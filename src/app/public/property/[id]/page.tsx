@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { properties, leaseUnits, complianceCertificates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { ArrowLeft, Building, MapPin, ShieldCheck, CheckCircle } from "lucide-react";
+import PropertyActions from "@/components/PropertyActions";
 
 export const revalidate = 0;
 
@@ -172,18 +173,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
           </div>
 
           {/* Transaction Quick Actions */}
-          <div className="premium-card p-6 border border-gray-200 bg-teal-50/50 flex flex-col gap-3">
-            <button className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer">
-              Request Proposal
-            </button>
-            <button className="w-full py-2.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold text-xs transition-all cursor-pointer">
-              Request Site Visit
-            </button>
-            <div className="grid grid-cols-2 gap-3 mt-1 text-center text-[10px] font-bold text-[#0F8B7D]">
-              <button className="py-2 border border-teal-200 rounded-lg hover:bg-teal-50 cursor-pointer">Compare</button>
-              <button className="py-2 border border-teal-200 rounded-lg hover:bg-teal-50 cursor-pointer">Download Pack</button>
-            </div>
-          </div>
+          <PropertyActions propertyId={prop.id} propertyName={prop.name} />
 
           {/* Statutory NOCs */}
           <div className="premium-card p-6 border border-gray-100 bg-white">
