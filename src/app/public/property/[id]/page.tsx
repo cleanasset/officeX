@@ -79,6 +79,38 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
             </div>
           </div>
 
+          {/* Property Specifications & Amenities (BUD Aligned) */}
+          <div className="premium-card p-6 border border-gray-100 bg-white">
+            <h3 className="font-bold text-gray-900 text-sm mb-4">Property Specifications & Amenities</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mb-6 pb-6 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Furnishing Status</span>
+                <span className="font-bold text-gray-900 block mt-1">Fully Fitted</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Power Backup</span>
+                <span className="font-bold text-gray-900 block mt-1">100% (2x 1500 kVA DG)</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">HVAC System</span>
+                <span className="font-bold text-gray-900 block mt-1">Centralized Chilled Water</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Parking Allotment</span>
+                <span className="font-bold text-gray-900 block mt-1">1 Car / 1k Sq.Ft</span>
+              </div>
+            </div>
+            
+            <h4 className="font-bold text-gray-700 text-xs mb-3">Key Features & Services</h4>
+            <div className="flex flex-wrap gap-2">
+              {["24/7 Security Operations", "Visitor Management System", "Food Court & Lounge", "LEED Gold Certified", "Fiber-optic Connectivity", "Integrated Fire Sprinklers", "Professional FM Services"].map((amenity, idx) => (
+                <span key={idx} className="px-3 py-1.5 rounded-full bg-teal-50 border border-teal-100 text-[10px] font-bold text-[#0F8B7D]">
+                  {amenity}
+                </span>
+              ))}
+            </div>
+          </div>
+
           {/* Units Inventory */}
           <div className="premium-card p-6 border border-gray-100 bg-white">
             <h3 className="font-bold text-gray-900 text-sm mb-4">Available Office Inventory</h3>
@@ -182,17 +214,36 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
               Statutory NOC Statuses
             </h3>
             <div className="flex flex-col gap-4">
-              {certsList.map((cert, idx) => (
-                <div key={idx} className="flex justify-between items-center text-xs p-3 rounded-lg bg-gray-50 border border-gray-100">
-                  <div>
-                    <div className="font-bold text-gray-900">{cert.name}</div>
-                    <div className="text-[10px] text-gray-600 font-bold mt-0.5">Expiry: {new Date(cert.expiryDate).toLocaleDateString()}</div>
+              {certsList.map((cert, idx) => {
+                const expiry = new Date(cert.expiryDate);
+                const diffTime = expiry.getTime() - new Date().getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const isExpired = diffDays <= 0;
+
+                return (
+                  <div key={idx} className="flex flex-col gap-2 p-3.5 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-gray-900 text-xs">{cert.name}</div>
+                        <div className="text-[10px] text-gray-400 font-semibold mt-0.5">{cert.issuingAuthority}</div>
+                      </div>
+                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${isExpired ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                        {isExpired ? 'Expired' : 'Valid'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] border-t border-gray-100 pt-2 mt-1">
+                      <span className="text-gray-500 font-medium">
+                        {isExpired ? (
+                          <span className="text-red-500 font-bold">Expired on {expiry.toLocaleDateString()}</span>
+                        ) : (
+                          <span className="text-emerald-600 font-bold">{diffDays} days remaining</span>
+                        )}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-bold uppercase tracking-wider">KYC Verified</span>
+                    </div>
                   </div>
-                  <span className={`text-[10px] font-bold ${cert.status === 'valid' ? 'text-green-500' : 'text-red-500'}`}>
-                    {cert.status === 'valid' ? '✔ Valid' : '✗ Expired'}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
               {certsList.length === 0 && (
                 <div className="text-xs text-gray-400 italic text-center py-4">No active compliance certificates loaded.</div>
               )}
