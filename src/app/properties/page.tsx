@@ -47,7 +47,10 @@ export default async function PropertyDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         
         {/* Total Properties */}
-        <div className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm">
+        <Link 
+          href="/properties/registry" 
+          className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        >
           <div>
             <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Properties</span>
             <div className="text-3xl font-extrabold text-gray-900 mt-2">{propertiesCount}</div>
@@ -56,10 +59,13 @@ export default async function PropertyDashboard() {
           <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center text-[#8B5CF6]">
             <Building size={22} />
           </div>
-        </div>
+        </Link>
 
         {/* Occupancy Rate */}
-        <div className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm">
+        <Link 
+          href="/properties/rent-roll" 
+          className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm hover:border-emerald-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        >
           <div>
             <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Occupancy</span>
             <div className="text-3xl font-extrabold text-gray-900 mt-2">94.2%</div>
@@ -68,22 +74,28 @@ export default async function PropertyDashboard() {
           <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
             <TrendingUpIcon size={22} />
           </div>
-        </div>
+        </Link>
 
         {/* Open Helpdesk Issues */}
-        <div className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm">
+        <Link 
+          href="/ops" 
+          className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm hover:border-amber-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        >
           <div>
             <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Open Tickets</span>
             <div className="text-3xl font-extrabold text-gray-900 mt-2">{openTicketsCount}</div>
-            <span className="text-[10px] text-amber-500 font-bold mt-1 inline-block">⚠ 2 critical priority</span>
+            <span className="text-[10px] text-amber-500 font-bold mt-1 inline-block">⚠ {openTicketsCount} open requests</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
             <AlertTriangle size={22} />
           </div>
-        </div>
+        </Link>
 
         {/* Expired Compliance NOCs */}
-        <div className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm">
+        <Link 
+          href="/properties/compliance" 
+          className="premium-card p-6 border border-gray-100 flex items-center justify-between bg-white shadow-sm hover:border-red-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+        >
           <div>
             <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Expired NOCs</span>
             <div className="text-3xl font-extrabold text-red-600 mt-2">{expiredCertsCount}</div>
@@ -92,7 +104,7 @@ export default async function PropertyDashboard() {
           <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
             <ShieldCheck size={22} />
           </div>
-        </div>
+        </Link>
 
       </div>
 
