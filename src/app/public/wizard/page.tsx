@@ -19,6 +19,8 @@ export default function RequirementWizard() {
     timeline: "3 Months"
   });
 
+  const [manualMode, setManualMode] = useState(false);
+
   const handleGstinCheck = async () => {
     if (!gstin) {
       setGstinError("Please enter a GSTIN.");
@@ -46,6 +48,15 @@ export default function RequirementWizard() {
     } finally {
       setIsValidating(false);
     }
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.companyName.trim()) {
+      setGstinError("Company Name is required.");
+      return;
+    }
+    setStep(2);
   };
 
   const handleFinish = async () => {
@@ -97,33 +108,88 @@ export default function RequirementWizard() {
             <span className={step >= 3 ? "text-primary-teal" : ""}>3. Lead Summary</span>
           </div>
 
-          {/* STEP 1: GSTIN Verification */}
+          {/* STEP 1: GSTIN Verification or Manual Mode */}
           {step === 1 && (
             <div className="flex flex-col gap-6">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Verify Corporate Legal Entity</h2>
-                <p className="text-xs text-gray-500 mt-1">Enter your Indian GSTIN registration to auto-fill company records.</p>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {manualMode ? "Enter Corporate Details" : "Verify Corporate Legal Entity"}
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  {manualMode ? "Manually fill in your company records to log the lead." : "Enter your Indian GSTIN registration to auto-fill company records."}
+                </p>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">GSTIN Number</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. 27AAACT1234F1ZP" 
-                  value={gstin}
-                  onChange={(e) => setGstin(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white"
-                />
-                {gstinError && <span className="text-red-500 text-[10px] font-bold mt-1">⚠ {gstinError}</span>}
-              </div>
+              {!manualMode ? (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">GSTIN Number</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 27AAACT1234F1ZP" 
+                      value={gstin}
+                      onChange={(e) => setGstin(e.target.value)}
+                      className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white"
+                    />
+                    {gstinError && <span className="text-red-500 text-[10px] font-bold mt-1">⚠ {gstinError}</span>}
+                  </div>
 
-              <button 
-                onClick={handleGstinCheck}
-                disabled={isValidating}
-                className="w-full py-3 rounded-xl bg-primary-teal text-white hover:bg-teal-700 font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-md"
-              >
-                {isValidating ? "Validating Entity..." : "Verify & Continue"}
-              </button>
+                  <button 
+                    onClick={handleGstinCheck}
+                    disabled={isValidating}
+                    className="w-full py-3 rounded-xl bg-primary-teal text-white hover:bg-teal-700 font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                  >
+                    {isValidating ? "Validating Entity..." : "Verify & Continue"}
+                  </button>
+
+                  <button 
+                    onClick={() => { setManualMode(true); setGstinError(""); }}
+                    className="text-xs text-center text-gray-600 hover:text-teal-600 font-bold underline cursor-pointer"
+                  >
+                    Or fill details manually without GSTIN
+                  </button>
+                </>
+              ) : (
+                <form onSubmit={handleManualSubmit} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Company Legal Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Infy Labs Private Limited" 
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                      className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contact Email</label>
+                    <input 
+                      type="email" 
+                      placeholder="e.g. admin@infylabs.com" 
+                      className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white"
+                    />
+                  </div>
+
+                  {gstinError && <span className="text-red-500 text-[10px] font-bold">⚠ {gstinError}</span>}
+
+                  <button 
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-primary-teal text-white hover:bg-teal-700 font-semibold text-xs transition-colors shadow-md cursor-pointer"
+                  >
+                    Continue to Space Scope
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => { setManualMode(false); setGstinError(""); }}
+                    className="text-xs text-center text-gray-600 hover:text-teal-600 font-bold underline cursor-pointer"
+                  >
+                    Back to GSTIN Verification
+                  </button>
+                </form>
+              )}
             </div>
           )}
 
