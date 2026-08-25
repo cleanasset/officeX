@@ -22,12 +22,12 @@ export default function PublicSearch() {
   ];
 
   useEffect(() => {
-    // Seed properties
+    // Seed properties with exact database UUIDs
     setProperties([
-      { id: "1", name: "Apex Business Tower", city: "Mumbai", address: "Bandra Kurla Complex", area: "25,000 sqft", rent: "₹1,05,000/mo" },
-      { id: "2", name: "Meridian Tech Park", city: "Bengaluru", address: "Whitefield", area: "18,000 sqft", rent: "₹60,000/mo" },
-      { id: "3", name: "Nexus Hub", city: "Pune", address: "Hinjewadi Phase 1", area: "12,000 sqft", rent: "₹38,000/mo" },
-      { id: "4", name: "Crystal Tower", city: "Chennai", address: "OMR Road", area: "15,000 sqft", rent: "₹95,000/mo" }
+      { id: "49275374-a7ab-46ec-81b0-c7854d10cdd5", name: "Apex Business Tower", city: "Mumbai", address: "Bandra Kurla Complex", area: "25,000 sqft", rent: "₹1,05,000/mo" },
+      { id: "3ccd744d-babe-4efb-8b00-f85462fbf28b", name: "Meridian Tech Park", city: "Bengaluru", address: "Whitefield", area: "18,000 sqft", rent: "₹60,000/mo" },
+      { id: "4dcde520-ccf3-44d0-a46d-bf504de34b42", name: "Nexus Hub", city: "Pune", address: "Hinjewadi Phase 1", area: "12,000 sqft", rent: "₹38,000/mo" },
+      { id: "286fdc42-fb87-4787-9404-f7349eecf08e", name: "Crystal Tower", city: "Chennai", address: "OMR Road", area: "15,000 sqft", rent: "₹95,000/mo" }
     ]);
 
     // Read query parameter from URL
