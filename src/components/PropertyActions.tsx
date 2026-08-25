@@ -111,6 +111,30 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
         </div>
       )}
 
+      {/* Broker Contact Card */}
+      <div className="premium-card p-5 border border-gray-200 bg-white flex flex-col gap-3.5 mb-4 shadow-sm">
+        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned Property Broker</h4>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-extrabold text-sm border border-blue-200 shadow-inner">
+            RM
+          </div>
+          <div>
+            <h5 className="font-extrabold text-gray-900 text-xs">Ravi Menon</h5>
+            <p className="text-[9px] font-bold text-[#0F8B7D] uppercase tracking-wider mt-0.5 font-sans">Leasing Director, OfficeX</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5 text-[10px] text-gray-600 border-t border-gray-50 pt-3">
+          <div className="flex justify-between items-center">
+            <span>Direct Phone</span>
+            <span className="font-bold text-gray-800">+91 98900 12345</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span>Email</span>
+            <span className="font-bold text-gray-800">ravi@officex.in</span>
+          </div>
+        </div>
+      </div>
+
       {/* Action Buttons Panel */}
       <div className="premium-card p-6 border border-gray-200 bg-teal-50/50 flex flex-col gap-3">
         <button 

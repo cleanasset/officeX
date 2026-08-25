@@ -1,8 +1,10 @@
 "use client";
 import React, { useState } from "react";
-import { Kanban, Sparkles, TrendingUp, X, User, Phone, Mail, FileText, ArrowRight, ShieldCheck } from "lucide-react";
+import { Kanban, Sparkles, TrendingUp, X, User, Phone, Mail, FileText, ArrowRight, ShieldCheck, MessageSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function PipelinePage() {
+  const router = useRouter();
   const [columns, setColumns] = useState<any>({
     New: [
       { id: 1, name: "InfyTech Hub", req: "8k sq.ft", value: "₹1.2L/mo", poc: "Alok Gupta", role: "Procurement Head", email: "alok@infytech.com", phone: "+91 98321 04958", gst: "27AABCT9876C1ZR" },
@@ -155,6 +157,12 @@ export default function PipelinePage() {
 
             {/* Actions button */}
             <div className="border-t border-gray-100 pt-5 flex flex-col gap-3">
+              <button 
+                onClick={() => router.push("/leasing/chat")}
+                className="w-full py-2.5 rounded-xl border border-teal-200 hover:bg-teal-50 text-[#0F8B7D] font-extrabold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <MessageSquare size={14} /> Open Deal Collaboration Chat
+              </button>
               <button 
                 onClick={() => {
                   alert(`LOI Draft document generated for ${selectedCard.name}! Redirecting to LOI portal.`);

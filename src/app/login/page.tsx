@@ -15,9 +15,10 @@ export default function LoginPage() {
   const demoAccounts = [
     { email: "admin@officex.in", label: "Super Admin", redirect: "/admin" },
     { email: "rajesh@officex.in", label: "Property Manager", redirect: "/properties" },
+    { email: "ravi@officex.in", label: "Leasing Broker", redirect: "/leasing" },
     { email: "vendor@techserve.in", label: "FM Vendor", redirect: "/vendor" },
     { email: "tenant@tcs.com", label: "Tenant Admin", redirect: "/tenant" },
-    { email: "ravi@officex.in", label: "Leasing Broker", redirect: "/leasing" }
+    { email: "vijay@officex.in", label: "Facility Manager", redirect: "/ops" }
   ];
 
   const handleDemoLogin = (acc: typeof demoAccounts[0]) => {
