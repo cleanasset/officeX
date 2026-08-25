@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, type, grade, address, city, pincode, totalArea, ownerCompany } = body;
+    const { name, type, grade, address, city, pincode, totalArea, ownerCompany, imageUrl } = body;
 
     if (!name || !type || !address || !city || !pincode || !totalArea) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -29,7 +29,8 @@ export async function POST(req: Request) {
       city,
       pincode,
       totalArea: String(totalArea),
-      ownerCompany: ownerCompany || "OfficeX Management"
+      ownerCompany: ownerCompany || "OfficeX Management",
+      imageUrl: imageUrl || null
     }).returning();
 
     return NextResponse.json(inserted[0]);

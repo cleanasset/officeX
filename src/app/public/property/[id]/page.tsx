@@ -47,6 +47,30 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
         </Link>
       </header>
 
+      {/* Building Hero Cover Photo Banner */}
+      <div className="w-full h-80 relative bg-gray-100 border-b border-gray-200">
+        <img 
+          src={prop.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200&auto=format&fit=crop"} 
+          alt={prop.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end">
+          <div className="max-w-6xl mx-auto w-full px-12 pb-8 text-white flex flex-col items-start gap-2">
+            <span className="px-3 py-1 rounded bg-[#0F8B7D] text-[10px] font-bold uppercase tracking-wider">
+              {prop.type}
+            </span>
+            <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight">
+              {prop.name}
+              <span className="px-2.5 py-0.5 rounded bg-white/20 text-white font-bold text-xs">Grade {prop.grade}</span>
+            </h1>
+            <p className="text-xs font-semibold flex items-center gap-1 opacity-90">
+              <MapPin size={14} />
+              {prop.address}, {prop.city} - {prop.pincode}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Main Details Panel */}
       <div className="max-w-6xl mx-auto w-full py-12 px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
         
@@ -54,15 +78,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
         <div className="md:col-span-2 flex flex-col gap-8">
           
           <div className="premium-card p-8 border border-gray-100 bg-white">
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              {prop.name}
-              <span className="px-2.5 py-0.5 rounded bg-blue-50 text-blue-600 font-bold text-xs">Grade {prop.grade}</span>
-            </h1>
-            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-              <MapPin size={14} className="text-gray-400" />
-              {prop.address}, {prop.city} - {prop.pincode}
-            </p>
-            <hr className="border-gray-100 my-6" />
+            <h3 className="font-bold text-gray-900 text-sm mb-4">Corporate Asset Details</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-xs text-gray-600">
               <div>
                 <div className="text-gray-400 font-semibold uppercase tracking-wider">Total Area</div>

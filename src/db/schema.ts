@@ -40,6 +40,7 @@ export const properties = pgTable("properties", {
   totalArea: decimal("total_area", { precision: 12, scale: 2 }).notNull(),
   ownerName: varchar("owner_name", { length: 100 }),
   ownerCompany: varchar("owner_company", { length: 255 }),
+  imageUrl: varchar("image_url", { length: 1000 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 

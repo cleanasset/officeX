@@ -22,7 +22,8 @@ export default function PropertyRegistry() {
           grade: p.grade,
           power: "100% Backup",
           hvac: "Centralized HVAC",
-          leed: "Gold Certified"
+          leed: "Gold Certified",
+          imageUrl: p.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop"
         }));
         setProperties(formatted);
       }
@@ -60,6 +61,7 @@ export default function PropertyRegistry() {
     parking: "1 Car / 1,000 Sq.Ft",
     leed: "Gold Certified",
     owner: "",
+    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop",
     amenities: [] as string[]
   });
 
@@ -84,7 +86,8 @@ export default function PropertyRegistry() {
           city: form.city,
           pincode: form.pincode || "400001",
           totalArea: parseFloat(form.totalArea || "0") || 10000,
-          ownerCompany: form.owner || "OfficeX Management"
+          ownerCompany: form.owner || "OfficeX Management",
+          imageUrl: form.imageUrl
         })
       });
 
@@ -112,6 +115,7 @@ export default function PropertyRegistry() {
       parking: "1 Car / 1,000 Sq.Ft",
       leed: "Gold Certified",
       owner: "",
+      imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop",
       amenities: []
     });
   };
@@ -238,6 +242,35 @@ export default function PropertyRegistry() {
                   onChange={(e) => setForm({ ...form, pincode: e.target.value })}
                   className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
                 />
+              </div>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Building Aesthetic Image</label>
+                <div className="grid grid-cols-3 gap-4 mt-1">
+                  {[
+                    { name: "Modern Glass Tower", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop" },
+                    { name: "Classic Brick Plaza", url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=600&auto=format&fit=crop" },
+                    { name: "Futuristic Space", url: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop" }
+                  ].map((theme) => {
+                    const isSelected = form.imageUrl === theme.url;
+                    return (
+                      <button
+                        key={theme.name}
+                        type="button"
+                        onClick={() => setForm({ ...form, imageUrl: theme.url })}
+                        className={`flex flex-col rounded-xl overflow-hidden border text-left cursor-pointer transition-all ${
+                          isSelected ? "border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20" : "border-gray-200 hover:border-[#0F8B7D]"
+                        }`}
+                      >
+                        <div className="h-20 w-full bg-gray-100 relative">
+                          <img src={theme.url} alt={theme.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="p-2 text-[10px] font-bold text-gray-700 bg-white border-t border-gray-50">
+                          {theme.name}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 border-t border-gray-50 pt-5 mt-4">
@@ -529,37 +562,48 @@ export default function PropertyRegistry() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {properties.map((p) => (
-          <div key={p.id} className="premium-card p-6 border border-gray-200 bg-white flex flex-col justify-between min-h-[220px] hover:border-purple-300 transition-colors shadow-sm">
+          <div key={p.id} className="premium-card border border-gray-200 bg-white flex flex-col justify-between hover:border-purple-300 transition-colors shadow-sm overflow-hidden rounded-2xl">
             <div>
-              <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <Building size={16} className="text-purple-600 animate-pulse-green" />
-                  {p.name}
-                </h3>
-                <span className="px-2.5 py-0.5 rounded bg-purple-50 border border-purple-100 text-purple-600 text-[9px] font-extrabold uppercase tracking-wider">
-                  Grade {p.grade}
-                </span>
+              {/* Building Image Banner */}
+              <div className="h-36 w-full relative overflow-hidden bg-gray-100 border-b border-gray-100">
+                <img 
+                  src={p.imageUrl} 
+                  alt={p.name} 
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <p className="text-xs text-gray-500 flex items-center gap-1 mt-2 font-medium">
-                <MapPin size={12} className="text-gray-400" /> {p.location}
-              </p>
               
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 text-[11px] border-t border-gray-50 pt-3">
-                <div>
-                  <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Capacity</span>
-                  <span className="font-bold text-gray-800">{p.units}</span>
+              <div className="p-6">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                    <Building size={16} className="text-purple-600 animate-pulse-green" />
+                    {p.name}
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded bg-purple-50 border border-purple-100 text-purple-600 text-[9px] font-extrabold uppercase tracking-wider">
+                    Grade {p.grade}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Total Area</span>
-                  <span className="font-bold text-gray-800">{p.area}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">HVAC System</span>
-                  <span className="font-semibold text-gray-700">{p.hvac}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">LEED Cert</span>
-                  <span className="font-bold text-emerald-600">{p.leed}</span>
+                <p className="text-xs text-gray-500 flex items-center gap-1 mt-2 font-medium">
+                  <MapPin size={12} className="text-gray-400" /> {p.location}
+                </p>
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 text-[11px] border-t border-gray-50 pt-3">
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Capacity</span>
+                    <span className="font-bold text-gray-800">{p.units}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Total Area</span>
+                    <span className="font-bold text-gray-800">{p.area}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">HVAC System</span>
+                    <span className="font-semibold text-gray-700">{p.hvac}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">LEED Cert</span>
+                    <span className="font-bold text-emerald-600">{p.leed}</span>
+                  </div>
                 </div>
               </div>
             </div>
