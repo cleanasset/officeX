@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Building,
   TrendingUp,
@@ -143,6 +143,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   
   // Detect current portal module from pathname
   const portalKey = Object.keys(menuConfigs).find(key => pathname.startsWith(`/${key}`)) || "properties";
@@ -152,7 +153,7 @@ export default function Sidebar() {
     <div className="w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0">
       
       {/* Top Brand Logo */}
-      <div className="p-6 flex flex-col gap-5 border-b border-gray-200">
+      <div className="p-6 flex flex-col gap-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
           <Image 
             src="/logo-removebg-preview.png" 
@@ -169,9 +170,25 @@ export default function Sidebar() {
             className="object-contain"
           />
         </div>
-        <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-600">
-          {config.title}
-        </span>
+        
+        {/* Module Switcher Dropdown */}
+        <div className="flex flex-col gap-1.5 mt-2">
+          <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Active Module</label>
+          <select 
+            value={portalKey}
+            onChange={(e) => router.push(`/${e.target.value}`)}
+            className="w-full px-2 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-[#F9FAFB] hover:bg-gray-50 text-gray-800 focus:outline-none focus:border-[#0F8B7D] cursor-pointer transition-colors shadow-sm"
+          >
+            <option value="leasing">Leasing CRM</option>
+            <option value="marketplace">FM Marketplace</option>
+            <option value="properties">Property SaaS</option>
+            <option value="vendor">Vendor Hub</option>
+            <option value="tenant">Tenant Portal</option>
+            <option value="admin">Admin Console</option>
+            <option value="ops">Operations Hub</option>
+            <option value="reporting">Metrics Console</option>
+          </select>
+        </div>
       </div>
 
       {/* Nav Items List */}

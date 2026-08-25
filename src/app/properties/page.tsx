@@ -29,7 +29,7 @@ export default async function PropertyDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <Link 
-            href="/properties/registry" 
+            href="/properties/registry?add=true" 
             className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition-colors"
           >
             Add Property

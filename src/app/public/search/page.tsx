@@ -22,13 +22,27 @@ export default function PublicSearch() {
   ];
 
   useEffect(() => {
-    // Seed properties with exact database UUIDs
-    setProperties([
-      { id: "49275374-a7ab-46ec-81b0-c7854d10cdd5", name: "Apex Business Tower", city: "Mumbai", address: "Bandra Kurla Complex", area: "25,000 sqft", rent: "₹1,05,000/mo" },
-      { id: "3ccd744d-babe-4efb-8b00-f85462fbf28b", name: "Meridian Tech Park", city: "Bengaluru", address: "Whitefield", area: "18,000 sqft", rent: "₹60,000/mo" },
-      { id: "4dcde520-ccf3-44d0-a46d-bf504de34b42", name: "Nexus Hub", city: "Pune", address: "Hinjewadi Phase 1", area: "12,000 sqft", rent: "₹38,000/mo" },
-      { id: "286fdc42-fb87-4787-9404-f7349eecf08e", name: "Crystal Tower", city: "Chennai", address: "OMR Road", area: "15,000 sqft", rent: "₹95,000/mo" }
-    ]);
+    const loadProperties = async () => {
+      try {
+        const res = await fetch("/api/properties");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const formatted = data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            city: p.city,
+            address: p.address,
+            area: parseFloat(p.totalArea).toLocaleString() + " sqft",
+            rent: "₹1,05,000/mo"
+          }));
+          setProperties(formatted);
+        }
+      } catch (err) {
+        console.error("Error loading search properties:", err);
+      }
+    };
+    
+    loadProperties();
 
     // Read query parameter from URL
     if (typeof window !== "undefined") {
@@ -107,8 +121,12 @@ export default function PublicSearch() {
     const q = query.trim().toLowerCase();
     if (!q) return true; // Show all listings if search is empty
     
-    const searchTerms = q.split(/\s+/);
-    return searchTerms.every(term => 
+    // Split by spaces and commas, filter out short connector words
+    const searchTerms = q.split(/[\s,]+/).filter(t => t.length > 2);
+    if (searchTerms.length === 0) return true;
+
+    // Match if any of the significant search terms exists in name, address, or city
+    return searchTerms.some(term => 
       p.name.toLowerCase().includes(term) ||
       p.address.toLowerCase().includes(term) ||
       p.city.toLowerCase().includes(term)
