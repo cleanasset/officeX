@@ -1,18 +1,19 @@
 "use client";
 import React, { useState } from "react";
-import { Building, Plus, Search, MapPin, Layers, X, Check, Bell, Edit3, ArrowRight, Trash2 } from "lucide-react";
+import { Building, Plus, Search, MapPin, Layers, X, Check, Bell, Edit3, ArrowRight, Trash2, Printer, Download, Sparkles, Phone, Mail, QrCode } from "lucide-react";
 
 export default function ListingsPage() {
   const [listings, setListings] = useState([
-    { id: 1, name: "Apex Business Tower - Floor 4", type: "Office Space", area: "8,500 sq.ft", rate: "₹180/sq.ft", status: "Vacant", address: "BKC, Mumbai", amenities: "24/7 Power, VRV Air Conditioning" },
-    { id: 2, name: "Meridian Tech Park - Block B", type: "IT/ITeS Space", area: "15,000 sq.ft", rate: "₹120/sq.ft", status: "Occupied", address: "Whitefield, Bengaluru", amenities: "Central Chillers, Fibre Optic" },
-    { id: 3, name: "Nexus Hub - Desk Space", type: "Coworking", area: "200 Desks", rate: "₹12,000/desk", status: "Vacant", address: "Hinjewadi, Pune", amenities: "Shared Lounge, Meeting Rooms" }
+    { id: 1, name: "Apex Business Tower - Floor 4", type: "Office Space", area: "8,500 sq.ft", rate: "₹180/sq.ft", status: "Vacant", address: "BKC, Mumbai", amenities: "24/7 Power, VRV Air Conditioning, 100% DG Backup, Mechanized Scrubbing" },
+    { id: 2, name: "Meridian Tech Park - Block B", type: "IT/ITeS Space", area: "15,000 sq.ft", rate: "₹120/sq.ft", status: "Occupied", address: "Whitefield, Bengaluru", amenities: "Central Chillers, Fibre Optic, LEED Certified, Multi-Level Parking" },
+    { id: 3, name: "Nexus Hub - Desk Space", type: "Coworking", area: "200 Desks", rate: "₹12,000/desk", status: "Vacant", address: "Hinjewadi, Pune", amenities: "Shared Lounge, Meeting Rooms, 24/7 Security, High-Speed Wifi" }
   ]);
 
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [notification, setNotification] = useState("");
   const [editingRate, setEditingRate] = useState("");
+  const [brochureListing, setBrochureListing] = useState<any>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -121,7 +122,13 @@ export default function ListingsPage() {
                     {l.status}
                   </span>
                 </td>
-                <td className="py-4 text-right">
+                <td className="py-4 text-right flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setBrochureListing(l)}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                  >
+                    Brochure
+                  </button>
                   <button
                     onClick={() => handleDeleteListing(l.id, l.name)}
                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -193,7 +200,10 @@ export default function ListingsPage() {
             
             <div className="border-t border-gray-100 pt-5 flex flex-col gap-3">
               <button 
-                onClick={() => alert(`Staging sales brochure compiled for ${selectedListing.name}!`)}
+                onClick={() => {
+                  setBrochureListing(selectedListing);
+                  setSelectedListing(null);
+                }}
                 className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 Generate Brochure <ArrowRight size={14} />
@@ -320,6 +330,138 @@ export default function ListingsPage() {
           </form>
         </div>
       )}
+
+      {/* DYNAMIC SALES BROCHURE MODAL & PRINT GENERATOR */}
+      {brochureListing && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-8 shadow-2xl flex flex-col gap-6 relative border border-gray-100 print:p-0 print:border-none print:shadow-none animate-scale-up">
+            
+            {/* Modal Actions */}
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4 print:hidden">
+              <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
+                <Sparkles size={16} className="text-amber-500 animate-pulse" />
+                <span>Sales Brochure Preview</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Printer size={13} /> Print/Save PDF
+                </button>
+                <button 
+                  onClick={() => setBrochureListing(null)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Brochure Template */}
+            <div className="flex flex-col gap-6 border border-gray-200 rounded-2xl p-6 bg-gradient-to-br from-slate-50 to-white relative overflow-hidden print:border-none print:p-0">
+              
+              {/* Premium Top Bar Design */}
+              <div className="flex justify-between items-start border-b-2 border-blue-600 pb-5">
+                <div>
+                  <span className="px-2.5 py-0.5 rounded bg-blue-600 text-white font-extrabold text-[9px] uppercase tracking-widest">
+                    OfficeX Exclusive Listing
+                  </span>
+                  <h2 className="text-xl font-black text-gray-900 mt-2 tracking-tight">{brochureListing.name}</h2>
+                  <p className="text-xs text-gray-500 font-semibold flex items-center gap-1 mt-1">
+                    <MapPin size={12} className="text-blue-500" /> {brochureListing.address}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Asking Rental</span>
+                  <span className="text-xl font-extrabold text-blue-600 block mt-0.5">{brochureListing.rate}</span>
+                  <span className="text-[9px] text-gray-400 font-semibold">Leasable area: {brochureListing.area}</span>
+                </div>
+              </div>
+
+              {/* Graphic Banner */}
+              <div className="h-44 w-full rounded-xl overflow-hidden bg-slate-200 border border-slate-100 relative">
+                <img 
+                  src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=800&auto=format&fit=crop" 
+                  alt="Office Workspace" 
+                  className="w-full h-full object-cover" 
+                />
+                <div className="absolute bottom-3 left-3 px-3 py-1 rounded bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
+                  Premium Grade-A commercial workspace
+                </div>
+              </div>
+
+              {/* Grid Specifications */}
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="p-3.5 rounded-xl bg-white border border-gray-100 shadow-sm">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Space Category</span>
+                  <span className="font-extrabold text-gray-900 mt-1 block">{brochureListing.type}</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-white border border-gray-100 shadow-sm">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Occupancy Status</span>
+                  <span className="font-extrabold text-emerald-600 mt-1 block">{brochureListing.status}</span>
+                </div>
+              </div>
+
+              {/* Amenities */}
+              <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm text-xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Key Specifications & Amenities</span>
+                <div className="flex flex-wrap gap-2">
+                  {brochureListing.amenities.split(",").map((a: string, i: number) => (
+                    <span key={i} className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-bold text-blue-700">
+                      ✓ {a.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Contact & QR Code Footer */}
+              <div className="flex justify-between items-center border-t border-gray-200 pt-5 mt-2 bg-blue-50/30 p-4 rounded-xl">
+                <div className="text-xs">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Leasing Enquiry</span>
+                  <div className="flex items-center gap-1.5 font-bold text-gray-800">
+                    <Phone size={12} className="text-blue-500" /> +91 22 4987 6000
+                  </div>
+                  <div className="flex items-center gap-1.5 font-semibold text-gray-600 mt-0.5">
+                    <Mail size={12} className="text-blue-500" /> leasing@officex.in
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Scan to Visit</span>
+                    <span className="text-[9px] text-blue-600 font-bold uppercase">officex.in/listings</span>
+                  </div>
+                  <div className="p-1 bg-white rounded-lg border border-gray-200">
+                    <QrCode size={36} className="text-gray-900" />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="flex justify-end gap-3 print:hidden">
+              <button
+                type="button"
+                onClick={() => setBrochureListing(null)}
+                className="px-5 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.print();
+                }}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Printer size={13} /> Print/Save PDF Brochure
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
