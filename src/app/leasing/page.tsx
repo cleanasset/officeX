@@ -58,11 +58,22 @@ export default function LeasingDashboard() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const [brokerPartnershipInvite, setBrokerPartnershipInvite] = useState({
+    id: "BP-503",
+    landlord: "Rajesh Kumar (Property Manager)",
+    property: "Apex Business Tower - Floor 4",
+    commission: "1 Month Rent (8.33% Comm)",
+    status: "Pending Acceptance",
+    accepted: false
+  });
+
   const activeListings = [
     { id: 1, name: "Apex Business Tower - Floor 4", type: "Office Space", area: "8,500 sq.ft", rate: "₹180/sq.ft", status: "Vacant", address: "BKC, Mumbai" },
     { id: 2, name: "Meridian Tech Park - Block B", type: "IT/ITeS Space", area: "15,000 sq.ft", rate: "₹120/sq.ft", status: "Occupied", address: "Whitefield, Bengaluru" },
     { id: 3, name: "Nexus Hub - Desk Space", type: "Coworking", area: "200 Desks", rate: "₹12,000/desk", status: "Vacant", address: "Hinjewadi, Pune" }
   ];
+
+  const [listingsList, setListingsList] = useState(activeListings);
 
   const defaultLeads = [
     { id: "L-089", company: "HCL Tech", contact: "Vikram Malhotra", area: "12,000 sq.ft", budget: "₹150-180/sq.ft", status: "Stale", date: "Aug 19, 2026" },
@@ -345,6 +356,45 @@ export default function LeasingDashboard() {
               </button>
             </div>
 
+            {/* Broker Partnership Assignment Invitation */}
+            <div className="p-4 rounded-xl border-l-4 border-purple-500 bg-purple-50/50 flex justify-between items-center text-xs">
+              <div className="flex-1 pr-3">
+                <div className="font-extrabold text-gray-900">Brokerage Assignment Request</div>
+                <div className="text-gray-500 font-semibold mt-0.5">
+                  {brokerPartnershipInvite.landlord} proposed commission for {brokerPartnershipInvite.property} ({brokerPartnershipInvite.commission})
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  if (brokerPartnershipInvite.accepted) return;
+                  setBrokerPartnershipInvite({
+                    ...brokerPartnershipInvite,
+                    status: "Active Agreement",
+                    accepted: true
+                  });
+                  const newProp = {
+                    id: listingsList.length + 1,
+                    name: "Apex Business Tower - Floor 4 (Partner Exclusive)",
+                    type: "Office Space",
+                    area: "12,000 sq.ft",
+                    rate: "₹180/sq.ft",
+                    status: "Vacant",
+                    address: "BKC, Mumbai"
+                  };
+                  setListingsList([newProp, ...listingsList]);
+                  showToast("Exclusive brokerage agreement accepted! Property added to your active inventory.");
+                }}
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-[10px] uppercase shadow-sm transition-colors cursor-pointer shrink-0 ${
+                  brokerPartnershipInvite.accepted 
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                    : "bg-purple-600 hover:bg-purple-700 text-white"
+                }`}
+                disabled={brokerPartnershipInvite.accepted}
+              >
+                {brokerPartnershipInvite.accepted ? "Partnership Active" : "Accept Contract"}
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -369,7 +419,7 @@ export default function LeasingDashboard() {
               </div>
 
               <div className="flex flex-col gap-4">
-                {activeListings.map(l => (
+                {listingsList.map(l => (
                   <div key={l.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 text-xs flex flex-col gap-1">
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-gray-900 text-sm">{l.name}</span>

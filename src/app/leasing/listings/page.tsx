@@ -407,7 +407,7 @@ export default function ListingsPage() {
               <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm text-xs">
                 <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Key Specifications & Amenities</span>
                 <div className="flex flex-wrap gap-2">
-                  {brochureListing.amenities.split(",").map((a: string, i: number) => (
+                  {(brochureListing.amenities || "Standard CAFM Assets").split(",").map((a: string, i: number) => (
                     <span key={i} className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-bold text-blue-700">
                       ✓ {a.trim()}
                     </span>
