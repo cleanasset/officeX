@@ -15,8 +15,8 @@ async function run() {
       }
     });
     const db = drizzle(pool);
-    await db.execute(sql`ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url VARCHAR(1000);`);
-    console.log("Database update successful: column 'image_url' added to 'properties' table!");
+    await db.execute(sql`ALTER TABLE properties ALTER COLUMN image_url TYPE TEXT;`);
+    console.log("Database update successful: column 'image_url' altered to TYPE TEXT!");
     await pool.end();
     process.exit(0);
   } catch (error) {

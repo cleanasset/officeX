@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Building, MapPin, Plus, ArrowLeft, Check, Sparkles, Upload, Image as ImageIcon, Link as LinkIcon, X, Tag, ShieldCheck, Zap, Coffee, Wifi, Car, Trash2, AlertTriangle, Bell } from "lucide-react";
+import { Building, MapPin, Plus, ArrowLeft, Check, Sparkles, Upload, Image as ImageIcon, Link as LinkIcon, X, Tag, ShieldCheck, Zap, Coffee, Wifi, Car, Trash2, AlertTriangle, Bell, Layers, HelpCircle } from "lucide-react";
 
 export default function PropertyRegistry() {
   const [properties, setProperties] = useState<any[]>([]);
@@ -104,7 +104,7 @@ export default function PropertyRegistry() {
     }
   ];
 
-  // Form state
+  // Form state with clarified floor fields
   const [form, setForm] = useState({
     name: "",
     type: "Commercial Office",
@@ -113,7 +113,9 @@ export default function PropertyRegistry() {
     city: "Ahmedabad",
     pincode: "",
     totalArea: "",
-    floors: "",
+    buildingTotalFloors: "", // Total Building Structure Floors (e.g. 18)
+    ownershipScope: "Whole Building", // "Whole Building", "Multiple Specific Floors", "Single Floor / Unit"
+    offeredFloors: "Whole Building (All Floors)", // Exact floors being listed (e.g. "Floors 4 to 8")
     furnishing: "Fully Fitted",
     power: "100% DG Backup",
     hvac: "Centralized Chilled Water",
@@ -192,14 +194,45 @@ export default function PropertyRegistry() {
     setForm({ ...form, amenities: form.amenities.filter(a => a !== amenity) });
   };
 
-  // Image Upload Handler
+  // Image Upload Handler with Canvas Compression
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          setForm({ ...form, imageUrl: reader.result });
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas to resize/compress image
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+            setForm(prev => ({ ...prev, imageUrl: compressedDataUrl }));
+            showToast("Cover photo uploaded and optimized successfully!");
+          }
+        };
+        if (typeof event.target?.result === "string") {
+          img.src = event.target.result;
         }
       };
       reader.readAsDataURL(file);
@@ -209,6 +242,7 @@ export default function PropertyRegistry() {
   const handleApplyCustomUrl = () => {
     if (form.customImageUrl.trim()) {
       setForm({ ...form, imageUrl: form.customImageUrl.trim() });
+      showToast("Custom image web URL applied!");
     }
   };
 
@@ -233,36 +267,41 @@ export default function PropertyRegistry() {
       if (res.ok) {
         await fetchProperties();
         showToast(`Successfully published ${form.name || "Building Asset"} to marketplace registry!`);
+        setIsAdding(false);
+        setStep(1);
+        setForm({
+          name: "",
+          type: "Commercial Office",
+          grade: "A",
+          address: "",
+          city: "Ahmedabad",
+          pincode: "",
+          totalArea: "",
+          buildingTotalFloors: "",
+          ownershipScope: "Whole Building",
+          offeredFloors: "Whole Building (All Floors)",
+          furnishing: "Fully Fitted",
+          power: "100% DG Backup",
+          hvac: "Centralized Chilled Water",
+          parking: "1 Car / 1,000 Sq.Ft",
+          leed: "Gold Certified",
+          owner: "",
+          imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=800&auto=format&fit=crop",
+          customImageUrl: "",
+          amenities: [
+            "100% DG Power Backup",
+            "High-Speed Passenger Elevators",
+            "3-Tier 24/7 Security & CCTV"
+          ]
+        });
+      } else {
+        const errData = await res.json();
+        alert(`Error publishing property: ${errData.error || "Please check required fields."}`);
       }
     } catch (err) {
       console.error("Error creating property:", err);
+      alert("Network error publishing property. Please try again.");
     }
-    
-    setIsAdding(false);
-    setStep(1);
-    setForm({
-      name: "",
-      type: "Commercial Office",
-      grade: "A",
-      address: "",
-      city: "Ahmedabad",
-      pincode: "",
-      totalArea: "",
-      floors: "",
-      furnishing: "Fully Fitted",
-      power: "100% DG Backup",
-      hvac: "Centralized Chilled Water",
-      parking: "1 Car / 1,000 Sq.Ft",
-      leed: "Gold Certified",
-      owner: "",
-      imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=800&auto=format&fit=crop",
-      customImageUrl: "",
-      amenities: [
-        "100% DG Power Backup",
-        "High-Speed Passenger Elevators",
-        "3-Tier 24/7 Security & CCTV"
-      ]
-    });
   };
 
   // Delete Listing Handler
@@ -315,7 +354,7 @@ export default function PropertyRegistry() {
         <div className="grid grid-cols-5 gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">
           {[
             { s: 1, label: "1. Specs & Image" },
-            { s: 2, label: "2. Physical Areas" },
+            { s: 2, label: "2. Floors & Areas" },
             { s: 3, label: "3. Power & HVAC" },
             { s: 4, label: "4. All Amenities" },
             { s: 5, label: "5. Review & Publish" }
@@ -611,39 +650,93 @@ export default function PropertyRegistry() {
                 onClick={() => setStep(2)}
                 className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
               >
-                Next: Physical Areas →
+                Next: Floors & Areas →
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 2: Physical Areas */}
+        {/* STEP 2: Physical Areas & Floor Breakdown (Clarified) */}
         {step === 2 && (
           <div className="premium-card p-8 border border-gray-200 bg-white flex flex-col gap-6 shadow-sm">
-            <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-1.5">
-              <Sparkles size={16} className="text-[#0F8B7D]" /> Step 2: Physical Areas & Floor Capacities
-            </h3>
+            <div>
+              <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-1.5">
+                <Sparkles size={16} className="text-[#0F8B7D]" /> Step 2: Physical Areas & Floor Ownership Breakdown
+              </h3>
+              <p className="text-[11px] text-gray-500 font-semibold mt-1">
+                Clearly differentiate between the total building structure height and the specific floor(s) you own or are listing.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Leasable Super Built-up Area */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Total Super Built-up Area (Sq.Ft.)</label>
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+                  Leasable Super Built-up Area (Sq.Ft.)
+                </label>
                 <input 
                   type="number" 
-                  placeholder="e.g. 250000" 
+                  placeholder="e.g. 50000" 
                   value={form.totalArea}
                   onChange={(e) => setForm({ ...form, totalArea: e.target.value })}
                   className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
                 />
+                <span className="text-[10px] text-gray-400 font-medium">Total square feet of space available for lease</span>
               </div>
+
+              {/* Total Building Structure Height */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Total Floors</label>
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+                  Total Building Height (Total Tower Floors)
+                </label>
                 <input 
                   type="number" 
-                  placeholder="e.g. 14" 
-                  value={form.floors}
-                  onChange={(e) => setForm({ ...form, floors: e.target.value })}
+                  placeholder="e.g. 18 (G + 18 Floors Total)" 
+                  value={form.buildingTotalFloors}
+                  onChange={(e) => setForm({ ...form, buildingTotalFloors: e.target.value })}
                   className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
                 />
+                <span className="text-[10px] text-gray-400 font-medium">Total architectural floors in the entire tower structure</span>
               </div>
+
+              {/* Ownership / Space Scope */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+                  Ownership / Space Scope
+                </label>
+                <select 
+                  value={form.ownershipScope}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const defaultOffered = val === "Whole Building" ? "Whole Building (All Floors)" : (val === "Single Floor / Unit" ? "4th Floor Wing B" : "Floors 3 to 7");
+                    setForm({ ...form, ownershipScope: val, offeredFloors: defaultOffered });
+                  }}
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                >
+                  <option value="Whole Building">Whole Building (Sole Owner / Manage entire tower)</option>
+                  <option value="Multiple Specific Floors">Multiple Specific Floors (e.g. Floors 3 to 7)</option>
+                  <option value="Single Floor / Unit">Single Floor / Demarcated Unit (e.g. 4th Floor Wing B)</option>
+                </select>
+                <span className="text-[10px] text-gray-400 font-medium">Do you own the whole building or specific floors?</span>
+              </div>
+
+              {/* Floor Number(s) Available for Lease */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+                  Floor Number(s) Available for Lease
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Whole Building OR Floors 4, 5, 6 OR 3rd Floor" 
+                  value={form.offeredFloors}
+                  onChange={(e) => setForm({ ...form, offeredFloors: e.target.value })}
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                />
+                <span className="text-[10px] text-gray-400 font-medium">Exact floor numbers/wings available for prospective tenants</span>
+              </div>
+
+              {/* Furnishing Status */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Furnishing Status</label>
                 <select 
@@ -651,11 +744,13 @@ export default function PropertyRegistry() {
                   onChange={(e) => setForm({ ...form, furnishing: e.target.value })}
                   className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
                 >
-                  <option value="Fully Fitted">Fully Fitted (Plug & Play)</option>
-                  <option value="Warm Shell">Warm Shell (Flooring & HVAC done)</option>
-                  <option value="Bare Shell">Bare Shell</option>
+                  <option value="Fully Fitted">Fully Fitted (Plug & Play with Workstations & Cabins)</option>
+                  <option value="Warm Shell">Warm Shell (Flooring, Ceiling & HVAC completed)</option>
+                  <option value="Bare Shell">Bare Shell (Raw Space for Custom Fit-out)</option>
                 </select>
               </div>
+
+              {/* Dedicated Parking Ratio */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Dedicated Parking Ratio</label>
                 <input 
@@ -666,7 +761,9 @@ export default function PropertyRegistry() {
                   className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
                 />
               </div>
+
             </div>
+            
             <div className="flex justify-between gap-3 border-t border-gray-100 pt-5 mt-2">
               <button 
                 type="button"
@@ -893,12 +990,15 @@ export default function PropertyRegistry() {
                 <span className="font-extrabold text-gray-900 mt-0.5 block">{form.type}</span>
               </div>
               <div>
-                <span className="text-[10px] text-gray-400 font-bold block uppercase">Super Built-up Area</span>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Leasable Super Built-up Area</span>
                 <span className="font-extrabold text-[#0F8B7D] mt-0.5 block">{parseFloat(form.totalArea || "0").toLocaleString()} Sq.Ft.</span>
               </div>
               <div>
-                <span className="text-[10px] text-gray-400 font-bold block uppercase">Floors / Capacity</span>
-                <span className="font-extrabold text-gray-900 mt-0.5 block">{form.floors} Floors</span>
+                <span className="text-[10px] text-gray-400 font-bold block uppercase">Floor Scope & Available Floors</span>
+                <span className="font-extrabold text-gray-900 mt-0.5 block">{form.offeredFloors} ({form.ownershipScope})</span>
+                {form.buildingTotalFloors && (
+                  <span className="text-[10px] text-gray-400 font-medium block">Total Tower Structure: {form.buildingTotalFloors} Floors</span>
+                )}
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">HVAC System</span>
