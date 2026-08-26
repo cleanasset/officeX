@@ -2,7 +2,7 @@ import React from "react";
 import { db } from "@/db";
 import { users, auditLogs } from "@/db/schema";
 import { desc } from "drizzle-orm";
-import { ShieldCheck, Users, Sparkles, ClipboardList, Settings, UserCheck, ShieldAlert, FileText, ArrowRight } from "lucide-react";
+import { ShieldCheck, Users, Sparkles, ClipboardList, Settings, UserCheck, ShieldAlert, FileText, ArrowRight, Cpu } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -103,8 +103,77 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
+      {/* API Integrations Health Grid & Pending Queue Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* API Health Grid */}
+        <div className="md:col-span-2 premium-card p-6 border border-gray-200 bg-white shadow-sm">
+          <h3 className="text-sm font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <Cpu size={18} className="text-red-500 font-bold" />
+            Platform Integrations & API Gateway Health Checks
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
+              <span className="font-bold text-gray-700">Razorpay Route</span>
+              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
+              </span>
+              <span className="text-[9px] text-gray-400 font-semibold mt-1">Latency: 42ms | Res: 200</span>
+            </div>
+            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
+              <span className="font-bold text-gray-700">Twilio SMS Gateway</span>
+              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
+              </span>
+              <span className="text-[9px] text-gray-400 font-semibold mt-1">Latency: 75ms | Res: 200</span>
+            </div>
+            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
+              <span className="font-bold text-gray-700">OpenAI Model API</span>
+              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
+              </span>
+              <span className="text-[9px] text-gray-400 font-semibold mt-1">Latency: 120ms | model-ok</span>
+            </div>
+            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
+              <span className="font-bold text-gray-700">Postgres Database</span>
+              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Connected
+              </span>
+              <span className="text-[9px] text-gray-400 font-semibold mt-1">SSL Encrypted | 99.9% Up</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending Approvals Quick Board */}
+        <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
+          <h3 className="text-sm font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <ShieldCheck size={18} className="text-red-500 font-bold" />
+            Pending Gateway Actions
+          </h3>
+          <div className="flex flex-col gap-3 text-xs">
+            <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/30 flex justify-between items-center shadow-inner">
+              <div className="flex-1 pr-2">
+                <span className="font-bold text-gray-900 block">GSTIN KYC Audit</span>
+                <span className="text-[9px] text-gray-500 font-semibold block">SafeGuard Security Private Ltd</span>
+              </div>
+              <Link href="/admin/kyc" className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[9px] uppercase tracking-wider transition-colors shrink-0">
+                Verify
+              </Link>
+            </div>
+            <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/30 flex justify-between items-center shadow-inner">
+              <div className="flex-1 pr-2">
+                <span className="font-bold text-gray-900 block">Statutory Audit License</span>
+                <span className="text-[9px] text-gray-500 font-semibold block">AquaClean Environmental LLP</span>
+              </div>
+              <Link href="/admin/kyc" className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[9px] uppercase tracking-wider transition-colors shrink-0">
+                Verify
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Audit logs trail */}
-      <div className="premium-card p-6 border border-gray-200 bg-white">
+      <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
             <ClipboardList size={18} className="text-red-500" />

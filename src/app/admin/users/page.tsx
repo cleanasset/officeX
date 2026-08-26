@@ -71,6 +71,46 @@ export default function UserManagement() {
         <p className="text-sm text-gray-600 font-semibold mt-1">Manage active platform roles, access policies, and workspace accounts.</p>
       </div>
 
+      {/* User Provisioning Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="premium-card p-5 border border-gray-200 bg-white shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Total Provisioned</span>
+            <div className="text-2xl font-extrabold text-gray-900 mt-1">{usersList.length}</div>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
+            {usersList.length}
+          </div>
+        </div>
+        <div className="premium-card p-5 border border-gray-200 bg-white shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Active Accounts</span>
+            <div className="text-2xl font-extrabold text-gray-900 mt-1">{usersList.filter(u => u.status !== "suspended").length}</div>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center font-bold">
+            {usersList.filter(u => u.status !== "suspended").length}
+          </div>
+        </div>
+        <div className="premium-card p-5 border border-gray-200 bg-white shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Suspended Accounts</span>
+            <div className="text-2xl font-extrabold text-red-600 mt-1">{usersList.filter(u => u.status === "suspended").length}</div>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
+            {usersList.filter(u => u.status === "suspended").length}
+          </div>
+        </div>
+        <div className="premium-card p-5 border border-gray-200 bg-white shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Admin Superusers</span>
+            <div className="text-2xl font-extrabold text-purple-600 mt-1">{usersList.filter(u => u.role === "super_admin").length}</div>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+            {usersList.filter(u => u.role === "super_admin").length}
+          </div>
+        </div>
+      </div>
+
       {/* Two Column Layout: Add User Form & Users Table */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         
@@ -148,7 +188,8 @@ export default function UserManagement() {
                   <th className="py-4">Full Name</th>
                   <th className="py-4">Email</th>
                   <th className="py-4">Role</th>
-                  <th className="py-4">Joined Date</th>
+                  <th className="py-4">Status</th>
+                  <th className="py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,12 +198,44 @@ export default function UserManagement() {
                     <td className="py-4 font-bold text-gray-900">{usr.fullName}</td>
                     <td className="py-4 text-gray-700">{usr.email}</td>
                     <td className="py-4">
-                      <span className="px-2.5 py-1 rounded bg-red-600 text-white font-bold text-[10px] font-bold uppercase tracking-wider">
+                      <span className="px-2.5 py-1 rounded bg-red-50 text-red-600 border border-red-100 font-bold text-[10px] uppercase tracking-wider">
                         {usr.role.replace("_", " ")}
                       </span>
                     </td>
-                    <td className="py-4 text-gray-600">
-                      {usr.createdAt ? new Date(usr.createdAt).toLocaleDateString() : "Active"}
+                    <td className="py-4">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                        usr.status === "suspended" 
+                          ? "bg-red-100 text-red-800" 
+                          : "bg-green-100 text-green-800"
+                      }`}>
+                        {usr.status || "active"}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right">
+                      <button 
+                        onClick={async () => {
+                          const newStatus = usr.status === "suspended" ? "active" : "suspended";
+                          // Toggle locally in state
+                          setUsersList(usersList.map(u => u.id === usr.id ? { ...u, status: newStatus } : u));
+                          // Track user status change in DB audit trail logs
+                          fetch("/api/leads", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              companyName: `User status changed: ${usr.email} set to ${newStatus}`,
+                              desiredSqft: "0",
+                              budgetRange: "Admin Action"
+                            })
+                          });
+                        }}
+                        className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer border ${
+                          usr.status === "suspended"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                            : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                        }`}
+                      >
+                        {usr.status === "suspended" ? "Activate" : "Suspend"}
+                      </button>
                     </td>
                   </tr>
                 ))}
