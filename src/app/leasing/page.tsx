@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Building, 
   TrendingUp, 
@@ -64,13 +64,31 @@ export default function LeasingDashboard() {
     { id: 3, name: "Nexus Hub - Desk Space", type: "Coworking", area: "200 Desks", rate: "₹12,000/desk", status: "Vacant", address: "Hinjewadi, Pune" }
   ];
 
-  const leads = [
+  const defaultLeads = [
     { id: "L-089", company: "HCL Tech", contact: "Vikram Malhotra", area: "12,000 sq.ft", budget: "₹150-180/sq.ft", status: "Stale", date: "Aug 19, 2026" },
     { id: "L-091", company: "Jio Logistics", contact: "Aniket Shah", area: "25,000 sq.ft", budget: "₹110-130/sq.ft", status: "Viewing Properties", date: "Aug 22, 2026" },
     { id: "L-092", company: "Infosys Ltd", contact: "Meera Nair", area: "45,000 sq.ft", budget: "₹120-140/sq.ft", status: "Negotiating LOI", date: "Aug 23, 2026" },
     { id: "L-093", company: "Nykaa Retail Office", contact: "Deepika Sen", area: "8,000 sq.ft", budget: "₹170-190/sq.ft", status: "Hot Lead", date: "Aug 24, 2026" },
     { id: "L-094", company: "CRED HQ Space", contact: "Kunal Shah", area: "18,000 sq.ft", budget: "₹160-180/sq.ft", status: "Site Visit Scheduled", date: "Aug 25, 2026" }
   ];
+
+  const [leadsList, setLeadsList] = useState(defaultLeads);
+
+  useEffect(() => {
+    async function fetchLeads() {
+      try {
+        const res = await fetch("/api/leasing/leads");
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setLeadsList([...data, ...defaultLeads]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch leads", err);
+      }
+    }
+    fetchLeads();
+  }, []);
+
 
   const visits = [
     { id: "V-201", visitor: "Jio Logistics (Aniket Shah)", time: "11:30 AM", site: "Meridian Tech Park Block B", host: "Ravi Menon" },
@@ -398,7 +416,7 @@ export default function LeasingDashboard() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {leads.map(lead => (
+                {leadsList.map(lead => (
                   <div 
                     key={lead.id} 
                     onClick={() => {
