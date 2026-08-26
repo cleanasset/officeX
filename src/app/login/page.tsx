@@ -14,11 +14,11 @@ export default function LoginPage() {
 
   const demoAccounts = [
     { email: "admin@officex.in", label: "Super Admin", redirect: "/admin" },
-    { email: "rajesh@officex.in", label: "Property Manager", redirect: "/properties" },
-    { email: "ravi@officex.in", label: "Leasing Broker", redirect: "/leasing" },
-    { email: "vendor@techserve.in", label: "FM Vendor", redirect: "/vendor" },
-    { email: "tenant@tcs.com", label: "Tenant Admin", redirect: "/tenant" },
-    { email: "vijay@officex.in", label: "Facility Manager", redirect: "/ops" }
+    { email: "propertymanager@officex.in", label: "Property Manager", redirect: "/properties" },
+    { email: "broker@officex.in", label: "Leasing Broker", redirect: "/leasing" },
+    { email: "vendor@officex.in", label: "FM Vendor", redirect: "/vendor" },
+    { email: "tenant@officex.in", label: "Tenant Admin", redirect: "/tenant" },
+    { email: "facilitymanager@officex.in", label: "Facility Manager", redirect: "/ops" }
   ];
 
   const handleDemoLogin = (acc: typeof demoAccounts[0]) => {
@@ -84,7 +84,7 @@ export default function LoginPage() {
             <div className="relative">
               <input 
                 type="email" 
-                placeholder="e.g. rajesh@officex.in" 
+                placeholder="e.g. propertymanager@officex.in" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white transition-colors"

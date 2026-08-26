@@ -14,7 +14,7 @@ export default function RentRoll() {
       totalDue: "₹20,35,000",
       poc: "Priya Sharma",
       role: "Tenant Administrator",
-      email: "tenant@tcs.com",
+      email: "tenant@officex.in",
       phone: "+91 98765 43210",
       complianceRating: "98.5%"
     },

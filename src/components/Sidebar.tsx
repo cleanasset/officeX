@@ -1,6 +1,5 @@
 "use client";
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -45,7 +44,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "Lease Registry", href: "/leasing/registry", icon: FolderOpen },
       { name: "Commission Tracker", href: "/leasing/commissions", icon: DollarSign }
     ],
-    user: { name: "Ravi Menon", role: "Leasing Manager" }
+    user: { name: "Leasing Broker", role: "broker@officex.in" }
   },
   marketplace: {
     title: "FM Marketplace",
@@ -59,7 +58,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "Payments & Escrow", href: "/marketplace/payments", icon: DollarSign },
       { name: "Vendor Ratings", href: "/marketplace/ratings", icon: Sparkles }
     ],
-    user: { name: "Ramesh Kumar", role: "Procurement Lead" }
+    user: { name: "Property Manager", role: "propertymanager@officex.in" }
   },
   properties: {
     title: "Property SaaS",
@@ -72,7 +71,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
       { name: "Compliance Tracker", href: "/properties/compliance", icon: ShieldCheck }
     ],
-    user: { name: "Rajesh Kumar", role: "Property Manager" }
+    user: { name: "Property Manager", role: "propertymanager@officex.in" }
   },
   vendor: {
     title: "Vendor Hub",
@@ -84,7 +83,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "Invoices & Payouts", href: "/vendor/payouts", icon: DollarSign },
       { name: "Reviews & Ratings", href: "/vendor/reviews", icon: Sparkles }
     ],
-    user: { name: "TechServe Solutions", role: "Verified FM Contractor" }
+    user: { name: "FM Vendor", role: "vendor@officex.in" }
   },
   tenant: {
     title: "Tenant Portal",
@@ -97,7 +96,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "Visitors", href: "/tenant/visitors", icon: Users },
       { name: "Document Locker", href: "/tenant/documents", icon: FolderOpen }
     ],
-    user: { name: "Priya Sharma", role: "TCS Tenant Admin" }
+    user: { name: "Tenant Admin", role: "tenant@officex.in" }
   },
   admin: {
     title: "Admin Console",
@@ -111,7 +110,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "AI Config", href: "/admin/ai", icon: Sparkles },
       { name: "Audit Logs", href: "/admin/logs", icon: ClipboardList }
     ],
-    user: { name: "Amit Kumar", role: "Super Admin" }
+    user: { name: "Super Admin", role: "admin@officex.in" }
   },
   ops: {
     title: "Operations Hub",
@@ -125,7 +124,7 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "PPM Calendar", href: "/ops/ppm", icon: Calendar },
       { name: "Asset Registry", href: "/ops/assets", icon: Building }
     ],
-    user: { name: "Vijay Dev", role: "Facility Manager" }
+    user: { name: "Facility Manager", role: "facilitymanager@officex.in" }
   },
   reporting: {
     title: "Metrics Console",
@@ -137,20 +136,40 @@ const menuConfigs: Record<string, { title: string; accentColor: string; items: M
       { name: "Financial Reports", href: "/reporting/financials", icon: DollarSign },
       { name: "AI Summaries", href: "/reporting/ai", icon: Sparkles }
     ],
-    user: { name: "Amit Kumar", role: "Platform Auditor" }
+    user: { name: "Platform Auditor", role: "admin@officex.in" }
   }
 };
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleToggle = () => setIsOpen(prev => !prev);
+    window.addEventListener("officex-toggle-sidebar", handleToggle);
+    return () => window.removeEventListener("officex-toggle-sidebar", handleToggle);
+  }, []);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
   
   // Detect current portal module from pathname
   const portalKey = Object.keys(menuConfigs).find(key => pathname.startsWith(`/${key}`)) || "properties";
   const config = menuConfigs[portalKey];
 
   return (
-    <div className="w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0">
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          onClick={() => setIsOpen(false)} 
+          className="fixed inset-0 bg-black/30 backdrop-blur-xs z-25 md:hidden cursor-pointer"
+        />
+      )}
+
+      <div className={`w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0 transition-transform duration-200 md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
       
       {/* Top Brand Logo */}
       <div className="p-6 flex flex-col gap-4 border-b border-gray-200">
@@ -231,5 +250,6 @@ export default function Sidebar() {
       </div>
 
     </div>
+    </>
   );
 }

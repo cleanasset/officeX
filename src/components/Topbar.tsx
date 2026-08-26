@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bell, HelpCircle, Building, MapPin, ArrowRight } from "lucide-react";
+import { Search, Bell, HelpCircle, Building, MapPin, ArrowRight, Menu } from "lucide-react";
 
 export default function Topbar() {
   const pathname = usePathname();
@@ -68,11 +68,20 @@ export default function Topbar() {
   };
 
   return (
-    <header className="h-[60px] bg-white border-b border-gray-200 fixed top-0 right-0 left-[260px] z-20 px-8 flex items-center justify-between shadow-sm">
+    <header className="h-[60px] bg-white border-b border-gray-200 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-4 md:px-8 flex items-center justify-between shadow-sm">
       
-      {/* Left Breadcrumbs */}
-      <div className="text-xs font-bold text-gray-700 uppercase tracking-widest">
-        {formattedBreadcrumb || "Dashboard"}
+      {/* Left Breadcrumbs & Menu Toggle */}
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={() => window.dispatchEvent(new CustomEvent("officex-toggle-sidebar"))}
+          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-500 md:hidden cursor-pointer shadow-sm mr-1"
+          title="Toggle Navigation Menu"
+        >
+          <Menu size={16} />
+        </button>
+        <div className="text-xs font-bold text-gray-700 uppercase tracking-widest truncate max-w-[120px] sm:max-w-none">
+          {formattedBreadcrumb || "Dashboard"}
+        </div>
       </div>
 
       {/* Right Search, Notification and Avatar */}

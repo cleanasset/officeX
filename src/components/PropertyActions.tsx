@@ -130,7 +130,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
           </div>
           <div className="flex justify-between items-center">
             <span>Email</span>
-            <span className="font-bold text-gray-800">ravi@officex.in</span>
+            <span className="font-bold text-gray-800">broker@officex.in</span>
           </div>
         </div>
       </div>

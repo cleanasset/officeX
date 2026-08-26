@@ -13,7 +13,7 @@ export default function PortalLayout({
       <Sidebar />
       
       {/* Main Panel */}
-      <div className="flex-1 pl-[260px] flex flex-col">
+      <div className="flex-1 pl-0 md:pl-[260px] flex flex-col">
         {/* Top Header Bar */}
         <Topbar />
         
