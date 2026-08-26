@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -34,6 +34,22 @@ export async function POST(req: Request) {
     }).returning();
 
     return NextResponse.json(inserted[0]);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Property ID required" }, { status: 400 });
+    }
+
+    await db.delete(properties).where(eq(properties.id, id));
+    return NextResponse.json({ success: true, message: "Property listing deleted successfully" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

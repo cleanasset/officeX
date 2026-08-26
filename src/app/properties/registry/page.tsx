@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Building, MapPin, Plus, ArrowLeft, Check, Sparkles, Upload, Image as ImageIcon, Link as LinkIcon, X, Tag, ShieldCheck, Zap, Coffee, Wifi, Car, Trash2 } from "lucide-react";
+import { Building, MapPin, Plus, ArrowLeft, Check, Sparkles, Upload, Image as ImageIcon, Link as LinkIcon, X, Tag, ShieldCheck, Zap, Coffee, Wifi, Car, Trash2, AlertTriangle, Bell } from "lucide-react";
 
 export default function PropertyRegistry() {
   const [properties, setProperties] = useState<any[]>([]);
@@ -10,9 +10,19 @@ export default function PropertyRegistry() {
   const [customAmenityInput, setCustomAmenityInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Delete modal state
+  const [propertyToDelete, setPropertyToDelete] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // City Search Dropdown State
   const [citySearch, setCitySearch] = useState("");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const popularCities = [
     "Ahmedabad, Gujarat",
@@ -131,9 +141,11 @@ export default function PropertyRegistry() {
           id: p.id,
           name: p.name,
           type: p.type,
-          location: p.address + ", " + p.city,
+          location: (p.address ? p.address + ", " : "") + p.city,
+          city: p.city,
+          address: p.address,
           units: "Commercial Space",
-          area: parseFloat(p.totalArea).toLocaleString() + " sq.ft",
+          area: parseFloat(p.totalArea || "0").toLocaleString() + " sq.ft",
           owner: p.ownerCompany || "OfficeX Management",
           grade: p.grade,
           power: "100% Backup",
@@ -220,6 +232,7 @@ export default function PropertyRegistry() {
 
       if (res.ok) {
         await fetchProperties();
+        showToast(`Successfully published ${form.name || "Building Asset"} to marketplace registry!`);
       }
     } catch (err) {
       console.error("Error creating property:", err);
@@ -250,6 +263,29 @@ export default function PropertyRegistry() {
         "3-Tier 24/7 Security & CCTV"
       ]
     });
+  };
+
+  // Delete Listing Handler
+  const handleDeleteListing = async () => {
+    if (!propertyToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/properties?id=${propertyToDelete.id}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        setProperties(properties.filter(p => p.id !== propertyToDelete.id));
+        showToast(`Listing "${propertyToDelete.name}" has been permanently delisted and removed.`);
+      } else {
+        showToast("Error removing property listing. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error deleting property:", err);
+      showToast("Error removing property listing.");
+    } finally {
+      setIsDeleting(false);
+      setPropertyToDelete(null);
+    }
   };
 
   if (isAdding) {
@@ -910,7 +946,17 @@ export default function PropertyRegistry() {
   }
 
   return (
-    <div className="flex flex-col gap-8 font-sans">
+    <div className="flex flex-col gap-8 font-sans relative">
+      
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-bounce">
+          <Bell size={16} className="text-teal-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Property Registry</h1>
@@ -924,17 +970,23 @@ export default function PropertyRegistry() {
         </button>
       </div>
 
+      {/* Grid Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {properties.map((p) => (
-          <div key={p.id} className="premium-card border border-gray-200 bg-white flex flex-col justify-between hover:border-purple-300 transition-colors shadow-sm overflow-hidden rounded-2xl">
+          <div key={p.id} className="premium-card border border-gray-200 bg-white flex flex-col justify-between hover:border-purple-300 transition-all shadow-sm overflow-hidden rounded-2xl group">
             <div>
               {/* Building Image Banner */}
-              <div className="h-36 w-full relative overflow-hidden bg-gray-100 border-b border-gray-100">
+              <div className="h-40 w-full relative overflow-hidden bg-gray-100 border-b border-gray-100">
                 <img 
                   src={p.imageUrl} 
                   alt={p.name} 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[9px] font-extrabold uppercase tracking-wider shadow">
+                    Grade {p.grade}
+                  </span>
+                </div>
               </div>
               
               <div className="p-6">
@@ -943,22 +995,19 @@ export default function PropertyRegistry() {
                     <Building size={16} className="text-purple-600 animate-pulse-green" />
                     {p.name}
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded bg-purple-50 border border-purple-100 text-purple-600 text-[9px] font-extrabold uppercase tracking-wider">
-                    Grade {p.grade}
-                  </span>
                 </div>
-                <p className="text-xs text-gray-500 flex items-center gap-1 mt-2 font-medium">
-                  <MapPin size={12} className="text-gray-400" /> {p.location}
+                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1.5 font-medium">
+                  <MapPin size={12} className="text-gray-400 shrink-0" /> <span className="truncate">{p.location}</span>
                 </p>
                 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 text-[11px] border-t border-gray-50 pt-3">
-                  <div>
-                    <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Capacity</span>
-                    <span className="font-bold text-gray-800">{p.units}</span>
-                  </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mt-4 text-[11px] border-t border-gray-50 pt-3">
                   <div>
                     <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Total Area</span>
                     <span className="font-bold text-gray-800">{p.area}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Owner / Landlord</span>
+                    <span className="font-bold text-gray-800 truncate block">{p.owner}</span>
                   </div>
                   <div>
                     <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">HVAC System</span>
@@ -971,9 +1020,92 @@ export default function PropertyRegistry() {
                 </div>
               </div>
             </div>
+
+            {/* Card Actions: Delete / Delist Option */}
+            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+              <span className="text-[10px] text-emerald-600 font-extrabold uppercase tracking-wider flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                Active Listed
+              </span>
+              <button
+                type="button"
+                onClick={() => setPropertyToDelete(p)}
+                className="px-2.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors flex items-center gap-1 cursor-pointer"
+                title="Delete or delist this property listing"
+              >
+                <Trash2 size={12} />
+                <span>Delete Listing</span>
+              </button>
+            </div>
           </div>
         ))}
+
+        {properties.length === 0 && (
+          <div className="md:col-span-3 p-12 text-center border-2 border-dashed border-gray-200 rounded-3xl bg-white">
+            <Building size={48} className="text-gray-300 mx-auto mb-3" />
+            <h3 className="font-bold text-gray-900 text-sm">No Property Listings in Registry</h3>
+            <p className="text-xs text-gray-500 font-semibold mt-1">Click the "Add Property" button to list your first building asset.</p>
+          </div>
+        )}
       </div>
+
+      {/* CONFIRMATION MODAL: Delete Property Listing */}
+      {propertyToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 flex flex-col gap-6 shadow-2xl animate-scale-up border border-gray-100">
+            
+            {/* Modal Header */}
+            <div className="flex items-center gap-3.5 text-red-600">
+              <div className="p-3 bg-red-50 rounded-2xl border border-red-100 shrink-0">
+                <AlertTriangle size={24} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-gray-900 text-base">Delete & Delist Property</h3>
+                <span className="text-[11px] text-gray-500 font-semibold">Permanently remove asset from registry</span>
+              </div>
+            </div>
+
+            {/* Asset Info Card */}
+            <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-xs flex flex-col gap-1.5">
+              <div className="font-bold text-gray-900 text-sm">{propertyToDelete.name}</div>
+              <div className="text-gray-500 font-semibold flex items-center gap-1">
+                <MapPin size={12} className="text-gray-400" />
+                {propertyToDelete.location}
+              </div>
+              <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                Total Area: <strong className="text-gray-800">{propertyToDelete.area}</strong> • Grade {propertyToDelete.grade}
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed font-medium">
+              Are you sure you want to delist and delete this listing? It will be removed from marketplace search, rent collection roll, and broker pipeline views.
+            </p>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 justify-end border-t border-gray-100 pt-4">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPropertyToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteListing}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 size={14} />
+                {isDeleting ? "Delisting..." : "Confirm Delete Listing"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
