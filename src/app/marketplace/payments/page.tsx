@@ -26,7 +26,7 @@ export default function EscrowPayments() {
         </div>
 
         {/* Dynamic Platform Fee Configuration Box */}
-        <div className="flex items-center gap-4 bg-teal-50/50 p-4 rounded-xl border border-teal-100 max-w-sm">
+        <div className="flex items-center gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100 max-w-sm">
           <div className="flex-1">
             <span className="text-[10px] text-gray-500 font-bold block uppercase tracking-wider">Configure Platform Fee</span>
             <span className="text-[10px] text-gray-600 font-medium">Adjust the OfficeX marketplace commission dynamically.</span>
@@ -38,7 +38,7 @@ export default function EscrowPayments() {
               max="100" 
               value={commissionPct} 
               onChange={(e) => setCommissionPct(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-              className="w-16 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold focus:outline-none focus:border-[#0F8B7D] text-center"
+              className="w-16 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold focus:outline-none focus:border-[#2563EB] text-center"
             />
             <span className="text-xs font-bold text-gray-700">%</span>
           </div>
@@ -71,7 +71,7 @@ export default function EscrowPayments() {
 
               return (
                 <tr key={tx.id} className="border-b border-gray-200 text-xs hover:bg-gray-50/50">
-                  <td className="py-4 font-mono font-bold text-teal-600">{tx.id}</td>
+                  <td className="py-4 font-mono font-bold text-[#2563EB]">{tx.id}</td>
                   <td className="py-4 text-gray-900 font-bold">{tx.wo}</td>
                   <td className="py-4 text-gray-700 font-semibold">₹{tx.grossAmount.toLocaleString()}</td>
                   <td className="py-4 text-red-600 font-extrabold">₹{commissionVal.toLocaleString()}</td>
@@ -87,7 +87,7 @@ export default function EscrowPayments() {
                     {tx.status === "Held in Escrow" ? (
                       <button 
                         onClick={() => handleRelease(tx.id)}
-                        className="px-2.5 py-1.5 rounded-lg bg-teal-600 text-white font-bold text-[10px] hover:bg-teal-700 transition-colors flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg bg-teal-600 text-white font-bold text-[10px] hover:bg-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
                       >
                         Release Payout <ArrowUpRight size={10} />
                       </button>

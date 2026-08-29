@@ -13,7 +13,7 @@ export default async function AdminDashboard() {
 
   const modules = [
     { label: "User Management", desc: "Provision roles and security accounts", link: "/admin/users", icon: Users, color: "text-red-500 bg-red-50 border-red-100" },
-    { label: "RBAC Settings", desc: "Manage permissions access matrix", link: "/admin/rbac", icon: ShieldCheck, color: "text-teal-500 bg-teal-50 border-teal-100" },
+    { label: "RBAC Settings", desc: "Manage permissions access matrix", link: "/admin/rbac", icon: ShieldCheck, color: "text-teal-500 bg-blue-50 border-blue-100" },
     { label: "Vendor KYC", desc: "Verify GSTIN tax and licenses", link: "/admin/kyc", icon: UserCheck, color: "text-amber-500 bg-amber-50 border-amber-100" },
     { label: "Platform Settings", desc: "Adjust commission splits and regions", link: "/admin/settings", icon: Settings, color: "text-blue-500 bg-blue-50 border-blue-100" },
     { label: "AI Configuration", desc: "LLM parameters and observation gates", link: "/admin/ai", icon: Sparkles, color: "text-purple-500 bg-purple-50 border-purple-100" },

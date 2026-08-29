@@ -15,7 +15,7 @@ export default function RFQDirectory() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">RFQ Directory</h1>
           <p className="text-sm text-gray-600 font-bold mt-1">Browse, post, and track all Request for Quotations (RFQs) created for property services.</p>
         </div>
-        <button className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-md flex items-center gap-2">
+        <button className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-md flex items-center gap-2">
           <Plus size={14} /> Create RFQ
         </button>
       </div>
@@ -36,7 +36,7 @@ export default function RFQDirectory() {
             {rfqs.map((rfq) => (
               <tr key={rfq.id} className="border-b border-gray-200 text-xs hover:bg-gray-50/50">
                 <td className="py-4 font-bold text-gray-900 flex items-center gap-2">
-                  <FolderOpen size={14} className="text-teal-600" />
+                  <FolderOpen size={14} className="text-[#2563EB]" />
                   {rfq.title}
                 </td>
                 <td className="py-4 text-gray-700 font-semibold">{rfq.category}</td>

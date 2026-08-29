@@ -105,62 +105,62 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
     <div className="relative w-full">
       {/* Toast Alert */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-float bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-800 animate-fade-in">
           <CheckCircle size={16} className="text-emerald-400" />
           <span>{toast}</span>
         </div>
       )}
 
       {/* Broker Contact Card */}
-      <div className="premium-card p-5 border border-gray-200 bg-white flex flex-col gap-3.5 mb-4 shadow-sm">
-        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned Property Broker</h4>
+      <div className="p-5 rounded-2xl border border-slate-200 bg-white flex flex-col gap-3.5 mb-4 shadow-xs">
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assigned Property Broker</h4>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-extrabold text-sm border border-blue-200 shadow-inner">
             RM
           </div>
           <div>
-            <h5 className="font-extrabold text-gray-900 text-xs">Ravi Menon</h5>
-            <p className="text-[9px] font-bold text-[#0F8B7D] uppercase tracking-wider mt-0.5 font-sans">Leasing Director, OfficeX</p>
+            <h5 className="font-extrabold text-slate-900 text-xs">Ravi Menon</h5>
+            <p className="text-[9px] font-extrabold text-[#2563EB] uppercase tracking-wider mt-0.5 font-sans">Leasing Director, OfficeX</p>
           </div>
         </div>
-        <div className="flex flex-col gap-1.5 text-[10px] text-gray-600 border-t border-gray-50 pt-3">
+        <div className="flex flex-col gap-1.5 text-[10px] text-slate-600 border-t border-slate-50 pt-3 font-semibold">
           <div className="flex justify-between items-center">
             <span>Direct Phone</span>
-            <span className="font-bold text-gray-800">+91 98900 12345</span>
+            <span className="font-bold text-slate-800">+91 98900 12345</span>
           </div>
           <div className="flex justify-between items-center">
             <span>Email</span>
-            <span className="font-bold text-gray-800">broker@officex.in</span>
+            <span className="font-bold text-slate-800">broker@officex.in</span>
           </div>
         </div>
       </div>
 
       {/* Action Buttons Panel */}
-      <div className="premium-card p-6 border border-gray-200 bg-teal-50/50 flex flex-col gap-3">
+      <div className="p-6 rounded-2xl border border-slate-200 bg-blue-50/20 flex flex-col gap-3">
         <button 
           onClick={() => setShowProposalModal(true)}
-          className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
         >
           <FileText size={14} />
           Request Proposal
         </button>
         <button 
           onClick={() => setShowVisitModal(true)}
-          className="w-full py-2.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-750 font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
         >
           <Calendar size={14} />
           Request Site Visit
         </button>
-        <div className="grid grid-cols-2 gap-3 mt-1 text-center text-[10px] font-bold text-[#0F8B7D]">
+        <div className="grid grid-cols-2 gap-3 mt-1 text-center text-[10px] font-bold text-[#2563EB]">
           <button 
             onClick={() => showToast(`${propertyName} added to your comparisons matrix!`)}
-            className="py-2 border border-teal-200 rounded-lg hover:bg-teal-50 cursor-pointer"
+            className="py-2 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
           >
             Compare
           </button>
           <button 
             onClick={handleDownload}
-            className="py-2 border border-teal-200 rounded-lg hover:bg-teal-50 cursor-pointer flex items-center justify-center gap-1"
+            className="py-2 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer flex items-center justify-center gap-1"
           >
             <Download size={10} />
             Download Pack
@@ -170,36 +170,36 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
 
       {/* 1. Proposal Request Modal */}
       {showProposalModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl p-6 w-full max-w-md animate-scale-up">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
-              <h3 className="font-bold text-gray-900 text-sm">Request Space Proposal</h3>
-              <button onClick={() => setShowProposalModal(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl p-6 w-full max-w-md animate-scale-up">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+              <h3 className="font-extrabold text-slate-900 text-sm">Request Space Proposal</h3>
+              <button onClick={() => setShowProposalModal(false)} className="text-slate-400 hover:text-slate-650 cursor-pointer">
                 <X size={18} />
               </button>
             </div>
             
             <form onSubmit={handleProposalSubmit} className="flex flex-col gap-4">
-              <div className="text-xs text-gray-500 mb-2">
+              <div className="text-xs text-slate-500 mb-2 font-medium">
                 Submit your seat requirement for **{propertyName}** to auto-log a leasing lead.
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Company Name</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Company Name</label>
                 <input 
                   type="text" 
                   required
                   placeholder="e.g. Infy Labs Private Limited"
                   value={proposalForm.companyName}
                   onChange={(e) => setProposalForm({ ...proposalForm, companyName: e.target.value })}
-                  className="px-3.5 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-gray-900 font-medium"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Estimated Seats Needed</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Estimated Seats Needed</label>
                 <select 
                   value={proposalForm.seats}
                   onChange={(e) => setProposalForm({ ...proposalForm, seats: e.target.value })}
-                  className="px-3.5 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-gray-900 font-medium"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold cursor-pointer"
                 >
                   <option value="20">20 Seats (approx. 1,400 sq.ft)</option>
                   <option value="50">50 Seats (approx. 3,500 sq.ft)</option>
@@ -208,21 +208,21 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Contact Email</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Contact Email</label>
                 <input 
                   type="email" 
                   required
                   placeholder="e.g. admin@infylabs.com"
                   value={proposalForm.email}
                   onChange={(e) => setProposalForm({ ...proposalForm, email: e.target.value })}
-                  className="px-3.5 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-gray-900 font-medium"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold"
                 />
               </div>
               
               <button 
                 type="submit" 
                 disabled={isSubmittingProposal}
-                className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-semibold text-xs shadow-md transition-all mt-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all mt-2 cursor-pointer"
               >
                 {isSubmittingProposal ? "Submitting Request..." : "Submit Proposal Request"}
               </button>
@@ -233,35 +233,35 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
 
       {/* 2. Site Visit Modal */}
       {showVisitModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl p-6 w-full max-w-md animate-scale-up">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
-              <h3 className="font-bold text-gray-900 text-sm">Schedule Site Visit</h3>
-              <button onClick={() => setShowVisitModal(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl p-6 w-full max-w-md animate-scale-up">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+              <h3 className="font-extrabold text-slate-900 text-sm">Schedule Site Visit</h3>
+              <button onClick={() => setShowVisitModal(false)} className="text-slate-400 hover:text-slate-650 cursor-pointer">
                 <X size={18} />
               </button>
             </div>
             
             <form onSubmit={handleVisitSubmit} className="flex flex-col gap-4">
-              <div className="text-xs text-gray-500 mb-2">
+              <div className="text-xs text-slate-500 mb-2 font-medium">
                 Select a convenient date and time to inspect **{propertyName}** in person.
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Preferred Date</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Preferred Date</label>
                 <input 
                   type="date" 
                   required
                   value={visitDate}
                   onChange={(e) => setVisitDate(e.target.value)}
-                  className="px-3.5 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-gray-900 font-medium"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Preferred Time Slot</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Preferred Time Slot</label>
                 <select 
                   value={visitTime}
                   onChange={(e) => setVisitTime(e.target.value)}
-                  className="px-3.5 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-gray-900 font-medium"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold cursor-pointer"
                 >
                   <option value="10:00">10:00 AM - 11:30 AM</option>
                   <option value="11:30">11:30 AM - 01:00 PM</option>
@@ -273,7 +273,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
               <button 
                 type="submit" 
                 disabled={isSubmittingVisit}
-                className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-semibold text-xs shadow-md transition-all mt-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all mt-2 cursor-pointer"
               >
                 {isSubmittingVisit ? "Scheduling Visit..." : "Schedule Site Visit"}
               </button>

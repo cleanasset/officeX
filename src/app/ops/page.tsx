@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import { 
   Briefcase, 
@@ -18,7 +19,10 @@ import {
   AlertTriangle,
   FileText,
   UserCheck,
-  Send
+  Send,
+  HeartPulse,
+  Wrench,
+  Gauge
 } from "lucide-react";
 import Link from "next/link";
 
@@ -47,11 +51,11 @@ export default function OperationsDashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-8 relative">
+    <div className="flex flex-col gap-8 relative font-sans text-slate-900 bg-slate-50/20 p-2">
       
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-950 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-800 animate-fade-in">
           <CheckCircle size={16} className="text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
@@ -60,12 +64,12 @@ export default function OperationsDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">FM Command Centre</h1>
-          <p className="text-sm text-gray-600 font-bold mt-1">Real-time workplace health metrics, statutory alerts, and SLA dispatch trackers.</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">FM Command Centre</h1>
+          <p className="text-xs text-slate-500 font-bold mt-1">Real-time workplace health metrics, statutory compliance tracking, and operational exceptions.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/ops/ppm" className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow-md transition-colors flex items-center gap-2">
-            <Calendar size={15} /> PPM Calendar
+          <Link href="/ops/ppm" className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-2">
+            <Calendar size={14} /> PPM Calendar
           </Link>
         </div>
       </div>
@@ -73,88 +77,90 @@ export default function OperationsDashboard() {
       {/* WORKPLACE HEALTH COMMAND GAUGE */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Main Health Gauge */}
-        <div className="premium-card p-6 border border-gray-200 bg-white flex flex-col justify-between min-h-[180px]">
+        {/* Main Health Gauge (Redesigned to OFFICEX Blue) */}
+        <div className="p-6 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between min-h-[200px] shadow-xs">
           <div>
-            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-wider block">Primary Performance Index</span>
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">Workplace health index</span>
             <div className="flex items-baseline gap-2 mt-4">
-              <span className="text-5xl font-extrabold text-amber-600">91</span>
-              <span className="text-sm text-gray-400 font-semibold">/ 100</span>
+              <span className="text-5xl font-black text-[#2563EB]">91</span>
+              <span className="text-xs text-slate-400 font-bold">/ 100</span>
             </div>
-            <span className="text-[11px] text-gray-600 font-bold mt-2 block">WORKPLACE HEALTH SCORE</span>
+            <span className="text-xs font-extrabold text-slate-900 mt-2 flex items-center gap-1.5 uppercase tracking-wider">
+              <Gauge size={14} className="text-[#2563EB]" /> Overall Health Score
+            </span>
           </div>
-          <div className="w-full bg-gray-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-amber-600 h-full rounded-full" style={{ width: "91%" }}></div>
+          <div className="w-full bg-slate-100 h-2.5 rounded-full mt-4 overflow-hidden">
+            <div className="bg-[#2563EB] h-full rounded-full" style={{ width: "91%" }}></div>
           </div>
         </div>
 
         {/* Supporting Dimensions */}
-        <div className="premium-card p-6 border border-gray-200 bg-white md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-6 rounded-2xl border border-slate-200 bg-white md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-xs">
           <div 
-            onClick={() => showToast("Facility Index: 94% - All core HVAC, elevator, and MEP systems operating normally.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            onClick={() => showToast("Facility Index: 94% - Core HVAC, elevator, and MEP systems operating normally.")}
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Facility</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">94%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Facility</span>
+            <span className="text-lg font-black text-slate-900 mt-1">94%</span>
           </div>
           <div 
-            onClick={() => showToast("Asset Health: 97% - 48 of 49 registered assets in Grade-A operational state.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            onClick={() => showToast("Asset Health: 97% - 48 of 49 registered assets in operational state.")}
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Asset Health</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">97%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Asset Health</span>
+            <span className="text-lg font-black text-slate-900 mt-1">97%</span>
           </div>
           <div 
-            onClick={() => showToast("SLA Target: 96% - 24/25 incidents resolved within guaranteed response windows.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            onClick={() => showToast("SLA Target: 96% - 24/25 incidents resolved within response windows.")}
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">SLA Target</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">96%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">SLA Target</span>
+            <span className="text-lg font-black text-slate-900 mt-1">96%</span>
           </div>
           <div 
             onClick={() => showToast("Cleanliness Score: 94% - Housekeeping audit passed across all floors.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Cleanliness</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">94%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cleanliness</span>
+            <span className="text-lg font-black text-slate-900 mt-1">94%</span>
           </div>
           <div 
             onClick={() => showToast("Energy Efficiency: 87% - Power factor optimal at 0.98, chiller staging active.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Energy Eff.</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">87%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Energy Eff.</span>
+            <span className="text-lg font-black text-slate-900 mt-1">87%</span>
           </div>
           <div 
             onClick={() => showToast("Experience Score: 91% - Tenant satisfaction surveys rated 4.6/5 this month.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Experience</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">91%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Experience</span>
+            <span className="text-lg font-black text-slate-900 mt-1">91%</span>
           </div>
           <div 
-            onClick={() => showToast("Vendor Compliance: 93% - All vendor statutory insurances and PF/ESIC verified.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            onClick={() => showToast("Vendor Compliance: 93% - All vendor statutory insurances and labor licenses verified.")}
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Vendor Compliance</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">93%</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Vendor Comp.</span>
+            <span className="text-lg font-black text-slate-900 mt-1">93%</span>
           </div>
           <div 
-            onClick={() => showToast("Workplace Satisfaction: 4.5 / 5 - Aggregated from 120 tenant responses.")}
-            className="flex flex-col justify-center p-2 rounded-lg hover:bg-amber-50/50 cursor-pointer transition-colors"
+            onClick={() => showToast("Workplace Satisfaction: 4.5 / 5 - Aggregated from tenant responses.")}
+            className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
-            <span className="text-[10px] text-gray-500 font-bold uppercase">Workplace Sat</span>
-            <span className="text-lg font-bold text-gray-900 mt-1">4.5 / 5</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Tenant Sat</span>
+            <span className="text-lg font-black text-[#2563EB] mt-1">4.5 / 5</span>
           </div>
         </div>
 
       </div>
 
       {/* EXCEPTION MANAGEMENT: WHAT REQUIRES ATTENTION TODAY? */}
-      <div className="premium-card p-6 border border-gray-200 bg-red-50/50">
-        <h3 className="text-xs font-bold text-red-700 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-          <AlertOctagon size={16} className="text-red-600" />
-          Critical issues requiring attention today (Click to resolve)
+      <div className="p-6 rounded-2xl border border-red-200 bg-red-50/30">
+        <h3 className="text-xs font-black text-red-800 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+          <AlertOctagon size={16} className="text-red-650" />
+          Critical Operational Exceptions (Click to Resolve)
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
@@ -169,14 +175,14 @@ export default function OperationsDashboard() {
               property: "Crystal Tower (OMR Road, Chennai)",
               authority: "Tamil Nadu Fire & Rescue Services"
             })}
-            className="p-4 rounded-xl border border-red-200 bg-white flex flex-col justify-between min-h-[110px] shadow-sm hover:border-red-400 hover:shadow-md cursor-pointer transition-all"
+            className="p-4 rounded-xl border border-red-200 bg-white flex flex-col justify-between min-h-[120px] shadow-xs hover:border-red-400 hover:shadow-md cursor-pointer transition-all"
           >
             <div>
-              <span className="text-[9px] px-2 py-0.5 rounded bg-red-600 text-white font-bold uppercase inline-block">Statutory NOC</span>
-              <h4 className="text-xs font-bold text-gray-900 mt-2 hover:text-red-600">Crystal Tower Fire NOC Expired</h4>
+              <span className="text-[9px] px-2 py-0.5 rounded bg-red-600 text-white font-extrabold uppercase inline-block">Statutory NOC</span>
+              <h4 className="text-xs font-bold text-slate-900 mt-2.5">Crystal Tower Fire NOC Expired</h4>
             </div>
-            <span className="text-[10px] text-red-600 font-bold mt-2 flex items-center gap-1">
-              Action Required Immediately <ArrowRight size={10} />
+            <span className="text-[10px] text-red-600 font-extrabold mt-3 flex items-center gap-1">
+              Action Required <ArrowRight size={10} />
             </span>
           </div>
 
@@ -191,14 +197,14 @@ export default function OperationsDashboard() {
               property: "Meridian Tech Park - Block B",
               authority: "Precision Air Conditioning SLA"
             })}
-            className="p-4 rounded-xl border border-red-200 bg-white flex flex-col justify-between min-h-[110px] shadow-sm hover:border-red-400 hover:shadow-md cursor-pointer transition-all"
+            className="p-4 rounded-xl border border-red-200 bg-white flex flex-col justify-between min-h-[120px] shadow-xs hover:border-red-400 hover:shadow-md cursor-pointer transition-all"
           >
             <div>
-              <span className="text-[9px] px-2 py-0.5 rounded bg-red-600 text-white font-bold uppercase inline-block">SLA Breach Warning</span>
-              <h4 className="text-xs font-bold text-gray-900 mt-2 hover:text-red-600">Server Room Temp Alert breached by 7m</h4>
+              <span className="text-[9px] px-2 py-0.5 rounded bg-red-600 text-white font-extrabold uppercase inline-block">SLA Breach Warning</span>
+              <h4 className="text-xs font-bold text-slate-900 mt-2.5">Server Room Temp Alert breached by 7m</h4>
             </div>
-            <span className="text-[10px] text-red-600 font-bold mt-2 flex items-center gap-1">
-              Technician response overdue <ArrowRight size={10} />
+            <span className="text-[10px] text-red-600 font-extrabold mt-3 flex items-center gap-1">
+              Response Overdue <ArrowRight size={10} />
             </span>
           </div>
 
@@ -213,14 +219,14 @@ export default function OperationsDashboard() {
               property: "Apex Business Tower",
               authority: "NFPA-25 Compliance Routine"
             })}
-            className="p-4 rounded-xl border border-amber-200 bg-white flex flex-col justify-between min-h-[110px] shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition-all"
+            className="p-4 rounded-xl border border-amber-200 bg-white flex flex-col justify-between min-h-[120px] shadow-xs hover:border-amber-400 hover:shadow-md cursor-pointer transition-all"
           >
             <div>
-              <span className="text-[9px] px-2 py-0.5 rounded bg-amber-600 text-white font-bold uppercase inline-block">PPM Awaiting</span>
-              <h4 className="text-xs font-bold text-gray-900 mt-2 hover:text-amber-600">Kirloskar Sprinkler pump flow test</h4>
+              <span className="text-[9px] px-2 py-0.5 rounded bg-amber-600 text-white font-extrabold uppercase inline-block">PPM Awaiting</span>
+              <h4 className="text-xs font-bold text-slate-900 mt-2.5">Kirloskar Sprinkler pump flow test</h4>
             </div>
-            <span className="text-[10px] text-amber-600 font-bold mt-2 flex items-center gap-1">
-              Awaiting manager signoff <ArrowRight size={10} />
+            <span className="text-[10px] text-amber-600 font-extrabold mt-3 flex items-center gap-1">
+              Awaiting FM Signoff <ArrowRight size={10} />
             </span>
           </div>
         </div>
@@ -228,51 +234,51 @@ export default function OperationsDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        {/* Core Stats Overview (Interactive Cards with Links) */}
-        <div className="premium-card p-6 border border-gray-200 bg-white grid grid-cols-2 gap-6">
+        {/* Core Stats Overview (Unified blue colors) */}
+        <div className="grid grid-cols-2 gap-6 bg-white border border-slate-100 p-6 rounded-2xl shadow-xs">
           
-          <Link href="/ops/contracts" className="p-4 rounded-xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50/30 flex items-center justify-between cursor-pointer transition-all shadow-sm">
+          <Link href="/ops/contracts" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Managed Contracts</span>
-              <span className="text-2xl font-extrabold text-gray-900 block mt-2">5</span>
-              <span className="text-[10px] text-amber-600 font-bold mt-1 block">View Contracts →</span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Managed Contracts</span>
+              <span className="text-2xl font-black text-slate-900 block mt-2">5</span>
+              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">View Contracts →</span>
             </div>
-            <Briefcase size={24} className="text-amber-600" />
+            <Briefcase size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
           </Link>
 
-          <Link href="/ops/attendance" className="p-4 rounded-xl border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50/30 flex items-center justify-between cursor-pointer transition-all shadow-sm">
+          <Link href="/ops/attendance" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Shift Logs</span>
-              <span className="text-2xl font-extrabold text-gray-900 block mt-2">2 Active</span>
-              <span className="text-[10px] text-emerald-600 font-bold mt-1 block">Inspect Logs →</span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Active Shift Logs</span>
+              <span className="text-2xl font-black text-slate-900 block mt-2">2 Active</span>
+              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">Inspect Logs →</span>
             </div>
-            <ClipboardList size={24} className="text-emerald-600" />
+            <ClipboardList size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
           </Link>
 
-          <Link href="/ops/attendance" className="p-4 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50/30 flex items-center justify-between cursor-pointer transition-all shadow-sm">
+          <Link href="/ops/attendance" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Staff Attendance</span>
-              <span className="text-2xl font-extrabold text-gray-900 block mt-2">94%</span>
-              <span className="text-[10px] text-blue-600 font-bold mt-1 block">View Roster →</span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Staff Attendance</span>
+              <span className="text-2xl font-black text-slate-900 block mt-2">94%</span>
+              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">View Roster →</span>
             </div>
-            <Clock size={24} className="text-blue-600" />
+            <Clock size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
           </Link>
 
-          <Link href="/ops/ppm" className="p-4 rounded-xl border border-gray-100 hover:border-purple-300 hover:bg-purple-50/30 flex items-center justify-between cursor-pointer transition-all shadow-sm">
+          <Link href="/ops/ppm" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">PPM Tasks</span>
-              <span className="text-2xl font-extrabold text-gray-900 block mt-2">Week 34 Active</span>
-              <span className="text-[10px] text-purple-600 font-bold mt-1 block">Open Calendar →</span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">PPM Checklist</span>
+              <span className="text-2xl font-black text-slate-900 block mt-2">Week 34 Active</span>
+              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">Open Calendar →</span>
             </div>
-            <Calendar size={24} className="text-purple-600" />
+            <Calendar size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
           </Link>
         </div>
 
         {/* Shifts progress */}
-        <div className="premium-card p-6 border border-gray-200 bg-white flex flex-col justify-between">
+        <div className="p-6 rounded-2xl border border-slate-100 bg-white shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="text-base font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <ClipboardList size={18} className="text-amber-600" />
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <ClipboardList size={18} className="text-[#2563EB]" />
               Shift Logs Progress (Click to inspect)
             </h3>
             <div className="flex flex-col gap-4">
@@ -291,13 +297,13 @@ export default function OperationsDashboard() {
                     { name: "Fresh water hydro-pneumatic pressure at 4.2 bar", done: true }
                   ]
                 })}
-                className="p-4 rounded-xl border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50/20 flex justify-between items-center text-xs cursor-pointer transition-all shadow-sm"
+                className="p-4 rounded-xl border border-slate-150 hover:border-blue-300 hover:bg-blue-50/10 flex justify-between items-center text-xs cursor-pointer transition-all shadow-xs"
               >
                 <div>
-                  <div className="font-bold text-gray-900 hover:text-emerald-700">Morning Shift Logger Checklist</div>
-                  <div className="text-gray-600 font-semibold mt-1">Lobby checks, generator health, lift operations verified.</div>
+                  <div className="font-extrabold text-slate-900">Morning Shift Logger Checklist</div>
+                  <div className="text-slate-500 font-semibold mt-1">Lobby checks, generator health, lift operations verified.</div>
                 </div>
-                <span className="px-2.5 py-1 rounded bg-emerald-600 text-white font-bold uppercase text-[10px]">Logged</span>
+                <span className="px-2.5 py-1 rounded bg-[#2563EB] text-white font-extrabold uppercase text-[10px]">Logged</span>
               </div>
 
               {/* Log 2 */}
@@ -314,16 +320,16 @@ export default function OperationsDashboard() {
                     { name: "Fire panel master control status confirmed normal", done: nightLogSubmitted }
                   ]
                 })}
-                className="p-4 rounded-xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50/20 flex justify-between items-center text-xs cursor-pointer transition-all shadow-sm"
+                className="p-4 rounded-xl border border-slate-150 hover:border-blue-300 hover:bg-blue-50/10 flex justify-between items-center text-xs cursor-pointer transition-all shadow-xs"
               >
                 <div>
-                  <div className="font-bold text-gray-900 hover:text-amber-700">Night Patrol Log</div>
-                  <div className="text-gray-600 font-semibold mt-1">
+                  <div className="font-extrabold text-slate-900">Night Patrol Log</div>
+                  <div className="text-slate-500 font-semibold mt-1">
                     {nightLogSubmitted ? "Night patrol checks verified and signed off." : "Due for submission at 11:30 PM."}
                   </div>
                 </div>
-                <span className={`px-2.5 py-1 rounded text-white font-bold uppercase text-[10px] ${
-                  nightLogSubmitted ? "bg-emerald-600" : "bg-amber-600"
+                <span className={`px-2.5 py-1 rounded text-white font-extrabold uppercase text-[10px] ${
+                  nightLogSubmitted ? "bg-emerald-600" : "bg-blue-650 bg-amber-600"
                 }`}>
                   {nightLogSubmitted ? "Logged" : "Awaiting"}
                 </span>
@@ -336,55 +342,55 @@ export default function OperationsDashboard() {
 
       {/* MODAL 1: Issue Resolution Drawer */}
       {selectedIssue && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex justify-end z-50 animate-fade-in">
           <div className="w-full max-w-md bg-white h-screen p-8 flex flex-col justify-between shadow-2xl animate-slide-in">
             <div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
                 <div>
-                  <span className="text-[9px] font-extrabold px-2 py-0.5 rounded bg-red-50 text-red-600 uppercase tracking-wider">
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded bg-red-50 text-red-650 uppercase tracking-wider">
                     {selectedIssue.type}
                   </span>
-                  <h3 className="font-extrabold text-gray-900 text-base mt-2">{selectedIssue.title}</h3>
+                  <h3 className="font-black text-slate-900 text-sm mt-2">{selectedIssue.title}</h3>
                 </div>
                 <button 
                   onClick={() => setSelectedIssue(null)}
-                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-650 cursor-pointer"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="flex flex-col gap-5 text-xs text-gray-700">
-                <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Building Asset</span>
-                  <span className="font-bold text-gray-900">{selectedIssue.property}</span>
+              <div className="flex flex-col gap-5 text-xs text-slate-700 font-semibold">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Building Asset</span>
+                  <span className="font-bold text-slate-900">{selectedIssue.property}</span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Governing Authority / SLA</span>
-                  <span className="font-bold text-gray-900">{selectedIssue.authority}</span>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Governing Authority / SLA</span>
+                  <span className="font-bold text-slate-900">{selectedIssue.authority}</span>
                 </div>
 
                 <div>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Incident Summary</span>
-                  <p className="p-3.5 rounded-xl bg-red-50/40 border border-red-100 text-gray-800 leading-relaxed">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Incident Summary</span>
+                  <p className="p-3.5 rounded-xl bg-red-50/30 border border-red-100 text-slate-800 leading-relaxed font-semibold">
                     {selectedIssue.desc}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-5 flex flex-col gap-3">
+            <div className="border-t border-slate-100 pt-5 flex flex-col gap-3">
               <button 
                 onClick={() => handleResolveIssue(selectedIssue.title, selectedIssue.actionName)}
-                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <CheckCircle size={15} />
                 {selectedIssue.actionName}
               </button>
               <button 
                 onClick={() => setSelectedIssue(null)}
-                className="w-full py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 font-bold text-xs cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs cursor-pointer"
               >
                 Close
               </button>
@@ -395,43 +401,43 @@ export default function OperationsDashboard() {
 
       {/* MODAL 2: Shift Log Checklist Drawer */}
       {selectedShiftLog && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex justify-end z-50 animate-fade-in">
           <div className="w-full max-w-md bg-white h-screen p-8 flex flex-col justify-between shadow-2xl animate-slide-in">
             <div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
                 <div>
-                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
                     selectedShiftLog.status === "LOGGED" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
                   }`}>
                     {selectedShiftLog.status} SHIFT
                   </span>
-                  <h3 className="font-extrabold text-gray-900 text-base mt-2">{selectedShiftLog.title}</h3>
+                  <h3 className="font-black text-slate-900 text-sm mt-2">{selectedShiftLog.title}</h3>
                 </div>
                 <button 
                   onClick={() => setSelectedShiftLog(null)}
-                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-650 cursor-pointer"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="flex flex-col gap-4 text-xs">
-                <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
-                  <span className="text-gray-500 font-semibold">Shift Window:</span>
-                  <span className="font-bold text-gray-900">{selectedShiftLog.time}</span>
+              <div className="flex flex-col gap-4 text-xs font-semibold">
+                <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500">Shift Window:</span>
+                  <span className="font-bold text-slate-900">{selectedShiftLog.time}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
-                  <span className="text-gray-500 font-semibold">Shift Lead:</span>
-                  <span className="font-bold text-gray-900">{selectedShiftLog.lead}</span>
+                <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-500">Shift Lead:</span>
+                  <span className="font-bold text-slate-900">{selectedShiftLog.lead}</span>
                 </div>
 
                 <div className="mt-2">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Audit Checkpoints</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">Audit Checkpoints</span>
                   <div className="flex flex-col gap-2.5">
                     {selectedShiftLog.items.map((item: any, idx: number) => (
-                      <div key={idx} className="flex items-start gap-2.5 p-3 rounded-xl border border-gray-100 bg-gray-50/50">
-                        <CheckCircle size={15} className={item.done ? "text-emerald-600 mt-0.5" : "text-gray-300 mt-0.5"} />
-                        <span className={`font-semibold ${item.done ? "text-gray-900" : "text-gray-500"}`}>
+                      <div key={idx} className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                        <CheckCircle size={15} className={item.done ? "text-emerald-600 mt-0.5" : "text-slate-350 mt-0.5"} />
+                        <span className={item.done ? "text-slate-900" : "text-slate-400"}>
                           {item.name}
                         </span>
                       </div>
@@ -441,17 +447,17 @@ export default function OperationsDashboard() {
 
                 {selectedShiftLog.status === "AWAITING" && (
                   <form onSubmit={handleNightLogSubmit} className="flex flex-col gap-3 mt-3">
-                    <label className="text-[10px] text-gray-400 font-bold uppercase">Supervisor Signoff Notes</label>
+                    <label className="text-[10px] text-slate-400 font-bold uppercase">Supervisor Signoff Notes</label>
                     <textarea 
                       rows={2}
                       placeholder="e.g. All physical checks completed. Verified perimeter alarm."
                       value={nightLogNotes}
                       onChange={(e) => setNightLogNotes(e.target.value)}
-                      className="p-3 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-amber-600 resize-none font-medium"
+                      className="p-3 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] resize-none font-semibold text-slate-800"
                     />
                     <button 
                       type="submit"
-                      className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Send size={14} /> Submit & Sign Off Night Log
                     </button>
@@ -460,10 +466,10 @@ export default function OperationsDashboard() {
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-slate-100 pt-4">
               <button 
                 onClick={() => setSelectedShiftLog(null)}
-                className="w-full py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 font-bold text-xs cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 font-bold text-xs cursor-pointer"
               >
                 Close
               </button>

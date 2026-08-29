@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local specs, scratch assets & parsed texts
+/client response/
+/documents/
+/scratch/
+/*.txt
+/rent_roll_spec.txt
+/visitor_compliance_spec.txt
+/common_platform_spec.txt
+/blueprint.txt
+/OFFICEX_Figma_Design_Review_Gap_Analysis.xlsx.txt

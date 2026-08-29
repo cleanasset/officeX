@@ -62,7 +62,7 @@ export default function AIConfiguration() {
             </select>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl border border-teal-100 bg-teal-50/50">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-blue-100 bg-blue-50/50">
             <div className="flex flex-col">
               <span className="text-xs font-bold text-gray-900">Shadow Mode</span>
               <span className="text-[10px] text-gray-600 mt-0.5">Observe & log predictions silently.</span>
@@ -71,7 +71,7 @@ export default function AIConfiguration() {
               type="checkbox" 
               checked={observationMode}
               onChange={(e) => setObservationMode(e.target.checked)}
-              className="w-4 h-4 text-primary-teal focus:ring-primary-teal border-gray-300 rounded"
+              className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB] border-gray-300 rounded"
             />
           </div>
         </div>

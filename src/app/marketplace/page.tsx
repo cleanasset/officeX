@@ -67,7 +67,7 @@ export default function MarketplaceDashboard() {
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-bounce">
-          <CheckCircle size={16} className="text-[#0F8B7D]" />
+          <CheckCircle size={16} className="text-[#2563EB]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -79,7 +79,7 @@ export default function MarketplaceDashboard() {
           <p className="text-sm text-gray-500 font-semibold mt-1">Vendor bidding, quotation comparisons, and escrow payouts.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/marketplace/rfq" className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-1.5">
+          <Link href="/marketplace/rfq" className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-1.5">
             Post New RFQ
           </Link>
         </div>
@@ -91,14 +91,14 @@ export default function MarketplaceDashboard() {
         {/* KPI 1: Active RFQs */}
         <div 
           onClick={() => setSelectedKpi("rfqs")}
-          className="premium-card p-6 border border-gray-200 hover:border-teal-300 hover:bg-teal-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
+          className="premium-card p-6 border border-gray-200 hover:border-blue-350 bg-blue-50 hover:bg-blue-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Active RFQs</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-teal-700">{activeRfqs.length}</div>
-            <span className="text-[10px] text-[#0F8B7D] font-bold mt-1 block">🟢 Open for Bidding →</span>
+            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#2563EB]">{activeRfqs.length}</div>
+            <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">🟢 Open for Bidding →</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] group-hover:scale-110 transition-transform">
             <Layers size={22} />
           </div>
         </div>
@@ -106,12 +106,12 @@ export default function MarketplaceDashboard() {
         {/* KPI 2: Bids Received */}
         <div 
           onClick={() => setSelectedKpi("bids")}
-          className="premium-card p-6 border border-gray-200 hover:border-teal-300 hover:bg-teal-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
+          className="premium-card p-6 border border-gray-200 hover:border-blue-350 bg-blue-50 hover:bg-blue-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Bids Received</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-teal-700">{recentQuotes.length}</div>
-            <span className="text-[10px] text-teal-600 font-bold mt-1 block">5 new quotes today →</span>
+            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#2563EB]">{recentQuotes.length}</div>
+            <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">5 new quotes today →</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
             <FileText size={22} />
@@ -121,12 +121,12 @@ export default function MarketplaceDashboard() {
         {/* KPI 3: Active Orders */}
         <div 
           onClick={() => setSelectedKpi("orders")}
-          className="premium-card p-6 border border-gray-200 hover:border-teal-300 hover:bg-teal-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
+          className="premium-card p-6 border border-gray-200 hover:border-blue-350 bg-blue-50 hover:bg-blue-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Active Orders</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-teal-700">{activeOrders.length}</div>
-            <span className="text-[10px] text-teal-600 font-bold mt-1 block">100% SLA compliant →</span>
+            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#2563EB]">{activeOrders.length}</div>
+            <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">100% SLA compliant →</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
             <ClipboardList size={22} />
@@ -136,11 +136,11 @@ export default function MarketplaceDashboard() {
         {/* KPI 4: Escrow Balance */}
         <div 
           onClick={() => setSelectedKpi("escrow")}
-          className="premium-card p-6 border border-gray-200 hover:border-teal-300 hover:bg-teal-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
+          className="premium-card p-6 border border-gray-200 hover:border-blue-350 bg-blue-50 hover:bg-blue-50/10 flex items-center justify-between bg-white cursor-pointer transition-all shadow-sm group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Escrow Balance</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-teal-700">₹4.2L</div>
+            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#2563EB]">₹4.2L</div>
             <span className="text-[10px] text-emerald-600 font-bold mt-1 block">Razorpay Escrow Secure →</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
@@ -153,7 +153,7 @@ export default function MarketplaceDashboard() {
       {/* RFQ Bidding Pipelines Table */}
       <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
         <h3 className="text-base font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <Layers size={18} className="text-[#0F8B7D]" />
+          <Layers size={18} className="text-[#2563EB]" />
           Recent Bidding Pipelines (Click row to compare bids side-by-side)
         </h3>
         <div className="overflow-x-auto">
@@ -175,8 +175,8 @@ export default function MarketplaceDashboard() {
                   onClick={() => setSelectedCompareRfq(rfq)}
                   className="border-b border-gray-100 text-xs hover:bg-[#F0FDFA]/40 transition-colors cursor-pointer group"
                 >
-                  <td className="py-4 font-mono font-bold text-[#0F8B7D]">{rfq.id}</td>
-                  <td className="py-4 font-bold text-gray-900 group-hover:text-[#0F8B7D]">{rfq.title}</td>
+                  <td className="py-4 font-mono font-bold text-[#2563EB]">{rfq.id}</td>
+                  <td className="py-4 font-bold text-gray-900 group-hover:text-[#2563EB]">{rfq.title}</td>
                   <td className="py-4 text-gray-600 font-semibold">{rfq.category}</td>
                   <td className="py-4 text-gray-600 font-semibold">{rfq.manpower}</td>
                   <td className="py-4 text-gray-400 font-semibold">{rfq.deadline}</td>
@@ -186,7 +186,7 @@ export default function MarketplaceDashboard() {
                         e.stopPropagation();
                         setSelectedCompareRfq(rfq);
                       }}
-                      className="px-3.5 py-1.5 rounded-lg border border-teal-200 text-[#0F8B7D] hover:bg-teal-50 font-bold text-[10px] uppercase cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-lg border border-blue-200 text-[#2563EB] hover:bg-blue-50 font-bold text-[10px] uppercase cursor-pointer"
                     >
                       Compare Bids
                     </button>
@@ -206,7 +206,7 @@ export default function MarketplaceDashboard() {
               <div className="flex justify-between items-center border-b border-gray-100 pb-5 mb-6">
                 <div>
                   <h3 className="font-extrabold text-gray-900 text-base capitalize">{selectedKpi} List</h3>
-                  <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider">FM Marketplace</span>
+                  <span className="text-[10px] text-[#2563EB] font-bold uppercase tracking-wider">FM Marketplace</span>
                 </div>
                 <button 
                   onClick={() => setSelectedKpi(null)}
@@ -223,7 +223,7 @@ export default function MarketplaceDashboard() {
                     <div key={r.id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-xs">
                       <div className="flex justify-between items-center">
                         <strong className="text-gray-900">{r.title}</strong>
-                        <span className="px-2 py-0.5 rounded bg-teal-50 text-teal-700 font-bold text-[9px] uppercase">{r.status}</span>
+                        <span className="px-2 py-0.5 rounded bg-blue-50 text-[#2563EB] font-bold text-[9px] uppercase">{r.status}</span>
                       </div>
                       <span className="text-[10px] text-gray-400 block mt-1">ID: {r.id} • Posted: {r.posted}</span>
                     </div>
@@ -241,9 +241,9 @@ export default function MarketplaceDashboard() {
                           <span className="font-extrabold text-gray-900 block">{q.vendor}</span>
                           <span className="text-[10px] text-gray-400">{q.rfqTitle}</span>
                         </div>
-                        <span className="text-sm font-extrabold text-teal-600">{q.bid}</span>
+                        <span className="text-sm font-extrabold text-[#2563EB]">{q.bid}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[10px] bg-teal-50 text-[#0F8B7D] px-2.5 py-1 rounded-lg border border-teal-100 w-fit">
+                      <div className="flex items-center gap-1.5 text-[10px] bg-blue-50 text-[#2563EB] px-2.5 py-1 rounded-lg border border-blue-100 w-fit">
                         <Sparkles size={11} /> OFFICEX Vendor Score: <strong className="text-sm ml-0.5">{q.score}/100</strong>
                       </div>
                     </div>
@@ -307,7 +307,7 @@ export default function MarketplaceDashboard() {
             {/* Modal Header */}
             <div className="flex justify-between items-center border-b border-gray-100 pb-4">
               <div>
-                <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-wider">Side-by-Side Quote Evaluation</span>
+                <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider">Side-by-Side Quote Evaluation</span>
                 <h3 className="font-extrabold text-gray-900 text-base mt-0.5">Compare Bids: {selectedCompareRfq.title}</h3>
               </div>
               <button 
@@ -339,14 +339,14 @@ export default function MarketplaceDashboard() {
               </div>
 
               {/* Vendor Option 1 */}
-              <div className="p-5 rounded-2xl border border-teal-200 bg-teal-50/10 flex flex-col justify-between min-h-[300px]">
+              <div className="p-5 rounded-2xl border border-blue-200 bg-blue-50/10 flex flex-col justify-between min-h-[300px]">
                 <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-start border-b border-teal-100 pb-3">
+                  <div className="flex justify-between items-start border-b border-blue-100 pb-3">
                     <div>
                       <h4 className="font-extrabold text-gray-900 text-sm">TechServe Solutions</h4>
-                      <span className="text-[10px] text-[#0F8B7D] font-bold block mt-0.5">BEE Certified HVAC</span>
+                      <span className="text-[10px] text-[#2563EB] font-bold block mt-0.5">BEE Certified HVAC</span>
                     </div>
-                    <span className="px-2.5 py-1 rounded bg-[#0F8B7D] text-white font-extrabold text-[10px]">91 Score</span>
+                    <span className="px-2.5 py-1 rounded bg-[#2563EB] text-white font-extrabold text-[10px]">91 Score</span>
                   </div>
 
                   {/* Criteria Scores */}
@@ -358,7 +358,7 @@ export default function MarketplaceDashboard() {
                     <div className="flex justify-between"><span>Compliance (10%)</span><span className="text-gray-900 font-bold">90/100</span></div>
                   </div>
 
-                  <div className="mt-2 text-center bg-white p-3 rounded-xl border border-teal-100 shadow-sm">
+                  <div className="mt-2 text-center bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
                     <span className="text-[10px] text-gray-400 font-bold uppercase block">Quoted Price Bid</span>
                     <span className="text-lg font-black text-emerald-600">₹1,40,000</span>
                   </div>
@@ -366,7 +366,7 @@ export default function MarketplaceDashboard() {
 
                 <button 
                   onClick={() => handleAwardBid("TechServe Solutions", selectedCompareRfq.title)}
-                  className="w-full mt-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-extrabold text-xs shadow-md transition-colors cursor-pointer"
+                  className="w-full mt-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-colors cursor-pointer"
                 >
                   Award Contract (TechServe)
                 </button>

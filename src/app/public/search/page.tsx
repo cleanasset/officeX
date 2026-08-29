@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Building, MapPin, X, Navigation, ArrowLeft } from "lucide-react";
+import { Search, Building, MapPin, X, Navigation, ArrowLeft, SlidersHorizontal, Star } from "lucide-react";
 
 export default function PublicSearch() {
   const [query, setQuery] = useState("");
@@ -11,9 +11,11 @@ export default function PublicSearch() {
   const [mapQuery, setMapQuery] = useState("India");
   const [properties, setProperties] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [readinessFilter, setReadinessFilter] = useState("ALL");
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Local suggestions mock to match exact user searches from mobile
+  // Local suggestions mock to match exact user searches
   const localMockSuggestions = [
     { display_name: "DEVASYA GOLD PLUS, New India Colony, Nikol, Ahmedabad", lat: "23.047863", lon: "72.678411" },
     { display_name: "Devasya Gold, Devasya Rd, Gandhinagar, Gujarat", lat: "23.192534", lon: "72.648352" },
@@ -27,13 +29,17 @@ export default function PublicSearch() {
         const res = await fetch("/api/properties");
         const data = await res.json();
         if (Array.isArray(data)) {
+          // Pre-populate with mock scores and readiness
           const formatted = data.map((p: any) => ({
             id: p.id,
             name: p.name,
             city: p.city,
             address: p.address,
             area: parseFloat(p.totalArea).toLocaleString() + " sqft",
-            rent: "₹1,05,000/mo"
+            rent: "₹1,05,000/mo",
+            grade: p.grade || "A",
+            score: p.name.includes("Apex") ? 86 : p.name.includes("Meridian") ? 89 : 82,
+            readiness: p.name.includes("Apex") ? "Ready to Move" : "Under Fit-out"
           }));
           setProperties(formatted);
         }
@@ -63,26 +69,22 @@ export default function PublicSearch() {
     }
 
     const delayDebounce = setTimeout(async () => {
-      // Find matches in local mocks first
       const matches = localMockSuggestions.filter(item => 
         item.display_name.toLowerCase().includes(query.toLowerCase())
       );
 
       try {
-        // Fetch from OSM Nominatim search API for real-time global autocomplete suggestions
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=4`, {
           headers: { "Accept-Language": "en" }
         });
         const data = await res.json();
         
-        // Merge lists, keeping local overrides on top
         const merged = [...matches, ...data.map((item: any) => ({
           display_name: item.display_name,
           lat: item.lat,
           lon: item.lon
         }))];
 
-        // Deduplicate
         const unique = merged.filter((v, i, a) => a.findIndex(t => t.display_name === v.display_name) === i);
         setSuggestions(unique);
       } catch (err) {
@@ -93,7 +95,7 @@ export default function PublicSearch() {
     return () => clearTimeout(delayDebounce);
   }, [query]);
 
-  // Click outside listener to hide suggestions list
+  // Click outside listener to hide suggestions
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -116,27 +118,41 @@ export default function PublicSearch() {
     setShowSuggestions(false);
   };
 
-  // Filter local listings based on search text (robust multi-word & trimmed matching)
+  // Filter listings based on text + grade + readiness filters
   const filteredProperties = properties.filter(p => {
+    // 1. Text filter
     const q = query.trim().toLowerCase();
-    if (!q) return true; // Show all listings if search is empty
-    
-    // Split by spaces and commas, filter out short connector words
-    const searchTerms = q.split(/[\s,]+/).filter(t => t.length > 2);
-    if (searchTerms.length === 0) return true;
+    let textMatches = true;
+    if (q) {
+      const searchTerms = q.split(/[\s,]+/).filter(t => t.length > 2);
+      if (searchTerms.length > 0) {
+        textMatches = searchTerms.some(term => 
+          p.name.toLowerCase().includes(term) ||
+          p.address.toLowerCase().includes(term) ||
+          p.city.toLowerCase().includes(term)
+        );
+      }
+    }
 
-    // Match if any of the significant search terms exists in name, address, or city
-    return searchTerms.some(term => 
-      p.name.toLowerCase().includes(term) ||
-      p.address.toLowerCase().includes(term) ||
-      p.city.toLowerCase().includes(term)
-    );
+    // 2. Grade filter
+    let gradeMatches = true;
+    if (gradeFilter !== "ALL") {
+      gradeMatches = p.grade === gradeFilter;
+    }
+
+    // 3. Readiness filter
+    let readinessMatches = true;
+    if (readinessFilter !== "ALL") {
+      readinessMatches = p.readiness === readinessFilter;
+    }
+
+    return textMatches && gradeMatches && readinessMatches;
   });
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden font-sans bg-gray-100 flex flex-col">
+    <div className="relative w-screen h-screen overflow-hidden font-sans bg-slate-100 flex flex-col">
       
-      {/* Real Google Maps background filling the screen */}
+      {/* Real Maps background filling the screen */}
       <div className="absolute inset-0 z-0">
         <iframe
           title="Google Map Search"
@@ -150,14 +166,14 @@ export default function PublicSearch() {
         />
       </div>
 
-      {/* Floating Header & Search Control Overlay */}
-      <div className="absolute top-6 left-6 z-10 w-full max-w-[400px] flex flex-col gap-3" ref={searchRef}>
+      {/* Floating Header & Search Control Overlay (OFFICEX Blue theme) */}
+      <div className="absolute top-6 left-6 z-10 w-full max-w-[420px] flex flex-col gap-3" ref={searchRef}>
         
         {/* Floating Search Box */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-3 flex flex-col gap-2">
+        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 flex flex-col gap-3">
           
           <div className="flex items-center gap-3">
-            <Link href="/" className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
+            <Link href="/" className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
               <ArrowLeft size={18} />
             </Link>
             <form onSubmit={handleSearchSubmit} className="flex-1 relative flex items-center">
@@ -169,10 +185,10 @@ export default function PublicSearch() {
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Search Google Maps location..."
-                className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-teal-600 text-xs bg-gray-50/50"
+                placeholder="Search location (e.g. BKC, Hinjewadi)..."
+                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs font-semibold bg-slate-50/50"
               />
-              <Search size={14} className="absolute left-3 text-gray-400" />
+              <Search size={14} className="absolute left-3 text-slate-400" />
               {query && (
                 <button
                   type="button"
@@ -180,7 +196,7 @@ export default function PublicSearch() {
                     setQuery("");
                     setSuggestions([]);
                   }}
-                  className="absolute right-3 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 text-slate-400 hover:text-slate-650"
                 >
                   <X size={14} />
                 </button>
@@ -188,64 +204,104 @@ export default function PublicSearch() {
             </form>
           </div>
 
-          {/* Autocomplete Suggestions list (appears as you type) */}
+          {/* Autocomplete Suggestions list */}
           {showSuggestions && suggestions.length > 0 && (
-            <div className="mt-2 border-t border-gray-100 pt-2 flex flex-col max-h-[220px] overflow-y-auto">
+            <div className="border-t border-slate-100 pt-2 flex flex-col max-h-[220px] overflow-y-auto">
               {suggestions.map((loc, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSelectSuggestion(loc)}
-                  className="w-full text-left px-3 py-2.5 hover:bg-gray-50 rounded-lg text-xs font-semibold text-gray-700 flex items-start gap-2 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 flex items-start gap-2 transition-colors cursor-pointer"
                 >
-                  <MapPin size={14} className="text-teal-600 shrink-0 mt-0.5" />
+                  <MapPin size={14} className="text-[#2563EB] shrink-0 mt-0.5" />
                   <span className="truncate">{loc.display_name}</span>
                 </button>
               ))}
             </div>
           )}
+
+          {/* Responsive Advanced Filters Row */}
+          <div className="flex gap-2 border-t border-slate-100 pt-3">
+            <div className="flex-1">
+              <label className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Building Grade</label>
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#2563EB]"
+              >
+                <option value="ALL">All Grades</option>
+                <option value="A">Grade A</option>
+                <option value="B">Grade B</option>
+                <option value="C">Grade C</option>
+              </select>
+            </div>
+
+            <div className="flex-1">
+              <label className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Readiness State</label>
+              <select
+                value={readinessFilter}
+                onChange={(e) => setReadinessFilter(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#2563EB]"
+              >
+                <option value="ALL">All Readiness</option>
+                <option value="Ready to Move">Ready to Move</option>
+                <option value="Under Fit-out">Under Fit-out</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Floating Property Results list card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 max-h-[calc(100vh-180px)] overflow-y-auto flex flex-col gap-3">
-          <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">
-              {filteredProperties.length > 0 ? "OfficeX Listings Nearby" : "No active listings here"}
+        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 max-h-[calc(100vh-210px)] overflow-y-auto flex flex-col gap-3">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+            <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">
+              {filteredProperties.length > 0 ? "OfficeX Verified Listings" : "No active listings"}
             </span>
-            <span className="px-2 py-0.5 rounded bg-teal-50 text-teal-600 font-bold text-[9px]">Map Active</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 text-[#2563EB] font-bold text-[9px] uppercase tracking-wider">Map Active</span>
           </div>
 
           {/* Render matched list */}
           {filteredProperties.map((prop, idx) => (
-            <div key={idx} className="p-3 rounded-xl border border-gray-100 hover:border-teal-500 bg-white flex flex-col gap-2 transition-all">
+            <div key={idx} className="p-3.5 rounded-xl border border-slate-100 hover:border-[#2563EB] bg-white flex flex-col gap-2.5 transition-all shadow-xs">
               <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-extrabold text-gray-900 text-xs flex items-center gap-1.5">
-                    <Building size={12} className="text-teal-600" />
+                <div className="flex-1 min-w-0 pr-2">
+                  <h4 className="font-extrabold text-slate-900 text-xs truncate flex items-center gap-1.5">
+                    <Building size={13} className="text-[#2563EB]" />
                     {prop.name}
                   </h4>
-                  <p className="text-[10px] text-gray-500 font-bold mt-0.5">{prop.address}, {prop.city}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{prop.address}, {prop.city}</p>
                 </div>
-                <span className="text-xs font-bold text-teal-600 shrink-0">{prop.rent}</span>
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="text-xs font-black text-[#2563EB]">{prop.rent}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-black text-slate-500 uppercase mt-0.5">Grade {prop.grade}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 mt-1">
-                <span>Area: {prop.area}</span>
-                <Link href={`/public/property/${prop.id}`} className="px-2.5 py-1 rounded bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+
+              {/* Score Badges row */}
+              <div className="flex items-center justify-between border-t border-slate-50 pt-2.5 text-[10px] font-bold">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[#2563EB] text-[9px] font-extrabold">
+                    Score: {prop.score}
+                  </span>
+                  <span className="text-[9px] text-slate-400 font-bold">{prop.readiness}</span>
+                </div>
+                <Link href={`/public/property/${prop.id}`} className="px-3 py-1 rounded bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-[9px] transition-colors">
                   View Space
                 </Link>
               </div>
             </div>
           ))}
 
-          {/* No direct listings prompt */}
+          {/* Empty State */}
           {filteredProperties.length === 0 && (
-            <div className="py-2">
-              <p className="text-xs text-gray-600 leading-relaxed font-bold">
-                No active OfficeX business suites found at this location.
+            <div className="py-4 text-center">
+              <p className="text-xs text-slate-650 leading-relaxed font-bold">
+                No matching OfficeX workspace listings found.
               </p>
-              <p className="text-[10px] text-gray-500 mt-1">
-                Centering Google Map on **{mapQuery}** for navigation. You can submit custom requirements to secure office spaces nearby.
+              <p className="text-[10px] text-slate-400 mt-1 leading-normal font-semibold">
+                You can submit your customized workplace requirements to our CRM team to locate a property suite for you.
               </p>
-              <Link href="/public/wizard" className="mt-3 block w-full py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-center font-bold text-[10px] shadow-sm transition-colors">
+              <Link href="/public/wizard" className="mt-4 block w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-center font-bold text-[10px] shadow-md transition-colors">
                 Request Office Here
               </Link>
             </div>

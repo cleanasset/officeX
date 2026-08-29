@@ -87,7 +87,7 @@ export default function LoginPage() {
                 placeholder="e.g. propertymanager@officex.in" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white transition-colors"
               />
               <User size={14} className="absolute left-3.5 top-3.5 text-gray-400" />
             </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
                 placeholder="Password (123456)" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-primary-teal text-xs bg-white transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white transition-colors"
               />
               <Lock size={14} className="absolute left-3.5 top-3.5 text-gray-400" />
             </div>
@@ -110,7 +110,7 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-primary-teal hover:bg-teal-700 text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2"
           >
             {isLoading ? "Signing in..." : "Continue"}
             <ArrowRight size={14} />
@@ -128,13 +128,13 @@ export default function LoginPage() {
                 key={idx}
                 onClick={() => handleDemoLogin(acc)}
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-primary-teal hover:bg-teal-50/20 transition-all flex justify-between items-center text-xs text-left font-medium"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-[#2563EB] hover:bg-blue-50/20 transition-all flex justify-between items-center text-xs text-left font-medium"
               >
                 <div>
                   <span className="text-gray-900 font-bold">{acc.label}</span>
                   <span className="text-gray-400 block text-[10px] mt-0.5">{acc.email}</span>
                 </div>
-                <ArrowRight size={14} className="text-gray-400 hover:text-primary-teal" />
+                <ArrowRight size={14} className="text-gray-400 hover:text-[#2563EB]" />
               </button>
             ))}
           </div>

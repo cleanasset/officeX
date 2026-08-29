@@ -31,13 +31,13 @@ export default function QuotationsPage() {
             {quotes.map((q) => (
               <tr key={q.id} className="border-b border-gray-200 text-xs hover:bg-gray-50/50">
                 <td className="py-4 font-bold text-gray-900 flex items-center gap-2">
-                  <FileText size={14} className="text-teal-600" />
+                  <FileText size={14} className="text-[#2563EB]" />
                   {q.vendor}
                 </td>
                 <td className="py-4 text-gray-700 font-semibold">{q.rfq}</td>
                 <td className="py-4 text-gray-700 font-semibold">{q.base}</td>
                 <td className="py-4 text-gray-700 font-semibold">{q.gst}</td>
-                <td className="py-4 text-gray-900 font-extrabold text-teal-600">{q.gross}</td>
+                <td className="py-4 text-gray-900 font-extrabold text-[#2563EB]">{q.gross}</td>
                 <td className="py-4">
                   <span className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider ${
                     q.status === "Awarded" ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"

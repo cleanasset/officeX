@@ -112,10 +112,10 @@ export default function ChatRoomsPage() {
         <div>
           <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
             <h2 className="font-extrabold text-gray-900 text-sm flex items-center gap-1.5">
-              <MessageSquare size={16} className="text-[#0F8B7D]" />
+              <MessageSquare size={16} className="text-[#2563EB]" />
               Collaboration Rooms
             </h2>
-            <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 text-[10px] font-extrabold">
+            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#2563EB] text-[10px] font-extrabold">
               {dealRooms.length} Active
             </span>
           </div>
@@ -139,7 +139,7 @@ export default function ChatRoomsPage() {
                   key={room.id}
                   onClick={() => setActiveRoomId(room.id)}
                   className={`w-full text-left p-4 border-b border-gray-100 transition-colors flex flex-col gap-1.5 cursor-pointer ${
-                    isActive ? "bg-teal-50/40 border-l-4 border-l-[#0F8B7D]" : "hover:bg-gray-50"
+                    isActive ? "bg-blue-50/40 border-l-4 border-l-[#2563EB]" : "hover:bg-gray-50"
                   }`}
                 >
                   <div className="flex justify-between items-start">
@@ -221,7 +221,7 @@ export default function ChatRoomsPage() {
                 ) : (
                   <div className={`p-3.5 rounded-2xl text-xs font-semibold shadow-sm leading-relaxed border ${
                     isMe 
-                      ? "bg-[#0F8B7D] text-white border-teal-600 rounded-tr-none" 
+                      ? "bg-[#2563EB] text-white border-teal-600 rounded-tr-none" 
                       : "bg-white text-gray-800 border-gray-100 rounded-tl-none"
                   }`}>
                     {msg.text}
@@ -253,7 +253,7 @@ export default function ChatRoomsPage() {
 
           <button 
             type="submit"
-            className="p-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold shadow-md cursor-pointer transition-colors"
+            className="p-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold shadow-md cursor-pointer transition-colors"
           >
             <Send size={16} />
           </button>

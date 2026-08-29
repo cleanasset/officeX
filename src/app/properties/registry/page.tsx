@@ -345,7 +345,7 @@ export default function PropertyRegistry() {
               <p className="text-xs text-gray-500 font-semibold">Upload photos, configure building specifications, and select verified amenities.</p>
             </div>
           </div>
-          <span className="text-xs font-bold px-3 py-1 bg-teal-50 border border-teal-100 text-[#0F8B7D] rounded-full">
+          <span className="text-xs font-bold px-3 py-1 bg-blue-50 border border-blue-100 text-[#2563EB] rounded-full">
             Step {step} of 5
           </span>
         </div>
@@ -362,7 +362,7 @@ export default function PropertyRegistry() {
             <div 
               key={item.s} 
               className={`pb-2 border-b-4 transition-all duration-300 ${
-                step >= item.s ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-gray-100"
+                step >= item.s ? "border-[#2563EB] text-[#2563EB]" : "border-gray-100"
               }`}
             >
               {item.label}
@@ -374,7 +374,7 @@ export default function PropertyRegistry() {
         {step === 1 && (
           <div className="premium-card p-8 border border-gray-200 bg-white flex flex-col gap-6 shadow-sm">
             <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-1.5">
-              <Sparkles size={16} className="text-[#0F8B7D]" /> Step 1: Property Specs, City Location & Cover Image
+              <Sparkles size={16} className="text-[#2563EB]" /> Step 1: Property Specs, City Location & Cover Image
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -387,7 +387,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. Apex Brick Plaza" 
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
@@ -397,7 +397,7 @@ export default function PropertyRegistry() {
                 <select 
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#2563EB]"
                 >
                   <option value="Commercial Office">Commercial Office Space</option>
                   <option value="IT Park">IT / ITeS Tech Park</option>
@@ -412,7 +412,7 @@ export default function PropertyRegistry() {
                 <select 
                   value={form.grade}
                   onChange={(e) => setForm({ ...form, grade: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#2563EB]"
                 >
                   <option value="A">Grade A (Institutional / Premium)</option>
                   <option value="B">Grade B (Standard Commercial)</option>
@@ -428,7 +428,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. Apex Real Estate Developers LLP" 
                   value={form.owner}
                   onChange={(e) => setForm({ ...form, owner: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
@@ -440,7 +440,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. S G Highway, Near Iscon Cross Road" 
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
@@ -458,7 +458,7 @@ export default function PropertyRegistry() {
                       setIsCityDropdownOpen(true);
                     }}
                     onFocus={() => setIsCityDropdownOpen(true)}
-                    className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-white"
+                    className="w-full px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB] bg-white"
                   />
                   <MapPin size={14} className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" />
                 </div>
@@ -481,11 +481,11 @@ export default function PropertyRegistry() {
                               setForm({ ...form, city: cityName });
                               setIsCityDropdownOpen(false);
                             }}
-                            className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-800 hover:bg-teal-50 hover:text-[#0F8B7D] flex items-center justify-between transition-colors cursor-pointer border-b border-gray-50"
+                            className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-800 hover:bg-blue-50 hover:text-[#2563EB] flex items-center justify-between transition-colors cursor-pointer border-b border-gray-50"
                           >
                             <span>{c}</span>
                             {form.city.toLowerCase() === cityName.toLowerCase() && (
-                              <Check size={12} className="text-[#0F8B7D]" />
+                              <Check size={12} className="text-[#2563EB]" />
                             )}
                           </button>
                         );
@@ -502,7 +502,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. 380015" 
                   value={form.pincode}
                   onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
@@ -558,14 +558,14 @@ export default function PropertyRegistry() {
                           onClick={() => setForm({ ...form, imageUrl: theme.url })}
                           className={`flex flex-col rounded-xl overflow-hidden border text-left cursor-pointer transition-all ${
                             isSelected 
-                              ? "border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-md" 
+                              ? "border-[#2563EB] ring-2 ring-[#2563EB]/20 shadow-md" 
                               : "border-gray-200 hover:border-gray-400"
                           }`}
                         >
                           <div className="h-24 w-full bg-gray-100 relative">
                             <img src={theme.url} alt={theme.name} className="w-full h-full object-cover" />
                             {isSelected && (
-                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center text-[10px] shadow">
+                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[10px] shadow">
                                 ✓
                               </div>
                             )}
@@ -589,7 +589,7 @@ export default function PropertyRegistry() {
                       onChange={handleFileUpload} 
                       className="hidden" 
                     />
-                    <div className="p-3 bg-white rounded-full shadow-sm border border-gray-200 text-[#0F8B7D] mb-2">
+                    <div className="p-3 bg-white rounded-full shadow-sm border border-gray-200 text-[#2563EB] mb-2">
                       <Upload size={22} />
                     </div>
                     <span className="font-bold text-xs text-gray-900">Upload Building Image from Device</span>
@@ -597,7 +597,7 @@ export default function PropertyRegistry() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="mt-3 px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer"
+                      className="mt-3 px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer"
                     >
                       Browse Image File
                     </button>
@@ -613,12 +613,12 @@ export default function PropertyRegistry() {
                         placeholder="Paste image web link (e.g. https://images.unsplash.com/...)"
                         value={form.customImageUrl}
                         onChange={(e) => setForm({ ...form, customImageUrl: e.target.value })}
-                        className="flex-1 px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                        className="flex-1 px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                       />
                       <button
                         type="button"
                         onClick={handleApplyCustomUrl}
-                        className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-sm cursor-pointer"
+                        className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm cursor-pointer"
                       >
                         Apply Photo
                       </button>
@@ -628,12 +628,12 @@ export default function PropertyRegistry() {
 
                 {/* Live Preview Hero Card */}
                 {form.imageUrl && (
-                  <div className="mt-3 p-3 rounded-2xl border border-teal-100 bg-teal-50/20 flex items-center gap-4">
+                  <div className="mt-3 p-3 rounded-2xl border border-blue-100 bg-blue-50/20 flex items-center gap-4">
                     <div className="w-24 h-16 rounded-xl overflow-hidden bg-gray-200 border border-gray-200 shrink-0">
                       <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1">
-                      <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-wider block">Active Building Cover Photo</span>
+                      <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider block">Active Building Cover Photo</span>
                       <span className="text-xs font-extrabold text-gray-900 block truncate mt-0.5">{form.name || "Building Asset Cover"}</span>
                     </div>
                   </div>
@@ -648,7 +648,7 @@ export default function PropertyRegistry() {
               <button 
                 type="button"
                 onClick={() => setStep(2)}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
               >
                 Next: Floors & Areas →
               </button>
@@ -661,7 +661,7 @@ export default function PropertyRegistry() {
           <div className="premium-card p-8 border border-gray-200 bg-white flex flex-col gap-6 shadow-sm">
             <div>
               <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-1.5">
-                <Sparkles size={16} className="text-[#0F8B7D]" /> Step 2: Physical Areas & Floor Ownership Breakdown
+                <Sparkles size={16} className="text-[#2563EB]" /> Step 2: Physical Areas & Floor Ownership Breakdown
               </h3>
               <p className="text-[11px] text-gray-500 font-semibold mt-1">
                 Clearly differentiate between the total building structure height and the specific floor(s) you own or are listing.
@@ -680,7 +680,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. 50000" 
                   value={form.totalArea}
                   onChange={(e) => setForm({ ...form, totalArea: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
                 <span className="text-[10px] text-gray-400 font-medium">Total square feet of space available for lease</span>
               </div>
@@ -695,7 +695,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. 18 (G + 18 Floors Total)" 
                   value={form.buildingTotalFloors}
                   onChange={(e) => setForm({ ...form, buildingTotalFloors: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
                 <span className="text-[10px] text-gray-400 font-medium">Total architectural floors in the entire tower structure</span>
               </div>
@@ -712,7 +712,7 @@ export default function PropertyRegistry() {
                     const defaultOffered = val === "Whole Building" ? "Whole Building (All Floors)" : (val === "Single Floor / Unit" ? "4th Floor Wing B" : "Floors 3 to 7");
                     setForm({ ...form, ownershipScope: val, offeredFloors: defaultOffered });
                   }}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#2563EB]"
                 >
                   <option value="Whole Building">Whole Building (Sole Owner / Manage entire tower)</option>
                   <option value="Multiple Specific Floors">Multiple Specific Floors (e.g. Floors 3 to 7)</option>
@@ -731,7 +731,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. Whole Building OR Floors 4, 5, 6 OR 3rd Floor" 
                   value={form.offeredFloors}
                   onChange={(e) => setForm({ ...form, offeredFloors: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
                 <span className="text-[10px] text-gray-400 font-medium">Exact floor numbers/wings available for prospective tenants</span>
               </div>
@@ -742,7 +742,7 @@ export default function PropertyRegistry() {
                 <select 
                   value={form.furnishing}
                   onChange={(e) => setForm({ ...form, furnishing: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#2563EB]"
                 >
                   <option value="Fully Fitted">Fully Fitted (Plug & Play with Workstations & Cabins)</option>
                   <option value="Warm Shell">Warm Shell (Flooring, Ceiling & HVAC completed)</option>
@@ -758,7 +758,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. 1 Car per 1,000 Sq.Ft." 
                   value={form.parking}
                   onChange={(e) => setForm({ ...form, parking: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
@@ -775,7 +775,7 @@ export default function PropertyRegistry() {
               <button 
                 type="button"
                 onClick={() => setStep(3)}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
               >
                 Next: Power & HVAC →
               </button>
@@ -787,7 +787,7 @@ export default function PropertyRegistry() {
         {step === 3 && (
           <div className="premium-card p-8 border border-gray-200 bg-white flex flex-col gap-6 shadow-sm">
             <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-1.5">
-              <Sparkles size={16} className="text-[#0F8B7D]" /> Step 3: Power Backup & HVAC Systems
+              <Sparkles size={16} className="text-[#2563EB]" /> Step 3: Power Backup & HVAC Systems
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1.5">
@@ -797,7 +797,7 @@ export default function PropertyRegistry() {
                   placeholder="e.g. 100% DG Backup (2x 1500 kVA Cummins)" 
                   value={form.power}
                   onChange={(e) => setForm({ ...form, power: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -805,7 +805,7 @@ export default function PropertyRegistry() {
                 <select 
                   value={form.hvac}
                   onChange={(e) => setForm({ ...form, hvac: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#2563EB]"
                 >
                   <option value="Centralized Chilled Water">Centralized Chilled Water System</option>
                   <option value="VRV/VRF System">VRV / VRF Energy Efficient System</option>
@@ -817,7 +817,7 @@ export default function PropertyRegistry() {
                 <select 
                   value={form.leed}
                   onChange={(e) => setForm({ ...form, leed: e.target.value })}
-                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
+                  className="px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white cursor-pointer focus:outline-none focus:border-[#2563EB]"
                 >
                   <option value="Platinum Certified">LEED Platinum Certified</option>
                   <option value="Gold Certified">LEED Gold Certified</option>
@@ -838,7 +838,7 @@ export default function PropertyRegistry() {
               <button 
                 type="button"
                 onClick={() => setStep(4)}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
               >
                 Next: Amenities →
               </button>
@@ -852,11 +852,11 @@ export default function PropertyRegistry() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-3 gap-2">
               <div>
                 <h3 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                  <Sparkles size={16} className="text-[#0F8B7D]" /> Step 4: Comprehensive Amenities & Features
+                  <Sparkles size={16} className="text-[#2563EB]" /> Step 4: Comprehensive Amenities & Features
                 </h3>
                 <p className="text-[11px] text-gray-500 font-semibold mt-0.5">Select from categorized amenities or type your own custom features.</p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-teal-50 text-[#0F8B7D] text-xs font-extrabold border border-teal-100">
+              <span className="px-3 py-1 rounded-full bg-blue-50 text-[#2563EB] text-xs font-extrabold border border-blue-100">
                 {form.amenities.length} Selected
               </span>
             </div>
@@ -879,13 +879,13 @@ export default function PropertyRegistry() {
                           onClick={() => handleAmenityToggle(amenity)}
                           className={`flex items-center justify-between p-3 rounded-xl border text-xs font-bold text-left cursor-pointer transition-all ${
                             isSelected 
-                              ? "bg-teal-50 border-teal-300 text-[#0F8B7D] shadow-sm" 
+                              ? "bg-blue-50 border-blue-350 bg-blue-50 text-[#2563EB] shadow-sm" 
                               : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                           }`}
                         >
                           <span className="truncate pr-2">{amenity}</span>
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
-                            isSelected ? "bg-[#0F8B7D] text-white" : "border border-gray-300"
+                            isSelected ? "bg-[#2563EB] text-white" : "border border-gray-300"
                           }`}>
                             {isSelected && "✓"}
                           </span>
@@ -900,7 +900,7 @@ export default function PropertyRegistry() {
             {/* Custom Amenity Adder */}
             <div className="border-t border-gray-100 pt-5 flex flex-col gap-3 bg-gray-50/50 p-4 rounded-2xl">
               <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                <Tag size={14} className="text-[#0F8B7D]" /> Add Custom Amenity or Special Facility
+                <Tag size={14} className="text-[#2563EB]" /> Add Custom Amenity or Special Facility
               </span>
               <form onSubmit={handleAddCustomAmenity} className="flex gap-2">
                 <input 
@@ -908,11 +908,11 @@ export default function PropertyRegistry() {
                   placeholder="e.g. Helipad, Squash Court, Solar Carport, In-house Clinic..." 
                   value={customAmenityInput}
                   onChange={(e) => setCustomAmenityInput(e.target.value)}
-                  className="flex-1 px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-white"
+                  className="flex-1 px-3.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB] bg-white"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors cursor-pointer"
                 >
                   + Add Amenity
                 </button>
@@ -924,7 +924,7 @@ export default function PropertyRegistry() {
                   {form.amenities.map((a) => (
                     <span 
                       key={a} 
-                      className="px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-bold text-[#0F8B7D] flex items-center gap-1.5"
+                      className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-[#2563EB] flex items-center gap-1.5"
                     >
                       <span>✓ {a}</span>
                       <button 
@@ -951,7 +951,7 @@ export default function PropertyRegistry() {
               <button 
                 type="button"
                 onClick={() => setStep(5)}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
               >
                 Next: Review & Publish →
               </button>
@@ -963,7 +963,7 @@ export default function PropertyRegistry() {
         {step === 5 && (
           <div className="premium-card p-8 border border-gray-200 bg-white flex flex-col gap-6 shadow-sm">
             <h3 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-1.5">
-              <Sparkles size={16} className="text-[#0F8B7D]" /> Step 5: Review Building Asset & Publish
+              <Sparkles size={16} className="text-[#2563EB]" /> Step 5: Review Building Asset & Publish
             </h3>
 
             {/* Preview Banner */}
@@ -971,7 +971,7 @@ export default function PropertyRegistry() {
               <img src={form.imageUrl} alt={form.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-5">
                 <div className="text-white">
-                  <span className="px-2 py-0.5 rounded bg-[#0F8B7D] text-[9px] font-extrabold uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded bg-[#2563EB] text-[9px] font-extrabold uppercase tracking-wider">
                     Grade {form.grade} Asset
                   </span>
                   <h2 className="text-xl font-extrabold mt-1">{form.name || "Commercial Building Asset"}</h2>
@@ -991,7 +991,7 @@ export default function PropertyRegistry() {
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Leasable Super Built-up Area</span>
-                <span className="font-extrabold text-[#0F8B7D] mt-0.5 block">{parseFloat(form.totalArea || "0").toLocaleString()} Sq.Ft.</span>
+                <span className="font-extrabold text-[#2563EB] mt-0.5 block">{parseFloat(form.totalArea || "0").toLocaleString()} Sq.Ft.</span>
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold block uppercase">Floor Scope & Available Floors</span>
@@ -1015,7 +1015,7 @@ export default function PropertyRegistry() {
                 <span className="text-[10px] text-gray-400 font-bold block uppercase mb-2">Verified Amenities ({form.amenities.length})</span>
                 <div className="flex flex-wrap gap-1.5">
                   {form.amenities.map(a => (
-                    <span key={a} className="px-2.5 py-1 rounded-full bg-teal-50 border border-teal-100 text-[9px] font-bold text-[#0F8B7D]">
+                    <span key={a} className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-[9px] font-bold text-[#2563EB]">
                       ✓ {a}
                     </span>
                   ))}
@@ -1034,7 +1034,7 @@ export default function PropertyRegistry() {
               <button 
                 type="button"
                 onClick={handlePublish}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Check size={14} /> Publish Building Asset
               </button>
