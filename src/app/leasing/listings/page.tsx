@@ -17,7 +17,7 @@ export default function ListingsPage() {
   const [brochureListing, setBrochureListing] = useState<any>(null);
 
   // Tabbed Wizard State for Add Listing
-  const [activeTab, setActiveTab] = useState<"basics" | "spaces" | "commercials" | "photos">("basics");
+  const [activeTab, setActiveTab] = useState<string | number>("basics");
   const [form, setForm] = useState({
     name: "",
     type: "Office Space",
@@ -251,15 +251,15 @@ export default function ListingsPage() {
         </div>
       )}
 
-      {/* Tabbed Add Listing Modal */}
+      {/* 13-Step Guided Property Listing Builder Wizard */}
       {isAdding && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
-          <div className="w-full max-w-lg bg-white rounded-3xl p-8 flex flex-col gap-5 shadow-2xl border border-slate-100 animate-scale-up">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in overflow-y-auto p-4">
+          <div className="w-full max-w-2xl bg-white rounded-3xl p-6 flex flex-col gap-4 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
             
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Listing Builder Wizard</span>
-                <h3 className="font-extrabold text-slate-900 text-base mt-0.5">Register Workspace Listing</h3>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">13-Step Listing Builder</span>
+                <h3 className="font-extrabold text-slate-900 text-base mt-0.5">Guided Property Listing Creator</h3>
               </div>
               <button 
                 type="button" 
@@ -270,64 +270,63 @@ export default function ListingsPage() {
               </button>
             </div>
 
-            {/* Tab switch buttons */}
-            <div className="flex border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              <button 
-                onClick={() => setActiveTab("basics")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "basics" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
-              >
-                1. Basics
-              </button>
-              <button 
-                onClick={() => setActiveTab("spaces")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "spaces" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
-              >
-                2. Spaces
-              </button>
-              <button 
-                onClick={() => setActiveTab("commercials")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "commercials" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
-              >
-                3. Commercials
-              </button>
-              <button 
-                onClick={() => setActiveTab("photos")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "photos" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
-              >
-                4. Photo & Review
-              </button>
+            {/* Stepper progress indicator */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+              {Array.from({ length: 13 }).map((_, idx) => {
+                const stepNum = idx + 1;
+                const stepLabels = [
+                  "Basic", "Location", "Building", "Floors", "Commercials", 
+                  "Amenities", "Parking", "HVAC", "Photos", "Floor Plan", 
+                  "Compliance", "Docs", "Preview"
+                ];
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      if (stepNum < 13) {
+                        // Allow clicking back/forth
+                        setActiveTab(stepNum as any);
+                      }
+                    }}
+                    className={`flex items-center justify-center w-5 h-5 rounded-full text-[9px] shrink-0 font-extrabold ${
+                      (activeTab === "basics" ? 1 : Number(activeTab)) === stepNum
+                        ? "bg-[#0F8B7D] text-white"
+                        : (activeTab === "basics" ? 1 : Number(activeTab)) > stepNum
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                    title={stepLabels[idx]}
+                  >
+                    {stepNum}
+                  </button>
+                );
+              })}
+              <span className="text-[10px] font-black text-[#0F8B7D] ml-2">
+                Step {activeTab === "basics" ? 1 : activeTab} / 13
+              </span>
             </div>
 
-            {/* Form Steps */}
-            <form onSubmit={handleCreateListing} className="flex flex-col gap-4 text-xs font-semibold text-slate-700">
+            {/* Wizard Form */}
+            <div className="flex flex-col gap-4 text-xs font-semibold text-slate-700">
               
-              {/* Tab 1: Basics */}
-              {activeTab === "basics" && (
+              {/* Step 1: Basic */}
+              {(activeTab === "basics" || activeTab === 1) && (
                 <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 1: Basic Information</span>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Property Name & Unit Title</label>
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Listing Name / Title</label>
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. Apex Tower - Unit 502"
+                      placeholder="e.g. Apex Business Tower - Floor 4"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Space Location (Address)</label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="e.g. BKC, Mumbai"
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Workspace Type</label>
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Workspace Type</label>
                     <select 
                       value={form.type}
                       onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -341,86 +340,145 @@ export default function ListingsPage() {
                   </div>
                   <button 
                     type="button" 
-                    onClick={() => setActiveTab("spaces")}
+                    onClick={() => setActiveTab(2 as any)}
                     className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs mt-2 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    Next Step <ArrowRight size={14} />
+                    Next: Location <ArrowRight size={14} />
                   </button>
                 </div>
               )}
 
-              {/* Tab 2: Spaces */}
-              {activeTab === "spaces" && (
+              {/* Step 2: Location */}
+              {activeTab === 2 && (
                 <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 2: Location Details</span>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Full Address</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. Bandra Kurla Complex, Mumbai"
+                      value={form.address}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Leasable Area (Sq.Ft)</label>
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">City</label>
+                      <input type="text" placeholder="Mumbai" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Micro-market</label>
+                      <input type="text" placeholder="BKC" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(1 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(3 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Building <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Building */}
+              {activeTab === 3 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 3: Building Structure</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Building Name</label>
+                      <input type="text" placeholder="Tower A" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Developer</label>
+                      <input type="text" placeholder="Apex Realty" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Building Grade</label>
+                    <select 
+                      value={form.grade}
+                      onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold cursor-pointer"
+                    >
+                      <option value="A">Grade A</option>
+                      <option value="B">Grade B</option>
+                      <option value="C">Grade C</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(2 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(4 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Floors <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Floors/Spaces */}
+              {activeTab === 4 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 4: Floors & Spaces Allocation</span>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Leasable Area (Sq.Ft)</label>
                       <input 
                         type="number"
                         placeholder="e.g. 5000"
                         value={form.area}
                         onChange={(e) => setForm({ ...form, area: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Building Grade</label>
-                      <select 
-                        value={form.grade}
-                        onChange={(e) => setForm({ ...form, grade: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold cursor-pointer"
-                      >
-                        <option value="A">Grade A</option>
-                        <option value="B">Grade B</option>
-                        <option value="C">Grade C</option>
-                      </select>
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Floor Number</label>
+                      <input type="text" placeholder="4th Floor" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Total Desks</label>
+                      <input 
+                        type="number" 
+                        placeholder="100 Desks" 
+                        value={form.desks}
+                        onChange={(e) => setForm({ ...form, desks: e.target.value })}
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" 
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Key Specifications & Amenities</label>
-                    <textarea 
-                      rows={2}
-                      placeholder="e.g. Central AC, 100% Power backup, High speed fiber links"
-                      value={form.amenities}
-                      onChange={(e) => setForm({ ...form, amenities: e.target.value })}
-                      className="px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 resize-none font-semibold text-slate-800"
-                    />
-                  </div>
                   <div className="flex justify-between gap-3 mt-2">
-                    <button type="button" onClick={() => setActiveTab("basics")} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
-                    <button type="button" onClick={() => setActiveTab("commercials")} className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next <ArrowRight size={13} /></button>
+                    <button type="button" onClick={() => setActiveTab(3 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(5 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Commercials <ArrowRight size={13} /></button>
                   </div>
                 </div>
               )}
 
-              {/* Tab 3: Commercials */}
-              {activeTab === "commercials" && (
+              {/* Step 5: Commercials */}
+              {activeTab === 5 && (
                 <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 5: Commercial Parameters</span>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Base Rental Rate (INR)</label>
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Base Rental Rate (₹/sq.ft)</label>
                       <input 
                         type="number"
-                        placeholder="e.g. 150"
+                        placeholder="150"
                         value={form.rate}
                         onChange={(e) => setForm({ ...form, rate: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">CAM maintenance Fee (INR)</label>
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">CAM Fee (₹/sq.ft)</label>
                       <input 
                         type="number"
-                        placeholder="e.g. 15"
+                        placeholder="15"
                         value={form.camFee}
                         onChange={(e) => setForm({ ...form, camFee: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Security Deposit</label>
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Security Deposit</label>
                       <select 
                         value={form.securityDeposit}
                         onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })}
@@ -433,40 +491,196 @@ export default function ListingsPage() {
                       </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Annual Escalation %</label>
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Annual Escalation %</label>
                       <input 
                         type="text"
                         value={form.escalation}
                         onChange={(e) => setForm({ ...form, escalation: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-bold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-bold"
                       />
                     </div>
                   </div>
                   <div className="flex justify-between gap-3 mt-2">
-                    <button type="button" onClick={() => setActiveTab("spaces")} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
-                    <button type="button" onClick={() => setActiveTab("photos")} className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next <ArrowRight size={13} /></button>
+                    <button type="button" onClick={() => setActiveTab(4 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(6 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Amenities <ArrowRight size={13} /></button>
                   </div>
                 </div>
               )}
 
-              {/* Tab 4: Photos & Review */}
-              {activeTab === "photos" && (
+              {/* Step 6: Amenities */}
+              {activeTab === 6 && (
                 <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 6: Key Amenities</span>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Photo URL (Reference)</label>
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Amenities Checklist (Comma-separated)</label>
+                    <textarea 
+                      rows={3}
+                      placeholder="Conference Rooms, Lounge, Pantry, Breakout Zone, High Speed Wifi, 24/7 Security"
+                      value={form.amenities}
+                      onChange={(e) => setForm({ ...form, amenities: e.target.value })}
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold"
+                    />
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(5 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(7 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Parking <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 7: Parking */}
+              {activeTab === 7 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 7: Parking Integration</span>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Car Bays Allocation</label>
+                      <input type="number" placeholder="5" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Two-wheeler Bays</label>
+                      <input type="number" placeholder="10" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">EV Charging Bays</label>
+                      <input type="number" placeholder="2" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(6 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(8 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: HVAC/Power <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 8: Power/HVAC */}
+              {activeTab === 8 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 8: HVAC & Utilities</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">HVAC system type</label>
+                      <select className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold">
+                        <option>Central Chiller</option>
+                        <option>VRV/VRF</option>
+                        <option>Split unit systems</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Power Backup (KVA)</label>
+                      <input type="text" placeholder="e.g. 500 KVA" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(7 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(9 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Photos <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 9: Photos/Video */}
+              {activeTab === 9 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 9: Media Assets</span>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Photo Reference URL</label>
                     <input 
                       type="text"
                       value={form.photoUrl}
                       onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-mono text-[10px]"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-[10px]"
                     />
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Video Walkthrough URL</label>
+                    <input type="text" placeholder="https://youtube.com/watch?v=..." className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-[10px]" />
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(8 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(10 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Floor Plans <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
 
-                  {/* Summary check panel */}
+              {/* Step 10: Floor Plans */}
+              {activeTab === 10 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 10: Floor Plans Attachment</span>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase">Floor Plan Image/CAD URL</label>
+                    <input type="text" placeholder="https://officex-plans.s3.amazonaws.com/plan4.png" className="px-3.5 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-[10px]" />
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(9 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(11 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Compliance <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 11: Compliance */}
+              {activeTab === 11 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 11: Compliance Verification</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Fire NOC Certificate</label>
+                      <select className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold">
+                        <option>Verified & Active</option>
+                        <option>Awaiting Clearance</option>
+                        <option>Not Applicable</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Occupancy Certificate (OC)</label>
+                      <select className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold">
+                        <option>Issued</option>
+                        <option>Pending Appeal</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(10 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(12 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Docs <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 12: Documents */}
+              {activeTab === 12 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 12: Title & Mutation Documents</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Title Deed (Registered)</label>
+                      <select className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold">
+                        <option>Attached PDF</option>
+                        <option>Awaiting Escrow</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-slate-450 uppercase">Mutation Certificate</label>
+                      <select className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold">
+                        <option>Available</option>
+                        <option>Not Available</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-between gap-3 mt-2">
+                    <button type="button" onClick={() => setActiveTab(11 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button type="button" onClick={() => setActiveTab(13 as any)} className="px-5 py-2.5 bg-[#0F8B7D] text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next: Preview <ArrowRight size={13} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 13: Preview & Publish */}
+              {activeTab === 13 && (
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-widest">Step 13: Publish & Launch Preview</span>
+                  
                   <div className="p-4 rounded-2xl bg-blue-50/30 border border-blue-100 flex flex-col gap-2">
-                    <span className="text-[9px] text-[#0F8B7D] font-black uppercase tracking-widest block">Review Details</span>
+                    <span className="text-[9px] text-[#0F8B7D] font-black uppercase tracking-widest block">Review Parameters</span>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Listing Title:</span>
+                      <span className="text-slate-400">Workspace Title:</span>
                       <span className="font-extrabold text-slate-900">{form.name || "N/A"}</span>
                     </div>
                     <div className="flex justify-between">
@@ -474,20 +688,30 @@ export default function ListingsPage() {
                       <span className="font-extrabold text-slate-900">{form.address || "N/A"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Monthly Rent:</span>
+                      <span className="text-slate-400">Base Rent:</span>
                       <span className="font-extrabold text-slate-900">₹{form.rate || "0"}/{form.type === "Coworking" ? "desk" : "sq.ft"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Total Area:</span>
+                      <span className="font-extrabold text-slate-900">{form.area || "0"} Sq.Ft</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between gap-3 mt-2">
-                    <button type="button" onClick={() => setActiveTab("commercials")} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
-                    <button type="submit" className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-blue-700 text-white font-extrabold rounded-xl cursor-pointer">Submit Workspace Listing</button>
+                    <button type="button" onClick={() => setActiveTab(12 as any)} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
+                    <button 
+                      onClick={(e) => {
+                        handleCreateListing(e);
+                      }}
+                      className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl cursor-pointer"
+                    >
+                      Publish Listing
+                    </button>
                   </div>
                 </div>
               )}
 
-            </form>
-
+            </div>
           </div>
         </div>
       )}

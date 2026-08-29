@@ -8,17 +8,17 @@ export default function PipelinePage() {
   const router = useRouter();
   const [columns, setColumns] = useState<any>({
     New: [
-      { id: 1, name: "InfyTech Hub", req: "8k sq.ft", value: "₹1.2L/mo", poc: "Alok Gupta", role: "Procurement Head", email: "alok@infytech.com", phone: "+91 98321 04958", gst: "27AABCT9876C1ZR", dealHealth: "On Track", matchScore: 94 },
-      { id: 5, name: "Scalezix Solutions", req: "5k sq.ft", value: "₹75K/mo", poc: "Jiya Patel", role: "Managing Director", email: "jiya@scalezix.com", phone: "+91 99887 76655", gst: "24AADCV1234D2ZS", dealHealth: "On Track", matchScore: 98 }
+      { id: 1, name: "InfyTech Hub", req: "8k sq.ft", value: "₹1.2L/mo", poc: "Alok Gupta", role: "Procurement Head", email: "alok@infytech.com", phone: "+91 98321 04958", gst: "27AABCT9876C1ZR", dealHealth: "On Track", matchScore: 94, healthScore: 88, nextAction: "Send proposal template", recommendedMatches: "Apex Tower F4, Meridian Block B" },
+      { id: 5, name: "Scalezix Solutions", req: "5k sq.ft", value: "₹75K/mo", poc: "Jiya Patel", role: "Managing Director", email: "jiya@scalezix.com", phone: "+91 99887 76655", gst: "24AADCV1234D2ZS", dealHealth: "On Track", matchScore: 98, healthScore: 95, nextAction: "Initiate LOI draft generation", recommendedMatches: "Apex Tower F5" }
     ],
     Qualified: [
-      { id: 2, name: "RazorPay Ops", req: "12k sq.ft", value: "₹2.1L/mo", poc: "Harish Iyer", role: "Real Estate Director", email: "harish@razorpay.com", phone: "+91 99887 76655", gst: "27AAACR1020D1ZE", dealHealth: "Stale Alert (7d)", matchScore: 89 }
+      { id: 2, name: "RazorPay Ops", req: "12k sq.ft", value: "₹2.1L/mo", poc: "Harish Iyer", role: "Real Estate Director", email: "harish@razorpay.com", phone: "+91 99887 76655", gst: "27AAACR1020D1ZE", dealHealth: "Stale Alert (7d)", matchScore: 89, healthScore: 68, nextAction: "Schedule followup call for negotiation", recommendedMatches: "Apex Tower F3" }
     ],
     "Proposal Sent": [
-      { id: 3, name: "Dharma Media", req: "15k sq.ft", value: "₹3.5L/mo", poc: "Rohit Sen", role: "Admin Lead", email: "rohit@dharmamedia.com", phone: "+91 94567 89012", gst: "27AABCM8822A1ZV", dealHealth: "At Risk", matchScore: 82 }
+      { id: 3, name: "Dharma Media", req: "15k sq.ft", value: "₹3.5L/mo", poc: "Rohit Sen", role: "Admin Lead", email: "rohit@dharmamedia.com", phone: "+91 94567 89012", gst: "27AABCM8822A1ZV", dealHealth: "At Risk", matchScore: 82, healthScore: 54, nextAction: "Send reminder notice for pending approval", recommendedMatches: "Meridian Block B" }
     ],
     Won: [
-      { id: 4, name: "TATA Projects", req: "25k sq.ft", value: "₹6.0L/mo", poc: "Sanjay Bose", role: "VP Operations", email: "sanjay@tataprojects.com", phone: "+91 91234 56789", gst: "27AABCT1000A1ZZ", dealHealth: "Lease Executed", matchScore: 96 }
+      { id: 4, name: "TATA Projects", req: "25k sq.ft", value: "₹6.0L/mo", poc: "Sanjay Bose", role: "VP Operations", email: "sanjay@tataprojects.com", phone: "+91 91234 56789", gst: "27AABCT1000A1ZZ", dealHealth: "Lease Executed", matchScore: 96, healthScore: 100, nextAction: "Complete workspace onboarding configuration", recommendedMatches: "Apex Tower F4" }
     ]
   });
 
@@ -115,9 +115,16 @@ export default function PipelinePage() {
                     <span className="font-extrabold text-slate-950 text-xs hover:text-[#0F8B7D] hover:underline block">{item.name}</span>
                     <span className="px-1.5 py-0.5 rounded bg-blue-50 text-[#0F8B7D] text-[8px] font-black">{item.matchScore}% Match</span>
                   </div>
-                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold mt-3">
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold mt-2">
                     <span>{item.req}</span>
                     <span className="text-[#0F8B7D] font-black">{item.value}</span>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-col gap-1 text-[9px]">
+                    <div className="flex justify-between font-bold text-slate-700">
+                      <span>Deal Health Score:</span>
+                      <span className={item.healthScore >= 80 ? "text-emerald-600" : item.healthScore >= 60 ? "text-amber-600" : "text-red-650"}>{item.healthScore}/100</span>
+                    </div>
+                    <p className="text-[9px] text-slate-500 italic"><strong className="text-slate-600 not-italic font-bold">Action:</strong> {item.nextAction}</p>
                   </div>
                 </div>
 
@@ -209,6 +216,38 @@ export default function PipelinePage() {
                   <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50">
                     <span className="text-[9px] font-bold text-slate-400 uppercase block">Budget Est.</span>
                     <span className="font-extrabold text-[#0F8B7D] mt-1 block">{selectedCard.value}</span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-150 pt-4 mt-2 flex flex-col gap-3">
+                  <h4 className="font-bold text-slate-950 text-xs">CRM Decision Support Intelligence</h4>
+                  
+                  <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/15">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase block">Next Best Action Recommendation</span>
+                    <span className="font-extrabold text-slate-800 text-[11px] mt-1 block">{selectedCard.nextAction}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                    <div className="flex justify-between font-bold text-slate-700 mb-2">
+                      <span>Deal Health Score Breakdown:</span>
+                      <span className={selectedCard.healthScore >= 80 ? "text-emerald-700" : "text-amber-700"}>{selectedCard.healthScore}/100</span>
+                    </div>
+                    <div className="flex flex-col gap-1.5 text-[10px] text-slate-500 font-bold">
+                      <div className="flex justify-between"><span>Activity Frequency:</span> <span className="text-slate-800 font-extrabold">92%</span></div>
+                      <div className="flex justify-between"><span>Response SLA Speed:</span> <span className="text-slate-800 font-extrabold">85%</span></div>
+                      <div className="flex justify-between"><span>Document Completeness:</span> <span className="text-slate-800 font-extrabold">100%</span></div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs font-semibold">
+                    <span className="text-[9px] font-bold text-slate-450 uppercase block mb-1.5">Recommended Space Matches</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedCard.recommendedMatches.split(",").map((match: string, i: number) => (
+                        <span key={i} className="px-2 py-0.5 rounded bg-blue-50 border border-blue-100 text-[10px] font-bold text-blue-750">
+                          {match.trim()}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

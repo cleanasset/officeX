@@ -65,7 +65,9 @@ const unifiedMenu: MenuItem[] = [
     icon: MapPin,
     subItems: [
       { name: "Property Registry", href: "/properties/registry" },
-      { name: "Tenant Directory", href: "/properties/tenants" }
+      { name: "Tenant Directory", href: "/properties/tenants" },
+      { name: "Buildings & Floors", href: "/properties/registry" },
+      { name: "Space Bookings", href: "/tenant" }
     ]
   },
   {
@@ -74,6 +76,8 @@ const unifiedMenu: MenuItem[] = [
     icon: ClipboardList,
     subItems: [
       { name: "FM Command Centre", href: "/ops" },
+      { name: "Outcome FM", href: "/ops/outcomes" },
+      { name: "Helpdesk Tickets", href: "/ops/helpdesk" },
       { name: "PPM Calendar", href: "/ops/ppm" },
       { name: "Compliance Centre", href: "/properties/compliance" }
     ]
@@ -83,7 +87,8 @@ const unifiedMenu: MenuItem[] = [
     href: "/ops/assets",
     icon: Settings,
     subItems: [
-      { name: "Asset Register", href: "/ops/assets" }
+      { name: "Asset Register", href: "/ops/assets" },
+      { name: "Health & Warranty", href: "/ops/assets" }
     ]
   },
   {
@@ -92,6 +97,7 @@ const unifiedMenu: MenuItem[] = [
     icon: Briefcase,
     subItems: [
       { name: "Vendor Dashboard", href: "/vendor" },
+      { name: "Contracts & Performance", href: "/marketplace/ratings" },
       { name: "Work Orders", href: "/vendor/work-orders" }
     ]
   },
@@ -101,6 +107,7 @@ const unifiedMenu: MenuItem[] = [
     icon: DollarSign,
     subItems: [
       { name: "Rent Roll Ledger", href: "/properties/rent-roll" },
+      { name: "Collections & Invoices", href: "/properties/collections" },
       { name: "Payments & Escrow", href: "/marketplace/payments" }
     ]
   },

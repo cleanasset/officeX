@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Building, MapPin, X, Navigation, ArrowLeft, SlidersHorizontal, Star } from "lucide-react";
+import { Search, Building, MapPin, X, Navigation, ArrowLeft, SlidersHorizontal, Star, Heart } from "lucide-react";
 
 export default function PublicSearch() {
   const [query, setQuery] = useState("");
@@ -13,6 +13,8 @@ export default function PublicSearch() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [gradeFilter, setGradeFilter] = useState("ALL");
   const [readinessFilter, setReadinessFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState("score"); // score, rent, area, commute
+  const [shortlisted, setShortlisted] = useState<number[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Local suggestions mock to match exact user searches
@@ -35,10 +37,13 @@ export default function PublicSearch() {
             name: p.name,
             city: p.city,
             address: p.address,
-            area: parseFloat(p.totalArea).toLocaleString() + " sqft",
-            rent: "₹1,05,000/mo",
+            areaValue: p.totalArea ? parseFloat(p.totalArea) : 5000,
+            area: parseFloat(p.totalArea || "5000").toLocaleString() + " sqft",
+            rentValue: p.name.includes("Apex") ? 180000 : p.name.includes("Meridian") ? 120000 : 150000,
+            rent: p.name.includes("Apex") ? "₹1,80,000/mo" : p.name.includes("Meridian") ? "₹1,20,000/mo" : "₹1,50,000/mo",
             grade: p.grade || "A",
             score: p.name.includes("Apex") ? 86 : p.name.includes("Meridian") ? 89 : 82,
+            commuteScore: p.name.includes("Apex") ? 92 : p.name.includes("Meridian") ? 88 : 79,
             readiness: p.name.includes("Apex") ? "Ready to Move" : "Under Fit-out"
           }));
           setProperties(formatted);
@@ -118,36 +123,44 @@ export default function PublicSearch() {
     setShowSuggestions(false);
   };
 
-  // Filter listings based on text + grade + readiness filters
-  const filteredProperties = properties.filter(p => {
-    // 1. Text filter
-    const q = query.trim().toLowerCase();
-    let textMatches = true;
-    if (q) {
-      const searchTerms = q.split(/[\s,]+/).filter(t => t.length > 2);
-      if (searchTerms.length > 0) {
-        textMatches = searchTerms.some(term => 
-          p.name.toLowerCase().includes(term) ||
-          p.address.toLowerCase().includes(term) ||
-          p.city.toLowerCase().includes(term)
-        );
+  // Filter & Rank listings based on query + filters + sort selection
+  const sortedProperties = properties
+    .filter(p => {
+      // 1. Text filter
+      const q = query.trim().toLowerCase();
+      let textMatches = true;
+      if (q) {
+        const searchTerms = q.split(/[\s,]+/).filter(t => t.length > 2);
+        if (searchTerms.length > 0) {
+          textMatches = searchTerms.some(term => 
+            p.name.toLowerCase().includes(term) ||
+            p.address.toLowerCase().includes(term) ||
+            p.city.toLowerCase().includes(term)
+          );
+        }
       }
-    }
 
-    // 2. Grade filter
-    let gradeMatches = true;
-    if (gradeFilter !== "ALL") {
-      gradeMatches = p.grade === gradeFilter;
-    }
+      // 2. Grade filter
+      let gradeMatches = true;
+      if (gradeFilter !== "ALL") {
+        gradeMatches = p.grade === gradeFilter;
+      }
 
-    // 3. Readiness filter
-    let readinessMatches = true;
-    if (readinessFilter !== "ALL") {
-      readinessMatches = p.readiness === readinessFilter;
-    }
+      // 3. Readiness filter
+      let readinessMatches = true;
+      if (readinessFilter !== "ALL") {
+        readinessMatches = p.readiness === readinessFilter;
+      }
 
-    return textMatches && gradeMatches && readinessMatches;
-  });
+      return textMatches && gradeMatches && readinessMatches;
+    })
+    .sort((a, b) => {
+      if (sortBy === "score") return b.score - a.score;
+      if (sortBy === "commute") return b.commuteScore - a.commuteScore;
+      if (sortBy === "rent") return a.rentValue - b.rentValue;
+      if (sortBy === "area") return b.areaValue - a.areaValue;
+      return 0;
+    });
 
   return (
     <div className="relative w-screen h-screen overflow-hidden font-sans bg-slate-100 flex flex-col">
@@ -248,6 +261,20 @@ export default function PublicSearch() {
                 <option value="Under Fit-out">Under Fit-out</option>
               </select>
             </div>
+
+            <div className="flex-1">
+              <label className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Sort & Rank</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
+              >
+                <option value="score">Property Score</option>
+                <option value="commute">Commute Score</option>
+                <option value="rent">Rent (Low to High)</option>
+                <option value="area">Area (High to Low)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -255,45 +282,68 @@ export default function PublicSearch() {
         <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 max-h-[calc(100vh-210px)] overflow-y-auto flex flex-col gap-3">
           <div className="flex justify-between items-center pb-2 border-b border-slate-100">
             <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">
-              {filteredProperties.length > 0 ? "OfficeX Verified Listings" : "No active listings"}
+              {sortedProperties.length > 0 ? "OfficeX Verified Listings" : "No active listings"}
             </span>
             <span className="px-2 py-0.5 rounded bg-blue-50 text-[#0F8B7D] font-bold text-[9px] uppercase tracking-wider">Map Active</span>
           </div>
 
           {/* Render matched list */}
-          {filteredProperties.map((prop, idx) => (
-            <div key={idx} className="p-3.5 rounded-xl border border-slate-100 hover:border-[#0F8B7D] bg-white flex flex-col gap-2.5 transition-all shadow-xs">
-              <div className="flex justify-between items-start">
-                <div className="flex-1 min-w-0 pr-2">
-                  <h4 className="font-extrabold text-slate-900 text-xs truncate flex items-center gap-1.5">
-                    <Building size={13} className="text-[#0F8B7D]" />
-                    {prop.name}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{prop.address}, {prop.city}</p>
-                </div>
-                <div className="flex flex-col items-end shrink-0">
-                  <span className="text-xs font-black text-[#0F8B7D]">{prop.rent}</span>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-black text-slate-500 uppercase mt-0.5">Grade {prop.grade}</span>
-                </div>
-              </div>
+          {sortedProperties.map((prop, idx) => {
+            const isShortlisted = shortlisted.includes(prop.id);
+            return (
+              <div key={idx} className="p-3.5 rounded-xl border border-slate-100 hover:border-[#0F8B7D] bg-white flex flex-col gap-2.5 transition-all shadow-xs relative">
+                
+                {/* Save/Shortlist Bookmark Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isShortlisted) {
+                      setShortlisted(shortlisted.filter(id => id !== prop.id));
+                    } else {
+                      setShortlisted([...shortlisted, prop.id]);
+                    }
+                  }}
+                  className="absolute top-3.5 right-3.5 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                  title={isShortlisted ? "Remove from shortlist" : "Save to shortlist"}
+                >
+                  <Heart size={14} className={isShortlisted ? "fill-red-500 text-red-500" : "text-slate-400"} />
+                </button>
 
-              {/* Score Badges row */}
-              <div className="flex items-center justify-between border-t border-slate-50 pt-2.5 text-[10px] font-bold">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[#0F8B7D] text-[9px] font-extrabold">
-                    Score: {prop.score}
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-bold">{prop.readiness}</span>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0 pr-6">
+                    <h4 className="font-extrabold text-slate-900 text-xs truncate flex items-center gap-1.5">
+                      <Building size={13} className="text-[#0F8B7D]" />
+                      {prop.name}
+                    </h4>
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{prop.address}, {prop.city}</p>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="text-xs font-black text-[#0F8B7D]">{prop.rent}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-black text-slate-500 uppercase mt-0.5">Grade {prop.grade}</span>
+                  </div>
                 </div>
-                <Link href={`/public/property/${prop.id}`} className="px-3 py-1 rounded bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-[9px] transition-colors">
-                  View Space
-                </Link>
+
+                {/* Score Badges row */}
+                <div className="flex items-center justify-between border-t border-slate-50 pt-2.5 text-[10px] font-bold">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[#0F8B7D] text-[9px] font-extrabold">
+                      Score: {prop.score}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[9px] font-extrabold">
+                      Commute: {prop.commuteScore}%
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-bold">{prop.readiness}</span>
+                  </div>
+                  <Link href={`/public/property/${prop.id}`} className="px-3 py-1 rounded bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-[9px] transition-colors shrink-0">
+                    View Space
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Empty State */}
-          {filteredProperties.length === 0 && (
+          {sortedProperties.length === 0 && (
             <div className="py-4 text-center">
               <p className="text-xs text-slate-650 leading-relaxed font-bold">
                 No matching OfficeX workspace listings found.

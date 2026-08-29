@@ -48,6 +48,13 @@ export default function RentRoll() {
   const [effectiveDate, setEffectiveDate] = useState("");
   const [showOverrideWarning, setShowOverrideWarning] = useState(false);
 
+  const [auditLogs, setAuditLogs] = useState([
+    { id: 1, action: "Lease initialized", details: "TCS India registered with Base Rent: ₹18.5L, CAM: ₹1.85L", date: "2026-08-01 10:00 AM", user: "system" },
+    { id: 2, action: "Lease initialized", details: "Razorpay Tech registered with Base Rent: ₹8.5L, CAM: ₹85K", date: "2026-08-01 10:05 AM", user: "system" }
+  ]);
+
+  const [showVariance, setShowVariance] = useState(false);
+
   const triggerReminder = (tenantName: string, poc: string) => {
     setNotification(`Demand notice & SMS reminder successfully dispatched to ${poc} (${tenantName})!`);
     setTimeout(() => setNotification(""), 4000);
@@ -58,6 +65,14 @@ export default function RentRoll() {
     setRentroll(rentroll.map(t => {
       if (t.id === id) {
         const nextHold = !t.escalationHold;
+        const log = {
+          id: Date.now(),
+          action: nextHold ? "Escalation Hold Enabled" : "Escalation Hold Released",
+          details: `${t.tenant}: Escalation hold set to ${nextHold}`,
+          date: new Date().toLocaleString(),
+          user: "admin@officex.in"
+        };
+        setAuditLogs(prev => [log, ...prev]);
         return {
           ...t,
           escalationHold: nextHold,
@@ -102,6 +117,14 @@ export default function RentRoll() {
     const rentNum = Number(newRentVal);
     setRentroll(rentroll.map(t => {
       if (t.id === selectedTenant.id) {
+        const log = {
+          id: Date.now(),
+          action: "Base Rent Adjusted",
+          details: `${t.tenant}: Base rent updated from ₹${t.baseRent.toLocaleString()} to ₹${rentNum.toLocaleString()}`,
+          date: new Date().toLocaleString(),
+          user: "admin@officex.in"
+        };
+        setAuditLogs(prev => [log, ...prev]);
         return {
           ...t,
           baseRent: rentNum,
@@ -119,6 +142,10 @@ export default function RentRoll() {
     setSelectedTenant(null);
   };
 
+  const handleExport = (format: "XLSX" | "PDF") => {
+    showToast(`MIS Ledger successfully compiled and exported as ${format}!`);
+  };
+
   const showToast = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(""), 4000);
@@ -129,6 +156,15 @@ export default function RentRoll() {
   const totalCAM = rentroll.reduce((sum, item) => sum + item.camRent, 0);
   const totalGrossDue = totalBaseRent + totalCAM;
   
+  // Budget benchmarks
+  const budgetedBase = 2800000;
+  const budgetedCAM = 280000;
+  const budgetedGross = budgetedBase + budgetedCAM;
+
+  const baseVariance = totalBaseRent - budgetedBase;
+  const camVariance = totalCAM - budgetedCAM;
+  const grossVariance = totalGrossDue - budgetedGross;
+
   // NOI UAT Calculations: NOI = Revenue - Opex (est. opex at 35% of total income)
   const opexExpenses = Math.round(totalGrossDue * 0.35);
   const netOperatingIncome = totalGrossDue - opexExpenses;
@@ -137,10 +173,30 @@ export default function RentRoll() {
     <div className="flex flex-col gap-8 relative font-sans text-slate-900 bg-slate-50/20 p-2">
       
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Rent Roll Registry</h1>
           <p className="text-xs text-slate-500 font-bold mt-1">Audit active tenant lease commercial rolls, annual escalations, deposits, and CAM calculations.</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowVariance(!showVariance)}
+            className="px-3.5 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-slate-700 font-bold text-xs cursor-pointer"
+          >
+            {showVariance ? "Hide Variance" : "Show Variance"}
+          </button>
+          <button 
+            onClick={() => handleExport("XLSX")}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm cursor-pointer"
+          >
+            Export XLSX
+          </button>
+          <button 
+            onClick={() => handleExport("PDF")}
+            className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-750 text-white font-bold text-xs shadow-sm cursor-pointer"
+          >
+            Export PDF
+          </button>
         </div>
       </div>
 
@@ -148,6 +204,45 @@ export default function RentRoll() {
         <div className="p-4 rounded-xl bg-blue-50 border border-blue-150 text-[#0F8B7D] font-bold text-xs animate-pulse flex items-center gap-2 max-w-2xl">
           <Bell size={16} />
           {notification}
+        </div>
+      )}
+
+      {/* MIS VARIANCE ANALYSIS COMPONENT */}
+      {showVariance && (
+        <div className="p-6 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-xs flex flex-col gap-4 animate-scale-up">
+          <span className="text-[10px] text-amber-700 font-black uppercase tracking-widest block">MIS Actual vs Budget Variance Analysis</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4 bg-white rounded-xl border border-amber-100 shadow-2xs">
+              <span className="text-[9px] text-slate-400 font-bold uppercase block">Base Rent Variance</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-lg font-black text-slate-900">₹{totalBaseRent.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400 font-semibold">vs ₹{budgetedBase.toLocaleString()}</span>
+              </div>
+              <span className={`text-[10px] font-bold block mt-1.5 ${baseVariance >= 0 ? "text-emerald-600" : "text-red-650"}`}>
+                {baseVariance >= 0 ? "+" : ""}₹{baseVariance.toLocaleString()} ({((baseVariance / budgetedBase) * 100).toFixed(1)}%)
+              </span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-amber-100 shadow-2xs">
+              <span className="text-[9px] text-slate-400 font-bold uppercase block">CAM Charge Variance</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-lg font-black text-slate-900">₹{totalCAM.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400 font-semibold">vs ₹{budgetedCAM.toLocaleString()}</span>
+              </div>
+              <span className={`text-[10px] font-bold block mt-1.5 ${camVariance >= 0 ? "text-emerald-600" : "text-red-650"}`}>
+                {camVariance >= 0 ? "+" : ""}₹{camVariance.toLocaleString()} ({((camVariance / budgetedCAM) * 100).toFixed(1)}%)
+              </span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-amber-100 shadow-2xs">
+              <span className="text-[9px] text-slate-400 font-bold uppercase block">Gross Billing Variance</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-lg font-black text-slate-900">₹{totalGrossDue.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400 font-semibold">vs ₹{budgetedGross.toLocaleString()}</span>
+              </div>
+              <span className={`text-[10px] font-bold block mt-1.5 ${grossVariance >= 0 ? "text-emerald-600" : "text-red-650"}`}>
+                {grossVariance >= 0 ? "+" : ""}₹{grossVariance.toLocaleString()} ({((grossVariance / budgetedGross) * 100).toFixed(1)}%)
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -333,6 +428,28 @@ export default function RentRoll() {
                     </div>
                   )}
                 </div>
+
+                <div className="border-t border-slate-150 pt-4 mt-4">
+                  <h4 className="font-bold text-slate-900 text-xs mb-3">Audit Logs & Timeline History</h4>
+                  <div className="flex flex-col gap-2 max-h-[150px] overflow-y-auto pr-1">
+                    {auditLogs
+                      .filter(log => log.details.includes(selectedTenant.tenant))
+                      .map((log) => (
+                        <div key={log.id} className="p-2 rounded bg-gray-50 border border-gray-100 text-[10px]">
+                          <div className="flex justify-between font-bold text-slate-700">
+                            <span>{log.action}</span>
+                            <span className="text-slate-450 font-normal">{log.date}</span>
+                          </div>
+                          <p className="text-slate-600 mt-0.5">{log.details}</p>
+                          <span className="text-[9px] text-[#0F8B7D] font-black mt-1 block">User: {log.user}</span>
+                        </div>
+                      ))}
+                    {auditLogs.filter(log => log.details.includes(selectedTenant.tenant)).length === 0 && (
+                      <span className="text-slate-400 text-[10px] italic">No overrides recorded yet.</span>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
 

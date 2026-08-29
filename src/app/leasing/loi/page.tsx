@@ -1,8 +1,11 @@
 "use client";
+
 import React, { useState } from "react";
 import { FileText, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function LoiPage() {
+  const router = useRouter();
   const [loiList] = useState([
     { id: 1, tenant: "Razorpay Software", property: "Apex Floor 4", deposit: "₹15,00,000", leasePeriod: "3 Years", status: "Signed", onboardStatus: "Pending Onboarding" },
     { id: 2, tenant: "Paytm Services", property: "Meridian Block B", deposit: "₹24,00,000", leasePeriod: "5 Years", status: "Pending Tenant Sign", onboardStatus: "N/A" }
@@ -11,8 +14,7 @@ export default function LoiPage() {
   const [message, setMessage] = useState("");
 
   const handleOnboardInit = (tenant: string) => {
-    setMessage(`Workspace Onboarding initialized for ${tenant}! Relational checklists configured for IT, Fitouts, and CAFM NOCs.`);
-    setTimeout(() => setMessage(""), 5000);
+    router.push(`/leasing/onboard?tenant=${encodeURIComponent(tenant)}`);
   };
 
   return (
