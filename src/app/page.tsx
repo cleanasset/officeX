@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Search,
   Building,
@@ -45,7 +46,7 @@ import {
 
 export default function LandingPage() {
   const router = useRouter();
-  const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor">("space");
+  const [activeSearchTab, setActiveSearchTab] = useState<"space" | "saas" | "vendor">("space");
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
@@ -111,6 +112,8 @@ export default function LandingPage() {
       router.push(
         `/public/search?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
       );
+    } else if (activeSearchTab === "saas") {
+      router.push(`/public/wizard`);
     } else {
       router.push(
         `/public/wizard?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
@@ -268,9 +271,11 @@ export default function LandingPage() {
       <section className="pt-40 pb-20 px-6 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#9CCAE2] via-[#97C4E5] to-[#91BBE5]">
         
         {/* Floating Pulsing Badge */}
-        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-white/90 text-xs font-bold text-[#0D7A6E] shadow-xs">
+        <div className="mb-6 inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/70 border border-white/90 text-xs font-bold text-[#0D7A6E] shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-          Trusted by 450+ Teams
+          <span>Trusted by 450+ Teams</span>
+          <span className="w-px h-3 bg-slate-300/80"></span>
+          <span className="text-slate-700">OFFICEX Trust Score: <span className="text-emerald-700 font-extrabold">98.4% Verified</span></span>
         </div>
 
         <h1 className="text-center max-w-4xl text-4xl md:text-6xl font-black tracking-tight text-slate-950 leading-[1.15]">
@@ -296,7 +301,18 @@ export default function LandingPage() {
               }`}
             >
               <Building size={14} />
-              Find Office Space
+              Find Workspace
+            </button>
+            <button 
+              onClick={() => setActiveSearchTab("saas")}
+              className={`flex-1 py-4 text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                activeSearchTab === "saas" 
+                  ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <Layers size={14} />
+              Manage Workspace
             </button>
             <button 
               onClick={() => setActiveSearchTab("vendor")}
@@ -369,6 +385,39 @@ export default function LandingPage() {
                   </select>
                 </div>
               </div>
+            ) : activeSearchTab === "saas" ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <span className="absolute left-3 top-3.5 text-slate-400"><Building size={16} /></span>
+                  <input 
+                    type="text"
+                    placeholder="Enter Organization Name"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-semibold bg-white"
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-3 text-slate-400"><Users size={16} /></span>
+                  <select 
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                  >
+                    <option value="50">Team size: 10 - 50</option>
+                    <option value="100">Team size: 50 - 200</option>
+                    <option value="500">Team size: 200 - 1000</option>
+                    <option value="1000">Team size: 1000+ Enterprise</option>
+                  </select>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-3 text-slate-400"><SlidersHorizontal size={16} /></span>
+                  <select 
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                  >
+                    <option value="setup">Workspace Onboarding Setup</option>
+                    <option value="desk">Hot Desk & Meeting Booking</option>
+                    <option value="ppm">PPM Calendar Automation</option>
+                    <option value="analytics">Energy / Sustainability Reporting</option>
+                  </select>
+                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative">
@@ -437,8 +486,17 @@ export default function LandingPage() {
                 onClick={handleLandingSearch}
                 className="w-full md:w-auto px-10 py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Search size={14} />
-                Search
+                {activeSearchTab === "saas" ? (
+                  <>
+                    <Layers size={14} />
+                    Launch Workspace OS
+                  </>
+                ) : (
+                  <>
+                    <Search size={14} />
+                    Search
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -470,6 +528,58 @@ export default function LandingPage() {
           <div>
             <div className="text-2xl md:text-3xl font-black text-slate-950">{animateCount.uptime}%</div>
             <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">System Uptime</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ROLE-AWARE ENTRY PORTALS SECTION (Figma Gap Page 1) */}
+      <section className="py-12 bg-white px-6 border-b border-[#DFE4E1]">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <h3 className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-widest mb-1.5">Role-Aware Entry Portals</h3>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">Access Your Tailored Workspace OS Workspace</h2>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Link href="/properties/registry" className="p-4 rounded-2xl border border-slate-100 hover:border-[#0F8B7D] hover:shadow-sm bg-slate-50/50 hover:bg-white text-center transition-all flex flex-col items-center gap-2.5">
+              <Building className="text-[#0F8B7D]" size={20} />
+              <div>
+                <div className="font-extrabold text-slate-900 text-[10px] uppercase tracking-wider">Owner / Landlord</div>
+                <p className="text-[9px] text-slate-400 mt-1 font-semibold leading-normal">Publish listings, track rent rolls & portfolio occupancy.</p>
+              </div>
+            </Link>
+
+            <Link href="/tenant" className="p-4 rounded-2xl border border-slate-100 hover:border-[#0F8B7D] hover:shadow-sm bg-slate-50/50 hover:bg-white text-center transition-all flex flex-col items-center gap-2.5">
+              <Users className="text-[#0F8B7D]" size={20} />
+              <div>
+                <div className="font-extrabold text-slate-900 text-[10px] uppercase tracking-wider">Tenant Occupier</div>
+                <p className="text-[9px] text-slate-400 mt-1 font-semibold leading-normal">Book meeting rooms, log safety complaints & request parking.</p>
+              </div>
+            </Link>
+
+            <Link href="/ops" className="p-4 rounded-2xl border border-slate-100 hover:border-[#0F8B7D] hover:shadow-sm bg-slate-50/50 hover:bg-white text-center transition-all flex flex-col items-center gap-2.5">
+              <ClipboardList className="text-[#0F8B7D]" size={20} />
+              <div>
+                <div className="font-extrabold text-slate-900 text-[10px] uppercase tracking-wider">Facility Manager</div>
+                <p className="text-[9px] text-slate-400 mt-1 font-semibold leading-normal">Automate PPM schedules, track SLAs & utility runtime meters.</p>
+              </div>
+            </Link>
+
+            <Link href="/vendor" className="p-4 rounded-2xl border border-slate-100 hover:border-[#0F8B7D] hover:shadow-sm bg-slate-50/50 hover:bg-white text-center transition-all flex flex-col items-center gap-2.5">
+              <Wrench className="text-[#0F8B7D]" size={20} />
+              <div>
+                <div className="font-extrabold text-slate-900 text-[10px] uppercase tracking-wider">Vendor Partner</div>
+                <p className="text-[9px] text-slate-400 mt-1 font-semibold leading-normal">Submit bids, verify milestone checklists & receive payouts.</p>
+              </div>
+            </Link>
+
+            <Link href="/leasing/pipeline" className="p-4 rounded-2xl border border-slate-100 hover:border-[#0F8B7D] hover:shadow-sm bg-slate-50/50 hover:bg-white text-center transition-all flex flex-col items-center gap-2.5 col-span-2 md:col-span-1">
+              <Award className="text-[#0F8B7D]" size={20} />
+              <div>
+                <div className="font-extrabold text-slate-900 text-[10px] uppercase tracking-wider">Leasing Broker</div>
+                <p className="text-[9px] text-slate-400 mt-1 font-semibold leading-normal">Track leads pipeline, schedule site visits & manage LOIs.</p>
+              </div>
+            </Link>
           </div>
         </div>
       </section>

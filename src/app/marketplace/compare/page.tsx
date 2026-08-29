@@ -82,6 +82,25 @@ export default function CompareQuotes() {
         </div>
       </div>
 
+      {/* Smart Match Recommendation Banner (Client Response Approved Change) */}
+      <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 text-[#0F8B7D] font-black text-xs uppercase tracking-widest mb-1.5">
+            <Award size={16} /> Smart Match Recommendation (AI Decision Model)
+          </div>
+          <h4 className="font-extrabold text-slate-900 text-sm mb-1">Recommended Vendor: TechServe Solutions (Score: 91/100)</h4>
+          <p className="text-xs text-slate-650 font-semibold leading-relaxed">
+            TechServe Solutions is recommended based on total cost of ownership. It offers the lowest Gross Bid (₹1,41,600), maximum statutory compliance (19/20), and superior technical capability (19/20). Although Apex MEP offers a faster SLA (2 hours vs 4 hours), TechServe’s cost-efficiency and compliance history make it the optimal choice.
+          </p>
+        </div>
+        <button
+          onClick={() => handleAwardContract("TechServe Solutions")}
+          className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs shadow-md transition-all whitespace-nowrap cursor-pointer"
+        >
+          Accept Recommendation
+        </button>
+      </div>
+
       {/* Matrix Table */}
       <div className="p-6 rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
