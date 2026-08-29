@@ -17,6 +17,7 @@ export default function Visitors() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<any>(null);
   const [isEmergencyActive, setIsEmergencyActive] = useState(false);
+  const [securityAlert, setSecurityAlert] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -27,7 +28,11 @@ export default function Visitors() {
     type: "Guest",
     time: "12:00 PM",
     vehicle: "",
-    consent: false
+    consent: false,
+    recurring: false,
+    recurringPeriod: "Daily",
+    parkingSlot: "None",
+    contractorDocStatus: "Valid"
   });
 
   const showToast = (msg: string) => {
@@ -57,6 +62,12 @@ export default function Visitors() {
       return;
     }
 
+    // Contractor compliance check
+    if (form.type === "Contractor" && form.contractorDocStatus === "Expired") {
+      alert("COMPLIANCE BLOCK: This contractor's safety NOC / liability documentation has expired. Visitor pass cannot be issued until valid certificates are uploaded.");
+      return;
+    }
+
     const newV = {
       id: visitors.length + 1,
       name: form.name,
@@ -68,12 +79,19 @@ export default function Visitors() {
       status: "Approved",
       checkedIn: false,
       overstay: false,
-      safe: false
+      safe: false,
+      vehicle: form.vehicle || "N/A",
+      parkingSlot: form.parkingSlot,
+      recurring: form.recurring ? `Yes (${form.recurringPeriod})` : "No"
     };
 
     setVisitors([...visitors, newV]);
     setIsRegistering(false);
-    setForm({ name: "", email: "", phone: "", company: "", type: "Guest", time: "12:00 PM", vehicle: "", consent: false });
+    setForm({ 
+      name: "", email: "", phone: "", company: "", type: "Guest", time: "12:00 PM", 
+      vehicle: "", consent: false, recurring: false, recurringPeriod: "Daily", 
+      parkingSlot: "None", contractorDocStatus: "Valid" 
+    });
     showToast(`Visitor invitation created for ${newV.name}. Passcode: ${newV.code}`);
   };
 
@@ -87,6 +105,30 @@ export default function Visitors() {
     showToast("Visitor checked out successfully.");
   };
 
+  const handleDeclineCheckIn = (id: number, name: string) => {
+    setVisitors(visitors.map(v => {
+      if (v.id === id) {
+        return { ...v, status: "Check-in Declined", checkedIn: false };
+      }
+      return v;
+    }));
+    setSecurityAlert(`SECURITY ALERT: Check-in declined by Host for ${name}. Instruct guest to exit BKC premises immediately.`);
+    showToast(`Security operations notified of check-in refusal.`);
+  };
+
+  const handleExtendPass = (id: number) => {
+    setVisitors(visitors.map(v => {
+      if (v.id === id) {
+        return { ...v, time: "06:00 PM (Extended)", status: "Approved (Extended)" };
+      }
+      return v;
+    }));
+    if (selectedVisitor && selectedVisitor.id === id) {
+      setSelectedVisitor({ ...selectedVisitor, time: "06:00 PM (Extended)", status: "Approved (Extended)" });
+    }
+    showToast("Visitor pass validity extended until 06:00 PM today.");
+  };
+
   const handleMarkSafe = (id: number) => {
     setVisitors(visitors.map(v => {
       if (v.id === id) {
@@ -95,6 +137,10 @@ export default function Visitors() {
       return v;
     }));
     showToast("Marked safe in database.");
+  };
+
+  const handlePrintBadge = (name: string, code: string) => {
+    showToast(`Badge print command dispatched to gatekeeper printer. Code: ${code}`);
   };
 
   // UAT emergency statistics
@@ -136,6 +182,19 @@ export default function Visitors() {
           </button>
         </div>
       </div>
+
+      {/* Security Alert Banner */}
+      {securityAlert && (
+        <div className="p-4 rounded-xl bg-red-100 border border-red-300 text-red-750 font-black text-xs flex justify-between items-center animate-scale-up">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={16} className="text-red-700 animate-bounce" />
+            <span>{securityAlert}</span>
+          </div>
+          <button onClick={() => setSecurityAlert(null)} className="p-1 rounded-full hover:bg-red-200">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Emergency Status Alert Box */}
       {isEmergencyActive && (
@@ -218,6 +277,14 @@ export default function Visitors() {
                         Mark Safe
                       </button>
                     )}
+                    {v.status === "Approved" && (
+                      <button
+                        onClick={() => handleDeclineCheckIn(v.id, v.name)}
+                        className="px-2.5 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 text-red-600 font-bold text-[10px] cursor-pointer"
+                      >
+                        Decline Entry
+                      </button>
+                    )}
                     {v.checkedIn ? (
                       <>
                         {v.safe && (
@@ -232,11 +299,11 @@ export default function Visitors() {
                       </>
                     ) : (
                       <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${
-                        v.status === "Approved" 
+                        v.status === "Approved" || v.status === "Approved (Extended)"
                           ? "bg-emerald-50 text-emerald-600 border border-emerald-200" 
                           : v.status === "Checked Out"
                           ? "bg-slate-100 text-slate-500 border border-slate-200"
-                          : "bg-red-50 text-red-650 border border-red-200"
+                          : "bg-red-55 border border-red-200 text-red-650"
                       }`}>
                         {v.status}
                       </span>
@@ -264,7 +331,7 @@ export default function Visitors() {
             </div>
 
             <div className="w-full flex flex-col items-center p-6 rounded-2xl bg-slate-50 border border-slate-100 gap-4">
-              <QrCode size={120} className="text-purple-600 p-2 bg-white border border-slate-200 rounded-xl" />
+              <QrCode size={120} className="text-[#0F8B7D] p-2 bg-white border border-slate-200 rounded-xl" />
               <div className="text-center">
                 <span className="font-mono font-black text-[#0F8B7D] text-base">{selectedVisitor.code}</span>
                 <span className="text-[10px] text-slate-400 font-bold block mt-1 uppercase tracking-wider">{selectedVisitor.name}</span>
@@ -276,12 +343,12 @@ export default function Visitors() {
               <div className="flex justify-between border-b border-slate-100 pb-1.5">
                 <span>Verification State</span>
                 <span className="text-emerald-600 font-extrabold uppercase flex items-center gap-1">
-                  <ShieldCheck size={12} /> Approved
+                  <ShieldCheck size={12} /> {selectedVisitor.status}
                 </span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                <span>Access Zone</span>
-                <span className="font-extrabold text-slate-900">Floor 5 - Unit 5A</span>
+                <span>Access Zone / Parking</span>
+                <span className="font-extrabold text-slate-900">Unit 5A ({selectedVisitor.parkingSlot || "No Parking Assigned"})</span>
               </div>
               <div className="flex justify-between">
                 <span>Valid Date & Time</span>
@@ -289,19 +356,31 @@ export default function Visitors() {
               </div>
             </div>
 
-            <button 
-              onClick={() => setSelectedVisitor(null)}
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer text-center"
-            >
-              Print Pass / Send Passcode
-            </button>
+            <div className="w-full grid grid-cols-2 gap-3 mt-2">
+              {selectedVisitor.status.includes("Approved") && (
+                <button
+                  onClick={() => handleExtendPass(selectedVisitor.id)}
+                  className="py-2.5 rounded-xl border border-gray-250 text-gray-700 font-bold text-[10px] cursor-pointer text-center hover:bg-gray-50"
+                >
+                  Extend Pass
+                </button>
+              )}
+              <button 
+                onClick={() => handlePrintBadge(selectedVisitor.name, selectedVisitor.code)}
+                className={`py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0d7569] text-white font-bold text-[10px] shadow-md transition-colors cursor-pointer text-center ${
+                  !selectedVisitor.status.includes("Approved") ? "col-span-2" : ""
+                }`}
+              >
+                Print Gate Badge
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Register Guest Modal */}
       {isRegistering && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in overflow-y-auto">
           <form 
             onSubmit={handleRegister}
             className="w-full max-w-md bg-white rounded-3xl p-8 flex flex-col gap-5 shadow-2xl border border-slate-100 animate-scale-up"
@@ -327,7 +406,7 @@ export default function Visitors() {
                     placeholder="e.g. Alok Roy"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-purple-600 bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -338,7 +417,7 @@ export default function Visitors() {
                     placeholder="e.g. TCS Auditor"
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-purple-600 bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
               </div>
@@ -351,7 +430,7 @@ export default function Visitors() {
                     placeholder="e.g. guest@tcs.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-purple-600 bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -361,7 +440,7 @@ export default function Visitors() {
                     placeholder="e.g. +91 99887 76655"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-purple-600 bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
               </div>
@@ -374,7 +453,7 @@ export default function Visitors() {
                     placeholder="e.g. 02:00 PM"
                     value={form.time}
                     onChange={(e) => setForm({ ...form, time: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-purple-600 bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -382,7 +461,7 @@ export default function Visitors() {
                   <select 
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-purple-600 bg-white cursor-pointer"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#0F8B7D] bg-white cursor-pointer"
                   >
                     <option value="Guest">Guest</option>
                     <option value="Client">Client</option>
@@ -392,15 +471,74 @@ export default function Visitors() {
                 </div>
               </div>
 
+              {/* Contractor Specific NOC Document check status validation (UAT contractor NOC block) */}
+              {form.type === "Contractor" && (
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-50/50 border border-purple-100">
+                  <label className="text-[10px] font-bold text-purple-750 uppercase">Safety NOC & Liability Status</label>
+                  <select
+                    value={form.contractorDocStatus}
+                    onChange={(e) => setForm({ ...form, contractorDocStatus: e.target.value })}
+                    className="px-3 py-1.5 border border-purple-200 rounded-lg text-xs font-bold bg-white text-slate-900 cursor-pointer"
+                  >
+                    <option value="Valid">Valid Safety Certificates & Insurance NOC</option>
+                    <option value="Expired">Expired Safety Certificates (Pass will block)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Vehicle registration and Parking Bay Selection */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Vehicle Plate (Optional)</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. MH 02 AB 1234"
+                    value={form.vehicle}
+                    onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Parking Bay Allocation</label>
+                  <select
+                    value={form.parkingSlot}
+                    onChange={(e) => setForm({ ...form, parkingSlot: e.target.value })}
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold bg-white cursor-pointer"
+                  >
+                    <option value="None">No Parking Required</option>
+                    <option value="Bay P1-A08">Bay P1-A08 (Standard)</option>
+                    <option value="Bay P2-B45 (EV)">Bay P2-B45 (EV Station)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Scheduling Recurring Visits */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Vehicle Plate (Optional)</label>
-                <input 
-                  type="text"
-                  placeholder="e.g. MH 02 AB 1234"
-                  value={form.vehicle}
-                  onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
-                  className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-purple-600 bg-slate-50"
-                />
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.recurring}
+                    onChange={(e) => setForm({ ...form, recurring: e.target.checked })}
+                    className="rounded border-slate-300 text-[#0F8B7D] focus:ring-[#0F8B7D] cursor-pointer"
+                  />
+                  <span className="text-[10px] font-bold text-slate-450 uppercase">Setup Recurring Visit Schedule</span>
+                </label>
+                {form.recurring && (
+                  <div className="grid grid-cols-2 gap-3 mt-1 animate-scale-up">
+                    <select
+                      value={form.recurringPeriod}
+                      onChange={(e) => setForm({ ...form, recurringPeriod: e.target.value })}
+                      className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold bg-white cursor-pointer"
+                    >
+                      <option value="Daily">Daily recurrence</option>
+                      <option value="Weekly">Weekly recurrence</option>
+                      <option value="Monthly">Monthly recurrence</option>
+                    </select>
+                    <span className="text-[10px] text-gray-500 font-semibold flex items-center">
+                      Auto-invitations scheduled
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Consent check */}

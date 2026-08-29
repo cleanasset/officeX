@@ -479,11 +479,11 @@ export default function TenantDashboard() {
       {/* ===== BOOK DESK MODAL ===== */}
       {bookingModal === "desk" && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 flex flex-col gap-5 shadow-2xl border border-gray-100 animate-scale-up">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 flex flex-col gap-5 shadow-2xl border border-gray-100 animate-scale-up">
             <div className="flex justify-between items-center border-b border-gray-100 pb-3">
               <div>
                 <span className="text-[10px] font-bold text-purple-600 uppercase">Workplace Reservations</span>
-                <h3 className="font-extrabold text-gray-900 text-base mt-0.5">Book a Hot Desk</h3>
+                <h3 className="font-extrabold text-gray-900 text-base mt-0.5">Workplace Floor Plan & Hot Desking</h3>
               </div>
               <button 
                 onClick={() => setBookingModal(null)}
@@ -493,21 +493,21 @@ export default function TenantDashboard() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-3.5 text-xs">
+            <div className="flex flex-col gap-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase">Floor</label>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase">Floor Level</label>
                   <select 
                     value={deskFloor}
                     onChange={(e) => setDeskFloor(e.target.value)}
                     className="px-3 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white"
                   >
-                    <option value="Floor 4">Floor 4</option>
-                    <option value="Floor 5">Floor 5</option>
+                    <option value="Floor 4">Floor 4 (Quiet Operations)</option>
+                    <option value="Floor 5">Floor 5 (Tech Wing)</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase">Zone</label>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase">Workspace Zone</label>
                   <select 
                     value={deskZone}
                     onChange={(e) => setDeskZone(e.target.value)}
@@ -520,22 +520,84 @@ export default function TenantDashboard() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-gray-400 font-bold uppercase">Select Available Desk ID</label>
-                <select 
-                  value={deskId}
-                  onChange={(e) => setDeskId(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-lg text-xs font-semibold bg-white"
-                >
-                  <option value="Desk A-12">Desk A-12 (Window view)</option>
-                  <option value="Desk A-14">Desk A-14 (Dual monitor)</option>
-                  <option value="Desk B-02">Desk B-02 (Near pantry)</option>
-                  <option value="Desk C-15">Desk C-15 (Standard)</option>
-                </select>
+              {/* Interactive SVG / CSS Visual Grid */}
+              <div className="p-4 rounded-xl border border-gray-100 bg-gray-50 flex flex-col gap-3">
+                <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block">Interactive Floor Layout (Select Green Desk)</span>
+                
+                {/* Desks Grid */}
+                <div className="grid grid-cols-6 gap-3.5 my-2">
+                  {[
+                    { id: "A-01", status: "occupied" },
+                    { id: "A-02", status: "available" },
+                    { id: "A-03", status: "reserved" },
+                    { id: "A-04", status: "available" },
+                    { id: "A-05", status: "maintenance" },
+                    { id: "A-06", status: "available" },
+                    { id: "B-01", status: "available" },
+                    { id: "B-02", status: "occupied" },
+                    { id: "B-03", status: "available" },
+                    { id: "B-04", status: "reserved" },
+                    { id: "B-05", status: "available" },
+                    { id: "B-06", status: "available" },
+                    { id: "C-01", status: "occupied" },
+                    { id: "C-02", status: "available" },
+                    { id: "C-03", status: "available" },
+                    { id: "C-04", status: "maintenance" },
+                    { id: "C-05", status: "available" },
+                    { id: "C-06", status: "occupied" }
+                  ].map((desk) => {
+                    const isSelected = deskId === `Desk ${desk.id}`;
+                    return (
+                      <button
+                        key={desk.id}
+                        type="button"
+                        onClick={() => {
+                          if (desk.status === "available") {
+                            setDeskId(`Desk ${desk.id}`);
+                          }
+                        }}
+                        disabled={desk.status !== "available"}
+                        className={`h-11 rounded-lg border text-[10px] font-bold flex items-center justify-center transition-all ${
+                          isSelected
+                            ? "bg-purple-600 text-white border-purple-800 ring-2 ring-purple-300 scale-105"
+                            : desk.status === "available"
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:scale-102 cursor-pointer"
+                            : desk.status === "occupied"
+                            ? "bg-red-50 border-red-200 text-red-650 opacity-60 cursor-not-allowed"
+                            : desk.status === "reserved"
+                            ? "bg-amber-50 border-amber-200 text-amber-600 opacity-60 cursor-not-allowed"
+                            : "bg-gray-150 border-gray-300 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {desk.id}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Map Legend */}
+                <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 border-t border-gray-200 pt-2.5 mt-1">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-emerald-50 border border-emerald-200 block"></span>
+                    <span>Available</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-red-50 border border-red-250 block"></span>
+                    <span>Occupied</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-amber-50 border border-amber-200 block"></span>
+                    <span>Reserved</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-purple-600 block"></span>
+                    <span>Selected ({deskId})</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-100 text-purple-700 text-[11px] font-semibold">
-                📝 Desks are reserved until 11:00 AM. Unclaimed desks are auto-released to the pool.
+              <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-purple-700 text-[10px] font-bold">
+                ℹ️ Selecting a green desk reserves it immediately. Check-in is required at receptionist gate by 11:00 AM.
               </div>
             </div>
 
@@ -548,9 +610,10 @@ export default function TenantDashboard() {
               </button>
               <button
                 onClick={handleDeskConfirm}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors cursor-pointer"
+                disabled={!deskId}
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50"
               >
-                Confirm Booking
+                Confirm Desk Booking
               </button>
             </div>
           </div>
