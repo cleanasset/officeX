@@ -38,7 +38,9 @@ import {
   Star,
   Award,
   HelpCircle,
-  Wrench
+  Wrench,
+  Clock,
+  CheckSquare
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -46,7 +48,16 @@ export default function LandingPage() {
   const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor">("space");
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTimelineStep, setActiveTimelineStep] = useState<number>(0);
+  const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
+
+  // Contact Modal States
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactCompany, setContactCompany] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactStatus, setContactStatus] = useState<"idle" | "sending" | "success">("idle");
 
   // Search input states
   const [spaceCity, setSpaceCity] = useState("Mumbai");
@@ -110,6 +121,32 @@ export default function LandingPage() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleLandingSearch();
+    }
+  };
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactName || !contactEmail) return;
+
+    setContactStatus("sending");
+    setTimeout(() => {
+      setContactStatus("success");
+      setTimeout(() => {
+        setIsContactModalOpen(false);
+        setContactStatus("idle");
+        setContactName("");
+        setContactEmail("");
+        setContactCompany("");
+        setContactPhone("");
+        setContactMessage("");
+      }, 2500);
+    }, 1500);
+  };
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -187,10 +224,10 @@ export default function LandingPage() {
 
         {/* Desktop Nav Links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-          <a href="#features" className="hover:text-[#0F8B7D] transition-colors">Solutions</a>
-          <a href="#workflow" className="hover:text-[#0F8B7D] transition-colors">Marketplace</a>
-          <a href="#pricing" className="hover:text-[#0F8B7D] transition-colors">Pricing</a>
-          <a href="#faq" className="hover:text-[#0F8B7D] transition-colors">About</a>
+          <button onClick={() => scrollToSection("features")} className="hover:text-[#0F8B7D] transition-colors font-semibold">Solutions</button>
+          <button onClick={() => router.push("/marketplace")} className="hover:text-[#0F8B7D] transition-colors font-semibold">Marketplace</button>
+          <button onClick={() => scrollToSection("pricing")} className="hover:text-[#0F8B7D] transition-colors font-semibold">Pricing</button>
+          <button onClick={() => scrollToSection("faq")} className="hover:text-[#0F8B7D] transition-colors font-semibold">About</button>
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
@@ -212,10 +249,10 @@ export default function LandingPage() {
       {/* Mobile Nav Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-24 px-8 flex flex-col gap-6 md:hidden">
-          <a href="#features" className="text-lg font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
-          <a href="#workflow" className="text-lg font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Marketplace</a>
-          <a href="#pricing" className="text-lg font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
-          <a href="#faq" className="text-lg font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>About</a>
+          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("features"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">Solutions</button>
+          <button onClick={() => { setMobileMenuOpen(false); router.push("/marketplace"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">Marketplace</button>
+          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("pricing"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">Pricing</button>
+          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("faq"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">About</button>
           <hr className="border-[#DFE4E1]" />
           <a href="/login" className="text-lg font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Sign In</a>
           <button 
@@ -227,7 +264,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO & SHIFTING GRADIENT SEARCH (Figma exact gradient: #9CCAE2 -> #91BBE5) */}
+      {/* SECTION 2: HERO & SHIFTING GRADIENT SEARCH */}
       <section className="pt-40 pb-20 px-6 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#9CCAE2] via-[#97C4E5] to-[#91BBE5]">
         
         {/* Floating Pulsing Badge */}
@@ -437,7 +474,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 3: EVERYTHING YOU NEED, ONE PLATFORM (Bento Grid - Background exact #F6FAF9) */}
+      {/* SECTION 3: EVERYTHING YOU NEED, ONE PLATFORM (Bento Grid) */}
       <section id="features" className="py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-6">
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -450,11 +487,17 @@ export default function LandingPage() {
             {/* LEFT COLUMN: FM Marketplace, Operations Calendar, Cost Analytics (col-span-2) */}
             <div className="lg:col-span-2 flex flex-col gap-8">
               
-              {/* Card A: FM Marketplace (col-span-2 equivalent inside) */}
-              <div className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between group relative overflow-hidden">
+              {/* Card A: FM Marketplace */}
+              <div 
+                onClick={() => router.push('/public/wizard')}
+                className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between group relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+              >
                 <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-48 h-48 rounded-full bg-emerald-50/30 group-hover:scale-110 transition-transform"></div>
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-900">FM Marketplace</h3>
+                  <h3 className="text-lg font-extrabold text-slate-900 flex items-center justify-between">
+                    FM Marketplace
+                    <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
+                  </h3>
                   <p className="text-slate-500 mt-2 font-medium text-xs max-w-xl">
                     Discover, compare, and onboard pre-verified facility management vendors across 40+ categories.
                   </p>
@@ -487,15 +530,21 @@ export default function LandingPage() {
                   </div>
                 </div>
                 
-                <a href="/public/wizard" className="inline-flex items-center gap-2 text-xs font-bold text-[#0F8B7D] mt-8 hover:gap-3 transition-all cursor-pointer">
+                <span className="inline-flex items-center gap-2 text-xs font-bold text-[#0F8B7D] mt-8 hover:gap-3 transition-all">
                   Explore Vendors <ArrowRight size={14} />
-                </a>
+                </span>
               </div>
 
               {/* Card B: Operations Calendar */}
-              <div className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between relative overflow-hidden">
+              <div 
+                onClick={() => router.push('/ops')}
+                className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between relative overflow-hidden cursor-pointer group hover:shadow-md transition-shadow"
+              >
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-900">Operations Calendar</h3>
+                  <h3 className="text-lg font-extrabold text-slate-900 flex items-center justify-between">
+                    Operations Calendar
+                    <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
+                  </h3>
                   <p className="text-slate-500 mt-2 font-medium text-xs max-w-xl">
                     Centralized view of all Planned Preventive Maintenance (PPM) activities across your portfolio.
                   </p>
@@ -528,15 +577,21 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <a href="/ops" className="inline-flex items-center gap-2 text-xs font-bold text-[#0F8B7D] mt-8 hover:gap-3 transition-all cursor-pointer">
+                <span className="inline-flex items-center gap-2 text-xs font-bold text-[#0F8B7D] mt-8 hover:gap-3 transition-all">
                   View Schedule <ChevronRight size={14} />
-                </a>
+                </span>
               </div>
 
               {/* Card C: Cost Analytics */}
-              <div className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+              <div 
+                onClick={() => router.push('/reporting/financials')}
+                className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer group hover:shadow-md transition-shadow"
+              >
                 <div className="flex-1 text-left">
-                  <h3 className="text-lg font-extrabold text-slate-900">Cost Analytics</h3>
+                  <h3 className="text-lg font-extrabold text-slate-900 flex items-center justify-between max-w-xs md:max-w-full">
+                    Cost Analytics
+                    <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors md:hidden" />
+                  </h3>
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className="text-3xl font-black text-slate-900">₹4.2L</span>
                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 flex items-center gap-0.5">
@@ -572,6 +627,10 @@ export default function LandingPage() {
                     <circle cx="155" cy="25" r="3" fill="#0F8B7D" />
                   </svg>
                 </div>
+
+                <span className="hidden md:flex absolute bottom-4 right-4 items-center gap-1.5 text-xs font-bold text-[#0F8B7D] opacity-0 group-hover:opacity-100 transition-opacity">
+                  View Financials <ChevronRight size={14} />
+                </span>
               </div>
 
             </div>
@@ -580,9 +639,15 @@ export default function LandingPage() {
             <div className="flex flex-col gap-8">
               
               {/* Card D: Leasing CRM */}
-              <div className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between h-[250px] relative overflow-hidden group">
+              <div 
+                onClick={() => router.push('/leasing/pipeline')}
+                className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between h-[250px] relative overflow-hidden cursor-pointer group hover:shadow-md transition-shadow"
+              >
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Leasing CRM</h3>
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center justify-between">
+                    Leasing CRM
+                    <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
+                  </h3>
                   <p className="text-slate-500 mt-1 font-medium text-xs">
                     Track inbound leads & site visits.
                   </p>
@@ -600,15 +665,21 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <a href="/leasing/pipeline" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:gap-2 transition-all cursor-pointer">
+                <span className="text-xs font-bold text-[#0F8B7D] inline-flex items-center gap-1 hover:gap-2 transition-all">
                   View Leads <ArrowRight size={13} />
-                </a>
+                </span>
               </div>
 
               {/* Card E: Compliance Tracking */}
-              <div className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between h-[250px] relative overflow-hidden">
+              <div 
+                onClick={() => router.push('/properties/compliance')}
+                className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white shadow-xs flex flex-col justify-between h-[250px] relative overflow-hidden cursor-pointer group hover:shadow-md transition-shadow"
+              >
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Compliance Tracking</h3>
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center justify-between">
+                    Compliance Tracking
+                    <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
+                  </h3>
                   <p className="text-slate-500 mt-1 font-medium text-xs">
                     Automated NOC & license renewals.
                   </p>
@@ -637,11 +708,14 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <span className="text-[10px] text-slate-400 font-bold block mt-3">Auto-updates active</span>
+                <span className="text-[10px] text-[#0F8B7D] font-bold group-hover:underline">Manage Compliance ›</span>
               </div>
 
               {/* Card F: AI Automation */}
-              <div className="rounded-3xl p-6 md:p-8 bg-slate-900 text-white shadow-xs flex flex-col justify-between h-[220px] relative overflow-hidden group">
+              <div 
+                onClick={() => router.push('/reporting/ai')}
+                className="rounded-3xl p-6 md:p-8 bg-slate-900 text-white shadow-xs flex flex-col justify-between h-[220px] relative overflow-hidden cursor-pointer group hover:shadow-lg transition-all"
+              >
                 <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-32 h-32 rounded-full bg-emerald-500/10 group-hover:scale-110 transition-transform"></div>
                 <div>
                   <div className="flex items-center justify-between">
@@ -649,13 +723,16 @@ export default function LandingPage() {
                     <Cpu size={18} className="text-emerald-400 animate-pulse" />
                   </div>
                   
-                  <h3 className="text-base font-extrabold text-white mt-4">AI Automation</h3>
+                  <h3 className="text-base font-extrabold text-white mt-4 flex items-center justify-between">
+                    AI Automation
+                    <ArrowUpRight size={16} className="text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                  </h3>
                   <p className="text-slate-400 mt-2 font-medium text-xs leading-relaxed">
                     Smart contract extraction & anomaly detection.
                   </p>
                 </div>
 
-                <div className="text-[10px] text-slate-500 font-bold">Observation mode pre-active</div>
+                <span className="text-[10px] text-emerald-400 font-bold group-hover:underline">Configure AI ›</span>
               </div>
 
             </div>
@@ -664,7 +741,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 4: PIPELINE & PAYMENTS WORKFLOW (Background exact #F0F3F8) */}
+      {/* SECTION 4: PIPELINE & PAYMENTS WORKFLOW */}
       <section id="workflow" className="py-20 bg-[#F0F3F8] px-6">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -712,60 +789,177 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Escrow flow visualizer */}
-            <div className="rounded-3xl p-8 border border-[#DFE4E1] bg-white shadow-md relative overflow-hidden">
-              <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2 mb-6 border-b border-slate-200 pb-4">
-                <ShieldCheck size={20} className="text-[#0F8B7D]" />
-                PAYMENT FLOW ARCHITECTURE
-              </h3>
+            {/* Dynamic right-side card visualization based on selected timeline step */}
+            <div className="rounded-3xl p-8 border border-[#DFE4E1] bg-white shadow-md relative overflow-hidden min-h-[360px] flex flex-col justify-between transition-all duration-300">
               
-              <div className="flex flex-col gap-4 relative">
-                
-                {/* Enterprise Client box */}
-                <div className="p-4 rounded-xl border border-[#DFE4E1] bg-white flex justify-between items-center text-xs font-bold shadow-xs hover:border-[#0F8B7D] transition-colors group">
-                  <div className="flex items-center gap-2">
-                    <Building size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
-                    <span className="text-slate-800">Enterprise Client</span>
+              {activeTimelineStep === 0 && (
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                  <h3 className="font-extrabold text-[#0F8B7D] text-sm flex items-center gap-2 mb-4 border-b border-slate-100 pb-3 uppercase tracking-wider">
+                    <ClipboardList size={18} />
+                    1. Scope & Requirement Builder
+                  </h3>
+                  <div className="p-4 rounded-xl border border-[#DFE4E1] bg-slate-50/50 flex flex-col gap-3 text-xs">
+                    <div className="flex justify-between border-b border-slate-150 pb-2">
+                      <span className="font-bold text-slate-400">Service Category</span>
+                      <span className="font-bold text-slate-800">HVAC Preventive Servicing</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-150 pb-2">
+                      <span className="font-bold text-slate-400">Response SLA</span>
+                      <span className="font-bold text-rose-600 flex items-center gap-1"><Clock size={12} /> Critical (4 Hours)</span>
+                    </div>
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <span className="font-bold text-slate-400 block mb-1">Checklist Tasks</span>
+                      <label className="flex items-center gap-2 font-bold text-slate-700">
+                        <CheckSquare size={13} className="text-[#0F8B7D]" />
+                        Filter cleaning & motor checking
+                      </label>
+                      <label className="flex items-center gap-2 font-bold text-slate-700">
+                        <CheckSquare size={13} className="text-[#0F8B7D]" />
+                        Refrigerant pressure logs validation
+                      </label>
+                    </div>
                   </div>
-                  <span className="text-slate-500">Initiates ₹100,000 Payment</span>
+                  <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-100 rounded-full self-start">Drafting RFQ Complete</span>
                 </div>
+              )}
 
-                {/* Arrow down connector */}
-                <div className="flex justify-center items-center py-0.5">
-                  <div className="h-6 w-0.5 border-l border-dashed border-slate-300"></div>
+              {activeTimelineStep === 1 && (
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                  <h3 className="font-extrabold text-[#0F8B7D] text-sm flex items-center gap-2 mb-4 border-b border-slate-100 pb-3 uppercase tracking-wider">
+                    <Network size={18} />
+                    2. Algorithmic Matching
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold mb-2">Our matching algorithm matches local verified contractors based on previous SLA history and cost index.</p>
+                  <div className="flex flex-col gap-2">
+                    <div className="p-3 rounded-xl border border-[#DFE4E1] bg-emerald-50/20 flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2">
+                        <Award size={15} className="text-emerald-600" />
+                        <span className="font-bold text-slate-800">QuickCool Facility Tech</span>
+                      </div>
+                      <span className="font-black text-emerald-700">98% Match</span>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[#DFE4E1] bg-slate-50/50 flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2">
+                        <Building size={15} className="text-slate-400" />
+                        <span className="font-bold text-slate-700">Apex CleanAir Solutions</span>
+                      </div>
+                      <span className="font-bold text-slate-500">92% Match</span>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-black border border-blue-100 rounded-full self-start">3 Vendors Notified</span>
                 </div>
+              )}
 
-                {/* Razorpay Nodal Escrow */}
-                <div className="p-3.5 rounded-full border border-emerald-100 bg-emerald-50/80 text-center text-xs font-extrabold text-[#0F8B7D] flex items-center justify-center gap-2 shadow-xs max-w-sm mx-auto w-full hover:bg-emerald-50 transition-colors">
-                  <Lock size={14} className="animate-pulse" />
-                  Razorpay Escrow Nodal Account
+              {activeTimelineStep === 2 && (
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                  <h3 className="font-extrabold text-[#0F8B7D] text-sm flex items-center gap-2 mb-4 border-b border-slate-100 pb-3 uppercase tracking-wider">
+                    <SlidersHorizontal size={18} />
+                    3. Normalized Bids Comparison
+                  </h3>
+                  <div className="border border-[#DFE4E1] rounded-xl overflow-hidden text-xs">
+                    <div className="grid grid-cols-3 bg-slate-50 py-2 px-3 font-extrabold text-slate-400 text-[10px] uppercase border-b border-slate-150">
+                      <span>Vendor</span>
+                      <span>Price Quote</span>
+                      <span>SLA Compliance</span>
+                    </div>
+                    <div className="grid grid-cols-3 py-2.5 px-3 font-bold text-slate-800 border-b border-slate-100 items-center">
+                      <span>QuickCool</span>
+                      <span className="text-[#0F8B7D]">₹12,500</span>
+                      <span className="text-emerald-600">99.2%</span>
+                    </div>
+                    <div className="grid grid-cols-3 py-2.5 px-3 font-bold text-slate-800 items-center">
+                      <span>Apex CleanAir</span>
+                      <span>₹11,800</span>
+                      <span className="text-slate-500">94.8%</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-bold italic block">Auto-highlighting recommended bids based on rating weightings.</span>
                 </div>
+              )}
 
-                {/* Split line drawing */}
-                <div className="flex items-center justify-center relative h-10 w-full">
-                  <svg className="w-[60%] h-full text-slate-300" viewBox="0 0 100 30" fill="none" preserveAspectRatio="none">
-                    <path d="M50 0 L50 10 M50 10 L10 10 M50 10 L90 10 M10 10 L10 30 M90 10 L90 30" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" />
-                  </svg>
+              {activeTimelineStep === 3 && (
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                  <h3 className="font-extrabold text-[#0F8B7D] text-sm flex items-center gap-2 mb-4 border-b border-slate-100 pb-3 uppercase tracking-wider">
+                    <FileText size={18} />
+                    4. Digitized SLA Agreement
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold mb-2">Contracts are generated from pre-approved regulatory templates. Terms are locked to trigger escrow.</p>
+                  <div className="p-3.5 rounded-xl border border-blue-100 bg-blue-50/20 text-xs flex flex-col gap-2 font-bold text-slate-700">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-[#0F8B7D]" />
+                      SLA Target: 98.5% uptime commitment
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-[#0F8B7D]" />
+                      Payment Term: Split Escrow release on completion
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-100 rounded-full self-start">Contracts OTP Signed</span>
                 </div>
+              )}
 
-                {/* Split columns */}
-                <div className="grid grid-cols-2 gap-4">
+              {activeTimelineStep === 4 && (
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                  <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2 mb-6 border-b border-slate-200 pb-4">
+                    <ShieldCheck size={20} className="text-[#0F8B7D]" />
+                    PAYMENT FLOW ARCHITECTURE
+                  </h3>
                   
-                  {/* Vendor Payout (90%) */}
-                  <div className="p-4 rounded-xl border border-[#DFE4E1] bg-[#F6FAF9] text-center hover:border-emerald-200 transition-all shadow-xs">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Vendor</div>
-                    <div className="font-black text-slate-900 text-sm mt-1">90%</div>
-                    <div className="text-[10px] text-emerald-600 font-bold mt-1 bg-emerald-50 rounded px-1.5 py-0.5 inline-block border border-emerald-100">Upon Sign-off</div>
-                  </div>
+                  <div className="flex flex-col gap-4 relative">
+                    
+                    {/* Enterprise Client box */}
+                    <div className="p-4 rounded-xl border border-[#DFE4E1] bg-white flex justify-between items-center text-xs font-bold shadow-xs hover:border-[#0F8B7D] transition-colors group">
+                      <div className="flex items-center gap-2">
+                        <Building size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
+                        <span className="text-slate-800">Enterprise Client</span>
+                      </div>
+                      <span className="text-slate-500">Initiates ₹100,000 Payment</span>
+                    </div>
 
-                  {/* OfficeX Payout (10%) */}
-                  <div className="p-4 rounded-xl border border-[#DFE4E1] bg-[#F6FAF9] text-center hover:border-[#0F8B7D] transition-all shadow-xs">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">OfficeX</div>
-                    <div className="font-black text-slate-900 text-sm mt-1">10%</div>
-                    <div className="text-[10px] text-slate-500 font-bold mt-1 bg-slate-50 rounded px-1.5 py-0.5 inline-block border border-slate-100">Platform Fee</div>
-                  </div>
+                    {/* Arrow down connector */}
+                    <div className="flex justify-center items-center py-0.5">
+                      <div className="h-6 w-0.5 border-l border-dashed border-slate-300"></div>
+                    </div>
 
+                    {/* Razorpay Nodal Escrow */}
+                    <div className="p-3.5 rounded-full border border-emerald-100 bg-emerald-50/80 text-center text-xs font-extrabold text-[#0F8B7D] flex items-center justify-center gap-2 shadow-xs max-w-sm mx-auto w-full hover:bg-emerald-50 transition-colors">
+                      <Lock size={14} className="animate-pulse" />
+                      Razorpay Escrow Nodal Account
+                    </div>
+
+                    {/* Split line drawing */}
+                    <div className="flex items-center justify-center relative h-10 w-full">
+                      <svg className="w-[60%] h-full text-slate-300" viewBox="0 0 100 30" fill="none" preserveAspectRatio="none">
+                        <path d="M50 0 L50 10 M50 10 L10 10 M50 10 L90 10 M10 10 L10 30 M90 10 L90 30" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" />
+                      </svg>
+                    </div>
+
+                    {/* Split columns */}
+                    <div className="grid grid-cols-2 gap-4">
+                      
+                      {/* Vendor Payout (90%) */}
+                      <div className="p-4 rounded-xl border border-[#DFE4E1] bg-[#F6FAF9] text-center hover:border-emerald-200 transition-all shadow-xs">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Vendor</div>
+                        <div className="font-black text-slate-900 text-sm mt-1">90%</div>
+                        <div className="text-[10px] text-emerald-600 font-bold mt-1 bg-emerald-50 rounded px-1.5 py-0.5 inline-block border border-emerald-100">Upon Sign-off</div>
+                      </div>
+
+                      {/* OfficeX Payout (10%) */}
+                      <div className="p-4 rounded-xl border border-[#DFE4E1] bg-[#F6FAF9] text-center hover:border-[#0F8B7D] transition-all shadow-xs">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">OfficeX</div>
+                        <div className="font-black text-slate-900 text-sm mt-1">10%</div>
+                        <div className="text-[10px] text-slate-500 font-bold mt-1 bg-slate-50 rounded px-1.5 py-0.5 inline-block border border-slate-100">Platform Fee</div>
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Card Footer Step Hint */}
+              <div className="border-t border-slate-100 pt-4 mt-6 flex items-center justify-between text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
+                <span>Timeline Stage</span>
+                <span className="text-[#0F8B7D] font-black">{timelineSteps[activeTimelineStep].title}</span>
               </div>
             </div>
 
@@ -825,7 +1019,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 5: PRICING PLANS (Background exact #F6FAF9) */}
+      {/* SECTION 5: PRICING PLANS */}
       <section id="pricing" className="py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-6">
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -848,7 +1042,10 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><CheckCircle size={15} className="text-emerald-500 shrink-0" /> Up to 3 Users</li>
                 </ul>
               </div>
-              <button className="w-full py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer">
+              <button 
+                onClick={() => router.push("/login?plan=starter")}
+                className="w-full py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
                 Sign Up
               </button>
             </div>
@@ -869,7 +1066,7 @@ export default function LandingPage() {
                 </ul>
               </div>
               <button 
-                onClick={() => router.push('/public/wizard')}
+                onClick={() => router.push('/public/wizard?plan=professional')}
                 className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs mt-8 transition-colors cursor-pointer shadow-md"
               >
                 Get Started
@@ -889,7 +1086,10 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><CheckCircle size={15} className="text-emerald-500 shrink-0" /> Dedicated Success Mgr</li>
                 </ul>
               </div>
-              <button className="w-full py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer">
+              <button 
+                onClick={() => setIsContactModalOpen(true)}
+                className="w-full py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
                 Contact Sales
               </button>
             </div>
@@ -898,7 +1098,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 6: FAQ ACCORDION (Background exact #F6FAF9) */}
+      {/* SECTION 6: FAQ ACCORDION */}
       <section id="faq" className="py-20 bg-[#F6FAF9] px-6">
         <div className="max-w-4xl mx-auto w-full">
           <div className="text-center mb-16">
@@ -927,7 +1127,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 7: DARK FOOTER (Background exact #111828) */}
+      {/* SECTION 7: DARK FOOTER */}
       <footer className="bg-[#111828] text-white py-16 px-6 border-t border-slate-850">
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-12">
           
@@ -956,11 +1156,11 @@ export default function LandingPage() {
           <div>
             <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300">Platform</h4>
             <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
-              <li><a href="#features" className="hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="#features" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#features" className="hover:text-white transition-colors">Compliance</a></li>
-              <li><a href="#features" className="hover:text-white transition-colors">Security</a></li>
-              <li><a href="#features" className="hover:text-white transition-colors">Support</a></li>
+              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Terms of Service</button></li>
+              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Privacy Policy</button></li>
+              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Compliance</button></li>
+              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Security</button></li>
+              <li><button onClick={() => scrollToSection("faq")} className="hover:text-white transition-colors text-left">Support</button></li>
             </ul>
           </div>
 
@@ -990,6 +1190,115 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* CONTACT SALES MODAL OVERLAY */}
+      {isContactModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-[#DFE4E1] shadow-2xl p-6 md:p-8 max-w-md w-full relative">
+            <button 
+              onClick={() => setIsContactModalOpen(false)}
+              className="absolute right-4 top-4 p-1 rounded-full hover:bg-slate-100 text-slate-450 hover:text-slate-700 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            {contactStatus === "success" ? (
+              <div className="text-center py-8 flex flex-col items-center justify-center animate-scaleUp">
+                <div className="w-16 h-16 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-4 shadow">
+                  <CheckCircle size={32} />
+                </div>
+                <h4 className="text-lg font-extrabold text-slate-900">Request Submitted</h4>
+                <p className="text-xs text-slate-500 mt-2 font-semibold">
+                  Thank you! Our enterprise account team will reach out to you within 24 hours.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Contact Enterprise Sales</h3>
+                  <p className="text-xs text-slate-500 mt-1 font-semibold">Learn how OfficeX scales across multi-region property portfolios.</p>
+                </div>
+                
+                <hr className="border-slate-100" />
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Full Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="Enter your name" 
+                    className="w-full px-4 py-2.5 text-xs rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] font-semibold"
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Work Email *</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="name@company.com" 
+                    className="w-full px-4 py-2.5 text-xs rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] font-semibold"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Company Name</label>
+                    <input 
+                      type="text" 
+                      value={contactCompany}
+                      onChange={(e) => setContactCompany(e.target.value)}
+                      placeholder="e.g. DLF" 
+                      className="w-full px-4 py-2.5 text-xs rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] font-semibold"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      placeholder="+91..." 
+                      className="w-full px-4 py-2.5 text-xs rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] font-semibold"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Message</label>
+                  <textarea 
+                    value={contactMessage}
+                    onChange={(e) => setContactMessage(e.target.value)}
+                    placeholder="Tell us about your portfolio..." 
+                    rows={3}
+                    className="w-full px-4 py-2.5 text-xs rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] font-semibold resize-none"
+                  />
+                </div>
+                
+                <button 
+                  type="submit" 
+                  disabled={contactStatus === "sending"}
+                  className="w-full py-3 mt-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0D7A6E] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:bg-slate-350"
+                >
+                  {contactStatus === "sending" ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Submit Request"
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
