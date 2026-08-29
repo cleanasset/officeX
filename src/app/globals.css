@@ -3,7 +3,7 @@
 :root {
   --background: #F0F4F8; /* Cool Grey Page Background */
   --foreground: #111827; /* Dark Charcoal Text */
-  --primary-blue: #2563EB;
+  --primary-teal: #0F8B7D;
   --primary-light: #14B8A6;
   --accent-blue: #2563EB;
   --card-bg: #FFFFFF;
@@ -12,7 +12,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary-blue: var(--primary-blue);
+  --color-primary-teal: var(--primary-teal);
   --color-primary-light: var(--primary-light);
   --color-accent-blue: var(--accent-blue);
   --color-card-bg: var(--card-bg);

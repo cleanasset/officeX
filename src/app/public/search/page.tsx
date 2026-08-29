@@ -186,7 +186,7 @@ export default function PublicSearch() {
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 placeholder="Search location (e.g. BKC, Hinjewadi)..."
-                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs font-semibold bg-slate-50/50"
+                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs font-semibold bg-slate-50/50"
               />
               <Search size={14} className="absolute left-3 text-slate-400" />
               {query && (
@@ -213,7 +213,7 @@ export default function PublicSearch() {
                   onClick={() => handleSelectSuggestion(loc)}
                   className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 flex items-start gap-2 transition-colors cursor-pointer"
                 >
-                  <MapPin size={14} className="text-[#2563EB] shrink-0 mt-0.5" />
+                  <MapPin size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
                   <span className="truncate">{loc.display_name}</span>
                 </button>
               ))}
@@ -227,7 +227,7 @@ export default function PublicSearch() {
               <select
                 value={gradeFilter}
                 onChange={(e) => setGradeFilter(e.target.value)}
-                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
               >
                 <option value="ALL">All Grades</option>
                 <option value="A">Grade A</option>
@@ -241,7 +241,7 @@ export default function PublicSearch() {
               <select
                 value={readinessFilter}
                 onChange={(e) => setReadinessFilter(e.target.value)}
-                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold bg-white text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
               >
                 <option value="ALL">All Readiness</option>
                 <option value="Ready to Move">Ready to Move</option>
@@ -257,22 +257,22 @@ export default function PublicSearch() {
             <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">
               {filteredProperties.length > 0 ? "OfficeX Verified Listings" : "No active listings"}
             </span>
-            <span className="px-2 py-0.5 rounded bg-blue-50 text-[#2563EB] font-bold text-[9px] uppercase tracking-wider">Map Active</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 text-[#0F8B7D] font-bold text-[9px] uppercase tracking-wider">Map Active</span>
           </div>
 
           {/* Render matched list */}
           {filteredProperties.map((prop, idx) => (
-            <div key={idx} className="p-3.5 rounded-xl border border-slate-100 hover:border-[#2563EB] bg-white flex flex-col gap-2.5 transition-all shadow-xs">
+            <div key={idx} className="p-3.5 rounded-xl border border-slate-100 hover:border-[#0F8B7D] bg-white flex flex-col gap-2.5 transition-all shadow-xs">
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0 pr-2">
                   <h4 className="font-extrabold text-slate-900 text-xs truncate flex items-center gap-1.5">
-                    <Building size={13} className="text-[#2563EB]" />
+                    <Building size={13} className="text-[#0F8B7D]" />
                     {prop.name}
                   </h4>
                   <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{prop.address}, {prop.city}</p>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
-                  <span className="text-xs font-black text-[#2563EB]">{prop.rent}</span>
+                  <span className="text-xs font-black text-[#0F8B7D]">{prop.rent}</span>
                   <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-black text-slate-500 uppercase mt-0.5">Grade {prop.grade}</span>
                 </div>
               </div>
@@ -280,12 +280,12 @@ export default function PublicSearch() {
               {/* Score Badges row */}
               <div className="flex items-center justify-between border-t border-slate-50 pt-2.5 text-[10px] font-bold">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[#2563EB] text-[9px] font-extrabold">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-[#0F8B7D] text-[9px] font-extrabold">
                     Score: {prop.score}
                   </span>
                   <span className="text-[9px] text-slate-400 font-bold">{prop.readiness}</span>
                 </div>
-                <Link href={`/public/property/${prop.id}`} className="px-3 py-1 rounded bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-[9px] transition-colors">
+                <Link href={`/public/property/${prop.id}`} className="px-3 py-1 rounded bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-[9px] transition-colors">
                   View Space
                 </Link>
               </div>
@@ -301,7 +301,7 @@ export default function PublicSearch() {
               <p className="text-[10px] text-slate-400 mt-1 leading-normal font-semibold">
                 You can submit your customized workplace requirements to our CRM team to locate a property suite for you.
               </p>
-              <Link href="/public/wizard" className="mt-4 block w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-center font-bold text-[10px] shadow-md transition-colors">
+              <Link href="/public/wizard" className="mt-4 block w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white text-center font-bold text-[10px] shadow-md transition-colors">
                 Request Office Here
               </Link>
             </div>

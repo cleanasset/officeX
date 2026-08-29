@@ -100,7 +100,7 @@ export default function Topbar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => { if (searchQuery.trim().length > 0) setIsDropdownOpen(true); }}
-              className="pl-9 pr-4 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:border-[#2563EB] text-xs w-64 bg-gray-50 transition-colors"
+              className="pl-9 pr-4 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs w-64 bg-gray-50 transition-colors"
             />
             <Search size={14} className="absolute left-3.5 top-2.5 text-gray-400" />
           </form>
@@ -121,13 +121,13 @@ export default function Topbar() {
                   >
                     <div className="flex items-center gap-2.5">
                       {item.type === "City" ? (
-                        <MapPin size={14} className="text-[#2563EB]" />
+                        <MapPin size={14} className="text-[#0F8B7D]" />
                       ) : item.type === "Asset" ? (
                         <Settings size={14} className="text-amber-500 animate-pulse" />
                       ) : item.type === "Ticket" || item.type === "Work Order" ? (
                         <FileText size={14} className="text-purple-500" />
                       ) : (
-                        <Building size={14} className="text-[#2563EB]" />
+                        <Building size={14} className="text-[#0F8B7D]" />
                       )}
                       <div>
                         <span className="font-bold text-gray-900 text-xs block">{item.name}</span>
@@ -143,18 +143,18 @@ export default function Topbar() {
         </div>
 
         {/* Support Link */}
-        <a href="#help" className="text-gray-500 hover:text-[#2563EB] transition-colors" title="Help & Documentation">
+        <a href="#help" className="text-gray-500 hover:text-[#0F8B7D] transition-colors" title="Help & Documentation">
           <HelpCircle size={18} />
         </a>
 
         {/* Notifications Icon with Red Dot */}
-        <button className="relative text-gray-500 hover:text-[#2563EB] transition-colors">
+        <button className="relative text-gray-500 hover:text-[#0F8B7D] transition-colors">
           <Bell size={18} />
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500"></span>
         </button>
 
         {/* User Mini Avatar */}
-        <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center font-bold text-[#2563EB] text-xs shadow-xs">
+        <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center font-bold text-[#0F8B7D] text-xs shadow-xs">
           U
         </div>
 

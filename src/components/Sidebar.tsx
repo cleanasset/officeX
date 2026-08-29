@@ -191,7 +191,7 @@ export default function Sidebar() {
             <select 
               value={currentPortalKey}
               onChange={(e) => handleRoleChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-[#F9FAFB] hover:bg-gray-50 text-gray-800 focus:outline-none focus:border-[#2563EB] cursor-pointer transition-colors shadow-xs"
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-[#F9FAFB] hover:bg-gray-50 text-gray-800 focus:outline-none focus:border-[#0F8B7D] cursor-pointer transition-colors shadow-xs"
             >
               <option value="properties">Property Owner (SaaS)</option>
               <option value="ops">Facility Manager (Ops)</option>
@@ -225,12 +225,12 @@ export default function Sidebar() {
                   onClick={() => setActiveTab(activeTab === item.name ? "" : item.name)}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isActive 
-                      ? "bg-[#EFF6FF] text-[#2563EB] border-l-4 border-[#2563EB]" 
+                      ? "bg-[#EFF6FF] text-[#0F8B7D] border-l-4 border-[#0F8B7D]" 
                       : "text-gray-600 hover:bg-[#F9FAFB] hover:text-gray-900"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon size={16} className={isActive ? "text-[#2563EB]" : "text-gray-500"} />
+                    <Icon size={16} className={isActive ? "text-[#0F8B7D]" : "text-gray-500"} />
                     <span>{item.name}</span>
                   </div>
                   {hasSub && (
@@ -251,7 +251,7 @@ export default function Sidebar() {
                           href={sub.href}
                           className={`text-[11px] font-semibold transition-colors ${
                             isSubActive 
-                              ? "text-[#2563EB] font-bold" 
+                              ? "text-[#0F8B7D] font-bold" 
                               : "text-gray-500 hover:text-gray-900"
                           }`}
                         >
@@ -269,7 +269,7 @@ export default function Sidebar() {
         {/* Bottom User Card in OFFICEX Blue */}
         <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center font-bold text-[#2563EB] text-xs">
+            <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center font-bold text-[#0F8B7D] text-xs">
               {activeRole.label[0]}
             </div>
             <div className="flex flex-col">
@@ -277,7 +277,7 @@ export default function Sidebar() {
               <span className="text-[9px] text-gray-500 font-bold leading-none mt-0.5">{activeRole.email}</span>
             </div>
           </div>
-          <Link href="/" className="text-gray-400 hover:text-[#2563EB] transition-colors" title="Sign Out">
+          <Link href="/" className="text-gray-400 hover:text-[#0F8B7D] transition-colors" title="Sign Out">
             <LogOut size={15} />
           </Link>
         </div>

@@ -36,7 +36,7 @@ export default function ReportingDashboard() {
           <div>
             <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Utility Costs</span>
             <div className="text-3xl font-extrabold text-gray-900 mt-2">₹2.4L</div>
-            <span className="text-[10px] text-[#2563EB] font-bold mt-1 inline-block">Electricity/Water aggregate</span>
+            <span className="text-[10px] text-[#0F8B7D] font-bold mt-1 inline-block">Electricity/Water aggregate</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
             <TrendingUp size={22} />

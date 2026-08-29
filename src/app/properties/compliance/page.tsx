@@ -71,7 +71,7 @@ export default function ComplianceTracker() {
         </div>
         <button 
           onClick={() => setIsUploading(true)}
-          className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
+          className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
         >
           <Upload size={14} /> Upload Renewed NOC
         </button>
@@ -85,13 +85,13 @@ export default function ComplianceTracker() {
           <div>
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">Portfolio Health</span>
             <div className="flex items-baseline gap-2 mt-4">
-              <span className="text-5xl font-black text-[#2563EB]">96%</span>
+              <span className="text-5xl font-black text-[#0F8B7D]">96%</span>
               <span className="text-xs text-slate-400 font-bold">compliance score</span>
             </div>
             <span className="text-xs font-extrabold text-slate-900 mt-2 block uppercase tracking-wider">Statutory NOC Status</span>
           </div>
           <div className="w-full bg-slate-100 h-2.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#2563EB] h-full rounded-full" style={{ width: "96%" }}></div>
+            <div className="bg-[#0F8B7D] h-full rounded-full" style={{ width: "96%" }}></div>
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export default function ComplianceTracker() {
             {certs.map((c) => (
               <tr key={c.id} className="border-b border-slate-100 text-xs hover:bg-blue-50/10 transition-colors font-semibold">
                 <td className="py-4 font-black text-slate-900 flex items-center gap-2">
-                  <ShieldCheck size={14} className="text-[#2563EB]" />
+                  <ShieldCheck size={14} className="text-[#0F8B7D]" />
                   {c.name}
                 </td>
                 <td className="py-4 text-slate-700">{c.property}</td>
@@ -258,7 +258,7 @@ export default function ComplianceTracker() {
               </button>
               <button 
                 type="submit"
-                className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md transition-colors cursor-pointer"
+                className="px-5 py-2 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md transition-colors cursor-pointer"
               >
                 Submit NOC renewal
               </button>

@@ -68,7 +68,7 @@ export default function OperationsDashboard() {
           <p className="text-xs text-slate-500 font-bold mt-1">Real-time workplace health metrics, statutory compliance tracking, and operational exceptions.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/ops/ppm" className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-2">
+          <Link href="/ops/ppm" className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-2">
             <Calendar size={14} /> PPM Calendar
           </Link>
         </div>
@@ -82,15 +82,15 @@ export default function OperationsDashboard() {
           <div>
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">Workplace health index</span>
             <div className="flex items-baseline gap-2 mt-4">
-              <span className="text-5xl font-black text-[#2563EB]">91</span>
+              <span className="text-5xl font-black text-[#0F8B7D]">91</span>
               <span className="text-xs text-slate-400 font-bold">/ 100</span>
             </div>
             <span className="text-xs font-extrabold text-slate-900 mt-2 flex items-center gap-1.5 uppercase tracking-wider">
-              <Gauge size={14} className="text-[#2563EB]" /> Overall Health Score
+              <Gauge size={14} className="text-[#0F8B7D]" /> Overall Health Score
             </span>
           </div>
           <div className="w-full bg-slate-100 h-2.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#2563EB] h-full rounded-full" style={{ width: "91%" }}></div>
+            <div className="bg-[#0F8B7D] h-full rounded-full" style={{ width: "91%" }}></div>
           </div>
         </div>
 
@@ -150,7 +150,7 @@ export default function OperationsDashboard() {
             className="flex flex-col justify-center p-3 rounded-xl hover:bg-blue-50/30 cursor-pointer border border-transparent hover:border-blue-100 transition-colors"
           >
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Tenant Sat</span>
-            <span className="text-lg font-black text-[#2563EB] mt-1">4.5 / 5</span>
+            <span className="text-lg font-black text-[#0F8B7D] mt-1">4.5 / 5</span>
           </div>
         </div>
 
@@ -241,36 +241,36 @@ export default function OperationsDashboard() {
             <div>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Managed Contracts</span>
               <span className="text-2xl font-black text-slate-900 block mt-2">5</span>
-              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">View Contracts →</span>
+              <span className="text-[10px] text-[#0F8B7D] font-bold mt-1 block">View Contracts →</span>
             </div>
-            <Briefcase size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
+            <Briefcase size={22} className="text-slate-400 group-hover:text-[#0F8B7D]" />
           </Link>
 
           <Link href="/ops/attendance" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Active Shift Logs</span>
               <span className="text-2xl font-black text-slate-900 block mt-2">2 Active</span>
-              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">Inspect Logs →</span>
+              <span className="text-[10px] text-[#0F8B7D] font-bold mt-1 block">Inspect Logs →</span>
             </div>
-            <ClipboardList size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
+            <ClipboardList size={22} className="text-slate-400 group-hover:text-[#0F8B7D]" />
           </Link>
 
           <Link href="/ops/attendance" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Staff Attendance</span>
               <span className="text-2xl font-black text-slate-900 block mt-2">94%</span>
-              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">View Roster →</span>
+              <span className="text-[10px] text-[#0F8B7D] font-bold mt-1 block">View Roster →</span>
             </div>
-            <Clock size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
+            <Clock size={22} className="text-slate-400 group-hover:text-[#0F8B7D]" />
           </Link>
 
           <Link href="/ops/ppm" className="p-4 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 flex items-center justify-between cursor-pointer transition-all shadow-xs group">
             <div>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">PPM Checklist</span>
               <span className="text-2xl font-black text-slate-900 block mt-2">Week 34 Active</span>
-              <span className="text-[10px] text-[#2563EB] font-bold mt-1 block">Open Calendar →</span>
+              <span className="text-[10px] text-[#0F8B7D] font-bold mt-1 block">Open Calendar →</span>
             </div>
-            <Calendar size={22} className="text-slate-400 group-hover:text-[#2563EB]" />
+            <Calendar size={22} className="text-slate-400 group-hover:text-[#0F8B7D]" />
           </Link>
         </div>
 
@@ -278,7 +278,7 @@ export default function OperationsDashboard() {
         <div className="p-6 rounded-2xl border border-slate-100 bg-white shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <ClipboardList size={18} className="text-[#2563EB]" />
+              <ClipboardList size={18} className="text-[#0F8B7D]" />
               Shift Logs Progress (Click to inspect)
             </h3>
             <div className="flex flex-col gap-4">
@@ -303,7 +303,7 @@ export default function OperationsDashboard() {
                   <div className="font-extrabold text-slate-900">Morning Shift Logger Checklist</div>
                   <div className="text-slate-500 font-semibold mt-1">Lobby checks, generator health, lift operations verified.</div>
                 </div>
-                <span className="px-2.5 py-1 rounded bg-[#2563EB] text-white font-extrabold uppercase text-[10px]">Logged</span>
+                <span className="px-2.5 py-1 rounded bg-[#0F8B7D] text-white font-extrabold uppercase text-[10px]">Logged</span>
               </div>
 
               {/* Log 2 */}
@@ -383,7 +383,7 @@ export default function OperationsDashboard() {
             <div className="border-t border-slate-100 pt-5 flex flex-col gap-3">
               <button 
                 onClick={() => handleResolveIssue(selectedIssue.title, selectedIssue.actionName)}
-                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <CheckCircle size={15} />
                 {selectedIssue.actionName}
@@ -453,11 +453,11 @@ export default function OperationsDashboard() {
                       placeholder="e.g. All physical checks completed. Verified perimeter alarm."
                       value={nightLogNotes}
                       onChange={(e) => setNightLogNotes(e.target.value)}
-                      className="p-3 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] resize-none font-semibold text-slate-800"
+                      className="p-3 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#0F8B7D] resize-none font-semibold text-slate-800"
                     />
                     <button 
                       type="submit"
-                      className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Send size={14} /> Submit & Sign Off Night Log
                     </button>

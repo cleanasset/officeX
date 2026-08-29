@@ -485,7 +485,7 @@ export default function LeasingDashboard() {
                   >
                     <div className="flex justify-between items-center">
                       <span className="font-extrabold text-gray-900 text-sm">{lead.company}</span>
-                      <span className="px-2.5 py-0.5 rounded bg-blue-50 border border-blue-100 text-[#2563EB] font-bold text-[9px] uppercase">{lead.status}</span>
+                      <span className="px-2.5 py-0.5 rounded bg-blue-50 border border-blue-100 text-[#0F8B7D] font-bold text-[9px] uppercase">{lead.status}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-500 mt-1">
                       <span>Contact: <strong className="text-gray-700">{lead.contact}</strong></span>

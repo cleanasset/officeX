@@ -88,7 +88,7 @@ export default function PipelinePage() {
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Leasing Sales Pipeline</h1>
           <p className="text-xs text-slate-500 font-bold mt-1">Monitor active deals progression across stages, negotiate commercial agreements, and launch workspace onboarding.</p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[#2563EB] text-[10px] font-bold">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[#0F8B7D] text-[10px] font-bold">
           <Sparkles size={12} className="animate-spin" /> Drag & Drop Active
         </div>
       </div>
@@ -108,16 +108,16 @@ export default function PipelinePage() {
                 key={item.id} 
                 draggable
                 onDragStart={(e) => handleDragStart(e, item, colName)}
-                className="p-4 rounded-xl bg-white border border-slate-150 shadow-xs flex flex-col gap-3.5 cursor-grab active:cursor-grabbing hover:border-[#2563EB] hover:shadow-md transition-all"
+                className="p-4 rounded-xl bg-white border border-slate-150 shadow-xs flex flex-col gap-3.5 cursor-grab active:cursor-grabbing hover:border-[#0F8B7D] hover:shadow-md transition-all"
               >
                 <div onClick={() => setSelectedCard(item)} className="cursor-pointer">
                   <div className="flex justify-between items-start">
-                    <span className="font-extrabold text-slate-950 text-xs hover:text-[#2563EB] hover:underline block">{item.name}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-[#2563EB] text-[8px] font-black">{item.matchScore}% Match</span>
+                    <span className="font-extrabold text-slate-950 text-xs hover:text-[#0F8B7D] hover:underline block">{item.name}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-[#0F8B7D] text-[8px] font-black">{item.matchScore}% Match</span>
                   </div>
                   <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold mt-3">
                     <span>{item.req}</span>
-                    <span className="text-[#2563EB] font-black">{item.value}</span>
+                    <span className="text-[#0F8B7D] font-black">{item.value}</span>
                   </div>
                 </div>
 
@@ -138,7 +138,7 @@ export default function PipelinePage() {
                   {colName === "Won" && (
                     <button
                       onClick={() => handleOnboardWorkspace(item.name)}
-                      className="px-2.5 py-1 rounded bg-[#2563EB] hover:bg-blue-700 text-white text-[9px] font-extrabold transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded bg-[#0F8B7D] hover:bg-blue-700 text-white text-[9px] font-extrabold transition-colors cursor-pointer"
                     >
                       Onboard Space
                     </button>
@@ -159,7 +159,7 @@ export default function PipelinePage() {
               <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
                 <div>
                   <h3 className="font-black text-slate-900 text-base">{selectedCard.name} Lead</h3>
-                  <span className="text-[10px] text-[#2563EB] font-bold uppercase tracking-wider">Leasing Pipeline CRM</span>
+                  <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider">Leasing Pipeline CRM</span>
                 </div>
                 <button 
                   onClick={() => setSelectedCard(null)}
@@ -208,7 +208,7 @@ export default function PipelinePage() {
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50">
                     <span className="text-[9px] font-bold text-slate-400 uppercase block">Budget Est.</span>
-                    <span className="font-extrabold text-[#2563EB] mt-1 block">{selectedCard.value}</span>
+                    <span className="font-extrabold text-[#0F8B7D] mt-1 block">{selectedCard.value}</span>
                   </div>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function PipelinePage() {
             <div className="border-t border-slate-100 pt-5 flex flex-col gap-3">
               <button 
                 onClick={() => router.push("/leasing/chat")}
-                className="w-full py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 text-[#2563EB] font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 text-[#0F8B7D] font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <MessageSquare size={14} /> Open Deal Collaboration Chat
               </button>
@@ -227,7 +227,7 @@ export default function PipelinePage() {
                   showToast(`LOI Draft document generated for ${selectedCard.name}!`);
                   setSelectedCard(null);
                 }}
-                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 Generate LOI Draft <ArrowRight size={14} />
               </button>

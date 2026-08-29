@@ -36,7 +36,7 @@ export default function RFQDirectory() {
             {rfqs.map((rfq) => (
               <tr key={rfq.id} className="border-b border-gray-200 text-xs hover:bg-gray-50/50">
                 <td className="py-4 font-bold text-gray-900 flex items-center gap-2">
-                  <FolderOpen size={14} className="text-[#2563EB]" />
+                  <FolderOpen size={14} className="text-[#0F8B7D]" />
                   {rfq.title}
                 </td>
                 <td className="py-4 text-gray-700 font-semibold">{rfq.category}</td>

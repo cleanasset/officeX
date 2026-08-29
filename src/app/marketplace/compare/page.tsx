@@ -111,7 +111,7 @@ export default function CompareQuotes() {
               <tr className="border-b border-slate-100 text-xs font-semibold">
                 <td className="py-4 font-bold text-slate-900">Gross Total Bid</td>
                 {vendors.map((v, idx) => (
-                  <td key={idx} className="py-4 text-center font-black text-[#2563EB]">{v.gross}</td>
+                  <td key={idx} className="py-4 text-center font-black text-[#0F8B7D]">{v.gross}</td>
                 ))}
               </tr>
               <tr className="border-b border-slate-100 text-xs font-semibold">
@@ -162,10 +162,10 @@ export default function CompareQuotes() {
               {/* Total Weighted Vendor Score */}
               <tr className="border-b border-slate-100 text-xs font-semibold bg-blue-50/20">
                 <td className="py-4 font-black text-slate-950 flex items-center gap-1.5 pl-4">
-                  <Award size={15} className="text-[#2563EB]" /> Total Weighted Score
+                  <Award size={15} className="text-[#0F8B7D]" /> Total Weighted Score
                 </td>
                 {vendors.map((v, idx) => (
-                  <td key={idx} className="py-4 text-center font-black text-sm text-[#2563EB]">{v.totalScore} / 100</td>
+                  <td key={idx} className="py-4 text-center font-black text-sm text-[#0F8B7D]">{v.totalScore} / 100</td>
                 ))}
               </tr>
 
@@ -190,7 +190,7 @@ export default function CompareQuotes() {
                   <td key={idx} className="py-6 text-center">
                     <button
                       onClick={() => handleAwardContract(v.name)}
-                      className="px-5 py-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-[10px] uppercase shadow-sm transition-colors cursor-pointer"
+                      className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-[10px] uppercase shadow-sm transition-colors cursor-pointer"
                     >
                       Award Work Order
                     </button>

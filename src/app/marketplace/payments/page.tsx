@@ -38,7 +38,7 @@ export default function EscrowPayments() {
               max="100" 
               value={commissionPct} 
               onChange={(e) => setCommissionPct(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-              className="w-16 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold focus:outline-none focus:border-[#2563EB] text-center"
+              className="w-16 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs font-bold focus:outline-none focus:border-[#0F8B7D] text-center"
             />
             <span className="text-xs font-bold text-gray-700">%</span>
           </div>
@@ -71,7 +71,7 @@ export default function EscrowPayments() {
 
               return (
                 <tr key={tx.id} className="border-b border-gray-200 text-xs hover:bg-gray-50/50">
-                  <td className="py-4 font-mono font-bold text-[#2563EB]">{tx.id}</td>
+                  <td className="py-4 font-mono font-bold text-[#0F8B7D]">{tx.id}</td>
                   <td className="py-4 text-gray-900 font-bold">{tx.wo}</td>
                   <td className="py-4 text-gray-700 font-semibold">₹{tx.grossAmount.toLocaleString()}</td>
                   <td className="py-4 text-red-600 font-extrabold">₹{commissionVal.toLocaleString()}</td>

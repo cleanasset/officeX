@@ -97,7 +97,7 @@ export default function RequirementWizard() {
           <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={30} height={30} className="object-contain" />
           <Image src="/name-removebg-preview.png" alt="OfficeX" width={95} height={19} className="object-contain" />
         </Link>
-        <Link href="/public/search" className="text-xs font-bold text-slate-500 hover:text-[#2563EB] transition-colors flex items-center gap-1">
+        <Link href="/public/search" className="text-xs font-bold text-slate-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Search
         </Link>
       </header>
@@ -108,13 +108,13 @@ export default function RequirementWizard() {
           
           {/* Progress Indicators */}
           <div className="flex justify-between items-center mb-8 text-[9px] font-black text-slate-400 uppercase tracking-wider">
-            <span className={step >= 1 ? "text-[#2563EB]" : ""}>1. GSTIN Check</span>
+            <span className={step >= 1 ? "text-[#0F8B7D]" : ""}>1. GSTIN Check</span>
             <ChevronRight size={12} />
-            <span className={step >= 2 ? "text-[#2563EB]" : ""}>2. Space Needs</span>
+            <span className={step >= 2 ? "text-[#0F8B7D]" : ""}>2. Space Needs</span>
             <ChevronRight size={12} />
-            <span className={step >= 3 ? "text-[#2563EB]" : ""}>3. FM Services</span>
+            <span className={step >= 3 ? "text-[#0F8B7D]" : ""}>3. FM Services</span>
             <ChevronRight size={12} />
-            <span className={step >= 4 ? "text-[#2563EB]" : ""}>4. Commercials</span>
+            <span className={step >= 4 ? "text-[#0F8B7D]" : ""}>4. Commercials</span>
           </div>
 
           {/* STEP 1: GSTIN Verification or Manual Mode */}
@@ -138,7 +138,7 @@ export default function RequirementWizard() {
                       placeholder="e.g. 27AAACT1234F1ZP" 
                       value={gstin}
                       onChange={(e) => setGstin(e.target.value)}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50 font-semibold uppercase"
+                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold uppercase"
                     />
                     {gstinError && <span className="text-red-500 text-[10px] font-bold mt-1">⚠ {gstinError}</span>}
                   </div>
@@ -146,14 +146,14 @@ export default function RequirementWizard() {
                   <button 
                     onClick={handleGstinCheck}
                     disabled={isValidating}
-                    className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                    className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
                   >
                     {isValidating ? "Validating Entity..." : "Verify & Continue"}
                   </button>
 
                   <button 
                     onClick={() => { setManualMode(true); setGstinError(""); }}
-                    className="text-xs text-center text-slate-500 hover:text-[#2563EB] font-bold underline cursor-pointer"
+                    className="text-xs text-center text-slate-500 hover:text-[#0F8B7D] font-bold underline cursor-pointer"
                   >
                     Or fill details manually without GSTIN
                   </button>
@@ -167,7 +167,7 @@ export default function RequirementWizard() {
                       placeholder="e.g. Infy Labs Private Limited" 
                       value={formData.companyName}
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50 font-semibold text-slate-900"
+                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold text-slate-900"
                       required
                     />
                   </div>
@@ -179,7 +179,7 @@ export default function RequirementWizard() {
                       placeholder="e.g. admin@infylabs.com" 
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50 font-semibold text-slate-900"
+                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold text-slate-900"
                       required
                     />
                   </div>
@@ -188,7 +188,7 @@ export default function RequirementWizard() {
 
                   <button 
                     type="submit"
-                    className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-md cursor-pointer"
+                    className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-md cursor-pointer"
                   >
                     Continue to Space Scope
                   </button>
@@ -196,7 +196,7 @@ export default function RequirementWizard() {
                   <button 
                     type="button"
                     onClick={() => { setManualMode(false); setGstinError(""); }}
-                    className="text-xs text-center text-slate-500 hover:text-[#2563EB] font-bold underline cursor-pointer"
+                    className="text-xs text-center text-slate-500 hover:text-[#0F8B7D] font-bold underline cursor-pointer"
                   >
                     Back to GSTIN Verification
                   </button>
@@ -225,7 +225,7 @@ export default function RequirementWizard() {
                       const estimatedSqft = seatsVal ? (parseInt(seatsVal) * 70).toString() : "";
                       setFormData({ ...formData, seats: seatsVal, desiredSqft: estimatedSqft });
                     }}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50 font-semibold"
+                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -235,7 +235,7 @@ export default function RequirementWizard() {
                     placeholder="e.g. 3500" 
                     value={formData.desiredSqft}
                     onChange={(e) => setFormData({ ...formData, desiredSqft: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50 font-semibold"
+                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold"
                   />
                 </div>
               </div>
@@ -246,7 +246,7 @@ export default function RequirementWizard() {
                   <select 
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white font-semibold cursor-pointer"
+                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white font-semibold cursor-pointer"
                   >
                     <option>Mumbai</option>
                     <option>Bengaluru</option>
@@ -260,7 +260,7 @@ export default function RequirementWizard() {
                     type="date" 
                     value={formData.moveInDate}
                     onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50 font-semibold"
+                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold"
                   />
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function RequirementWizard() {
                 </button>
                 <button 
                   onClick={() => setStep(3)}
-                  className="px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
                 >
                   Continue to Services <ArrowRight size={14} />
                 </button>
@@ -301,7 +301,7 @@ export default function RequirementWizard() {
                     type="checkbox" 
                     checked={formData.itNetworking}
                     onChange={(e) => setFormData({ ...formData, itNetworking: e.target.checked })}
-                    className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB] border-slate-300 rounded cursor-pointer"
+                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
                   />
                 </label>
 
@@ -314,7 +314,7 @@ export default function RequirementWizard() {
                     type="checkbox" 
                     checked={formData.housekeeping}
                     onChange={(e) => setFormData({ ...formData, housekeeping: e.target.checked })}
-                    className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB] border-slate-300 rounded cursor-pointer"
+                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
                   />
                 </label>
 
@@ -327,7 +327,7 @@ export default function RequirementWizard() {
                     type="checkbox" 
                     checked={formData.mepServices}
                     onChange={(e) => setFormData({ ...formData, mepServices: e.target.checked })}
-                    className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB] border-slate-300 rounded cursor-pointer"
+                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
                   />
                 </label>
 
@@ -340,7 +340,7 @@ export default function RequirementWizard() {
                     type="checkbox" 
                     checked={formData.catering}
                     onChange={(e) => setFormData({ ...formData, catering: e.target.checked })}
-                    className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB] border-slate-300 rounded cursor-pointer"
+                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
                   />
                 </label>
               </div>
@@ -355,7 +355,7 @@ export default function RequirementWizard() {
                 </button>
                 <button 
                   onClick={() => setStep(4)}
-                  className="px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
                 >
                   Continue to Commercials <ArrowRight size={14} />
                 </button>
@@ -377,7 +377,7 @@ export default function RequirementWizard() {
                   <select 
                     value={formData.budgetRange}
                     onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white cursor-pointer"
+                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white cursor-pointer"
                   >
                     <option>Under 1 Lakh</option>
                     <option>1-2 Lakhs</option>
@@ -393,7 +393,7 @@ export default function RequirementWizard() {
                       type="number" 
                       value={formData.lockInMonths}
                       onChange={(e) => setFormData({ ...formData, lockInMonths: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50"
+                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -402,7 +402,7 @@ export default function RequirementWizard() {
                       type="number" 
                       value={formData.leaseTermYears}
                       onChange={(e) => setFormData({ ...formData, leaseTermYears: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-slate-50"
+                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50"
                     />
                   </div>
                 </div>
@@ -418,7 +418,7 @@ export default function RequirementWizard() {
                 </button>
                 <button 
                   onClick={handleFinish}
-                  className="px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
                 >
                   Submit Requirements
                 </button>
@@ -438,7 +438,7 @@ export default function RequirementWizard() {
                   Your corporate workspace requirements have been successfully logged in the OFFICEX Leasing CRM. A leasing supervisor will follow up with verified property proposals within 2 hours.
                 </p>
               </div>
-              <Link href="/public/search" className="px-6 py-3 rounded-xl bg-[#2563EB] text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-md">
+              <Link href="/public/search" className="px-6 py-3 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-md">
                 View Similar Listings
               </Link>
             </div>

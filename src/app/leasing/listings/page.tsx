@@ -102,14 +102,14 @@ export default function ListingsPage() {
         </div>
         <button 
           onClick={() => setIsAdding(true)}
-          className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
+          className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
         >
           <Plus size={14} /> Add Listing
         </button>
       </div>
 
       {notification && (
-        <div className="p-4 rounded-xl bg-blue-50 border border-blue-150 text-[#2563EB] font-bold text-xs flex items-center gap-2 max-w-2xl animate-pulse">
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-150 text-[#0F8B7D] font-bold text-xs flex items-center gap-2 max-w-2xl animate-pulse">
           <Bell size={16} />
           {notification}
         </div>
@@ -137,9 +137,9 @@ export default function ListingsPage() {
               >
                 <td 
                   onClick={() => { setSelectedListing(l); setEditingRate(l.rate); }}
-                  className="py-4 font-black text-slate-900 flex items-center gap-2.5 hover:text-[#2563EB] hover:underline cursor-pointer"
+                  className="py-4 font-black text-slate-900 flex items-center gap-2.5 hover:text-[#0F8B7D] hover:underline cursor-pointer"
                 >
-                  <Building size={14} className="text-[#2563EB]" />
+                  <Building size={14} className="text-[#0F8B7D]" />
                   {l.name}
                 </td>
                 <td className="py-4 text-slate-700">{l.type}</td>
@@ -156,7 +156,7 @@ export default function ListingsPage() {
                 <td className="py-4 text-right flex items-center justify-end gap-2.5">
                   <button
                     onClick={() => setBrochureListing(l)}
-                    className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 text-[#2563EB] rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                    className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 text-[#0F8B7D] rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
                   >
                     Brochure
                   </button>
@@ -182,7 +182,7 @@ export default function ListingsPage() {
               <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
                 <div>
                   <h3 className="font-black text-slate-900 text-sm">Listing Configurations</h3>
-                  <span className="text-[10px] text-[#2563EB] font-bold uppercase tracking-wider">{selectedListing.name}</span>
+                  <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider">{selectedListing.name}</span>
                 </div>
                 <button 
                   onClick={() => setSelectedListing(null)}
@@ -216,11 +216,11 @@ export default function ListingsPage() {
                       type="text" 
                       value={editingRate}
                       onChange={(e) => setEditingRate(e.target.value)}
-                      className="flex-1 px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
+                      className="flex-1 px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
                     />
                     <button 
                       onClick={() => handleUpdateRate(selectedListing.id, editingRate)}
-                      className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-xl text-[10px] shadow-md transition-colors cursor-pointer"
+                      className="px-4 py-2 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-xl text-[10px] shadow-md transition-colors cursor-pointer"
                     >
                       Update
                     </button>
@@ -235,7 +235,7 @@ export default function ListingsPage() {
                   setBrochureListing(selectedListing);
                   setSelectedListing(null);
                 }}
-                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 Generate Brochure <ArrowRight size={14} />
               </button>
@@ -274,25 +274,25 @@ export default function ListingsPage() {
             <div className="flex border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <button 
                 onClick={() => setActiveTab("basics")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "basics" ? "border-[#2563EB] text-[#2563EB]" : "border-transparent"}`}
+                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "basics" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
               >
                 1. Basics
               </button>
               <button 
                 onClick={() => setActiveTab("spaces")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "spaces" ? "border-[#2563EB] text-[#2563EB]" : "border-transparent"}`}
+                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "spaces" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
               >
                 2. Spaces
               </button>
               <button 
                 onClick={() => setActiveTab("commercials")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "commercials" ? "border-[#2563EB] text-[#2563EB]" : "border-transparent"}`}
+                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "commercials" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
               >
                 3. Commercials
               </button>
               <button 
                 onClick={() => setActiveTab("photos")}
-                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "photos" ? "border-[#2563EB] text-[#2563EB]" : "border-transparent"}`}
+                className={`flex-1 pb-2 border-b-2 text-center transition-all ${activeTab === "photos" ? "border-[#0F8B7D] text-[#0F8B7D]" : "border-transparent"}`}
               >
                 4. Photo & Review
               </button>
@@ -312,7 +312,7 @@ export default function ListingsPage() {
                       placeholder="e.g. Apex Tower - Unit 502"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-semibold"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -323,7 +323,7 @@ export default function ListingsPage() {
                       placeholder="e.g. BKC, Mumbai"
                       value={form.address}
                       onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-semibold"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -342,7 +342,7 @@ export default function ListingsPage() {
                   <button 
                     type="button" 
                     onClick={() => setActiveTab("spaces")}
-                    className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs mt-2 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs mt-2 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     Next Step <ArrowRight size={14} />
                   </button>
@@ -360,7 +360,7 @@ export default function ListingsPage() {
                         placeholder="e.g. 5000"
                         value={form.area}
                         onChange={(e) => setForm({ ...form, area: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-semibold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -383,12 +383,12 @@ export default function ListingsPage() {
                       placeholder="e.g. Central AC, 100% Power backup, High speed fiber links"
                       value={form.amenities}
                       onChange={(e) => setForm({ ...form, amenities: e.target.value })}
-                      className="px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 resize-none font-semibold text-slate-800"
+                      className="px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 resize-none font-semibold text-slate-800"
                     />
                   </div>
                   <div className="flex justify-between gap-3 mt-2">
                     <button type="button" onClick={() => setActiveTab("basics")} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
-                    <button type="button" onClick={() => setActiveTab("commercials")} className="px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next <ArrowRight size={13} /></button>
+                    <button type="button" onClick={() => setActiveTab("commercials")} className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next <ArrowRight size={13} /></button>
                   </div>
                 </div>
               )}
@@ -404,7 +404,7 @@ export default function ListingsPage() {
                         placeholder="e.g. 150"
                         value={form.rate}
                         onChange={(e) => setForm({ ...form, rate: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-semibold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -414,7 +414,7 @@ export default function ListingsPage() {
                         placeholder="e.g. 15"
                         value={form.camFee}
                         onChange={(e) => setForm({ ...form, camFee: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-semibold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-semibold"
                       />
                     </div>
                   </div>
@@ -438,13 +438,13 @@ export default function ListingsPage() {
                         type="text"
                         value={form.escalation}
                         onChange={(e) => setForm({ ...form, escalation: e.target.value })}
-                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-bold"
+                        className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-bold"
                       />
                     </div>
                   </div>
                   <div className="flex justify-between gap-3 mt-2">
                     <button type="button" onClick={() => setActiveTab("spaces")} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
-                    <button type="button" onClick={() => setActiveTab("photos")} className="px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next <ArrowRight size={13} /></button>
+                    <button type="button" onClick={() => setActiveTab("photos")} className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer flex items-center gap-1">Next <ArrowRight size={13} /></button>
                   </div>
                 </div>
               )}
@@ -458,13 +458,13 @@ export default function ListingsPage() {
                       type="text"
                       value={form.photoUrl}
                       onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
-                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#2563EB] bg-slate-50 font-mono text-[10px]"
+                      className="px-3.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] bg-slate-50 font-mono text-[10px]"
                     />
                   </div>
 
                   {/* Summary check panel */}
                   <div className="p-4 rounded-2xl bg-blue-50/30 border border-blue-100 flex flex-col gap-2">
-                    <span className="text-[9px] text-[#2563EB] font-black uppercase tracking-widest block">Review Details</span>
+                    <span className="text-[9px] text-[#0F8B7D] font-black uppercase tracking-widest block">Review Details</span>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Listing Title:</span>
                       <span className="font-extrabold text-slate-900">{form.name || "N/A"}</span>
@@ -481,7 +481,7 @@ export default function ListingsPage() {
 
                   <div className="flex justify-between gap-3 mt-2">
                     <button type="button" onClick={() => setActiveTab("commercials")} className="px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">Back</button>
-                    <button type="submit" className="px-6 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl cursor-pointer">Submit Workspace Listing</button>
+                    <button type="submit" className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-blue-700 text-white font-extrabold rounded-xl cursor-pointer">Submit Workspace Listing</button>
                   </div>
                 </div>
               )}
@@ -499,14 +499,14 @@ export default function ListingsPage() {
             
             {/* Modal Actions */}
             <div className="flex justify-between items-center border-b border-slate-100 pb-4 print:hidden">
-              <div className="flex items-center gap-2 text-[#2563EB] font-bold text-sm">
+              <div className="flex items-center gap-2 text-[#0F8B7D] font-bold text-sm">
                 <Sparkles size={16} className="text-amber-500 animate-pulse" />
                 <span>Sales Brochure Preview</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#2563EB] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0F8B7D] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Printer size={13} /> Print/Save PDF
                 </button>
@@ -535,7 +535,7 @@ export default function ListingsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Asking Rental</span>
-                  <span className="text-xl font-extrabold text-[#2563EB] block mt-0.5">{brochureListing.rate}</span>
+                  <span className="text-xl font-extrabold text-[#0F8B7D] block mt-0.5">{brochureListing.rate}</span>
                   <span className="text-[9px] text-slate-400 font-semibold">Leasable area: {brochureListing.area}</span>
                 </div>
               </div>
@@ -581,16 +581,16 @@ export default function ListingsPage() {
                 <div className="text-xs font-semibold">
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Leasing Enquiry</span>
                   <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <Phone size={12} className="text-[#2563EB]" /> +91 22 4987 6000
+                    <Phone size={12} className="text-[#0F8B7D]" /> +91 22 4987 6000
                   </div>
                   <div className="flex items-center gap-1.5 font-semibold text-slate-600 mt-0.5">
-                    <Mail size={12} className="text-[#2563EB]" /> leasing@officex.in
+                    <Mail size={12} className="text-[#0F8B7D]" /> leasing@officex.in
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Scan to Visit</span>
-                    <span className="text-[9px] text-[#2563EB] font-bold uppercase">officex.in/listings</span>
+                    <span className="text-[9px] text-[#0F8B7D] font-bold uppercase">officex.in/listings</span>
                   </div>
                   <div className="p-1 bg-white rounded-lg border border-slate-200">
                     <QrCode size={36} className="text-slate-900" />
@@ -613,7 +613,7 @@ export default function ListingsPage() {
                 onClick={() => {
                   window.print();
                 }}
-                className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <Printer size={13} /> Print/Save PDF Brochure
               </button>

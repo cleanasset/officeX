@@ -21,7 +21,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
         <div className="text-center p-8">
           <Building size={48} className="text-gray-300 mx-auto mb-4" />
           <h2 className="text-lg font-bold text-gray-900">Property Not Found</h2>
-          <Link href="/public/search" className="text-[#2563EB] text-xs font-semibold mt-2 inline-block">Back to search</Link>
+          <Link href="/public/search" className="text-[#0F8B7D] text-xs font-semibold mt-2 inline-block">Back to search</Link>
         </div>
       </div>
     );
@@ -42,7 +42,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
           <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={30} height={30} className="object-contain" />
           <Image src="/name-removebg-preview.png" alt="OfficeX" width={95} height={19} className="object-contain" />
         </Link>
-        <Link href="/public/search" className="text-xs font-semibold text-gray-500 hover:text-[#2563EB] transition-colors flex items-center gap-1">
+        <Link href="/public/search" className="text-xs font-semibold text-gray-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Search
         </Link>
       </header>
@@ -56,7 +56,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end">
           <div className="max-w-6xl mx-auto w-full px-12 pb-8 text-white flex flex-col items-start gap-2">
-            <span className="px-3 py-1 rounded bg-[#2563EB] text-[10px] font-bold uppercase tracking-wider">
+            <span className="px-3 py-1 rounded bg-[#0F8B7D] text-[10px] font-bold uppercase tracking-wider">
               {prop.type}
             </span>
             <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight">
@@ -120,7 +120,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
             <h4 className="font-bold text-gray-700 text-xs mb-3">Key Features & Services</h4>
             <div className="flex flex-wrap gap-2">
               {["24/7 Security Operations", "Visitor Management System", "Food Court & Lounge", "LEED Gold Certified", "Fiber-optic Connectivity", "Integrated Fire Sprinklers", "Professional FM Services"].map((amenity, idx) => (
-                <span key={idx} className="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-bold text-[#2563EB]">
+                <span key={idx} className="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-bold text-[#0F8B7D]">
                   {amenity}
                 </span>
               ))}
@@ -147,7 +147,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
                       <td className="py-3 font-bold text-gray-900">{unit.unitNumber}</td>
                       <td className="py-3 text-gray-500">{unit.floorNumber}</td>
                       <td className="py-3 text-gray-500 font-medium">{parseFloat(unit.areaSqft).toLocaleString()}</td>
-                      <td className="py-3 font-bold text-[#2563EB]">₹{parseFloat(unit.baseRent).toLocaleString()}/mo</td>
+                      <td className="py-3 font-bold text-[#0F8B7D]">₹{parseFloat(unit.baseRent).toLocaleString()}/mo</td>
                       <td className="py-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${unit.status === 'available' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
                           {unit.status}
@@ -169,7 +169,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
           <div className="premium-card p-6 border border-gray-200 bg-white">
             <h3 className="font-bold text-gray-900 text-sm mb-4">OFFICEX Property Score</h3>
             <div className="flex items-baseline gap-1.5 mb-4">
-              <span className="text-4xl font-extrabold text-[#2563EB]">86</span>
+              <span className="text-4xl font-extrabold text-[#0F8B7D]">86</span>
               <span className="text-xs text-gray-400 font-semibold">/ 100</span>
             </div>
             
@@ -226,7 +226,7 @@ export default async function PropertyDetails({ params }: { params: Promise<{ id
           {/* Statutory NOCs */}
           <div className="premium-card p-6 border border-gray-100 bg-white">
             <h3 className="font-bold text-gray-900 text-sm mb-4 flex items-center gap-1.5">
-              <ShieldCheck size={18} className="text-[#2563EB]" />
+              <ShieldCheck size={18} className="text-[#0F8B7D]" />
               Statutory NOC Statuses
             </h3>
             <div className="flex flex-col gap-4">

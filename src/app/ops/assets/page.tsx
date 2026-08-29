@@ -80,7 +80,7 @@ export default function OperationsAssets() {
           <select 
             value={criticalityFilter}
             onChange={(e) => setCriticalityFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white text-slate-800 focus:outline-none focus:border-[#2563EB]"
+            className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
           >
             <option value="ALL">All Criticality</option>
             <option value="Critical">Critical</option>
@@ -89,7 +89,7 @@ export default function OperationsAssets() {
           </select>
           <button 
             onClick={() => setIsAdding(true)}
-            className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
+            className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
           >
             <Plus size={14} /> Register Asset Tag
           </button>
@@ -117,7 +117,7 @@ export default function OperationsAssets() {
                 className="border-b border-slate-100 text-xs hover:bg-blue-50/10 cursor-pointer transition-colors font-semibold"
               >
                 <td className="py-4 font-black text-slate-900 flex items-center gap-2.5">
-                  <Building size={14} className="text-[#2563EB]" />
+                  <Building size={14} className="text-[#0F8B7D]" />
                   {a.name}
                 </td>
                 <td className="py-4 font-mono font-bold text-indigo-600">{a.code}</td>
@@ -133,7 +133,7 @@ export default function OperationsAssets() {
                     {a.criticality}
                   </span>
                 </td>
-                <td className="py-4 font-extrabold text-[#2563EB]">
+                <td className="py-4 font-extrabold text-[#0F8B7D]">
                   {a.healthScore}%
                 </td>
                 <td className="py-4 text-right">
@@ -154,7 +154,7 @@ export default function OperationsAssets() {
             <div>
               <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
                 <div>
-                  <span className="text-[10px] font-bold font-mono text-[#2563EB] uppercase tracking-wider">{selectedAsset.code}</span>
+                  <span className="text-[10px] font-bold font-mono text-[#0F8B7D] uppercase tracking-wider">{selectedAsset.code}</span>
                   <h3 className="font-extrabold text-slate-900 text-base mt-1">{selectedAsset.name}</h3>
                 </div>
                 <button 
@@ -190,7 +190,7 @@ export default function OperationsAssets() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Health Score</span>
-                    <span className="font-black text-[#2563EB]">{selectedAsset.healthScore}%</span>
+                    <span className="font-black text-[#0F8B7D]">{selectedAsset.healthScore}%</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Criticality</span>
@@ -217,7 +217,7 @@ export default function OperationsAssets() {
                   showToast(`Maintenance log scheduled for ${selectedAsset.name}`);
                   setSelectedAsset(null);
                 }}
-                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Wrench size={14} /> Log Maintenance Service
               </button>
@@ -258,7 +258,7 @@ export default function OperationsAssets() {
                   placeholder="e.g. Voltas Central AHU 2000CFM"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB] bg-slate-50"
+                  className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                 />
               </div>
 
@@ -270,7 +270,7 @@ export default function OperationsAssets() {
                     placeholder="e.g. AX-AHU-04"
                     value={form.code}
                     onChange={(e) => setForm({ ...form, code: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#2563EB] font-mono bg-slate-50 uppercase"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#0F8B7D] font-mono bg-slate-50 uppercase"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -280,7 +280,7 @@ export default function OperationsAssets() {
                     placeholder="e.g. Floor 4 AHU Room"
                     value={form.location}
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB] bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
               </div>
@@ -293,7 +293,7 @@ export default function OperationsAssets() {
                     placeholder="e.g. Voltas India"
                     value={form.manufacturer}
                     onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB] bg-slate-50"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] bg-slate-50"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -301,7 +301,7 @@ export default function OperationsAssets() {
                   <select 
                     value={form.criticality}
                     onChange={(e) => setForm({ ...form, criticality: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#2563EB] bg-white cursor-pointer"
+                    className="px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#0F8B7D] bg-white cursor-pointer"
                   >
                     <option value="Normal">Normal</option>
                     <option value="High">High</option>
@@ -321,7 +321,7 @@ export default function OperationsAssets() {
               </button>
               <button 
                 type="submit"
-                className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md transition-colors cursor-pointer"
+                className="px-5 py-2 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md transition-colors cursor-pointer"
               >
                 Register Asset
               </button>

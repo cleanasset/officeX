@@ -82,18 +82,18 @@ export default function WorkOrders() {
           <div 
             key={wo.id} 
             onClick={() => setSelectedWO(wo)}
-            className="p-6 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between min-h-[190px] shadow-xs hover:border-[#2563EB] hover:shadow-md cursor-pointer transition-all"
+            className="p-6 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between min-h-[190px] shadow-xs hover:border-[#0F8B7D] hover:shadow-md cursor-pointer transition-all"
           >
             <div>
               <div className="flex justify-between items-start border-b border-slate-50 pb-3.5 mb-3.5">
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-xs hover:text-[#2563EB] hover:underline">{wo.title}</h3>
+                  <h3 className="font-extrabold text-slate-900 text-xs hover:text-[#0F8B7D] hover:underline">{wo.title}</h3>
                   <span className="text-[10px] text-slate-400 font-bold block mt-1">Contractor: {wo.vendor}</span>
                 </div>
                 <span className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
                   wo.status === "Completed" 
                     ? "bg-emerald-50 text-emerald-600 border-emerald-250" 
-                    : "bg-blue-50 text-[#2563EB] border-blue-250"
+                    : "bg-blue-50 text-[#0F8B7D] border-blue-250"
                 }`}>
                   {wo.status}
                 </span>
@@ -105,7 +105,7 @@ export default function WorkOrders() {
                 </div>
                 <div className="flex justify-between">
                   <span>Progress:</span>
-                  <span className="text-[#2563EB] font-bold">{wo.progress}</span>
+                  <span className="text-[#0F8B7D] font-bold">{wo.progress}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SLA Timer:</span>
@@ -142,7 +142,7 @@ export default function WorkOrders() {
               <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
                 <div>
                   <span className={`text-[9px] font-black px-2.5 py-0.5 rounded border uppercase tracking-wider ${
-                    selectedWO.status === "Completed" ? "bg-emerald-50 text-emerald-600 border-emerald-250" : "bg-blue-50 text-[#2563EB] border-blue-250"
+                    selectedWO.status === "Completed" ? "bg-emerald-50 text-emerald-600 border-emerald-250" : "bg-blue-50 text-[#0F8B7D] border-blue-250"
                   }`}>
                     {selectedWO.status} Job
                   </span>
@@ -199,7 +199,7 @@ export default function WorkOrders() {
               {selectedWO.status === "In Progress" && (
                 <button 
                   onClick={() => handleVerifySignoff(selectedWO.id)}
-                  className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <CheckCircle size={15} /> Verify & Sign Off Work Order
                 </button>

@@ -63,7 +63,7 @@ export default function RentRoll() {
       </div>
 
       {notification && (
-        <div className="p-4 rounded-xl bg-blue-50 border border-blue-150 text-[#2563EB] font-bold text-xs animate-pulse flex items-center gap-2 max-w-2xl">
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-150 text-[#0F8B7D] font-bold text-xs animate-pulse flex items-center gap-2 max-w-2xl">
           <Bell size={16} />
           {notification}
         </div>
@@ -83,7 +83,7 @@ export default function RentRoll() {
         </div>
         <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs">
           <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">Gross Billing Volume</span>
-          <div className="text-2xl font-black text-[#2563EB] mt-2">₹{totalGrossDue.toLocaleString()}</div>
+          <div className="text-2xl font-black text-[#0F8B7D] mt-2">₹{totalGrossDue.toLocaleString()}</div>
           <span className="text-[9px] text-emerald-600 font-bold mt-1 block">100% Collected</span>
         </div>
         <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs">
@@ -114,8 +114,8 @@ export default function RentRoll() {
                 onClick={() => setSelectedTenant(row)}
                 className="border-b border-slate-100 text-xs hover:bg-blue-50/10 cursor-pointer transition-colors font-semibold"
               >
-                <td className="py-4 font-black text-slate-900 flex items-center gap-2 hover:text-[#2563EB] hover:underline">
-                  <FileText size={14} className="text-[#2563EB]" />
+                <td className="py-4 font-black text-slate-900 flex items-center gap-2 hover:text-[#0F8B7D] hover:underline">
+                  <FileText size={14} className="text-[#0F8B7D]" />
                   {row.tenant}
                 </td>
                 <td className="py-4 text-slate-700">{row.space}</td>
@@ -123,7 +123,7 @@ export default function RentRoll() {
                 <td className="py-4 text-slate-650">₹{row.securityDeposit.toLocaleString()}</td>
                 <td className="py-4 text-slate-700 font-bold">₹{row.baseRent.toLocaleString()}</td>
                 <td className="py-4 text-red-600">₹{row.camRent.toLocaleString()}</td>
-                <td className="py-4 text-right font-black text-[#2563EB]">₹{(row.baseRent + row.camRent).toLocaleString()}</td>
+                <td className="py-4 text-right font-black text-[#0F8B7D]">₹{(row.baseRent + row.camRent).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -139,7 +139,7 @@ export default function RentRoll() {
               <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
                 <div>
                   <h3 className="font-extrabold text-slate-900 text-base">{selectedTenant.tenant} Lease Profile</h3>
-                  <span className="text-[10px] text-[#2563EB] font-bold uppercase tracking-wider">Active Corporate Tenant</span>
+                  <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider">Active Corporate Tenant</span>
                 </div>
                 <button 
                   onClick={() => setSelectedTenant(null)}
@@ -192,7 +192,7 @@ export default function RentRoll() {
             <div className="border-t border-slate-100 pt-5 flex flex-col gap-3">
               <button 
                 onClick={() => triggerReminder(selectedTenant.tenant, selectedTenant.poc)}
-                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 Send Rent Reminder <ArrowRight size={14} />
               </button>

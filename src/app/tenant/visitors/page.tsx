@@ -266,7 +266,7 @@ export default function Visitors() {
             <div className="w-full flex flex-col items-center p-6 rounded-2xl bg-slate-50 border border-slate-100 gap-4">
               <QrCode size={120} className="text-purple-600 p-2 bg-white border border-slate-200 rounded-xl" />
               <div className="text-center">
-                <span className="font-mono font-black text-[#2563EB] text-base">{selectedVisitor.code}</span>
+                <span className="font-mono font-black text-[#0F8B7D] text-base">{selectedVisitor.code}</span>
                 <span className="text-[10px] text-slate-400 font-bold block mt-1 uppercase tracking-wider">{selectedVisitor.name}</span>
                 <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">{selectedVisitor.company}</span>
               </div>

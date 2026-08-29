@@ -71,7 +71,7 @@ export default function AIConfiguration() {
               type="checkbox" 
               checked={observationMode}
               onChange={(e) => setObservationMode(e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB] border-gray-300 rounded"
+              className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-gray-300 rounded"
             />
           </div>
         </div>

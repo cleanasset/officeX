@@ -120,7 +120,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
           </div>
           <div>
             <h5 className="font-extrabold text-slate-900 text-xs">Ravi Menon</h5>
-            <p className="text-[9px] font-extrabold text-[#2563EB] uppercase tracking-wider mt-0.5 font-sans">Leasing Director, OfficeX</p>
+            <p className="text-[9px] font-extrabold text-[#0F8B7D] uppercase tracking-wider mt-0.5 font-sans">Leasing Director, OfficeX</p>
           </div>
         </div>
         <div className="flex flex-col gap-1.5 text-[10px] text-slate-600 border-t border-slate-50 pt-3 font-semibold">
@@ -139,7 +139,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
       <div className="p-6 rounded-2xl border border-slate-200 bg-blue-50/20 flex flex-col gap-3">
         <button 
           onClick={() => setShowProposalModal(true)}
-          className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
         >
           <FileText size={14} />
           Request Proposal
@@ -151,7 +151,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
           <Calendar size={14} />
           Request Site Visit
         </button>
-        <div className="grid grid-cols-2 gap-3 mt-1 text-center text-[10px] font-bold text-[#2563EB]">
+        <div className="grid grid-cols-2 gap-3 mt-1 text-center text-[10px] font-bold text-[#0F8B7D]">
           <button 
             onClick={() => showToast(`${propertyName} added to your comparisons matrix!`)}
             className="py-2 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
@@ -191,7 +191,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
                   placeholder="e.g. Infy Labs Private Limited"
                   value={proposalForm.companyName}
                   onChange={(e) => setProposalForm({ ...proposalForm, companyName: e.target.value })}
-                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-slate-900 font-semibold"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -199,7 +199,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
                 <select 
                   value={proposalForm.seats}
                   onChange={(e) => setProposalForm({ ...proposalForm, seats: e.target.value })}
-                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-slate-900 font-semibold cursor-pointer"
                 >
                   <option value="20">20 Seats (approx. 1,400 sq.ft)</option>
                   <option value="50">50 Seats (approx. 3,500 sq.ft)</option>
@@ -215,14 +215,14 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
                   placeholder="e.g. admin@infylabs.com"
                   value={proposalForm.email}
                   onChange={(e) => setProposalForm({ ...proposalForm, email: e.target.value })}
-                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-slate-900 font-semibold"
                 />
               </div>
               
               <button 
                 type="submit" 
                 disabled={isSubmittingProposal}
-                className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all mt-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all mt-2 cursor-pointer"
               >
                 {isSubmittingProposal ? "Submitting Request..." : "Submit Proposal Request"}
               </button>
@@ -253,7 +253,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
                   required
                   value={visitDate}
                   onChange={(e) => setVisitDate(e.target.value)}
-                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-slate-900 font-semibold"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -261,7 +261,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
                 <select 
                   value={visitTime}
                   onChange={(e) => setVisitTime(e.target.value)}
-                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#2563EB] text-xs bg-white text-slate-900 font-semibold cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white text-slate-900 font-semibold cursor-pointer"
                 >
                   <option value="10:00">10:00 AM - 11:30 AM</option>
                   <option value="11:30">11:30 AM - 01:00 PM</option>
@@ -273,7 +273,7 @@ export default function PropertyActions({ propertyId, propertyName }: PropertyAc
               <button 
                 type="submit" 
                 disabled={isSubmittingVisit}
-                className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all mt-2 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all mt-2 cursor-pointer"
               >
                 {isSubmittingVisit ? "Scheduling Visit..." : "Schedule Site Visit"}
               </button>
