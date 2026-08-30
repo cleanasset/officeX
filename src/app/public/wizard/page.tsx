@@ -1,11 +1,14 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { CheckCircle, ArrowRight, Save, Building, Users, Calendar, ShieldCheck, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, ArrowRight, Save, Building, Users, Calendar, ShieldCheck, Sparkles, Check } from "lucide-react";
 
 export default function RequirementSubmissionWizard() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -60,6 +63,7 @@ export default function RequirementSubmissionWizard() {
       // Simulate intelligent marketplace matching
       setMatchedSpaces([
         {
+          id: "apex-bkc",
           name: "Apex Business Tower - Block B",
           location: "BKC, Mumbai",
           seats: "60 Seats (4,500 sq.ft.)",
@@ -68,6 +72,7 @@ export default function RequirementSubmissionWizard() {
           score: 86
         },
         {
+          id: "nexus-hub",
           name: "Nexus Innovation Tower",
           location: "BKC Annex, Mumbai",
           seats: "70 Seats (5,200 sq.ft.)",
@@ -80,7 +85,11 @@ export default function RequirementSubmissionWizard() {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      showToast("Workspace requirement published to marketplace & leasing desk!");
+      setIsSubmitting(true);
+      showToast("Requirement confirmed! Transitioning to Workspace Onboarding & CRM...");
+      setTimeout(() => {
+        router.push("/leasing/onboard");
+      }, 1200);
     }
   };
 
@@ -106,11 +115,17 @@ export default function RequirementSubmissionWizard() {
 
       {/* Top Navbar */}
       <div className="px-12 py-4 flex items-center justify-between bg-white/90 backdrop-blur-md border-b border-gray-200">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#0F8B7D] flex items-center justify-center text-white font-black text-sm">
-            OX
-          </div>
-          <span className="font-black text-xl text-gray-900 tracking-tight">OFFICEX</span>
+        <Link href="/" className="flex items-center gap-3">
+          <img 
+            src="/logo-removebg-preview.png" 
+            alt="OfficeX Logo" 
+            className="w-8 h-8 object-contain"
+          />
+          <img 
+            src="/name-removebg-preview.png" 
+            alt="OfficeX" 
+            className="h-5 w-auto object-contain"
+          />
         </Link>
 
         <div className="flex items-center gap-6 text-xs font-semibold text-gray-600">
@@ -424,10 +439,10 @@ export default function RequirementSubmissionWizard() {
                     </div>
 
                     <Link
-                      href="/public/property/apex-bkc"
-                      className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs"
+                      href={`/public/property/${m.id || "apex-bkc"}`}
+                      className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
                     >
-                      View & Request Proposal
+                      View &amp; Request Proposal <ArrowRight size={12} />
                     </Link>
                   </div>
                 ))}
@@ -440,7 +455,8 @@ export default function RequirementSubmissionWizard() {
             {step > 1 ? (
               <button
                 onClick={() => setStep(step - 1)}
-                className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                disabled={isSubmitting}
+                className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-50"
               >
                 ← Back
               </button>
@@ -448,9 +464,20 @@ export default function RequirementSubmissionWizard() {
 
             <button
               onClick={handleNext}
-              className="px-8 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-8 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-75 transition-all"
             >
-              {step === 4 ? "Complete Requirement & Onboard" : "Next Step"} <ArrowRight size={14} />
+              {isSubmitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Provisioning Workspace...</span>
+                </>
+              ) : (
+                <>
+                  <span>{step === 4 ? "Complete Requirement & Onboard" : "Next Step"}</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
             </button>
           </div>
         </div>

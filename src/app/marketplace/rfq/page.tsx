@@ -145,9 +145,12 @@ export default function RFQDirectory() {
                   </span>
                 </td>
                 <td className="py-4">
-                  <button className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1">
-                    <Eye size={13} /> View
-                  </button>
+                  <Link
+                    href="/marketplace/compare"
+                    className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <Eye size={13} /> View Quotes
+                  </Link>
                 </td>
               </tr>
             ))}

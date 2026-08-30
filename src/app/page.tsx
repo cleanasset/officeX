@@ -114,7 +114,7 @@ export default function LandingPage() {
       );
     } else if (activeSearchTab === "vendor") {
       router.push(
-        `/public/wizard?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
+        `/marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
       );
     } else {
       router.push('/login');
