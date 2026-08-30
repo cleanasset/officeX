@@ -1,169 +1,136 @@
 "use client";
-
 import React, { useState } from "react";
-import { ShieldCheck, AlertTriangle, ArrowRight, Upload, X, CheckCircle, Bell, Clock, Calendar } from "lucide-react";
+import { Upload, Search, CheckCircle, AlertTriangle, XCircle, Code, Shield } from "lucide-react";
 
-export default function ComplianceTracker() {
-  const [certs, setCerts] = useState([
-    { id: 1, name: "Fire NOC Safety Certificate", property: "Apex Business Tower", authority: "State Fire Services", expiry: "2026-09-20", remaining: 22, status: "Expiring Soon", escalation: "L1 Alert Sent (30d)" },
-    { id: 2, name: "Lift Safety License", property: "Meridian Tech Park", authority: "PWD Electrical Inspectorate", expiry: "2026-08-10", remaining: 0, status: "Expired", escalation: "L2 Alert Sent (15d)" },
-    { id: 3, name: "Diesel Generator Emissions NOC", property: "Nexus Hub", authority: "Pollution Control Board", expiry: "2026-12-15", remaining: 108, status: "Healthy", escalation: "Normal Monitoring" },
-    { id: 4, name: "Structural Stability Certificate", property: "Devasya Gold Plus", authority: "Municipal Corporation Office", expiry: "2026-10-30", remaining: 62, status: "Healthy", escalation: "Normal Monitoring" }
-  ]);
-
-  const [isUploading, setIsUploading] = useState(false);
+export default function ComplianceTrackerDashboard() {
+  const [notify30, setNotify30] = useState(true);
+  const [autoEscalate15, setAutoEscalate15] = useState(true);
+  const [subject, setSubject] = useState("[ACTION REQUIRED] License Expiring: {{LicenseName}} at {{Property}}");
   const [toast, setToast] = useState<string | null>(null);
-  const [uploadForm, setUploadForm] = useState({
-    name: "Fire NOC Safety Certificate",
-    property: "Apex Business Tower",
-    authority: "State Fire Services",
-    expiryDate: ""
-  });
 
-  const showToast = (msg: string) => {
-    setToast(msg);
+  const certificates = [
+    { name: "Fire NOC", property: "Crystal Tower", authority: "Fire Department", expiry: "12-Sep-2025", days: "18 days", dayColor: "text-amber-600 font-bold", status: "Expiring Soon", stClass: "bg-amber-50 text-amber-800 border-amber-200", action: "Renew Now", actColor: "text-purple-600 font-bold hover:underline" },
+    { name: "Lift Fitness", property: "Apex Tower", authority: "PWD Lift Inspector", expiry: "01-Jan-2026", days: "129 days", dayColor: "text-gray-600", status: "Valid", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    { name: "PESO License", property: "Meridian Park", authority: "Petroleum Safety Org", expiry: "15-Jul-2025", days: "-40 days", dayColor: "text-red-600 font-bold", status: "Expired", stClass: "bg-red-50 text-red-600 border-red-200 font-bold", action: "Re-apply", actColor: "text-red-600 font-bold hover:underline" },
+    { name: "PCB Consent", property: "Nexus Hub", authority: "Pollution Control Board", expiry: "30-Nov-2025", days: "98 days", dayColor: "text-gray-600", status: "Valid", stClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    { name: "Building Insurance", property: "Crystal Tower", authority: "HDFC Ergo", expiry: "22-Aug-2025", days: "-2 days", dayColor: "text-red-600 font-bold", status: "Expired", stClass: "bg-red-50 text-red-600 border-red-200 font-bold", action: "Renew Now", actColor: "text-purple-600 font-bold hover:underline" }
+  ];
+
+  const handleUploadCert = () => {
+    setToast("Upload new compliance certificate modal opened!");
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleSaveTemplate = () => {
+    setToast("Escalation email template saved successfully!");
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadForm.expiryDate) {
-      alert("Please select expiry date");
-      return;
-    }
-
-    const expiry = new Date(uploadForm.expiryDate);
-    const diffTime = expiry.getTime() - new Date().getTime();
-    const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    
-    const newCert = {
-      id: certs.length + 1,
-      name: uploadForm.name,
-      property: uploadForm.property,
-      authority: uploadForm.authority,
-      expiry: uploadForm.expiryDate,
-      remaining: diffDays,
-      status: diffDays <= 0 ? "Expired" : diffDays <= 30 ? "Expiring Soon" : "Healthy",
-      escalation: "Pending Verification"
-    };
-
-    setCerts([newCert, ...certs]);
-    setIsUploading(false);
-    showToast(`NOC certificate receipt uploaded and submitted for audit verification!`);
-  };
-
   return (
-    <div className="flex flex-col gap-8 relative font-sans text-slate-900 bg-slate-50/20 p-2">
-      
-      {/* Toast Alert */}
+    <div className="flex flex-col gap-6 font-sans">
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-950 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-800 animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
           <CheckCircle size={16} className="text-emerald-400" />
           <span>{toast}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Compliance Command Centre</h1>
-          <p className="text-xs text-slate-500 font-bold mt-1">Audit statutory property NOCs, fire rescue certs, and lift inspectors approvals.</p>
+          <h1 className="text-2xl font-black text-gray-900">Compliance Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Real-time statutory license status, automated escalations, and renewals.</p>
         </div>
-        <button 
-          onClick={() => setIsUploading(true)}
-          className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
+        <button
+          onClick={handleUploadCert}
+          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer"
         >
-          <Upload size={14} /> Upload Renewed NOC
+          <Upload size={14} /> Upload Certificate
         </button>
       </div>
 
-      {/* COMPLIANCE HEALTH GAUGE */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Compliance Score */}
-        <div className="p-6 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col justify-between min-h-[180px]">
-          <div>
-            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">Portfolio Health</span>
-            <div className="flex items-baseline gap-2 mt-4">
-              <span className="text-5xl font-black text-[#0F8B7D]">96%</span>
-              <span className="text-xs text-slate-400 font-bold">compliance score</span>
-            </div>
-            <span className="text-xs font-extrabold text-slate-900 mt-2 block uppercase tracking-wider">Statutory NOC Status</span>
+      {/* KPI + Health Overview Row */}
+      <div className="grid grid-cols-[1fr_360px] gap-6">
+        {/* Metric Counter Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex items-center justify-between">
+          <div className="text-center px-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Total Licenses</p>
+            <p className="text-3xl font-black text-gray-900 mt-1">48</p>
           </div>
-          <div className="w-full bg-slate-100 h-2.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#0F8B7D] h-full rounded-full" style={{ width: "96%" }}></div>
+          <div className="h-10 w-px bg-gray-200" />
+          <div className="text-center px-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Valid</p>
+            <p className="text-3xl font-black text-emerald-600 mt-1">38</p>
           </div>
-        </div>
-
-        {/* Warning cards / Countdown status */}
-        <div className="p-6 rounded-2xl border border-slate-200 bg-red-50/20 md:col-span-2 flex flex-col justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] text-red-600 font-black uppercase tracking-widest block">Critical Countdown Alert</span>
-            <h3 className="text-sm font-extrabold text-slate-900 mt-2.5">Auto-escalation triggers active</h3>
-            <p className="text-xs text-slate-500 font-semibold mt-1 leading-relaxed">
-              Compliance alerts are generated at **60**, **30**, and **15** days before expiry. Critical failures are auto-dispatched to the regional operations auditor.
-            </p>
+          <div className="h-10 w-px bg-gray-200" />
+          <div className="text-center px-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Expiring &lt;60d</p>
+            <p className="text-3xl font-black text-amber-500 mt-1">6</p>
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-4 text-center">
-            <div className="p-2.5 rounded-xl bg-white border border-red-150">
-              <div className="text-[9px] text-slate-400 font-bold uppercase">15d Failure</div>
-              <div className="text-base font-black text-red-650 mt-1">1 Case</div>
-            </div>
-            <div className="p-2.5 rounded-xl bg-white border border-amber-150">
-              <div className="text-[9px] text-slate-400 font-bold uppercase">30d Warning</div>
-              <div className="text-base font-black text-amber-700 mt-1">1 Case</div>
-            </div>
-            <div className="p-2.5 rounded-xl bg-white border border-slate-150">
-              <div className="text-[9px] text-slate-400 font-bold uppercase">Healthy NOC</div>
-              <div className="text-base font-black text-slate-700 mt-1">2 Cases</div>
-            </div>
+          <div className="h-10 w-px bg-gray-200" />
+          <div className="text-center px-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Expired</p>
+            <p className="text-3xl font-black text-red-500 mt-1">4</p>
           </div>
         </div>
 
+        {/* Health Overview Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-gray-900">Health Overview</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">License status distribution</p>
+            <div className="space-y-1 mt-2 text-[10px]">
+              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Valid (79%)</div>
+              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> Expiring (12.5%)</div>
+              <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" /> Expired (8.5%)</div>
+            </div>
+          </div>
+          <div className="text-4xl font-black text-gray-900">
+            79%
+          </div>
+        </div>
       </div>
 
-      {/* Compliance Register Table */}
-      <div className="p-6 rounded-2xl border border-slate-200 bg-white shadow-xs">
+      {/* Compliance Registry Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-gray-900">Compliance Registry</h2>
+          <button className="text-xs font-bold text-purple-600 hover:underline">
+            View All →
+          </button>
+        </div>
+
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              <th className="py-4">Certificate Name</th>
-              <th className="py-4">Building Property</th>
-              <th className="py-4">Authority</th>
-              <th className="py-4">Expiry Date</th>
-              <th className="py-4">Days Left</th>
-              <th className="py-4">Escalation Status</th>
-              <th className="py-4 text-right">Status</th>
+            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              <th className="py-3">CERTIFICATE NAME</th>
+              <th className="py-3">PROPERTY</th>
+              <th className="py-3">ISSUING AUTHORITY</th>
+              <th className="py-3">EXPIRY DATE</th>
+              <th className="py-3">DAYS REMAINING</th>
+              <th className="py-3">STATUS</th>
+              <th className="py-3 text-right">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
-            {certs.map((c) => (
-              <tr key={c.id} className="border-b border-slate-100 text-xs hover:bg-blue-50/10 transition-colors font-semibold">
-                <td className="py-4 font-black text-slate-900 flex items-center gap-2">
-                  <ShieldCheck size={14} className="text-[#0F8B7D]" />
-                  {c.name}
-                </td>
-                <td className="py-4 text-slate-700">{c.property}</td>
-                <td className="py-4 text-slate-500 font-bold">{c.authority}</td>
-                <td className="py-4 text-slate-650">{new Date(c.expiry).toLocaleDateString()}</td>
-                <td className="py-4">
-                  {c.remaining === 0 ? (
-                    <span className="text-red-500 font-black">Expired</span>
-                  ) : (
-                    <span className="text-slate-900 font-bold">{c.remaining} Days</span>
-                  )}
-                </td>
-                <td className="py-4 text-slate-400 font-bold">{c.escalation}</td>
-                <td className="py-4 text-right">
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                    c.status === "Healthy" 
-                      ? "bg-emerald-50 text-emerald-600 border border-emerald-250" 
-                      : c.status === "Expiring Soon"
-                      ? "bg-amber-50 text-amber-700 border border-amber-250"
-                      : "bg-red-50 text-red-600 border border-red-250"
-                  }`}>
-                    {c.status}
+            {certificates.map((cert) => (
+              <tr key={cert.name} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                <td className="py-3.5 font-bold text-gray-900">{cert.name}</td>
+                <td className="py-3.5 text-gray-600">{cert.property}</td>
+                <td className="py-3.5 text-gray-600">{cert.authority}</td>
+                <td className={`py-3.5 ${cert.days.includes("-") ? "text-red-500 font-bold" : "text-gray-600"}`}>{cert.expiry}</td>
+                <td className={`py-3.5 ${cert.dayColor}`}>{cert.days}</td>
+                <td className="py-3.5">
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${cert.stClass}`}>
+                    {cert.status}
                   </span>
+                </td>
+                <td className="py-3.5 text-right">
+                  {cert.action ? (
+                    <button className={`text-xs ${cert.actColor}`}>
+                      {cert.action}
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -171,102 +138,104 @@ export default function ComplianceTracker() {
         </table>
       </div>
 
-      {/* Upload Renewal Modal */}
-      {isUploading && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
-          <form 
-            onSubmit={handleUploadSubmit}
-            className="w-full max-w-md bg-white rounded-3xl p-8 flex flex-col gap-5 shadow-2xl border border-slate-100 animate-scale-up"
-          >
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-slate-900 text-base">Upload Renewed Statutory NOC</h3>
-              <button 
-                type="button" 
-                onClick={() => setIsUploading(false)}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-450 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
+      {/* Bottom Row: Automated Alert Escalations + Email Template Editor */}
+      <div className="grid grid-cols-[1fr_1fr] gap-6">
+        {/* Automated Alert Escalations */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+          <h2 className="text-base font-bold text-gray-900">Automated Alert Escalations</h2>
+
+          <div>
+            <div className="flex justify-between text-xs font-bold mb-1">
+              <span className="text-gray-700">&ldquo;Expiring Soon&rdquo; Flag Lead Time</span>
+              <span className="text-purple-600">60 Days</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-purple-600 rounded-full" style={{ width: "60%" }} />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-gray-900">Daily alerts to PM at 30 days</p>
+                <p className="text-[10px] text-gray-400">Notify Property Manager via email & app</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={notify30}
+                onChange={(e) => setNotify30(e.target.checked)}
+                className="w-5 h-5 accent-purple-600 cursor-pointer"
+              />
             </div>
 
-            <div className="flex flex-col gap-4 text-xs font-semibold text-slate-700">
-              
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Select NOC Type</label>
-                <select 
-                  value={uploadForm.name}
-                  onChange={(e) => setUploadForm({ ...uploadForm, name: e.target.value })}
-                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold cursor-pointer"
-                >
-                  <option>Fire NOC Safety Certificate</option>
-                  <option>Lift Safety License</option>
-                  <option>Diesel Generator Emissions NOC</option>
-                  <option>Structural Stability Certificate</option>
-                </select>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-gray-900">Auto-escalate to Facility Head at 15 days</p>
+                <p className="text-[10px] text-gray-400">Cc senior management on critical alerts</p>
               </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Operating Property</label>
-                <select 
-                  value={uploadForm.property}
-                  onChange={(e) => setUploadForm({ ...uploadForm, property: e.target.value })}
-                  className="px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold cursor-pointer"
-                >
-                  <option>Apex Business Tower</option>
-                  <option>Meridian Tech Park</option>
-                  <option>Nexus Hub</option>
-                  <option>Devasya Gold Plus</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Issuing Authority</label>
-                  <input 
-                    type="text" 
-                    value={uploadForm.authority}
-                    onChange={(e) => setUploadForm({ ...uploadForm, authority: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">New Expiry Date</label>
-                  <input 
-                    type="date" 
-                    required
-                    value={uploadForm.expiryDate}
-                    onChange={(e) => setUploadForm({ ...uploadForm, expiryDate: e.target.value })}
-                    className="px-3.5 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-center cursor-pointer hover:bg-slate-100 transition-colors flex flex-col items-center justify-center gap-1">
-                <Upload size={20} className="text-slate-400" />
-                <span className="font-bold text-slate-800 text-[10px]">Select PDF or PNG Scan</span>
-                <span className="text-[8px] text-slate-400">Max size limit 5MB</span>
-              </div>
+              <input
+                type="checkbox"
+                checked={autoEscalate15}
+                onChange={(e) => setAutoEscalate15(e.target.checked)}
+                className="w-5 h-5 accent-purple-600 cursor-pointer"
+              />
             </div>
+          </div>
 
-            <div className="border-t border-slate-100 pt-4 flex justify-end gap-3">
-              <button 
-                type="button" 
-                onClick={() => setIsUploading(false)}
-                className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-650 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit"
-                className="px-5 py-2 bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md transition-colors cursor-pointer"
-              >
-                Submit NOC renewal
-              </button>
-            </div>
-          </form>
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-xs text-gray-600 flex items-start gap-2">
+            <span className="text-gray-400">ℹ</span>
+            <p>Status automatically flags as <b className="text-red-500 font-bold">&ldquo;Expired&rdquo;</b> on the exact expiry date at 00:00 local time.</p>
+          </div>
         </div>
-      )}
 
+        {/* Email Template Editor */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-base font-bold text-gray-900">Email Template Editor</h2>
+              <button className="text-xs font-bold text-purple-600 hover:underline">Preview</button>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                SUBJECT LINE
+              </label>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-mono text-gray-800 bg-white"
+              />
+            </div>
+
+            <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+              <div className="p-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex gap-2 text-xs text-gray-500 font-bold">
+                  <span>B</span><span>I</span><span>🔗</span>
+                </div>
+                <button className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-700">
+                  {"{ } Variables"}
+                </button>
+              </div>
+              <textarea
+                defaultValue={`Hello Team,\n\nThis is an automated reminder that the {{LicenseName}} for {{Property}} is due to expire in {{DaysRemaining}} days.\n\nPlease initiate renewal documents.`}
+                className="w-full p-3 text-xs text-gray-700 resize-none h-24 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button className="px-5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50">
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveTemplate}
+              className="px-6 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md cursor-pointer"
+            >
+              Save Template
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

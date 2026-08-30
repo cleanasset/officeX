@@ -1,452 +1,464 @@
 "use client";
-
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, ArrowLeft, ShieldCheck, CheckCircle, ArrowRight, Sparkles, Building, Settings, Check } from "lucide-react";
+import { CheckCircle, ArrowRight, Save, Building, Users, Calendar, ShieldCheck, Sparkles } from "lucide-react";
 
-export default function RequirementWizard() {
+export default function RequirementSubmissionWizard() {
   const [step, setStep] = useState(1);
-  const [gstin, setGstin] = useState("");
-  const [companyInfo, setCompanyInfo] = useState<any>(null);
-  const [gstinError, setGstinError] = useState("");
-  const [isValidating, setIsValidating] = useState(false);
-  const [manualMode, setManualMode] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
+  // Form Fields
   const [formData, setFormData] = useState({
+    // Step 1: Company Info
     companyName: "",
+    legalEntity: "Private Limited",
+    industry: "Technology / IT",
+    gstin: "",
+    contactPerson: "",
     email: "",
-    seats: "50",
-    desiredSqft: "3500",
-    city: "Mumbai",
-    moveInDate: "",
-    itNetworking: true,
-    housekeeping: false,
-    mepServices: true,
-    catering: false,
-    budgetRange: "2-5 Lakhs",
-    lockInMonths: "36",
-    leaseTermYears: "5"
+    phone: "",
+
+    // Step 2: Space & Location Needs
+    targetCity: "Mumbai",
+    microMarket: "BKC / Bandra Kurla Complex",
+    workspaceType: "Enterprise Managed Office",
+    seatsRequired: 60,
+    areaSqft: 4500,
+    cabins: 4,
+    meetingRooms: 3,
+
+    // Step 3: Budget, Timeline & Operations
+    monthlyBudget: "₹1,25,000 - ₹1,80,000 / month",
+    targetMoveIn: "Within 30 Days",
+    leaseTermYears: "3 Years (36 Months)",
+    powerBackupNeed: "100% DG Redundancy",
+    hvacType: "Central Air Conditioning",
+    existingFMRequired: true,
+    requiredFMServices: ["Daily Housekeeping", "24/7 Security Guarding", "MEP & Electrical AMC"]
   });
 
-  const handleGstinCheck = async () => {
-    if (!gstin) {
-      setGstinError("Please enter a GSTIN.");
+  const [matchedSpaces, setMatchedSpaces] = useState<any[]>([]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const steps = [
+    { num: 1, label: "Company & Identity" },
+    { num: 2, label: "Space & Floor Needs" },
+    { num: 3, label: "Commercials & FM Ops" },
+    { num: 4, label: "Intelligent Matches" }
+  ];
+
+  const handleNext = () => {
+    if (step === 1 && !formData.companyName) {
+      showToast("Please enter company name.");
       return;
     }
-    setIsValidating(true);
-    setGstinError("");
-
-    try {
-      const res = await fetch("/api/verify-gst", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gstin })
-      });
-      const data = await res.json();
-      if (data.valid) {
-        setCompanyInfo(data);
-        setFormData({ ...formData, companyName: data.legalName });
-        setStep(2);
-      } else {
-        setGstinError(data.message || "Invalid GSTIN verification details.");
-      }
-    } catch (err) {
-      setGstinError("Verification check timed out. Try again.");
-    } finally {
-      setIsValidating(false);
+    if (step === 3) {
+      // Simulate intelligent marketplace matching
+      setMatchedSpaces([
+        {
+          name: "Apex Business Tower - Block B",
+          location: "BKC, Mumbai",
+          seats: "60 Seats (4,500 sq.ft.)",
+          rate: "₹1.25L / mo",
+          matchScore: "98% Match",
+          score: 86
+        },
+        {
+          name: "Nexus Innovation Tower",
+          location: "BKC Annex, Mumbai",
+          seats: "70 Seats (5,200 sq.ft.)",
+          rate: "₹1.45L / mo",
+          matchScore: "94% Match",
+          score: 92
+        }
+      ]);
+    }
+    if (step < 4) {
+      setStep(step + 1);
+    } else {
+      showToast("Workspace requirement published to marketplace & leasing desk!");
     }
   };
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.companyName.trim()) {
-      setGstinError("Company Name is required.");
-      return;
-    }
-    setStep(2);
+  const handleSaveDraft = () => {
+    showToast("Progress saved to your browser session.");
   };
 
-  const handleFinish = async () => {
-    try {
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyName: formData.companyName,
-          desiredSqft: formData.desiredSqft,
-          budgetRange: formData.budgetRange,
-          city: formData.city
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setStep(5); // Completion step
-      }
-    } catch (err) {
-      alert("Failed to submit requirements.");
-    }
+  const toggleFMService = (srv: string) => {
+    const next = formData.requiredFMServices.includes(srv)
+      ? formData.requiredFMServices.filter((s) => s !== srv)
+      : [...formData.requiredFMServices, srv];
+    setFormData({ ...formData, requiredFMServices: next });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      
+    <div className="min-h-screen bg-gradient-to-b from-slate-200 via-slate-100 to-slate-200 font-sans flex flex-col justify-between">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
+          <CheckCircle size={16} className="text-emerald-400" />
+          <span>{toast}</span>
+        </div>
+      )}
+
       {/* Top Navbar */}
-      <header className="h-[60px] bg-white border-b border-slate-100 px-8 flex items-center justify-between shadow-xs">
-        <Link href="/" className="flex items-center gap-3">
-          <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={30} height={30} className="object-contain" />
-          <Image src="/name-removebg-preview.png" alt="OfficeX" width={95} height={19} className="object-contain" />
-        </Link>
-        <Link href="/public/search" className="text-xs font-bold text-slate-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
-          <ArrowLeft size={14} /> Back to Search
-        </Link>
-      </header>
-
-      {/* Wizard Form Container */}
-      <div className="flex-1 flex justify-center items-center p-8">
-        <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-xl p-8">
-          
-          {/* Progress Indicators */}
-          <div className="flex justify-between items-center mb-8 text-[9px] font-black text-slate-400 uppercase tracking-wider">
-            <span className={step >= 1 ? "text-[#0F8B7D]" : ""}>1. GSTIN Check</span>
-            <ChevronRight size={12} />
-            <span className={step >= 2 ? "text-[#0F8B7D]" : ""}>2. Space Needs</span>
-            <ChevronRight size={12} />
-            <span className={step >= 3 ? "text-[#0F8B7D]" : ""}>3. FM Services</span>
-            <ChevronRight size={12} />
-            <span className={step >= 4 ? "text-[#0F8B7D]" : ""}>4. Commercials</span>
+      <div className="px-12 py-4 flex items-center justify-between bg-white/90 backdrop-blur-md border-b border-gray-200">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#0F8B7D] flex items-center justify-center text-white font-black text-sm">
+            OX
           </div>
+          <span className="font-black text-xl text-gray-900 tracking-tight">OFFICEX</span>
+        </Link>
 
-          {/* STEP 1: GSTIN Verification or Manual Mode */}
-          {step === 1 && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">
-                  {manualMode ? "Enter Corporate Details" : "Verify Corporate Legal Entity"}
-                </h2>
-                <p className="text-xs text-slate-500 mt-1 font-semibold">
-                  {manualMode ? "Manually fill in your company records to log the lead." : "Enter your Indian GSTIN registration to auto-fill company records."}
-                </p>
-              </div>
+        <div className="flex items-center gap-6 text-xs font-semibold text-gray-600">
+          <Link href="/public/search" className="hover:text-gray-900">Property Marketplace</Link>
+          <Link href="/marketplace" className="hover:text-gray-900">FM Marketplace</Link>
+          <Link href="/portfolio" className="hover:text-gray-900">OFFICEX.PRO</Link>
+        </div>
 
-              {!manualMode ? (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GSTIN Number</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 27AAACT1234F1ZP" 
-                      value={gstin}
-                      onChange={(e) => setGstin(e.target.value)}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold uppercase"
-                    />
-                    {gstinError && <span className="text-red-500 text-[10px] font-bold mt-1">⚠ {gstinError}</span>}
-                  </div>
-
-                  <button 
-                    onClick={handleGstinCheck}
-                    disabled={isValidating}
-                    className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                  >
-                    {isValidating ? "Validating Entity..." : "Verify & Continue"}
-                  </button>
-
-                  <button 
-                    onClick={() => { setManualMode(true); setGstinError(""); }}
-                    className="text-xs text-center text-slate-500 hover:text-[#0F8B7D] font-bold underline cursor-pointer"
-                  >
-                    Or fill details manually without GSTIN
-                  </button>
-                </>
-              ) : (
-                <form onSubmit={handleManualSubmit} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Company Legal Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Infy Labs Private Limited" 
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold text-slate-900"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contact Email</label>
-                    <input 
-                      type="email" 
-                      placeholder="e.g. admin@infylabs.com" 
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold text-slate-900"
-                      required
-                    />
-                  </div>
-
-                  {gstinError && <span className="text-red-500 text-[10px] font-bold">⚠ {gstinError}</span>}
-
-                  <button 
-                    type="submit"
-                    className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-md cursor-pointer"
-                  >
-                    Continue to Space Scope
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={() => { setManualMode(false); setGstinError(""); }}
-                    className="text-xs text-center text-slate-500 hover:text-[#0F8B7D] font-bold underline cursor-pointer"
-                  >
-                    Back to GSTIN Verification
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* STEP 2: Workspace Space Needs */}
-          {step === 2 && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">{formData.companyName}</h2>
-                <p className="text-xs text-emerald-600 font-semibold mt-1">✔ Entity details successfully logged.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Seats Needed</label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 50" 
-                    value={formData.seats}
-                    onChange={(e) => {
-                      const seatsVal = e.target.value;
-                      const estimatedSqft = seatsVal ? (parseInt(seatsVal) * 70).toString() : "";
-                      setFormData({ ...formData, seats: seatsVal, desiredSqft: estimatedSqft });
-                    }}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Area (Est. Sq.Ft.)</label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 3500" 
-                    value={formData.desiredSqft}
-                    onChange={(e) => setFormData({ ...formData, desiredSqft: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Operating City</label>
-                  <select 
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white font-semibold cursor-pointer"
-                  >
-                    <option>Mumbai</option>
-                    <option>Bengaluru</option>
-                    <option>Pune</option>
-                    <option>Ahmedabad</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Move-in</label>
-                  <input 
-                    type="date" 
-                    value={formData.moveInDate}
-                    onChange={(e) => setFormData({ ...formData, moveInDate: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50 font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 justify-between mt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setStep(1)} 
-                  className="px-5 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Back
-                </button>
-                <button 
-                  onClick={() => setStep(3)}
-                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
-                >
-                  Continue to Services <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Operational Services */}
-          {step === 3 && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">Select Facility Management Services</h2>
-                <p className="text-xs text-slate-500 mt-1 font-semibold">Select which core facility operations you require in your space package.</p>
-              </div>
-
-              <div className="flex flex-col gap-3 font-semibold text-xs">
-                <label className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <div>
-                    <div className="font-extrabold text-slate-900">IT & Telecom Networking Setup</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">High-speed server links, routers, and switches.</div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={formData.itNetworking}
-                    onChange={(e) => setFormData({ ...formData, itNetworking: e.target.checked })}
-                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <div>
-                    <div className="font-extrabold text-slate-900">Mechanized Cleaning & Housekeeping</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Daily cleaning staff deployment and checklist audits.</div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={formData.housekeeping}
-                    onChange={(e) => setFormData({ ...formData, housekeeping: e.target.checked })}
-                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <div>
-                    <div className="font-extrabold text-slate-900">MEP Hard Services Maintenance</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Mechanical, electrical, plumbing support and annual AMCs.</div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={formData.mepServices}
-                    onChange={(e) => setFormData({ ...formData, mepServices: e.target.checked })}
-                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <div>
-                    <div className="font-extrabold text-slate-900">Corporate Catering & Pantry Services</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Daily cafeteria food and executive pantry management.</div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={formData.catering}
-                    onChange={(e) => setFormData({ ...formData, catering: e.target.checked })}
-                    className="w-4 h-4 text-[#0F8B7D] focus:ring-[#0F8B7D] border-slate-300 rounded cursor-pointer"
-                  />
-                </label>
-              </div>
-
-              <div className="flex gap-3 justify-between mt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setStep(2)} 
-                  className="px-5 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Back
-                </button>
-                <button 
-                  onClick={() => setStep(4)}
-                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
-                >
-                  Continue to Commercials <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Commercial Terms */}
-          {step === 4 && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">Target Commercial Specifications</h2>
-                <p className="text-xs text-slate-500 mt-1 font-semibold">Define budget parameters, lock-in requirements, and target lease term.</p>
-              </div>
-
-              <div className="flex flex-col gap-4 font-semibold text-xs">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Budget Range</label>
-                  <select 
-                    value={formData.budgetRange}
-                    onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                    className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white cursor-pointer"
-                  >
-                    <option>Under 1 Lakh</option>
-                    <option>1-2 Lakhs</option>
-                    <option>2-5 Lakhs</option>
-                    <option>Above 5 Lakhs</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lock-in Period (Months)</label>
-                    <input 
-                      type="number" 
-                      value={formData.lockInMonths}
-                      onChange={(e) => setFormData({ ...formData, lockInMonths: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Lease (Years)</label>
-                    <input 
-                      type="number" 
-                      value={formData.leaseTermYears}
-                      onChange={(e) => setFormData({ ...formData, leaseTermYears: e.target.value })}
-                      className="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-slate-50"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 justify-between mt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setStep(3)} 
-                  className="px-5 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Back
-                </button>
-                <button 
-                  onClick={handleFinish}
-                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-                >
-                  Submit Requirements
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Completion */}
-          {step === 5 && (
-            <div className="flex flex-col items-center text-center gap-6">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 animate-pulse">
-                <CheckCircle size={36} />
-              </div>
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">Requirements Registered</h2>
-                <p className="text-xs text-slate-500 mt-2 leading-relaxed font-semibold">
-                  Your corporate workspace requirements have been successfully logged in the OFFICEX Leasing CRM. A leasing supervisor will follow up with verified property proposals within 2 hours.
-                </p>
-              </div>
-              <Link href="/public/search" className="px-6 py-3 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-md">
-                View Similar Listings
-              </Link>
-            </div>
-          )}
-
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSaveDraft}
+            className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"
+          >
+            <Save size={13} /> Save Draft
+          </button>
         </div>
       </div>
 
+      {/* Main Wizard Container */}
+      <div className="max-w-3xl w-full mx-auto px-4 py-8">
+        {/* Stepper */}
+        <div className="relative flex items-center justify-between mb-8 px-6">
+          <div className="absolute left-10 right-10 top-4 h-0.5 bg-gray-300 z-0" />
+          {steps.map((s) => (
+            <div key={s.num} className="relative z-10 flex flex-col items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  step >= s.num
+                    ? "bg-[#0F8B7D] text-white shadow-md ring-4 ring-white"
+                    : "bg-gray-300 text-gray-600 ring-4 ring-white"
+                }`}
+              >
+                {s.num}
+              </div>
+              <span
+                className={`text-[11px] mt-1.5 font-bold ${
+                  step >= s.num ? "text-[#0F8B7D]" : "text-gray-500"
+                }`}
+              >
+                {s.label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Wizard Form Card */}
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-white/80 p-8 shadow-xl space-y-6">
+          {/* STEP 1: Company & Identity */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="border-b border-gray-100 pb-3">
+                <h2 className="text-base font-bold text-gray-900">Corporate Identity & Point of Contact</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Captures legal entity details for automated LOI / Lease drafting.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">COMPANY LEGAL NAME</label>
+                  <input
+                    value={formData.companyName}
+                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                    placeholder="e.g. Tata Digital Private Limited"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">BUSINESS STRUCTURE</label>
+                  <select
+                    value={formData.legalEntity}
+                    onChange={(e) => setFormData({ ...formData, legalEntity: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>Private Limited (Pvt Ltd)</option>
+                    <option>Public Limited</option>
+                    <option>LLP / Partnership</option>
+                    <option>Multinational Subsidiary</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">INDUSTRY SECTOR</label>
+                  <select
+                    value={formData.industry}
+                    onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>Technology / IT & SaaS</option>
+                    <option>BFSI & Investment Banking</option>
+                    <option>Healthcare & Pharma</option>
+                    <option>Consulting & Professional Services</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">GSTIN (OPTIONAL)</label>
+                  <input
+                    value={formData.gstin}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
+                    placeholder="27AAACT2727Q1ZB"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] bg-white uppercase font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CONTACT PERSON</label>
+                  <input
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                    placeholder="Aditya Verma (Head of Real Estate)"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">OFFICIAL EMAIL</label>
+                  <input
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="aditya.verma@tatadigital.com"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CONTACT PHONE</label>
+                  <input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+91 98201 12345"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Space & Floor Needs */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="border-b border-gray-100 pb-3">
+                <h2 className="text-base font-bold text-gray-900">Space, Seating & Floor Configuration</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Define exact physical workspace specifications.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TARGET CITY</label>
+                  <select
+                    value={formData.targetCity}
+                    onChange={(e) => setFormData({ ...formData, targetCity: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>Mumbai</option>
+                    <option>Bengaluru</option>
+                    <option>Gurugram / NCR</option>
+                    <option>Pune</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PREFERRED MICRO-MARKET</label>
+                  <input
+                    value={formData.microMarket}
+                    onChange={(e) => setFormData({ ...formData, microMarket: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">WORKSPACE MODEL</label>
+                  <select
+                    value={formData.workspaceType}
+                    onChange={(e) => setFormData({ ...formData, workspaceType: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>Enterprise Managed Office</option>
+                    <option>Bare Shell Commercial</option>
+                    <option>Warm Shell Fit-out</option>
+                    <option>Coworking Dedicated Floor</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">REQUIRED SEATS</label>
+                  <input
+                    type="number"
+                    value={formData.seatsRequired}
+                    onChange={(e) => setFormData({ ...formData, seatsRequired: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">APPROX AREA (SQ.FT.)</label>
+                  <input
+                    type="number"
+                    value={formData.areaSqft}
+                    onChange={(e) => setFormData({ ...formData, areaSqft: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Commercials & FM Ops */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="border-b border-gray-100 pb-3">
+                <h2 className="text-base font-bold text-gray-900">Commercial Terms & Facility Management</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Budget parameters and integrated FM operational requirements.</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">MONTHLY BUDGET</label>
+                  <select
+                    value={formData.monthlyBudget}
+                    onChange={(e) => setFormData({ ...formData, monthlyBudget: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>₹1,00,000 - ₹1,50,000 / month</option>
+                    <option>₹1,50,000 - ₹2,50,000 / month</option>
+                    <option>₹2,50,000+ / month</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TARGET MOVE-IN</label>
+                  <select
+                    value={formData.targetMoveIn}
+                    onChange={(e) => setFormData({ ...formData, targetMoveIn: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>Immediate Move-in</option>
+                    <option>Within 30 Days</option>
+                    <option>Within 60 Days</option>
+                    <option>Q4 2026</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">LEASE DURATION</label>
+                  <select
+                    value={formData.leaseTermYears}
+                    onChange={(e) => setFormData({ ...formData, leaseTermYears: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option>3 Years (36 Months)</option>
+                    <option>5 Years (60 Months)</option>
+                    <option>9 Years (108 Months)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">REQUIRED FM & OPERATIONS SERVICES</label>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {["Daily Housekeeping", "24/7 Security Guarding", "MEP & Electrical AMC", "HVAC Chiller Maintenance", "Pest Control & Hygiene", "Pantry & Cafeteria Staff"].map((srv) => {
+                    const isSel = formData.requiredFMServices.includes(srv);
+                    return (
+                      <button
+                        key={srv}
+                        type="button"
+                        onClick={() => toggleFMService(srv)}
+                        className={`p-2.5 rounded-xl border text-left font-semibold transition-all ${
+                          isSel
+                            ? "bg-teal-50 border-[#0F8B7D] text-[#0F8B7D]"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {isSel ? "✓ " : "+ "} {srv}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Intelligent Matches */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Recommended Verified Matches</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Ranked by OFFICEX Property Score & requirement fit.</p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
+                  <Sparkles size={12} /> Auto-Matched
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {matchedSpaces.map((m) => (
+                  <div key={m.name} className="border border-gray-200 rounded-2xl p-4 bg-gray-50/50 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-gray-900">{m.name}</h3>
+                        <span className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px] font-bold">{m.matchScore}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">📍 {m.location} • {m.seats}</p>
+                      <p className="text-xs font-black text-gray-900 mt-1">{m.rate} • <span className="text-teal-700 font-bold">Property Score: {m.score}/100</span></p>
+                    </div>
+
+                    <Link
+                      href="/public/property/apex-bkc"
+                      className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs"
+                    >
+                      View & Request Proposal
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer Navigation */}
+          <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+            {step > 1 ? (
+              <button
+                onClick={() => setStep(step - 1)}
+                className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+              >
+                ← Back
+              </button>
+            ) : <div />}
+
+            <button
+              onClick={handleNext}
+              className="px-8 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+            >
+              {step === 4 ? "Complete Requirement & Onboard" : "Next Step"} <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="py-4 text-center text-xs text-gray-400 bg-gray-900 text-gray-400">
+        © 2026 OfficeX Workspaces. Institutional Commercial Space & FM Operating Platform.
+      </div>
     </div>
   );
 }

@@ -1,249 +1,210 @@
 "use client";
-
 import React, { useState } from "react";
-import { Settings, Save, Database, ShieldCheck, Mail, Clock, Key } from "lucide-react";
+import { CheckCircle, Save, Plus } from "lucide-react";
 
-export default function PlatformConfiguration() {
-  const [commission, setCommission] = useState("10.00");
-  const [regions, setRegions] = useState("Mumbai, Bengaluru, Pune, Chennai, Delhi NCR");
-  const [retention, setRetention] = useState("7 Years");
-  const [backupSchedule, setBackupSchedule] = useState("Daily at 02:00 AM IST");
-  const [message, setMessage] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+export default function PlatformConfigurationDashboard() {
+  const [commissionRate, setCommissionRate] = useState(10);
+  const [hourlyBackup, setHourlyBackup] = useState(true);
+  const [offsiteReplication, setOffsiteReplication] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // SLA thresholds state
-  const [slaThresholds, setSlaThresholds] = useState([
-    { priority: "Critical", responseMins: 15, resolutionHours: 2 },
-    { priority: "High", responseMins: 30, resolutionHours: 6 },
-    { priority: "Medium", responseMins: 120, resolutionHours: 24 },
-    { priority: "Low", responseMins: 240, resolutionHours: 48 }
-  ]);
+  const exceptions = [
+    { cat: "Security", rate: "8%" },
+    { cat: "Housekeeping", rate: "12%" }
+  ];
 
-  // API credentials state
-  const [apiCredentials, setApiCredentials] = useState({
-    razorpayKeyId: "rzp_test_K2a8H1lP9w3x1c",
-    razorpaySecret: "••••••••••••••••••••••••••••••••",
-    twilioAuthToken: "••••••••••••••••••••••••••••••••",
-    openaiApiKey: "••••••••••••••••••••••••••••••••"
-  });
+  const slaTargets = [
+    { prio: "Critical", prioColor: "text-red-600 font-bold", resp: "1h", resol: "4h" },
+    { prio: "High", prioColor: "text-amber-600 font-bold", resp: "4h", resol: "24h" },
+    { prio: "Medium", prioColor: "text-blue-600 font-bold", resp: "8h", resol: "48h" },
+    { prio: "Low", prioColor: "text-gray-700 font-semibold", resp: "24h", resol: "72h" }
+  ];
 
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setMessage("");
-
-    // Simulate saving delay
-    setTimeout(() => {
-      setIsSaving(false);
-      setMessage("Global platform settings successfully updated!");
-    }, 1000);
+  const handleSave = () => {
+    setToast("Platform schemas, commission rates, and API keys saved!");
+    setTimeout(() => setToast(null), 3500);
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Platform Configuration</h1>
-        <p className="text-sm text-gray-600 font-semibold mt-1">Configure global pricing thresholds, regions micro-markets, and database backups.</p>
-      </div>
-
-      {message && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 font-bold text-xs">
-          ✔ {message}
+    <div className="flex flex-col gap-6 font-sans">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
+          <CheckCircle size={16} className="text-emerald-400" />
+          <span>{toast}</span>
         </div>
       )}
 
-      <form onSubmit={handleSaveSettings} className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-        
-        {/* Core Financial Settings */}
-        <div className="premium-card p-6 border border-gray-200 bg-white flex flex-col gap-5">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <Settings size={18} className="text-red-500" />
-            Financial & Commission Rules
-          </h3>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Platform Commission (%)</label>
-            <input 
-              type="number" 
-              step="0.01"
-              value={commission}
-              onChange={(e) => setCommission(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-red-500 text-xs bg-white"
-            />
-            <span className="text-[10px] text-gray-600 mt-1">Applied to gross FM work order transactions.</span>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Taxation Regime (India)</label>
-            <select className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-red-500 text-xs bg-white">
-              <option>Standard GST 18% Rules</option>
-              <option>Composition Scheme Rules</option>
-            </select>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Platform Configuration</h1>
+          <p className="text-sm text-gray-500 mt-1">Admin &gt; Configuration Settings</p>
         </div>
+        <button
+          onClick={handleSave}
+          className="px-6 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer"
+        >
+          <Save size={14} /> Save Settings
+        </button>
+      </div>
 
-        {/* Operating Regions */}
-        <div className="premium-card p-6 border border-gray-200 bg-white flex flex-col gap-5">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <ShieldCheck size={18} className="text-red-500" />
-            Active Operating Regions
-          </h3>
+      {/* Section 1: Financial & Service Level Schemas */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <h2 className="text-base font-bold text-gray-900">Financial & Service Level Schemas</h2>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Regions List (Comma separated)</label>
-            <textarea 
-              rows={4}
-              value={regions}
-              onChange={(e) => setRegions(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-red-500 text-xs bg-white resize-none"
-            />
-          </div>
-        </div>
+        <div className="grid grid-cols-[1fr_1fr] gap-8">
+          {/* Left: Marketplace Commission */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-gray-700">Marketplace Commission</h3>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                Default Rate (%)
+              </label>
+              <input
+                type="number"
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(Number(e.target.value))}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 bg-white"
+              />
+            </div>
 
-        {/* Database & Backups */}
-        <div className="premium-card p-6 border border-gray-200 bg-white flex flex-col gap-5">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <Database size={18} className="text-red-500" />
-            Backups & Data Retention
-          </h3>
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-gray-700">Category Exceptions</span>
+                <button className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+                  <Plus size={12} /> Add Category Exception
+                </button>
+              </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Backup Frequency</label>
-            <input 
-              type="text" 
-              value={backupSchedule}
-              onChange={(e) => setBackupSchedule(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-red-500 text-xs bg-white"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Document Retention Policy</label>
-            <select 
-              value={retention}
-              onChange={(e) => setRetention(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-red-500 text-xs bg-white"
-            >
-              <option>3 Years</option>
-              <option>5 Years</option>
-              <option>7 Years</option>
-              <option>10 Years</option>
-            </select>
-          </div>
-        </div>
-
-        {/* SLA Target Thresholds Input Grid */}
-        <div className="md:col-span-2 premium-card p-6 border border-gray-200 bg-white flex flex-col gap-5 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <Clock size={18} className="text-red-500" />
-            Helpdesk Ticket SLA Target Thresholds
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-gray-200 text-[9px] font-bold text-gray-500 uppercase tracking-wider">
-                  <th className="py-2">Ticket Severity</th>
-                  <th className="py-2">Response SLA Target (Mins)</th>
-                  <th className="py-2">Resolution SLA Target (Hours)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {slaThresholds.map((row, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-3 font-bold text-gray-900">{row.priority}</td>
-                    <td className="py-2">
-                      <input 
-                        type="number" 
-                        value={row.responseMins}
-                        onChange={(e) => {
-                          const updated = [...slaThresholds];
-                          updated[idx].responseMins = parseInt(e.target.value) || 0;
-                          setSlaThresholds(updated);
-                        }}
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold w-24 bg-white"
-                      />
-                    </td>
-                    <td className="py-2">
-                      <input 
-                        type="number" 
-                        value={row.resolutionHours}
-                        onChange={(e) => {
-                          const updated = [...slaThresholds];
-                          updated[idx].resolutionHours = parseInt(e.target.value) || 0;
-                          setSlaThresholds(updated);
-                        }}
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold w-24 bg-white"
-                      />
-                    </td>
-                  </tr>
+              <div className="border border-gray-200 rounded-xl overflow-hidden text-xs">
+                <div className="grid grid-cols-2 bg-gray-50 p-2.5 px-4 font-bold text-[10px] text-gray-400 uppercase">
+                  <span>CATEGORY</span>
+                  <span className="text-right">RATE (%)</span>
+                </div>
+                {exceptions.map((ex) => (
+                  <div key={ex.cat} className="grid grid-cols-2 p-3 px-4 border-t border-gray-100 items-center font-semibold">
+                    <span className="text-gray-800">{ex.cat}</span>
+                    <span className="text-right text-gray-900 font-bold">{ex.rate}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Third-Party API Credentials Input Grid */}
-        <div className="premium-card p-6 border border-gray-200 bg-white flex flex-col gap-4 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
-            <Key size={18} className="text-red-500" />
-            Third-Party API Credentials
-          </h3>
-          <div className="flex flex-col gap-3 text-xs">
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-gray-500 uppercase">Razorpay Key ID</label>
-              <input 
-                type="text"
-                value={apiCredentials.razorpayKeyId}
-                onChange={(e) => setApiCredentials({ ...apiCredentials, razorpayKeyId: e.target.value })}
-                className="px-3 py-2 border border-gray-200 rounded-xl font-mono text-[10px] focus:outline-none focus:border-red-500 bg-white"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-gray-500 uppercase">Razorpay Key Secret</label>
-              <input 
-                type="password"
-                value={apiCredentials.razorpaySecret}
-                onChange={(e) => setApiCredentials({ ...apiCredentials, razorpaySecret: e.target.value })}
-                className="px-3 py-2 border border-gray-200 rounded-xl font-mono text-[10px] focus:outline-none focus:border-red-500 bg-white"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-gray-500 uppercase">Twilio Auth Token</label>
-              <input 
-                type="password"
-                value={apiCredentials.twilioAuthToken}
-                onChange={(e) => setApiCredentials({ ...apiCredentials, twilioAuthToken: e.target.value })}
-                className="px-3 py-2 border border-gray-200 rounded-xl font-mono text-[10px] focus:outline-none focus:border-red-500 bg-white"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-bold text-gray-500 uppercase">OpenAI API Secret Key</label>
-              <input 
-                type="password"
-                value={apiCredentials.openaiApiKey}
-                onChange={(e) => setApiCredentials({ ...apiCredentials, openaiApiKey: e.target.value })}
-                className="px-3 py-2 border border-gray-200 rounded-xl font-mono text-[10px] focus:outline-none focus:border-red-500 bg-white"
-              />
+          {/* Right: SLA Targets */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-gray-700">SLA Targets</h3>
+            <div className="border border-gray-200 rounded-xl overflow-hidden text-xs">
+              <div className="grid grid-cols-3 bg-gray-50 p-2.5 px-4 font-bold text-[10px] text-gray-400 uppercase">
+                <span>PRIORITY</span>
+                <span>RESPONSE TARGET</span>
+                <span className="text-right">RESOLUTION TARGET</span>
+              </div>
+              {slaTargets.map((sla) => (
+                <div key={sla.prio} className="grid grid-cols-3 p-3 px-4 border-t border-gray-100 items-center">
+                  <span className={sla.prioColor}>{sla.prio}</span>
+                  <span className="text-gray-700 font-semibold">{sla.resp}</span>
+                  <span className="text-right text-gray-700 font-semibold">{sla.resol}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Submit */}
-        <div className="col-span-full flex justify-end">
-          <button 
-            type="submit" 
-            disabled={isSaving}
-            className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-md transition-colors flex items-center gap-2"
-          >
-            <Save size={14} />
-            {isSaving ? "Saving Settings..." : "Save Configuration"}
-          </button>
+      {/* Section 2: APIs & Data Governance */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <h2 className="text-base font-bold text-gray-900">APIs & Data Governance</h2>
+
+        <div className="grid grid-cols-[1fr_1fr] gap-8">
+          {/* Left: API Status Grid */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-gray-700">API Status Grid</h3>
+
+            {/* MSG91 / Twilio SMS */}
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/40 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold text-gray-800">MSG91 / TWILIO SMS</span>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 block mb-0.5">Account SID</label>
+                <input
+                  type="password"
+                  defaultValue="****************************"
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 block mb-0.5">Auth Token / Secret</label>
+                <input
+                  type="password"
+                  defaultValue="****************************"
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Gupshup WhatsApp */}
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/40 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold text-gray-800">GUPSHUP WHATSAPP</span>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 block mb-0.5">API Key</label>
+                <input
+                  type="password"
+                  defaultValue="****************************"
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Backup & Recovery */}
+          <div className="space-y-6">
+            <h3 className="text-xs font-bold text-gray-700">Backup & Recovery</h3>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-800">Hourly Database Backups</span>
+                <input
+                  type="checkbox"
+                  checked={hourlyBackup}
+                  onChange={(e) => setHourlyBackup(e.target.checked)}
+                  className="w-5 h-5 accent-[#0F8B7D] cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-800">Daily Off-site S3 Replication</span>
+                <input
+                  type="checkbox"
+                  checked={offsiteReplication}
+                  onChange={(e) => setOffsiteReplication(e.target.checked)}
+                  className="w-5 h-5 accent-[#0F8B7D] cursor-pointer"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-gray-800">Data Retention Period</span>
+                  <span className="text-xs font-black text-emerald-700">7 Years</span>
+                </div>
+                <div className="w-full h-1.5 bg-gray-200 rounded-full mb-1">
+                  <div className="h-full bg-emerald-600 rounded-full" style={{ width: "70%" }} />
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-400">
+                  <span>1 Yr</span>
+                  <span className="text-emerald-700 font-semibold">(G-16 Compliant)</span>
+                  <span>10 Yrs</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-      </form>
-
+      </div>
     </div>
   );
 }

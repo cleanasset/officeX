@@ -1,275 +1,301 @@
 "use client";
-
 import React, { useState } from "react";
-import { Kanban, Sparkles, TrendingUp, X, User, Phone, Mail, FileText, ArrowRight, ShieldCheck, MessageSquare, AlertCircle, Award, CheckCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { AlertCircle, Clock, CheckCircle, Sparkles, ArrowRight, X, Building, Users } from "lucide-react";
 
-export default function PipelinePage() {
-  const router = useRouter();
-  const [columns, setColumns] = useState<any>({
-    New: [
-      { id: 1, name: "InfyTech Hub", req: "8k sq.ft", value: "₹1.2L/mo", poc: "Alok Gupta", role: "Procurement Head", email: "alok@infytech.com", phone: "+91 98321 04958", gst: "27AABCT9876C1ZR", dealHealth: "On Track", matchScore: 94, healthScore: 88, nextAction: "Send proposal template", recommendedMatches: "Apex Tower F4, Meridian Block B" },
-      { id: 5, name: "Scalezix Solutions", req: "5k sq.ft", value: "₹75K/mo", poc: "Jiya Patel", role: "Managing Director", email: "jiya@scalezix.com", phone: "+91 99887 76655", gst: "24AADCV1234D2ZS", dealHealth: "On Track", matchScore: 98, healthScore: 95, nextAction: "Initiate LOI draft generation", recommendedMatches: "Apex Tower F5" }
-    ],
-    Qualified: [
-      { id: 2, name: "RazorPay Ops", req: "12k sq.ft", value: "₹2.1L/mo", poc: "Harish Iyer", role: "Real Estate Director", email: "harish@razorpay.com", phone: "+91 99887 76655", gst: "27AAACR1020D1ZE", dealHealth: "Stale Alert (7d)", matchScore: 89, healthScore: 68, nextAction: "Schedule followup call for negotiation", recommendedMatches: "Apex Tower F3" }
-    ],
-    "Proposal Sent": [
-      { id: 3, name: "Dharma Media", req: "15k sq.ft", value: "₹3.5L/mo", poc: "Rohit Sen", role: "Admin Lead", email: "rohit@dharmamedia.com", phone: "+91 94567 89012", gst: "27AABCM8822A1ZV", dealHealth: "At Risk", matchScore: 82, healthScore: 54, nextAction: "Send reminder notice for pending approval", recommendedMatches: "Meridian Block B" }
-    ],
-    Won: [
-      { id: 4, name: "TATA Projects", req: "25k sq.ft", value: "₹6.0L/mo", poc: "Sanjay Bose", role: "VP Operations", email: "sanjay@tataprojects.com", phone: "+91 91234 56789", gst: "27AABCT1000A1ZZ", dealHealth: "Lease Executed", matchScore: 96, healthScore: 100, nextAction: "Complete workspace onboarding configuration", recommendedMatches: "Apex Tower F4" }
-    ]
-  });
+interface PipelineCard {
+  company: string;
+  contact: string;
+  area: string;
+  budget: string;
+  dealHealth: number; // 0-100
+  time?: string;
+  badge?: string;
+  badgeColor?: string;
+  warning?: string;
+  isExecuted?: boolean;
+}
 
-  const [draggingCard, setDraggingCard] = useState<any>(null);
-  const [draggingSourceCol, setDraggingSourceCol] = useState<string>("");
-  const [selectedCard, setSelectedCard] = useState<any>(null);
+interface PipelineColumn {
+  title: string;
+  count: number;
+  value: string;
+  color: string;
+  cards: PipelineCard[];
+}
+
+export default function PipelineKanbanBoard() {
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<PipelineCard | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleDragStart = (e: React.DragEvent, card: any, colName: string) => {
-    setDraggingCard(card);
-    setDraggingSourceCol(colName);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent, targetColName: string) => {
-    e.preventDefault();
-    if (!draggingCard || draggingSourceCol === targetColName) return;
-
-    // Transition health if dropped into won
-    let updatedCard = { ...draggingCard };
-    if (targetColName === "Won") {
-      updatedCard.dealHealth = "Lease Executed";
+  const columns: PipelineColumn[] = [
+    {
+      title: "Enquiry",
+      count: 8,
+      value: "₹4.2L",
+      color: "border-t-gray-300",
+      cards: [
+        {
+          company: "TCS Innovation Lab",
+          contact: "Amit Patel",
+          area: "12,000 sqft",
+          budget: "₹1.8L/mo",
+          dealHealth: 92,
+          time: "2 hrs ago",
+          badge: "New Hot Lead",
+          badgeColor: "bg-emerald-100 text-emerald-800"
+        },
+        {
+          company: "Wipro Digital",
+          contact: "Sneha Rao",
+          area: "8,500 sqft",
+          budget: "₹1.2L/mo",
+          dealHealth: 55,
+          warning: "8 days inactive"
+        }
+      ]
+    },
+    {
+      title: "Qualified & Suggested",
+      count: 6,
+      value: "₹3.1L",
+      color: "border-t-blue-500",
+      cards: [
+        {
+          company: "Infosys Fintech",
+          contact: "Rahul Desai",
+          area: "20,000 sqft",
+          budget: "₹3.0L/mo",
+          dealHealth: 88,
+          time: "1 day ago",
+          badge: "Site Visit Done",
+          badgeColor: "bg-blue-100 text-blue-800"
+        }
+      ]
+    },
+    {
+      title: "LOI & Negotiation",
+      count: 5,
+      value: "₹2.2L",
+      color: "border-t-amber-500",
+      cards: [
+        {
+          company: "Deloitte Digital",
+          contact: "Priya Sharma",
+          area: "15,000 sqft",
+          budget: "₹2.2L/mo",
+          dealHealth: 95,
+          time: "LOI Signed"
+        }
+      ]
+    },
+    {
+      title: "Lease Executed",
+      count: 3,
+      value: "₹5.5L",
+      color: "border-t-emerald-500",
+      cards: [
+        {
+          company: "Tata Consultancy Services",
+          contact: "Aditya Verma",
+          area: "25,000 sqft",
+          budget: "₹3.8L/mo",
+          dealHealth: 100,
+          time: "Executed Today",
+          badge: "Ready to Onboard",
+          badgeColor: "bg-teal-100 text-teal-800",
+          isExecuted: true
+        }
+      ]
     }
+  ];
 
-    const updatedSource = columns[draggingSourceCol].filter((c: any) => c.id !== draggingCard.id);
-    const updatedTarget = [...columns[targetColName], updatedCard];
-
-    setColumns({
-      ...columns,
-      [draggingSourceCol]: updatedSource,
-      [targetColName]: updatedTarget
-    });
-
-    setDraggingCard(null);
-    setDraggingSourceCol("");
-    showToast(`Deal "${updatedCard.name}" transitioned to ${targetColName}!`);
+  const handleLaunchOnboarding = (card: PipelineCard) => {
+    setSelectedDeal(card);
+    setShowOnboardingModal(true);
   };
 
-  const handleOnboardWorkspace = (name: string) => {
-    showToast(`Workspace onboarding initialized for ${name}! Redirecting to workspace setup.`);
-    setTimeout(() => {
-      router.push("/public/wizard");
-    }, 1500);
+  const handleCompleteOnboarding = () => {
+    setShowOnboardingModal(false);
+    showToast(`Workspace onboarding initiated for ${selectedDeal?.company}! Floor & FM services activated.`);
   };
 
   return (
-    <div className="flex flex-col gap-8 relative font-sans text-slate-900 bg-slate-50/20 p-2">
-      {/* Toast Alert */}
+    <div className="flex flex-col gap-6 font-sans">
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-950 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-800 animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
           <CheckCircle size={16} className="text-emerald-400" />
           <span>{toast}</span>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      {/* KPI Bar */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-8 shadow-sm">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Leasing Sales Pipeline</h1>
-          <p className="text-xs text-slate-500 font-bold mt-1">Monitor active deals progression across stages, negotiate commercial agreements, and launch workspace onboarding.</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pipeline GTV</p>
+          <p className="text-2xl font-black text-gray-900">₹17.6L</p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[#0F8B7D] text-[10px] font-bold">
-          <Sparkles size={12} className="animate-spin" /> Drag & Drop Active
+        <div className="border-l border-gray-200 pl-8">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Win Rate</p>
+          <p className="text-2xl font-black text-gray-900">24%</p>
+        </div>
+        <div className="border-l border-gray-200 pl-8">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Avg Deal Cycle</p>
+          <p className="text-2xl font-black text-gray-900">38 Days</p>
+        </div>
+        <div className="border-l border-gray-200 pl-8">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Active Deals</p>
+          <p className="text-2xl font-black text-teal-700">22</p>
+        </div>
+        <div className="ml-auto">
+          <span className="px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold flex items-center gap-1">
+            <AlertCircle size={14} /> Attention Needed (&gt;7d): 2
+          </span>
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {Object.entries(columns).map(([colName, items]: any, idx) => (
-          <div 
-            key={idx} 
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, colName)}
-            className="p-4 rounded-2xl border border-slate-200 bg-slate-100/50 flex flex-col gap-3 min-h-[480px] transition-colors"
-          >
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{colName} ({items.length})</span>
-            {items.map((item: any) => (
-              <div 
-                key={item.id} 
-                draggable
-                onDragStart={(e) => handleDragStart(e, item, colName)}
-                className="p-4 rounded-xl bg-white border border-slate-150 shadow-xs flex flex-col gap-3.5 cursor-grab active:cursor-grabbing hover:border-[#0F8B7D] hover:shadow-md transition-all"
-              >
-                <div onClick={() => setSelectedCard(item)} className="cursor-pointer">
-                  <div className="flex justify-between items-start">
-                    <span className="font-extrabold text-slate-950 text-xs hover:text-[#0F8B7D] hover:underline block">{item.name}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-[#0F8B7D] text-[8px] font-black">{item.matchScore}% Match</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold mt-2">
-                    <span>{item.req}</span>
-                    <span className="text-[#0F8B7D] font-black">{item.value}</span>
-                  </div>
-                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-col gap-1 text-[9px]">
-                    <div className="flex justify-between font-bold text-slate-700">
-                      <span>Deal Health Score:</span>
-                      <span className={item.healthScore >= 80 ? "text-emerald-600" : item.healthScore >= 60 ? "text-amber-600" : "text-red-650"}>{item.healthScore}/100</span>
-                    </div>
-                    <p className="text-[9px] text-slate-500 italic"><strong className="text-slate-600 not-italic font-bold">Action:</strong> {item.nextAction}</p>
-                  </div>
-                </div>
+      {/* Kanban Columns */}
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {columns.map((col) => (
+          <div key={col.title} className="min-w-[310px] flex-1">
+            <div className={`border-t-4 ${col.color} bg-gray-50 rounded-t-xl px-4 py-3 flex items-center justify-between`}>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">{col.title}</span>
+                <span className="w-5 h-5 rounded-full bg-gray-200 text-[10px] font-bold text-gray-600 flex items-center justify-center">
+                  {col.count}
+                </span>
+              </div>
+              {col.value && <span className="text-xs font-bold text-gray-500">{col.value}</span>}
+            </div>
 
-                {/* Footer status row */}
-                <div className="border-t border-slate-50 pt-2.5 flex items-center justify-between">
-                  <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-                    item.dealHealth.includes("Stale")
-                      ? "bg-amber-50 text-amber-700 border border-amber-200"
-                      : item.dealHealth === "At Risk"
-                      ? "bg-red-50 text-red-600 border border-red-200"
-                      : item.dealHealth === "Lease Executed"
-                      ? "bg-emerald-50 text-emerald-600 border border-emerald-250"
-                      : "bg-slate-50 text-slate-500 border border-slate-200"
-                  }`}>
-                    {item.dealHealth}
-                  </span>
-                  
-                  {colName === "Won" && (
+            <div className="space-y-3 mt-3">
+              {col.cards.map((card) => (
+                <div key={card.company} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-900">{card.company}</span>
+                    {card.badge && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${card.badgeColor}`}>
+                        {card.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-gray-500">{card.contact}</p>
+
+                  <div className="flex justify-between text-[10px] bg-gray-50 p-2 rounded-lg">
+                    <div>
+                      <span className="font-bold text-gray-400 uppercase block">Area Req</span>
+                      <span className="font-bold text-gray-900 text-xs">{card.area}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-400 uppercase block">Est. Budget</span>
+                      <span className="font-bold text-teal-700 text-xs">{card.budget}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-400 uppercase block">Health</span>
+                      <span className="font-bold text-emerald-600 text-xs">{card.dealHealth}%</span>
+                    </div>
+                  </div>
+
+                  {card.isExecuted ? (
                     <button
-                      onClick={() => handleOnboardWorkspace(item.name)}
-                      className="px-2.5 py-1 rounded bg-[#0F8B7D] hover:bg-blue-700 text-white text-[9px] font-extrabold transition-colors cursor-pointer"
+                      onClick={() => handleLaunchOnboarding(card)}
+                      className="w-full py-2 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
-                      Onboard Space
+                      <Sparkles size={13} /> Launch Workspace Onboarding
                     </button>
+                  ) : (
+                    <div className="border-t border-gray-100 pt-2 flex items-center justify-between text-[10px]">
+                      {card.time && (
+                        <span className="text-gray-400 flex items-center gap-1">
+                          <Clock size={10} /> {card.time}
+                        </span>
+                      )}
+                      {card.warning && (
+                        <span className="text-red-500 font-semibold flex items-center gap-1">
+                          ⚠ {card.warning}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Slide-out Drawer Panel for Lead Details */}
-      {selectedCard && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex justify-end z-50 animate-fade-in">
-          <div className="w-full max-w-md bg-white h-screen p-8 flex flex-col justify-between shadow-2xl animate-slide-in">
-            <div>
-              {/* Header */}
-              <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
+      {/* Tenant / Workspace Onboarding Modal Bridge */}
+      {showOnboardingModal && selectedDeal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-gray-200 max-w-xl w-full p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center font-bold">
+                  <Building size={20} />
+                </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-base">{selectedCard.name} Lead</h3>
-                  <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider">Leasing Pipeline CRM</span>
-                </div>
-                <button 
-                  onClick={() => setSelectedCard(null)}
-                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-650 cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Lead Information */}
-              <div className="flex flex-col gap-6 text-xs font-semibold text-slate-750">
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Point of Contact</label>
-                  <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-slate-50 border border-slate-100 font-semibold text-slate-800">
-                    <User size={14} className="text-slate-500" />
-                    <span>{selectedCard.poc} ({selectedCard.role})</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Contact Details</label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-slate-50 border border-slate-100 font-semibold text-slate-800">
-                      <Mail size={14} className="text-slate-500" />
-                      <span>{selectedCard.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-slate-50 border border-slate-100 font-semibold text-slate-800">
-                      <Phone size={14} className="text-slate-500" />
-                      <span>{selectedCard.phone}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Corporate Details</label>
-                  <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-150 font-semibold text-emerald-800">
-                    <ShieldCheck size={14} />
-                    <span>GSTIN: {selectedCard.gst} (KYC Verified)</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">Space Required</span>
-                    <span className="font-extrabold text-slate-900 mt-1 block">{selectedCard.req}</span>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">Budget Est.</span>
-                    <span className="font-extrabold text-[#0F8B7D] mt-1 block">{selectedCard.value}</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-150 pt-4 mt-2 flex flex-col gap-3">
-                  <h4 className="font-bold text-slate-950 text-xs">CRM Decision Support Intelligence</h4>
-                  
-                  <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/15">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">Next Best Action Recommendation</span>
-                    <span className="font-extrabold text-slate-800 text-[11px] mt-1 block">{selectedCard.nextAction}</span>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                    <div className="flex justify-between font-bold text-slate-700 mb-2">
-                      <span>Deal Health Score Breakdown:</span>
-                      <span className={selectedCard.healthScore >= 80 ? "text-emerald-700" : "text-amber-700"}>{selectedCard.healthScore}/100</span>
-                    </div>
-                    <div className="flex flex-col gap-1.5 text-[10px] text-slate-500 font-bold">
-                      <div className="flex justify-between"><span>Activity Frequency:</span> <span className="text-slate-800 font-extrabold">92%</span></div>
-                      <div className="flex justify-between"><span>Response SLA Speed:</span> <span className="text-slate-800 font-extrabold">85%</span></div>
-                      <div className="flex justify-between"><span>Document Completeness:</span> <span className="text-slate-800 font-extrabold">100%</span></div>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs font-semibold">
-                    <span className="text-[9px] font-bold text-slate-450 uppercase block mb-1.5">Recommended Space Matches</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedCard.recommendedMatches.split(",").map((match: string, i: number) => (
-                        <span key={i} className="px-2 py-0.5 rounded bg-blue-50 border border-blue-100 text-[10px] font-bold text-blue-750">
-                          {match.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  <h3 className="text-base font-black text-gray-900">Tenant & Workspace Onboarding</h3>
+                  <p className="text-xs text-gray-400">Lease Executed &gt; Launching OFFICEX.PRO SaaS</p>
                 </div>
               </div>
+              <button onClick={() => setShowOnboardingModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
             </div>
 
-            {/* Actions button */}
-            <div className="border-t border-slate-100 pt-5 flex flex-col gap-3">
-              <button 
-                onClick={() => router.push("/leasing/chat")}
-                className="w-full py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 text-[#0F8B7D] font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <MessageSquare size={14} /> Open Deal Collaboration Chat
-              </button>
-              <button 
-                onClick={() => {
-                  showToast(`LOI Draft document generated for ${selectedCard.name}!`);
-                  setSelectedCard(null);
-                }}
-                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                Generate LOI Draft <ArrowRight size={14} />
-              </button>
+            <div className="space-y-4 text-xs">
+              <div className="p-4 bg-gray-50 rounded-2xl space-y-2 border border-gray-200">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Tenant Organization:</span>
+                  <span className="font-bold text-gray-900">{selectedDeal.company}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Allocated Space:</span>
+                  <span className="font-bold text-gray-900">{selectedDeal.area} (Floor 4, Unit 4A)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Monthly Lease Value:</span>
+                  <span className="font-bold text-teal-700">{selectedDeal.budget}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Automated Onboarding Sequence</p>
+                {[
+                  "Create canonical Tenant Master record in OFFICEX.PRO",
+                  "Generate Tenant Admin login credentials & invite email",
+                  "Provision Floor 4 Unit 4A in Space Master & Rent Roll",
+                  "Link mandatory FM services (Daily Housekeeping & Security)",
+                  "Initialize Tenant Helpdesk, Document Locker & Visitor Access"
+                ].map((item, idx) => (
+                  <div key={item} className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-50/60 border border-emerald-100 text-emerald-900 font-semibold">
+                    <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowOnboardingModal(false)}
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCompleteOnboarding}
+                  className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <Sparkles size={13} /> Complete & Go Live
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,226 +1,138 @@
+"use client";
 import React from "react";
-import { db } from "@/db";
-import { users, auditLogs } from "@/db/schema";
-import { desc } from "drizzle-orm";
-import { ShieldCheck, Users, Sparkles, ClipboardList, Settings, UserCheck, ShieldAlert, FileText, ArrowRight, Cpu } from "lucide-react";
-import Link from "next/link";
+import { TrendingUp, AlertTriangle, CheckCircle, Clock, ExternalLink, Search, Filter } from "lucide-react";
 
-export const revalidate = 0;
+export default function SuperAdminDashboard() {
+  const integrations = [
+    { name: "Razorpay PG", icon: "🏦", uptime: "99.9%", latency: "142ms", status: "online" },
+    { name: "Twilio SMS", icon: "📱", status: "Online", extra: true },
+    { name: "Gupshup WA", icon: "📧", status: "Online", extra: true }
+  ];
 
-export default async function AdminDashboard() {
-  const usersList = await db.select().from(users);
-  const logsList = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(5);
+  const approvals = [
+    { id: "APP-102", type: "Vendor KYC", entity: "TechServe Solutions", date: "22-Aug", verification: "GST Verified", verColor: "text-emerald-600", actions: ["Approve", "Reject"] },
+    { id: "APP-101", type: "Refund Request", entity: "TCS Rent Deposit", date: "20-Aug", verification: "Approved by Finance", verColor: "text-amber-600", actions: ["Process Refund"] },
+    { id: "APP-098", type: "Admin Onboarding", entity: "Rajesh Kumar", date: "19-Aug", verification: "Email Verified", verColor: "text-blue-600", actions: ["Approve Account"] }
+  ];
 
-  const modules = [
-    { label: "User Management", desc: "Provision roles and security accounts", link: "/admin/users", icon: Users, color: "text-red-500 bg-red-50 border-red-100" },
-    { label: "RBAC Settings", desc: "Manage permissions access matrix", link: "/admin/rbac", icon: ShieldCheck, color: "text-teal-500 bg-blue-50 border-blue-100" },
-    { label: "Vendor KYC", desc: "Verify GSTIN tax and licenses", link: "/admin/kyc", icon: UserCheck, color: "text-amber-500 bg-amber-50 border-amber-100" },
-    { label: "Platform Settings", desc: "Adjust commission splits and regions", link: "/admin/settings", icon: Settings, color: "text-blue-500 bg-blue-50 border-blue-100" },
-    { label: "AI Configuration", desc: "LLM parameters and observation gates", link: "/admin/ai", icon: Sparkles, color: "text-purple-500 bg-purple-50 border-purple-100" },
-    { label: "Audit Ledger", desc: "Search immutable log traces", link: "/admin/logs", icon: ClipboardList, color: "text-emerald-500 bg-emerald-50 border-emerald-100" }
+  const auditEvents = [
+    { icon: "🔴", title: "Account Suspended", desc: "Vendor V-8893 flagged for compliance violation.", time: "Today, 14:23 by SuperAdmin" },
+    { icon: "✅", title: "Bulk Kyc Approved", desc: "Batch B-22 processed successfully.", time: "Today, 11:05 by System" },
+    { icon: "⚙️", title: "Config Changed", desc: "Updated webhook endpoint for payments.", time: "Yesterday, 18:45 by SuperAdmin" }
   ];
 
   return (
-    <div className="flex flex-col gap-8">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Super Admin Portal</h1>
-          <p className="text-sm text-gray-600 font-semibold mt-1">Configure global parameters, provisioning gates, and track platform audits.</p>
+    <div className="flex flex-col gap-6 font-sans">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-5 gap-3">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">💰 GTV</p>
+          <p className="text-2xl font-black text-gray-900">₹2.4Cr</p>
+          <span className="text-[10px] font-bold text-emerald-600">▲12%</span>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">📊 MRR</p>
+          <p className="text-2xl font-black text-gray-900">₹3.8L</p>
+          <span className="text-[10px] font-bold text-emerald-600">▲4%</span>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">👥 Users</p>
+          <p className="text-2xl font-black text-gray-900">342</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-red-200 p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">⚠️ Pending KYC</p>
+          <p className="text-2xl font-black text-gray-900">8</p>
+          <span className="text-[10px] font-bold text-red-500">Action Req</span>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">🏢 Managed Properties</p>
+          <p className="text-2xl font-black text-gray-900">34</p>
         </div>
       </div>
 
-      {/* Quick Action Module Tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {modules.map((m, idx) => {
-          const Icon = m.icon;
-          return (
-            <Link 
-              key={idx} 
-              href={m.link}
-              className="premium-card p-6 border border-gray-200 bg-white hover:border-red-500 hover:shadow-md transition-all group flex flex-col justify-between min-h-[140px]"
-            >
-              <div className="flex items-start justify-between">
-                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${m.color}`}>
-                  <Icon size={20} />
-                </div>
-                <ArrowRight size={16} className="text-gray-500 group-hover:text-red-500 transition-colors" />
-              </div>
-              <div className="mt-4">
-                <h3 className="text-sm font-bold text-gray-900">{m.label}</h3>
-                <p className="text-[11px] text-gray-600 font-bold mt-0.5">{m.desc}</p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* KPI BENTO */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white">
-          <div>
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Users</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2">{usersList.length}</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 inline-block">Active provision states</span>
+      {/* Integration Health */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-gray-900">⚙️ Integration Health</h2>
+          <button className="text-xs font-semibold text-[#0F8B7D] cursor-pointer">View Detailed Logs →</button>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-gray-900">🏦 Razorpay PG</span><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /></div>
+            <div className="flex justify-between text-[10px] text-gray-500"><span>Uptime</span><span className="font-bold text-gray-700">99.9%</span></div>
+            <div className="flex justify-between text-[10px] text-gray-500"><span>Latency</span><span className="font-bold text-gray-700">142ms</span></div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
-            <Users size={22} />
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-gray-900">📱 Twilio SMS</span><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /></div>
+            <div className="flex justify-between text-[10px] text-gray-500"><span>Status</span><span className="font-bold text-emerald-600">Online</span></div>
+          </div>
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-gray-900">📧 Gupshup WA</span><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /></div>
+            <div className="flex justify-between text-[10px] text-gray-500"><span>Status</span><span className="font-bold text-emerald-600">Online</span></div>
           </div>
         </div>
-
-        <div className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white">
-          <div>
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Pending KYC</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2">2</div>
-            <span className="text-[10px] text-amber-600 font-bold mt-1 inline-block">Verification checks queued</span>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-gray-900">💾 PostgreSQL Primary DB</span><span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">Healthy</span></div>
+            <div className="flex gap-8 text-[10px] text-gray-500"><div><span className="uppercase font-bold text-gray-400">DB Size</span><p className="font-bold text-gray-700">4.2 GB</p></div><div><span className="uppercase font-bold text-gray-400">Last Backup</span><p className="font-bold text-gray-700">Completed 2h ago</p></div></div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-            <ShieldCheck size={22} />
-          </div>
-        </div>
-
-        <div className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white">
-          <div>
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Database Status</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2">100%</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 inline-block">Backups Online</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-            <ClipboardList size={22} />
-          </div>
-        </div>
-
-        <div className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white">
-          <div>
-            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">AI Operations</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2">Active</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 inline-block">Human-in-the-loop enabled</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-            <Sparkles size={22} />
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-gray-900">🧠 OpenAI API</span><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /></div>
+            <div className="flex justify-between text-[10px] text-gray-500"><span>Status</span><span className="font-bold text-emerald-600">Online</span></div>
+            <div className="flex justify-between text-[10px] text-gray-500"><span>Tokens Today</span><span className="font-bold text-gray-700">12,450</span></div>
           </div>
         </div>
       </div>
 
-      {/* API Integrations Health Grid & Pending Queue Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* API Health Grid */}
-        <div className="md:col-span-2 premium-card p-6 border border-gray-200 bg-white shadow-sm">
-          <h3 className="text-sm font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Cpu size={18} className="text-red-500 font-bold" />
-            Platform Integrations & API Gateway Health Checks
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
-              <span className="font-bold text-gray-700">Razorpay Route</span>
-              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
-              </span>
-              <span className="text-[9px] text-gray-400 font-semibold mt-1">Latency: 42ms | Res: 200</span>
-            </div>
-            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
-              <span className="font-bold text-gray-700">Twilio SMS Gateway</span>
-              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
-              </span>
-              <span className="text-[9px] text-gray-400 font-semibold mt-1">Latency: 75ms | Res: 200</span>
-            </div>
-            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
-              <span className="font-bold text-gray-700">OpenAI Model API</span>
-              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
-              </span>
-              <span className="text-[9px] text-gray-400 font-semibold mt-1">Latency: 120ms | model-ok</span>
-            </div>
-            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col gap-1.5 shadow-inner">
-              <span className="font-bold text-gray-700">Postgres Database</span>
-              <span className="text-[10px] text-green-600 font-extrabold uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Connected
-              </span>
-              <span className="text-[9px] text-gray-400 font-semibold mt-1">SSL Encrypted | 99.9% Up</span>
+      {/* Pending Approvals + Audit Timeline */}
+      <div className="grid grid-cols-[1fr_340px] gap-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-bold text-gray-900">☑️ Pending Approvals Ledger</h2>
+            <div className="flex gap-2">
+              <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input placeholder="Search ID..." className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D] w-36" /></div>
+              <button className="p-2 rounded-xl border border-gray-200 text-gray-400 cursor-pointer"><Filter size={14} /></button>
             </div>
           </div>
-        </div>
-
-        {/* Pending Approvals Quick Board */}
-        <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
-          <h3 className="text-sm font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <ShieldCheck size={18} className="text-red-500 font-bold" />
-            Pending Gateway Actions
-          </h3>
-          <div className="flex flex-col gap-3 text-xs">
-            <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/30 flex justify-between items-center shadow-inner">
-              <div className="flex-1 pr-2">
-                <span className="font-bold text-gray-900 block">GSTIN KYC Audit</span>
-                <span className="text-[9px] text-gray-500 font-semibold block">SafeGuard Security Private Ltd</span>
-              </div>
-              <Link href="/admin/kyc" className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[9px] uppercase tracking-wider transition-colors shrink-0">
-                Verify
-              </Link>
-            </div>
-            <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/30 flex justify-between items-center shadow-inner">
-              <div className="flex-1 pr-2">
-                <span className="font-bold text-gray-900 block">Statutory Audit License</span>
-                <span className="text-[9px] text-gray-500 font-semibold block">AquaClean Environmental LLP</span>
-              </div>
-              <Link href="/admin/kyc" className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[9px] uppercase tracking-wider transition-colors shrink-0">
-                Verify
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Audit logs trail */}
-      <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-            <ClipboardList size={18} className="text-red-500" />
-            Recent Audit Trail Logs
-          </h3>
-          <Link href="/admin/logs" className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
-            View All Audit Logs <ArrowRight size={12} />
-          </Link>
-        </div>
-        
-        <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-4">Trace ID</th>
-                <th className="py-4">Module</th>
-                <th className="py-4">Action Event</th>
-                <th className="py-4">Timestamp</th>
-                <th className="py-4">Severity</th>
-              </tr>
-            </thead>
+            <thead><tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider"><th className="py-3 pr-3">Request ID</th><th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Entity Name</th><th className="py-3 pr-3">Date Submitted</th><th className="py-3 pr-3">Verification Status</th><th className="py-3">Actions</th></tr></thead>
             <tbody>
-              {logsList.map((log, idx) => (
-                <tr key={idx} className="border-b border-gray-200 text-xs hover:bg-gray-50/50 transition-colors">
-                  <td className="py-4 font-mono font-bold text-red-600">{log.traceId}</td>
-                  <td className="py-4 text-gray-900 font-bold">{log.module}</td>
-                  <td className="py-4 text-gray-700 font-semibold">{log.action}</td>
-                  <td className="py-4 text-gray-500 font-medium">{new Date(log.createdAt || "").toLocaleString()}</td>
-                  <td className="py-4">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                      log.severity === "critical"
-                        ? "bg-red-50 text-red-600 border border-red-100"
-                        : log.severity === "warning"
-                        ? "bg-amber-50 text-amber-600 border border-amber-100"
-                        : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                    }`}>
-                      {log.severity}
-                    </span>
+              {approvals.map((a) => (
+                <tr key={a.id} className="border-b border-gray-100 text-xs">
+                  <td className="py-3.5 pr-3 font-bold text-gray-500">{a.id}</td>
+                  <td className="py-3.5 pr-3 text-gray-700">{a.type}</td>
+                  <td className="py-3.5 pr-3 font-semibold text-gray-900">{a.entity}</td>
+                  <td className="py-3.5 pr-3 text-gray-600">{a.date}</td>
+                  <td className={`py-3.5 pr-3 text-xs font-semibold ${a.verColor}`}>{a.verification}</td>
+                  <td className="py-3.5 flex gap-1">
+                    {a.actions.map((act) => (
+                      <button key={act} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer ${act === "Reject" ? "bg-red-500 text-white" : "bg-[#0F8B7D] text-white"}`}>{act}</button>
+                    ))}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <p className="text-xs text-gray-500 text-center mt-4 cursor-pointer hover:text-[#0F8B7D]">View All Pending (8)</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h2 className="text-base font-bold text-gray-900 mb-5">🕐 Audit Timeline</h2>
+          <div className="space-y-5">
+            {auditEvents.map((e, i) => (
+              <div key={i} className="flex gap-3">
+                <span className="text-base">{e.icon}</span>
+                <div>
+                  <p className="text-xs font-bold text-gray-900">{e.title}</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">{e.desc}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{e.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-[#0F8B7D] font-semibold mt-5 cursor-pointer hover:underline">Full Audit Log</p>
         </div>
       </div>
-
     </div>
   );
 }
-

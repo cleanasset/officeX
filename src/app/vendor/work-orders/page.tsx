@@ -1,347 +1,303 @@
 "use client";
 import React, { useState } from "react";
-import { ClipboardList, Check, X, Send, UserCheck, Clock, Building, Phone, ArrowRight, Bell, CheckCircle, AlertTriangle, Calendar, FileText, Camera } from "lucide-react";
+import { Download, CheckCircle, Camera, Check } from "lucide-react";
 
-export default function VendorWorkOrders() {
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [milestoneNotes, setMilestoneNotes] = useState("");
+export default function VendorWorkOrdersTracker() {
+  const [selectedWo, setSelectedWo] = useState("#WO-2024-089");
+  const [attendance, setAttendance] = useState<Record<string, "Present" | "Absent">>({
+    "Rahul S. (Lead)": "Present",
+    "Amit K.": "Present",
+    "Vikas R.": "Absent",
+    "Deepak M.": "Present"
+  });
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
-  };
+  const [ppmChecklist, setPpmChecklist] = useState<Record<string, boolean>>({
+    "AHU Filter Cleaning": true,
+    "Chiller Parameter Readings": true,
+    "UPS Battery Voltage Check": false,
+    "DG Set Oil Level": false,
+    "LT Panel Visual Inspection": false
+  });
 
-  const [orders, setOrders] = useState([
+  const [issueSeverity, setIssueSeverity] = useState("");
+  const [issueDesc, setIssueDesc] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+
+  const workOrders = [
     {
-      id: "WO-801",
-      title: "HVAC Maintenance & Chiller Overhaul",
-      location: "Apex Business Tower, BKC Mumbai - Floor 4",
-      client: "Rajesh Kumar (Property Manager)",
-      budget: "₹1,40,000",
-      startDate: "Aug 18, 2026",
-      deadline: "Sep 01, 2026",
+      id: "#WO-2024-089",
+      client: "Apex Tech Pvt Ltd",
+      property: "CyberCity Tower B, Floor 4",
+      startDate: "01 Nov 2023",
+      progress: "Month 4 of 12",
+      pct: 33,
       status: "Active",
-      assignedTech: "Sanjay Kumar",
-      techRole: "Senior HVAC Specialist",
-      techPhone: "+91 98450 11223",
-      shift: "Morning Shift (09:00 AM - 05:00 PM)",
-      certification: "BEE Certified HVAC Technician",
-      currentMilestone: "Milestone 2/3 — Chiller pressure testing & verification",
-      tasks: [
-        { name: "Condenser coil chemical descaling & jet flushing", done: true },
-        { name: "Refrigerant R-134a gas charge & pressure test (7.2 bar for 45 min)", done: false },
-        { name: "BMS sensor calibration + temperature log submission", done: false }
-      ]
+      statusClass: "bg-emerald-50 text-emerald-700 border border-emerald-200"
     },
     {
-      id: "WO-802",
-      title: "Weekly Deep Cleaning & Mechanized Floor Scrubbing",
-      location: "Meridian Tech Park, Whitefield Bengaluru - All Floors",
-      client: "Vijay Dev (Facility Manager)",
-      budget: "₹45,000",
-      startDate: "Aug 24, 2026",
-      deadline: "Aug 26, 2026",
-      status: "Review Pending",
-      assignedTech: "Vikram Shah",
-      techRole: "Housekeeping Supervisor + 4 Crew",
-      techPhone: "+91 98450 44556",
-      shift: "Evening Shift (02:00 PM - 10:00 PM)",
-      certification: "BICSc Certified Cleaning Lead",
-      currentMilestone: "Milestone 1/1 completed — Awaiting facility lead validation",
-      tasks: [
-        { name: "Mechanized single-disc floor scrubbing (Floors 1–6)", done: true },
-        { name: "Washroom deep sanitization & air freshener refill", done: true },
-        { name: "Internal glass facade wipe-down & dusting", done: true }
-      ]
+      id: "#WO-2023-412",
+      client: "Nexus Malls",
+      property: "Nexus Seawoods, Navi Mumbai",
+      startDate: "15 Mar 2023",
+      progress: "Month 11 of 12",
+      pct: 91,
+      status: "Active",
+      statusClass: "bg-emerald-50 text-emerald-700 border border-emerald-200"
     },
     {
-      id: "WO-803",
-      title: "DG Set 500kVA B-Check & Oil Filtration",
-      location: "Nexus Hub, Hinjewadi Pune - Basement Utility Room",
-      client: "Nexus Management Office",
-      budget: "₹85,000",
-      startDate: "Aug 20, 2026",
-      deadline: "Sep 05, 2026",
-      status: "Active",
-      assignedTech: "Ramesh Dev",
-      techRole: "High-Tension Electrician (Class-A)",
-      techPhone: "+91 98450 77889",
-      shift: "Morning Shift (07:00 AM - 03:00 PM)",
-      certification: "Govt. Class-A Electrical License",
-      currentMilestone: "Milestone 1/2 — Transformer oil filtration & relay testing",
-      tasks: [
-        { name: "Transformer oil filtration (50 litres @ 40°C)", done: true },
-        { name: "Overcurrent relay & earth-fault relay testing", done: false },
-        { name: "DG sync panel calibration & load bank test", done: false },
-        { name: "Battery health check & electrolyte top-up", done: false }
-      ]
+      id: "#WO-2024-002",
+      client: "Global Tech Park",
+      property: "Block C, Hinjewadi Phase 1",
+      startDate: "05 Jan 2024",
+      progress: "Month 2 of 24",
+      pct: 8,
+      status: "Mobilising",
+      statusClass: "bg-amber-50 text-amber-700 border border-amber-200"
+    },
+    {
+      id: "#WO-2022-881",
+      client: "Infosys Ltd",
+      property: "Campus 4, Electronic City",
+      startDate: "10 Dec 2022",
+      progress: "Completed 100%",
+      pct: 100,
+      status: "Closed",
+      statusClass: "bg-gray-100 text-gray-600 border border-gray-200"
     }
-  ]);
+  ];
 
-  const handleTaskToggle = (orderId: string, taskIdx: number) => {
-    setOrders(orders.map(o => {
-      if (o.id === orderId) {
-        const updatedTasks = o.tasks.map((t, i) => i === taskIdx ? { ...t, done: !t.done } : t);
-        return { ...o, tasks: updatedTasks };
-      }
-      return o;
-    }));
-    if (selectedOrder && selectedOrder.id === orderId) {
-      const updatedTasks = selectedOrder.tasks.map((t: any, i: number) => i === taskIdx ? { ...t, done: !t.done } : t);
-      setSelectedOrder({ ...selectedOrder, tasks: updatedTasks });
-    }
-  };
-
-  const handleSubmitMilestone = (orderId: string) => {
-    setOrders(orders.map(o => {
-      if (o.id === orderId) {
-        return {
-          ...o,
-          status: "Review Pending",
-          currentMilestone: "Milestone submitted — Awaiting manager sign-off",
-          tasks: o.tasks.map(t => ({ ...t, done: true }))
-        };
-      }
-      return o;
-    }));
-    setSelectedOrder(null);
-    setMilestoneNotes("");
-    showToast(`Proof of work for ${orderId} submitted to client Property Manager for verification & payout release!`);
+  const handleSubmitLog = () => {
+    setToast("Daily site log submitted for #WO-2024-089!");
+    setTimeout(() => setToast(null), 3500);
   };
 
   return (
-    <div className="flex flex-col gap-8 font-sans relative">
-
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-bounce">
+    <div className="flex flex-col gap-6 font-sans">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
           <CheckCircle size={16} className="text-emerald-400" />
-          <span>{toastMessage}</span>
+          <span>{toast}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Active Work Orders & Job Dispatches</h1>
-          <p className="text-sm text-gray-600 font-semibold mt-1">Click any work order to inspect technician details, update milestone checklists, and submit proof of completion.</p>
+          <h1 className="text-2xl font-black text-gray-900">Active Work Orders</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and track your ongoing service contracts and daily site logs.</p>
         </div>
-        <span className="px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs">
-          {orders.length} Active Dispatches
-        </span>
+        <button className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-2 shadow-sm">
+          <Download size={14} /> Export Report
+        </button>
       </div>
 
-      {/* Work Order Cards */}
-      <div className="flex flex-col gap-5">
-        {orders.map((wo) => (
-          <div
-            key={wo.id}
-            onClick={() => { setSelectedOrder(wo); setMilestoneNotes(""); }}
-            className="premium-card p-6 border border-gray-200 bg-white hover:border-emerald-300 hover:shadow-md cursor-pointer transition-all group"
-          >
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex-1 flex flex-col gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded">{wo.id}</span>
-                  <h3 className="font-bold text-gray-900 text-sm group-hover:text-emerald-700 transition-colors flex items-center gap-2">
-                    <ClipboardList size={16} className="text-emerald-600" />
-                    {wo.title}
-                  </h3>
+      {/* Primary Selected Card with Dual-Pane Journey & Logger */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        {/* Table Header Row */}
+        <div className="grid grid-cols-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
+          <div>WO ID</div>
+          <div>CLIENT</div>
+          <div>PROPERTY</div>
+          <div>START DATE</div>
+          <div>PROGRESS</div>
+          <div className="text-right">STATUS</div>
+        </div>
+
+        {/* Selected Order Summary Row */}
+        <div className="grid grid-cols-6 items-center p-6 border-l-4 border-l-[#0F8B7D] bg-teal-50/10">
+          <div className="font-bold text-[#0F8B7D] text-xs">#WO-2024-089</div>
+          <div className="font-semibold text-gray-900 text-xs">Apex Tech Pvt Ltd</div>
+          <div className="text-gray-600 text-xs">CyberCity Tower B, Floor 4</div>
+          <div className="text-gray-600 text-xs">01 Nov 2023</div>
+          <div>
+            <span className="text-[10px] text-gray-500 font-semibold">Month 4 of 12 <b className="text-[#0F8B7D]">33%</b></span>
+            <div className="w-28 h-1.5 rounded-full bg-gray-200 mt-1 overflow-hidden">
+              <div className="h-full bg-[#0F8B7D] rounded-full" style={{ width: "33%" }} />
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Active
+            </span>
+          </div>
+        </div>
+
+        {/* Nested Deep Dive: Journey + Daily Logger */}
+        <div className="p-6 pt-2 grid grid-cols-[1fr_360px] gap-6 border-t border-gray-100">
+          {/* Left Column: Contract Values + Service Journey */}
+          <div className="flex flex-col justify-between pr-4">
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">Monthly Contract Value</p>
+                <p className="text-xl font-black text-gray-900 mt-1">₹2,18,300 <span className="text-xs text-gray-400 font-normal">/mo</span></p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">SLA Commitments</p>
+                <p className="text-xs font-bold text-gray-800 mt-1.5">
+                  <span className="text-[#0F8B7D]">2h</span> Response • <span className="text-[#0F8B7D]">8h</span> Resolution
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6">Service Journey</h3>
+              <div className="relative flex items-center justify-between px-4 pb-8">
+                {/* Timeline Bar */}
+                <div className="absolute left-8 right-8 top-3.5 h-0.5 bg-gray-200 z-0">
+                  <div className="h-full bg-[#0F8B7D]" style={{ width: "65%" }} />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-gray-600 font-medium mt-1">
-                  <span className="flex items-center gap-1"><Building size={12} className="text-gray-400" /> {wo.location}</span>
-                  <span className="flex items-center gap-1"><UserCheck size={12} className="text-gray-400" /> {wo.assignedTech} ({wo.techRole})</span>
-                  <span className="flex items-center gap-1"><Clock size={12} className="text-gray-400" /> {wo.shift}</span>
-                </div>
-
-                <div className="text-[11px] text-gray-500 font-semibold bg-gray-50 p-2.5 rounded-xl border border-gray-100 w-fit mt-1 flex items-center gap-1.5">
-                  <Calendar size={12} className="text-gray-400" />
-                  📌 {wo.currentMilestone}
-                </div>
-
-                {/* Mini progress bar */}
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full transition-all"
-                      style={{ width: `${(wo.tasks.filter(t => t.done).length / wo.tasks.length) * 100}%` }}
-                    />
+                {/* Step 1 */}
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center text-xs font-bold">
+                    <Check size={14} />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500">
-                    {wo.tasks.filter(t => t.done).length}/{wo.tasks.length} Tasks
+                  <span className="text-[11px] font-bold text-gray-700 mt-2">WO Issued</span>
+                </div>
+
+                {/* Step 2 */}
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center text-xs font-bold">
+                    <Check size={14} />
+                  </div>
+                  <span className="text-[11px] font-bold text-gray-700 mt-2">Mobilisation</span>
+                </div>
+
+                {/* Step 3 Active */}
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full bg-white border-2 border-[#0F8B7D] text-[#0F8B7D] flex items-center justify-center text-xs font-black">
+                    ◉
+                  </div>
+                  <span className="text-[11px] font-black text-[#0F8B7D] mt-2 text-center">
+                    Monthly Service<br /><span className="text-[9px] font-semibold">(Active)</span>
                   </span>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="font-extrabold text-gray-900">{wo.budget}</span>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  wo.status === "Active"
-                    ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                    : wo.status === "Review Pending"
-                    ? "bg-blue-50 border border-blue-200 text-blue-700"
-                    : "bg-gray-50 border border-gray-200 text-gray-600"
-                }`}>
-                  {wo.status}
-                </span>
-                <ArrowRight size={16} className="text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                {/* Step 4 */}
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-400 flex items-center justify-center text-xs font-bold">
+                    4
+                  </div>
+                  <span className="text-[11px] font-semibold text-gray-400 mt-2">Completion</span>
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Right Column: Daily Site Logger */}
+          <div className="bg-gray-50/70 border border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 mb-4">
+              <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                📋 Daily Site Logger
+              </span>
+              <span className="text-[10px] font-semibold text-gray-500">Today, 14 Feb</span>
+            </div>
+
+            {/* Attendance */}
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Technician Attendance</p>
+            <div className="space-y-2 mb-5">
+              {Object.entries(attendance).map(([name, status]) => (
+                <div key={name} className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-gray-800">{name}</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setAttendance({ ...attendance, [name]: "Present" })}
+                      className={`px-2 py-0.5 rounded-md text-[9px] font-bold transition-all ${
+                        status === "Present" ? "bg-emerald-100 text-emerald-700 border border-emerald-300" : "bg-white text-gray-400 border border-gray-200"
+                      }`}
+                    >
+                      Present
+                    </button>
+                    <button
+                      onClick={() => setAttendance({ ...attendance, [name]: "Absent" })}
+                      className={`px-2 py-0.5 rounded-md text-[9px] font-bold transition-all ${
+                        status === "Absent" ? "bg-red-100 text-red-700 border border-red-300" : "bg-white text-gray-400 border border-gray-200"
+                      }`}
+                    >
+                      Absent
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* PPM Checklist */}
+            <div className="pt-3 border-t border-gray-200">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Daily PPM Checklist</p>
+              <div className="space-y-2 mb-5">
+                {Object.entries(ppmChecklist).map(([task, done]) => (
+                  <label key={task} className="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={done}
+                      onChange={() => setPpmChecklist({ ...ppmChecklist, [task]: !done })}
+                      className="w-4 h-4 rounded border-gray-300 accent-[#0F8B7D]"
+                    />
+                    <span className={done ? "font-semibold text-gray-900" : "text-gray-600"}>{task}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Log Issue */}
+            <div className="pt-3 border-t border-gray-200">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Log Issue (Optional)</p>
+              <select
+                value={issueSeverity}
+                onChange={(e) => setIssueSeverity(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs mb-2 bg-white text-gray-700"
+              >
+                <option value="">Select Severity</option>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High / Critical</option>
+              </select>
+              <textarea
+                value={issueDesc}
+                onChange={(e) => setIssueDesc(e.target.value)}
+                placeholder="Describe the issue..."
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs resize-none h-14 mb-3 bg-white"
+              />
+              <div className="border border-dashed border-gray-300 rounded-xl p-3 text-center mb-4 cursor-pointer bg-white hover:border-[#0F8B7D]">
+                <Camera size={16} className="mx-auto text-gray-400 mb-1" />
+                <span className="text-[10px] text-gray-500 font-semibold">Click to upload evidence photo</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSubmitLog}
+              className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer"
+            >
+              Submit Daily Log
+            </button>
+          </div>
+        </div>
+
+        {/* Other Work Orders List Rows */}
+        {workOrders.slice(1).map((wo) => (
+          <div
+            key={wo.id}
+            onClick={() => setSelectedWo(wo.id)}
+            className="grid grid-cols-6 items-center p-6 border-t border-gray-100 hover:bg-gray-50/50 cursor-pointer transition-colors"
+          >
+            <div className="font-bold text-gray-600 text-xs">{wo.id}</div>
+            <div className="font-semibold text-gray-900 text-xs">{wo.client}</div>
+            <div className="text-gray-600 text-xs">{wo.property}</div>
+            <div className="text-gray-600 text-xs">{wo.startDate}</div>
+            <div>
+              <span className="text-[10px] text-gray-500 font-semibold">{wo.progress}</span>
+              <div className="w-28 h-1.5 rounded-full bg-gray-200 mt-1 overflow-hidden">
+                <div className="h-full bg-[#0F8B7D] rounded-full" style={{ width: `${wo.pct}%` }} />
+              </div>
+            </div>
+            <div className="text-right">
+              <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${wo.statusClass}`}>
+                {wo.status}
+              </span>
             </div>
           </div>
         ))}
       </div>
-
-      {/* ===== WORK ORDER DETAIL DRAWER ===== */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50 animate-fade-in">
-          <div className="w-full max-w-md bg-white h-screen p-7 flex flex-col justify-between shadow-2xl animate-slide-in overflow-y-auto">
-            <div className="flex flex-col gap-5">
-              {/* Header */}
-              <div className="flex justify-between items-start border-b border-gray-100 pb-4">
-                <div>
-                  <span className="text-[9px] font-extrabold font-mono text-gray-400 uppercase tracking-wider">{selectedOrder.id}</span>
-                  <h3 className="font-extrabold text-gray-900 text-base mt-0.5">{selectedOrder.title}</h3>
-                  <span className="text-[11px] text-gray-500 font-semibold">{selectedOrder.location}</span>
-                </div>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Contract & Status */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Contract Amount</span>
-                  <span className="font-extrabold text-emerald-600 text-sm">{selectedOrder.budget}</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Job Status</span>
-                  <span className={`font-bold text-sm ${
-                    selectedOrder.status === "Active" ? "text-emerald-700" : "text-blue-700"
-                  }`}>{selectedOrder.status}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Start Date</span>
-                  <span className="font-bold text-gray-900">{selectedOrder.startDate}</span>
-                </div>
-                <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Deadline</span>
-                  <span className="font-bold text-red-600">{selectedOrder.deadline}</span>
-                </div>
-              </div>
-
-              {/* Client */}
-              <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-100 text-xs">
-                <span className="text-[10px] text-amber-600 font-bold uppercase block mb-1">Requesting Client</span>
-                <span className="font-extrabold text-gray-900">{selectedOrder.client}</span>
-              </div>
-
-              {/* On-Site Technician */}
-              <div className="p-3.5 rounded-xl bg-blue-50/40 border border-blue-100 text-xs">
-                <span className="text-[10px] text-blue-600 font-bold uppercase block mb-1">Assigned On-Site Technician</span>
-                <span className="font-extrabold text-gray-900 block text-sm">{selectedOrder.assignedTech}</span>
-                <span className="text-[11px] text-gray-600 font-semibold block mt-0.5">{selectedOrder.techRole}</span>
-                <div className="flex items-center gap-4 text-[11px] text-gray-600 font-medium mt-2">
-                  <span className="flex items-center gap-1"><Phone size={11} className="text-gray-400" /> {selectedOrder.techPhone}</span>
-                  <span className="flex items-center gap-1"><Clock size={11} className="text-gray-400" /> {selectedOrder.shift}</span>
-                </div>
-                <span className="text-[10px] text-blue-600 font-bold mt-2 block">🪪 {selectedOrder.certification}</span>
-              </div>
-
-              {/* Milestone Checklist */}
-              <div>
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Milestone Checklist — Click to toggle completion</span>
-                <div className="flex flex-col gap-2">
-                  {selectedOrder.tasks.map((t: any, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleTaskToggle(selectedOrder.id, idx)}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl border text-left cursor-pointer transition-all text-xs ${
-                        t.done
-                          ? "bg-emerald-50 border-emerald-200 text-gray-700"
-                          : "bg-white border-gray-200 hover:bg-gray-50 text-gray-800"
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                        t.done ? "bg-emerald-600 text-white" : "border-2 border-gray-300"
-                      }`}>
-                        {t.done && <Check size={12} />}
-                      </div>
-                      <span className={`font-semibold ${t.done ? "line-through opacity-60" : ""}`}>
-                        {t.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Proof-of-Work Notes */}
-              {selectedOrder.status === "Active" && (
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase">Technician Work Notes & Readings</label>
-                  <textarea
-                    rows={3}
-                    placeholder="e.g. Pressure tested at 7.2 bar for 45 min. Condenser coils cleaned. Photos attached."
-                    value={milestoneNotes}
-                    onChange={(e) => setMilestoneNotes(e.target.value)}
-                    className="p-3 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-emerald-600 resize-none font-medium"
-                  />
-                  <button
-                    onClick={() => showToast("Site photo evidence captured & attached.")}
-                    className="w-fit px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Camera size={12} /> Attach Site Photo Evidence
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="border-t border-gray-100 pt-5 flex flex-col gap-3 mt-4">
-              {selectedOrder.status === "Active" ? (
-                <button
-                  onClick={() => handleSubmitMilestone(selectedOrder.id)}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Send size={14} /> Submit Milestone Proof & Request Payout
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    showToast("Reminder sent to Facility Manager for milestone sign-off!");
-                    setSelectedOrder(null);
-                  }}
-                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Bell size={14} /> Send Signoff Reminder to Client
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  showToast(`Work log PDF exported for ${selectedOrder.id}.`);
-                }}
-                className="w-full py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <FileText size={14} /> Export Work Log PDF
-              </button>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="w-full py-2 rounded-xl text-gray-500 font-bold text-xs hover:bg-gray-50 cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
