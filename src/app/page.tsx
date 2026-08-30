@@ -46,7 +46,7 @@ import {
 
 export default function LandingPage() {
   const router = useRouter();
-  const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor">("space");
+  const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor" | "saas">("space");
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
@@ -112,10 +112,12 @@ export default function LandingPage() {
       router.push(
         `/public/search?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
       );
-    } else {
+    } else if (activeSearchTab === "vendor") {
       router.push(
         `/public/wizard?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
       );
+    } else {
+      router.push('/login');
     }
   };
 
@@ -310,6 +312,17 @@ export default function LandingPage() {
               <Wrench size={14} />
               Hire FM Vendor
             </button>
+            <button 
+              onClick={() => setActiveSearchTab("saas")}
+              className={`flex-1 py-4 text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                activeSearchTab === "saas" 
+                  ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
+                  : "border-transparent text-slate-400 hover:text-slate-650"
+              }`}
+            >
+              <Settings size={14} />
+              OFFICEX.PRO SaaS
+            </button>
           </div>
 
           <div className="p-6">
@@ -370,7 +383,7 @@ export default function LandingPage() {
                   </select>
                 </div>
               </div>
-            ) : (
+            ) : activeSearchTab === "vendor" ? (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-slate-400"><SlidersHorizontal size={16} /></span>
@@ -431,6 +444,29 @@ export default function LandingPage() {
                   </select>
                 </div>
               </div>
+            ) : (
+              /* OFFICEX.PRO SaaS Panel */
+              <div className="flex flex-col items-center text-center py-4 gap-4">
+                <div className="flex items-center gap-6 flex-wrap justify-center">
+                  <button onClick={() => router.push('/tenant')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
+                    <div className="w-10 h-10 rounded-xl bg-[#0F8B7D] flex items-center justify-center"><Users size={18} className="text-white" /></div>
+                    <span className="text-[10px] font-bold text-slate-700">Tenant Portal</span>
+                  </button>
+                  <button onClick={() => router.push('/ops')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
+                    <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center"><Settings size={18} className="text-white" /></div>
+                    <span className="text-[10px] font-bold text-slate-700">FM Operations</span>
+                  </button>
+                  <button onClick={() => router.push('/portfolio')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><Building size={18} className="text-white" /></div>
+                    <span className="text-[10px] font-bold text-slate-700">Landlord Portal</span>
+                  </button>
+                  <button onClick={() => router.push('/reporting')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center"><TrendingUp size={18} className="text-white" /></div>
+                    <span className="text-[10px] font-bold text-slate-700">Analytics & MIS</span>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 font-semibold max-w-lg">Already managing a workspace? Log in to operate your building — helpdesk, assets, rent roll, compliance, and analytics.</p>
+              </div>
             )}
 
             <div className="mt-5 flex justify-end">
@@ -445,13 +481,66 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Partner Logo Ribbon */}
-        <div className="w-full max-w-4xl mt-14 py-4 px-6 bg-white/30 backdrop-blur-xs flex items-center justify-around flex-wrap gap-8 text-xs font-black text-slate-800 uppercase tracking-widest border-y border-[#DFE4E1]">
-          <span className="hover:text-slate-900 transition-colors">TCS</span>
-          <span className="hover:text-slate-900 transition-colors">WIPRO</span>
-          <span className="hover:text-slate-900 transition-colors">INFOSYS</span>
-          <span className="hover:text-slate-900 transition-colors">DLF</span>
-          <span className="hover:text-slate-900 transition-colors">EMBASSY</span>
+        {/* Partner Logo Full-Width Scrolling Marquee Ribbon */}
+        <div className="w-full mt-14 py-4 bg-white/40 backdrop-blur-md border-y border-[#DFE4E1] overflow-hidden">
+          <div className="animate-marquee flex items-center gap-16 text-xs font-black text-slate-800 uppercase tracking-widest">
+            <span>TCS</span>
+            <span>•</span>
+            <span>WIPRO</span>
+            <span>•</span>
+            <span>INFOSYS</span>
+            <span>•</span>
+            <span>DLF COMMERCIAL</span>
+            <span>•</span>
+            <span>EMBASSY REIT</span>
+            <span>•</span>
+            <span>GODREJ PROPERTIES</span>
+            <span>•</span>
+            <span>PRESTIGE GROUP</span>
+            <span>•</span>
+            <span>L&amp;T REALTY</span>
+            <span>•</span>
+            <span>BROOKFIELD</span>
+            <span>•</span>
+            <span>BLACKSTONE</span>
+            <span>•</span>
+            <span>K RAHEJA CORP</span>
+            <span>•</span>
+            <span>HCL TECH</span>
+            <span>•</span>
+            <span>COGNIZANT</span>
+            <span>•</span>
+            <span>ACCENTURE</span>
+            <span>•</span>
+            {/* Duplicate track for seamless infinite scroll */}
+            <span>TCS</span>
+            <span>•</span>
+            <span>WIPRO</span>
+            <span>•</span>
+            <span>INFOSYS</span>
+            <span>•</span>
+            <span>DLF COMMERCIAL</span>
+            <span>•</span>
+            <span>EMBASSY REIT</span>
+            <span>•</span>
+            <span>GODREJ PROPERTIES</span>
+            <span>•</span>
+            <span>PRESTIGE GROUP</span>
+            <span>•</span>
+            <span>L&amp;T REALTY</span>
+            <span>•</span>
+            <span>BROOKFIELD</span>
+            <span>•</span>
+            <span>BLACKSTONE</span>
+            <span>•</span>
+            <span>K RAHEJA CORP</span>
+            <span>•</span>
+            <span>HCL TECH</span>
+            <span>•</span>
+            <span>COGNIZANT</span>
+            <span>•</span>
+            <span>ACCENTURE</span>
+          </div>
         </div>
 
         {/* Simulated Stats count-up row */}
