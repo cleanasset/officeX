@@ -73,22 +73,23 @@ export default function RentPaymentGateway() {
       </div>
 
       {/* Payment History */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-5">Payment History</h2>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="py-3 pr-3">Month</th>
-              <th className="py-3 pr-3">Invoice No</th>
-              <th className="py-3 pr-3">Amount</th>
-              <th className="py-3 pr-3">Paid Date</th>
-              <th className="py-3 pr-3">Mode</th>
-              <th className="py-3 pr-3">Ref</th>
-              <th className="py-3 pr-3">Status</th>
-              <th className="py-3">Receipt</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 shadow-2xs w-full">
+        <h2 className="text-base md:text-lg font-black text-gray-900 mb-4">Payment History</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3 pr-3">Month</th>
+                <th className="py-3 pr-3">Invoice No</th>
+                <th className="py-3 pr-3">Amount</th>
+                <th className="py-3 pr-3">Paid Date</th>
+                <th className="py-3 pr-3">Mode</th>
+                <th className="py-3 pr-3">Ref</th>
+                <th className="py-3 pr-3">Status</th>
+                <th className="py-3">Receipt</th>
+              </tr>
+            </thead>
+            <tbody>
             {paymentHistory.map((p) => (
               <tr key={p.ref} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
                 <td className="py-3.5 pr-3 font-semibold text-gray-900">{p.month}</td>
@@ -107,12 +108,13 @@ export default function RentPaymentGateway() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Payment Modal */}
       {showPayModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-[420px] p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[420px] p-5 md:p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} className="text-[#0F8B7D]" />

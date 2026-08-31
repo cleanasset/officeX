@@ -94,23 +94,23 @@ export default function OperationsDashboard() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">FM Command Centre</h1>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">FM Command Centre</h1>
           <p className="text-xs text-gray-500 mt-0.5">Real-time facility operations, asset uptime, SLA escalations &amp; Workplace Health monitoring.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             href="/ops/helpdesk"
-            className="px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
           >
-            <AlertTriangle size={13} className="text-amber-500" /> Helpdesk Tickets
+            <AlertTriangle size={13} className="text-amber-500" /> Helpdesk
           </Link>
           <Link
             href="/ops/ppm"
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
           >
-            <Calendar size={13} /> 52-Week PPM
+            <Calendar size={13} /> 52w PPM
           </Link>
         </div>
       </div>

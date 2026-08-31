@@ -17,7 +17,11 @@ import {
   X,
   Star,
   ShieldCheck,
-  MapPin
+  MapPin,
+  Map as MapIcon,
+  List as ListIcon,
+  Phone,
+  Building
 } from "lucide-react";
 import type { PropertyListing } from "@/components/RealGoogleMap";
 
@@ -40,6 +44,7 @@ export default function PropertySearchAndDiscovery() {
   const [budget, setBudget] = useState("Budget");
   const [gradeA, setGradeA] = useState(true);
   const [furnished, setFurnished] = useState(false);
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
 
   // Comparison State
   const [compareList, setCompareList] = useState<PropertyListing[]>([]);
@@ -98,25 +103,25 @@ export default function PropertySearchAndDiscovery() {
       capacity: "90 Seats",
       furnishing: "Fully Furnished",
       price: "₹2.10L",
-      pricePerSqft: "₹170/sq.ft.",
-      pricePerSeat: "₹11,800/seat",
+      pricePerSqft: "₹195/sq.ft.",
+      pricePerSeat: "₹14,000/seat",
       propertyScore: 92,
       readiness: "Immediate Move-in",
-      commuteScore: 96,
-      energyRating: "BEE 5-Star",
+      commuteScore: 91,
+      energyRating: "LEED Platinum",
       image: "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80",
-      lat: 19.0682,
+      lat: 19.0689,
       lng: 72.8695
     },
     {
       id: "the-capital",
-      title: "The Capital (Platina) — Cybernetic Floor",
-      buildingName: "The Capital Commercial Tower",
+      title: "The Capital — Suite 704 Cyber Wing",
+      buildingName: "The Capital (Wadhwa)",
       location: "Plot C-70, G Block, BKC, Mumbai",
-      subLocation: "Behind ICICI Regional HQ",
+      subLocation: "Opp. ICICI Bank Towers",
       area: "3,400 sqft",
       capacity: "45 Seats",
-      furnishing: "Warm Shell",
+      furnishing: "Plug & Play",
       price: "₹95K",
       pricePerSqft: "₹120/sq.ft.",
       pricePerSeat: "₹9,500/seat",
@@ -166,7 +171,7 @@ export default function PropertySearchAndDiscovery() {
   };
 
   return (
-    <div className="h-screen max-h-screen bg-white font-sans flex flex-col overflow-hidden">
+    <div className="h-screen max-h-screen bg-white font-sans flex flex-col overflow-hidden w-full max-w-full">
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
           <Check size={14} className="text-emerald-400" />
@@ -174,17 +179,17 @@ export default function PropertySearchAndDiscovery() {
         </div>
       )}
 
-      {/* Top Filters & Search Bar */}
-      <div className="border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-3 bg-white shrink-0 z-30 shadow-xs">
-        <div className="flex items-center gap-2.5 flex-wrap flex-1">
+      {/* Top Mobile/Desktop Search Bar */}
+      <div className="border-b border-gray-200 p-3 md:px-6 md:py-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 bg-white shrink-0 z-30 shadow-xs">
+        <div className="flex items-center gap-2 flex-wrap flex-1">
           {/* Main Keyword Search Bar */}
-          <div className="relative min-w-[260px] max-w-sm">
+          <div className="relative flex-1 min-w-[200px]">
             <MapPin size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search building, area, landmark (e.g. One BKC, Godrej)..."
+              placeholder="Search building, landmark (e.g. One BKC)..."
               className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-xs font-medium focus:outline-none focus:border-[#0F8B7D] bg-gray-50/50 focus:bg-white transition-all shadow-xs"
             />
             {searchQuery && (
@@ -197,106 +202,72 @@ export default function PropertySearchAndDiscovery() {
             )}
           </div>
 
-          <select
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs"
-          >
-            <option>📍 Mumbai (BKC)</option>
-            <option>📍 Bengaluru (Whitefield)</option>
-            <option>📍 Pune (Hinjewadi)</option>
-            <option>📍 Gurugram (Cyber City)</option>
-          </select>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs shrink-0"
+            >
+              <option>📍 Mumbai (BKC)</option>
+              <option>📍 Bengaluru</option>
+              <option>📍 Pune</option>
+              <option>📍 Gurugram</option>
+            </select>
 
-          <select
-            value={spaceType}
-            onChange={(e) => setSpaceType(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs"
-          >
-            <option>Office Space</option>
-            <option>Managed Coworking</option>
-            <option>Enterprise Suite</option>
-            <option>Retail Floor</option>
-          </select>
-
-          <select
-            value={size}
-            onChange={(e) => setSize(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs"
-          >
-            <option>2,000 - 5,000 Sq.Ft</option>
-            <option>&lt; 2,000 Sq.Ft</option>
-            <option>&gt; 5,000 Sq.Ft</option>
-          </select>
-
-          <select
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs"
-          >
-            <option>Budget Range</option>
-            <option>&lt; ₹1L/mo</option>
-            <option>₹1L - ₹2.5L/mo</option>
-            <option>&gt; ₹2.5L/mo</option>
-          </select>
-
-          <button
-            onClick={() => setGradeA(!gradeA)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-              gradeA ? "bg-[#0F8B7D] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            Grade A
-          </button>
-
-          <button
-            onClick={() => setFurnished(!furnished)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-              furnished ? "bg-[#0F8B7D] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            Furnished
-          </button>
+            <select
+              value={spaceType}
+              onChange={(e) => setSpaceType(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs shrink-0"
+            >
+              <option>Office Space</option>
+              <option>Managed Coworking</option>
+              <option>Enterprise Suite</option>
+            </select>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {compareList.length > 0 && (
+        {/* Mobile View Toggle Button (Airbnb Style) */}
+        <div className="md:hidden flex items-center justify-between border-t border-gray-100 pt-2">
+          <span className="text-[11px] font-bold text-gray-500">{filteredProperties.length} Properties</span>
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-xl text-xs font-bold">
             <button
-              onClick={() => { setSelectedProperty(null); setIsCompareOpen(true); }}
-              className="px-4 py-2 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] text-xs font-bold flex items-center gap-1.5 hover:bg-teal-100 shadow-xs cursor-pointer"
+              onClick={() => setMobileView("list")}
+              className={`px-3 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                mobileView === "list" ? "bg-white text-[#0F8B7D] shadow-xs" : "text-gray-500"
+              }`}
             >
-              <Scale size={13} /> Compare ({compareList.length})
+              <ListIcon size={12} /> List
             </button>
-          )}
-
-          <button
-            onClick={() => { setSearchQuery(""); setBudget("Budget"); setGradeA(true); setFurnished(false); }}
-            className="text-xs font-semibold text-gray-500 hover:text-gray-800 cursor-pointer"
-          >
-            Clear All
-          </button>
+            <button
+              onClick={() => setMobileView("map")}
+              className={`px-3 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                mobileView === "map" ? "bg-white text-[#0F8B7D] shadow-xs" : "text-gray-500"
+              }`}
+            >
+              <MapIcon size={12} /> Map
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Split View: Left Results (40% width, independently scrolling) + Right Real Google Maps (60% width, fixed full height) */}
-      <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-[40%_60%] h-full">
-        {/* Left Side: Property Listings Feed (Scrolls independently) */}
-        <div className="h-full min-h-0 overflow-y-auto p-5 space-y-4 border-r border-gray-200 bg-gray-50/40">
+      {/* Main Responsive Body: Desktop Split (42%/58%), Mobile Single View */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col md:grid md:grid-cols-[42%_58%] h-full">
+        {/* Left: Property Listings Feed */}
+        <div 
+          className={`h-full min-h-0 overflow-y-auto p-4 md:p-5 space-y-4 border-r border-gray-200 bg-gray-50/40 ${
+            mobileView === "map" ? "hidden md:block" : "block"
+          }`}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-gray-200/70">
             <div>
-              <h1 className="text-lg font-black text-gray-900">Commercial Workspaces in Mumbai BKC</h1>
+              <h1 className="text-base md:text-lg font-black text-gray-900">Commercial Workspaces in Mumbai BKC</h1>
               <p className="text-[11px] text-gray-400 mt-0.5">
-                Showing {filteredProperties.length} of {properties.length} verified landmark towers
+                Showing {filteredProperties.length} verified Grade-A landmark towers
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-gray-600 flex items-center gap-1 cursor-pointer">
-                Sort: <span className="text-[#0F8B7D]">OFFICEX Score ⇅</span>
-              </span>
             </div>
           </div>
 
-          <div className="space-y-3.5">
+          <div className="space-y-3.5 pb-20 md:pb-6">
             {filteredProperties.map((prop) => {
               const isComp = compareList.some((c) => c.id === prop.id);
               const isSelected = selectedProperty?.id === prop.id;
@@ -311,7 +282,7 @@ export default function PropertySearchAndDiscovery() {
                 >
                   <div className="flex flex-col sm:flex-row gap-3.5 p-3.5">
                     {/* Image Box */}
-                    <div className="w-full sm:w-36 h-32 rounded-xl overflow-hidden relative shrink-0">
+                    <div className="w-full sm:w-36 h-36 sm:h-32 rounded-xl overflow-hidden relative shrink-0">
                       <img src={prop.image} alt={prop.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
                         <span className="px-1.5 py-0.5 rounded bg-white/95 backdrop-blur-sm text-[8px] font-black text-emerald-700 shadow-sm flex items-center gap-0.5">
@@ -358,39 +329,36 @@ export default function PropertySearchAndDiscovery() {
                         {/* Specs Grid */}
                         <div className="bg-gray-50 rounded-xl p-2 mt-2 grid grid-cols-3 gap-1 text-[9px]">
                           <div>
-                            <p className="text-[7px] font-bold text-gray-400 uppercase">AREA & RATE</p>
-                            <p className="font-bold text-gray-800">{prop.area}</p>
-                            <p className="text-[8px] text-gray-500">{prop.pricePerSqft}</p>
+                            <span className="text-gray-400 block font-semibold">Area</span>
+                            <span className="font-bold text-gray-800">{prop.area}</span>
                           </div>
                           <div>
-                            <p className="text-[7px] font-bold text-gray-400 uppercase">SEATS</p>
-                            <p className="font-bold text-gray-800">{prop.capacity}</p>
-                            <p className="text-[8px] text-gray-500">{prop.pricePerSeat}</p>
+                            <span className="text-gray-400 block font-semibold">Capacity</span>
+                            <span className="font-bold text-gray-800">{prop.capacity}</span>
                           </div>
                           <div>
-                            <p className="text-[7px] font-bold text-gray-400 uppercase">COMMUTE</p>
-                            <p className="font-bold text-emerald-700">{prop.commuteScore}/100</p>
-                            <p className="text-[8px] text-teal-700 font-semibold">{prop.energyRating}</p>
+                            <span className="text-gray-400 block font-semibold">Move-in</span>
+                            <span className="font-bold text-emerald-700">{prop.readiness}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Pricing & CTAs */}
-                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100">
+                      {/* Pricing & CTA */}
+                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-100">
                         <div>
-                          <p className="text-base font-black text-gray-900 leading-none">
-                            {prop.price} <span className="text-[9px] text-gray-400 font-normal">/mo</span>
-                          </p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-base font-black text-gray-900">{prop.price}</span>
+                            <span className="text-[10px] text-gray-500 font-semibold">/month</span>
+                          </div>
+                          <span className="text-[9px] text-gray-400 font-bold block">{prop.pricePerSqft}</span>
                         </div>
-                        
-                        <div className="flex items-center gap-1.5">
-                          <Link
-                            href={`/public/property/${prop.id}`}
-                            className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-xs flex items-center gap-1"
-                          >
-                            View Details <ArrowRight size={10} />
-                          </Link>
-                        </div>
+
+                        <Link
+                          href={`/public/property/${prop.id}`}
+                          className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95"
+                        >
+                          Inspect Space <ArrowRight size={12} />
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -398,97 +366,40 @@ export default function PropertySearchAndDiscovery() {
               );
             })}
           </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-center gap-1 pt-3 pb-4">
-            <button className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500 hover:bg-gray-100">← Prev</button>
-            <button className="w-6 h-6 rounded-lg bg-[#0F8B7D] text-white font-bold text-[11px]">1</button>
-            <button className="w-6 h-6 rounded-lg text-gray-700 hover:bg-gray-100 font-semibold text-[11px]">2</button>
-            <button className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#0F8B7D] hover:bg-teal-50">Next →</button>
-          </div>
         </div>
 
-        {/* Right Side: 100% REAL Interactive Google Map (60% width) */}
-        <div className="w-full h-full relative">
+        {/* Right: Real Google Map */}
+        <div 
+          className={`h-full relative overflow-hidden ${
+            mobileView === "list" ? "hidden md:block" : "block"
+          }`}
+        >
           <RealGoogleMap
             properties={filteredProperties}
             selectedProperty={selectedProperty}
             onSelectProperty={(p) => setSelectedProperty(p)}
           />
+
+          {/* Mobile Floating Card on Map View */}
+          {selectedProperty && (
+            <div className="md:hidden absolute bottom-20 left-3 right-3 z-30 bg-white rounded-2xl p-3.5 shadow-2xl border border-gray-200 animate-in slide-in-from-bottom duration-200">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] font-bold text-[#0F8B7D] uppercase tracking-wider block">{selectedProperty.buildingName}</span>
+                  <h4 className="text-xs font-bold text-gray-900 truncate">{selectedProperty.title}</h4>
+                  <p className="text-[10px] font-black text-gray-900 mt-0.5">{selectedProperty.price} <span className="text-gray-400 font-normal">({selectedProperty.pricePerSqft})</span></p>
+                </div>
+                <Link
+                  href={`/public/property/${selectedProperty.id}`}
+                  className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold shrink-0 ml-2"
+                >
+                  View Details
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Comparison Drawer Modal */}
-      {isCompareOpen && (
-        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-xs flex items-end justify-center animate-in fade-in duration-200">
-          <div className="bg-white rounded-t-3xl border-t border-gray-200 max-w-6xl w-full p-8 shadow-2xl max-h-[80vh] overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-3">
-                <Scale size={20} className="text-[#0F8B7D]" />
-                <h2 className="text-xl font-black text-gray-900">Commercial Space Comparison ({compareList.length}/3)</h2>
-              </div>
-              <button
-                onClick={() => setIsCompareOpen(false)}
-                className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-6">
-              {compareList.map((c) => (
-                <div key={c.id} className="border border-gray-200 rounded-2xl p-5 space-y-4 bg-gray-50/50">
-                  <div className="h-32 rounded-xl overflow-hidden relative">
-                    <img src={c.image} alt={c.title} className="w-full h-full object-cover" />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-bold">
-                      Score: {c.propertyScore}/100
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">{c.title}</h3>
-                    <p className="text-xs text-gray-500">{c.location}</p>
-                  </div>
-
-                  <div className="space-y-2 text-xs divide-y divide-gray-200">
-                    <div className="flex justify-between pt-2">
-                      <span className="text-gray-500">Rent / Month</span>
-                      <span className="font-black text-gray-900">{c.price}</span>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-gray-500">Rate / Sq.Ft.</span>
-                      <span className="font-bold text-gray-800">{c.pricePerSqft}</span>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-gray-500">Rate / Seat</span>
-                      <span className="font-bold text-gray-800">{c.pricePerSeat}</span>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-gray-500">Furnishing</span>
-                      <span className="font-semibold text-gray-700">{c.furnishing}</span>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-gray-500">Operational Readiness</span>
-                      <span className="font-bold text-teal-700">{c.readiness}</span>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-gray-500">Commute Score</span>
-                      <span className="font-bold text-emerald-600">{c.commuteScore}/100</span>
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/public/property/${c.id}`}
-                    className="block text-center w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs"
-                  >
-                    Select & Request Proposal
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

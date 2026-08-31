@@ -48,7 +48,7 @@ export default function AIExecutiveSummaryDashboard() {
       </div>
 
       {/* Main Grid: Left Configuration Panel + Right Document Editor */}
-      <div className="grid grid-cols-[360px_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 w-full">
         {/* Left Config Card */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
           <h2 className="text-base font-bold text-gray-900">Configuration</h2>

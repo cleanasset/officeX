@@ -37,7 +37,7 @@ export default function MonthlyMISReportGenerator() {
       )}
 
       {/* Main Split Grid: Left Generator Form + Right Live Document Paper */}
-      <div className="grid grid-cols-[380px_1fr] gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 md:gap-8 items-start w-full">
         {/* Left Form Panel */}
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">

@@ -30,11 +30,15 @@
   --color-blue-900: #171D1B;
 }
 
-body {
+html, body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  min-width: 1440px; /* Enforce widescreen desktop */
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 /* Premium Floating Badge Animation */
@@ -100,11 +104,10 @@ body {
 
 .animate-marquee {
   display: flex;
-  width: max-content;
+  width: 200%;
   animation: marquee 25s linear infinite;
 }
 
 .animate-marquee:hover {
   animation-play-state: paused;
 }
-

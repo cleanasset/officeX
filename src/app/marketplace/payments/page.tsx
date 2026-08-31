@@ -6,6 +6,11 @@ export default function PaymentsAndEscrowLedger() {
   const [selectedMonth, setSelectedMonth] = useState("This Month");
   const [toast, setToast] = useState<string | null>(null);
 
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const kpis = [
     { label: "ESCROW HELD", value: "₹6.5L", icon: <Lock size={16} className="text-blue-500" /> },
     { label: "RELEASED", value: "₹18.2L", icon: <CheckCircle size={16} className="text-emerald-500" />, valColor: "text-emerald-700" },
@@ -47,36 +52,39 @@ export default function PaymentsAndEscrowLedger() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Payments Ledger</h1>
-          <p className="text-sm text-gray-500 mt-1">Track escrow status, automated payouts, and platform commissions.</p>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">Payments &amp; Escrow Ledger</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Track escrow status, automated payouts, and platform commissions.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white"
+            className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white"
           >
             <option>This Month</option>
             <option>Last Month</option>
             <option>Q3 Total</option>
           </select>
-          <button className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
+          <button 
+            onClick={() => showToast("Exported Escrow Report (.csv)")}
+            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+          >
             <Download size={13} /> Export Report
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 w-full">
         {kpis.map((k) => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between shadow-sm">
+          <div key={k.label} className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 flex items-center justify-between shadow-2xs">
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{k.label}</p>
-              <p className={`text-3xl font-black mt-1 ${k.valColor || "text-gray-900"}`}>{k.value}</p>
+              <p className={`text-2xl md:text-3xl font-black mt-1 ${k.valColor || "text-gray-900"}`}>{k.value}</p>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gray-50 flex items-center justify-center font-bold shrink-0">
               {k.icon}
             </div>
           </div>

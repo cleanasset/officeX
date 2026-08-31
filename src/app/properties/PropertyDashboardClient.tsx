@@ -109,23 +109,23 @@ export default function PropertyDashboardClient({
       )}
 
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Good Morning, Rajesh</h1>
-          <p className="text-sm text-gray-600 font-bold mt-1">Manage your commercial real estate portfolio and leasing partnerships.</p>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Good Morning, Rajesh</h1>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">Manage your commercial real estate portfolio and leasing partnerships.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <button 
             onClick={() => setShowAssignModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Handshake size={14} /> Assign Broker & Commission
+            <Handshake size={14} /> Assign Broker
           </button>
           <Link 
             href="/properties/registry?add=true" 
-            className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+            className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-xs"
           >
-            Add Property
+            + Add Property
           </Link>
         </div>
       </div>

@@ -113,31 +113,31 @@ export default function EmployeeWorkplace() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Workplace &amp; Desk Booking</h1>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">Workplace &amp; Hot-Desk Hub</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             Self-service hot-desk reservations, meeting room scheduling, and workplace amenities for One BKC (Floor 4).
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             href="/tenant/visitors"
-            className="px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
           >
-            <Users size={13} /> Pre-Register Visitors
+            <Users size={13} /> Visitors
           </Link>
           <Link
             href="/tenant/helpdesk"
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
           >
-            <Wrench size={13} /> Raise Office Ticket
+            <Wrench size={13} /> Raise Ticket
           </Link>
         </div>
       </div>
 
       {/* Active Workstation Banner */}
-      <div className="bg-gradient-to-r from-teal-900 via-[#0F8B7D] to-teal-700 text-white rounded-3xl p-6 shadow-md">
+      <div className="bg-gradient-to-r from-teal-900 via-[#0F8B7D] to-teal-700 text-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-md w-full">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div className="space-y-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-teal-200">ACTIVE WORKPLACE PASS</span>

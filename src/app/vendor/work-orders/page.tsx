@@ -66,9 +66,13 @@ export default function VendorWorkOrdersTracker() {
     }
   ];
 
-  const handleSubmitLog = () => {
-    setToast("Daily site log submitted for #WO-2024-089!");
+  const showToast = (msg: string) => {
+    setToast(msg);
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleSubmitLog = () => {
+    showToast("Daily site log submitted for #WO-2024-089!");
   };
 
   return (
@@ -81,52 +85,59 @@ export default function VendorWorkOrdersTracker() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Active Work Orders</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage and track your ongoing service contracts and daily site logs.</p>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">Active Work Orders</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Manage and track your ongoing service contracts and daily site logs.</p>
         </div>
-        <button className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-2 shadow-sm">
-          <Download size={14} /> Export Report
+        <button 
+          onClick={() => showToast("Exported Work Orders Report")}
+          className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer w-fit"
+        >
+          <Download size={13} /> Export Report
         </button>
       </div>
 
       {/* Primary Selected Card with Dual-Pane Journey & Logger */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        {/* Table Header Row */}
-        <div className="grid grid-cols-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
-          <div>WO ID</div>
-          <div>CLIENT</div>
-          <div>PROPERTY</div>
-          <div>START DATE</div>
-          <div>PROGRESS</div>
-          <div className="text-right">STATUS</div>
-        </div>
-
-        {/* Selected Order Summary Row */}
-        <div className="grid grid-cols-6 items-center p-6 border-l-4 border-l-[#0F8B7D] bg-teal-50/10">
-          <div className="font-bold text-[#0F8B7D] text-xs">#WO-2024-089</div>
-          <div className="font-semibold text-gray-900 text-xs">Apex Tech Pvt Ltd</div>
-          <div className="text-gray-600 text-xs">CyberCity Tower B, Floor 4</div>
-          <div className="text-gray-600 text-xs">01 Nov 2023</div>
-          <div>
-            <span className="text-[10px] text-gray-500 font-semibold">Month 4 of 12 <b className="text-[#0F8B7D]">33%</b></span>
-            <div className="w-28 h-1.5 rounded-full bg-gray-200 mt-1 overflow-hidden">
-              <div className="h-full bg-[#0F8B7D] rounded-full" style={{ width: "33%" }} />
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden w-full">
+        {/* Table Header Row & Summary with Mobile Scroll */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[640px]">
+            <div className="grid grid-cols-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider p-4 md:p-6 pb-3 border-b border-gray-100 bg-gray-50/50">
+              <div>WO ID</div>
+              <div>CLIENT</div>
+              <div>PROPERTY</div>
+              <div>START DATE</div>
+              <div>PROGRESS</div>
+              <div className="text-right">STATUS</div>
             </div>
-          </div>
-          <div className="text-right">
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Active
-            </span>
+
+            {/* Selected Order Summary Row */}
+            <div className="grid grid-cols-6 items-center p-4 md:p-6 border-l-4 border-l-[#0F8B7D] bg-teal-50/10 text-xs">
+              <div className="font-bold text-[#0F8B7D]">#WO-2024-089</div>
+              <div className="font-semibold text-gray-900">Apex Tech Pvt Ltd</div>
+              <div className="text-gray-600">CyberCity Tower B, Fl 4</div>
+              <div className="text-gray-600">01 Nov 2023</div>
+              <div>
+                <span className="text-[10px] text-gray-500 font-semibold">Month 4 of 12 <b className="text-[#0F8B7D]">33%</b></span>
+                <div className="w-24 h-1.5 rounded-full bg-gray-200 mt-1 overflow-hidden">
+                  <div className="h-full bg-[#0F8B7D] rounded-full" style={{ width: "33%" }} />
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Active
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Nested Deep Dive: Journey + Daily Logger */}
-        <div className="p-6 pt-2 grid grid-cols-[1fr_360px] gap-6 border-t border-gray-100">
+        <div className="p-4 md:p-6 pt-3 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 border-t border-gray-100">
           {/* Left Column: Contract Values + Service Journey */}
-          <div className="flex flex-col justify-between pr-4">
-            <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="flex flex-col justify-between pr-0 lg:pr-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <p className="text-[10px] font-bold text-gray-400 uppercase">Monthly Contract Value</p>
                 <p className="text-xl font-black text-gray-900 mt-1">₹2,18,300 <span className="text-xs text-gray-400 font-normal">/mo</span></p>

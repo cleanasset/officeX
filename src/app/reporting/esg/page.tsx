@@ -45,26 +45,26 @@ export default function ESGSustainabilityBoard() {
   return (
     <div className="flex flex-col gap-6 font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Sustainability Board</h1>
-          <p className="text-sm text-gray-500 mt-1">Real-time tracking of Environmental, Social, and Governance metrics.</p>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">ESG &amp; Sustainability Board</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Real-time tracking of Environmental, Social, and Governance metrics.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-1.5 bg-white">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-1.5 bg-white">
             <Calendar size={13} /> Q3 2023
           </button>
-          <button className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-1.5 bg-white">
+          <button className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 flex items-center gap-1.5 bg-white">
             <Filter size={13} /> Filters
           </button>
-          <button className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
-            <Download size={13} /> Export All Reports
+          <button className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+            <Download size={13} /> Export All
           </button>
         </div>
       </div>
 
       {/* Top Metric Cards: Overall ESG Score + Resource Intensity Grid */}
-      <div className="grid grid-cols-[340px_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 w-full">
         {/* Overall ESG Score Card */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between">

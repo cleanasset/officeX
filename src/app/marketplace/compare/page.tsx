@@ -52,21 +52,21 @@ export default function QuoteComparisonBoard() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">RFQ Quote Comparison & Vendor Selection</h1>
-          <p className="text-xs text-gray-500 mt-1">Weighted Decision Matrix for Q3 MEP & HVAC Maintenance Contract (RFP-2026-MEP-003)</p>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">RFQ Quote Comparison &amp; Selection</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Weighted Decision Matrix for Q3 MEP &amp; HVAC Contract (RFP-2026-MEP-003)</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-xl bg-teal-50 text-[#0F8B7D] font-bold text-xs border border-teal-100 flex items-center gap-1.5">
+          <span className="px-3 py-1.5 rounded-xl bg-teal-50 text-[#0F8B7D] font-bold text-[11px] border border-teal-100 flex items-center gap-1.5">
             <Sparkles size={13} /> Transparent Decision Intelligence
           </span>
         </div>
       </div>
 
-      {/* Comparison Table */}
-      <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+      {/* Comparison Table with Mobile Scroll */}
+      <div className="bg-white rounded-2xl md:rounded-3xl border border-gray-200 overflow-x-auto shadow-2xs w-full">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70">

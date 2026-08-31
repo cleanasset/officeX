@@ -146,26 +146,26 @@ export default function PipelineKanbanBoard() {
         </div>
       )}
 
-      {/* Top Header & Context */}
-      <div className="flex items-center justify-between">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Commercial Leasing Pipeline</h1>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900">Commercial Leasing Pipeline</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             Click any deal card to inspect building requirements, advance stages, draft LOIs, and launch onboarding.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             href="/leasing/loi"
-            className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
           >
-            <FileText size={13} /> LOI &amp; Term Sheets
+            <FileText size={13} /> LOI Room
           </Link>
           <Link
             href="/leasing/onboard"
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
           >
-            <Sparkles size={13} /> Workspace Onboarding
+            <Sparkles size={13} /> Onboarding
           </Link>
         </div>
       </div>

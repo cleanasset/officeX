@@ -206,21 +206,21 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
       
-      {/* SECTION 1: FLOATING GLASS NAVBAR (OFFICEX Theme Teal accents) */}
-      <header className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[90%] max-w-7xl z-50 bg-white/90 backdrop-blur-md border border-[#DFE4E1] rounded-full px-6 py-3 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
+      {/* SECTION 1: FLOATING GLASS NAVBAR */}
+      <header className="fixed top-3 left-1/2 transform -translate-x-1/2 w-[95%] sm:w-[90%] max-w-7xl z-50 bg-white/95 backdrop-blur-md border border-[#DFE4E1] rounded-2xl md:rounded-full px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-2 md:gap-3">
           <Image 
             src="/logo-removebg-preview.png" 
             alt="OfficeX Logo" 
-            width={34} 
-            height={34} 
+            width={30} 
+            height={30} 
             className="object-contain"
           />
           <Image 
             src="/name-removebg-preview.png" 
             alt="OfficeX" 
-            width={110} 
-            height={22} 
+            width={95} 
+            height={20} 
             className="object-contain"
           />
         </div>
@@ -244,23 +244,23 @@ export default function LandingPage() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button className="md:hidden text-slate-600 hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        <button className="md:hidden p-1 text-slate-600 hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </header>
 
       {/* Mobile Nav Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-white pt-24 px-8 flex flex-col gap-6 md:hidden">
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("features"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">Solutions</button>
-          <button onClick={() => { setMobileMenuOpen(false); router.push("/marketplace"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">Marketplace</button>
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("pricing"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">Pricing</button>
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("faq"); }} className="text-left text-lg font-bold hover:text-[#0F8B7D]">About</button>
+        <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-5 md:hidden">
+          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("features"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Solutions</button>
+          <button onClick={() => { setMobileMenuOpen(false); router.push("/marketplace"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Marketplace</button>
+          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("pricing"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Pricing</button>
+          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("faq"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">About</button>
           <hr className="border-[#DFE4E1]" />
-          <a href="/login" className="text-lg font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Sign In</a>
+          <a href="/login" className="text-base font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Sign In</a>
           <button 
             onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
-            className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer"
+            className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
           >
             Get Started
           </button>
@@ -268,64 +268,64 @@ export default function LandingPage() {
       )}
 
       {/* SECTION 2: HERO & SHIFTING GRADIENT SEARCH */}
-      <section className="pt-40 pb-20 px-6 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#9CCAE2] via-[#97C4E5] to-[#91BBE5]">
+      <section className="pt-28 md:pt-40 pb-16 md:pb-20 px-4 md:px-6 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#9CCAE2] via-[#97C4E5] to-[#91BBE5] w-full max-w-full">
         
         {/* Floating Pulsing Badge */}
-        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-white/90 text-xs font-bold text-[#0D7A6E] shadow-xs">
+        <div className="mb-4 md:mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-white/90 text-xs font-bold text-[#0D7A6E] shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
           Trusted by 450+ Teams
         </div>
 
-        <h1 className="text-center max-w-4xl text-4xl md:text-6xl font-black tracking-tight text-slate-950 leading-[1.15]">
+        <h1 className="text-center max-w-4xl text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-slate-950 leading-[1.15]">
           The Operating System for <br />
           <span className="text-[#0F8B7D] drop-shadow-xs">
             Commercial Workspaces
           </span>
         </h1>
         
-        <p className="text-center max-w-3xl text-slate-800 mt-6 text-sm md:text-base font-semibold leading-relaxed">
+        <p className="text-center max-w-3xl text-slate-800 mt-4 md:mt-6 text-xs sm:text-sm md:text-base font-semibold leading-relaxed px-2">
           Streamline leasing, vendor procurement, and facility operations in one unified platform designed for modern institutional real estate.
         </p>
 
         {/* Option-3 Dual-Entry Proposition Search Card */}
-        <div className="w-full max-w-4xl mt-12 bg-white rounded-2xl shadow-2xl border border-[#DFE4E1] overflow-hidden">
+        <div className="w-full max-w-4xl mt-8 md:mt-12 bg-white rounded-2xl shadow-2xl border border-[#DFE4E1] overflow-hidden">
           <div className="flex border-b border-slate-100 bg-slate-50/50">
             <button 
               onClick={() => setActiveSearchTab("space")}
-              className={`flex-1 py-4 text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 md:py-4 px-2 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeSearchTab === "space" 
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
                   : "border-transparent text-slate-400 hover:text-slate-650"
               }`}
             >
-              <Building size={14} />
-              Find Office Space
+              <Building size={13} />
+              <span className="truncate">Find Space</span>
             </button>
             <button 
               onClick={() => setActiveSearchTab("vendor")}
-              className={`flex-1 py-4 text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 md:py-4 px-2 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeSearchTab === "vendor" 
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
                   : "border-transparent text-slate-400 hover:text-slate-650"
               }`}
             >
-              <Wrench size={14} />
-              Hire FM Vendor
+              <Wrench size={13} />
+              <span className="truncate">Hire Vendor</span>
             </button>
             <button 
               onClick={() => setActiveSearchTab("saas")}
-              className={`flex-1 py-4 text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 md:py-4 px-2 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeSearchTab === "saas" 
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
                   : "border-transparent text-slate-400 hover:text-slate-650"
               }`}
             >
-              <Settings size={14} />
-              OFFICEX.PRO SaaS
+              <Settings size={13} />
+              <span className="truncate">OFFICEX.PRO</span>
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {activeSearchTab === "space" ? (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative">
@@ -565,11 +565,11 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 3: EVERYTHING YOU NEED, ONE PLATFORM (Bento Grid) */}
-      <section id="features" className="py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-6">
+      <section id="features" className="py-16 md:py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Everything You Need. One Platform.</h2>
-            <p className="text-slate-500 font-medium text-sm mt-3">Unify lease operations, compliance, work order procurement, and maintenance calendars in one dashboard.</p>
+          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Everything You Need. One Platform.</h2>
+            <p className="text-slate-500 font-medium text-xs md:text-sm mt-2 md:mt-3">Unify lease operations, compliance, work order procurement, and maintenance calendars in one dashboard.</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -832,16 +832,16 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 4: PIPELINE & PAYMENTS WORKFLOW */}
-      <section id="workflow" className="py-20 bg-[#F0F3F8] px-6">
+      <section id="workflow" className="py-16 md:py-20 bg-[#F0F3F8] px-4 md:px-6 w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
             
             {/* Timeline info */}
             <div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
                 From Procurement to Payment — Secure & Verified
               </h2>
-              <p className="text-slate-500 mt-4 max-w-md font-medium text-sm leading-relaxed">
+              <p className="text-slate-500 mt-3 md:mt-4 max-w-md font-medium text-xs md:text-sm leading-relaxed">
                 An end-to-end transparent workflow designed to protect both facility managers and vendors.
               </p>
 
@@ -1110,17 +1110,17 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 5: PRICING PLANS */}
-      <section id="pricing" className="py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-6">
+      <section id="pricing" className="py-16 md:py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Transparent Pricing for Every Scale</h2>
-            <p className="text-slate-500 font-medium text-sm mt-3">Choose the right plan to manage and secure your operations.</p>
+          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Transparent Pricing for Every Scale</h2>
+            <p className="text-slate-500 font-medium text-xs md:text-sm mt-2 md:mt-3">Choose the right plan to manage and secure your operations.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
             
             {/* Plan 1: Starter */}
-            <div className="rounded-3xl p-8 border border-[#DFE4E1] bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
+            <div className="rounded-3xl p-6 md:p-8 border border-[#DFE4E1] bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base">Starter</h3>
                 <p className="text-xs text-slate-400 mt-1.5 font-semibold">For single-site offices up to 10k sqft.</p>
@@ -1141,7 +1141,7 @@ export default function LandingPage() {
             </div>
 
             {/* Plan 2: Professional */}
-            <div className="rounded-3xl p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-105">
+            <div className="rounded-3xl p-6 md:p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-100 md:scale-105">
               <span className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black uppercase tracking-widest shadow">MOST POPULAR</span>
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
@@ -1189,25 +1189,25 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 6: FAQ ACCORDION */}
-      <section id="faq" className="py-20 bg-[#F6FAF9] px-6">
+      <section id="faq" className="py-16 md:py-20 bg-[#F6FAF9] px-4 md:px-6 w-full max-w-full overflow-hidden">
         <div className="max-w-4xl mx-auto w-full">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Frequently Asked Questions</h2>
-            <p className="text-slate-500 font-medium text-sm mt-3">Find clear answers about vendor operations, billing security, and integrations.</p>
+          <div className="text-center mb-12 md:mb-16">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Frequently Asked Questions</h2>
+            <p className="text-slate-500 font-medium text-xs md:text-sm mt-2 md:mt-3">Find clear answers about vendor operations, billing security, and integrations.</p>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3.5 md:gap-4">
             {faqs.map((faq, idx) => (
               <div key={idx} className="bg-white rounded-xl border border-[#DFE4E1] overflow-hidden shadow-xs">
                 <button 
                   onClick={() => toggleFAQ(idx)}
-                  className="w-full px-6 py-4.5 flex items-center justify-between font-bold text-slate-900 text-left hover:bg-slate-50/50 transition-colors"
+                  className="w-full px-4 md:px-6 py-3.5 md:py-4.5 flex items-center justify-between font-bold text-slate-900 text-left hover:bg-slate-50/50 transition-colors"
                 >
                   <span className="text-xs md:text-sm font-extrabold text-slate-800">{faq.q}</span>
                   <ChevronDown size={18} className={`text-slate-400 transition-transform ${activeFAQ === idx ? "transform rotate-180 text-[#0F8B7D]" : ""}`} />
                 </button>
                 {activeFAQ === idx && (
-                  <div className="px-6 pb-5 text-xs text-slate-500 border-t border-slate-50 pt-4 leading-relaxed font-semibold">
+                  <div className="px-4 md:px-6 pb-4 md:pb-5 text-xs text-slate-500 border-t border-slate-50 pt-3 md:pt-4 leading-relaxed font-semibold">
                     {faq.a}
                   </div>
                 )}
@@ -1218,7 +1218,7 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 7: DARK FOOTER */}
-      <footer className="bg-[#111828] text-white py-16 px-6 border-t border-slate-850">
+      <footer className="bg-[#111828] text-white py-16 px-4 md:px-6 border-t border-slate-850 w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-12">
           
           <div className="flex flex-col gap-4">
