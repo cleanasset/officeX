@@ -13,7 +13,7 @@ export default function PaymentsAndEscrowLedger() {
     { label: "PENDING VERIFICATION", value: "3", icon: "📋" }
   ];
 
-  const transactions = [
+  const initialTransactions = [
     { date: "22-Aug", inv: "INV-102", wo: "WO-045", vendor: "TechServe", gross: "₹2,18,300", comm: "₹21,830", net: "₹1,96,470", mode: "Razorpay Route", status: "Escrow Held", isEscrow: true },
     { date: "15-Aug", inv: "INV-098", wo: "WO-032", vendor: "CleanPro", gross: "₹1,50,000", comm: "₹15,000", net: "₹1,35,000", mode: "Razorpay Route", status: "Released" },
     { date: "10-Aug", inv: "INV-089", wo: "WO-028", vendor: "Rentokil", gross: "₹42,000", comm: "₹4,200", net: "₹37,800", mode: "Manual Payout", status: "Released" },
@@ -24,8 +24,16 @@ export default function PaymentsAndEscrowLedger() {
     { date: "20-Jul", inv: "INV-038", wo: "WO-005", vendor: "TechServe", gross: "₹2,18,300", comm: "₹21,830", net: "₹1,96,470", mode: "Razorpay Route", status: "Released" }
   ];
 
-  const handleVerifyRelease = () => {
-    setToast("Escrow funds verified & released to TechServe!");
+  const [txList, setTxList] = useState(initialTransactions);
+
+  const handleVerifyRelease = (inv: string, vendor: string) => {
+    setTxList(prev => prev.map(t => {
+      if (t.inv === inv) {
+        return { ...t, status: "Released", isEscrow: false };
+      }
+      return t;
+    }));
+    setToast(`Escrow funds verified & released to ${vendor}! 90% payout processed.`);
     setTimeout(() => setToast(null), 3500);
   };
 
@@ -131,7 +139,7 @@ export default function PaymentsAndEscrowLedger() {
             </tr>
           </thead>
           <tbody>
-            {transactions.map((t) => (
+            {txList.map((t) => (
               <tr key={t.inv} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
                 <td className="py-3.5 px-6 text-gray-500">{t.date}</td>
                 <td className="py-3.5 px-4 font-bold text-gray-900">{t.inv}</td>
@@ -155,15 +163,13 @@ export default function PaymentsAndEscrowLedger() {
                 <td className="py-3.5 px-6 text-right">
                   {t.isEscrow ? (
                     <button
-                      onClick={handleVerifyRelease}
+                      onClick={() => handleVerifyRelease(t.inv, t.vendor)}
                       className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                     >
-                      Verify & Release
+                      Verify &amp; Release
                     </button>
                   ) : (
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <MoreVertical size={14} />
-                    </button>
+                    <span className="text-[11px] font-bold text-emerald-600">✓ Paid</span>
                   )}
                 </td>
               </tr>

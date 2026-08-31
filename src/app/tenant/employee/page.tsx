@@ -1,165 +1,376 @@
 "use client";
 
 import React, { useState } from "react";
-import { Home, Calendar, Wrench, Users, MoreHorizontal, MapPin, Car, Coffee, Zap, Bell, CheckCircle2, Clock, Wifi, ShieldCheck } from "lucide-react";
+import { 
+  Home, Calendar, Wrench, Users, MapPin, Car, Coffee, Zap, 
+  Bell, CheckCircle2, Clock, Wifi, ShieldCheck, Check, Sparkles, 
+  Tv, Monitor, ArrowRight, X, QrCode, Building 
+} from "lucide-react";
+import Link from "next/link";
+
+interface DeskItem {
+  id: string;
+  monitor: string;
+  status: string;
+  user?: string;
+}
 
 export default function EmployeeWorkplace() {
-  const [activeTab, setActiveTab] = useState("home");
   const [toast, setToast] = useState<string | null>(null);
+  const [selectedZone, setSelectedZone] = useState<"Zone A" | "Zone B" | "Zone C">("Zone A");
+  const [selectedDesk, setSelectedDesk] = useState<string>("Desk A-12");
+  
+  // Meeting Room State
+  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string>("11:00 AM - 12:00 PM");
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const showToast = (msg: string) => { 
+    setToast(msg); 
+    setTimeout(() => setToast(null), 3500); 
+  };
 
-  const quickActions = [
-    { icon: MapPin, label: "Book Desk", color: "bg-[#0F8B7D]", action: () => showToast("Opening desk booking...") },
-    { icon: Calendar, label: "Book Room", color: "bg-purple-600", action: () => showToast("Opening room booking...") },
-    { icon: Wrench, label: "Raise Request", color: "bg-amber-500", action: () => showToast("Opening service request form...") },
-    { icon: Users, label: "Register Visitor", color: "bg-blue-600", action: () => showToast("Opening visitor registration...") },
-    { icon: Car, label: "Book Parking", color: "bg-slate-700", action: () => showToast("Opening parking reservation...") },
-    { icon: Coffee, label: "Order Pantry", color: "bg-orange-500", action: () => showToast("Opening pantry order...") },
+  const deskList: Record<"Zone A" | "Zone B" | "Zone C", DeskItem[]> = {
+    "Zone A": [
+      { id: "Desk A-01", monitor: "Dual 27\" 4K", status: "available" },
+      { id: "Desk A-02", monitor: "Single 32\" Curved", status: "occupied", user: "Rahul S." },
+      { id: "Desk A-03", monitor: "Dual 27\" 4K", status: "available" },
+      { id: "Desk A-04", monitor: "Single 27\"", status: "available" },
+      { id: "Desk A-05", monitor: "Dual 27\" 4K", status: "occupied", user: "Sneha P." },
+      { id: "Desk A-06", monitor: "Standing Desk", status: "available" },
+      { id: "Desk A-07", monitor: "Dual 27\" 4K", status: "available" },
+      { id: "Desk A-08", monitor: "Single 32\" Curved", status: "occupied", user: "Amit K." },
+      { id: "Desk A-09", monitor: "Single 27\"", status: "available" },
+      { id: "Desk A-10", monitor: "Standing Desk", status: "available" },
+      { id: "Desk A-11", monitor: "Dual 27\" 4K", status: "available" },
+      { id: "Desk A-12", monitor: "Executive Corner 4K", status: "selected" }
+    ],
+    "Zone B": [
+      { id: "Desk B-01", monitor: "Dual 27\"", status: "occupied", user: "Vikram M." },
+      { id: "Desk B-02", monitor: "Single 27\"", status: "available" },
+      { id: "Desk B-03", monitor: "Collab Pod", status: "available" },
+      { id: "Desk B-04", monitor: "Dual 27\"", status: "occupied", user: "Pooja R." },
+      { id: "Desk B-05", monitor: "Single 27\"", status: "available" },
+      { id: "Desk B-06", monitor: "Collab Pod", status: "available" }
+    ],
+    "Zone C": [
+      { id: "Desk C-01", monitor: "Executive Focus", status: "available" },
+      { id: "Desk C-02", monitor: "Executive Focus", status: "available" },
+      { id: "Desk C-03", monitor: "Phone Booth", status: "available" },
+      { id: "Desk C-04", monitor: "Executive Focus", status: "available" }
+    ]
+  };
+
+  const meetingRooms = [
+    { 
+      name: "Boardroom Platinum", 
+      capacity: "20 Seater", 
+      features: "Dual 85\" 4K Displays · Polycom VC · Acoustic Glass", 
+      status: "Available",
+      rate: "Free for Floor 4 Tenants"
+    },
+    { 
+      name: "Conf Room Orchid", 
+      capacity: "12 Seater", 
+      features: "75\" Touch Whiteboard · Wireless Screen Share", 
+      status: "Available",
+      rate: "Free for Floor 4 Tenants"
+    },
+    { 
+      name: "Cyber-Bay Huddle", 
+      capacity: "6 Seater", 
+      features: "55\" Display · Jabra Speakerphone", 
+      status: "Available",
+      rate: "Free for Floor 4 Tenants"
+    }
   ];
 
-  const todaySchedule = [
-    { time: "09:00 AM", event: "Desk A-12, Floor 4 — Zone A (Quiet)", status: "confirmed" },
-    { time: "11:00 AM", event: "Meeting Room Orchid — Project Sync", status: "confirmed" },
-    { time: "02:30 PM", event: "Visitor: Amit Shah (Home Ministry)", status: "pending" },
-    { time: "04:00 PM", event: "Parking Bay P1-A08 reserved", status: "confirmed" },
-  ];
+  const handleDeskSelect = (deskId: string, isOccupied: boolean) => {
+    if (isOccupied) {
+      showToast(`${deskId} is currently occupied by a teammate.`);
+      return;
+    }
+    setSelectedDesk(deskId);
+    showToast(`Selected ${deskId} for today. NFC digital badge updated!`);
+  };
 
-  const myRequests = [
-    { id: "SR-4421", issue: "AC not cooling in Zone B", status: "In Progress", sla: "2h remaining" },
-    { id: "SR-4418", issue: "Flickering light near Desk C-04", status: "Resolved", sla: "Completed" },
-    { id: "SR-4415", issue: "WiFi slow on Floor 4", status: "Assigned", sla: "4h remaining" },
-  ];
+  const handleBookRoom = (roomName: string) => {
+    setSelectedRoom(roomName);
+  };
 
-  const workplaceServices = [
-    { icon: Wifi, label: "IT Support", desc: "Network, devices & access" },
-    { icon: Zap, label: "Electrical", desc: "Power, lighting & sockets" },
-    { icon: Wrench, label: "Maintenance", desc: "Furniture, plumbing & repairs" },
-    { icon: Coffee, label: "Housekeeping", desc: "Cleaning & pantry" },
-    { icon: ShieldCheck, label: "Security", desc: "Access cards & CCTV" },
-    { icon: Car, label: "Parking", desc: "Vehicle & EV charging" },
-  ];
+  const handleConfirmRoomBooking = () => {
+    if (!selectedRoom) return;
+    showToast(`Booked ${selectedRoom} for ${selectedSlot}! Calendar invite sent.`);
+    setSelectedRoom(null);
+  };
 
   return (
-    <div className="flex flex-col gap-0 relative font-sans text-slate-900 bg-white min-h-screen max-w-md mx-auto border-x border-gray-100">
+    <div className="flex flex-col gap-6 font-sans text-slate-900 pb-12 w-full max-w-full">
       {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-950 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-fade-in">
-          <CheckCircle2 size={14} className="text-emerald-400" /> {toast}
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-emerald-400" />
+          <span>{toast}</span>
         </div>
       )}
 
-      {/* Status Bar */}
-      <div className="px-5 pt-6 pb-4 bg-gradient-to-b from-[#0F8B7D]/10 to-white">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-widest">Good Morning</span>
-            <h1 className="text-lg font-black text-slate-900">My Workplace</h1>
-          </div>
-          <button className="relative p-2 rounded-full bg-white border border-gray-200 shadow-xs">
-            <Bell size={18} className="text-slate-600" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Workplace &amp; Desk Booking</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Self-service hot-desk reservations, meeting room scheduling, and workplace amenities for One BKC (Floor 4).
+          </p>
         </div>
-
-        {/* Location Card */}
-        <div className="p-3.5 rounded-2xl bg-white border border-gray-100 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0F8B7D]/10 flex items-center justify-center">
-            <MapPin size={18} className="text-[#0F8B7D]" />
-          </div>
-          <div className="flex-1">
-            <span className="text-xs font-bold text-slate-900 block">Apex Business Tower, BKC</span>
-            <span className="text-[10px] text-slate-500 font-semibold">Floor 4 · Zone A · Desk A-12</span>
-          </div>
-          <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black uppercase">Checked In</span>
-        </div>
-      </div>
-
-      {/* Quick Actions Grid */}
-      <div className="px-5 py-4">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Quick Actions</span>
-        <div className="grid grid-cols-3 gap-3">
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              onClick={action.action}
-              className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <div className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center`}>
-                <action.icon size={18} className="text-white" />
-              </div>
-              <span className="text-[10px] font-bold text-slate-700">{action.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Today's Schedule */}
-      <div className="px-5 py-4">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Today&apos;s Schedule</span>
-        <div className="flex flex-col gap-2">
-          {todaySchedule.map((item, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <span className="text-[10px] font-bold text-slate-500 min-w-[60px]">{item.time}</span>
-              <span className="text-[11px] font-semibold text-slate-800 flex-1">{item.event}</span>
-              <span className={`w-2 h-2 rounded-full ${item.status === "confirmed" ? "bg-emerald-500" : "bg-amber-400"}`}></span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* My Requests */}
-      <div className="px-5 py-4">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">My Service Requests</span>
-        <div className="flex flex-col gap-2">
-          {myRequests.map((req) => (
-            <div key={req.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200">
-              <div className="flex-1">
-                <span className="text-[11px] font-bold text-slate-900 block">{req.issue}</span>
-                <span className="text-[9px] text-slate-500 font-semibold">{req.id} · {req.sla}</span>
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                req.status === "Resolved" ? "bg-emerald-50 text-emerald-700" : req.status === "In Progress" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
-              }`}>{req.status}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Workplace Services */}
-      <div className="px-5 py-4 pb-24">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Workplace Services</span>
-        <div className="grid grid-cols-2 gap-2.5">
-          {workplaceServices.map((svc) => (
-            <button key={svc.label} className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer text-left">
-              <svc.icon size={16} className="text-[#0F8B7D]" />
-              <div>
-                <span className="text-[10px] font-bold text-slate-900 block">{svc.label}</span>
-                <span className="text-[9px] text-slate-500">{svc.desc}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex justify-around items-center py-2 px-4 z-40">
-        {[
-          { icon: Home, label: "Home", active: activeTab === "home" },
-          { icon: Calendar, label: "Book", active: activeTab === "book" },
-          { icon: Wrench, label: "Requests", active: activeTab === "requests" },
-          { icon: Users, label: "Visitors", active: activeTab === "visitors" },
-          { icon: MoreHorizontal, label: "More", active: activeTab === "more" },
-        ].map((tab) => (
-          <button
-            key={tab.label}
-            onClick={() => setActiveTab(tab.label.toLowerCase())}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors cursor-pointer ${tab.active ? "text-[#0F8B7D]" : "text-slate-400"}`}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/tenant/visitors"
+            className="px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-2xs flex items-center gap-1.5"
           >
-            <tab.icon size={20} />
-            <span className="text-[9px] font-bold">{tab.label}</span>
-          </button>
-        ))}
+            <Users size={13} /> Pre-Register Visitors
+          </Link>
+          <Link
+            href="/tenant/helpdesk"
+            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
+          >
+            <Wrench size={13} /> Raise Office Ticket
+          </Link>
+        </div>
       </div>
+
+      {/* Active Workstation Banner */}
+      <div className="bg-gradient-to-r from-teal-900 via-[#0F8B7D] to-teal-700 text-white rounded-3xl p-6 shadow-md">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <div className="space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-teal-200">ACTIVE WORKPLACE PASS</span>
+            <h2 className="text-xl font-black">{selectedDesk} · Active</h2>
+            <p className="text-xs text-white/80">One BKC (Apex Tower) • Floor 4 • {selectedZone}</p>
+          </div>
+
+          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/20">
+            <QrCode size={38} className="text-white shrink-0" />
+            <div className="text-xs">
+              <span className="font-bold block text-teal-100">NFC Speed-Gate Key</span>
+              <span className="text-[10px] text-white/80">Turnstile Badge #OX-8492</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <span className="px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-100 border border-emerald-300/30 text-xs font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Checked In · Today
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Interactive Desk Booking Grid & Meeting Rooms Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: Hot Desk Floor Plan */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-200 p-6 shadow-2xs space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-black text-gray-900">Floor 4 Hot-Desk Interactive Plan</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Click any available workstation to reserve instantly</p>
+            </div>
+
+            {/* Zone Selector */}
+            <div className="flex bg-gray-100 rounded-xl p-1 border border-gray-200 text-xs font-bold">
+              {(["Zone A", "Zone B", "Zone C"] as const).map((z) => (
+                <button
+                  key={z}
+                  onClick={() => setSelectedZone(z)}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    selectedZone === z 
+                      ? "bg-[#0F8B7D] text-white shadow-2xs" 
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {z} {z === "Zone A" ? "(Quiet Focus)" : z === "Zone B" ? "(Collab)" : "(Executive)"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-[10px] font-bold text-gray-500 pt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-md bg-teal-50 border-2 border-[#0F8B7D]" /> Your Active Desk
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-md bg-white border border-gray-200" /> Available
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-md bg-gray-100 border border-gray-300 text-gray-400" /> Occupied
+            </div>
+          </div>
+
+          {/* Desks Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {deskList[selectedZone].map((desk) => {
+              const isSelected = selectedDesk === desk.id;
+              const isOccupied = desk.status === "occupied";
+
+              return (
+                <div
+                  key={desk.id}
+                  onClick={() => handleDeskSelect(desk.id, isOccupied)}
+                  className={`p-3.5 rounded-2xl border transition-all text-xs flex flex-col justify-between min-h-[90px] cursor-pointer ${
+                    isSelected
+                      ? "bg-teal-50/80 border-2 border-[#0F8B7D] shadow-xs text-teal-900"
+                      : isOccupied
+                      ? "bg-gray-50 border-gray-200/80 opacity-60 cursor-not-allowed"
+                      : "bg-white border-gray-200 hover:border-[#0F8B7D] hover:shadow-md"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-gray-900">{desk.id}</span>
+                    {isSelected ? (
+                      <span className="w-4 h-4 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center text-[9px] font-bold">
+                        ✓
+                      </span>
+                    ) : isOccupied ? (
+                      <span className="text-[9px] font-bold text-gray-400">Busy</span>
+                    ) : (
+                      <span className="text-[9px] font-bold text-emerald-600">Open</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-2">
+                    <Monitor size={11} className="text-gray-400" />
+                    <span className="truncate">{desk.monitor}</span>
+                  </div>
+
+                  {isOccupied && (
+                    <span className="text-[9px] font-semibold text-gray-400 truncate mt-1">
+                      👤 {desk.user}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Col: Meeting Rooms & Quick Services */}
+        <div className="space-y-6">
+          {/* Meeting Rooms Card */}
+          <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-gray-900">Conference Rooms</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Book smart meeting spaces with 4K VC</p>
+              </div>
+              <Calendar size={18} className="text-[#0F8B7D]" />
+            </div>
+
+            <div className="space-y-3">
+              {meetingRooms.map((room) => (
+                <div 
+                  key={room.name}
+                  className="p-3.5 rounded-2xl bg-gray-50/70 border border-gray-200 space-y-2 text-xs hover:border-[#0F8B7D]/50 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-gray-900">{room.name}</h4>
+                    <span className="px-2 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-bold text-[9px]">
+                      {room.capacity}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 leading-snug">{room.features}</p>
+                  <div className="pt-1 flex items-center justify-between">
+                    <span className="text-[10px] text-emerald-700 font-bold">{room.status}</span>
+                    <button
+                      onClick={() => handleBookRoom(room.name)}
+                      className="px-3 py-1 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs cursor-pointer"
+                    >
+                      Book Room
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Workplace Services */}
+          <div className="bg-white rounded-3xl border border-gray-200 p-5 shadow-2xs space-y-3">
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Quick Office Amenities</h4>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button 
+                onClick={() => showToast("Pantry order placed! Hot coffee will be delivered to your desk.")}
+                className="p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-teal-50 hover:border-teal-200 text-left transition-all group cursor-pointer"
+              >
+                <Coffee size={15} className="text-amber-500 mb-1" />
+                <span className="font-bold text-gray-800 block group-hover:text-[#0F8B7D]">Pantry Order</span>
+                <span className="text-[9px] text-gray-400">Coffee / Tea</span>
+              </button>
+
+              <button 
+                onClick={() => showToast("AC adjustment ticket sent to BMS operator for Zone A.")}
+                className="p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-teal-50 hover:border-teal-200 text-left transition-all group cursor-pointer"
+              >
+                <Zap size={15} className="text-blue-500 mb-1" />
+                <span className="font-bold text-gray-800 block group-hover:text-[#0F8B7D]">AC Cooling</span>
+                <span className="text-[9px] text-gray-400">Adjust Temp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Book Room Modal */}
+      {selectedRoom && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-gray-200 max-w-md w-full p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 text-xs">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-[10px] font-bold text-teal-700 uppercase">RESERVE MEETING SPACE</span>
+                <h3 className="text-base font-black text-gray-900 mt-0.5">{selectedRoom}</h3>
+                <p className="text-xs text-gray-400">One BKC (Apex Tower) • Floor 4</p>
+              </div>
+              <button onClick={() => setSelectedRoom(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">SELECT TIME SLOT (TODAY)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  "10:00 AM - 11:00 AM",
+                  "11:00 AM - 12:00 PM",
+                  "02:00 PM - 03:00 PM",
+                  "04:00 PM - 05:00 PM"
+                ].map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setSelectedSlot(slot)}
+                    className={`py-2 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                      selectedSlot === slot
+                        ? "bg-[#0F8B7D] text-white shadow-xs"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <button
+                onClick={() => setSelectedRoom(null)}
+                className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRoomBooking}
+                className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold shadow-xs flex items-center gap-1.5"
+              >
+                Confirm Reservation <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

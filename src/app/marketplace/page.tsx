@@ -64,7 +64,7 @@ export default function MarketplaceHome() {
 
       {/* 3 Action Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <Link href="/marketplace/rfq" className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0F8B7D] to-[#14B8A6] p-6 text-white hover:shadow-lg transition-all group cursor-pointer">
+        <Link href="/marketplace/create-rfq" className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0F8B7D] to-[#14B8A6] p-6 text-white hover:shadow-lg transition-all group cursor-pointer">
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-bold">Create RFQ</h3>

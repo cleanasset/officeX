@@ -163,15 +163,15 @@ export default function PropertyDashboardClient({
           </div>
         </Link>
 
-        {/* Open Helpdesk Issues */}
+        {/* Tenant Requests & Service Issues */}
         <Link 
-          href="/ops" 
+          href="/properties/tenants" 
           className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Open Tickets</span>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Tenant Requests</span>
             <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-amber-700">{openTicketsCount}</div>
-            <span className="text-[10px] text-amber-600 font-bold mt-1 block">⚠ {openTicketsCount} open requests</span>
+            <span className="text-[10px] text-amber-600 font-bold mt-1 block">⚠ {openTicketsCount} open tenant requests</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
             <AlertTriangle size={22} />

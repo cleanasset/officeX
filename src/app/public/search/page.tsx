@@ -144,7 +144,7 @@ export default function PropertySearchAndDiscovery() {
     );
   });
 
-  const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(properties[0]);
+  const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -262,7 +262,7 @@ export default function PropertySearchAndDiscovery() {
         <div className="flex items-center gap-3 shrink-0">
           {compareList.length > 0 && (
             <button
-              onClick={() => setIsCompareOpen(true)}
+              onClick={() => { setSelectedProperty(null); setIsCompareOpen(true); }}
               className="px-4 py-2 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] text-xs font-bold flex items-center gap-1.5 hover:bg-teal-100 shadow-xs cursor-pointer"
             >
               <Scale size={13} /> Compare ({compareList.length})
@@ -420,7 +420,7 @@ export default function PropertySearchAndDiscovery() {
 
       {/* Comparison Drawer Modal */}
       {isCompareOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end justify-center animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-xs flex items-end justify-center animate-in fade-in duration-200">
           <div className="bg-white rounded-t-3xl border-t border-gray-200 max-w-6xl w-full p-8 shadow-2xl max-h-[80vh] overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div className="flex items-center gap-3">

@@ -3,12 +3,23 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { 
   MapPin, ShieldCheck, ChevronRight, Star, 
   Award, Sparkles, Calendar, FileText, CheckCircle, X, 
   Download, Zap, Wind, ArrowUpDown, Camera, Dumbbell, 
-  ArrowLeftRight, Check, Compass, BatteryCharging, Leaf, Shield, Scale, Send
+  ArrowLeftRight, Check, Compass, BatteryCharging, Leaf, Shield, Scale, Send,
+  Navigation
 } from "lucide-react";
+
+const RealGoogleMap = dynamic(() => import("@/components/RealGoogleMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-80 bg-slate-100 rounded-2xl flex items-center justify-center text-xs font-semibold text-gray-400">
+      Loading Google Map Location...
+    </div>
+  )
+});
 
 interface PropertyDetailsClientProps {
   property: any;
@@ -80,7 +91,59 @@ export default function PropertyDetailsClient({
   };
 
   const downloadPropertyPack = () => {
-    showToast("Downloading verified OFFICEX Property Pack & Commercial Term Sheet...");
+    // Generate and download a formatted Property Specification Pack
+    const content = `===============================================================
+OFFICEX VERIFIED INSTITUTIONAL PROPERTY PACK
+===============================================================
+
+PROPERTY DETAILS:
+-----------------
+Building Name: ${property.name || "One BKC — North Wing Executive"}
+Micro-market: ${property.address || "G Block, Bandra Kurla Complex, Mumbai"}
+Grade: ${property.grade || "Grade A+"}
+OFFICEX Property Score: 86 / 100 (Institutional Grade)
+Sustainability Certification: LEED Gold / IGBC Platinum
+
+COMMERCIAL TERMS:
+-----------------
+Quoted Base Rent: ₹185 / sq.ft. / month
+Common Area Maintenance (CAM): ₹18 / sq.ft. / month
+Estimated Monthly Rent (4,500 sq.ft.): ₹1,25,000 / month
+Rate per Seat: ₹12,500 / seat / month (60 Seats Capacity)
+Security Deposit: 3 Months Interest-Free Refundable
+Annual Rent Escalation: 5% Compounded Annually
+Standard Lease Lock-in: 36 Months
+
+TECHNICAL & INFRASTRUCTURE SPECIFICATIONS:
+------------------------------------------
+Power Redundancy: 100% N+1 DG Backup (2x 1010 kVA Cummins Synchronized)
+HVAC System: Central Water-Cooled Chillers with VAV Air Handling Units
+Vertical Transportation: 6 High-Speed Passenger Elevators (Schindler Destination Dispatch)
+Floor-to-Ceiling Height: 3.85 Metres Clear Height
+Parking Allocation: 1 Car Park per 1,000 sq.ft. (Multi-Level Basement)
+
+STATUTORY COMPLIANCE REGISTRY:
+------------------------------
+1. Fire Safety NOC: Mumbai Fire Brigade (Valid till Jan 2027)
+2. Lift Fitness Certificate: PWD Electrical Inspector (Valid till Feb 2027)
+3. MPCB Consent to Operate (CTO): Active
+4. Structural Stability Certificate: MCGM Licensed Structural Auditor
+
+===============================================================
+Generated via OFFICEX Operating Platform · https://officex.in
+===============================================================`;
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `OFFICEX-Property-Pack-${(property.name || "Space").replace(/\s+/g, "_")}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("Downloaded verified OFFICEX Property Pack!");
   };
 
   const propertyScoreDimensions = [
@@ -323,11 +386,20 @@ export default function PropertyDetailsClient({
               </div>
             )}
 
-            {/* Tab 3: Location */}
+            {/* Tab 3: Location & Interactive Google Map */}
             {activeTab === "location" && (
-              <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm space-y-4">
-                <h2 className="text-base font-bold text-gray-900">Transit & Commute Accessibility</h2>
-                <div className="grid grid-cols-3 gap-4 text-xs">
+              <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900">Transit &amp; Commute Accessibility</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">{property.name || "One BKC"} · G Block, Bandra Kurla Complex</p>
+                  </div>
+                  <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-black border border-teal-200">
+                    Commute Score: 94/100
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-100">
                     <p className="text-[10px] font-bold text-teal-700 uppercase">METRO CONNECTIVITY</p>
                     <p className="font-bold text-gray-900 mt-1">BKC Metro Line 3</p>
@@ -343,6 +415,44 @@ export default function PropertyDetailsClient({
                     <p className="font-bold text-gray-900 mt-1">Western Express Highway</p>
                     <p className="text-[11px] text-gray-500">1.8 km direct arterial</p>
                   </div>
+                </div>
+
+                {/* Embedded Real Google Map */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Live Google Map &amp; Satellite View</h3>
+                  <div className="h-80 w-full rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner">
+                    <RealGoogleMap
+                      properties={[{
+                        id: property.id || "apex-bkc",
+                        title: property.name || "One BKC — North Wing Executive",
+                        buildingName: property.name?.split("—")[0]?.trim() || "ONE BKC",
+                        location: property.address || "G Block, Bandra Kurla Complex, Mumbai",
+                        subLocation: "BKC Commercial Hub",
+                        area: "4,500 sq.ft.",
+                        capacity: "60 Seats",
+                        furnishing: "Fully Furnished Grade A+",
+                        price: "₹1.25L",
+                        pricePerSqft: "₹185/sq.ft.",
+                        pricePerSeat: "₹12,500/seat",
+                        energyRating: "LEED Gold",
+                        propertyScore: 86,
+                        commuteScore: 94,
+                        readiness: "Immediate Move-in",
+                        lat: property.id === "godrej-bkc" ? 19.0682 : property.id === "maker-maxity" ? 19.0607 : property.id === "the-capital" ? 19.0637 : 19.0664,
+                        lng: property.id === "godrej-bkc" ? 72.8695 : property.id === "maker-maxity" ? 72.8519 : property.id === "the-capital" ? 72.8631 : 72.8680,
+                        image: property.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80"
+                      }]}
+                      selectedProperty={null}
+                      onSelectProperty={() => {}}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-100 text-xs text-gray-600 space-y-1.5">
+                  <p className="font-bold text-gray-900">Micromarket Highlights:</p>
+                  <p className="text-[11px] leading-relaxed text-gray-500">
+                    Situated in the core financial district of Mumbai BKC with walking access to Jio World Convention Centre, US Consulate General, MCA Club, and 30+ premium dining &amp; corporate executive hubs.
+                  </p>
                 </div>
               </div>
             )}
@@ -393,7 +503,125 @@ export default function PropertyDetailsClient({
             </div>
           </div>
         </div>
+
+        {/* SECTION: Similar Recommended Workspaces */}
+        <div className="pt-10 border-t border-gray-200 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-gray-900">Similar Verified Workspaces in BKC</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Top-scoring Grade A commercial towers in the same micromarket</p>
+            </div>
+            <Link
+              href="/public/search"
+              className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
+            >
+              Browse All Spaces <ChevronRight size={13} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {similarProperties.map((sim: any) => (
+              <div
+                key={sim.id}
+                className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
+              >
+                <div className="h-44 relative overflow-hidden">
+                  <img
+                    src={sim.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80"}
+                    alt={sim.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-3 left-3 flex gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-sm text-[9px] font-black text-emerald-700 shadow-sm flex items-center gap-1">
+                      <Check size={10} strokeWidth={3} /> VERIFIED
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-blue-600 text-[9px] font-black text-white shadow-sm">
+                      {sim.grade || "GRADE A"}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-3 right-3 bg-gray-900/90 backdrop-blur-md text-white px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-md">
+                    <Star size={11} className="text-amber-400 fill-amber-400" />
+                    <span className="text-xs font-black">{sim.propertyScore || 88}</span>
+                    <span className="text-[9px] text-gray-300">/100</span>
+                  </div>
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm leading-snug">{sim.name}</h3>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <MapPin size={11} className="text-gray-400 shrink-0" /> {sim.address || "BKC, Mumbai"}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 text-[11px]">
+                      <div>
+                        <span className="text-gray-400 block text-[9px] font-bold uppercase">STARTING RENT</span>
+                        <span className="font-black text-gray-900">₹72K - ₹2.1L</span>
+                        <span className="text-[10px] text-gray-400">/mo</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[9px] font-bold uppercase">CAPACITY</span>
+                        <span className="font-bold text-gray-800">35 - 90 Seats</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/public/property/${sim.id}`}
+                    className="w-full py-2.5 rounded-xl bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white text-xs font-bold text-center transition-all flex items-center justify-center gap-1 shadow-2xs"
+                  >
+                    View Space Details <ChevronRight size={12} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Official OFFICEX Platform Footer */}
+      <footer className="mt-16 bg-gray-950 text-white border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-xs">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <img src="/logo-removebg-preview.png" alt="OfficeX Logo" className="w-8 h-8 object-contain" />
+              <img src="/name-removebg-preview.png" alt="OfficeX" className="h-5 w-auto object-contain brightness-0 invert" />
+            </div>
+            <p className="text-gray-400 leading-relaxed text-[11px]">
+              The unified operating platform for commercial workspaces — streamlining discovery, transactions, vendor procurement, and building operations.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">Marketplaces</h4>
+            <ul className="space-y-1.5 text-gray-400">
+              <li><Link href="/public/search" className="hover:text-white">Find Office Space</Link></li>
+              <li><Link href="/marketplace" className="hover:text-white">Hire FM Vendors</Link></li>
+              <li><Link href="/public/wizard" className="hover:text-white">Workspace Intake Wizard</Link></li>
+              <li><Link href="/marketplace/compare" className="hover:text-white">Quote Comparison</Link></li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">OFFICEX.PRO SaaS</h4>
+            <ul className="space-y-1.5 text-gray-400">
+              <li><Link href="/portfolio" className="hover:text-white">Landlord Portfolio</Link></li>
+              <li><Link href="/properties/rent-roll" className="hover:text-white">Rent Roll Master</Link></li>
+              <li><Link href="/ops" className="hover:text-white">FM Command Centre</Link></li>
+              <li><Link href="/tenant" className="hover:text-white">Tenant Workplace</Link></li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">Trust & Security</h4>
+            <p className="text-gray-400 text-[11px] leading-relaxed">
+              SOC 2 Type II Certified • AES-256 Encryption • Razorpay Escrow Nodal Integrated
+            </p>
+            <p className="text-[10px] text-gray-500 pt-2">© 2026 OfficeX Workspaces Pvt Ltd. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
 
       {/* Request Proposal Modal */}
       {showProposalModal && (

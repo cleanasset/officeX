@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import Link from "next/link";
-import { Layers, Plus, Minus, Navigation, Maximize2, Compass, ArrowRight } from "lucide-react";
+import { Layers, Plus, Minus, Navigation, Maximize2, Compass, ArrowRight, X } from "lucide-react";
 
 export interface PropertyListing {
   id: string;
@@ -255,6 +255,13 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
         <div className="absolute bottom-6 left-6 z-[400] w-80 bg-white rounded-2xl p-4 shadow-2xl border border-gray-200 animate-in fade-in zoom-in duration-200">
           <div className="relative h-36 rounded-xl overflow-hidden mb-3">
             <img src={selectedProperty.image} alt={selectedProperty.title} className="w-full h-full object-cover" />
+            <button
+              onClick={(e) => { e.stopPropagation(); onSelectProperty(null as any); }}
+              className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer z-10"
+              title="Close popup"
+            >
+              <X size={12} />
+            </button>
             <div className="absolute top-2.5 left-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
               <span>Score:</span>
               <span className="text-yellow-400 font-black">{selectedProperty.propertyScore}/100</span>

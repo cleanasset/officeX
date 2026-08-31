@@ -50,9 +50,17 @@ export default function RFQDirectory() {
   return (
     <div className="flex flex-col gap-6 font-sans">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">RFQ Directory</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage and track your Request for Quotations across properties.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">RFQ Directory</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and track your Request for Quotations across properties.</p>
+        </div>
+        <Link
+          href="/marketplace/create-rfq"
+          className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
+        >
+          <Plus size={14} /> Create New RFQ
+        </Link>
       </div>
 
       {/* Tabs */}
