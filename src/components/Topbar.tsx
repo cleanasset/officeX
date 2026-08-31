@@ -74,17 +74,22 @@ export default function Topbar() {
   return (
     <header className="h-[60px] bg-white border-b border-gray-100 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-4 md:px-8 flex items-center justify-between shadow-sm">
       
-      {/* Left Breadcrumbs & Menu Toggle */}
-      <div className="flex items-center gap-2">
+      {/* Left Breadcrumbs & Brand on Mobile */}
+      <div className="flex items-center gap-2.5">
         <button 
           onClick={() => window.dispatchEvent(new CustomEvent("officex-toggle-sidebar"))}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 md:hidden cursor-pointer shadow-sm mr-1"
+          className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 md:hidden cursor-pointer shadow-2xs active:scale-95 transition-transform"
           title="Toggle Navigation Menu"
         >
-          <Menu size={16} />
+          <Menu size={18} />
         </button>
-        <div className="text-xs font-bold text-gray-700 uppercase tracking-widest truncate max-w-[120px] sm:max-w-none">
-          {formattedBreadcrumb || "Dashboard"}
+        <div className="flex items-center gap-2">
+          <div className="md:hidden flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#0F8B7D]" />
+          </div>
+          <div className="text-xs font-black text-gray-800 uppercase tracking-wider truncate max-w-[140px] sm:max-w-none">
+            {formattedBreadcrumb || "Dashboard"}
+          </div>
         </div>
       </div>
 

@@ -29,6 +29,7 @@ export default function PipelineKanbanBoard() {
   const [selectedDeal, setSelectedDeal] = useState<PipelineCard | null>(null);
   const [activeDealModal, setActiveDealModal] = useState<PipelineCard | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [mobileStage, setMobileStage] = useState<number>(0);
 
   const [deals, setDeals] = useState<PipelineCard[]>([
     {
@@ -224,12 +225,36 @@ export default function PipelineKanbanBoard() {
         </div>
       </div>
 
+      {/* Mobile Stage Switcher Bar */}
+      <div className="md:hidden flex items-center gap-1 bg-gray-100 p-1 rounded-2xl border border-gray-200 text-xs font-bold overflow-x-auto">
+        {columnHeaders.map((col, idx) => (
+          <button
+            key={col.title}
+            onClick={() => setMobileStage(idx)}
+            className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-black transition-all whitespace-nowrap text-center cursor-pointer ${
+              mobileStage === idx
+                ? "bg-white text-[#0F8B7D] shadow-xs"
+                : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            {col.title.split(" ")[0]} ({col.count})
+          </button>
+        ))}
+      </div>
+
       {/* Responsive Kanban Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full items-start">
         {columnHeaders.map((col, colIndex) => {
           const colDeals = deals.filter(d => d.stageIndex === colIndex);
+          const isHiddenOnMobile = mobileStage !== colIndex;
+
           return (
-            <div key={col.title} className="flex flex-col bg-gray-50/70 rounded-2xl border border-gray-200/90 overflow-hidden shadow-2xs">
+            <div 
+              key={col.title} 
+              className={`flex flex-col bg-gray-50/70 rounded-2xl border border-gray-200/90 overflow-hidden shadow-2xs ${
+                isHiddenOnMobile ? "hidden md:flex" : "flex"
+              }`}
+            >
               {/* Column Header */}
               <div className={`border-t-4 ${col.color} p-3.5 px-4 flex items-center justify-between bg-white border-b border-gray-200/80`}>
                 <div className="flex items-center gap-2">

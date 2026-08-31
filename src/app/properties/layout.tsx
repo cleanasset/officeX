@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 export default function PortalLayout({
   children,
@@ -18,10 +19,13 @@ export default function PortalLayout({
         <Topbar />
         
         {/* Main Content Area */}
-        <main className="flex-1 mt-[60px] p-4 md:p-8 overflow-y-auto min-w-0 max-w-full overflow-x-hidden">
+        <main className="flex-1 mt-[60px] p-4 md:p-8 overflow-y-auto min-w-0 max-w-full overflow-x-hidden pb-24 md:pb-8">
           {children}
         </main>
       </div>
+
+      {/* Fixed Mobile Bottom App Bar */}
+      <MobileBottomNav />
     </div>
   );
 }
