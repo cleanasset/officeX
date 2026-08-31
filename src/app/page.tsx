@@ -481,70 +481,70 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Partner Logo Full-Width Scrolling Marquee Ribbon */}
-        <div className="w-full mt-14 py-4 bg-white/40 backdrop-blur-md border-y border-[#DFE4E1] overflow-hidden">
-          <div className="animate-marquee flex items-center gap-16 text-xs font-black text-slate-800 uppercase tracking-widest">
-            <span>TCS</span>
-            <span>•</span>
-            <span>WIPRO</span>
-            <span>•</span>
-            <span>INFOSYS</span>
-            <span>•</span>
-            <span>DLF COMMERCIAL</span>
-            <span>•</span>
-            <span>EMBASSY REIT</span>
-            <span>•</span>
-            <span>GODREJ PROPERTIES</span>
-            <span>•</span>
-            <span>PRESTIGE GROUP</span>
-            <span>•</span>
-            <span>L&amp;T REALTY</span>
-            <span>•</span>
-            <span>BROOKFIELD</span>
-            <span>•</span>
-            <span>BLACKSTONE</span>
-            <span>•</span>
-            <span>K RAHEJA CORP</span>
-            <span>•</span>
-            <span>HCL TECH</span>
-            <span>•</span>
-            <span>COGNIZANT</span>
-            <span>•</span>
-            <span>ACCENTURE</span>
-            <span>•</span>
-            {/* Duplicate track for seamless infinite scroll */}
-            <span>TCS</span>
-            <span>•</span>
-            <span>WIPRO</span>
-            <span>•</span>
-            <span>INFOSYS</span>
-            <span>•</span>
-            <span>DLF COMMERCIAL</span>
-            <span>•</span>
-            <span>EMBASSY REIT</span>
-            <span>•</span>
-            <span>GODREJ PROPERTIES</span>
-            <span>•</span>
-            <span>PRESTIGE GROUP</span>
-            <span>•</span>
-            <span>L&amp;T REALTY</span>
-            <span>•</span>
-            <span>BROOKFIELD</span>
-            <span>•</span>
-            <span>BLACKSTONE</span>
-            <span>•</span>
-            <span>K RAHEJA CORP</span>
-            <span>•</span>
-            <span>HCL TECH</span>
-            <span>•</span>
-            <span>COGNIZANT</span>
-            <span>•</span>
-            <span>ACCENTURE</span>
+        {/* Ultra-Sleek Partner Logo Scrolling Marquee with Edge Fade */}
+        <div className="w-full mt-12 md:mt-14 py-3 md:py-3.5 bg-white/30 backdrop-blur-md border-y border-white/40 overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+          <div className="animate-marquee flex items-center gap-8 md:gap-12 text-[11px] md:text-xs font-black text-slate-900 uppercase tracking-widest whitespace-nowrap">
+            <span className="whitespace-nowrap">TCS</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">WIPRO</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">INFOSYS</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">DLF COMMERCIAL</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">EMBASSY REIT</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">PRESTIGE GROUP</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">L&amp;T REALTY</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">BROOKFIELD</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">BLACKSTONE</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">K RAHEJA CORP</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">HCL TECH</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">COGNIZANT</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">ACCENTURE</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            {/* Seamless Repeat Track */}
+            <span className="whitespace-nowrap">TCS</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">WIPRO</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">INFOSYS</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">DLF COMMERCIAL</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">EMBASSY REIT</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">PRESTIGE GROUP</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">L&amp;T REALTY</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">BROOKFIELD</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">BLACKSTONE</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">K RAHEJA CORP</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">HCL TECH</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">COGNIZANT</span>
+            <span className="text-slate-500 opacity-60">•</span>
+            <span className="whitespace-nowrap">ACCENTURE</span>
           </div>
         </div>
 
         {/* Simulated Stats count-up row */}
-        <div className="max-w-4xl w-full grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 text-center border-t border-[#DFE4E1] pt-10">
+        <div className="max-w-4xl w-full grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-12 md:mt-16 text-center border-t border-slate-800/10 pt-8 md:pt-10">
           <div>
             <div className="text-2xl md:text-3xl font-black text-slate-950">{animateCount.sqft}M+</div>
             <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">Sqft Managed</div>
