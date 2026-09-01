@@ -34,7 +34,28 @@ export default function PropertyDashboardClient({
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  
+  const [isCleanMode, setIsCleanMode] = useState(false);
+  const [userEmail, setUserEmail] = useState("owner@officex.in");
+  const [customProperties, setCustomProperties] = useState<any[]>([]);
+
+  // Detect Clean Test Mode on mount
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const mode = localStorage.getItem("officex_mode");
+      const email = localStorage.getItem("officex_user_email") || "owner@officex.in";
+      const isTest = mode === "clean_test" || email.startsWith("test.");
+      setIsCleanMode(isTest);
+      setUserEmail(email);
+
+      if (isTest) {
+        const savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        setCustomProperties(savedProps);
+        const savedPartnerships = JSON.parse(localStorage.getItem("officex_user_partnerships") || "[]");
+        setPartnerships(savedPartnerships);
+      }
+    }
+  }, []);
+
   // Form state
   const [assignPropertyId, setAssignPropertyId] = useState(initialProperties[0]?.id || "");
   const [assignBroker, setAssignBroker] = useState("Ravi Menon (Leasing Director)");
@@ -61,7 +82,8 @@ export default function PropertyDashboardClient({
 
   const handleCreateAssignment = (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedProp = initialProperties.find(p => p.id === assignPropertyId) || { name: "Apex Business Tower - Floor 4" };
+    const activeList = isCleanMode ? customProperties : initialProperties;
+    const selectedProp = activeList.find(p => p.id === assignPropertyId) || { name: "Commercial Tower" };
     
     const newP = {
       id: "BP-" + Math.floor(Math.random() * 900 + 100),
@@ -76,26 +98,21 @@ export default function PropertyDashboardClient({
       })
     };
 
-    setPartnerships([newP, ...partnerships]);
+    const updated = [newP, ...partnerships];
+    setPartnerships(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_partnerships", JSON.stringify(updated));
+    }
     setShowAssignModal(false);
     showToast(`Brokerage invite sent to ${newP.brokerName} for ${newP.propertyName}! Commission set to ${newP.commission}.`);
-
-    // Write log to audit trial dynamically
-    fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        companyName: `Broker Partnership proposal: ${newP.brokerName} | Commission: ${newP.commission}`,
-        desiredSqft: "25000",
-        budgetRange: "Agreement Sent"
-      })
-    });
   };
 
-  // Calculate statistics
-  const propertiesCount = initialProperties.length;
-  const openTicketsCount = initialTickets.filter(t => t.status === "open").length;
-  const expiredCertsCount = initialCerts.filter(c => c.status === "expired").length;
+  // Calculate statistics based on mode
+  const displayedProperties = isCleanMode ? customProperties : initialProperties;
+  const propertiesCount = displayedProperties.length;
+  const openTicketsCount = isCleanMode ? 0 : initialTickets.filter(t => t.status === "open").length;
+  const expiredCertsCount = isCleanMode ? 0 : initialCerts.filter(c => c.status === "expired").length;
+  const occupancyDisplay = isCleanMode ? (propertiesCount > 0 ? "100%" : "0.0%") : "94.2%";
 
   return (
     <div className="flex flex-col gap-8 font-sans relative">
@@ -111,8 +128,12 @@ export default function PropertyDashboardClient({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Good Morning, Rajesh</h1>
-          <p className="text-xs text-gray-500 font-medium mt-0.5">Manage your commercial real estate portfolio and leasing partnerships.</p>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+            Commercial Portfolio & Assets
+          </h1>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">
+            Manage your commercial real estate portfolio, vacant spaces, and leasing partnerships.
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button 
@@ -122,10 +143,10 @@ export default function PropertyDashboardClient({
             <Handshake size={14} /> Assign Broker
           </button>
           <Link 
-            href="/properties/registry?add=true" 
-            className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-xs"
+            href="/properties/add" 
+            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1"
           >
-            + Add Property
+            <Plus size={14} /> Add Property
           </Link>
         </div>
       </div>
@@ -135,13 +156,15 @@ export default function PropertyDashboardClient({
         
         {/* Total Properties */}
         <Link 
-          href="/properties/registry" 
+          href="/properties/add" 
           className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Properties</span>
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#8B5CF6]">{propertiesCount}</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 block">🟢 Active Portfolio</span>
+            <span className="text-[10px] text-green-600 font-bold mt-1 block">
+              {propertiesCount === 0 ? "⚪ 0 Listed (Empty)" : "🟢 Active Portfolio"}
+            </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-110 transition-transform">
             <Building size={22} />
@@ -155,8 +178,10 @@ export default function PropertyDashboardClient({
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Occupancy</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-emerald-700">94.2%</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 block">↑ 1.8% vs last month</span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-emerald-700">{occupancyDisplay}</div>
+            <span className="text-[10px] text-green-600 font-bold mt-1 block">
+              {isCleanMode ? "Clean Sandbox Metrics" : "↑ 1.8% vs last month"}
+            </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
             <TrendingUp size={22} />
@@ -193,6 +218,79 @@ export default function PropertyDashboardClient({
           </div>
         </Link>
 
+      </div>
+
+      {/* PORTFOLIO PROPERTY BUILDINGS LIST / EMPTY STATE */}
+      <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
+          <div className="flex items-center gap-2">
+            <Building size={18} className="text-[#0F8B7D]" />
+            <h3 className="text-base font-bold text-gray-900">Commercial Property Portfolio</h3>
+          </div>
+          <Link
+            href="/properties/add"
+            className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-2xs flex items-center gap-1"
+          >
+            <Plus size={13} /> Add Property Listing
+          </Link>
+        </div>
+
+        {propertiesCount === 0 ? (
+          <div className="p-8 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex flex-col items-center justify-center text-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+              <Building size={24} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">No Properties in Portfolio Yet</h4>
+              <p className="text-xs text-gray-500 max-w-sm mt-1">
+                You are currently in Clean Test Mode with 0 properties. Click below to create your first commercial building and start the lifecycle!
+              </p>
+            </div>
+            <Link
+              href="/properties/add"
+              className="mt-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-teal-800 transition-all shadow-md flex items-center gap-1.5"
+            >
+              <Plus size={14} /> Create First Property Listing
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {displayedProperties.map((p, idx) => (
+              <div key={p.id || idx} className="p-4 rounded-2xl border border-gray-200 bg-white hover:border-[#0F8B7D] hover:shadow-md transition-all flex flex-col justify-between gap-3 group">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] text-[10px] font-bold border border-teal-100">
+                      {p.grade || "Grade A"}
+                    </span>
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Listing
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#0F8B7D] transition-colors">{p.name}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">{p.microMarket || p.city}, {p.state || p.city}</p>
+                  {p.address && <p className="text-[10px] text-gray-400 mt-1 truncate">{p.address}</p>}
+                </div>
+
+                <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase">Base Rent</span>
+                    <span className="font-extrabold text-gray-900">₹{p.baseRent || "185"}/sq.ft.</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-gray-400 font-bold block uppercase">Total Area</span>
+                    <span className="font-extrabold text-gray-900">{p.totalArea || "150,000 sq.ft."}</span>
+                  </div>
+                  <Link
+                    href="/public/search"
+                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-[#0F8B7D] hover:text-white text-gray-700 text-[10px] font-bold transition-colors"
+                  >
+                    View Map →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* LEASING BROKER PARTNERSHIPS & COMMISSION AGREEMENTS LIST */}

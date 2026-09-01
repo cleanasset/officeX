@@ -158,8 +158,51 @@ function PropertySearchContent() {
     }
   ];
 
+  // Merge with real properties from database
+  const [dbProperties, setDbProperties] = useState<PropertyListing[]>([]);
+
+  useEffect(() => {
+    async function fetchRealProperties() {
+      try {
+        const res = await fetch("/api/properties");
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: PropertyListing[] = data
+            .filter((p: any) => p.latitude && p.longitude)
+            .map((p: any) => ({
+              id: p.id,
+              title: p.name,
+              buildingName: p.name,
+              location: `${p.micro_market || p.microMarket || ""}, ${p.city}, ${p.state || ""}`.replace(/^, /, ""),
+              subLocation: p.address || "",
+              area: p.total_area ? `${Number(p.total_area).toLocaleString()} sqft` : "N/A",
+              capacity: "—",
+              furnishing: "Warm Shell",
+              price: "Contact",
+              pricePerSqft: "Market Rate",
+              pricePerSeat: "—",
+              propertyScore: 75,
+              readiness: "Available",
+              commuteScore: 70,
+              energyRating: p.grade === "A" ? "Grade A" : `Grade ${p.grade || "A"}`,
+              image: p.image_url || p.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+              lat: parseFloat(p.latitude),
+              lng: parseFloat(p.longitude)
+            }));
+          setDbProperties(mapped);
+        }
+      } catch (err) {
+        console.warn("Could not fetch real properties:", err);
+      }
+    }
+    fetchRealProperties();
+  }, []);
+
+  // Combine demo and real DB properties
+  const allProperties = [...properties, ...dbProperties];
+
   // Filter properties based on search query
-  const filteredProperties = properties.filter((p) => {
+  const filteredProperties = allProperties.filter((p) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -229,12 +272,45 @@ function PropertySearchContent() {
             <select
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs shrink-0"
+              className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs shrink-0 max-w-[200px]"
             >
-              <option>📍 Mumbai (BKC)</option>
-              <option>📍 Bengaluru</option>
-              <option>📍 Pune</option>
-              <option>📍 Gurugram</option>
+              <optgroup label="⭐ Key Hubs">
+                <option value="Gujarat">📍 Gujarat (Ahmedabad / GIFT City)</option>
+                <option value="Mumbai">📍 Mumbai (BKC / Lower Parel)</option>
+                <option value="Bengaluru">📍 Bengaluru (ORR / Whitefield)</option>
+                <option value="Delhi NCR">📍 Delhi NCR (Gurugram / Noida)</option>
+                <option value="Hyderabad">📍 Hyderabad (HITEC City)</option>
+                <option value="Pune">📍 Pune (Hinjewadi / Kharadi)</option>
+                <option value="Chennai">📍 Chennai (OMR / Guindy)</option>
+                <option value="Kolkata">📍 Kolkata (Sector V / New Town)</option>
+              </optgroup>
+              <optgroup label="🏢 Tier-2 Cities">
+                <option value="Ahmedabad">📍 Ahmedabad</option>
+                <option value="Gandhinagar">📍 Gandhinagar & GIFT City</option>
+                <option value="Surat">📍 Surat</option>
+                <option value="Vadodara">📍 Vadodara</option>
+                <option value="Jaipur">📍 Jaipur</option>
+                <option value="Indore">📍 Indore</option>
+                <option value="Kochi">📍 Kochi</option>
+                <option value="Chandigarh">📍 Chandigarh & Mohali</option>
+                <option value="Lucknow">📍 Lucknow</option>
+                <option value="Bhubaneswar">📍 Bhubaneswar</option>
+                <option value="Goa">📍 Goa</option>
+              </optgroup>
+              <optgroup label="🇮🇳 States">
+                <option value="Andhra Pradesh">📍 Andhra Pradesh</option>
+                <option value="Assam">📍 Assam</option>
+                <option value="Bihar">📍 Bihar</option>
+                <option value="Haryana">📍 Haryana</option>
+                <option value="Kerala">📍 Kerala</option>
+                <option value="Madhya Pradesh">📍 Madhya Pradesh</option>
+                <option value="Punjab">📍 Punjab</option>
+                <option value="Rajasthan">📍 Rajasthan</option>
+                <option value="Tamil Nadu">📍 Tamil Nadu</option>
+                <option value="Telangana">📍 Telangana</option>
+                <option value="Uttar Pradesh">📍 Uttar Pradesh</option>
+                <option value="West Bengal">📍 West Bengal</option>
+              </optgroup>
             </select>
 
             <select

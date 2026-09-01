@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, User, Lock, ArrowRight, CheckCircle } from "lucide-react";
+import { User, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,17 +14,21 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const demoAccounts = [
-    { email: "admin@officex.in", label: "Super Admin", redirect: "/admin" },
-    { email: "propertymanager@officex.in", label: "Property Manager", redirect: "/properties" },
+    { email: "owner@officex.in", label: "Property Owner (Landlord)", redirect: "/properties" },
     { email: "broker@officex.in", label: "Leasing Broker", redirect: "/leasing" },
-    { email: "vendor@officex.in", label: "FM Vendor", redirect: "/vendor" },
-    { email: "tenant@officex.in", label: "Tenant Admin", redirect: "/tenant" },
-    { email: "facilitymanager@officex.in", label: "Facility Manager", redirect: "/ops" }
+    { email: "facilitymanager@officex.in", label: "Facility Manager (Ops)", redirect: "/ops" },
+    { email: "tenant@officex.in", label: "Tenant Admin (Occupier)", redirect: "/tenant" },
+    { email: "vendor@officex.in", label: "FM Vendor (Partner)", redirect: "/vendor" },
+    { email: "admin@officex.in", label: "Super Admin", redirect: "/admin" }
   ];
 
   const handleDemoLogin = (acc: typeof demoAccounts[0]) => {
     setIsLoading(true);
     setError("");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_email", acc.email);
+      localStorage.setItem("officex_user_name", acc.label);
+    }
     router.push(acc.redirect);
   };
 
@@ -34,41 +39,42 @@ export default function LoginPage() {
       return;
     }
 
-    if (password !== "123456") {
-      setError("Incorrect password. Use '123456' for testing.");
-      return;
+    setIsLoading(true);
+    setError("");
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_email", email.trim().toLowerCase());
     }
 
     // Match redirect route
     const match = demoAccounts.find(d => d.email.toLowerCase() === email.toLowerCase());
     if (match) {
-      setIsLoading(true);
-      setError("");
       router.push(match.redirect);
     } else {
-      setError("Account not found. Use one of the test emails below.");
+      // Default to Property Owner if custom new user email
+      router.push("/properties");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans p-6">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans p-4 sm:p-6 py-12">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
         
         {/* Top Header Panel */}
-        <div className="p-8 border-b border-gray-100 flex flex-col items-center gap-4 bg-gray-50/50">
+        <div className="p-8 border-b border-gray-100 flex flex-col items-center gap-3 bg-gray-50/50">
           <div className="flex items-center gap-3">
-            <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={34} height={34} className="object-contain" priority />
-            <Image src="/name-removebg-preview.png" alt="OfficeX" width={110} height={22} className="object-contain" priority />
+            <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={36} height={36} className="object-contain" priority />
+            <Image src="/name-removebg-preview.png" alt="OfficeX" width={115} height={23} className="object-contain" priority />
           </div>
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider text-center">
+          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider text-center">
             Sign in to your operating workspace
           </p>
         </div>
 
         {/* Form Panel */}
-        <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-4">
           {error && (
-            <div id="login-error" role="alert" className="p-3.5 rounded-lg bg-red-50 border border-red-100 text-red-500 font-semibold text-xs leading-normal">
+            <div id="login-error" role="alert" className="p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-500 font-semibold text-xs leading-normal">
               ⚠ {error}
             </div>
           )}
@@ -81,11 +87,10 @@ export default function LoginPage() {
                 name="email"
                 type="email" 
                 autoComplete="email"
-                data-testid="email-input"
-                placeholder="e.g. propertymanager@officex.in" 
+                placeholder="e.g. owner@officex.in" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
                 required
               />
               <User size={14} className="absolute left-3.5 top-3.5 text-gray-400" />
@@ -100,11 +105,10 @@ export default function LoginPage() {
                 name="password"
                 type="password" 
                 autoComplete="current-password"
-                data-testid="password-input"
-                placeholder="Password (123456)" 
+                placeholder="Enter password (e.g. 123456)" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
                 required
               />
               <Lock size={14} className="absolute left-3.5 top-3.5 text-gray-400" />
@@ -114,35 +118,40 @@ export default function LoginPage() {
           <button 
             id="login-submit"
             type="submit" 
-            data-testid="submit-button"
             disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 rounded-2xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold text-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer mt-1"
           >
-            {isLoading ? "Signing in..." : "Continue"}
+            <span>{isLoading ? "Signing in..." : "Continue to Workspace"}</span>
             <ArrowRight size={14} />
           </button>
         </form>
 
+        {/* Link to Signup */}
+        <div className="px-8 pb-6 text-center text-xs text-gray-500 font-medium">
+          <span>New to OFFICEX?</span>
+          <Link href="/signup" className="ml-1.5 font-bold text-[#0F8B7D] hover:underline">
+            Create an account →
+          </Link>
+        </div>
+
         {/* Quick Demo Access Options */}
-        <div className="p-8 bg-gray-50 border-t border-gray-100 flex flex-col gap-4">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+        <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col gap-3">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
             Quick Sandbox Access (Password: 123456)
           </span>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {demoAccounts.map((acc, idx) => (
               <button 
                 key={idx}
-                id={`btn-demo-${acc.email.split('@')[0]}`}
-                data-testid={`btn-demo-${acc.email.split('@')[0]}`}
                 onClick={() => handleDemoLogin(acc)}
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-[#0F8B7D] hover:bg-teal-50/20 transition-all flex justify-between items-center text-xs text-left font-medium cursor-pointer"
+                className="w-full px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-[#0F8B7D] hover:bg-teal-50/30 transition-all flex justify-between items-center text-xs text-left font-medium cursor-pointer shadow-2xs"
               >
                 <div>
                   <span className="text-gray-900 font-bold">{acc.label}</span>
-                  <span className="text-gray-400 block text-[10px] mt-0.5">{acc.email}</span>
+                  <span className="text-gray-400 block text-[10px] font-mono">{acc.email}</span>
                 </div>
-                <ArrowRight size={14} className="text-gray-400 hover:text-[#0F8B7D]" />
+                <ArrowRight size={13} className="text-gray-400" />
               </button>
             ))}
           </div>

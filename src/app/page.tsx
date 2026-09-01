@@ -335,11 +335,45 @@ export default function LandingPage() {
                     onChange={(e) => setSpaceCity(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
                   >
-                    <option value="Mumbai">Mumbai (BKC)</option>
-                    <option value="Bengaluru">Bengaluru (Whitefield)</option>
-                    <option value="Pune">Pune (Hinjewadi)</option>
-                    <option value="Ahmedabad">Ahmedabad (Nikol)</option>
-                    <option value="Delhi NCR">Delhi NCR</option>
+                    <optgroup label="⭐ Popular Indian Tech & Commercial Hubs">
+                      <option value="Gujarat">Gujarat (Ahmedabad / GIFT City / Gandhinagar)</option>
+                      <option value="Mumbai">Mumbai (BKC / Lower Parel / Powai)</option>
+                      <option value="Bengaluru">Bengaluru (ORR / Whitefield / Electronic City)</option>
+                      <option value="Delhi NCR">Delhi NCR (Gurugram Cyber City / Noida / Aerocity)</option>
+                      <option value="Hyderabad">Hyderabad (HITEC City / Financial District)</option>
+                      <option value="Pune">Pune (Hinjewadi / Kharadi / Baner)</option>
+                      <option value="Chennai">Chennai (OMR / Guindy / Mount Road)</option>
+                      <option value="Kolkata">Kolkata (Salt Lake Sector V / New Town)</option>
+                    </optgroup>
+                    <optgroup label="🏢 High-Growth Tier-2 Cities">
+                      <option value="Ahmedabad">Ahmedabad (SG Highway / Prahlad Nagar / SBR)</option>
+                      <option value="Gandhinagar">Gandhinagar & GIFT City (Fintech Hub)</option>
+                      <option value="Surat">Surat (Diamond Bourse & Ring Road)</option>
+                      <option value="Vadodara">Vadodara (Alkapuri & OP Road)</option>
+                      <option value="Jaipur">Jaipur (Malviya Nagar & Tonk Road)</option>
+                      <option value="Indore">Indore (Vijay Nagar & Super Corridor)</option>
+                      <option value="Kochi">Kochi (Infopark Kakkanad)</option>
+                      <option value="Chandigarh">Chandigarh & Mohali (IT City)</option>
+                      <option value="Lucknow">Lucknow (Gomti Nagar IT Hub)</option>
+                      <option value="Bhubaneswar">Bhubaneswar (Infocity)</option>
+                      <option value="Goa">Goa (Panaji & Verna Industrial)</option>
+                    </optgroup>
+                    <optgroup label="🇮🇳 All Indian States & UTs">
+                      <option value="Andhra Pradesh">Andhra Pradesh (Visakhapatnam)</option>
+                      <option value="Assam">Assam (Guwahati)</option>
+                      <option value="Bihar">Bihar (Patna)</option>
+                      <option value="Chhattisgarh">Chhattisgarh (Raipur)</option>
+                      <option value="Haryana">Haryana (Faridabad / Panchkula)</option>
+                      <option value="Kerala">Kerala (Thiruvananthapuram)</option>
+                      <option value="Madhya Pradesh">Madhya Pradesh (Bhopal)</option>
+                      <option value="Punjab">Punjab (Ludhiana / Amritsar)</option>
+                      <option value="Rajasthan">Rajasthan (Jodhpur / Udaipur)</option>
+                      <option value="Tamil Nadu">Tamil Nadu (Coimbatore)</option>
+                      <option value="Telangana">Telangana (Warangal)</option>
+                      <option value="Uttar Pradesh">Uttar Pradesh (Kanpur / Varanasi)</option>
+                      <option value="Uttarakhand">Uttarakhand (Dehradun)</option>
+                      <option value="West Bengal">West Bengal (Durgapur)</option>
+                    </optgroup>
                   </select>
                 </div>
 

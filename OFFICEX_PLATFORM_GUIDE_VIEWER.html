@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OFFICEX.PRO — Complete Platform Manual & Workflow Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0F8B7D;
+      --primary-dark: #0D7A6E;
+      --primary-light: #E6F4F2;
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --info: #3B82F6;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 0;
+    }
+    .header {
+      background: linear-gradient(135deg, #0F8B7D 0%, #064E46 100%);
+      color: white;
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+      position: relative;
+    }
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      max-width: 800px;
+      margin: 0 auto 1.5rem;
+    }
+    .header-badges {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .badge {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 6rem;
+    }
+    .search-bar {
+      margin: -2rem auto 2.5rem;
+      max-width: 700px;
+      position: relative;
+      z-index: 10;
+    }
+    .search-input {
+      width: 100%;
+      padding: 1.1rem 1.5rem;
+      font-size: 1rem;
+      font-family: inherit;
+      border-radius: 1rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(15, 139, 125, 0.15);
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-tab {
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-tab:hover, .nav-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text);
+      margin: 3.5rem 0 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.06);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .card-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .route-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 0.35rem 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .meta-bar {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .sub-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px dashed var(--border);
+    }
+    .sub-heading {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    ol, ul {
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    li {
+      margin-bottom: 0.75rem;
+    }
+    li strong {
+      color: var(--text);
+    }
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+      background: var(--surface);
+    }
+    th, td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #F1F5F9;
+      font-weight: 700;
+      color: var(--text);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .code-block {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 1.25rem;
+      border-radius: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h1>OFFICEX.PRO — Complete Platform Manual</h1>
+    <p>Comprehensive Master Guide & Workflow Manual covering all 8 Portals, 76+ Application Pages, and 10 End-to-End Operational Lifecycles.</p>
+    <div class="header-badges">
+      <span class="badge">Version 4.0</span>
+      <span class="badge">One Platform Core</span>
+      <span class="badge">76+ Pages Documented</span>
+      <span class="badge">10 Operational Flows</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="search-bar">
+      <input type="text" id="filterInput" class="search-input" placeholder="🔍 Search any page name, portal, flow, or route (e.g. rent roll, helpdesk, /leasing/loi)..." onkeyup="filterCards()">
+    </div>
+
+    <div class="nav-tabs">
+      <a class="nav-tab active" onclick="showPortal('all')">All Modules</a>
+      <a class="nav-tab" onclick="showPortal('marketplace')">1. Marketplace</a>
+      <a class="nav-tab" onclick="showPortal('leasing')">2. Leasing & CRM</a>
+      <a class="nav-tab" onclick="showPortal('portfolio')">3. Landlord & Rent Roll</a>
+      <a class="nav-tab" onclick="showPortal('ops')">4. FM Operations</a>
+      <a class="nav-tab" onclick="showPortal('tenant')">5. Tenant & Occupier</a>
+      <a class="nav-tab" onclick="showPortal('vendor')">6. Vendor Portal</a>
+      <a class="nav-tab" onclick="showPortal('procurement')">7. Procurement & RFQ</a>
+      <a class="nav-tab" onclick="showPortal('reporting')">8. ESG & AI Reporting</a>
+      <a class="nav-tab" onclick="showPortal('admin')">9. Super Admin</a>
+    </div>
+
+    <div id="contentRoot">
+      <!-- Cards rendered from markdown data -->
+      <div class="card" data-portal="marketplace">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Page 01: OFFICEX Homepage</h2>
+            <div class="meta-bar" style="margin-top: 0.5rem;">
+              <span><strong>Portal:</strong> Public Marketplace</span> • 
+              <span><strong>Roles:</strong> Corporate Occupiers, Brokers, Public</span>
+            </div>
+          </div>
+          <span class="route-pill">/</span>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🎯 1. Primary Purpose & Business Value</div>
+          <p>Main acquisition gateway showcasing Grade-A commercial properties, managed suites, and coworking options. Converts web visitors into structured requirements.</p>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🔄 2. Step-by-Step User Flow</div>
+          <ol>
+            <li><strong>Search Input:</strong> User enters location (e.g. Mumbai BKC), workspace type, and seats in hero widget.</li>
+            <li><strong>Catalog Exploration:</strong> Explores featured properties, managed suites, and OFFICEX property scores.</li>
+            <li><strong>Lead Conversion:</strong> Clicks "Submit Requirements" to launch the interactive workspace wizard.</li>
+          </ol>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🎛️ 3. Key UI Elements & State</div>
+          <p>Multi-parameter hero search widget, real-time lead ingestion listener into <code>leasingStore</code>.</p>
+        </div>
+      </div>
+
+      <div class="card" data-portal="marketplace">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Page 02: Marketplace Search Catalog</h2>
+            <div class="meta-bar" style="margin-top: 0.5rem;">
+              <span><strong>Portal:</strong> Public Marketplace</span> • 
+              <span><strong>Roles:</strong> Tenants, Real Estate Consultants</span>
+            </div>
+          </div>
+          <span class="route-pill">/public/search</span>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🎯 1. Primary Purpose & Business Value</div>
+          <p>Advanced commercial property search with synchronized List and Google Map views. Enables precise filtering by micro-market, budget, floor area, and amenities.</p>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🔄 2. Step-by-Step User Flow</div>
+          <ol>
+            <li><strong>View Toggle:</strong> Toggles between List View, Grid View, and Map View.</li>
+            <li><strong>Filter Application:</strong> Filters by City, Budget Range slider, Floor Area, Building Grade, and Amenities.</li>
+            <li><strong>Map Interaction:</strong> Clicks map markers to preview pricing and property cards.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card" data-portal="portfolio">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Page 19: Rent Roll Master Engine</h2>
+            <div class="meta-bar" style="margin-top: 0.5rem;">
+              <span><strong>Portal:</strong> Landlord Portfolio</span> • 
+              <span><strong>Roles:</strong> CFOs, Leasing Directors, Property Accountants</span>
+            </div>
+          </div>
+          <span class="route-pill">/properties/rent-roll</span>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🎯 1. Primary Purpose & Business Value</div>
+          <p>Institutional-grade Rent Roll engine governing all lease financials, monthly billing schedules, contractual escalations, and lock-in covenants.</p>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🔄 2. Step-by-Step User Flow</div>
+          <ol>
+            <li><strong>Billing Cycle:</strong> Selects Property and Billing Cycle.</li>
+            <li><strong>Multi-Tab Navigation:</strong>
+              <ul>
+                <li><strong>Rent Roll Grid:</strong> Tenant, Unit, Leased Sq.Ft., Lease Dates, Base Rent, CAM, Utilities, GST, Total Billing.</li>
+                <li><strong>Invoices Tab:</strong> Approves and bulk-dispatches monthly tax invoices.</li>
+                <li><strong>Collections & Aging:</strong> Monitors paid vs. unpaid dues.</li>
+                <li><strong>Escalation Schedule:</strong> 12-month forward look of upcoming rent escalations.</li>
+                <li><strong>P&L / NOI:</strong> Net Operating Income calculation.</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card" data-portal="ops">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Page 26: Kanban Helpdesk Command Centre</h2>
+            <div class="meta-bar" style="margin-top: 0.5rem;">
+              <span><strong>Portal:</strong> FM Operations</span> • 
+              <span><strong>Roles:</strong> Helpdesk Coordinators, Facility Executives, Technicians</span>
+            </div>
+          </div>
+          <span class="route-pill">/ops/helpdesk</span>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🎯 1. Primary Purpose & Business Value</div>
+          <p>Drag-and-drop Kanban service desk for triaging, dispatching, and resolving facility incidents with real-time dynamic SLA countdown timers.</p>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🔄 2. Step-by-Step User Flow</div>
+          <ol>
+            <li><strong>Kanban Columns:</strong> Tickets organized across *New*, *Assigned*, *In Progress*, and *Resolved*.</li>
+            <li><strong>Dispatch:</strong> Drag ticket to *Assigned*, choose technician or vendor, and alert their mobile app.</li>
+            <li><strong>Resolution:</strong> Technician attaches photo proof; FM moves ticket to *Resolved*.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card" data-portal="admin">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Page 72: Razorpay Nodal Escrow Controller</h2>
+            <div class="meta-bar" style="margin-top: 0.5rem;">
+              <span><strong>Portal:</strong> Super Admin</span> • 
+              <span><strong>Roles:</strong> Financial Controllers, Escrow Officers, Super Admins</span>
+            </div>
+          </div>
+          <span class="route-pill">/admin/escrow</span>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🎯 1. Primary Purpose & Business Value</div>
+          <p>Central ledger for governing funds held in Razorpay Nodal Escrow accounts, managing split disbursements, and resolving billing disputes.</p>
+        </div>
+        <div class="sub-section">
+          <div class="sub-heading">🔄 2. Step-by-Step User Flow</div>
+          <ol>
+            <li><strong>Ledger Audit:</strong> Reviews Total Escrow Held, Released Funds, Retained Commission (10%), and Disputed Milestones.</li>
+            <li><strong>Disbursement:</strong> Clicks *Release* to disburse funds to vendor bank accounts upon FM signoff.</li>
+            <li><strong>Dispute Arbitration:</strong> Investigates client/vendor evidence for contested milestones.</li>
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function filterCards() {
+      const query = document.getElementById('filterInput').value.toLowerCase();
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        if (text.includes(query)) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function showPortal(portalKey) {
+      document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        if (portalKey === 'all' || card.getAttribute('data-portal') === portalKey) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

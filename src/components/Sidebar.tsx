@@ -269,7 +269,11 @@ export default function Sidebar() {
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-gray-900 leading-none">{activeRole.roleName}</span>
-              <span className="text-[10px] text-gray-400 mt-0.5 leading-none">{activeRole.email}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5 leading-none font-mono">
+                {typeof window !== "undefined" && localStorage.getItem("officex_user_email")
+                  ? localStorage.getItem("officex_user_email")
+                  : activeRole.email}
+              </span>
             </div>
           </div>
 

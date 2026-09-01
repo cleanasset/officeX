@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle, ArrowRight, Save, Building, Users, Calendar, ShieldCheck, Sparkles, Check } from "lucide-react";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
 
 export default function RequirementSubmissionWizard() {
   const router = useRouter();
@@ -275,28 +276,43 @@ export default function RequirementSubmissionWizard() {
                 <p className="text-xs text-gray-500 mt-0.5">Define exact physical workspace specifications.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TARGET CITY</label>
-                  <select
-                    value={formData.targetCity}
-                    onChange={(e) => setFormData({ ...formData, targetCity: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
-                  >
-                    <option>Mumbai</option>
-                    <option>Bengaluru</option>
-                    <option>Gurugram / NCR</option>
-                    <option>Pune</option>
-                  </select>
-                </div>
+              <div className="space-y-3">
+                <LocationAutocomplete
+                  value={`${formData.microMarket}, ${formData.targetCity}`}
+                  onChange={(displayText, loc) => {
+                    if (loc) {
+                      setFormData(prev => ({
+                        ...prev,
+                        targetCity: loc.city,
+                        microMarket: loc.microMarket || loc.name || ""
+                      }));
+                    }
+                  }}
+                  label="TARGET LOCATION / CITY / MICRO-MARKET (ALL 28 STATES & 8 UTS)"
+                  placeholder="Type to search e.g. Gujarat, GIFT City, Mumbai BKC, Bengaluru ORR, Cyber City..."
+                  required
+                />
 
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PREFERRED MICRO-MARKET</label>
-                  <input
-                    value={formData.microMarket}
-                    onChange={(e) => setFormData({ ...formData, microMarket: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
-                  />
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">SELECTED CITY</label>
+                    <input
+                      value={formData.targetCity}
+                      onChange={(e) => setFormData({ ...formData, targetCity: e.target.value })}
+                      placeholder="e.g. Gandhinagar, Mumbai, Bengaluru"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PREFERRED MICRO-MARKET</label>
+                    <input
+                      value={formData.microMarket}
+                      onChange={(e) => setFormData({ ...formData, microMarket: e.target.value })}
+                      placeholder="e.g. GIFT City, SG Highway, BKC, HITEC City"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle, ArrowRight, Save, Upload, Plus, Trash2, Building, ShieldCheck, FileText, Check } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { CheckCircle, ArrowRight, Save, Upload, Plus, Trash2, Building, ShieldCheck, FileText, Check, ArrowLeft } from "lucide-react";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import AddressMapAutocomplete from "@/components/AddressMapAutocomplete";
 import PropertyTitleAutocomplete from "@/components/PropertyTitleAutocomplete";
 import { IndianLocationItem, AddressSuggestion } from "@/lib/indianLocations";
 
-export default function PropertyListingBuilder() {
+export default function OwnerPropertyBuilder() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -59,7 +62,11 @@ export default function PropertyListingBuilder() {
     fireNocExpiry: "",
     liftLicenseExpiry: "",
     pollutionConsentExpiry: "",
-    occupancyCertificate: true
+    occupancyCertificate: true,
+
+    // GPS Coordinates (auto-filled from geocode)
+    latitude: null as number | null,
+    longitude: null as number | null
   });
 
   const steps = [
@@ -72,19 +79,16 @@ export default function PropertyListingBuilder() {
     { num: 7, label: "Preview & Publish" }
   ];
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  const handleLocationSelect = (displayText: string, loc?: IndianLocationItem) => {
+  const handleLocationSelect = (displayText: string, loc?: any) => {
     if (loc) {
       setFormData(prev => ({
         ...prev,
-        city: loc.city,
-        state: loc.state,
-        microMarket: loc.microMarket || loc.name,
-        pincode: loc.pincode || prev.pincode
+        propertyName: prev.propertyName || loc.buildingName || "",
+        city: loc.city || prev.city,
+        state: loc.state || prev.state,
+        microMarket: loc.area || displayText.split(",")[0] || prev.microMarket,
+        pincode: loc.pincode || prev.pincode,
+        address: loc.displayName || displayText || prev.address
       }));
     }
   };
@@ -105,7 +109,12 @@ export default function PropertyListingBuilder() {
     }
   };
 
-  const handleNext = () => {
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleNext = async () => {
     if (currentStep === 1 && !formData.propertyName) {
       showToast("Please enter property title / name.");
       return;
@@ -113,27 +122,93 @@ export default function PropertyListingBuilder() {
     if (currentStep < 7) {
       setCurrentStep(currentStep + 1);
     } else {
-      if (typeof window !== "undefined") {
-        const newProp = {
-          id: `prop-${Date.now()}`,
-          name: formData.propertyName || "Commercial Tower",
-          city: formData.city,
-          state: formData.state,
-          microMarket: formData.microMarket,
-          grade: formData.grade,
-          totalArea: formData.totalSuperArea,
-          availableArea: formData.availableArea,
-          baseRent: formData.baseRentPerSqft,
-          cam: formData.camPerSqft,
-          address: formData.address,
-          pincode: formData.pincode,
-          date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-        };
-        const existing = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-        localStorage.setItem("officex_user_properties", JSON.stringify([newProp, ...existing]));
-        window.dispatchEvent(new CustomEvent("officex-property-added", { detail: newProp }));
+      // Step 7: Publish to real database
+      const ownerUserId = typeof window !== "undefined" ? localStorage.getItem("officex_user_id") || "" : "";
+      const ownerName = typeof window !== "undefined" ? localStorage.getItem("officex_user_name") || "" : "";
+      const ownerCompany = typeof window !== "undefined" ? localStorage.getItem("officex_user_company") || "" : "";
+
+      const propertyPayload = {
+        name: formData.propertyName || "Commercial Tower",
+        type: formData.propertyType || "Commercial Office Park",
+        grade: formData.grade?.replace("Grade ", "") || "A",
+        address: formData.address || `${formData.microMarket}, ${formData.city}`,
+        city: formData.city || "Unknown",
+        state: formData.state || "",
+        microMarket: formData.microMarket || "",
+        pincode: formData.pincode || "000000",
+        totalArea: parseFloat(formData.totalSuperArea?.replace(/,/g, "") || "0") || 1000,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        ownerName: ownerName,
+        ownerCompany: ownerCompany,
+        ownerUserId: ownerUserId || undefined
+      };
+
+      try {
+        const res = await fetch("/api/properties", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(propertyPayload)
+        });
+
+        const dbProp = await res.json();
+
+        if (res.ok) {
+          // Also store in localStorage for immediate UI display
+          if (typeof window !== "undefined") {
+            const newProp = {
+              id: dbProp.id || `prop-${Date.now()}`,
+              name: formData.propertyName,
+              city: formData.city,
+              state: formData.state,
+              microMarket: formData.microMarket,
+              grade: formData.grade,
+              totalArea: formData.totalSuperArea,
+              availableArea: formData.availableArea,
+              baseRent: formData.baseRentPerSqft,
+              cam: formData.camPerSqft,
+              address: formData.address,
+              pincode: formData.pincode,
+              latitude: formData.latitude,
+              longitude: formData.longitude,
+              date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+            };
+            const existing = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+            localStorage.setItem("officex_user_properties", JSON.stringify([newProp, ...existing]));
+            window.dispatchEvent(new CustomEvent("officex-property-added", { detail: newProp }));
+          }
+
+          showToast("Property listing published successfully to your portfolio & database!");
+          setTimeout(() => {
+            router.push("/properties");
+          }, 1200);
+        } else {
+          showToast(`Error: ${dbProp.error || "Failed to publish property."}`);
+        }
+      } catch (err) {
+        console.error("Property publish error:", err);
+        showToast("Network error publishing property. Saved locally.");
+        // Fallback: save to localStorage only
+        if (typeof window !== "undefined") {
+          const newProp = {
+            id: `prop-${Date.now()}`,
+            name: formData.propertyName,
+            city: formData.city,
+            state: formData.state,
+            microMarket: formData.microMarket,
+            grade: formData.grade,
+            totalArea: formData.totalSuperArea,
+            address: formData.address,
+            pincode: formData.pincode,
+            date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+          };
+          const existing = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          localStorage.setItem("officex_user_properties", JSON.stringify([newProp, ...existing]));
+        }
+        setTimeout(() => {
+          router.push("/properties");
+        }, 1200);
       }
-      showToast("Property listing successfully published to the public marketplace!");
     }
   };
 
@@ -155,9 +230,14 @@ export default function PropertyListingBuilder() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900">Property Listing Builder</h1>
-          <p className="text-sm text-gray-500 mt-1">Multi-step commercial property listing creator with complete technical & commercial specs.</p>
+        <div className="flex items-center gap-3">
+          <Link href="/properties" className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+            <ArrowLeft size={16} />
+          </Link>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900">List New Commercial Property</h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5">Property Owner Portal • Complete Technical & Commercial Specification</p>
+          </div>
         </div>
         <button
           onClick={() => showToast("Draft listing saved!")}
@@ -197,9 +277,9 @@ export default function PropertyListingBuilder() {
         {currentStep === 1 && (
           <div className="space-y-4 text-xs">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 flex items-center justify-between">
-              <span>1. Basic Property Information & Indian Location Intelligence</span>
+              <span>1. Basic Property Information & Location</span>
               <span className="text-[10px] font-bold text-[#0F8B7D] bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100">
-                All 28 States & 8 UTs Active
+                Google Maps Places Search Active
               </span>
             </h2>
 
@@ -225,7 +305,9 @@ export default function PropertyListingBuilder() {
                         state: selectedMeta.state || prev.state,
                         pincode: selectedMeta.pincode || prev.pincode,
                         address: selectedMeta.fullAddress || selectedMeta.displayName || prev.address,
-                        metroDistance: selectedMeta.metroDistance || prev.metroDistance
+                        metroDistance: selectedMeta.metroDistance || prev.metroDistance,
+                        latitude: selectedMeta.latitude ?? prev.latitude,
+                        longitude: selectedMeta.longitude ?? prev.longitude
                       }));
                     } else {
                       setFormData(prev => ({ ...prev, propertyName: name }));
@@ -338,22 +420,27 @@ export default function PropertyListingBuilder() {
                 <input
                   value={formData.totalSuperArea}
                   onChange={(e) => setFormData({ ...formData, totalSuperArea: e.target.value })}
+                  placeholder="e.g. 150,000 sq.ft."
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
+
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TOTAL FLOORS</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TOTAL FLOORS (STRUCTURE)</label>
                 <input
                   value={formData.totalFloors}
                   onChange={(e) => setFormData({ ...formData, totalFloors: e.target.value })}
+                  placeholder="e.g. G + 14 Floors"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
+
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TYPICAL FLOOR PLATE</label>
                 <input
                   value={formData.typicalFloorPlate}
                   onChange={(e) => setFormData({ ...formData, typicalFloorPlate: e.target.value })}
+                  placeholder="e.g. 12,500 sq.ft."
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
@@ -361,26 +448,55 @@ export default function PropertyListingBuilder() {
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">AVAILABLE VACANT AREA</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">AVAILABLE VACANCY</label>
                 <input
                   value={formData.availableArea}
                   onChange={(e) => setFormData({ ...formData, availableArea: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
+                  placeholder="e.g. 25,000 sq.ft."
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 font-bold text-purple-700"
                 />
               </div>
+
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">SEATING CAPACITY</label>
                 <input
                   value={formData.seatingCapacity}
                   onChange={(e) => setFormData({ ...formData, seatingCapacity: e.target.value })}
+                  placeholder="e.g. 350 Seats"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
+
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CLEAR CEILING HEIGHT</label>
                 <input
                   value={formData.ceilingHeight}
                   onChange={(e) => setFormData({ ...formData, ceilingHeight: e.target.value })}
+                  placeholder="e.g. 3.8m Clear Height"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PASSENGER LIFTS</label>
+                <input
+                  type="number"
+                  value={formData.passengerLifts || ""}
+                  onChange={(e) => setFormData({ ...formData, passengerLifts: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 6"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">SERVICE LIFTS</label>
+                <input
+                  type="number"
+                  value={formData.serviceLifts || ""}
+                  onChange={(e) => setFormData({ ...formData, serviceLifts: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 2"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
@@ -391,7 +507,7 @@ export default function PropertyListingBuilder() {
         {/* STEP 3: Commercial Terms */}
         {currentStep === 3 && (
           <div className="space-y-4 text-xs">
-            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">3. Commercial Terms, CAM & Security Deposits</h2>
+            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">3. Commercial Lease Terms & Pricing Model</h2>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -399,28 +515,21 @@ export default function PropertyListingBuilder() {
                 <input
                   value={formData.baseRentPerSqft}
                   onChange={(e) => setFormData({ ...formData, baseRentPerSqft: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 font-bold"
+                  placeholder="e.g. 185"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 font-bold text-green-700"
                 />
               </div>
+
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CAM CHARGES (₹ / SQ.FT. / MONTH)</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CAM / MAINTENANCE (₹ / SQ.FT. / MO)</label>
                 <input
                   value={formData.camPerSqft}
                   onChange={(e) => setFormData({ ...formData, camPerSqft: e.target.value })}
+                  placeholder="e.g. 18"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">ANNUAL RENT ESCALATION (%)</label>
-                <input
-                  value={formData.annualEscalationPct}
-                  onChange={(e) => setFormData({ ...formData, annualEscalationPct: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-teal-700 font-bold"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">SECURITY DEPOSIT</label>
                 <select
@@ -433,6 +542,9 @@ export default function PropertyListingBuilder() {
                   <option>9 Months</option>
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">LOCK-IN PERIOD</label>
                 <select
@@ -446,19 +558,25 @@ export default function PropertyListingBuilder() {
                   <option>60 Months</option>
                 </select>
               </div>
+
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CAR PARKING CHARGE / SLOT</label>
-                <input
-                  value={formData.carParkingCharges}
-                  onChange={(e) => setFormData({ ...formData, carParkingCharges: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
-                />
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">ANNUAL ESCALATION</label>
+                <select
+                  value={formData.annualEscalationPct}
+                  onChange={(e) => setFormData({ ...formData, annualEscalationPct: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                >
+                  <option>5%</option>
+                  <option>7.5%</option>
+                  <option>10%</option>
+                  <option>15% (Every 3 Years)</option>
+                </select>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 4: Power, HVAC & Telecom */}
+        {/* STEP 4: Power, HVAC */}
         {currentStep === 4 && (
           <div className="space-y-4 text-xs">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">4. Power Infrastructure, HVAC & Redundancy</h2>
@@ -469,127 +587,148 @@ export default function PropertyListingBuilder() {
                 <input
                   value={formData.powerLoadKVA}
                   onChange={(e) => setFormData({ ...formData, powerLoadKVA: e.target.value })}
+                  placeholder="e.g. 2,000 kVA"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
+
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">DG BACKUP LEVEL</label>
-                <input
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">DIESEL GENERATOR (DG) BACKUP</label>
+                <select
                   value={formData.dgBackupPct}
                   onChange={(e) => setFormData({ ...formData, dgBackupPct: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
-                />
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                >
+                  <option>100% N+1 DG Backup</option>
+                  <option>100% DG Backup</option>
+                  <option>50% Critical Load</option>
+                  <option>No DG Backup</option>
+                </select>
               </div>
+
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">HVAC COOLING SYSTEM</label>
-                <input
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">HVAC / COOLING ARCHITECTURE</label>
+                <select
                   value={formData.hvacType}
                   onChange={(e) => setFormData({ ...formData, hvacType: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
-                />
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                >
+                  <option>Central Chiller Water-Cooled</option>
+                  <option>VRV / VRF High Efficiency</option>
+                  <option>Split Units / DX System</option>
+                </select>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 5: Amenities & Parking */}
+        {/* STEP 5: Amenities */}
         {currentStep === 5 && (
           <div className="space-y-4 text-xs">
-            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">5. Amenities, Parking & Sustainability</h2>
+            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">5. Campus Amenities & Parking Infrastructure</h2>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">CAR PARKING SLOTS</label>
                 <input
                   type="number"
-                  value={formData.carParkingSlots}
-                  onChange={(e) => setFormData({ ...formData, carParkingSlots: Number(e.target.value) })}
+                  value={formData.carParkingSlots || ""}
+                  onChange={(e) => setFormData({ ...formData, carParkingSlots: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 150"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
+
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TWO-WHEELER SLOTS</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TWO WHEELER SLOTS</label>
                 <input
                   type="number"
-                  value={formData.twoWheelerSlots}
-                  onChange={(e) => setFormData({ ...formData, twoWheelerSlots: Number(e.target.value) })}
+                  value={formData.twoWheelerSlots || ""}
+                  onChange={(e) => setFormData({ ...formData, twoWheelerSlots: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 300"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
+
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">EV CHARGING STATIONS</label>
                 <input
                   type="number"
-                  value={formData.evChargingStations}
-                  onChange={(e) => setFormData({ ...formData, evChargingStations: Number(e.target.value) })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">CAMPUS AMENITIES CHECKLIST</label>
-              <div className="grid grid-cols-3 gap-2">
-                {["Food Court & Cafeteria", "24/7 Security & CCTV", "Executive Lounge", "Gymnasium & Fitness", "Visitor Parking", "Conference Center", "Creche / Daycare", "Pharmacy & ATM", "Rooftop Garden"].map((am) => {
-                  const isSel = formData.amenities.includes(am);
-                  return (
-                    <button
-                      key={am}
-                      type="button"
-                      onClick={() => toggleAmenity(am)}
-                      className={`p-2.5 rounded-xl border text-left font-semibold transition-all ${
-                        isSel
-                          ? "bg-teal-50 border-[#0F8B7D] text-[#0F8B7D]"
-                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {isSel ? "✓ " : "+ "} {am}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 6: Compliance & Documents */}
-        {currentStep === 6 && (
-          <div className="space-y-4 text-xs">
-            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">6. Statutory Compliance & Verification Documents</h2>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">FIRE NOC EXPIRY DATE</label>
-                <input
-                  type="date"
-                  value="2027-09-12"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">LIFT FITNESS LICENSE</label>
-                <input
-                  type="date"
-                  value="2028-01-01"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">POLLUTION CONTROL BOARD (PCB)</label>
-                <input
-                  type="date"
-                  value="2027-11-30"
+                  value={formData.evChargingStations || ""}
+                  onChange={(e) => setFormData({ ...formData, evChargingStations: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 12"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">UPLOAD FLOOR PLANS & PROPERTY PHOTOS</label>
-              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center cursor-pointer hover:border-[#0F8B7D] bg-gray-50/50">
-                <Upload size={20} className="mx-auto text-gray-400 mb-1" />
-                <p className="font-semibold text-gray-700">Click to upload architectural CAD, PDF floor plans or High-Res Photos</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Supports PDF, DWG, PNG, JPG (Max 50MB)</p>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">CAMPUS & BUILDING AMENITIES</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  "Food Court & Cafeteria",
+                  "24/7 Security & CCTV",
+                  "Executive Lounge",
+                  "Gymnasium & Fitness",
+                  "Visitor Parking",
+                  "Conference Center",
+                  "Creche / Daycare",
+                  "ATM & Banking",
+                  "Pharmacy / First Aid"
+                ].map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleAmenity(item)}
+                    className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                      formData.amenities.includes(item)
+                        ? "bg-teal-50 border-[#0F8B7D] text-[#0F8B7D] font-bold shadow-2xs"
+                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    <span>{item}</span>
+                    {formData.amenities.includes(item) && <Check size={14} className="text-[#0F8B7D]" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 6: Compliance */}
+        {currentStep === 6 && (
+          <div className="space-y-4 text-xs">
+            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">6. Statutory Compliance & Verification</h2>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">FIRE SAFETY NOC EXPIRY</label>
+                <input
+                  type="date"
+                  value={formData.fireNocExpiry}
+                  onChange={(e) => setFormData({ ...formData, fireNocExpiry: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">LIFT LICENSE EXPIRY</label>
+                <input
+                  type="date"
+                  value={formData.liftLicenseExpiry}
+                  onChange={(e) => setFormData({ ...formData, liftLicenseExpiry: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">POLLUTION CONSENT (CTO) EXPIRY</label>
+                <input
+                  type="date"
+                  value={formData.pollutionConsentExpiry}
+                  onChange={(e) => setFormData({ ...formData, pollutionConsentExpiry: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+                />
               </div>
             </div>
           </div>
@@ -597,65 +736,53 @@ export default function PropertyListingBuilder() {
 
         {/* STEP 7: Preview & Publish */}
         {currentStep === 7 && (
-          <div className="space-y-5 text-xs">
-            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">7. Listing Summary & Quality Verification</h2>
+          <div className="space-y-4 text-xs">
+            <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">7. Review & Publish Listing to Portfolio</h2>
 
-            <div className="p-6 bg-teal-50/50 rounded-2xl border border-teal-100 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="px-2.5 py-0.5 rounded bg-teal-100 text-teal-800 font-bold text-[10px]">GRADE A LISTING</span>
-                  <h3 className="text-xl font-black text-gray-900 mt-1">{formData.propertyName || "Prestige Tech Park - Tower 3"}</h3>
-                  <p className="text-gray-600 mt-0.5">📍 {formData.microMarket}, {formData.city}</p>
+            <div className="p-5 rounded-2xl bg-teal-50/50 border border-teal-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-extrabold text-gray-900">{formData.propertyName || "Untitled Property"}</span>
+                <span className="px-3 py-1 rounded-full bg-[#0F8B7D] text-white text-[10px] font-bold">{formData.grade}</span>
+              </div>
+              <p className="text-xs text-gray-600 font-medium">{formData.address || `${formData.microMarket}, ${formData.city}`}</p>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                <div className="p-3 bg-white rounded-xl border border-teal-100">
+                  <span className="text-[9px] text-gray-400 font-bold block uppercase">Base Rent</span>
+                  <span className="text-sm font-extrabold text-[#0F8B7D]">₹{formData.baseRentPerSqft || "0"}/sq.ft.</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-black text-gray-900">₹{formData.baseRentPerSqft} <span className="text-xs font-normal text-gray-500">/ sq.ft. / mo</span></p>
-                  <p className="text-[11px] text-teal-700 font-bold">Estimated Property Score: 88/100</p>
+                <div className="p-3 bg-white rounded-xl border border-teal-100">
+                  <span className="text-[9px] text-gray-400 font-bold block uppercase">Available Space</span>
+                  <span className="text-sm font-extrabold text-gray-900">{formData.availableArea || "0 sq.ft."}</span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-teal-100">
+                  <span className="text-[9px] text-gray-400 font-bold block uppercase">CAM Maintenance</span>
+                  <span className="text-sm font-extrabold text-gray-900">₹{formData.camPerSqft || "0"}/sq.ft.</span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-teal-100">
+                  <span className="text-[9px] text-gray-400 font-bold block uppercase">Escalation</span>
+                  <span className="text-sm font-extrabold text-gray-900">{formData.annualEscalationPct}</span>
                 </div>
               </div>
-
-              <div className="grid grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-teal-100 text-[11px]">
-                <div>
-                  <span className="text-gray-400 uppercase font-bold text-[9px] block">AVAILABLE SPACE</span>
-                  <span className="font-bold text-gray-900">{formData.availableArea}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 uppercase font-bold text-[9px] block">SEATS</span>
-                  <span className="font-bold text-gray-900">{formData.seatingCapacity}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 uppercase font-bold text-[9px] block">CAM CHARGES</span>
-                  <span className="font-bold text-gray-900">₹{formData.camPerSqft}/sq.ft.</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 uppercase font-bold text-[9px] block">SECURITY DEPOSIT</span>
-                  <span className="font-bold text-gray-900">{formData.securityDepositMonths}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-900 flex items-center gap-2.5">
-              <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
-              <span>All mandatory statutory fields completed. Listing will be activated immediately on the Property Marketplace.</span>
             </div>
           </div>
         )}
 
-        {/* Footer Navigation Buttons */}
-        <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-          {currentStep > 1 ? (
-            <button
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
-            >
-              ← Back
-            </button>
-          ) : <div />}
+        {/* Action Controls */}
+        <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+          <button
+            disabled={currentStep === 1}
+            onClick={() => setCurrentStep(currentStep - 1)}
+            className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← Back
+          </button>
 
           <button
             onClick={handleNext}
-            className="px-8 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+            className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold shadow-md flex items-center gap-2 cursor-pointer transition-all"
           >
-            {currentStep === 7 ? "Publish Listing to Marketplace" : "Save & Continue"} <ArrowRight size={14} />
+            <span>{currentStep === 7 ? "Publish Listing to Portfolio" : `Next: ${steps[currentStep]?.label} →`}</span>
           </button>
         </div>
       </div>

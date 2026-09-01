@@ -35,11 +35,16 @@ export const properties = pgTable("properties", {
   type: varchar("type", { length: 100 }).notNull(),
   address: text("address").notNull(),
   city: varchar("city", { length: 100 }).notNull(),
+  state: varchar("state", { length: 100 }),
+  microMarket: varchar("micro_market", { length: 150 }),
   pincode: varchar("pincode", { length: 10 }).notNull(),
   grade: propertyGradeEnum("grade").default("A").notNull(),
   totalArea: decimal("total_area", { precision: 12, scale: 2 }).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
   ownerName: varchar("owner_name", { length: 100 }),
   ownerCompany: varchar("owner_company", { length: 255 }),
+  ownerUserId: uuid("owner_user_id").references(() => users.id),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
