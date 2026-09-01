@@ -246,13 +246,37 @@ function PropertySearchContent() {
               <option>Managed Coworking</option>
               <option>Enterprise Suite</option>
             </select>
+
+            {/* Desktop Compare Link */}
+            <Link
+              href="/public/property/compare"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 hover:border-[#0F8B7D] bg-white text-xs font-bold text-gray-700 shadow-xs shrink-0 transition-colors"
+            >
+              <Scale size={13} className="text-[#0F8B7D]" />
+              <span>Compare Matrix</span>
+              {compareList.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black">
+                  {compareList.length}
+                </span>
+              )}
+            </Link>
           </div>
         </div>
 
-        {/* Mobile View Toggle Button (Airbnb Style) */}
-        <div className="md:hidden flex items-center justify-between border-t border-gray-100 pt-2">
-          <span className="text-[11px] font-bold text-gray-500">{filteredProperties.length} Properties</span>
-          <div className="flex items-center bg-gray-100 p-0.5 rounded-xl text-xs font-bold">
+        {/* Mobile View Toggle & Compare Button Bar */}
+        <div className="md:hidden flex items-center justify-between border-t border-gray-100 pt-2 gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-gray-500">{filteredProperties.length} Spaces</span>
+            <Link
+              href="/public/property/compare"
+              className="px-2.5 py-1 rounded-lg border border-teal-200 bg-teal-50 text-[11px] font-bold text-[#0F8B7D] flex items-center gap-1 shadow-2xs"
+            >
+              <Scale size={12} />
+              <span>Compare {compareList.length > 0 ? `(${compareList.length})` : ""}</span>
+            </Link>
+          </div>
+
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-xl text-xs font-bold shrink-0">
             <button
               onClick={() => setMobileView("list")}
               className={`px-3 py-1 rounded-lg flex items-center gap-1 transition-all ${
@@ -339,13 +363,18 @@ function PropertySearchContent() {
                           </div>
                           
                           <button
+                            id={`btn-compare-${prop.id}`}
+                            data-testid={`btn-compare-${prop.id}`}
                             onClick={(e) => { e.stopPropagation(); toggleCompare(prop); }}
-                            className={`p-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-all shrink-0 ${
-                              isComp ? "bg-[#0F8B7D] text-white border-[#0F8B7D]" : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                            className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                              isComp 
+                                ? "bg-[#0F8B7D] text-white border-[#0F8B7D] shadow-xs" 
+                                : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:border-[#0F8B7D]"
                             }`}
                             title="Compare space"
                           >
-                            <Scale size={11} /> {isComp ? "Added" : "Compare"}
+                            <Scale size={12} className={isComp ? "text-white" : "text-[#0F8B7D]"} />
+                            <span>{isComp ? "Added ✓" : "Compare"}</span>
                           </button>
                         </div>
 
@@ -425,6 +454,17 @@ function PropertySearchContent() {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   <button
+                    onClick={() => toggleCompare(selectedProperty)}
+                    className={`p-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 ${
+                      compareList.some(c => c.id === selectedProperty.id)
+                        ? "bg-[#0F8B7D] text-white border-[#0F8B7D]"
+                        : "border-gray-200 text-gray-600 bg-gray-50"
+                    }`}
+                    title="Compare"
+                  >
+                    <Scale size={13} />
+                  </button>
+                  <button
                     onClick={() => setEnquiryProperty(selectedProperty)}
                     className="px-2.5 py-1.5 rounded-xl bg-teal-50 text-[#0F8B7D] border border-teal-200 text-xs font-bold"
                   >
@@ -442,6 +482,42 @@ function PropertySearchContent() {
           )}
         </div>
       </div>
+
+      {/* Floating Bottom Comparison Dock */}
+      {compareList.length > 0 && (
+        <div className="fixed bottom-4 left-3 right-3 md:left-auto md:right-8 z-40 bg-gray-900/95 backdrop-blur-md text-white p-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-700 flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200 max-w-lg md:max-w-xl">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 border border-teal-500/30">
+              <Scale size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold">{compareList.length} {compareList.length === 1 ? "Space" : "Spaces"} Selected</span>
+                <span className="px-1.5 py-0.2 rounded bg-teal-500/20 text-teal-300 text-[9px] font-black uppercase">Max 3</span>
+              </div>
+              <p className="text-[10px] text-gray-400 truncate">
+                {compareList.map(c => c.buildingName || c.title).join(" • ")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setCompareList([])}
+              className="px-2.5 py-1.5 rounded-xl border border-gray-700 hover:bg-gray-800 text-[11px] font-bold text-gray-300 transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+            <Link
+              href="/public/property/compare"
+              className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+            >
+              <span>Compare Now</span>
+              <ArrowRight size={13} />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Quick Enquiry Modal */}
       {enquiryProperty && (
