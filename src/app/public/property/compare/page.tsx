@@ -10,7 +10,12 @@ export const revalidate = 0;
 
 export default async function PropertyComparePage() {
   // Query all active properties from DB
-  const dbProps = await db.select().from(properties);
+  let dbProps: any[] = [];
+  try {
+    dbProps = await db.select().from(properties);
+  } catch (err) {
+    console.warn("Compare page DB fetch warning:", err);
+  }
 
   // Normalise DB properties into a format compatible with comparison matrix
   const baseProperties = dbProps.map((p) => ({
