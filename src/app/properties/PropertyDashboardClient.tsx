@@ -131,16 +131,16 @@ export default function PropertyDashboardClient({
       </div>
 
       {/* BLOCK 1: KPI BENTO GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         
         {/* Total Properties */}
         <Link 
           href="/properties/registry" 
-          className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
+          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Properties</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#8B5CF6]">{propertiesCount}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#8B5CF6]">{propertiesCount}</div>
             <span className="text-[10px] text-green-600 font-bold mt-1 block">🟢 Active Portfolio</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-110 transition-transform">
@@ -151,11 +151,11 @@ export default function PropertyDashboardClient({
         {/* Occupancy Rate */}
         <Link 
           href="/properties/rent-roll" 
-          className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Occupancy</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-emerald-700">94.2%</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-emerald-700">94.2%</div>
             <span className="text-[10px] text-green-600 font-bold mt-1 block">↑ 1.8% vs last month</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
@@ -166,11 +166,11 @@ export default function PropertyDashboardClient({
         {/* Tenant Requests & Service Issues */}
         <Link 
           href="/properties/tenants" 
-          className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Tenant Requests</span>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-amber-700">{openTicketsCount}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-amber-700">{openTicketsCount}</div>
             <span className="text-[10px] text-amber-600 font-bold mt-1 block">⚠ {openTicketsCount} open tenant requests</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
@@ -181,11 +181,11 @@ export default function PropertyDashboardClient({
         {/* Expired Compliance NOCs */}
         <Link 
           href="/properties/compliance" 
-          className="premium-card p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-red-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-red-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Expired NOCs</span>
-            <div className="text-3xl font-extrabold text-red-600 mt-2 group-hover:text-red-700">{expiredCertsCount}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-red-600 mt-2 group-hover:text-red-700">{expiredCertsCount}</div>
             <span className="text-[10px] text-red-600 font-bold mt-1 block">✗ Renewal Required</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
@@ -196,8 +196,8 @@ export default function PropertyDashboardClient({
       </div>
 
       {/* LEASING BROKER PARTNERSHIPS & COMMISSION AGREEMENTS LIST */}
-      <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
-        <div className="flex justify-between items-center mb-6 border-b border-gray-50 pb-3">
+      <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6 border-b border-gray-50 pb-3">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
             <Handshake size={18} className="text-purple-600" />
             Leasing Broker Partnerships & Commission Agreements
@@ -208,7 +208,7 @@ export default function PropertyDashboardClient({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[650px]">
             <thead>
               <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                 <th className="py-4">Contract ID</th>

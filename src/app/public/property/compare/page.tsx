@@ -90,10 +90,10 @@ export default async function PropertyComparePage() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-900">
       {/* Navbar Header */}
-      <header className="h-[60px] bg-white border-b border-gray-200 px-8 flex items-center justify-between shadow-xs sticky top-0 z-30">
-        <Link href="/" className="flex items-center gap-3">
-          <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={30} height={30} className="object-contain" />
-          <Image src="/name-removebg-preview.png" alt="OfficeX" width={95} height={19} className="object-contain" />
+      <header className="h-[60px] bg-white border-b border-gray-200 px-4 sm:px-8 flex items-center justify-between shadow-xs sticky top-0 z-30">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3">
+          <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={28} height={28} className="object-contain" />
+          <Image src="/name-removebg-preview.png" alt="OfficeX" width={90} height={18} className="object-contain" />
         </Link>
         <Link href="/public/search" className="text-xs font-semibold text-gray-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Listings
@@ -101,10 +101,10 @@ export default async function PropertyComparePage() {
       </header>
 
       {/* Main Compare Workspace */}
-      <div className="max-w-7xl mx-auto py-10 px-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Property Comparison Matrix</h1>
-          <p className="text-xs text-gray-500 font-bold mt-1">Evaluate up to 4 shortlisted offices side-by-side on commercial pricing, spatial specifications, and statutory NOC compliance metrics.</p>
+      <div className="max-w-7xl mx-auto py-6 sm:py-10 px-4 sm:px-8 space-y-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Property Comparison Matrix</h1>
+          <p className="text-xs text-gray-500 font-bold mt-1">Evaluate shortlisted offices side-by-side on commercial pricing, spatial specifications, and statutory NOC compliance metrics.</p>
         </div>
 
         {/* Client Interactive Component */}

@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import { Star, CheckCircle, Clock } from "lucide-react";
 
 export default function VendorPortalDashboard() {
@@ -110,23 +111,38 @@ export default function VendorPortalDashboard() {
 
       {/* Work Orders */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4"><h2 className="text-base font-bold text-gray-900">My Active Work Orders</h2><button className="text-xs font-semibold text-[#0F8B7D] cursor-pointer">View All →</button></div>
-        <table className="w-full text-left border-collapse">
-          <thead><tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider"><th className="py-3 pr-3">WO ID</th><th className="py-3 pr-3">Client</th><th className="py-3 pr-3">Property</th><th className="py-3 pr-3">Category</th><th className="py-3 pr-3">Timeline</th><th className="py-3 pr-3">Progress</th><th className="py-3">Status</th></tr></thead>
-          <tbody>
-            {workOrders.map((w) => (
-              <tr key={w.id} className="border-b border-gray-100 text-xs">
-                <td className="py-3.5 pr-3 font-bold text-gray-500">{w.id}</td>
-                <td className="py-3.5 pr-3 font-semibold text-gray-900">{w.client}</td>
-                <td className="py-3.5 pr-3 text-gray-600">{w.property}</td>
-                <td className="py-3.5 pr-3"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${w.catColor}`}>{w.category}</span></td>
-                <td className="py-3.5 pr-3 text-gray-600">{w.timeline}</td>
-                <td className="py-3.5 pr-3"><div className="flex items-center gap-2"><div className="w-20 h-2 rounded-full bg-gray-200"><div className="h-full rounded-full bg-[#0F8B7D]" style={{ width: `${w.progress}%` }} /></div><span className="text-[10px] font-bold">{w.progress}%</span></div></td>
-                <td className="py-3.5"><span className={`text-[10px] font-bold ${w.status === "Completed" ? "text-emerald-600" : w.status === "In Progress" ? "text-[#0F8B7D]" : "text-blue-600"}`}>● {w.status}</span></td>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-gray-900">My Active Work Orders</h2>
+          <Link href="/vendor/work-orders" className="text-xs font-semibold text-[#0F8B7D] cursor-pointer hover:underline">View All →</Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[650px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3 pr-3">WO ID</th>
+                <th className="py-3 pr-3">Client</th>
+                <th className="py-3 pr-3">Property</th>
+                <th className="py-3 pr-3">Category</th>
+                <th className="py-3 pr-3">Timeline</th>
+                <th className="py-3 pr-3">Progress</th>
+                <th className="py-3">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {workOrders.map((w) => (
+                <tr key={w.id} className="border-b border-gray-100 text-xs">
+                  <td className="py-3.5 pr-3 font-bold text-gray-500">{w.id}</td>
+                  <td className="py-3.5 pr-3 font-semibold text-gray-900">{w.client}</td>
+                  <td className="py-3.5 pr-3 text-gray-600">{w.property}</td>
+                  <td className="py-3.5 pr-3"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${w.catColor}`}>{w.category}</span></td>
+                  <td className="py-3.5 pr-3 text-gray-600">{w.timeline}</td>
+                  <td className="py-3.5 pr-3"><div className="flex items-center gap-2"><div className="w-20 h-2 rounded-full bg-gray-200"><div className="h-full rounded-full bg-[#0F8B7D]" style={{ width: `${w.progress}%` }} /></div><span className="text-[10px] font-bold">{w.progress}%</span></div></td>
+                  <td className="py-3.5"><span className={`text-[10px] font-bold ${w.status === "Completed" ? "text-emerald-600" : w.status === "In Progress" ? "text-[#0F8B7D]" : "text-blue-600"}`}>● {w.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
