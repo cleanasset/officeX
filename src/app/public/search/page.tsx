@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import {
   Heart,
   Plus,
@@ -21,9 +22,12 @@ import {
   Map as MapIcon,
   List as ListIcon,
   Phone,
-  Building
+  Building,
+  Sparkles,
+  Send
 } from "lucide-react";
 import type { PropertyListing } from "@/components/RealGoogleMap";
+import { savePublicEnquiry } from "@/lib/leasingStore";
 
 // Dynamic import of Real Google Map component to prevent SSR window issues
 const RealGoogleMap = dynamic(() => import("@/components/RealGoogleMap"), {
@@ -36,20 +40,39 @@ const RealGoogleMap = dynamic(() => import("@/components/RealGoogleMap"), {
   )
 });
 
-export default function PropertySearchAndDiscovery() {
-  const [city, setCity] = useState("Mumbai");
-  const [searchQuery, setSearchQuery] = useState("");
+function PropertySearchContent() {
+  const searchParams = useSearchParams();
+  const initialCity = searchParams?.get("city") || "Mumbai";
+  const initialQ = searchParams?.get("q") || searchParams?.get("area") || "";
+  const initialBudget = searchParams?.get("budget") || "Budget";
+
+  const [city, setCity] = useState(initialCity);
+  const [searchQuery, setSearchQuery] = useState(initialQ);
   const [spaceType, setSpaceType] = useState("Office Space");
   const [size, setSize] = useState("2,000 - 5,000 Sq.Ft");
-  const [budget, setBudget] = useState("Budget");
+  const [budget, setBudget] = useState(initialBudget);
   const [gradeA, setGradeA] = useState(true);
   const [furnished, setFurnished] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
+
+  useEffect(() => {
+    if (searchParams) {
+      const q = searchParams.get("q") || searchParams.get("area") || "";
+      if (q) setSearchQuery(q);
+      const c = searchParams.get("city");
+      if (c) setCity(c);
+    }
+  }, [searchParams]);
 
   // Comparison State
   const [compareList, setCompareList] = useState<PropertyListing[]>([]);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Quick Enquiry Modal State
+  const [enquiryProperty, setEnquiryProperty] = useState<PropertyListing | null>(null);
+  const [enquiryForm, setEnquiryForm] = useState({ company: "", email: "", phone: "", seats: "60" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Real Iconic Commercial Buildings in Mumbai BKC
   const properties: PropertyListing[] = [
@@ -353,12 +376,23 @@ export default function PropertySearchAndDiscovery() {
                           <span className="text-[9px] text-gray-400 font-bold block">{prop.pricePerSqft}</span>
                         </div>
 
-                        <Link
-                          href={`/public/property/${prop.id}`}
-                          className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95"
-                        >
-                          Inspect Space <ArrowRight size={12} />
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEnquiryProperty(prop);
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-100/80 text-[#0F8B7D] font-bold text-xs flex items-center gap-1 shadow-2xs transition-transform active:scale-95 cursor-pointer"
+                          >
+                            <Send size={11} /> Enquire
+                          </button>
+                          <Link
+                            href={`/public/property/${prop.id}`}
+                            className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95"
+                          >
+                            Inspect Space <ArrowRight size={12} />
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -389,17 +423,150 @@ export default function PropertySearchAndDiscovery() {
                   <h4 className="text-xs font-bold text-gray-900 truncate">{selectedProperty.title}</h4>
                   <p className="text-[10px] font-black text-gray-900 mt-0.5">{selectedProperty.price} <span className="text-gray-400 font-normal">({selectedProperty.pricePerSqft})</span></p>
                 </div>
-                <Link
-                  href={`/public/property/${selectedProperty.id}`}
-                  className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold shrink-0 ml-2"
-                >
-                  View Details
-                </Link>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <button
+                    onClick={() => setEnquiryProperty(selectedProperty)}
+                    className="px-2.5 py-1.5 rounded-xl bg-teal-50 text-[#0F8B7D] border border-teal-200 text-xs font-bold"
+                  >
+                    Enquire
+                  </button>
+                  <Link
+                    href={`/public/property/${selectedProperty.id}`}
+                    className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold shrink-0"
+                  >
+                    Details
+                  </Link>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Quick Enquiry Modal */}
+      {enquiryProperty && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-gray-200 max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-gray-900">Direct Space Enquiry</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">{enquiryProperty.title} ({enquiryProperty.buildingName})</p>
+              </div>
+              <button onClick={() => setEnquiryProperty(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!enquiryForm.company.trim() || !enquiryForm.email.trim()) {
+                  setToast("Please provide company name and email.");
+                  setTimeout(() => setToast(null), 3000);
+                  return;
+                }
+                setIsSubmitting(true);
+                savePublicEnquiry({
+                  companyName: enquiryForm.company,
+                  contactName: enquiryForm.company,
+                  email: enquiryForm.email,
+                  phone: enquiryForm.phone,
+                  propertyTitle: enquiryProperty.title,
+                  buildingName: enquiryProperty.buildingName,
+                  seats: enquiryForm.seats,
+                  moveInDate: "Immediate",
+                  budget: `${enquiryProperty.price}/mo`
+                });
+
+                setTimeout(() => {
+                  setIsSubmitting(false);
+                  setEnquiryProperty(null);
+                  setToast(`Enquiry sent for ${enquiryProperty.title}! Added to Leasing CRM.`);
+                  setEnquiryForm({ company: "", email: "", phone: "", seats: "60" });
+                  setTimeout(() => setToast(null), 4000);
+                }, 600);
+              }}
+              className="space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">COMPANY NAME</label>
+                <input
+                  value={enquiryForm.company}
+                  onChange={(e) => setEnquiryForm({ ...enquiryForm, company: e.target.value })}
+                  placeholder="e.g. Acme Innovations"
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">OFFICIAL EMAIL</label>
+                  <input
+                    type="email"
+                    value={enquiryForm.email}
+                    onChange={(e) => setEnquiryForm({ ...enquiryForm, email: e.target.value })}
+                    placeholder="name@company.com"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PHONE</label>
+                  <input
+                    value={enquiryForm.phone}
+                    onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value })}
+                    placeholder="+91 98000 00000"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">REQUIRED SEATS</label>
+                <input
+                  type="number"
+                  value={enquiryForm.seats}
+                  onChange={(e) => setEnquiryForm({ ...enquiryForm, seats: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEnquiryProperty(null)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <Send size={12} /> {isSubmitting ? "Sending..." : "Submit Enquiry"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function PropertySearchAndDiscovery() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 gap-3">
+          <div className="w-10 h-10 border-4 border-[#0F8B7D] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-bold text-gray-500">Loading Commercial Properties...</p>
+        </div>
+      }
+    >
+      <PropertySearchContent />
+    </Suspense>
   );
 }

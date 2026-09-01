@@ -93,42 +93,44 @@ export default function RentCollectionTracker() {
           </button>
         </div>
 
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="py-3">INVOICE ID</th>
-              <th className="py-3">TENANT</th>
-              <th className="py-3">PROPERTY</th>
-              <th className="py-3">AMOUNT BILLED</th>
-              <th className="py-3">DUE DATE</th>
-              <th className="py-3">PAYMENT DATE</th>
-              <th className="py-3">PAYMENT MODE</th>
-              <th className="py-3 text-right">STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
-                <td className="py-3.5 font-mono text-gray-500">{inv.id}</td>
-                <td className="py-3.5 font-bold text-gray-900">{inv.tenant}</td>
-                <td className="py-3.5 text-gray-600">{inv.property}</td>
-                <td className="py-3.5 font-bold text-gray-900">{inv.amount}</td>
-                <td className="py-3.5 text-gray-500">{inv.due}</td>
-                <td className="py-3.5 text-gray-500">{inv.paid}</td>
-                <td className="py-3.5 text-gray-600">{inv.mode}</td>
-                <td className="py-3.5 text-right">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${inv.stClass}`}>
-                    {inv.status}
-                  </span>
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[750px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3">INVOICE ID</th>
+                <th className="py-3">TENANT</th>
+                <th className="py-3">PROPERTY</th>
+                <th className="py-3">AMOUNT BILLED</th>
+                <th className="py-3">DUE DATE</th>
+                <th className="py-3">PAYMENT DATE</th>
+                <th className="py-3">PAYMENT MODE</th>
+                <th className="py-3 text-right">STATUS</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                  <td className="py-3.5 font-mono text-gray-500">{inv.id}</td>
+                  <td className="py-3.5 font-bold text-gray-900">{inv.tenant}</td>
+                  <td className="py-3.5 text-gray-600">{inv.property}</td>
+                  <td className="py-3.5 font-bold text-gray-900">{inv.amount}</td>
+                  <td className="py-3.5 text-gray-500">{inv.due}</td>
+                  <td className="py-3.5 text-gray-500">{inv.paid}</td>
+                  <td className="py-3.5 text-gray-600">{inv.mode}</td>
+                  <td className="py-3.5 text-right">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${inv.stClass}`}>
+                      {inv.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Bottom Row: Payment Mode Breakdown + Outstanding Follow-ups */}
-      <div className="grid grid-cols-[1fr_400px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
         {/* Payment Mode Breakdown */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
           <h2 className="text-base font-bold text-gray-900">Payment Mode Breakdown</h2>

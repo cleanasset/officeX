@@ -339,102 +339,192 @@ export default function RentRollMaster() {
             </div>
           </div>
 
-          {/* Structured Financial Table */}
+          {/* Structured Financial Table: Mobile Cards for <md, Wide Grid for >=md */}
           <div className="bg-white rounded-2xl border border-gray-200/90 overflow-hidden shadow-2xs">
-            <div className="grid grid-cols-12 bg-gray-50/80 p-3 px-4 border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-left items-center">
-              <div className="col-span-1">LEASE ID</div>
-              <div className="col-span-2">TENANT &amp; UNIT</div>
-              <div className="col-span-2">BUILDING</div>
-              <div className="col-span-1">AREA</div>
-              <div className="col-span-1">BASE RENT</div>
-              <div className="col-span-1">CAM / MO</div>
-              <div className="col-span-2">GROSS BILLING</div>
-              <div className="col-span-1">ESCALATION</div>
-              <div className="col-span-1 text-right">STATUS</div>
+            {/* Desktop Table View (>= md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <div className="min-w-[980px]">
+                <div className="grid grid-cols-12 bg-gray-50/80 p-3 px-4 border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-left items-center">
+                  <div className="col-span-1">LEASE ID</div>
+                  <div className="col-span-2">TENANT &amp; UNIT</div>
+                  <div className="col-span-2">BUILDING</div>
+                  <div className="col-span-1">AREA</div>
+                  <div className="col-span-1">BASE RENT</div>
+                  <div className="col-span-1">CAM / MO</div>
+                  <div className="col-span-2">GROSS BILLING</div>
+                  <div className="col-span-1">ESCALATION</div>
+                  <div className="col-span-1 text-right">STATUS</div>
+                </div>
+
+                <div className="divide-y divide-gray-100">
+                  {filteredData.map((d) => {
+                    const isExpanded = expandedLeaseId === d.leaseId;
+
+                    return (
+                      <div key={d.leaseId} className="transition-colors">
+                        {/* Primary Row */}
+                        <div 
+                          onClick={() => setExpandedLeaseId(isExpanded ? null : d.leaseId)}
+                          className="grid grid-cols-12 p-3.5 px-4 items-center text-xs hover:bg-teal-50/20 transition-colors cursor-pointer group"
+                        >
+                          <div className="col-span-1 font-mono font-bold text-[#0F8B7D]">{d.leaseId}</div>
+                          <div className="col-span-2">
+                            <span className="font-bold text-gray-900 block group-hover:text-[#0F8B7D]">{d.tenantName}</span>
+                            <span className="text-[10px] text-gray-400">{d.unit}</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="font-semibold text-gray-700 block truncate">{d.propertyName}</span>
+                            <span className="text-[10px] text-gray-400">{d.floor}</span>
+                          </div>
+                          <div className="col-span-1 font-semibold text-gray-800">{d.areaSqFt.toLocaleString()} sf</div>
+                          <div className="col-span-1 font-bold text-gray-900">{d.baseMonthlyRent}</div>
+                          <div className="col-span-1 text-gray-600">{d.camMonthly}</div>
+                          <div className="col-span-2">
+                            <span className="font-black text-gray-900 block">{d.totalMonthlyBilling}</span>
+                            <span className="text-[10px] text-teal-700 font-semibold">Incl. 18% GST</span>
+                          </div>
+                          <div className="col-span-1">
+                            <span className="font-semibold text-amber-700 block text-[11px]">{d.nextEscalationDate}</span>
+                            <span className="text-[9px] text-gray-400 font-bold">+{d.escalationPct}% Escalation</span>
+                          </div>
+                          <div className="col-span-1 flex items-center justify-end gap-1.5">
+                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black ${
+                              d.leaseStatus === "Active" 
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200" 
+                                : "bg-amber-50 text-amber-800 border border-amber-200"
+                            }`}>
+                              {d.leaseStatus}
+                            </span>
+                            {isExpanded ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
+                          </div>
+                        </div>
+
+                        {/* Structured Drilldown Card */}
+                        {isExpanded && (
+                          <div className="p-5 px-6 bg-gray-50/70 border-t border-gray-100 space-y-4 animate-in fade-in duration-150">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                              <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1.5">
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">LEASE PERIOD &amp; LOCK-IN</span>
+                                <p className="font-bold text-gray-900">Lease: {d.leaseStart} → {d.leaseEnd}</p>
+                                <p className="font-bold text-teal-700">Lock-in: {d.lockInEnd}</p>
+                                <p className="text-[10px] text-gray-400">Notice Period: {d.noticePeriodDays} Days</p>
+                              </div>
+
+                              <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1.5">
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">SECURITY DEPOSITS HELD</span>
+                                <p className="font-bold text-gray-900">Required: {d.depositRequired}</p>
+                                <p className="font-black text-emerald-700">Received: {d.depositReceived}</p>
+                                <p className="text-[10px] text-gray-400">6 Months Interest-Free Escrow</p>
+                              </div>
+
+                              <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1.5">
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">TAX &amp; RECONCILIATION</span>
+                                <p className="font-bold text-gray-900">Base GST (18%): {d.gstAmount}</p>
+                                <p className="font-bold text-gray-900">CAM Rate: ₹{d.camPsf}/sq.ft.</p>
+                                <p className="text-[10px] text-gray-400">Monthly Utility: {d.utilityMonthly}</p>
+                              </div>
+
+                              <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2 flex flex-col justify-between">
+                                <div>
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">PAYMENT AUDIT STATUS</span>
+                                  <p className={`font-black text-xs mt-0.5 ${d.outstanding === "₹0" ? "text-emerald-700" : "text-amber-700"}`}>
+                                    {d.outstanding === "₹0" ? "✅ Fully Paid · Zero Dues" : `⚠ Outstanding: ${d.outstanding}`}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); showToast(`Generated formal invoice pack for ${d.tenantName}!`); }}
+                                  className="w-full py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-[10px] shadow-2xs transition-all cursor-pointer text-center"
+                                >
+                                  Download Invoice Pack
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className="divide-y divide-gray-100">
+            {/* Mobile Dedicated Tenancy Cards (< md) */}
+            <div className="md:hidden divide-y divide-gray-100">
               {filteredData.map((d) => {
                 const isExpanded = expandedLeaseId === d.leaseId;
 
                 return (
-                  <div key={d.leaseId} className="transition-colors">
-                    {/* Primary Row */}
+                  <div key={d.leaseId} className="p-4 space-y-3">
                     <div 
                       onClick={() => setExpandedLeaseId(isExpanded ? null : d.leaseId)}
-                      className="grid grid-cols-12 p-3.5 px-4 items-center text-xs hover:bg-teal-50/20 transition-colors cursor-pointer group"
+                      className="cursor-pointer"
                     >
-                      <div className="col-span-1 font-mono font-bold text-[#0F8B7D]">{d.leaseId}</div>
-                      <div className="col-span-2">
-                        <span className="font-bold text-gray-900 block group-hover:text-[#0F8B7D]">{d.tenantName}</span>
-                        <span className="text-[10px] text-gray-400">{d.unit}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="font-semibold text-gray-700 block truncate">{d.propertyName}</span>
-                        <span className="text-[10px] text-gray-400">{d.floor}</span>
-                      </div>
-                      <div className="col-span-1 font-semibold text-gray-800">{d.areaSqFt.toLocaleString()} sf</div>
-                      <div className="col-span-1 font-bold text-gray-900">{d.baseMonthlyRent}</div>
-                      <div className="col-span-1 text-gray-600">{d.camMonthly}</div>
-                      <div className="col-span-2">
-                        <span className="font-black text-gray-900 block">{d.totalMonthlyBilling}</span>
-                        <span className="text-[10px] text-teal-700 font-semibold">Incl. 18% GST</span>
-                      </div>
-                      <div className="col-span-1">
-                        <span className="font-semibold text-amber-700 block text-[11px]">{d.nextEscalationDate}</span>
-                        <span className="text-[9px] text-gray-400 font-bold">+{d.escalationPct}% Escalation</span>
-                      </div>
-                      <div className="col-span-1 flex items-center justify-end gap-1.5">
-                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-black ${
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold text-[#0F8B7D]">{d.leaseId}</span>
+                          <h3 className="text-sm font-bold text-gray-900 leading-snug">{d.tenantName}</h3>
+                          <p className="text-[11px] text-gray-500 mt-0.5">{d.propertyName} · {d.unit}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-black shrink-0 ${
                           d.leaseStatus === "Active" 
                             ? "bg-emerald-50 text-emerald-800 border border-emerald-200" 
                             : "bg-amber-50 text-amber-800 border border-amber-200"
                         }`}>
                           {d.leaseStatus}
                         </span>
-                        {isExpanded ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 bg-gray-50/80 p-2.5 rounded-xl mt-3 text-xs">
+                        <div>
+                          <span className="text-[9px] font-bold text-gray-400 block uppercase">AREA</span>
+                          <span className="font-bold text-gray-800">{d.areaSqFt.toLocaleString()} sq.ft.</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-gray-400 block uppercase">TOTAL MONTHLY</span>
+                          <span className="font-black text-gray-900">{d.totalMonthlyBilling}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-gray-400 block uppercase">BASE RENT</span>
+                          <span className="font-semibold text-gray-700">{d.baseMonthlyRent}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-gray-400 block uppercase">NEXT ESCALATION</span>
+                          <span className="font-semibold text-amber-700">{d.nextEscalationDate} (+{d.escalationPct}%)</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 text-xs font-bold text-[#0F8B7D]">
+                        <span>{isExpanded ? "Hide Details" : "View Lease & Audit"}</span>
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </div>
                     </div>
 
-                    {/* Structured Drilldown Card */}
+                    {/* Mobile Expanded Detail Box */}
                     {isExpanded && (
-                      <div className="p-5 px-6 bg-gray-50/70 border-t border-gray-100 space-y-4 animate-in fade-in duration-150">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                          <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1.5">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">LEASE PERIOD &amp; LOCK-IN</span>
-                            <p className="font-bold text-gray-900">Lease: {d.leaseStart} → {d.leaseEnd}</p>
-                            <p className="font-bold text-teal-700">Lock-in: {d.lockInEnd}</p>
-                            <p className="text-[10px] text-gray-400">Notice Period: {d.noticePeriodDays} Days</p>
-                          </div>
+                      <div className="p-3.5 bg-gray-50/90 rounded-xl space-y-3 text-xs border border-gray-200/80 animate-in fade-in duration-150">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">LEASE &amp; LOCK-IN</span>
+                          <p className="font-bold text-gray-800">Lease: {d.leaseStart} → {d.leaseEnd}</p>
+                          <p className="text-teal-700 font-bold">Lock-in: {d.lockInEnd}</p>
+                        </div>
 
-                          <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1.5">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">SECURITY DEPOSITS HELD</span>
-                            <p className="font-bold text-gray-900">Required: {d.depositRequired}</p>
-                            <p className="font-black text-emerald-700">Received: {d.depositReceived}</p>
-                            <p className="text-[10px] text-gray-400">6 Months Interest-Free Escrow</p>
-                          </div>
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">DEPOSITS &amp; CAM</span>
+                          <p className="font-bold text-gray-800">Deposit: {d.depositReceived}</p>
+                          <p className="text-gray-600">CAM: {d.camMonthly} (₹{d.camPsf}/sf)</p>
+                          <p className="text-gray-600">GST (18%): {d.gstAmount}</p>
+                        </div>
 
-                          <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1.5">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">TAX &amp; RECONCILIATION</span>
-                            <p className="font-bold text-gray-900">Base GST (18%): {d.gstAmount}</p>
-                            <p className="font-bold text-gray-900">CAM Rate: ₹{d.camPsf}/sq.ft.</p>
-                            <p className="text-[10px] text-gray-400">Monthly Utility: {d.utilityMonthly}</p>
-                          </div>
-
-                          <div className="bg-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2 flex flex-col justify-between">
-                            <div>
-                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">PAYMENT AUDIT STATUS</span>
-                              <p className={`font-black text-xs mt-0.5 ${d.outstanding === "₹0" ? "text-emerald-700" : "text-amber-700"}`}>
-                                {d.outstanding === "₹0" ? "✅ Fully Paid · Zero Dues" : `⚠ Outstanding: ${d.outstanding}`}
-                              </p>
-                            </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); showToast(`Generated formal invoice pack for ${d.tenantName}!`); }}
-                              className="w-full py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-[10px] shadow-2xs transition-all cursor-pointer text-center"
-                            >
-                              Download Invoice Pack
-                            </button>
-                          </div>
+                        <div className="pt-2 border-t border-gray-200 flex flex-col gap-2">
+                          <p className={`font-black text-xs ${d.outstanding === "₹0" ? "text-emerald-700" : "text-amber-700"}`}>
+                            {d.outstanding === "₹0" ? "✅ Fully Paid · Zero Dues" : `⚠ Outstanding: ${d.outstanding}`}
+                          </p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); showToast(`Generated formal invoice pack for ${d.tenantName}!`); }}
+                            className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs shadow-xs transition-all cursor-pointer text-center"
+                          >
+                            Download Invoice Pack
+                          </button>
                         </div>
                       </div>
                     )}
@@ -448,48 +538,50 @@ export default function RentRollMaster() {
 
       {/* Tab 2: Monthly Invoices */}
       {activeTab === "invoices" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-black text-gray-900">Monthly GST Commercial Invoices</h3>
               <p className="text-xs text-gray-400 mt-0.5">Automated GST compliance invoices generated on 1st of every calendar month</p>
             </div>
           </div>
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                <th className="p-3">INVOICE NO</th>
-                <th className="p-3">TENANT</th>
-                <th className="p-3">BILLING MONTH</th>
-                <th className="p-3">RENT AMOUNT</th>
-                <th className="p-3">CAM RECOVERY</th>
-                <th className="p-3">GST (18%)</th>
-                <th className="p-3">TOTAL</th>
-                <th className="p-3 text-right">STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rentRollData.map((d, i) => (
-                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-mono font-bold text-[#0F8B7D]">INV-2026-08{i + 1}</td>
-                  <td className="p-3 font-bold text-gray-900">{d.tenantName}</td>
-                  <td className="p-3 text-gray-500">August 2026</td>
-                  <td className="p-3 font-semibold">{d.baseMonthlyRent}</td>
-                  <td className="p-3 text-gray-600">{d.camMonthly}</td>
-                  <td className="p-3 font-mono">{d.gstAmount}</td>
-                  <td className="p-3 font-black text-gray-900">{d.totalMonthlyBilling}</td>
-                  <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">Issued</span></td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                  <th className="p-3">INVOICE NO</th>
+                  <th className="p-3">TENANT</th>
+                  <th className="p-3">BILLING MONTH</th>
+                  <th className="p-3">RENT AMOUNT</th>
+                  <th className="p-3">CAM RECOVERY</th>
+                  <th className="p-3">GST (18%)</th>
+                  <th className="p-3">TOTAL</th>
+                  <th className="p-3 text-right">STATUS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rentRollData.map((d, i) => (
+                  <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3 font-mono font-bold text-[#0F8B7D]">INV-2026-08{i + 1}</td>
+                    <td className="p-3 font-bold text-gray-900">{d.tenantName}</td>
+                    <td className="p-3 text-gray-500">August 2026</td>
+                    <td className="p-3 font-semibold">{d.baseMonthlyRent}</td>
+                    <td className="p-3 text-gray-600">{d.camMonthly}</td>
+                    <td className="p-3 font-mono">{d.gstAmount}</td>
+                    <td className="p-3 font-black text-gray-900">{d.totalMonthlyBilling}</td>
+                    <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">Issued</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Tab 3: Collections Ledger */}
       {activeTab === "collections" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4 text-xs">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-black text-gray-900">Collections &amp; Bank Reconciliation Ledger</h3>
               <p className="text-xs text-gray-400 mt-0.5">Real-time payment receipts, RTGS/NEFT UTR references, and automated invoice clearance</p>
@@ -499,126 +591,132 @@ export default function RentRollMaster() {
             </span>
           </div>
 
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                <th className="p-3">RECEIPT NO</th>
-                <th className="p-3">TENANT</th>
-                <th className="p-3">PAYMENT DATE</th>
-                <th className="p-3">AMOUNT RECEIVED</th>
-                <th className="p-3">PAYMENT MODE</th>
-                <th className="p-3">UTR / REFERENCE</th>
-                <th className="p-3 text-right">RECONCILIATION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { r: "REC-2026-881", t: "Tata Digital Ltd", d: "02-Aug-2026", a: "₹63,24,800", m: "RTGS / HDFC Bank", utr: "HDFCR520260802008912" },
-                { r: "REC-2026-882", t: "Google India Pvt Ltd", d: "03-Aug-2026", a: "₹84,77,120", m: "Corporate Wire", utr: "CITIN20260803991204" },
-                { r: "REC-2026-883", t: "Wipro Cloud Infra", d: "05-Aug-2026", a: "₹32,17,860", m: "NEFT / ICICI", utr: "ICICN20260805128790" }
-              ].map((c, idx) => (
-                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-mono font-bold text-[#0F8B7D]">{c.r}</td>
-                  <td className="p-3 font-bold text-gray-900">{c.t}</td>
-                  <td className="p-3 text-gray-500">{c.d}</td>
-                  <td className="p-3 font-black text-emerald-700">{c.a}</td>
-                  <td className="p-3 text-gray-600">{c.m}</td>
-                  <td className="p-3 font-mono text-[10px] text-gray-500">{c.utr}</td>
-                  <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">100% Cleared</span></td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                  <th className="p-3">RECEIPT NO</th>
+                  <th className="p-3">TENANT</th>
+                  <th className="p-3">PAYMENT DATE</th>
+                  <th className="p-3">AMOUNT RECEIVED</th>
+                  <th className="p-3">PAYMENT MODE</th>
+                  <th className="p-3">UTR / REFERENCE</th>
+                  <th className="p-3 text-right">RECONCILIATION</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[
+                  { r: "REC-2026-881", t: "Tata Digital Ltd", d: "02-Aug-2026", a: "₹63,24,800", m: "RTGS / HDFC Bank", utr: "HDFCR520260802008912" },
+                  { r: "REC-2026-882", t: "Google India Pvt Ltd", d: "03-Aug-2026", a: "₹84,77,120", m: "Corporate Wire", utr: "CITIN20260803991204" },
+                  { r: "REC-2026-883", t: "Wipro Cloud Infra", d: "05-Aug-2026", a: "₹32,17,860", m: "NEFT / ICICI", utr: "ICICN20260805128790" }
+                ].map((c, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3 font-mono font-bold text-[#0F8B7D]">{c.r}</td>
+                    <td className="p-3 font-bold text-gray-900">{c.t}</td>
+                    <td className="p-3 text-gray-500">{c.d}</td>
+                    <td className="p-3 font-black text-emerald-700">{c.a}</td>
+                    <td className="p-3 text-gray-600">{c.m}</td>
+                    <td className="p-3 font-mono text-[10px] text-gray-500">{c.utr}</td>
+                    <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">100% Cleared</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Tab 4: Outstanding & Aging */}
       {activeTab === "aging" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4 text-xs">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
           <div>
             <h3 className="text-base font-black text-gray-900">Receivables Aging &amp; Credit Risk Analysis</h3>
             <p className="text-xs text-gray-400 mt-0.5">30-day, 60-day, 90-day overdue buckets with interest penalty calculations</p>
           </div>
 
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                <th className="p-3">TENANT</th>
-                <th className="p-3">CURRENT (0-30D)</th>
-                <th className="p-3">31 - 60 DAYS</th>
-                <th className="p-3">61 - 90 DAYS</th>
-                <th className="p-3">90+ DAYS</th>
-                <th className="p-3">TOTAL OVERDUE</th>
-                <th className="p-3 text-right">CREDIT RISK</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { t: "Tata Digital Ltd", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
-                { t: "Google India Pvt Ltd", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
-                { t: "Deloitte Digital", c: "₹45,07,600", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹45,07,600", r: "14d Due (Moderate)", rColor: "bg-amber-50 text-amber-800" },
-                { t: "Wipro Cloud Infra", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" }
-              ].map((ag, i) => (
-                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-bold text-gray-900">{ag.t}</td>
-                  <td className="p-3">{ag.c}</td>
-                  <td className="p-3 text-gray-400">{ag.d30}</td>
-                  <td className="p-3 text-gray-400">{ag.d60}</td>
-                  <td className="p-3 text-gray-400">{ag.d90}</td>
-                  <td className="p-3 font-black text-gray-900">{ag.tot}</td>
-                  <td className="p-3 text-right"><span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${ag.rColor}`}>{ag.r}</span></td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                  <th className="p-3">TENANT</th>
+                  <th className="p-3">CURRENT (0-30D)</th>
+                  <th className="p-3">31 - 60 DAYS</th>
+                  <th className="p-3">61 - 90 DAYS</th>
+                  <th className="p-3">90+ DAYS</th>
+                  <th className="p-3">TOTAL OVERDUE</th>
+                  <th className="p-3 text-right">CREDIT RISK</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[
+                  { t: "Tata Digital Ltd", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
+                  { t: "Google India Pvt Ltd", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
+                  { t: "Deloitte Digital", c: "₹45,07,600", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹45,07,600", r: "14d Due (Moderate)", rColor: "bg-amber-50 text-amber-800" },
+                  { t: "Wipro Cloud Infra", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" }
+                ].map((ag, i) => (
+                  <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3 font-bold text-gray-900">{ag.t}</td>
+                    <td className="p-3">{ag.c}</td>
+                    <td className="p-3 text-gray-400">{ag.d30}</td>
+                    <td className="p-3 text-gray-400">{ag.d60}</td>
+                    <td className="p-3 text-gray-400">{ag.d90}</td>
+                    <td className="p-3 font-black text-gray-900">{ag.tot}</td>
+                    <td className="p-3 text-right"><span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${ag.rColor}`}>{ag.r}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Tab 5: Escalations */}
       {activeTab === "escalations" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4 text-xs">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
           <div>
             <h3 className="text-base font-black text-gray-900">Contractual Escalation Index &amp; 30/90 Day Timers</h3>
             <p className="text-xs text-gray-400 mt-0.5">Automated compounding rent revisions with notice period escalation alerts</p>
           </div>
 
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                <th className="p-3">TENANT</th>
-                <th className="p-3">CURRENT BASE RENT</th>
-                <th className="p-3">ESCALATION %</th>
-                <th className="p-3">DUE DATE</th>
-                <th className="p-3">REVISED BASE RENT</th>
-                <th className="p-3">MONTHLY REVENUE GAIN</th>
-                <th className="p-3 text-right">ALERT STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rentRollData.map((d, idx) => (
-                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-bold text-gray-900">{d.tenantName}</td>
-                  <td className="p-3 font-semibold">{d.baseMonthlyRent}</td>
-                  <td className="p-3 font-bold text-teal-700">+{d.escalationPct}% p.a.</td>
-                  <td className="p-3 font-semibold text-amber-700">{d.nextEscalationDate}</td>
-                  <td className="p-3 font-bold text-gray-900">
-                    ₹{(Math.round(parseInt(d.baseMonthlyRent.replace(/[^\d]/g, "")) * (1 + d.escalationPct / 100))).toLocaleString("en-IN")}
-                  </td>
-                  <td className="p-3 font-black text-emerald-700">
-                    +₹{(Math.round(parseInt(d.baseMonthlyRent.replace(/[^\d]/g, "")) * (d.escalationPct / 100))).toLocaleString("en-IN")}
-                  </td>
-                  <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] text-[10px] font-bold">Scheduled</span></td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                  <th className="p-3">TENANT</th>
+                  <th className="p-3">CURRENT BASE RENT</th>
+                  <th className="p-3">ESCALATION %</th>
+                  <th className="p-3">DUE DATE</th>
+                  <th className="p-3">REVISED BASE RENT</th>
+                  <th className="p-3">MONTHLY REVENUE GAIN</th>
+                  <th className="p-3 text-right">ALERT STATUS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rentRollData.map((d, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3 font-bold text-gray-900">{d.tenantName}</td>
+                    <td className="p-3 font-semibold">{d.baseMonthlyRent}</td>
+                    <td className="p-3 font-bold text-teal-700">+{d.escalationPct}% p.a.</td>
+                    <td className="p-3 font-semibold text-amber-700">{d.nextEscalationDate}</td>
+                    <td className="p-3 font-bold text-gray-900">
+                      ₹{(Math.round(parseInt(d.baseMonthlyRent.replace(/[^\d]/g, "")) * (1 + d.escalationPct / 100))).toLocaleString("en-IN")}
+                    </td>
+                    <td className="p-3 font-black text-emerald-700">
+                      +₹{(Math.round(parseInt(d.baseMonthlyRent.replace(/[^\d]/g, "")) * (d.escalationPct / 100))).toLocaleString("en-IN")}
+                    </td>
+                    <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] text-[10px] font-bold">Scheduled</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Tab 6: P&L Summary */}
       {activeTab === "pnl" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4 text-xs">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-black text-gray-900">Property-wise Net Operating Income (NOI) Summary</h3>
               <p className="text-xs text-gray-400 mt-0.5">Gross Lease Revenue, CAM Recovery, Operating Expenses, and Net Operating Margin</p>
@@ -628,89 +726,93 @@ export default function RentRollMaster() {
             </span>
           </div>
 
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                <th className="p-3">PROPERTY</th>
-                <th className="p-3">GROSS RENT REVENUE</th>
-                <th className="p-3">CAM REVENUE</th>
-                <th className="p-3">TOTAL REVENUE</th>
-                <th className="p-3">OPERATING COSTS (OPEX)</th>
-                <th className="p-3">NET OPERATING INCOME (NOI)</th>
-                <th className="p-3 text-right">MARGIN %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { p: "One BKC (Apex Tower)", r: "₹1,08,65,000", c: "₹12,54,000", t: "₹1,21,19,000", o: "₹18,50,000", noi: "₹1,02,69,000", m: "84.7%" },
-                { p: "Maker Maxity Mumbai", r: "₹33,30,000", c: "₹3,70,000", t: "₹37,00,000", o: "₹6,80,000", noi: "₹30,20,000", m: "81.6%" },
-                { p: "Godrej BKC Horizon", r: "₹23,80,000", c: "₹2,52,000", t: "₹26,32,000", o: "₹5,10,000", noi: "₹21,22,000", m: "80.6%" }
-              ].map((p, i) => (
-                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-bold text-gray-900 flex items-center gap-1.5">
-                    <Building size={13} className="text-[#0F8B7D]" /> {p.p}
-                  </td>
-                  <td className="p-3 font-semibold">{p.r}</td>
-                  <td className="p-3 text-gray-600">{p.c}</td>
-                  <td className="p-3 font-bold text-gray-900">{p.t}</td>
-                  <td className="p-3 text-red-600 font-semibold">{p.o}</td>
-                  <td className="p-3 font-black text-emerald-700">{p.noi}</td>
-                  <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-black">{p.m}</span></td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                  <th className="p-3">PROPERTY</th>
+                  <th className="p-3">GROSS RENT REVENUE</th>
+                  <th className="p-3">CAM REVENUE</th>
+                  <th className="p-3">TOTAL REVENUE</th>
+                  <th className="p-3">OPERATING COSTS (OPEX)</th>
+                  <th className="p-3">NET OPERATING INCOME (NOI)</th>
+                  <th className="p-3 text-right">MARGIN %</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[
+                  { p: "One BKC (Apex Tower)", r: "₹1,08,65,000", c: "₹12,54,000", t: "₹1,21,19,000", o: "₹18,50,000", noi: "₹1,02,69,000", m: "84.7%" },
+                  { p: "Maker Maxity Mumbai", r: "₹33,30,000", c: "₹3,70,000", t: "₹37,00,000", o: "₹6,80,000", noi: "₹30,20,000", m: "81.6%" },
+                  { p: "Godrej BKC Horizon", r: "₹23,80,000", c: "₹2,52,000", t: "₹26,32,000", o: "₹5,10,000", noi: "₹21,22,000", m: "80.6%" }
+                ].map((p, i) => (
+                  <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3 font-bold text-gray-900 flex items-center gap-1.5">
+                      <Building size={13} className="text-[#0F8B7D]" /> {p.p}
+                    </td>
+                    <td className="p-3 font-semibold">{p.r}</td>
+                    <td className="p-3 text-gray-600">{p.c}</td>
+                    <td className="p-3 font-bold text-gray-900">{p.t}</td>
+                    <td className="p-3 text-red-600 font-semibold">{p.o}</td>
+                    <td className="p-3 font-black text-emerald-700">{p.noi}</td>
+                    <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-black">{p.m}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Tab 7: Tenant Directory */}
       {activeTab === "tenants" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4 text-xs">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
           <div>
             <h3 className="text-base font-black text-gray-900">Tenant Legal Entity &amp; Compliance Directory</h3>
             <p className="text-xs text-gray-400 mt-0.5">Statutory GSTIN, PAN numbers, registered addresses, and primary corporate contacts</p>
           </div>
 
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                <th className="p-3">TENANT ID</th>
-                <th className="p-3">LEGAL COMPANY NAME</th>
-                <th className="p-3">GSTIN</th>
-                <th className="p-3">PAN</th>
-                <th className="p-3">CONTACT PERSON</th>
-                <th className="p-3">EMAIL &amp; MOBILE</th>
-                <th className="p-3 text-right">KYC STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { id: "TEN-101", n: "Tata Digital Limited", g: "27AAACT2727Q1ZB", pan: "AAACT2727Q", c: "Aditya Verma (Head RE)", e: "aditya.verma@tatadigital.com", m: "+91 98201 44821" },
-                { id: "TEN-102", n: "Google India Private Limited", g: "27AAACG9014M1Z2", pan: "AAACG9014M", c: "Priya Nair (Director Workplace)", e: "pnair@google.com", m: "+91 98190 22391" },
-                { id: "TEN-103", n: "Deloitte Digital India LLP", g: "27AABBD3910F1Z4", pan: "AABBD3910F", c: "Rahul Mehta (Partner RE)", e: "rmehta@deloitte.com", m: "+91 98210 55102" },
-                { id: "TEN-104", n: "Wipro Limited", g: "27AAACW1209K1ZY", pan: "AAACW1209K", c: "Sneha Rao (Admin VP)", e: "sneha.rao@wipro.com", m: "+91 98330 11984" }
-              ].map((t, idx) => (
-                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-mono font-bold text-[#0F8B7D]">{t.id}</td>
-                  <td className="p-3 font-black text-gray-900">{t.n}</td>
-                  <td className="p-3 font-mono text-gray-700">{t.g}</td>
-                  <td className="p-3 font-mono text-gray-700">{t.pan}</td>
-                  <td className="p-3 font-semibold text-gray-800">{t.c}</td>
-                  <td className="p-3 text-gray-500">
-                    <div>{t.e}</div>
-                    <div className="text-[10px] text-gray-400">{t.m}</div>
-                  </td>
-                  <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">100% Verified</span></td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                  <th className="p-3">TENANT ID</th>
+                  <th className="p-3">LEGAL COMPANY NAME</th>
+                  <th className="p-3">GSTIN</th>
+                  <th className="p-3">PAN</th>
+                  <th className="p-3">CONTACT PERSON</th>
+                  <th className="p-3">EMAIL &amp; MOBILE</th>
+                  <th className="p-3 text-right">KYC STATUS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[
+                  { id: "TEN-101", n: "Tata Digital Limited", g: "27AAACT2727Q1ZB", pan: "AAACT2727Q", c: "Aditya Verma (Head RE)", e: "aditya.verma@tatadigital.com", m: "+91 98201 44821" },
+                  { id: "TEN-102", n: "Google India Private Limited", g: "27AAACG9014M1Z2", pan: "AAACG9014M", c: "Priya Nair (Director Workplace)", e: "pnair@google.com", m: "+91 98190 22391" },
+                  { id: "TEN-103", n: "Deloitte Digital India LLP", g: "27AABBD3910F1Z4", pan: "AABBD3910F", c: "Rahul Mehta (Partner RE)", e: "rmehta@deloitte.com", m: "+91 98210 55102" },
+                  { id: "TEN-104", n: "Wipro Limited", g: "27AAACW1209K1ZY", pan: "AAACW1209K", c: "Sneha Rao (Admin VP)", e: "sneha.rao@wipro.com", m: "+91 98330 11984" }
+                ].map((t, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="p-3 font-mono font-bold text-[#0F8B7D]">{t.id}</td>
+                    <td className="p-3 font-black text-gray-900">{t.n}</td>
+                    <td className="p-3 font-mono text-gray-700">{t.g}</td>
+                    <td className="p-3 font-mono text-gray-700">{t.pan}</td>
+                    <td className="p-3 font-semibold text-gray-800">{t.c}</td>
+                    <td className="p-3 text-gray-500">
+                      <div>{t.e}</div>
+                      <div className="text-[10px] text-gray-400">{t.m}</div>
+                    </td>
+                    <td className="p-3 text-right"><span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">100% Verified</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Tab 8: Field Dictionary */}
       {activeTab === "dictionary" && (
-        <div className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-2xs space-y-4 text-xs">
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
           <div>
             <h3 className="text-base font-black text-gray-900">Institutional Field Dictionary &amp; Formula Spec</h3>
             <p className="text-xs text-gray-400 mt-0.5">Reference definitions based on OFFICEX Institutional Specification</p>

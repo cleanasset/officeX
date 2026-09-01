@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   AlertCircle, Clock, CheckCircle, Sparkles, ArrowRight, X, 
   Building, Users, TrendingUp, Award, Calendar, DollarSign, 
@@ -96,6 +96,42 @@ export default function PipelineKanbanBoard() {
       badgeColor: "bg-teal-100 text-teal-800"
     }
   ]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("officex_leasing_pipeline") || "[]");
+      if (stored.length > 0) {
+        setDeals(prev => {
+          const ids = new Set(prev.map(d => d.id));
+          const newItems = stored.filter((s: PipelineCard) => !ids.has(s.id));
+          return [...newItems, ...prev];
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const handleNewLead = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem("officex_leasing_pipeline") || "[]");
+        if (stored.length > 0) {
+          setDeals(prev => {
+            const ids = new Set(prev.map(d => d.id));
+            const newItems = stored.filter((s: PipelineCard) => !ids.has(s.id));
+            return [...newItems, ...prev];
+          });
+          showToast("⚡ New enquiry added to Pipeline Kanban!");
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener("officex-lead-added", handleNewLead);
+    window.addEventListener("officex-visit-added", handleNewLead);
+    return () => {
+      window.removeEventListener("officex-lead-added", handleNewLead);
+      window.removeEventListener("officex-visit-added", handleNewLead);
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);

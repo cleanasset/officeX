@@ -61,37 +61,39 @@ export default function DocumentLockerDashboard() {
             />
           </div>
         </div>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="py-3 pr-3">Document Name</th>
-              <th className="py-3 pr-3">Category</th>
-              <th className="py-3 pr-3">File Type</th>
-              <th className="py-3 pr-3">Size</th>
-              <th className="py-3 pr-3">Upload Date</th>
-              <th className="py-3">Verified Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.map((d) => (
-              <tr key={d.name} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
-                <td className="py-4 pr-3 font-semibold text-gray-900 flex items-center gap-2">
-                  <FileText size={14} className="text-red-400" />
-                  {d.name}
-                </td>
-                <td className="py-4 pr-3 text-gray-600">{d.category}</td>
-                <td className="py-4 pr-3 text-gray-600">{d.type}</td>
-                <td className="py-4 pr-3 text-gray-600">{d.size}</td>
-                <td className="py-4 pr-3 text-gray-600">{d.date}</td>
-                <td className="py-4">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${statusStyle(d.status)}`}>
-                    {d.status === "Verified" && "✓ "}{d.status === "Pending" && "⏳ "}{d.status}
-                  </span>
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[650px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3 pr-3">Document Name</th>
+                <th className="py-3 pr-3">Category</th>
+                <th className="py-3 pr-3">File Type</th>
+                <th className="py-3 pr-3">Size</th>
+                <th className="py-3 pr-3">Upload Date</th>
+                <th className="py-3">Verified Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {documents.map((d) => (
+                <tr key={d.name} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                  <td className="py-4 pr-3 font-semibold text-gray-900 flex items-center gap-2">
+                    <FileText size={14} className="text-red-400" />
+                    {d.name}
+                  </td>
+                  <td className="py-4 pr-3 text-gray-600">{d.category}</td>
+                  <td className="py-4 pr-3 text-gray-600">{d.type}</td>
+                  <td className="py-4 pr-3 text-gray-600">{d.size}</td>
+                  <td className="py-4 pr-3 text-gray-600">{d.date}</td>
+                  <td className="py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${statusStyle(d.status)}`}>
+                      {d.status === "Verified" && "✓ "}{d.status === "Pending" && "⏳ "}{d.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
           <p className="text-[10px] text-gray-400">Showing 4 of 25 documents</p>
           <div className="flex items-center gap-1">

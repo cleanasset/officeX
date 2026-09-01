@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import L from "leaflet";
 import Link from "next/link";
 import { Layers, Plus, Minus, Navigation, Maximize2, Compass, ArrowRight, X } from "lucide-react";
 
@@ -28,17 +27,19 @@ export interface PropertyListing {
 interface MapProps {
   properties: PropertyListing[];
   selectedProperty: PropertyListing | null;
-  onSelectProperty: (property: PropertyListing) => void;
+  onSelectProperty: (property: PropertyListing | null) => void;
 }
 
 export default function RealGoogleMap({ properties, selectedProperty, onSelectProperty }: MapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<{ [id: string]: L.Marker }>({});
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<{ [id: string]: any }>({});
+  const tileLayerRef = useRef<any>(null);
+  const leafletModuleRef = useRef<any>(null);
 
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "terrain">("roadmap");
   const [zoomLevel, setZoomLevel] = useState(14);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Map Tile Providers (Google Maps High-Res Tile Endpoints)
   const tileLayers = {
@@ -48,114 +49,127 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
   };
 
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    let isMounted = true;
 
-    // Initialize Leaflet Map centered on Mumbai BKC
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: [19.0664, 72.8665], // Center of BKC Financial District
-        zoom: 14,
-        zoomControl: false,
-        attributionControl: false
-      });
+    async function initMap() {
+      if (typeof window === "undefined" || !mapContainerRef.current) return;
 
-      // Add default Google Roadmap Tile Layer
-      const initialLayer = L.tileLayer(tileLayers.roadmap, {
-        maxZoom: 20,
-        subdomains: ["mt0", "mt1", "mt2", "mt3"]
-      }).addTo(map);
+      try {
+        const L = (await import("leaflet")).default;
+        leafletModuleRef.current = L;
 
-      tileLayerRef.current = initialLayer;
-      mapInstanceRef.current = map;
+        if (!mapInstanceRef.current && mapContainerRef.current) {
+          const map = L.map(mapContainerRef.current, {
+            center: [19.0664, 72.8665], // Center of BKC Financial District
+            zoom: 14,
+            zoomControl: false,
+            attributionControl: false
+          });
 
-      // Invalidate size to ensure 100% full container fill
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 150);
+          const initialLayer = L.tileLayer(tileLayers.roadmap, {
+            maxZoom: 20,
+            subdomains: ["mt0", "mt1", "mt2", "mt3"]
+          }).addTo(map);
 
-      map.on("zoomend", () => {
-        setZoomLevel(map.getZoom());
-      });
+          tileLayerRef.current = initialLayer;
+          mapInstanceRef.current = map;
+
+          setTimeout(() => {
+            if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+          }, 200);
+
+          map.on("zoomend", () => {
+            setZoomLevel(map.getZoom());
+          });
+
+          if (isMounted) setMapLoaded(true);
+        }
+
+        const map = mapInstanceRef.current;
+        if (map) {
+          setTimeout(() => map.invalidateSize(), 150);
+
+          // Clear existing markers
+          Object.values(markersRef.current).forEach((m: any) => m.remove());
+          markersRef.current = {};
+
+          // Render custom Google Maps styled Price Badges with Property Score
+          properties.forEach((prop) => {
+            const isSelected = selectedProperty?.id === prop.id;
+
+            const customIcon = L.divIcon({
+              className: "custom-property-pin",
+              html: `
+                <div class="relative group cursor-pointer" style="transform: translate(-50%, -100%);">
+                  <div style="
+                    background-color: ${isSelected ? "#090D14" : "#0F8B7D"};
+                    color: white;
+                    font-family: system-ui, sans-serif;
+                    font-weight: 800;
+                    font-size: 11px;
+                    padding: 5px 9px;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    border: 2px solid white;
+                    transition: all 0.2s ease;
+                    ${isSelected ? "transform: scale(1.18); border-color: #0F8B7D;" : ""}
+                  ">
+                    <span>${prop.price}</span>
+                    <span style="
+                      background: rgba(255,255,255,0.25);
+                      color: #FDE047;
+                      font-size: 9px;
+                      padding: 1px 4px;
+                      border-radius: 6px;
+                      font-weight: 900;
+                    ">★${prop.propertyScore}</span>
+                  </div>
+                  <div style="
+                    position: absolute;
+                    bottom: -5px;
+                    left: 50%;
+                    transform: translateX(-50%) rotate(45deg);
+                    width: 10px;
+                    height: 10px;
+                    background-color: ${isSelected ? "#090D14" : "#0F8B7D"};
+                    border-right: 2px solid white;
+                    border-bottom: 2px solid white;
+                  "></div>
+                </div>
+              `,
+              iconSize: [80, 40],
+              iconAnchor: [40, 40]
+            });
+
+            const marker = L.marker([prop.lat, prop.lng], { icon: customIcon }).addTo(map);
+
+            marker.on("click", () => {
+              onSelectProperty(prop);
+            });
+
+            markersRef.current[prop.id] = marker;
+          });
+        }
+      } catch (err) {
+        console.error("Leaflet initialization error:", err);
+      }
     }
 
-    const map = mapInstanceRef.current;
-    if (map) {
-      setTimeout(() => map.invalidateSize(), 100);
-    }
-
-    // Clear existing markers
-    Object.values(markersRef.current).forEach((m) => m.remove());
-    markersRef.current = {};
-
-    // Render custom Google Maps styled Price Badges with Property Score
-    properties.forEach((prop) => {
-      const isSelected = selectedProperty?.id === prop.id;
-
-      const customIcon = L.divIcon({
-        className: "custom-property-pin",
-        html: `
-          <div class="relative group cursor-pointer" style="transform: translate(-50%, -100%);">
-            <div style="
-              background-color: ${isSelected ? "#090D14" : "#0F8B7D"};
-              color: white;
-              font-family: system-ui, sans-serif;
-              font-weight: 800;
-              font-size: 11px;
-              padding: 5px 9px;
-              border-radius: 12px;
-              box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-              display: flex;
-              align-items: center;
-              gap: 5px;
-              border: 2px solid white;
-              transition: all 0.2s ease;
-              ${isSelected ? "transform: scale(1.18); border-color: #0F8B7D;" : ""}
-            ">
-              <span>${prop.price}</span>
-              <span style="
-                background: rgba(255,255,255,0.25);
-                color: #FDE047;
-                font-size: 9px;
-                padding: 1px 4px;
-                border-radius: 6px;
-                font-weight: 900;
-              ">★${prop.propertyScore}</span>
-            </div>
-            <div style="
-              position: absolute;
-              bottom: -5px;
-              left: 50%;
-              transform: translateX(-50%) rotate(45deg);
-              width: 10px;
-              height: 10px;
-              background-color: ${isSelected ? "#090D14" : "#0F8B7D"};
-              border-right: 2px solid white;
-              border-bottom: 2px solid white;
-            "></div>
-          </div>
-        `,
-        iconSize: [80, 40],
-        iconAnchor: [40, 40]
-      });
-
-      const marker = L.marker([prop.lat, prop.lng], { icon: customIcon }).addTo(map);
-
-      marker.on("click", () => {
-        onSelectProperty(prop);
-      });
-
-      markersRef.current[prop.id] = marker;
-    });
+    initMap();
 
     return () => {
-      // cleanup if component unmounts
+      isMounted = false;
     };
   }, [properties, selectedProperty]);
 
   // Handle Layer switching (Map / Satellite / Terrain)
   const switchLayer = (type: "roadmap" | "satellite" | "terrain") => {
     setMapType(type);
-    if (mapInstanceRef.current && tileLayerRef.current) {
+    const L = leafletModuleRef.current;
+    if (mapInstanceRef.current && tileLayerRef.current && L) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
       const newLayer = L.tileLayer(tileLayers[type], {
         maxZoom: 20,

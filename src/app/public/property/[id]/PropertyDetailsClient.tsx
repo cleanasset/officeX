@@ -11,6 +11,7 @@ import {
   ArrowLeftRight, Check, Compass, BatteryCharging, Leaf, Shield, Scale, Send,
   Navigation
 } from "lucide-react";
+import { savePublicEnquiry, savePublicVisit } from "@/lib/leasingStore";
 
 const RealGoogleMap = dynamic(() => import("@/components/RealGoogleMap"), {
   ssr: false,
@@ -68,12 +69,26 @@ export default function PropertyDetailsClient({
       return;
     }
     setIsSubmittingProposal(true);
+    
+    // Save to shared leasing CRM store
+    savePublicEnquiry({
+      companyName: proposalForm.companyName,
+      contactName: proposalForm.companyName,
+      email: proposalForm.email,
+      phone: proposalForm.phone,
+      propertyTitle: property.name || property.title || "One BKC — North Wing Executive",
+      buildingName: property.name || "One BKC Commercial Complex",
+      seats: proposalForm.seats,
+      moveInDate: proposalForm.moveInDate,
+      budget: "₹1.25L - ₹2.5L/mo"
+    });
+
     setTimeout(() => {
       setIsSubmittingProposal(false);
       setShowProposalModal(false);
-      showToast(`Formal leasing proposal generated for ${proposalForm.companyName}! Sent to your email.`);
+      showToast(`Formal leasing proposal generated for ${proposalForm.companyName}! Sent to your email & added to Leasing CRM.`);
       setProposalForm({ companyName: "", seats: "60", moveInDate: "Immediate", email: "", phone: "" });
-    }, 900);
+    }, 700);
   };
 
   const handleVisitSubmit = (e: React.FormEvent) => {
@@ -83,11 +98,22 @@ export default function PropertyDetailsClient({
       return;
     }
     setIsSubmittingVisit(true);
+
+    // Save visit to shared leasing CRM store
+    savePublicVisit({
+      companyName: proposalForm.companyName || "Prospective Tenant",
+      propertyTitle: property.name || property.title || "One BKC Commercial Complex",
+      date: visitDate,
+      time: visitTime,
+      email: proposalForm.email,
+      phone: proposalForm.phone
+    });
+
     setTimeout(() => {
       setIsSubmittingVisit(false);
       setShowVisitModal(false);
-      showToast(`Site visit booked for ${visitDate} at ${visitTime}! Agent assigned.`);
-    }, 800);
+      showToast(`Site visit booked for ${visitDate} at ${visitTime}! Scheduled in Leasing CRM.`);
+    }, 700);
   };
 
   const downloadPropertyPack = () => {

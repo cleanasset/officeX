@@ -100,42 +100,44 @@ export default function ComplianceTrackerDashboard() {
           </button>
         </div>
 
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="py-3">CERTIFICATE NAME</th>
-              <th className="py-3">PROPERTY</th>
-              <th className="py-3">ISSUING AUTHORITY</th>
-              <th className="py-3">EXPIRY DATE</th>
-              <th className="py-3">DAYS REMAINING</th>
-              <th className="py-3">STATUS</th>
-              <th className="py-3 text-right">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {certificates.map((cert) => (
-              <tr key={cert.name} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
-                <td className="py-3.5 font-bold text-gray-900">{cert.name}</td>
-                <td className="py-3.5 text-gray-600">{cert.property}</td>
-                <td className="py-3.5 text-gray-600">{cert.authority}</td>
-                <td className={`py-3.5 ${cert.days.includes("-") ? "text-red-500 font-bold" : "text-gray-600"}`}>{cert.expiry}</td>
-                <td className={`py-3.5 ${cert.dayColor}`}>{cert.days}</td>
-                <td className="py-3.5">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${cert.stClass}`}>
-                    {cert.status}
-                  </span>
-                </td>
-                <td className="py-3.5 text-right">
-                  {cert.action ? (
-                    <button className={`text-xs ${cert.actColor}`}>
-                      {cert.action}
-                    </button>
-                  ) : null}
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[750px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3">CERTIFICATE NAME</th>
+                <th className="py-3">PROPERTY</th>
+                <th className="py-3">ISSUING AUTHORITY</th>
+                <th className="py-3">EXPIRY DATE</th>
+                <th className="py-3">DAYS REMAINING</th>
+                <th className="py-3">STATUS</th>
+                <th className="py-3 text-right">ACTIONS</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {certificates.map((cert) => (
+                <tr key={cert.name} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                  <td className="py-3.5 font-bold text-gray-900">{cert.name}</td>
+                  <td className="py-3.5 text-gray-600">{cert.property}</td>
+                  <td className="py-3.5 text-gray-600">{cert.authority}</td>
+                  <td className={`py-3.5 ${cert.days.includes("-") ? "text-red-500 font-bold" : "text-gray-600"}`}>{cert.expiry}</td>
+                  <td className={`py-3.5 ${cert.dayColor}`}>{cert.days}</td>
+                  <td className="py-3.5">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${cert.stClass}`}>
+                      {cert.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 text-right">
+                    {cert.action ? (
+                      <button className={`text-xs ${cert.actColor}`}>
+                        {cert.action}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Bottom Row: Automated Alert Escalations + Email Template Editor */}

@@ -24,11 +24,7 @@ export default function LoginPage() {
   const handleDemoLogin = (acc: typeof demoAccounts[0]) => {
     setIsLoading(true);
     setError("");
-    
-    // Simulate setting session
-    setTimeout(() => {
-      router.push(acc.redirect);
-    }, 800);
+    router.push(acc.redirect);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,9 +44,7 @@ export default function LoginPage() {
     if (match) {
       setIsLoading(true);
       setError("");
-      setTimeout(() => {
-        router.push(match.redirect);
-      }, 800);
+      router.push(match.redirect);
     } else {
       setError("Account not found. Use one of the test emails below.");
     }
@@ -63,8 +57,8 @@ export default function LoginPage() {
         {/* Top Header Panel */}
         <div className="p-8 border-b border-gray-100 flex flex-col items-center gap-4 bg-gray-50/50">
           <div className="flex items-center gap-3">
-            <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={34} height={34} className="object-contain" />
-            <Image src="/name-removebg-preview.png" alt="OfficeX" width={110} height={22} className="object-contain" />
+            <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={34} height={34} className="object-contain" priority />
+            <Image src="/name-removebg-preview.png" alt="OfficeX" width={110} height={22} className="object-contain" priority />
           </div>
           <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider text-center">
             Sign in to your operating workspace
@@ -74,43 +68,55 @@ export default function LoginPage() {
         {/* Form Panel */}
         <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-5">
           {error && (
-            <div className="p-3.5 rounded-lg bg-red-50 border border-red-100 text-red-500 font-semibold text-xs leading-normal">
+            <div id="login-error" role="alert" className="p-3.5 rounded-lg bg-red-50 border border-red-100 text-red-500 font-semibold text-xs leading-normal">
               ⚠ {error}
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</label>
+            <label htmlFor="email" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</label>
             <div className="relative">
               <input 
+                id="email"
+                name="email"
                 type="email" 
+                autoComplete="email"
+                data-testid="email-input"
                 placeholder="e.g. propertymanager@officex.in" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white transition-colors"
+                required
               />
               <User size={14} className="absolute left-3.5 top-3.5 text-gray-400" />
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Password</label>
+            <label htmlFor="password" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Password</label>
             <div className="relative">
               <input 
+                id="password"
+                name="password"
                 type="password" 
+                autoComplete="current-password"
+                data-testid="password-input"
                 placeholder="Password (123456)" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white transition-colors"
+                required
               />
               <Lock size={14} className="absolute left-3.5 top-3.5 text-gray-400" />
             </div>
           </div>
 
           <button 
+            id="login-submit"
             type="submit" 
+            data-testid="submit-button"
             disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
           >
             {isLoading ? "Signing in..." : "Continue"}
             <ArrowRight size={14} />
@@ -126,9 +132,11 @@ export default function LoginPage() {
             {demoAccounts.map((acc, idx) => (
               <button 
                 key={idx}
+                id={`btn-demo-${acc.email.split('@')[0]}`}
+                data-testid={`btn-demo-${acc.email.split('@')[0]}`}
                 onClick={() => handleDemoLogin(acc)}
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-[#0F8B7D] hover:bg-blue-50/20 transition-all flex justify-between items-center text-xs text-left font-medium"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-[#0F8B7D] hover:bg-teal-50/20 transition-all flex justify-between items-center text-xs text-left font-medium cursor-pointer"
               >
                 <div>
                   <span className="text-gray-900 font-bold">{acc.label}</span>

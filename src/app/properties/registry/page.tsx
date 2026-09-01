@@ -41,44 +41,46 @@ export default function PropertyMasterRegistry() {
 
         {/* Master Table */}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <th className="py-3 px-6">PROPERTY ID</th>
-                <th className="py-3 px-4">NAME</th>
-                <th className="py-3 px-4">TYPE</th>
-                <th className="py-3 px-4">LOCATION</th>
-                <th className="py-3 px-4">TOTAL AREA</th>
-                <th className="py-3 px-4">OCCUPIED</th>
-                <th className="py-3 px-4">VACANT</th>
-                <th className="py-3 px-6">OCCUPANCY</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.map((p) => (
-                <tr
-                  key={p.id}
-                  onClick={() => setSelectedProp(p.id)}
-                  className={`border-b border-gray-100 text-xs hover:bg-gray-50/50 cursor-pointer ${
-                    selectedProp === p.id ? "bg-purple-50/20" : ""
-                  }`}
-                >
-                  <td className="py-4 px-6 font-mono text-gray-500">{p.id}</td>
-                  <td className="py-4 px-4 font-bold text-gray-900">{p.name}</td>
-                  <td className="py-4 px-4 text-gray-600">{p.type}</td>
-                  <td className="py-4 px-4 text-gray-600">{p.location}</td>
-                  <td className="py-4 px-4 font-semibold text-gray-900">{p.area} sqft</td>
-                  <td className="py-4 px-4 text-gray-700">{p.occupied}</td>
-                  <td className="py-4 px-4 text-gray-700">{p.vacant}</td>
-                  <td className="py-4 px-6">
-                    <div className="w-24 h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                      <div className={`h-full rounded-full ${p.color}`} style={{ width: `${p.occPct}%` }} />
-                    </div>
-                  </td>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="py-3 px-6">PROPERTY ID</th>
+                  <th className="py-3 px-4">NAME</th>
+                  <th className="py-3 px-4">TYPE</th>
+                  <th className="py-3 px-4">LOCATION</th>
+                  <th className="py-3 px-4">TOTAL AREA</th>
+                  <th className="py-3 px-4">OCCUPIED</th>
+                  <th className="py-3 px-4">VACANT</th>
+                  <th className="py-3 px-6">OCCUPANCY</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {properties.map((p) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => setSelectedProp(p.id)}
+                    className={`border-b border-gray-100 text-xs hover:bg-gray-50/50 cursor-pointer ${
+                      selectedProp === p.id ? "bg-purple-50/20" : ""
+                    }`}
+                  >
+                    <td className="py-4 px-6 font-mono text-gray-500">{p.id}</td>
+                    <td className="py-4 px-4 font-bold text-gray-900">{p.name}</td>
+                    <td className="py-4 px-4 text-gray-600">{p.type}</td>
+                    <td className="py-4 px-4 text-gray-600">{p.location}</td>
+                    <td className="py-4 px-4 font-semibold text-gray-900">{p.area} sqft</td>
+                    <td className="py-4 px-4 text-gray-700">{p.occupied}</td>
+                    <td className="py-4 px-4 text-gray-700">{p.vacant}</td>
+                    <td className="py-4 px-6">
+                      <div className="w-24 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                        <div className={`h-full rounded-full ${p.color}`} style={{ width: `${p.occPct}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="flex items-center justify-between p-4 border-t border-gray-100">
             <p className="text-xs text-gray-400">Showing 1 to 4 of 4 properties</p>

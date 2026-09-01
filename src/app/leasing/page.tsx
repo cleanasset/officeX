@@ -1,15 +1,39 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   TrendingUp, TrendingDown, MoreVertical, ChevronRight, 
   Building, Users, Calendar, DollarSign, AlertCircle, ArrowUpRight, 
-  FileText, CheckCircle, Clock 
+  FileText, CheckCircle, Clock, Sparkles 
 } from "lucide-react";
+import { getPublicEnquiries, PublicEnquiry } from "@/lib/leasingStore";
 
 export default function LeasingDashboard() {
+  const [liveLeads, setLiveLeads] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = () => {
+      const publicLeads = getPublicEnquiries();
+      const formatted = publicLeads.map((p: PublicEnquiry) => ({
+        id: `#L-${p.id.slice(-4)}`,
+        company: p.companyName,
+        req: `${p.seats || 60} Seats (${p.propertyTitle || "Space"})`,
+        area: p.area || "Commercial Floor",
+        stage: "NEW (WEB)",
+        stageColor: "bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold",
+        assigned: "Unassigned",
+        assignedColor: "text-emerald-700 font-bold"
+      }));
+      setLiveLeads(formatted);
+    };
+
+    load();
+    window.addEventListener("officex-lead-added", load);
+    return () => window.removeEventListener("officex-lead-added", load);
+  }, []);
+
   const funnel = [
-    { stage: "Enquiry", count: 156, width: "100%", href: "/leasing/leads", color: "bg-teal-700" },
+    { stage: "Enquiry", count: 156 + liveLeads.length, width: "100%", href: "/leasing/leads", color: "bg-teal-700" },
     { stage: "Qualified", count: 89, width: "72%", href: "/leasing/leads", color: "bg-teal-600" },
     { stage: "Site Visit", count: 52, width: "52%", href: "/leasing/visits", color: "bg-teal-500" },
     { stage: "Negotiation", count: 28, width: "36%", href: "/leasing/pipeline", color: "bg-teal-500/90" },
@@ -18,6 +42,13 @@ export default function LeasingDashboard() {
   ];
 
   const actionItems = [
+    ...(liveLeads.length > 0 ? [{
+      color: "bg-emerald-500",
+      title: `⚡ Live Public Enquiry: ${liveLeads[0].company}`,
+      desc: `Requested ${liveLeads[0].req}`,
+      action: "Review Lead",
+      href: "/leasing/leads"
+    }] : []),
     { 
       color: "bg-red-500", 
       title: "HCL Tech Requirement - Unassigned", 
@@ -65,12 +96,14 @@ export default function LeasingDashboard() {
     }
   ];
 
-  const leads = [
+  const defaultLeads = [
     { id: "#L-8042", company: "HCL Tech", req: "IT Office Space", area: "15,000 sqft", stage: "NEW", stageColor: "bg-blue-100 text-blue-700", assigned: "Unassigned", assignedColor: "text-red-500" },
     { id: "#L-8041", company: "Innovate Corp", req: "Coworking Desks", area: "50 Seats", stage: "SITE VISIT", stageColor: "bg-emerald-100 text-emerald-700", assigned: "Ravi M.", assignedColor: "text-gray-700" },
     { id: "#L-8040", company: "Global Logistics", req: "Commercial Floor", area: "50,000 sqft", stage: "NEGOTIATION", stageColor: "bg-amber-100 text-amber-700", assigned: "Anita S.", assignedColor: "text-gray-700" },
     { id: "#L-8039", company: "FreshMart Retail", req: "Ground Floor Retail", area: "2,500 sqft", stage: "CLOSED-WON", stageColor: "bg-emerald-100 text-emerald-700", assigned: "Vikram K.", assignedColor: "text-gray-700" }
   ];
+
+  const leads = [...liveLeads, ...defaultLeads];
 
   return (
     <div className="flex flex-col gap-6 font-sans pb-12">

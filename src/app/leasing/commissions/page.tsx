@@ -181,40 +181,42 @@ export default function CommissionAndBrokerageTracker() {
           </div>
         </div>
 
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="py-3">DEAL REF</th>
-              <th className="py-3">CLIENT</th>
-              <th className="py-3">PROPERTY</th>
-              <th className="py-3">TOTAL TCV</th>
-              <th className="py-3">RATE (%)</th>
-              <th className="py-3">COMMISSION FEE</th>
-              <th className="py-3">INVOICE NO</th>
-              <th className="py-3">DATE ISSUED</th>
-              <th className="py-3 text-right">STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deals.map((d) => (
-              <tr key={d.id} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
-                <td className="py-4 font-mono font-bold text-blue-600">{d.id}</td>
-                <td className="py-4 font-bold text-gray-900">{d.client}</td>
-                <td className="py-4 text-gray-600">{d.property}</td>
-                <td className="py-4 font-semibold text-gray-900">{d.tcv}</td>
-                <td className="py-4 text-gray-600">{d.rate}</td>
-                <td className="py-4 font-bold text-gray-900">{d.fee}</td>
-                <td className="py-4 font-mono text-gray-500">{d.invoice}</td>
-                <td className="py-4 text-gray-500">{d.date}</td>
-                <td className="py-4 text-right">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${d.statusColor}`}>
-                    {d.status}
-                  </span>
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[780px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3">DEAL REF</th>
+                <th className="py-3">CLIENT</th>
+                <th className="py-3">PROPERTY</th>
+                <th className="py-3">TOTAL TCV</th>
+                <th className="py-3">RATE (%)</th>
+                <th className="py-3">COMMISSION FEE</th>
+                <th className="py-3">INVOICE NO</th>
+                <th className="py-3">DATE ISSUED</th>
+                <th className="py-3 text-right">STATUS</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {deals.map((d) => (
+                <tr key={d.id} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                  <td className="py-4 font-mono font-bold text-blue-600">{d.id}</td>
+                  <td className="py-4 font-bold text-gray-900">{d.client}</td>
+                  <td className="py-4 text-gray-600">{d.property}</td>
+                  <td className="py-4 font-semibold text-gray-900">{d.tcv}</td>
+                  <td className="py-4 text-gray-600">{d.rate}</td>
+                  <td className="py-4 font-bold text-gray-900">{d.fee}</td>
+                  <td className="py-4 font-mono text-gray-500">{d.invoice}</td>
+                  <td className="py-4 text-gray-500">{d.date}</td>
+                  <td className="py-4 text-right">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${d.statusColor}`}>
+                      {d.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">

@@ -98,8 +98,8 @@ export default function VisitorPreRegistration() {
             <button className="p-2 rounded-xl border border-gray-200 text-gray-400 cursor-pointer"><Filter size={14} /></button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse text-xs min-w-[650px]">
             <thead>
               <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 <th className="py-3 pr-3">Visitor Name</th>

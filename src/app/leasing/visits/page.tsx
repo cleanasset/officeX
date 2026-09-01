@@ -1,14 +1,16 @@
 "use client";
-import React, { useState } from "react";
-import { Plus, CheckCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Plus, CheckCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { getPublicVisits, PublicVisit } from "@/lib/leasingStore";
 
 export default function SiteVisitPlanner() {
   const [toast, setToast] = useState<string | null>(null);
+  const [publicVisits, setPublicVisits] = useState<PublicVisit[]>([]);
 
   const [scheduleForm, setScheduleForm] = useState({
     client: "",
     property: "",
-    date: "2023-10-24",
+    date: "2026-10-24",
     time: "10:00",
     agent: "Rohan Sharma (Self)",
     instructions: ""
@@ -17,9 +19,24 @@ export default function SiteVisitPlanner() {
   const [feedbackForm, setFeedbackForm] = useState({
     visit: "10:00 AM - HCL Tech",
     impression: "Highly Interested",
-    nextDate: "2023-10-25",
+    nextDate: "2026-10-25",
     notes: ""
   });
+
+  const loadVisits = () => {
+    setPublicVisits(getPublicVisits());
+  };
+
+  useEffect(() => {
+    loadVisits();
+    const handleNew = () => {
+      loadVisits();
+      setToast("⚡ New site visit scheduled from public portal!");
+      setTimeout(() => setToast(null), 3500);
+    };
+    window.addEventListener("officex-visit-added", handleNew);
+    return () => window.removeEventListener("officex-visit-added", handleNew);
+  }, []);
 
   const handleCreateVisit = () => {
     setToast("Site visit scheduled successfully!");
@@ -203,6 +220,30 @@ export default function SiteVisitPlanner() {
             </div>
 
             <div className="space-y-3">
+              {/* Dynamic Public Web Visits */}
+              {publicVisits.map((pv) => (
+                <div key={pv.id} className="p-4 rounded-xl border border-teal-200 bg-teal-50/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-teal-100 text-[#0F8B7D] flex items-center justify-center font-bold">
+                      <Clock size={16} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-900">{pv.time}</span>
+                        <span className="text-[10px] text-gray-500">• {pv.date}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-black">⚡ Live Booking</span>
+                      </div>
+                      <p className="text-xs text-gray-800 font-bold mt-0.5">
+                        {pv.companyName} — <span className="text-gray-600 font-normal">{pv.propertyTitle}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    Confirmed Visit
+                  </span>
+                </div>
+              ))}
+
               {/* Visit 1 */}
               <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">

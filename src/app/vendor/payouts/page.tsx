@@ -86,46 +86,48 @@ export default function VendorInvoicesAndPayouts() {
           </div>
         </div>
 
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="py-3">INVOICE NO</th>
-              <th className="py-3">WO ID</th>
-              <th className="py-3">PERIOD</th>
-              <th className="py-3">GROSS AMOUNT</th>
-              <th className="py-3">PLATFORM FEE</th>
-              <th className="py-3">NET PAYOUT</th>
-              <th className="py-3">PAID DATE</th>
-              <th className="py-3">TRANSACTION ID</th>
-              <th className="py-3 text-right">STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.no} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
-                <td className="py-3.5 font-bold text-gray-900">{inv.no}</td>
-                <td className="py-3.5 font-mono font-semibold text-blue-600">{inv.wo}</td>
-                <td className="py-3.5 text-gray-600">{inv.period}</td>
-                <td className="py-3.5 font-semibold text-gray-900">{inv.gross}</td>
-                <td className="py-3.5 text-red-500 font-semibold">{inv.fee}</td>
-                <td className="py-3.5 font-bold text-gray-900">{inv.net}</td>
-                <td className="py-3.5 text-gray-500">{inv.date}</td>
-                <td className="py-3.5 font-mono text-gray-500">{inv.txId}</td>
-                <td className="py-3.5 text-right">
-                  {inv.isEscrow ? (
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                      In Escrow
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Paid
-                    </span>
-                  )}
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[750px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3">INVOICE NO</th>
+                <th className="py-3">WO ID</th>
+                <th className="py-3">PERIOD</th>
+                <th className="py-3">GROSS AMOUNT</th>
+                <th className="py-3">PLATFORM FEE</th>
+                <th className="py-3">NET PAYOUT</th>
+                <th className="py-3">PAID DATE</th>
+                <th className="py-3">TRANSACTION ID</th>
+                <th className="py-3 text-right">STATUS</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr key={inv.no} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                  <td className="py-3.5 font-bold text-gray-900">{inv.no}</td>
+                  <td className="py-3.5 font-mono font-semibold text-blue-600">{inv.wo}</td>
+                  <td className="py-3.5 text-gray-600">{inv.period}</td>
+                  <td className="py-3.5 font-semibold text-gray-900">{inv.gross}</td>
+                  <td className="py-3.5 text-red-500 font-semibold">{inv.fee}</td>
+                  <td className="py-3.5 font-bold text-gray-900">{inv.net}</td>
+                  <td className="py-3.5 text-gray-500">{inv.date}</td>
+                  <td className="py-3.5 font-mono text-gray-500">{inv.txId}</td>
+                  <td className="py-3.5 text-right">
+                    {inv.isEscrow ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        In Escrow
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Paid
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
