@@ -50,23 +50,41 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
 
   useEffect(() => {
     let isMounted = true;
+    let resizeObserver: ResizeObserver | null = null;
 
-    async function initMap() {
+    async function initOrUpdateMap() {
       if (typeof window === "undefined" || !mapContainerRef.current) return;
 
-      try {
-        const L = (await import("leaflet")).default;
-        leafletModuleRef.current = L;
+      const container = mapContainerRef.current;
+      const width = container.clientWidth || container.offsetWidth;
+      const height = container.clientHeight || container.offsetHeight;
 
+      // If container is hidden (e.g. mobile list view with display:none), wait until it is visible
+      if (width === 0 || height === 0) {
+        return;
+      }
+
+      try {
+        let L = leafletModuleRef.current;
+        if (!L) {
+          L = (await import("leaflet")).default;
+          leafletModuleRef.current = L;
+        }
+        if (!isMounted) return;
+
+        // Initialize map instance only if not already initialized
         if (!mapInstanceRef.current && mapContainerRef.current) {
+          const defaultLat = 19.0664;
+          const defaultLng = 72.8665;
+
           const map = L.map(mapContainerRef.current, {
-            center: [19.0664, 72.8665], // Center of BKC Financial District
+            center: [defaultLat, defaultLng],
             zoom: 14,
             zoomControl: false,
             attributionControl: false
           });
 
-          const initialLayer = L.tileLayer(tileLayers.roadmap, {
+          const initialLayer = L.tileLayer(tileLayers[mapType] || tileLayers.roadmap, {
             maxZoom: 20,
             subdomains: ["mt0", "mt1", "mt2", "mt3"]
           }).addTo(map);
@@ -74,27 +92,29 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
           tileLayerRef.current = initialLayer;
           mapInstanceRef.current = map;
 
-          setTimeout(() => {
-            if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
-          }, 200);
-
           map.on("zoomend", () => {
-            setZoomLevel(map.getZoom());
+            if (isMounted) setZoomLevel(map.getZoom());
           });
 
           if (isMounted) setMapLoaded(true);
         }
 
         const map = mapInstanceRef.current;
-        if (map) {
-          setTimeout(() => map.invalidateSize(), 150);
+        if (map && L) {
+          map.invalidateSize();
 
           // Clear existing markers
-          Object.values(markersRef.current).forEach((m: any) => m.remove());
+          Object.values(markersRef.current).forEach((m: any) => {
+            try { m.remove(); } catch (_) {}
+          });
           markersRef.current = {};
 
           // Render custom Google Maps styled Price Badges with Property Score
           properties.forEach((prop) => {
+            const lat = Number(prop.lat);
+            const lng = Number(prop.lng);
+            if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) return;
+
             const isSelected = selectedProperty?.id === prop.id;
 
             const customIcon = L.divIcon({
@@ -117,7 +137,7 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
                     transition: all 0.2s ease;
                     ${isSelected ? "transform: scale(1.18); border-color: #0F8B7D;" : ""}
                   ">
-                    <span>${prop.price}</span>
+                    <span>${prop.price || "₹1.25L"}</span>
                     <span style="
                       background: rgba(255,255,255,0.25);
                       color: #FDE047;
@@ -125,7 +145,7 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
                       padding: 1px 4px;
                       border-radius: 6px;
                       font-weight: 900;
-                    ">★${prop.propertyScore}</span>
+                    ">★${prop.propertyScore || 85}</span>
                   </div>
                   <div style="
                     position: absolute;
@@ -144,13 +164,15 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
               iconAnchor: [40, 40]
             });
 
-            const marker = L.marker([prop.lat, prop.lng], { icon: customIcon }).addTo(map);
-
-            marker.on("click", () => {
-              onSelectProperty(prop);
-            });
-
-            markersRef.current[prop.id] = marker;
+            try {
+              const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+              marker.on("click", () => {
+                onSelectProperty(prop);
+              });
+              markersRef.current[prop.id] = marker;
+            } catch (markerErr) {
+              console.warn("Marker creation skipped for invalid lat/lng:", markerErr);
+            }
           });
         }
       } catch (err) {
@@ -158,12 +180,25 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
       }
     }
 
-    initMap();
+    // Set up ResizeObserver to handle tab switches and mobile view toggle
+    if (typeof window !== "undefined" && window.ResizeObserver && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+            initOrUpdateMap();
+          }
+        }
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    initOrUpdateMap();
 
     return () => {
       isMounted = false;
+      if (resizeObserver) resizeObserver.disconnect();
     };
-  }, [properties, selectedProperty]);
+  }, [properties, selectedProperty, mapType]);
 
   // Handle Layer switching (Map / Satellite / Terrain)
   const switchLayer = (type: "roadmap" | "satellite" | "terrain") => {
@@ -189,17 +224,31 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
   };
 
   const handleRecenter = () => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([19.0664, 72.8665], 14, { duration: 1 });
+    if (mapInstanceRef.current && mapContainerRef.current) {
+      const width = mapContainerRef.current.clientWidth || mapContainerRef.current.offsetWidth;
+      const height = mapContainerRef.current.clientHeight || mapContainerRef.current.offsetHeight;
+      if (width > 0 && height > 0) {
+        try {
+          mapInstanceRef.current.flyTo([19.0664, 72.8665], 14, { duration: 1 });
+        } catch (_) {}
+      }
     }
   };
 
   // Fly to selected property when clicked on the left feed
   useEffect(() => {
-    if (selectedProperty && mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([selectedProperty.lat, selectedProperty.lng], 15, {
-        duration: 0.8
-      });
+    if (selectedProperty && mapInstanceRef.current && mapContainerRef.current) {
+      const width = mapContainerRef.current.clientWidth || mapContainerRef.current.offsetWidth;
+      const height = mapContainerRef.current.clientHeight || mapContainerRef.current.offsetHeight;
+      const lat = Number(selectedProperty.lat);
+      const lng = Number(selectedProperty.lng);
+      if (width > 0 && height > 0 && !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        try {
+          mapInstanceRef.current.flyTo([lat, lng], 15, {
+            duration: 0.8
+          });
+        } catch (_) {}
+      }
     }
   }, [selectedProperty]);
 
