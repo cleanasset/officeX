@@ -191,34 +191,34 @@ Generated via OFFICEX Operating Platform · https://officex.in
       )}
 
       {/* Top Breadcrumb Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-3.5 flex items-center justify-between text-xs text-gray-500">
-        <div className="flex items-center gap-2">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <Link href="/public/search" className="hover:text-gray-900">Commercial Spaces</Link>
           <ChevronRight size={12} />
           <Link href="/public/search" className="hover:text-gray-900">{property.city || "Mumbai"}</Link>
           <ChevronRight size={12} />
-          <span className="font-bold text-gray-900">{property.name || "Apex BKC Mumbai"}</span>
+          <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">{property.name || "Apex BKC Mumbai"}</span>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={downloadPropertyPack}
-            className="px-3.5 py-1.5 rounded-lg border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 text-xs"
+            className="w-full sm:w-auto justify-center px-3.5 py-1.5 rounded-lg border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 text-xs"
           >
             <Download size={13} /> Download Property Pack
           </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Hero Gallery Grid */}
-        <div className="grid grid-cols-[1fr_380px] gap-6">
-          <div className="h-[380px] rounded-3xl overflow-hidden relative shadow-sm border border-gray-200">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+          <div className="h-[260px] sm:h-[380px] rounded-3xl overflow-hidden relative shadow-sm border border-gray-200">
             <img
               src={property.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&auto=format&fit=crop&q=80"}
               alt={property.name}
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-4 left-4 flex gap-2">
+            <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
               <span className="px-3 py-1 rounded-lg bg-white/95 backdrop-blur-md text-emerald-700 text-xs font-black shadow-sm flex items-center gap-1">
                 <ShieldCheck size={14} /> VERIFIED GRADE A
               </span>
@@ -226,21 +226,21 @@ Generated via OFFICEX Operating Platform · https://officex.in
                 LEED GOLD CERTIFIED
               </span>
             </div>
-            <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white p-3 px-5 rounded-2xl">
-              <h1 className="text-2xl font-black">{property.name || "Apex Business Tower"}</h1>
+            <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/60 backdrop-blur-md text-white p-3 px-4 sm:px-5 rounded-2xl">
+              <h1 className="text-xl sm:text-2xl font-black">{property.name || "Apex Business Tower"}</h1>
               <p className="text-xs text-gray-200 flex items-center gap-1 mt-0.5">
-                <MapPin size={13} className="text-teal-400" /> {property.address || "G Block, Bandra Kurla Complex, Mumbai"}
+                <MapPin size={13} className="text-teal-400 shrink-0" /> {property.address || "G Block, Bandra Kurla Complex, Mumbai"}
               </p>
             </div>
           </div>
 
           {/* Sticky Commercial Pricing Card */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+          <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
                 <div>
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">MONTHLY RENT</span>
-                  <p className="text-3xl font-black text-gray-900 mt-0.5">₹1,25,000</p>
+                  <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-0.5">₹1,25,000</p>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">RATE</span>
@@ -293,11 +293,11 @@ Generated via OFFICEX Operating Platform · https://officex.in
         </div>
 
         {/* 2-Column Main Section: Left Specifications/Tabs + Right OFFICEX Property Score Card */}
-        <div className="grid grid-cols-[1fr_380px] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
           {/* Left Column: Property Tabs & Details */}
           <div className="space-y-6">
             {/* Tabs Header */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-1.5 flex gap-2 shadow-xs">
+            <div className="bg-white rounded-2xl border border-gray-200 p-1.5 flex flex-col sm:flex-row gap-1.5 sm:gap-2 shadow-xs">
               {[
                 { id: "specs", label: "Building Specifications & Amenities" },
                 { id: "compliance", label: "Statutory Compliance & Certifications" },
@@ -306,7 +306,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center ${
                     activeTab === tab.id
                       ? "bg-[#0F8B7D] text-white shadow-xs"
                       : "text-gray-600 hover:text-gray-900"
@@ -319,10 +319,10 @@ Generated via OFFICEX Operating Platform · https://officex.in
 
             {/* Tab 1: Specifications & Amenities */}
             {activeTab === "specs" && (
-              <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm space-y-6">
+              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-6">
                 <h2 className="text-base font-bold text-gray-900">Technical Infrastructure & Amenities</h2>
                 
-                <div className="grid grid-cols-3 gap-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs">
                   <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">POWER BACKUP</p>
                     <p className="font-bold text-gray-900">100% N+1 DG Sync</p>
@@ -375,7 +375,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
 
             {/* Tab 2: Compliance */}
             {activeTab === "compliance" && (
-              <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm space-y-4">
+              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base font-bold text-gray-900">Statutory Compliance Certificates</h2>
                   <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
@@ -383,44 +383,46 @@ Generated via OFFICEX Operating Platform · https://officex.in
                   </span>
                 </div>
 
-                <div className="border border-gray-200 rounded-2xl overflow-hidden text-xs">
-                  <div className="grid grid-cols-4 bg-gray-50 p-3 px-4 font-bold text-[10px] text-gray-400 uppercase">
-                    <span>CERTIFICATE</span>
-                    <span>AUTHORITY</span>
-                    <span>EXPIRY DATE</span>
-                    <span className="text-right">STATUS</span>
-                  </div>
-                  {[
-                    { name: "Fire NOC", auth: "Mumbai Fire Brigade", expiry: "12-Sep-2026", status: "Valid" },
-                    { name: "Lift Fitness License", auth: "PWD Lift Inspector", expiry: "01-Jan-2027", status: "Valid" },
-                    { name: "Pollution Control Board Consent", auth: "MPCB", expiry: "30-Nov-2026", status: "Valid" },
-                    { name: "Structural Stability Certificate", auth: "Municipal Corp.", expiry: "Permanent", status: "Valid" },
-                    { name: "Building Comprehensive Insurance", auth: "HDFC Ergo", expiry: "15-Aug-2026", status: "Valid" }
-                  ].map((c) => (
-                    <div key={c.name} className="grid grid-cols-4 p-3.5 px-4 border-t border-gray-100 items-center">
-                      <span className="font-bold text-gray-900">{c.name}</span>
-                      <span className="text-gray-600">{c.auth}</span>
-                      <span className="text-gray-600 font-mono">{c.expiry}</span>
-                      <span className="text-right">
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                          {c.status}
-                        </span>
-                      </span>
+                <div className="border border-gray-200 rounded-2xl overflow-x-auto text-xs">
+                  <div className="min-w-[500px]">
+                    <div className="grid grid-cols-4 bg-gray-50 p-3 px-4 font-bold text-[10px] text-gray-400 uppercase">
+                      <span>CERTIFICATE</span>
+                      <span>AUTHORITY</span>
+                      <span>EXPIRY DATE</span>
+                      <span className="text-right">STATUS</span>
                     </div>
-                  ))}
+                    {[
+                      { name: "Fire NOC", auth: "Mumbai Fire Brigade", expiry: "12-Sep-2026", status: "Valid" },
+                      { name: "Lift Fitness License", auth: "PWD Lift Inspector", expiry: "01-Jan-2027", status: "Valid" },
+                      { name: "Pollution Control Board Consent", auth: "MPCB", expiry: "30-Nov-2026", status: "Valid" },
+                      { name: "Structural Stability Certificate", auth: "Municipal Corp.", expiry: "Permanent", status: "Valid" },
+                      { name: "Building Comprehensive Insurance", auth: "HDFC Ergo", expiry: "15-Aug-2026", status: "Valid" }
+                    ].map((c) => (
+                      <div key={c.name} className="grid grid-cols-4 p-3.5 px-4 border-t border-gray-100 items-center">
+                        <span className="font-bold text-gray-900">{c.name}</span>
+                        <span className="text-gray-600">{c.auth}</span>
+                        <span className="text-gray-600 font-mono">{c.expiry}</span>
+                        <span className="text-right">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                            {c.status}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Tab 3: Location & Interactive Google Map */}
             {activeTab === "location" && (
-              <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm space-y-6">
-                <div className="flex items-center justify-between">
+              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-8 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h2 className="text-base font-bold text-gray-900">Transit &amp; Commute Accessibility</h2>
                     <p className="text-xs text-gray-400 mt-0.5">{property.name || "One BKC"} · G Block, Bandra Kurla Complex</p>
                   </div>
-                  <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-black border border-teal-200">
+                  <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-black border border-teal-200 self-start sm:self-auto">
                     Commute Score: 94/100
                   </span>
                 </div>
@@ -545,7 +547,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {similarProperties.map((sim: any) => (
               <div
                 key={sim.id}
