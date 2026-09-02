@@ -113,16 +113,19 @@ Either party may terminate account subscription with 30 days written notice, pro
     }
   ];
 
-  // Scroll-spy: Observe right-side section scrolling to auto-update left active tab
+  // Scroll-spy: Track scroll inside the right content container
   useEffect(() => {
+    const container = document.getElementById("terms-right-panel");
+    if (!container) return;
+
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 140;
+      const scrollTop = container.scrollTop;
       for (const sec of sections) {
         const element = document.getElementById(sec.id);
         if (element) {
-          const top = element.offsetTop;
+          const top = element.offsetTop - 120;
           const height = element.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
+          if (scrollTop >= top && scrollTop < top + height) {
             setActiveSection(sec.id);
             break;
           }
@@ -130,8 +133,8 @@ Either party may terminate account subscription with 30 days written notice, pro
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
   const filteredSections = sections.filter(s => 
@@ -145,35 +148,35 @@ Either party may terminate account subscription with 30 days written notice, pro
 
   const handleNavClick = (id: string) => {
     setActiveSection(id);
+    const container = document.getElementById("terms-right-panel");
     const element = document.getElementById(id);
-    if (element) {
-      const yOffset = -100;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: "smooth" });
+    if (container && element) {
+      const topPos = element.offsetTop - 20;
+      container.scrollTo({ top: topPos, behavior: "smooth" });
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       
-      {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-2xs">
+      {/* Fixed Top Bar (h-14 shrink-0) */}
+      <header className="h-14 bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between shadow-2xs shrink-0 z-30">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image src="/logo-removebg-preview.png" alt="OfficeX" width={28} height={28} />
             <Image src="/name-removebg-preview.png" alt="OfficeX" width={90} height={18} />
           </Link>
           <span className="text-slate-300 font-light">|</span>
-          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Legal Terms</span>
+          <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Terms of Service</span>
         </div>
 
         <div className="flex items-center gap-3">
           <button 
             onClick={handlePrint}
-            className="px-3.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Printer size={14} />
-            <span>Print Terms</span>
+            <span>Print</span>
           </button>
           <Link 
             href="/"
@@ -184,48 +187,25 @@ Either party may terminate account subscription with 30 days written notice, pro
         </div>
       </header>
 
-      {/* Hero Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-[#0F8B7D]/90 text-white py-12 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-400 text-xs font-bold mb-4">
-            <ShieldCheck size={14} />
-            <span>Legal Governance Framework v3.1</span>
-          </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight">Terms of Service</h1>
-          <p className="text-slate-300 text-xs md:text-sm max-w-2xl mt-3 font-medium leading-relaxed">
-            Please read these terms carefully before using OfficeX commercial real estate operating system, marketplace bidding engine, and property management portals.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-6 mt-6 text-xs text-slate-300 font-semibold border-t border-white/10 pt-4">
-            <span>Last Revised: September 2, 2026</span>
-            <span>•</span>
-            <span>Jurisdiction: Republic of India (Mumbai & GIFT City)</span>
-            <span>•</span>
-            <span>Razorpay Escrow Approved</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
+      {/* Main Split Layout: Left Side Panel is 100% Stationary; ONLY Right Panel Scrolls */}
+      <div className="flex-1 flex overflow-hidden relative">
         
-        {/* Sticky Fixed Left Sidebar Navigation (Does NOT scroll away; pinned to viewport top-24) */}
-        <aside className="lg:col-span-1">
-          <div className="sticky top-24 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 p-4 shadow-sm transition-all">
-            
-            {/* Header Badge */}
-            <div className="flex items-center justify-between mb-3 px-1">
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#0F8B7D] animate-pulse"></span>
+        {/* LEFT PANEL: 100% STATIONARY FIXED SIDEBAR (NEVER SCROLLS WITH DOCUMENT) */}
+        <aside className="w-80 h-full bg-white border-r border-slate-200/90 p-5 shrink-0 flex flex-col justify-between overflow-y-auto hidden md:flex shadow-2xs z-20">
+          <div>
+            {/* Header Title & Badge */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D] animate-pulse"></span>
                 <span>Table of Contents</span>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[#0F8B7D] text-[10px] font-extrabold">
-                {filteredSections.length} Sections
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[#0F8B7D] text-[10px] font-black">
+                {filteredSections.length} Clauses
               </span>
             </div>
 
-            {/* Search Input */}
-            <div className="relative mb-3">
+            {/* Filter Search Field */}
+            <div className="relative mb-4">
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input 
                 type="text" 
@@ -236,21 +216,21 @@ Either party may terminate account subscription with 30 days written notice, pro
               />
             </div>
 
-            {/* Section Link List (Fixed left, smooth scroll-spy active pill) */}
-            <nav className="flex flex-col gap-1 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1 text-xs font-bold [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {/* Clauses Jump Navigation */}
+            <nav className="flex flex-col gap-1.5 max-h-[calc(100vh-18rem)] overflow-y-auto pr-1 [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {filteredSections.map((sec, idx) => {
                 const isActive = activeSection === sec.id;
                 return (
                   <button
                     key={sec.id}
                     onClick={() => handleNavClick(sec.id)}
-                    className={`group px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between text-left cursor-pointer ${
+                    className={`group w-full px-3 py-2.5 rounded-xl text-xs transition-all flex items-center justify-between text-left cursor-pointer ${
                       isActive 
-                        ? "bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] text-white font-black shadow-sm" 
-                        : "text-slate-600 font-bold hover:bg-slate-100/80 hover:text-slate-900"
+                        ? "bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] text-white font-black shadow-md" 
+                        : "text-slate-600 font-bold hover:bg-slate-100 hover:text-slate-900"
                     }`}
                   >
-                    <span className="flex items-center gap-2 truncate">
+                    <span className="flex items-center gap-2.5 truncate">
                       <span className={`w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center shrink-0 ${
                         isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
                       }`}>
@@ -263,83 +243,112 @@ Either party may terminate account subscription with 30 days written notice, pro
                 );
               })}
             </nav>
+          </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-1.5 text-xs font-bold">
-              <Link 
-                href="/privacy" 
-                className="px-2.5 py-1.5 rounded-lg text-[#0F8B7D] hover:bg-[#0F8B7D]/5 flex items-center justify-between transition-colors"
-              >
-                <span>Privacy Policy</span>
-                <ChevronRight size={13} />
-              </Link>
-              <Link 
-                href="/compliance" 
-                className="px-2.5 py-1.5 rounded-lg text-[#0F8B7D] hover:bg-[#0F8B7D]/5 flex items-center justify-between transition-colors"
-              >
-                <span>Statutory Compliance</span>
-                <ChevronRight size={13} />
-              </Link>
-            </div>
-
+          {/* Quick Footer Links in Left Panel */}
+          <div className="pt-4 border-t border-slate-100 flex flex-col gap-1 text-xs font-bold">
+            <Link 
+              href="/privacy" 
+              className="px-3 py-2 rounded-xl text-[#0F8B7D] hover:bg-[#0F8B7D]/5 flex items-center justify-between transition-colors"
+            >
+              <span>Privacy Policy</span>
+              <ChevronRight size={13} />
+            </Link>
+            <Link 
+              href="/compliance" 
+              className="px-3 py-2 rounded-xl text-[#0F8B7D] hover:bg-[#0F8B7D]/5 flex items-center justify-between transition-colors"
+            >
+              <span>Statutory Compliance</span>
+              <ChevronRight size={13} />
+            </Link>
           </div>
         </aside>
 
-        {/* Right Terms Content Cards */}
-        <section className="lg:col-span-3 flex flex-col gap-6">
+        {/* RIGHT PANEL: INDEPENDENT SCROLLING CONTAINER (ONLY THIS RIGHT SIDE MOVES) */}
+        <main id="terms-right-panel" className="flex-1 h-full overflow-y-auto scroll-smooth bg-slate-50">
           
-          {filteredSections.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <AlertCircle size={36} className="mx-auto text-amber-500 mb-3" />
-              <h3 className="text-base font-extrabold text-slate-800">No matching terms found</h3>
-              <p className="text-xs text-slate-500 mt-1">Try searching for keywords like "escrow", "GSTIN", "brokerage", or "arbitration".</p>
-            </div>
-          ) : (
-            filteredSections.map((sec) => {
-              const IconComponent = sec.icon;
-              return (
-                <div 
-                  key={sec.id} 
-                  id={sec.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-2xs hover:shadow-xs transition-shadow scroll-mt-24"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#0F8B7D]/10 text-[#0F8B7D] flex items-center justify-center font-bold">
-                      <IconComponent size={20} />
-                    </div>
-                    <h2 className="text-lg font-black text-slate-900">{sec.title}</h2>
-                  </div>
-
-                  <div className="text-xs md:text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-line border-t border-slate-100 pt-4">
-                    {sec.content}
-                  </div>
-                </div>
-              );
-            })
-          )}
-
-          {/* Need Legal Clarification Callout */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200/80 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mt-4">
-            <div>
-              <h3 className="text-sm font-black text-emerald-950 flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-[#0F8B7D]" /> Need Legal Clarification?
-              </h3>
-              <p className="text-xs text-emerald-800 mt-1 font-medium max-w-lg">
-                Our institutional compliance team is available to assist enterprise property funds, developers, and facility contractors with customized master service agreements (MSAs).
+          {/* Terms Hero Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-[#0F8B7D]/90 text-white py-10 px-6 md:px-10">
+            <div className="max-w-4xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-400 text-xs font-bold mb-3">
+                <ShieldCheck size={14} />
+                <span>Legal Governance Framework v3.1</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight">Terms of Service</h1>
+              <p className="text-slate-300 text-xs md:text-sm max-w-2xl mt-2 font-medium leading-relaxed">
+                Please read these terms carefully before using OfficeX commercial real estate operating system, marketplace bidding engine, and property management portals.
               </p>
+
+              <div className="flex flex-wrap items-center gap-6 mt-4 text-xs text-slate-300 font-semibold border-t border-white/10 pt-3">
+                <span>Last Revised: September 2, 2026</span>
+                <span>•</span>
+                <span>Jurisdiction: Republic of India (Mumbai & GIFT City)</span>
+                <span>•</span>
+                <span>Razorpay Escrow Approved</span>
+              </div>
             </div>
-            <Link 
-              href="/support"
-              className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-sm transition-colors shrink-0"
-            >
-              Contact Legal Desk
-            </Link>
           </div>
 
-        </section>
+          {/* Clauses Content */}
+          <div className="max-w-4xl px-6 md:px-10 py-8 space-y-6">
+            {filteredSections.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+                <AlertCircle size={36} className="mx-auto text-amber-500 mb-3" />
+                <h3 className="text-base font-extrabold text-slate-800">No matching terms found</h3>
+                <p className="text-xs text-slate-500 mt-1">Try searching for keywords like "escrow", "GSTIN", "brokerage", or "arbitration".</p>
+              </div>
+            ) : (
+              filteredSections.map((sec) => {
+                const IconComponent = sec.icon;
+                return (
+                  <div 
+                    key={sec.id} 
+                    id={sec.id}
+                    className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-2xs hover:shadow-xs transition-shadow"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-[#0F8B7D]/10 text-[#0F8B7D] flex items-center justify-center font-bold">
+                        <IconComponent size={20} />
+                      </div>
+                      <h2 className="text-lg font-black text-slate-900">{sec.title}</h2>
+                    </div>
 
-      </main>
+                    <div className="text-xs md:text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-line border-t border-slate-100 pt-4">
+                      {sec.content}
+                    </div>
+                  </div>
+                );
+              })
+            )}
 
-      <Footer />
+            {/* Need Legal Clarification Banner */}
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200/80 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h3 className="text-sm font-black text-emerald-950 flex items-center gap-2">
+                  <CheckCircle2 size={18} className="text-[#0F8B7D]" /> Need Legal Clarification?
+                </h3>
+                <p className="text-xs text-emerald-800 mt-1 font-medium max-w-lg">
+                  Our institutional compliance team is available to assist enterprise property funds, developers, and facility contractors with customized master service agreements (MSAs).
+                </p>
+              </div>
+              <Link 
+                href="/support"
+                className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-sm transition-colors shrink-0"
+              >
+                Contact Legal Desk
+              </Link>
+            </div>
+
+            {/* Footer inside scrolling right panel */}
+            <div className="-mx-6 md:-mx-10 -mb-8 pt-8">
+              <Footer />
+            </div>
+          </div>
+
+        </main>
+
+      </div>
+
     </div>
   );
 }
