@@ -200,17 +200,17 @@ export default function Sidebar() {
         />
       )}
 
-      <div className={`w-[260px] h-screen bg-white border-r border-gray-100 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0 transition-transform duration-200 md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <div className={`w-[260px] h-screen bg-white/95 backdrop-blur-md border-r border-gray-200/80 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0 transition-transform duration-200 shadow-sm md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
         
         {/* Top Brand Logo & Workspace Context Switcher */}
-        <div className="p-6 flex flex-col gap-4 border-b border-gray-100">
-          <Link href="/" className="flex items-center gap-3">
+        <div className="p-5 flex flex-col gap-3.5 border-b border-gray-100 bg-slate-50/50">
+          <Link href="/" className="flex items-center gap-3 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
               width={32} 
               height={32} 
-              className="object-contain"
+              className="object-contain group-hover:scale-105 transition-transform"
             />
             <Image 
               src="/name-removebg-preview.png" 
@@ -222,12 +222,15 @@ export default function Sidebar() {
           </Link>
           
           {/* Workspace Context Role Switcher */}
-          <div className="flex flex-col gap-1.5 mt-2">
-            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Active Workspace Context</label>
+          <div className="flex flex-col gap-1 mt-1">
+            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-between">
+              <span>Active Workspace</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            </label>
             <select 
               value={currentPortalKey}
               onChange={(e) => handleRoleChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-[#F9FAFB] hover:bg-gray-50 text-gray-800 focus:outline-none focus:border-[#0F8B7D] cursor-pointer transition-colors shadow-2xs"
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-extrabold bg-white hover:border-[#0F8B7D] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]/20 cursor-pointer transition-all shadow-2xs"
             >
               <option value="properties">Property Owner (SaaS)</option>
               <option value="ops">Facility Manager (Ops)</option>
@@ -241,9 +244,9 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Clean, Role-Isolated Navigation */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1.5 overflow-y-auto">
-          <div className="px-3 py-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+        {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1.5 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-wider">
             {activeRole.roleName} Portal
           </div>
 
@@ -255,35 +258,35 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all relative ${
                   isActive
-                    ? "bg-teal-50 text-[#0F8B7D] font-black shadow-2xs border border-teal-100"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] text-white font-black shadow-md"
+                    : "text-gray-600 font-bold hover:bg-gray-100/70 hover:text-gray-900"
                 }`}
               >
-                <Icon size={16} className={isActive ? "text-[#0F8B7D]" : "text-gray-400"} />
-                <span>{item.name}</span>
-                {isActive && <ChevronRight size={13} className="ml-auto text-[#0F8B7D]" />}
+                <Icon size={16} className={isActive ? "text-white" : "text-gray-400"} />
+                <span className="truncate">{item.name}</span>
+                {isActive && <ChevronRight size={13} className="ml-auto text-white shrink-0" />}
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom User Profile Section */}
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+        <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-slate-50/80">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
               {activeRole.roleName[0]}
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-gray-900 leading-none">{activeRole.roleName}</span>
-              <span className="text-[10px] text-gray-400 mt-0.5 leading-none font-mono">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-extrabold text-gray-900 leading-none truncate">{activeRole.roleName}</span>
+              <span className="text-[10px] text-gray-400 mt-1 leading-none font-mono truncate">
                 {userEmail || activeRole.email}
               </span>
             </div>
           </div>
 
-          <Link href="/login" title="Logout" className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          <Link href="/login" title="Logout" className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition-colors shrink-0">
             <LogOut size={15} />
           </Link>
         </div>
