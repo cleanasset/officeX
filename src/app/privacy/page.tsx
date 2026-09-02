@@ -61,52 +61,52 @@ export default function PrivacyPolicyPage() {
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans">
       
       {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-2xs">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 py-3 flex items-center justify-between shadow-2xs">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image src="/logo-removebg-preview.png" alt="OfficeX" width={28} height={28} />
             <Image src="/name-removebg-preview.png" alt="OfficeX" width={90} height={18} />
           </Link>
-          <span className="text-slate-300 font-light">|</span>
-          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Privacy & Data Governance</span>
+          <span className="text-slate-300 font-light hidden sm:inline">|</span>
+          <span className="text-xs font-black text-slate-700 uppercase tracking-wider hidden sm:inline">Privacy & Data Governance</span>
         </div>
 
         <Link 
           href="/"
-          className="px-4 py-1.5 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all flex items-center gap-1 shadow-2xs"
+          className="px-3.5 py-1.5 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all flex items-center gap-1 shadow-2xs"
         >
-          <ArrowLeft size={13} /> Back Home
+          <ArrowLeft size={13} /> <span className="hidden sm:inline">Back</span> Home
         </Link>
       </header>
 
       {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-[#0F8B7D]/90 text-white py-12 px-4 md:px-8">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-[#0F8B7D]/90 text-white py-8 md:py-12 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-400 text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-400 text-xs font-bold mb-3">
             <Lock size={14} />
             <span>DPDP Act 2023 Compliant</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight">Privacy Policy</h1>
-          <p className="text-slate-300 text-xs md:text-sm max-w-2xl mt-3 font-medium leading-relaxed">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight">Privacy Policy</h1>
+          <p className="text-slate-300 text-xs md:text-sm max-w-2xl mt-2 font-medium leading-relaxed">
             We are committed to safeguarding corporate data, tenant records, and visitor information across all 9 OfficeX platform portals using enterprise-grade encryption.
           </p>
 
-          <div className="flex flex-wrap items-center gap-6 mt-6 text-xs text-slate-300 font-semibold border-t border-white/10 pt-4">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-4 text-[11px] sm:text-xs text-slate-300 font-semibold border-t border-white/10 pt-3">
             <span>Effective Date: September 2026</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>Data Center: AWS Mumbai Region (ap-south-1)</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>Encryption: AES-256 & TLS 1.3</span>
           </div>
         </div>
       </div>
 
       {/* Main Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-10 flex flex-col gap-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-8 md:py-10 flex flex-col gap-8 md:gap-10">
         
         {/* Core Principles Cards Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
+        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-2xs">
             <div className="w-10 h-10 rounded-xl bg-[#0F8B7D]/10 text-[#0F8B7D] flex items-center justify-center font-bold mb-4">
               <Server size={20} />
             </div>
@@ -116,7 +116,7 @@ export default function PrivacyPolicyPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-2xs">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold mb-4">
               <Key size={20} />
             </div>
@@ -126,7 +126,7 @@ export default function PrivacyPolicyPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-2xs sm:col-span-2 md:col-span-1">
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold mb-4">
               <UserCheck size={20} />
             </div>
@@ -138,14 +138,14 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Data Processing Matrix Table */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-2xs">
+        <section className="bg-white rounded-2xl border border-slate-200 p-5 md:p-8 shadow-2xs">
           <div className="flex items-center gap-3 mb-6">
             <Database size={20} className="text-[#0F8B7D]" />
-            <h2 className="text-lg font-black text-slate-900">Data Processing & Retention Matrix</h2>
+            <h2 className="text-base sm:text-lg font-black text-slate-900">Data Processing & Retention Matrix</h2>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto [::-webkit-scrollbar]:hidden">
+            <table className="w-full min-w-[640px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-extrabold uppercase tracking-wider">
                   <th className="p-3.5 rounded-l-xl">Category</th>

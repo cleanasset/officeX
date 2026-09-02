@@ -131,18 +131,18 @@ export default function Footer() {
               <span>Thank you! You are subscribed.</span>
             </div>
           ) : (
-            <form onSubmit={handleSubscribe} className="flex gap-2 mt-4">
+            <form onSubmit={handleSubscribe} className="flex items-center gap-2 mt-4 w-full">
               <input 
                 type="email" 
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter work email" 
-                className="flex-1 px-3.5 py-2.5 text-xs rounded-lg border border-slate-700 bg-slate-800/90 focus:outline-none focus:border-[#0F8B7D] text-white placeholder-slate-500 font-semibold"
+                className="flex-1 min-w-0 w-full px-3 py-2.5 text-xs rounded-lg border border-slate-700 bg-slate-800/90 focus:outline-none focus:border-[#0F8B7D] text-white placeholder-slate-500 font-semibold"
               />
               <button 
                 type="submit"
-                className="px-4 py-2.5 rounded-lg bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0D7A6E] transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                className="px-3.5 py-2.5 rounded-lg bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0D7A6E] transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
               >
                 <span>Subscribe</span>
                 <Send size={12} />
@@ -160,7 +160,7 @@ export default function Footer() {
       {/* Bottom Legal Bar */}
       <div className="max-w-7xl mx-auto w-full border-t border-slate-800/80 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-[11px] text-slate-400 font-medium gap-4">
         <span>&copy; {new Date().getFullYear()} OfficeX Technologies (Scalezix Ventures LLP). All rights reserved. Built for Institutional Commercial Real Estate.</span>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
           <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
           <Link href="/compliance" className="hover:text-white transition-colors">Statutory NOC</Link>
