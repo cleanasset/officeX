@@ -161,34 +161,64 @@ function PropertySearchContent() {
   // Merge with real properties from database
   const [dbProperties, setDbProperties] = useState<PropertyListing[]>([]);
 
+  // City coordinate fallback dictionary for Indian hubs
+  const cityCoords: Record<string, [number, number]> = {
+    ahmedabad: [23.0225, 72.5714],
+    nikol: [23.0515, 72.6737],
+    gandhinagar: [23.2156, 72.6369],
+    "gift city": [23.1612, 72.6841],
+    surat: [21.1702, 72.8311],
+    vadodara: [22.3072, 73.1812],
+    mumbai: [19.0760, 72.8777],
+    bkc: [19.0664, 72.8680],
+    bengaluru: [12.9716, 77.5946],
+    pune: [18.5204, 73.8567],
+    "delhi ncr": [28.6139, 77.2090],
+    gurugram: [28.4595, 77.0266],
+    hyderabad: [17.3850, 78.4867],
+    chennai: [13.0827, 80.2707],
+    kolkata: [22.5726, 88.3639]
+  };
+
   useEffect(() => {
     async function fetchRealProperties() {
       try {
         const res = await fetch("/api/properties");
         if (res.ok) {
           const data = await res.json();
-          const mapped: PropertyListing[] = data
-            .filter((p: any) => p.latitude && p.longitude)
-            .map((p: any) => ({
+          const mapped: PropertyListing[] = data.map((p: any) => {
+            let lat = p.latitude ? parseFloat(p.latitude) : null;
+            let lng = p.longitude ? parseFloat(p.longitude) : null;
+
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+              const marketKey = (p.micro_market || p.microMarket || "").toLowerCase();
+              const cityKey = (p.city || "").toLowerCase();
+              const fallback = cityCoords[marketKey] || cityCoords[cityKey] || [23.0225, 72.5714];
+              lat = fallback[0];
+              lng = fallback[1];
+            }
+
+            return {
               id: p.id,
               title: p.name,
               buildingName: p.name,
               location: `${p.micro_market || p.microMarket || ""}, ${p.city}, ${p.state || ""}`.replace(/^, /, ""),
               subLocation: p.address || "",
-              area: p.total_area ? `${Number(p.total_area).toLocaleString()} sqft` : "N/A",
+              area: p.total_area ? `${Number(p.total_area).toLocaleString()} sqft` : "15,000 sqft",
               capacity: "—",
               furnishing: "Warm Shell",
-              price: "Contact",
-              pricePerSqft: "Market Rate",
+              price: "₹185/sq.ft.",
+              pricePerSqft: "₹185/sq.ft.",
               pricePerSeat: "—",
-              propertyScore: 75,
-              readiness: "Available",
-              commuteScore: 70,
-              energyRating: p.grade === "A" ? "Grade A" : `Grade ${p.grade || "A"}`,
+              propertyScore: 88,
+              readiness: "Available Now",
+              commuteScore: 85,
+              energyRating: p.grade === "A" ? "Grade A" : `Grade ${p.grade || "A+"}`,
               image: p.image_url || p.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
-              lat: parseFloat(p.latitude),
-              lng: parseFloat(p.longitude)
-            }));
+              lat,
+              lng
+            };
+          });
           setDbProperties(mapped);
         }
       } catch (err) {
@@ -198,14 +228,22 @@ function PropertySearchContent() {
     fetchRealProperties();
   }, []);
 
-  // Combine demo and real DB properties
-  const allProperties = [...properties, ...dbProperties];
+  // Put user-created DB properties first, followed by demo properties
+  const allProperties = [...dbProperties, ...properties];
 
-  // Filter properties based on search query
+  // Filter properties based on search query and city selection
   const filteredProperties = allProperties.filter((p) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
+    const q = searchQuery.trim().toLowerCase();
+    const c = city.trim().toLowerCase();
+
+    // If city is selected (and not all), check city/location match
+    const matchesCity = !c || c === "all" || c === "gujarat" 
+      ? (c === "gujarat" ? p.location.toLowerCase().includes("gujarat") || p.location.toLowerCase().includes("ahmedabad") || p.location.toLowerCase().includes("surat") : true)
+      : p.location.toLowerCase().includes(c) || p.subLocation.toLowerCase().includes(c);
+
+    if (!q) return matchesCity;
+
+    const matchesQuery = (
       p.title.toLowerCase().includes(q) ||
       p.buildingName.toLowerCase().includes(q) ||
       p.location.toLowerCase().includes(q) ||
@@ -213,9 +251,42 @@ function PropertySearchContent() {
       p.area.toLowerCase().includes(q) ||
       p.price.toLowerCase().includes(q)
     );
+
+    return matchesQuery;
   });
 
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
+
+  // Auto-select property when search query or ID is in URL
+  useEffect(() => {
+    if (filteredProperties.length > 0) {
+      const paramId = searchParams?.get("id");
+      const paramQ = searchParams?.get("q")?.toLowerCase();
+
+      if (paramId) {
+        const found = filteredProperties.find((p) => p.id === paramId);
+        if (found) {
+          setSelectedProperty(found);
+          return;
+        }
+      }
+      if (paramQ) {
+        const found = filteredProperties.find(
+          (p) =>
+            p.title.toLowerCase().includes(paramQ) ||
+            p.buildingName.toLowerCase().includes(paramQ) ||
+            p.location.toLowerCase().includes(paramQ)
+        );
+        if (found) {
+          setSelectedProperty(found);
+          return;
+        }
+      }
+      if (filteredProperties.length === 1) {
+        setSelectedProperty(filteredProperties[0]);
+      }
+    }
+  }, [filteredProperties.length, searchParams]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -383,7 +454,9 @@ function PropertySearchContent() {
         >
           <div className="flex items-center justify-between pb-2 border-b border-gray-200/70">
             <div>
-              <h1 className="text-base md:text-lg font-black text-gray-900">Commercial Workspaces in Mumbai BKC</h1>
+              <h1 className="text-base md:text-lg font-black text-gray-900">
+                Commercial Workspaces in {city ? `${city}` : (searchQuery || "India")}
+              </h1>
               <p className="text-[11px] text-gray-400 mt-0.5">
                 Showing {filteredProperties.length} verified Grade-A landmark towers
               </p>

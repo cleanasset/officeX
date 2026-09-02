@@ -134,6 +134,14 @@ export default function Sidebar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [currentPortalKey, setCurrentPortalKey] = useState<string>("properties");
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedEmail = localStorage.getItem("officex_user_email");
+      if (storedEmail) setUserEmail(storedEmail);
+    }
+  }, []);
 
   useEffect(() => {
     const handleToggle = () => setIsOpen(prev => !prev);
@@ -270,9 +278,7 @@ export default function Sidebar() {
             <div className="flex flex-col">
               <span className="text-xs font-bold text-gray-900 leading-none">{activeRole.roleName}</span>
               <span className="text-[10px] text-gray-400 mt-0.5 leading-none font-mono">
-                {typeof window !== "undefined" && localStorage.getItem("officex_user_email")
-                  ? localStorage.getItem("officex_user_email")
-                  : activeRole.email}
+                {userEmail || activeRole.email}
               </span>
             </div>
           </div>

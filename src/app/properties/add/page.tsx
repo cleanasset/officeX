@@ -1,13 +1,22 @@
 "use client";
-
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { CheckCircle, ArrowRight, Save, Upload, Plus, Trash2, Building, ShieldCheck, FileText, Check, ArrowLeft } from "lucide-react";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import AddressMapAutocomplete from "@/components/AddressMapAutocomplete";
 import PropertyTitleAutocomplete from "@/components/PropertyTitleAutocomplete";
 import { IndianLocationItem, AddressSuggestion } from "@/lib/indianLocations";
+
+const MapPinPicker = dynamic(() => import("@/components/MapPinPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[260px] bg-gray-100 rounded-2xl flex items-center justify-center text-xs font-bold text-gray-400">
+      Loading Interactive Map Pin Locator...
+    </div>
+  )
+});
 
 export default function OwnerPropertyBuilder() {
   const router = useRouter();
@@ -63,6 +72,9 @@ export default function OwnerPropertyBuilder() {
     liftLicenseExpiry: "",
     pollutionConsentExpiry: "",
     occupancyCertificate: true,
+
+    // Building Photo / Media
+    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
 
     // GPS Coordinates (auto-filled from geocode)
     latitude: null as number | null,
@@ -130,7 +142,7 @@ export default function OwnerPropertyBuilder() {
       const propertyPayload = {
         name: formData.propertyName || "Commercial Tower",
         type: formData.propertyType || "Commercial Office Park",
-        grade: formData.grade?.replace("Grade ", "") || "A",
+        grade: formData.grade?.replace(/^Grade\s+/i, "") || "A",
         address: formData.address || `${formData.microMarket}, ${formData.city}`,
         city: formData.city || "Unknown",
         state: formData.state || "",
@@ -141,7 +153,14 @@ export default function OwnerPropertyBuilder() {
         longitude: formData.longitude,
         ownerName: ownerName,
         ownerCompany: ownerCompany,
-        ownerUserId: ownerUserId || undefined
+        ownerUserId: ownerUserId || undefined,
+        imageUrl: formData.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+        compliance: {
+          fireNocExpiry: formData.fireNocExpiry || undefined,
+          liftLicenseExpiry: formData.liftLicenseExpiry || undefined,
+          pollutionConsentExpiry: formData.pollutionConsentExpiry || undefined,
+          occupancyCertificate: formData.occupancyCertificate
+        }
       };
 
       try {
@@ -404,6 +423,76 @@ export default function OwnerPropertyBuilder() {
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-semibold"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Interactive Map Pin Locator */}
+            <MapPinPicker
+              lat={formData.latitude}
+              lng={formData.longitude}
+              onChange={(newLat, newLng) => {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: newLat,
+                  longitude: newLng
+                }));
+              }}
+            />
+
+            {/* Building Photo / Media Selector */}
+            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">
+                  🏢 Building Photo & Showcase Media
+                </span>
+                <span className="text-[9px] text-gray-400">
+                  Select a template photo or enter custom image URL
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 overflow-x-auto pb-1">
+                {[
+                  {
+                    label: "Glass High-Rise",
+                    url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80"
+                  },
+                  {
+                    label: "Corporate Tower",
+                    url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80"
+                  },
+                  {
+                    label: "Tech Business Park",
+                    url: "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80"
+                  },
+                  {
+                    label: "Modern Facade",
+                    url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80"
+                  }
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, imageUrl: item.url }))}
+                    className={`relative rounded-xl overflow-hidden border-2 transition-all shrink-0 w-28 h-20 group cursor-pointer ${
+                      formData.imageUrl === item.url ? "border-[#0F8B7D] ring-2 ring-teal-500/20 shadow-sm" : "border-gray-200 opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={item.url} alt={item.label} className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] font-semibold py-0.5 text-center">
+                      {item.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  placeholder="Or paste custom image URL (e.g. https://...)"
+                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-mono"
+                />
               </div>
             </div>
           </div>

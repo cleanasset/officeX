@@ -12,7 +12,7 @@ export const userRoleEnum = pgEnum("user_role", [
   "auditor"
 ]);
 
-export const propertyGradeEnum = pgEnum("property_grade", ["A", "B", "C"]);
+export const propertyGradeEnum = pgEnum("property_grade", ["A", "B", "C", "A+", "B+"]);
 export const unitStatusEnum = pgEnum("unit_status", ["available", "leased", "in_negotiation"]);
 export const rfqStatusEnum = pgEnum("rfq_status", ["open", "evaluating", "awarded", "closed"]);
 export const quoteStatusEnum = pgEnum("quote_status", ["submitted", "shortlisted", "awarded", "declined"]);

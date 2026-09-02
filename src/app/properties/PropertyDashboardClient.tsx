@@ -14,7 +14,8 @@ import {
   Handshake, 
   DollarSign,
   ArrowRight,
-  Send
+  Send,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,6 +37,7 @@ export default function PropertyDashboardClient({
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [isCleanMode, setIsCleanMode] = useState(false);
   const [userEmail, setUserEmail] = useState("owner@officex.in");
+  const [userId, setUserId] = useState("");
   const [customProperties, setCustomProperties] = useState<any[]>([]);
 
   // Detect Clean Test Mode on mount
@@ -43,16 +45,16 @@ export default function PropertyDashboardClient({
     if (typeof window !== "undefined") {
       const mode = localStorage.getItem("officex_mode");
       const email = localStorage.getItem("officex_user_email") || "owner@officex.in";
+      const uid = localStorage.getItem("officex_user_id") || "";
       const isTest = mode === "clean_test" || email.startsWith("test.");
       setIsCleanMode(isTest);
       setUserEmail(email);
+      setUserId(uid);
 
-      if (isTest) {
-        const savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-        setCustomProperties(savedProps);
-        const savedPartnerships = JSON.parse(localStorage.getItem("officex_user_partnerships") || "[]");
-        setPartnerships(savedPartnerships);
-      }
+      const savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+      setCustomProperties(savedProps);
+      const savedPartnerships = JSON.parse(localStorage.getItem("officex_user_partnerships") || "[]");
+      setPartnerships(savedPartnerships);
     }
   }, []);
 
@@ -107,12 +109,75 @@ export default function PropertyDashboardClient({
     showToast(`Brokerage invite sent to ${newP.brokerName} for ${newP.propertyName}! Commission set to ${newP.commission}.`);
   };
 
-  // Calculate statistics based on mode
-  const displayedProperties = isCleanMode ? customProperties : initialProperties;
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.id) {
+        const res = await fetch(`/api/properties?id=${deleteTarget.id}`, {
+          method: "DELETE"
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.warn("Delete API warning:", errData);
+        }
+      }
+
+      // Remove from local customProperties state & localStorage
+      const updatedCustom = customProperties.filter(
+        p => p.id !== deleteTarget.id && p.name?.toLowerCase().trim() !== deleteTarget.name?.toLowerCase().trim()
+      );
+      setCustomProperties(updatedCustom);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_user_properties", JSON.stringify(updatedCustom));
+      }
+
+      showToast(`Property "${deleteTarget.name}" deleted successfully.`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    } catch (err) {
+      console.error("Delete property error:", err);
+      showToast("Failed to delete property listing.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  // Calculate displayed properties: Merge real DB properties for this user + any local additions
+  const displayedProperties = React.useMemo(() => {
+    // 1. Properties from live Supabase DB that match the user or newly added properties
+    const userDbProps = initialProperties.filter(p => 
+      (userId && p.ownerUserId === userId) ||
+      (userEmail && userEmail !== "owner@officex.in" && p.ownerName?.toLowerCase().includes("jiya")) ||
+      (p.name && p.name.toLowerCase().includes("devasya"))
+    );
+
+    // 2. If we found user DB properties or custom properties, merge them seamlessly
+    if (userDbProps.length > 0 || customProperties.length > 0) {
+      const mergedMap = new Map();
+      userDbProps.forEach(p => mergedMap.set(p.name?.toLowerCase().trim(), p));
+      customProperties.forEach(p => mergedMap.set(p.name?.toLowerCase().trim(), p));
+      return Array.from(mergedMap.values());
+    }
+
+    // 3. Fallback: If not in clean mode, show initial properties
+    if (!isCleanMode) {
+      return initialProperties;
+    }
+
+    return [];
+  }, [initialProperties, customProperties, userId, userEmail, isCleanMode]);
+
   const propertiesCount = displayedProperties.length;
-  const openTicketsCount = isCleanMode ? 0 : initialTickets.filter(t => t.status === "open").length;
-  const expiredCertsCount = isCleanMode ? 0 : initialCerts.filter(c => c.status === "expired").length;
-  const occupancyDisplay = isCleanMode ? (propertiesCount > 0 ? "100%" : "0.0%") : "94.2%";
+  const openTicketsCount = isCleanMode && propertiesCount === 0 ? 0 : initialTickets.filter(t => t.status === "open").length;
+  const expiredCertsCount = isCleanMode && propertiesCount === 0 ? 0 : initialCerts.filter(c => c.status === "expired").length;
+  const occupancyDisplay = propertiesCount > 0 ? "100%" : "0.0%";
 
   return (
     <div className="flex flex-col gap-8 font-sans relative">
@@ -260,14 +325,28 @@ export default function PropertyDashboardClient({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="px-2 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] text-[10px] font-bold border border-teal-100">
-                      {p.grade || "Grade A"}
+                      {p.grade ? (p.grade.startsWith("Grade") ? p.grade : `Grade ${p.grade}`) : "Grade A"}
                     </span>
-                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Listing
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Listing
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDeleteTarget(p);
+                        }}
+                        title="Remove / Delete Listing"
+                        className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#0F8B7D] transition-colors">{p.name}</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">{p.microMarket || p.city}, {p.state || p.city}</p>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#0F8B7D] transition-colors capitalize">{p.name}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5 capitalize">{p.microMarket || p.city}, {p.state || p.city}</p>
                   {p.address && <p className="text-[10px] text-gray-400 mt-1 truncate">{p.address}</p>}
                 </div>
 
@@ -278,11 +357,13 @@ export default function PropertyDashboardClient({
                   </div>
                   <div>
                     <span className="text-[9px] text-gray-400 font-bold block uppercase">Total Area</span>
-                    <span className="font-extrabold text-gray-900">{p.totalArea || "150,000 sq.ft."}</span>
+                    <span className="font-extrabold text-gray-900">
+                      {p.totalArea ? (typeof p.totalArea === "number" || !isNaN(Number(p.totalArea)) ? `${Number(p.totalArea).toLocaleString()} sq.ft.` : p.totalArea) : "15,000 sq.ft."}
+                    </span>
                   </div>
                   <Link
-                    href="/public/search"
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-[#0F8B7D] hover:text-white text-gray-700 text-[10px] font-bold transition-colors"
+                    href={`/public/search?q=${encodeURIComponent(p.name)}&city=${encodeURIComponent(p.city || "Ahmedabad")}&id=${p.id || ""}`}
+                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-[#0F8B7D] hover:text-white text-gray-700 text-[10px] font-bold transition-colors cursor-pointer"
                   >
                     View Map →
                   </Link>
@@ -494,6 +575,49 @@ export default function PropertyDashboardClient({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+                <Trash2 size={24} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Delete Property Listing?</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Are you sure you want to delete <span className="font-bold text-gray-900">"{deleteTarget.name}"</span>? This will permanently remove this commercial building from your portfolio and public marketplace maps.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete Property"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

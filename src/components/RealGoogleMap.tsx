@@ -74,12 +74,14 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
 
         // Initialize map instance only if not already initialized
         if (!mapInstanceRef.current && mapContainerRef.current) {
-          const defaultLat = 19.0664;
-          const defaultLng = 72.8665;
+          const firstProp = selectedProperty || (properties.length > 0 ? properties[0] : null);
+          const defaultLat = firstProp?.lat ? Number(firstProp.lat) : 19.0664;
+          const defaultLng = firstProp?.lng ? Number(firstProp.lng) : 72.8665;
+          const defaultZoom = firstProp ? 15 : 14;
 
           const map = L.map(mapContainerRef.current, {
             center: [defaultLat, defaultLng],
-            zoom: 14,
+            zoom: defaultZoom,
             zoomControl: false,
             attributionControl: false
           });
@@ -235,22 +237,33 @@ export default function RealGoogleMap({ properties, selectedProperty, onSelectPr
     }
   };
 
-  // Fly to selected property when clicked on the left feed
+  // Fly to selected property or filtered properties
   useEffect(() => {
-    if (selectedProperty && mapInstanceRef.current && mapContainerRef.current) {
+    if (mapInstanceRef.current && mapContainerRef.current) {
       const width = mapContainerRef.current.clientWidth || mapContainerRef.current.offsetWidth;
       const height = mapContainerRef.current.clientHeight || mapContainerRef.current.offsetHeight;
-      const lat = Number(selectedProperty.lat);
-      const lng = Number(selectedProperty.lng);
-      if (width > 0 && height > 0 && !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
-        try {
-          mapInstanceRef.current.flyTo([lat, lng], 15, {
-            duration: 0.8
-          });
-        } catch (_) {}
+      if (width > 0 && height > 0) {
+        if (selectedProperty) {
+          const lat = Number(selectedProperty.lat);
+          const lng = Number(selectedProperty.lng);
+          if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+            try {
+              mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 0.8 });
+            } catch (_) {}
+          }
+        } else if (properties.length > 0) {
+          const first = properties[0];
+          const lat = Number(first.lat);
+          const lng = Number(first.lng);
+          if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+            try {
+              mapInstanceRef.current.flyTo([lat, lng], properties.length === 1 ? 16 : 14, { duration: 0.8 });
+            } catch (_) {}
+          }
+        }
       }
     }
-  }, [selectedProperty]);
+  }, [selectedProperty, properties]);
 
   return (
     <div className="relative w-full h-full bg-[#E5E3DF] overflow-hidden select-none">
