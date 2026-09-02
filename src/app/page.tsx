@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Footer from "@/components/Footer";
 import {
   Search,
   Building,
@@ -1252,68 +1253,7 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 7: DARK FOOTER */}
-      <footer className="bg-[#111828] text-white py-16 px-4 md:px-6 border-t border-slate-850 w-full max-w-full overflow-hidden">
-        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-12">
-          
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <Image 
-                src="/logo-removebg-preview.png" 
-                alt="OfficeX Logo" 
-                width={30} 
-                height={30} 
-                className="object-contain filter brightness-0 invert"
-              />
-              <Image 
-                src="/name-removebg-preview.png" 
-                alt="OfficeX" 
-                width={100} 
-                height={20} 
-                className="object-contain filter brightness-0 invert"
-              />
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed mt-2 font-semibold">
-              India’s leading unified operating system for commercial real estate discoverability, transactions, and facility management.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300">Platform</h4>
-            <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
-              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Terms of Service</button></li>
-              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Privacy Policy</button></li>
-              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Compliance</button></li>
-              <li><button onClick={() => scrollToSection("features")} className="hover:text-white transition-colors text-left">Security</button></li>
-              <li><button onClick={() => scrollToSection("faq")} className="hover:text-white transition-colors text-left">Support</button></li>
-            </ul>
-          </div>
-
-          <div className="md:col-span-2">
-            <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300">Stay Updated</h4>
-            <p className="text-xs text-slate-400 mt-2 font-semibold">Subscribe to our newsletter for insights on commercial real estate tech.</p>
-            <div className="flex gap-2 mt-4 max-w-md">
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="flex-1 px-4 py-2.5 text-xs rounded-lg border border-slate-700 bg-slate-800/80 focus:outline-none focus:border-[#0F8B7D] text-white placeholder-slate-500 font-semibold"
-              />
-              <button className="px-5 py-2.5 rounded-lg bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0D7A6E] transition-colors cursor-pointer">
-                Subscribe
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        <div className="max-w-7xl mx-auto w-full border-t border-slate-800/60 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-[11px] text-slate-500 font-semibold">
-          <span>&copy; 2024 OfficeX. All rights reserved. Built for institutional real estate.</span>
-          <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Compliance NOC</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* CONTACT SALES MODAL OVERLAY */}
       {isContactModalOpen && (
