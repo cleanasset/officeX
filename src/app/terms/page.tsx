@@ -157,7 +157,7 @@ Either party may terminate account subscription with 30 days written notice, pro
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans">
       
       {/* Fixed Top Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 py-3 flex items-center justify-between shadow-2xs">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 md:px-8 py-3 flex items-center justify-between shadow-2xs">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image src="/logo-removebg-preview.png" alt="OfficeX" width={28} height={28} />
@@ -226,11 +226,11 @@ Either party may terminate account subscription with 30 days written notice, pro
         })}
       </div>
 
-      {/* MAIN LAYOUT: Desktop Sticky Sidebar + Fluid Right Content Column */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-8 md:py-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
+      {/* MAIN CONTAINER */}
+      <div className="max-w-7xl w-full mx-auto px-4 md:px-8 py-8 md:py-10 relative">
         
-        {/* DESKTOP STICKY LEFT SIDEBAR (lg:block, top-20 self-start max-h-[calc(100vh-6rem)]) */}
-        <aside className="hidden lg:block lg:col-span-1 self-start sticky top-20">
+        {/* DESKTOP FIXED LEFT SIDEBAR (Completely FIXED at top-20 on desktop, NEVER moves when scrolling!) */}
+        <aside className="hidden lg:block w-72 fixed top-20 z-20">
           <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 p-4 shadow-sm">
             
             {/* Table of Contents Header */}
@@ -305,8 +305,8 @@ Either party may terminate account subscription with 30 days written notice, pro
           </div>
         </aside>
 
-        {/* RIGHT CONTENT COLUMN (FLUID RESPONSIVE) */}
-        <section className="lg:col-span-3 flex flex-col gap-6">
+        {/* RIGHT CONTENT COLUMN (Offset by lg:pl-80 on desktop so it moves smoothly next to the FIXED left sidebar) */}
+        <section className="w-full lg:pl-80 flex flex-col gap-6">
           {filteredSections.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-12 text-center">
               <AlertCircle size={36} className="mx-auto text-amber-500 mb-3" />
@@ -356,7 +356,7 @@ Either party may terminate account subscription with 30 days written notice, pro
           </div>
         </section>
 
-      </main>
+      </div>
 
       {/* Clean Global Footer */}
       <Footer />
