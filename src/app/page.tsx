@@ -47,7 +47,8 @@ import {
 
 export default function LandingPage() {
   const router = useRouter();
-  const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor" | "saas">("space");
+  const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor">("space");
+  const [selectedCoreNode, setSelectedCoreNode] = useState<string>("Tenants");
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
@@ -101,7 +102,8 @@ export default function LandingPage() {
       }
     }, stepTime);
 
-    return () => clearInterval(timer);
+  
+return () => clearInterval(timer);
   }, []);
 
   const toggleFAQ = (index: number) => {
@@ -204,6 +206,27 @@ export default function LandingPage() {
     }
   ];
 
+    // 14 Core Orbital Nodes Data (from client option1.jpeg Section 03)
+  const coreNodes = [
+    { id: "Users", label: "Users & Roles", category: "Governance", desc: "Granular RBAC for Property Owners, Managers, FM Teams, Vendors, and Corporate Tenants." },
+    { id: "Properties", label: "Properties", category: "Core Asset", desc: "Institutional master property registry, building specs, CAD/BIM floor plans, and amenities." },
+    { id: "Spaces", label: "Spaces & Units", category: "Inventory", desc: "Real-time floor grids, unit occupancy matrix, demising plans, and vacancy status." },
+    { id: "Tenants", label: "Tenants", category: "Occupiers", desc: "Verified corporate occupiers, GSTIN validation, lease contracts, and authorized staff rosters." },
+    { id: "Assets", label: "Assets & Equip.", category: "Facility", desc: "1,284 tracked HVAC, DG, lift, and electrical assets with QR digital passports and service logs." },
+    { id: "Vendors", label: "Vendors & FM", category: "Procurement", desc: "450+ pre-vetted contractors, compliance KYC, SLA scorecards, and normalized rate cards." },
+    { id: "Contracts", label: "Contracts & LOI", category: "Commercial", desc: "Digital lease agreements, break options, lock-in terms, and vendor AMC master contracts." },
+    { id: "Documents", label: "Doc Locker", category: "Compliance", desc: "Central vault for Fire NOC, lift fitness, pollution certificates, and tax filings." },
+    { id: "Workflow", label: "Workflows", category: "Automation", desc: "Automated lease onboarding, maintenance escalation gates, and approval hierarchies." },
+    { id: "Tasks", label: "Tasks & Tickets", category: "Operations", desc: "SLA-governed FM helpdesk tickets, preventive maintenance checklists, and inspections." },
+    { id: "Notifications", label: "Alerts & Comms", category: "Engagement", desc: "Multi-channel broadcast alerts, automated payment SMS/WhatsApp reminders, and push notices." },
+    { id: "Audit", label: "Audit & Trail", category: "Security", desc: "Immutable financial, operational, and user access trail for institutional governance." },
+    { id: "Reporting", label: "Executive MIS", category: "Analytics", desc: "Live P&L, rent rolls, aging schedules, ESG utility consumption, and AI summaries." },
+    { id: "APIs", label: "APIs & Core Bus", category: "Integration", desc: "Open REST APIs connecting BMS sensors, smart energy meters, ERPs, and payment gateways." }
+  ];
+
+  const activeNodeData = coreNodes.find((n) => n.id === selectedCoreNode) || coreNodes[3];
+
+  
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
       
@@ -268,23 +291,45 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO & SHIFTING GRADIENT SEARCH */}
-      <section className="pt-28 md:pt-40 pb-16 md:pb-20 px-4 md:px-6 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#9CCAE2] via-[#97C4E5] to-[#91BBE5] w-full max-w-full">
+      {/* SECTION 2: HERO WITH BLURRED ARCHITECTURAL BANNER BACKGROUND */}
+      <section className="relative isolate pt-28 md:pt-40 pb-16 md:pb-20 px-4 md:px-6 flex flex-col items-center justify-center overflow-hidden w-full max-w-full min-h-[85vh]">
         
-        {/* Floating Pulsing Badge */}
-        <div className="mb-4 md:mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-white/90 text-xs font-bold text-[#0D7A6E] shadow-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-          Trusted by 450+ Teams
+        {/* Background Image Container with Blur & Balanced Contrast Scrim */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <Image 
+            src="/officex-hero-banner.jpg" 
+            alt="OfficeX Commercial Workspaces Operating System" 
+            fill 
+            className="object-cover object-center scale-105 blur-[5px]" 
+            priority 
+          />
+          {/* Luminous balanced overlay so skyscraper is visible while dark text has high contrast */}
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white" />
         </div>
 
-        <h1 className="text-center max-w-4xl text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-slate-950 leading-[1.15]">
-          The Operating System for <br />
-          <span className="text-[#0F8B7D] drop-shadow-xs">
-            Commercial Workspaces
-          </span>
-        </h1>
+        {/* Foreground Content Container */}
+        <div className="relative z-10 flex flex-col items-center justify-center w-full">
+
+          {/* Floating Pulsing Badge */}
+          <div className="mb-4 md:mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-slate-200/80 text-xs font-bold text-[#0D7A6E] shadow-sm backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+            Trusted by 450+ Teams
+          </div>
+
+          <div className="relative flex items-center justify-center">
+            {/* Luminous soft ambient backlight to ensure crisp contrast on any background */}
+            <div className="absolute -inset-x-20 -inset-y-10 bg-white/80 blur-2xl rounded-full pointer-events-none -z-10" />
+            
+            <h1 className="text-center max-w-5xl text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-slate-950 leading-tight px-2 lg:whitespace-nowrap">
+              The OS for{" "}
+              <span className="bg-gradient-to-r from-[#065A50] via-[#0D7A6E] to-[#04473F] bg-clip-text text-transparent drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+                Commercial Workspaces
+              </span>
+            </h1>
+          </div>
         
-        <p className="text-center max-w-3xl text-slate-800 mt-4 md:mt-6 text-xs sm:text-sm md:text-base font-semibold leading-relaxed px-2">
+        <p className="text-center max-w-3xl text-slate-800 mt-4 md:mt-5 text-xs sm:text-sm md:text-base font-semibold leading-relaxed px-2">
           Streamline leasing, vendor procurement, and facility operations in one unified platform designed for modern institutional real estate.
         </p>
 
@@ -313,17 +358,7 @@ export default function LandingPage() {
               <Wrench size={13} />
               <span className="truncate">Hire Vendor</span>
             </button>
-            <button 
-              onClick={() => setActiveSearchTab("saas")}
-              className={`flex-1 py-3 md:py-4 px-2 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                activeSearchTab === "saas" 
-                  ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
-                  : "border-transparent text-slate-400 hover:text-slate-650"
-              }`}
-            >
-              <Settings size={13} />
-              <span className="truncate">OFFICEX.PRO</span>
-            </button>
+            
           </div>
 
           <div className="p-4 md:p-6">
@@ -336,7 +371,7 @@ export default function LandingPage() {
                     onChange={(e) => setSpaceCity(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
                   >
-                    <optgroup label="⭐ Popular Indian Tech & Commercial Hubs">
+                    <optgroup label="Γ¡É Popular Indian Tech & Commercial Hubs">
                       <option value="Gujarat">Gujarat (Ahmedabad / GIFT City / Gandhinagar)</option>
                       <option value="Mumbai">Mumbai (BKC / Lower Parel / Powai)</option>
                       <option value="Bengaluru">Bengaluru (ORR / Whitefield / Electronic City)</option>
@@ -346,7 +381,7 @@ export default function LandingPage() {
                       <option value="Chennai">Chennai (OMR / Guindy / Mount Road)</option>
                       <option value="Kolkata">Kolkata (Salt Lake Sector V / New Town)</option>
                     </optgroup>
-                    <optgroup label="🏢 High-Growth Tier-2 Cities">
+                    <optgroup label="≡ƒÅó High-Growth Tier-2 Cities">
                       <option value="Ahmedabad">Ahmedabad (SG Highway / Prahlad Nagar / SBR)</option>
                       <option value="Gandhinagar">Gandhinagar & GIFT City (Fintech Hub)</option>
                       <option value="Surat">Surat (Diamond Bourse & Ring Road)</option>
@@ -359,7 +394,7 @@ export default function LandingPage() {
                       <option value="Bhubaneswar">Bhubaneswar (Infocity)</option>
                       <option value="Goa">Goa (Panaji & Verna Industrial)</option>
                     </optgroup>
-                    <optgroup label="🇮🇳 All Indian States & UTs">
+                    <optgroup label="≡ƒç«≡ƒç│ All Indian States & UTs">
                       <option value="Andhra Pradesh">Andhra Pradesh (Visakhapatnam)</option>
                       <option value="Assam">Assam (Guwahati)</option>
                       <option value="Bihar">Bihar (Patna)</option>
@@ -397,10 +432,10 @@ export default function LandingPage() {
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
                   >
                     <option value="All Ranges">Budget Range (All)</option>
-                    <option value="Below ₹1L">Below ₹1 Lakh/mo</option>
-                    <option value="₹1L - ₹5L">₹1L - ₹5 Lakh/mo</option>
-                    <option value="₹5L - ₹15L">₹5L - ₹15 Lakh/mo</option>
-                    <option value="Above ₹15L">Above ₹15 Lakh/mo</option>
+                    <option value="Below Γé╣1L">Below Γé╣1 Lakh/mo</option>
+                    <option value="Γé╣1L - Γé╣5L">Γé╣1L - Γé╣5 Lakh/mo</option>
+                    <option value="Γé╣5L - Γé╣15L">Γé╣5L - Γé╣15 Lakh/mo</option>
+                    <option value="Above Γé╣15L">Above Γé╣15 Lakh/mo</option>
                   </select>
                 </div>
 
@@ -418,7 +453,7 @@ export default function LandingPage() {
                   </select>
                 </div>
               </div>
-            ) : activeSearchTab === "vendor" ? (
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-slate-400"><SlidersHorizontal size={16} /></span>
@@ -458,10 +493,10 @@ export default function LandingPage() {
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
                   >
                     <option value="All Budgets">Budget Estimate (All)</option>
-                    <option value="Under ₹50k">Under ₹50,000</option>
-                    <option value="₹50k - ₹2L">₹50,000 - ₹2 Lakhs</option>
-                    <option value="₹2L - ₹10L">₹2 Lakhs - ₹10 Lakhs</option>
-                    <option value="Above ₹10L">Above ₹10 Lakhs</option>
+                    <option value="Under Γé╣50k">Under Γé╣50,000</option>
+                    <option value="Γé╣50k - Γé╣2L">Γé╣50,000 - Γé╣2 Lakhs</option>
+                    <option value="Γé╣2L - Γé╣10L">Γé╣2 Lakhs - Γé╣10 Lakhs</option>
+                    <option value="Above Γé╣10L">Above Γé╣10 Lakhs</option>
                   </select>
                 </div>
 
@@ -478,29 +513,6 @@ export default function LandingPage() {
                     <option value="Industrial Warehouse">Industrial Warehouse</option>
                   </select>
                 </div>
-              </div>
-            ) : (
-              /* OFFICEX.PRO SaaS Panel */
-              <div className="flex flex-col items-center text-center py-4 gap-4">
-                <div className="flex items-center gap-6 flex-wrap justify-center">
-                  <button onClick={() => router.push('/tenant')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
-                    <div className="w-10 h-10 rounded-xl bg-[#0F8B7D] flex items-center justify-center"><Users size={18} className="text-white" /></div>
-                    <span className="text-[10px] font-bold text-slate-700">Tenant Portal</span>
-                  </button>
-                  <button onClick={() => router.push('/ops')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
-                    <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center"><Settings size={18} className="text-white" /></div>
-                    <span className="text-[10px] font-bold text-slate-700">FM Operations</span>
-                  </button>
-                  <button onClick={() => router.push('/portfolio')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><Building size={18} className="text-white" /></div>
-                    <span className="text-[10px] font-bold text-slate-700">Landlord Portal</span>
-                  </button>
-                  <button onClick={() => router.push('/reporting')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-[#0F8B7D] hover:bg-[#0F8B7D]/5 transition-all w-32 cursor-pointer">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center"><TrendingUp size={18} className="text-white" /></div>
-                    <span className="text-[10px] font-bold text-slate-700">Analytics & MIS</span>
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500 font-semibold max-w-lg">Already managing a workspace? Log in to operate your building — helpdesk, assets, rent roll, compliance, and analytics.</p>
               </div>
             )}
 
@@ -520,60 +532,60 @@ export default function LandingPage() {
         <div className="w-full mt-12 md:mt-14 py-3 md:py-3.5 bg-white/30 backdrop-blur-md border-y border-white/40 overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
           <div className="animate-marquee flex items-center gap-8 md:gap-12 text-[11px] md:text-xs font-black text-slate-900 uppercase tracking-widest whitespace-nowrap">
             <span className="whitespace-nowrap">TCS</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">WIPRO</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">INFOSYS</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">DLF COMMERCIAL</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">EMBASSY REIT</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">PRESTIGE GROUP</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">L&amp;T REALTY</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">BROOKFIELD</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">BLACKSTONE</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">K RAHEJA CORP</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">HCL TECH</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">COGNIZANT</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">ACCENTURE</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             {/* Seamless Repeat Track */}
             <span className="whitespace-nowrap">TCS</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">WIPRO</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">INFOSYS</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">DLF COMMERCIAL</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">EMBASSY REIT</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">PRESTIGE GROUP</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">L&amp;T REALTY</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">BROOKFIELD</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">BLACKSTONE</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">K RAHEJA CORP</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">HCL TECH</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">COGNIZANT</span>
-            <span className="text-slate-500 opacity-60">•</span>
+            <span className="text-slate-500 opacity-60">ΓÇó</span>
             <span className="whitespace-nowrap">ACCENTURE</span>
           </div>
         </div>
@@ -589,13 +601,14 @@ export default function LandingPage() {
             <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">Verified Vendors</div>
           </div>
           <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-950">₹{animateCount.gtv}Cr+</div>
+            <div className="text-2xl md:text-3xl font-black text-slate-950">Γé╣{animateCount.gtv}Cr+</div>
             <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">GTV Processed</div>
           </div>
           <div>
             <div className="text-2xl md:text-3xl font-black text-slate-950">{animateCount.uptime}%</div>
             <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">System Uptime</div>
           </div>
+        </div>
         </div>
       </section>
 
@@ -718,9 +731,9 @@ export default function LandingPage() {
                     <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors md:hidden" />
                   </h3>
                   <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-slate-900">₹4.2L</span>
+                    <span className="text-3xl font-black text-slate-900">Γé╣4.2L</span>
                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 flex items-center gap-0.5">
-                      ↓12% <span className="font-medium text-[10px]">vs last month</span>
+                      Γåô12% <span className="font-medium text-[10px]">vs last month</span>
                     </span>
                   </div>
                   <p className="text-slate-400 mt-2 font-medium text-[11px] leading-relaxed max-w-sm">
@@ -833,7 +846,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <span className="text-[10px] text-[#0F8B7D] font-bold group-hover:underline">Manage Compliance ›</span>
+                <span className="text-[10px] text-[#0F8B7D] font-bold group-hover:underline">Manage Compliance ΓÇ║</span>
               </div>
 
               {/* Card F: AI Automation */}
@@ -857,7 +870,145 @@ export default function LandingPage() {
                   </p>
                 </div>
 
-                <span className="text-[10px] text-emerald-400 font-bold group-hover:underline">Configure AI ›</span>
+                <span className="text-[10px] text-emerald-400 font-bold group-hover:underline">Configure AI ΓÇ║</span>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      
+      {/* SECTION 3B: ONE CORE. ONE DATA FOUNDATION. ONE SOURCE OF TRUTH (Requested Architecture Diagram) */}
+      <section id="core-architecture" className="py-24 px-4 md:px-8 bg-slate-950 text-white relative overflow-hidden">
+        {/* Ambient Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-teal-500/10 blur-[140px] rounded-full pointer-events-none -z-0" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left 45%: Narrative & Selected Node Details */}
+            <div className="lg:col-span-5 flex flex-col items-start text-left">
+              <span className="text-xs font-extrabold text-[#0F8B7D] uppercase tracking-widest">
+                Data Architecture & Integration
+              </span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mt-2 tracking-tight">
+                One Core. One Data Foundation. One Source of Truth.
+              </h2>
+              <p className="text-slate-400 text-sm font-medium leading-relaxed mt-4">
+                OFFICEX Core connects your entire property ecosystem on a single, secure, and intelligent master-data backbone. Eliminate disconnected software stacks and fragmented records.
+              </p>
+
+              {/* 4 Value Pillars */}
+              <div className="mt-6 flex flex-col gap-3 w-full">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
+                  <span className="text-xs font-bold text-slate-200">No more siloed systems — All operational portals share one master schema</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
+                  <span className="text-xs font-bold text-slate-200">No duplicate data — Real-time entity-relationship continuity</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
+                  <span className="text-xs font-bold text-slate-200">No manual reconciliations — Instant automated financial & rent splits</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
+                  <span className="text-xs font-bold text-slate-200">Real-time visibility — Live portfolio telemetry for institutional leadership</span>
+                </div>
+              </div>
+
+              {/* Dynamic Interactive Node Inspection Card */}
+              <div className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/90 border border-teal-500/30 w-full shadow-xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D] animate-ping" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-teal-400">
+                      Node: {activeNodeData.label}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 bg-white/10 px-2 py-0.5 rounded">
+                    {activeNodeData.category}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                  {activeNodeData.desc}
+                </p>
+                <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Connected to: <strong>OFFICEX CORE</strong></span>
+                  <span className="text-[#0F8B7D] font-bold">Encrypted & Audited</span>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <button 
+                  onClick={() => setIsContactModalOpen(true)}
+                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <span>Request Architecture Whitepaper</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+
+            </div>
+
+            {/* Right 55%: Interactive Orbital Master Architecture Diagram */}
+            <div className="lg:col-span-7 flex flex-col items-center justify-center relative min-h-[520px]">
+              
+              {/* Outer Orbit Ring */}
+              <div className="relative w-full max-w-[500px] aspect-square rounded-full border border-teal-500/20 flex items-center justify-center p-8 animate-[spin_120s_linear_infinite]">
+                {/* Mid Orbit Ring */}
+                <div className="w-full h-full rounded-full border border-teal-500/30 border-dashed flex items-center justify-center p-12">
+                  {/* Inner Orbit Ring */}
+                  <div className="w-full h-full rounded-full border border-teal-500/40" />
+                </div>
+              </div>
+
+              {/* Central Core Element (Static in Center) */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-[#0F8B7D] via-[#0D7A6E] to-[#1E3A8A] p-1 shadow-[0_0_50px_rgba(15,139,125,0.6)] flex items-center justify-center text-center">
+                  <div className="w-full h-full rounded-full bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-2">
+                    <Database size={24} className="text-[#0F8B7D] mb-1" />
+                    <span className="text-xs font-black tracking-widest text-white">OFFICEX</span>
+                    <span className="text-[9px] font-bold text-teal-400 tracking-wider">CORE BUS</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 14 Interactive Satellite Nodes Positioned in Orbit */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+                {coreNodes.map((node, i) => {
+                  const angle = (i / coreNodes.length) * 2 * Math.PI - Math.PI / 2;
+                  const radius = 210; // Distance from center
+                  const x = Math.round(Math.cos(angle) * radius);
+                  const y = Math.round(Math.sin(angle) * radius);
+                  const isSelected = selectedCoreNode === node.id;
+
+                  return (
+                    <button
+                      key={node.id}
+                      onClick={() => setSelectedCoreNode(node.id)}
+                      onMouseEnter={() => setSelectedCoreNode(node.id)}
+                      style={{
+                        transform: `translate(${x}px, ${y}px)`
+                      }}
+                      className={`absolute px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer z-40 whitespace-nowrap shadow-md flex items-center gap-1.5 ${
+                        isSelected
+                          ? "bg-[#0F8B7D] text-white scale-110 ring-2 ring-white shadow-[0_0_20px_rgba(15,139,125,0.8)]"
+                          : "bg-slate-900/90 text-slate-300 border border-slate-700/80 hover:border-teal-400 hover:text-white"
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-teal-400"}`} />
+                      <span>{node.id}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="absolute bottom-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                Hover or click any node to inspect data flow
               </div>
 
             </div>
@@ -874,7 +1025,7 @@ export default function LandingPage() {
             {/* Timeline info */}
             <div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                From Procurement to Payment — Secure & Verified
+                From Procurement to Payment ΓÇö Secure & Verified
               </h2>
               <p className="text-slate-500 mt-3 md:mt-4 max-w-md font-medium text-xs md:text-sm leading-relaxed">
                 An end-to-end transparent workflow designed to protect both facility managers and vendors.
@@ -989,12 +1140,12 @@ export default function LandingPage() {
                     </div>
                     <div className="grid grid-cols-3 py-2.5 px-3 font-bold text-slate-800 border-b border-slate-100 items-center">
                       <span>QuickCool</span>
-                      <span className="text-[#0F8B7D]">₹12,500</span>
+                      <span className="text-[#0F8B7D]">Γé╣12,500</span>
                       <span className="text-emerald-600">99.2%</span>
                     </div>
                     <div className="grid grid-cols-3 py-2.5 px-3 font-bold text-slate-800 items-center">
                       <span>Apex CleanAir</span>
-                      <span>₹11,800</span>
+                      <span>Γé╣11,800</span>
                       <span className="text-slate-500">94.8%</span>
                     </div>
                   </div>
@@ -1038,7 +1189,7 @@ export default function LandingPage() {
                         <Building size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
                         <span className="text-slate-800">Enterprise Client</span>
                       </div>
-                      <span className="text-slate-500">Initiates ₹100,000 Payment</span>
+                      <span className="text-slate-500">Initiates Γé╣100,000 Payment</span>
                     </div>
 
                     {/* Arrow down connector */}
@@ -1181,7 +1332,7 @@ export default function LandingPage() {
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
                 <p className="text-xs text-slate-400 mt-1.5 font-semibold">For growing multi-site portfolios.</p>
-                <div className="text-3xl font-black text-slate-900 mt-6">₹4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
+                <div className="text-3xl font-black text-slate-900 mt-6">Γé╣4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
                 
                 <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
                   <li className="flex items-center gap-2"><CheckCircle size={15} className="text-emerald-500 shrink-0" /> Escrow Payments</li>
