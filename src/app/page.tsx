@@ -52,7 +52,8 @@ import {
   Zap,
   Check,
   Laptop,
-  Key
+  Key,
+  Play
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -472,65 +473,285 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO & SHIFTING GRADIENT SEARCH */}
-      <section className="pt-28 md:pt-36 pb-12 md:pb-20 px-4 md:px-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[720px] w-full max-w-full bg-slate-950">
-        {/* Background Platform Banner Image — Real prestigious commercial glass campus with digital platform twin */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/images/officex_hero_platform_tower.jpg"
-            alt="OfficeX Commercial Workspace Operating System Platform"
-            fill
-            priority
-            unoptimized
-            className="object-cover object-right md:object-[75%_center] opacity-90"
-          />
-          {/* Subtle multi-stop gradient — preserves the illuminated glass tower on the right while providing pure dark negative space on the left */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/75 pointer-events-none" />
+      {/* SECTION 2: HERO — OPTION 1 MASTER WIREFRAME SPLIT HERO (PRODUCT AS HERO) */}
+      <section className="pt-24 md:pt-30 pb-10 md:pb-14 px-4 md:px-6 lg:px-8 flex flex-col items-center justify-center relative overflow-hidden w-full max-w-full bg-[#070A11] border-b border-slate-800/80">
+        {/* Subtle architectural blueprint grid & ambient glow (No full-width stock/AI photo) */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:28px_28px] opacity-35" />
+          <div className="absolute top-1/4 right-0 w-[550px] h-[550px] bg-teal-500/10 rounded-full blur-[130px]" />
+          <div className="absolute top-1/3 left-0 w-[450px] h-[450px] bg-blue-600/8 rounded-full blur-[110px]" />
+          <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[#070A11] via-[#070A11]/80 to-transparent" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center justify-center w-full">
-          {/* Eyebrow Badge matching User's Exact Content — Sleek dark pill */}
-          <div className="mb-3 md:mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs font-bold text-emerald-300 tracking-wide">
-              Trusted by 450+ Commercial Teams
-            </span>
-          </div>
+        <div className="relative z-10 max-w-7xl w-full mx-auto">
+          {/* SPLIT HERO: 2-COLUMN LAYOUT */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-12 items-center mb-6 md:mb-8">
+            
+            {/* LEFT COLUMN: 5 COLS — Value Proposition, Capabilities & CTAs */}
+            <div className="lg:col-span-5 flex flex-col justify-center text-left">
+              {/* Eyebrow Badge matching User's Exact Content */}
+              <div className="mb-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 shadow-sm w-fit">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-xs font-bold text-emerald-300 tracking-wide">
+                  Trusted by 450+ Commercial Teams
+                </span>
+              </div>
 
-          {/* Headline matching User's Exact Content — Crisp, authoritative enterprise typography */}
-          <div className="relative flex items-center justify-center text-center">
-            <h1 className="max-w-4xl text-center text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-black tracking-tight text-white leading-[1.15] px-2 drop-shadow-md">
-              The OS for{" "}
-              <span className="text-teal-400 bg-gradient-to-r from-teal-300 via-emerald-400 to-teal-300 bg-clip-text text-transparent whitespace-nowrap">
-                Commercial Workspaces
-              </span>
-            </h1>
-          </div>
-        
-          {/* Subtitle matching User's Exact Content — Clean slate text with generous readability */}
-          <p className="text-center max-w-2xl text-slate-300 mt-3 md:mt-4 text-xs sm:text-sm md:text-base font-normal leading-relaxed px-4 drop-shadow-sm">
-            Streamline leasing, vendor procurement, and facility operations in one unified platform designed for modern institutional real estate.
-          </p>
+              {/* Main Headline */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[44px] xl:text-[48px] font-black tracking-tight text-white leading-[1.12]">
+                The OS for<br />
+                <span className="text-teal-400 bg-gradient-to-r from-teal-300 via-emerald-400 to-cyan-300 bg-clip-text text-transparent">
+                  Commercial Workspaces
+                </span>
+              </h1>
 
-          {/* 4 Feature Badge Pills matching User's Exact Content — Clean, balanced glass tags */}
-          <div className="mt-5 md:mt-6 flex flex-wrap items-center justify-center gap-2.5 max-w-4xl px-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
-              <Building size={13} className="text-teal-400 shrink-0" />
-              <span>Commercial Leasing &amp; Floor Demising</span>
+              {/* Subtitle matching User's Exact Content */}
+              <p className="mt-3 text-slate-300 text-sm md:text-base font-normal leading-relaxed max-w-lg">
+                Streamline leasing, vendor procurement, and facility operations in one unified platform designed for modern institutional real estate.
+              </p>
+
+              {/* 4 Feature Badges — Clean, structured 2-column grid */}
+              <div className="mt-4.5 grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-200 text-xs font-semibold hover:border-teal-500/40 transition-colors">
+                  <Building size={13} className="text-teal-400 shrink-0" />
+                  <span className="truncate">Commercial Leasing &amp; Demising</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-200 text-xs font-semibold hover:border-teal-500/40 transition-colors">
+                  <Wrench size={13} className="text-teal-400 shrink-0" />
+                  <span className="truncate">1,284+ Asset Passports &amp; PPM</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-200 text-xs font-semibold hover:border-teal-500/40 transition-colors">
+                  <ShieldCheck size={13} className="text-teal-400 shrink-0" />
+                  <span className="truncate">450+ Verified Vendors &amp; Escrow</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-200 text-xs font-semibold hover:border-teal-500/40 transition-colors">
+                  <TrendingUp size={13} className="text-teal-400 shrink-0" />
+                  <span className="truncate">94% Statutory Compliance</span>
+                </div>
+              </div>
+
+              {/* Primary & Secondary Action CTAs from Master Wireframe */}
+              <div className="mt-5.5 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setIsContactModalOpen(true)}
+                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-teal-950/40 hover:shadow-teal-900/60 hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Book a Demo</span>
+                  <ArrowRight size={14} />
+                </button>
+                <button
+                  onClick={() => scrollToSection("command-centre")}
+                  className="px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-white font-bold text-xs uppercase tracking-wider backdrop-blur-md hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Play size={12} className="fill-white" />
+                  <span>Explore Platform</span>
+                </button>
+              </div>
+
+              {/* Partner Logos Strip — Non-wrapping single row */}
+              <div className="mt-5.5 pt-3.5 border-t border-slate-800/80">
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                  Trusted by leading property owners &amp; managers
+                </div>
+                <div className="flex items-center gap-3 sm:gap-4 text-slate-400 text-[11px] font-bold uppercase tracking-wider opacity-85 flex-wrap">
+                  <span className="hover:text-white transition-colors">DLF</span>
+                  <span className="text-slate-700">•</span>
+                  <span className="hover:text-white transition-colors">EMBASSY</span>
+                  <span className="text-slate-700">•</span>
+                  <span className="hover:text-white transition-colors">BROOKFIELD</span>
+                  <span className="text-slate-700">•</span>
+                  <span className="hover:text-white transition-colors">PRESTIGE</span>
+                  <span className="text-slate-700">•</span>
+                  <span className="hover:text-white transition-colors">CAPITALAND</span>
+                </div>
+              </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
-              <Wrench size={13} className="text-teal-400 shrink-0" />
-              <span>1,284+ Digital Asset Passports &amp; PPM</span>
+
+            {/* RIGHT COLUMN: 7 COLS — High-Fidelity OFFICEX COMMAND CENTRE Product Dashboard Visual */}
+            <div className="lg:col-span-7 relative w-full">
+              {/* Soft ambient back-glow */}
+              <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-r from-teal-500/20 via-cyan-500/10 to-blue-500/20 blur-xl opacity-75" />
+
+              <div className="relative rounded-2xl bg-[#0F1420]/95 backdrop-blur-2xl border border-slate-700/80 shadow-[0_25px_60px_rgba(0,0,0,0.65)] overflow-hidden">
+                {/* Dashboard Window Header Bar */}
+                <div className="px-4 py-3 bg-[#0B0F19] border-b border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    {/* macOS window dots */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                    </div>
+                    <span className="text-slate-600 text-xs">|</span>
+                    <span className="text-[11px] font-black tracking-widest text-white uppercase flex items-center gap-2">
+                      OFFICEX COMMAND CENTRE
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 text-[9px] font-extrabold text-emerald-400 tracking-wider flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      LIVE
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-[10px] font-bold text-slate-300 flex items-center gap-1">
+                      <Building size={11} className="text-teal-400" />
+                      <span>All Properties (24)</span>
+                      <ChevronDown size={10} className="text-slate-400" />
+                    </div>
+                    <div className="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-[10px] font-bold text-slate-300 hidden sm:flex items-center gap-1">
+                      <Calendar size={11} className="text-blue-400" />
+                      <span>Last 30 Days</span>
+                      <ChevronDown size={10} className="text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dashboard Body */}
+                <div className="p-4 sm:p-5 space-y-3.5">
+                  {/* Top 6 KPI Metric Cards */}
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Properties</span>
+                      <span className="text-base sm:text-lg font-black text-white mt-0.5">24</span>
+                      <span className="text-[9px] font-semibold text-emerald-400 mt-0.5">4 Metros</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Total Area</span>
+                      <span className="text-base sm:text-lg font-black text-white mt-0.5">8.4M</span>
+                      <span className="text-[9px] font-semibold text-blue-400 mt-0.5">Sq.Ft.</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Occupancy</span>
+                      <span className="text-base sm:text-lg font-black text-white mt-0.5">91.6%</span>
+                      <span className="text-[9px] font-semibold text-emerald-400 mt-0.5">+2.4% MoM</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Revenue</span>
+                      <span className="text-base sm:text-lg font-black text-white mt-0.5">₹12.4 Cr</span>
+                      <span className="text-[9px] font-semibold text-emerald-400 mt-0.5">+112.5%</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Collected</span>
+                      <span className="text-base sm:text-lg font-black text-white mt-0.5">₹10.8 Cr</span>
+                      <span className="text-[9px] font-semibold text-blue-400 mt-0.5">87.1% Realized</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">SLA Score</span>
+                      <span className="text-base sm:text-lg font-black text-white mt-0.5">96%</span>
+                      <span className="text-[9px] font-semibold text-emerald-400 mt-0.5">450+ Vendors</span>
+                    </div>
+                  </div>
+
+                  {/* Middle Charts: Portfolio Performance Bars + Revenue Waveform */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    {/* Portfolio Performance Bar Chart (6 cols) */}
+                    <div className="sm:col-span-6 p-3 rounded-xl bg-slate-900/70 border border-slate-800/80 flex flex-col justify-between">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                          Portfolio Performance
+                        </span>
+                        <span className="text-[9px] font-bold text-teal-400">Avg 91.6%</span>
+                      </div>
+                      {/* Bar Visualization */}
+                      <div className="h-20 flex items-end justify-between gap-1.5 px-1 pt-1">
+                        {[
+                          { m: "Jan", h: "60%" },
+                          { m: "Feb", h: "66%" },
+                          { m: "Mar", h: "74%" },
+                          { m: "Apr", h: "70%" },
+                          { m: "May", h: "80%" },
+                          { m: "Jun", h: "85%" },
+                          { m: "Jul", h: "88%" },
+                          { m: "Aug", h: "94%", active: true },
+                        ].map((b, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
+                            <div
+                              style={{ height: b.h }}
+                              className={`w-full rounded-t-md transition-all ${
+                                b.active
+                                  ? "bg-gradient-to-t from-[#0F8B7D] to-teal-300 shadow-[0_0_12px_rgba(15,139,125,0.6)]"
+                                  : "bg-slate-700/70 hover:bg-slate-600"
+                              }`}
+                            />
+                            <span className="text-[8px] font-bold text-slate-500">{b.m}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Revenue Waveform Chart (6 cols) */}
+                    <div className="sm:col-span-6 p-3 rounded-xl bg-slate-900/70 border border-slate-800/80 flex flex-col justify-between">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                          Revenue Overview
+                        </span>
+                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                          ₹12.4 Cr MoM
+                        </span>
+                      </div>
+                      <div className="h-20 relative flex items-end">
+                        <svg className="w-full h-full overflow-visible" viewBox="0 0 200 65" preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id="heroRevGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.35" />
+                              <stop offset="100%" stopColor="#0F8B7D" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M0,50 Q30,53 60,42 T120,38 T160,20 T200,8 L200,65 L0,65 Z"
+                            fill="url(#heroRevGrad)"
+                          />
+                          <path
+                            d="M0,50 Q30,53 60,42 T120,38 T160,20 T200,8"
+                            fill="none"
+                            stroke="#0F8B7D"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                          <circle cx="60" cy="42" r="3" fill="#0F8B7D" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx="120" cy="38" r="3" fill="#0F8B7D" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx="160" cy="20" r="3" fill="#0F8B7D" stroke="#fff" strokeWidth="1.5" />
+                          <circle cx="200" cy="8" r="3.5" fill="#0F8B7D" stroke="#fff" strokeWidth="2" />
+                        </svg>
+                      </div>
+                      <div className="flex justify-between text-[8px] font-bold text-slate-500 pt-1 border-t border-slate-800">
+                        <span>May: ₹5.8Cr</span>
+                        <span>Jun: ₹7.2Cr</span>
+                        <span>Jul: ₹9.4Cr</span>
+                        <span className="text-white font-extrabold">Aug: ₹12.4Cr</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Operational Status Bar */}
+                  <div className="p-2.5 rounded-xl bg-[#0B0F19] border border-slate-800/90 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-slate-300 font-semibold text-[11px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                        <span><strong>342</strong> Open Tasks</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-300 font-semibold text-[11px]">
+                        <ShieldCheck size={13} className="text-emerald-400" />
+                        <span><strong>94%</strong> Compliant</span>
+                      </div>
+                      <div className="hidden md:flex items-center gap-1.5 text-slate-300 font-semibold text-[11px]">
+                        <Wrench size={13} className="text-blue-400" />
+                        <span><strong>1,284</strong> Total Assets</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => router.push('/ops')}
+                      className="text-teal-400 hover:text-teal-300 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <span>View Full Dashboard</span>
+                      <ArrowUpRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
-              <ShieldCheck size={13} className="text-teal-400 shrink-0" />
-              <span>450+ Verified Vendors &amp; Escrow Payouts</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
-              <TrendingUp size={13} className="text-teal-400 shrink-0" />
-              <span>94% Statutory Compliance &amp; Rent Roll</span>
-            </div>
+
           </div>
 
         {/* Option-3 Dual-Entry Proposition Search Card — Sleek, streamlined command bar */}
@@ -736,84 +957,84 @@ export default function LandingPage() {
         </div>
 
         {/* Ultra-Sleek Partner Logo Scrolling Marquee with Edge Fade */}
-        <div className="w-full mt-12 md:mt-14 py-3 md:py-3.5 bg-white/30 backdrop-blur-md border-y border-white/40 overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-          <div className="animate-marquee flex items-center gap-8 md:gap-12 text-[11px] md:text-xs font-black text-slate-900 uppercase tracking-widest whitespace-nowrap">
-            <span className="whitespace-nowrap">TCS</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">WIPRO</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">INFOSYS</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">DLF COMMERCIAL</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">EMBASSY REIT</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">PRESTIGE GROUP</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">L&amp;T REALTY</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">BROOKFIELD</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">BLACKSTONE</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">K RAHEJA CORP</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">HCL TECH</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">COGNIZANT</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">ACCENTURE</span>
-            <span className="text-slate-500 opacity-60">•</span>
+        <div className="w-full mt-12 md:mt-14 py-3.5 bg-slate-900/50 backdrop-blur-md border-y border-slate-800/80 overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+          <div className="animate-marquee flex items-center gap-8 md:gap-12 text-[11px] md:text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">TCS</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">WIPRO</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">INFOSYS</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">DLF COMMERCIAL</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">EMBASSY REIT</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">GODREJ PROPERTIES</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">PRESTIGE GROUP</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">L&amp;T REALTY</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">BROOKFIELD</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">BLACKSTONE</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">K RAHEJA CORP</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">HCL TECH</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">COGNIZANT</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">ACCENTURE</span>
+            <span className="text-teal-500/50">•</span>
             {/* Seamless Repeat Track */}
-            <span className="whitespace-nowrap">TCS</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">WIPRO</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">INFOSYS</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">DLF COMMERCIAL</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">EMBASSY REIT</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">PRESTIGE GROUP</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">L&amp;T REALTY</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">BROOKFIELD</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">BLACKSTONE</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">K RAHEJA CORP</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">HCL TECH</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">COGNIZANT</span>
-            <span className="text-slate-500 opacity-60">•</span>
-            <span className="whitespace-nowrap">ACCENTURE</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">TCS</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">WIPRO</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">INFOSYS</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">DLF COMMERCIAL</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">EMBASSY REIT</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">GODREJ PROPERTIES</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">PRESTIGE GROUP</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">L&amp;T REALTY</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">BROOKFIELD</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">BLACKSTONE</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">K RAHEJA CORP</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">HCL TECH</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">COGNIZANT</span>
+            <span className="text-teal-500/50">•</span>
+            <span className="whitespace-nowrap hover:text-teal-300 transition-colors">ACCENTURE</span>
           </div>
         </div>
 
         {/* Simulated Stats count-up row */}
-        <div className="max-w-4xl w-full grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-12 md:mt-16 text-center border-t border-slate-300/50 pt-8 md:pt-10">
-          <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-900">{animateCount.sqft}M+</div>
-            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">Sqft Managed</div>
+        <div className="max-w-4xl w-full grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-10 md:mt-14 text-center border-t border-slate-800/80 pt-8 md:pt-10">
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-slate-800/50">
+            <div className="text-2xl md:text-3xl font-black text-white tracking-tight">{animateCount.sqft}M+</div>
+            <div className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1">Sqft Managed</div>
           </div>
-          <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-900">{animateCount.vendors}+</div>
-            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">Verified Vendors</div>
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-slate-800/50">
+            <div className="text-2xl md:text-3xl font-black text-white tracking-tight">{animateCount.vendors}+</div>
+            <div className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1">Verified Vendors</div>
           </div>
-          <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-900">₹{animateCount.gtv}Cr+</div>
-            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">GTV Processed</div>
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-slate-800/50">
+            <div className="text-2xl md:text-3xl font-black text-white tracking-tight">₹{animateCount.gtv}Cr+</div>
+            <div className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1">GTV Processed</div>
           </div>
-          <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-900">{animateCount.uptime}%</div>
-            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">System Uptime</div>
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-slate-800/50">
+            <div className="text-2xl md:text-3xl font-black text-teal-400 tracking-tight">{animateCount.uptime}%</div>
+            <div className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider mt-1">System Uptime</div>
           </div>
         </div>
       </div>
