@@ -11,6 +11,8 @@
 }
 
 @theme {
+  --font-sans: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary-teal: var(--primary-teal);
@@ -146,4 +148,94 @@ html, body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #CBD5E1;
+}
+
+/* ==========================================================================
+   OFFICEX CORE ORBITAL ARCHITECTURE ANIMATIONS
+   ========================================================================== */
+
+/* Gentle satellite buoyancy */
+@keyframes orbit-float {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-3px);
+  }
+}
+
+.animate-orbit-float {
+  animation: orbit-float 4.5s ease-in-out infinite;
+}
+
+/* Radar ripple expanding outwards from the Core */
+@keyframes radar-ripple {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+.animate-radar-ripple {
+  animation: radar-ripple 3.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-radar-ripple-delayed {
+  animation: radar-ripple 3.5s cubic-bezier(0, 0, 0.2, 1) infinite 1.75s;
+}
+
+/* Ultra-smooth slow rotation for orbit tracks */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 60s linear infinite;
+  transform-origin: center;
+}
+
+.animate-spin-reverse-slow {
+  animation: spin-slow 80s linear infinite reverse;
+  transform-origin: center;
+}
+
+/* Flowing data pulses along connector rays */
+@keyframes data-beam {
+  0% {
+    stroke-dashoffset: 40;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-data-beam {
+  stroke-dasharray: 6 18;
+  animation: data-beam 2.2s linear infinite;
+}
+
+/* Central core breathing glow */
+@keyframes core-breathe {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(15, 139, 125, 0.12), 0 0 0 0 rgba(15, 139, 125, 0.1);
+  }
+  50% {
+    box-shadow: 0 12px 32px rgba(15, 139, 125, 0.22), 0 0 20px 4px rgba(15, 139, 125, 0.15);
+  }
+}
+
+.animate-core-breathe {
+  animation: core-breathe 4s ease-in-out infinite;
 }

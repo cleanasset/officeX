@@ -42,16 +42,219 @@ import {
   HelpCircle,
   Wrench,
   Clock,
-  CheckSquare
+  CheckSquare,
+  Briefcase,
+  BarChart3,
+  PieChart,
+  Activity,
+  Filter,
+  Eye,
+  Zap,
+  Check,
+  Laptop,
+  Key
 } from "lucide-react";
 
 export default function LandingPage() {
   const router = useRouter();
   const [activeSearchTab, setActiveSearchTab] = useState<"space" | "vendor">("space");
-  const [selectedCoreNode, setSelectedCoreNode] = useState<string>("Tenants");
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
+
+  // OFFICEX Core Diagram Nodes — Spacious, non-overlapping coordinates matching Option 1 Wireframe
+  const coreNodes = [
+    // Top arc
+    { id: "users", name: "Users", x: 26, y: 12 },
+    { id: "properties", name: "Properties", x: 42, y: 6 },
+    { id: "spaces", name: "Spaces", x: 58, y: 6 },
+    { id: "tenants", name: "Tenants", x: 74, y: 12 },
+    
+    // Right column
+    { id: "assets", name: "Assets", x: 88, y: 28 },
+    { id: "vendors", name: "Vendors", x: 90, y: 50 },
+    { id: "contracts", name: "Contracts", x: 88, y: 72 },
+    
+    // Bottom arc
+    { id: "documents", name: "Documents", x: 74, y: 88 },
+    { id: "tasks", name: "Tasks", x: 50, y: 94 },
+    { id: "workflow", name: "Workflow", x: 26, y: 88 },
+    
+    // Left column (generous distance from APIs & Integrations at x:6)
+    { id: "notifications", name: "Notifications", x: 18, y: 72 },
+    { id: "audit", name: "Audit", x: 30, y: 50 },
+    { id: "reporting", name: "Reporting", x: 18, y: 28 },
+  ];
+
+  // Lifecycle Stepper State & Data
+  const [activeLifecycleStep, setActiveLifecycleStep] = useState<number>(0);
+
+  const lifecycleSteps = [
+    {
+      id: "property",
+      name: "Property",
+      subtitle: "Acquisition & Onboarding",
+      desc: "Centralize asset registers, spatial demising, and digital property passports on day one.",
+      badge: "Asset Foundation",
+      metric: "100% Digital Passports",
+      capabilities: ["Spatial Demising & Stacking", "Digital Building Passports", "Ownership & Title Records", "Zoning & Permitting Data"]
+    },
+    {
+      id: "space",
+      name: "Space",
+      subtitle: "Space Planning & Management",
+      desc: "Dynamic floorplate configuration, rentable/usable area audits, and occupancy mapping.",
+      badge: "Spatial Optimization",
+      metric: "91.6% Space Utilization",
+      capabilities: ["Interactive 2D/3D Floorplans", "Desk & Zone Allocation", "Fit-Out Handover Checklists", "BOMA/RERA Area Calculations"]
+    },
+    {
+      id: "lease",
+      name: "Lease",
+      subtitle: "Lease Management & Rent Roll",
+      desc: "Manage commercial contracts, step-up escalations, CAM reconciliations, and lock-in periods.",
+      badge: "Revenue Engine",
+      metric: "₹12.4 Cr Monthly Rent Roll",
+      capabilities: ["Automated Rent Roll Generator", "Escalation & Indexation Rules", "Break-Clause Alerts", "Security Deposit Tracking"]
+    },
+    {
+      id: "tenant",
+      name: "Tenant",
+      subtitle: "Tenant Management & Engagement",
+      desc: "Deliver premium occupier experiences from onboarding to daily operational requests.",
+      badge: "Tenant Experience",
+      metric: "98% Tenant Satisfaction",
+      capabilities: ["Digital Move-In / Move-Out", "Tenant Directory & Contacts", "Insurance & Fitout Approvals", "Self-Service Billing Portal"]
+    },
+    {
+      id: "operations",
+      name: "Operations",
+      subtitle: "Facilities, Assets & Services",
+      desc: "52-week preventive maintenance calendars, QR-code asset tagging, and vendor work orders.",
+      badge: "Operational Rigor",
+      metric: "96% SLA Adherence",
+      capabilities: ["52-Week PPM Scheduling", "Digital QR Asset Passports", "Work Order Dispatch", "Real-Time Downtime Tracking"]
+    },
+    {
+      id: "compliance",
+      name: "Compliance",
+      subtitle: "Risk, Safety & Compliance",
+      desc: "Statutory audits, fire NOCs, labor compliance, and insurance tracking with zero lapses.",
+      badge: "Statutory Rigor",
+      metric: "94% Compliant Score",
+      capabilities: ["Statutory License Tracker", "Automated Expiry Alerts", "CAPA Audit Workflows", "EHS & Safety Inspection Logs"]
+    },
+    {
+      id: "workplace",
+      name: "Workplace",
+      subtitle: "Experience & Workplace",
+      desc: "Visitor management, meeting room bookings, cafeteria integration, and access control.",
+      badge: "Modern Workplace",
+      metric: "12,000+ Daily Check-ins",
+      capabilities: ["Touchless Visitor Access", "Meeting Room Bookings", "Parking Bay Allocation", "Tenant Feedback & Surveys"]
+    },
+    {
+      id: "insights",
+      name: "Insights",
+      subtitle: "Analytics & AI Intelligence",
+      isComingSoon: true,
+      desc: "Advanced portfolio reporting, predictive utility anomaly detection, and lease churn forecasting.",
+      badge: "Coming Soon",
+      metric: "Coming Soon",
+      capabilities: ["Predictive Churn Warnings", "Energy & HVAC Anomaly Alerts", "Portfolio NOI Forecasting", "Executive Board Pack Generator"]
+    }
+  ];
+
+  // Stakeholder Solutions State & Data
+  const [activeStakeholder, setActiveStakeholder] = useState<"owner" | "occupier" | "fm" | "vendor" | "investor">("owner");
+
+  const stakeholderData = {
+    owner: {
+      role: "Property Owner / CEO",
+      headline: "Maximize Portfolio Yields & Protect Net Operating Income",
+      quote: "Gain real-time visibility across rent roll, occupancy risk, and operating expenditure from a single dashboard.",
+      badge: "Yield & Asset Optimization",
+      metrics: [
+        { label: "Portfolio Occupancy", val: "91.6%" },
+        { label: "Tracked Rent Roll", val: "₹12.4 Cr/mo" },
+        { label: "On-Time Collections", val: "97.4%" },
+      ],
+      points: [
+        "Live consolidated revenue, rent collection, and arrears overview",
+        "Proactive 90-day lease expiry alerts with revenue exposure impact",
+        "Full recovery tracking for CAM, HVAC, and common utility bills",
+        "Institutional asset depreciation and capital expenditure auditing"
+      ]
+    },
+    occupier: {
+      role: "Corporate Occupier",
+      headline: "Empower Your Employees with Frictionless Workplace Operations",
+      quote: "Self-service service requests, instant touchless visitor registration, and real-time billing clarity.",
+      badge: "Tenant Experience",
+      metrics: [
+        { label: "Avg Request Resolution", val: "2.4 hrs" },
+        { label: "App Adoption", val: "94%" },
+        { label: "Visitor Check-in", val: "<30 sec" },
+      ],
+      points: [
+        "Dedicated mobile portal for facility requests and maintenance tickets",
+        "Fast visitor pre-registration and instant QR access passes",
+        "Itemized monthly billing statements and utility consumption data",
+        "Meeting room, desk, and event space reservation modules"
+      ]
+    },
+    fm: {
+      role: "Facility Manager",
+      headline: "Automate 52-Week Maintenance & Enforce Strict Vendor SLAs",
+      quote: "Replace WhatsApp chaos and paper logs with digital asset passports, automated PPM, and instant escalations.",
+      badge: "Operational Control",
+      metrics: [
+        { label: "SLA Adherence", val: "96.2%" },
+        { label: "PPM Completion", val: "98.5%" },
+        { label: "Open Tickets Tracked", val: "342" },
+      ],
+      points: [
+        "Automated 52-week preventive maintenance scheduling & dispatch",
+        "Digital QR-code asset passports for all critical HVAC, DG, and lifts",
+        "Standardized vendor performance scorecards and SLA accountability",
+        "Centralized inventory management for consumables and spare parts"
+      ]
+    },
+    vendor: {
+      role: "Vendor / Service Partner",
+      headline: "Win Grade-A Contracts & Enjoy Guaranteed Escrow Payouts",
+      quote: "Direct access to high-value commercial RFQs with milestone payments locked in RBI-regulated escrow accounts.",
+      badge: "Vendor Empowerment",
+      metrics: [
+        { label: "Escrow Protection", val: "100%" },
+        { label: "Avg Payout Speed", val: "24 hrs" },
+        { label: "Repeat Renewal Rate", val: "89%" },
+      ],
+      points: [
+        "Direct RFQ invitations from leading commercial landlords and REITs",
+        "Guaranteed funds held in Razorpay Nodal Escrow before work begins",
+        "Digital job cards, milestone verification, and photo inspection sign-offs",
+        "Transparent compliance scorecards to win more portfolio assignments"
+      ]
+    },
+    investor: {
+      role: "Investor / REIT",
+      headline: "Audit-Ready Data, Institutional Governance & Verifiable Returns",
+      quote: "Standardized property metrics, audited compliance trails, and verified lease cash flows for diligence.",
+      badge: "Institutional Trust",
+      metrics: [
+        { label: "WALE Visibility", val: "4.8 yrs" },
+        { label: "Statutory Compliance", val: "94%" },
+        { label: "Audit Readiness", val: "Instant" },
+      ],
+      points: [
+        "Portfolio-wide WALE, NOI, and tenant concentration analytics",
+        "Immutable statutory and environmental compliance records",
+        "Zero discrepancy between executed lease terms and actual billing",
+        "Automated quarterly investor reporting packs and asset benchmarks"
+      ]
+    }
+  };
 
   // Contact Modal States
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -102,8 +305,7 @@ export default function LandingPage() {
       }
     }, stepTime);
 
-  
-return () => clearInterval(timer);
+    return () => clearInterval(timer);
   }, []);
 
   const toggleFAQ = (index: number) => {
@@ -206,27 +408,6 @@ return () => clearInterval(timer);
     }
   ];
 
-    // 14 Core Orbital Nodes Data (from client option1.jpeg Section 03)
-  const coreNodes = [
-    { id: "Users", label: "Users & Roles", category: "Governance", desc: "Granular RBAC for Property Owners, Managers, FM Teams, Vendors, and Corporate Tenants." },
-    { id: "Properties", label: "Properties", category: "Core Asset", desc: "Institutional master property registry, building specs, CAD/BIM floor plans, and amenities." },
-    { id: "Spaces", label: "Spaces & Units", category: "Inventory", desc: "Real-time floor grids, unit occupancy matrix, demising plans, and vacancy status." },
-    { id: "Tenants", label: "Tenants", category: "Occupiers", desc: "Verified corporate occupiers, GSTIN validation, lease contracts, and authorized staff rosters." },
-    { id: "Assets", label: "Assets & Equip.", category: "Facility", desc: "1,284 tracked HVAC, DG, lift, and electrical assets with QR digital passports and service logs." },
-    { id: "Vendors", label: "Vendors & FM", category: "Procurement", desc: "450+ pre-vetted contractors, compliance KYC, SLA scorecards, and normalized rate cards." },
-    { id: "Contracts", label: "Contracts & LOI", category: "Commercial", desc: "Digital lease agreements, break options, lock-in terms, and vendor AMC master contracts." },
-    { id: "Documents", label: "Doc Locker", category: "Compliance", desc: "Central vault for Fire NOC, lift fitness, pollution certificates, and tax filings." },
-    { id: "Workflow", label: "Workflows", category: "Automation", desc: "Automated lease onboarding, maintenance escalation gates, and approval hierarchies." },
-    { id: "Tasks", label: "Tasks & Tickets", category: "Operations", desc: "SLA-governed FM helpdesk tickets, preventive maintenance checklists, and inspections." },
-    { id: "Notifications", label: "Alerts & Comms", category: "Engagement", desc: "Multi-channel broadcast alerts, automated payment SMS/WhatsApp reminders, and push notices." },
-    { id: "Audit", label: "Audit & Trail", category: "Security", desc: "Immutable financial, operational, and user access trail for institutional governance." },
-    { id: "Reporting", label: "Executive MIS", category: "Analytics", desc: "Live P&L, rent rolls, aging schedules, ESG utility consumption, and AI summaries." },
-    { id: "APIs", label: "APIs & Core Bus", category: "Integration", desc: "Open REST APIs connecting BMS sensors, smart energy meters, ERPs, and payment gateways." }
-  ];
-
-  const activeNodeData = coreNodes.find((n) => n.id === selectedCoreNode) || coreNodes[3];
-
-  
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
       
@@ -291,240 +472,266 @@ return () => clearInterval(timer);
         </div>
       )}
 
-      {/* SECTION 2: HERO WITH BLURRED ARCHITECTURAL BANNER BACKGROUND */}
-      <section className="relative isolate pt-28 md:pt-40 pb-16 md:pb-20 px-4 md:px-6 flex flex-col items-center justify-center overflow-hidden w-full max-w-full min-h-[85vh]">
-        
-        {/* Background Image Container with Blur & Balanced Contrast Scrim */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <Image 
-            src="/officex-hero-banner.jpg" 
-            alt="OfficeX Commercial Workspaces Operating System" 
-            fill 
-            className="object-cover object-center scale-105 blur-[5px]" 
-            priority 
+      {/* SECTION 2: HERO & SHIFTING GRADIENT SEARCH */}
+      <section className="pt-28 md:pt-36 pb-12 md:pb-20 px-4 md:px-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[720px] w-full max-w-full bg-slate-950">
+        {/* Background Platform Banner Image — Real prestigious commercial glass campus with digital platform twin */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/officex_hero_platform_tower.jpg"
+            alt="OfficeX Commercial Workspace Operating System Platform"
+            fill
+            priority
+            unoptimized
+            className="object-cover object-right md:object-[75%_center] opacity-90"
           />
-          {/* Luminous balanced overlay so skyscraper is visible while dark text has high contrast */}
-          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white" />
+          {/* Subtle multi-stop gradient — preserves the illuminated glass tower on the right while providing pure dark negative space on the left */}
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/75 pointer-events-none" />
         </div>
 
-        {/* Foreground Content Container */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full">
-
-          {/* Floating Pulsing Badge */}
-          <div className="mb-4 md:mb-6 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-slate-200/80 text-xs font-bold text-[#0D7A6E] shadow-sm backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-            Trusted by 450+ Teams
+          {/* Eyebrow Badge matching User's Exact Content — Sleek dark pill */}
+          <div className="mb-3 md:mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-md">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs font-bold text-emerald-300 tracking-wide">
+              Trusted by 450+ Commercial Teams
+            </span>
           </div>
 
-          <div className="relative flex items-center justify-center">
-            {/* Luminous soft ambient backlight to ensure crisp contrast on any background */}
-            <div className="absolute -inset-x-20 -inset-y-10 bg-white/80 blur-2xl rounded-full pointer-events-none -z-10" />
-            
-            <h1 className="text-center max-w-5xl text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-slate-950 leading-tight px-2 lg:whitespace-nowrap">
+          {/* Headline matching User's Exact Content — Crisp, authoritative enterprise typography */}
+          <div className="relative flex items-center justify-center text-center">
+            <h1 className="max-w-4xl text-center text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-black tracking-tight text-white leading-[1.15] px-2 drop-shadow-md">
               The OS for{" "}
-              <span className="bg-gradient-to-r from-[#065A50] via-[#0D7A6E] to-[#04473F] bg-clip-text text-transparent drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+              <span className="text-teal-400 bg-gradient-to-r from-teal-300 via-emerald-400 to-teal-300 bg-clip-text text-transparent whitespace-nowrap">
                 Commercial Workspaces
               </span>
             </h1>
           </div>
         
-        <p className="text-center max-w-3xl text-slate-800 mt-4 md:mt-5 text-xs sm:text-sm md:text-base font-semibold leading-relaxed px-2">
-          Streamline leasing, vendor procurement, and facility operations in one unified platform designed for modern institutional real estate.
-        </p>
+          {/* Subtitle matching User's Exact Content — Clean slate text with generous readability */}
+          <p className="text-center max-w-2xl text-slate-300 mt-3 md:mt-4 text-xs sm:text-sm md:text-base font-normal leading-relaxed px-4 drop-shadow-sm">
+            Streamline leasing, vendor procurement, and facility operations in one unified platform designed for modern institutional real estate.
+          </p>
 
-        {/* Option-3 Dual-Entry Proposition Search Card */}
-        <div className="w-full max-w-4xl mt-8 md:mt-12 bg-white rounded-2xl shadow-2xl border border-[#DFE4E1] overflow-hidden">
-          <div className="flex border-b border-slate-100 bg-slate-50/50">
+          {/* 4 Feature Badge Pills matching User's Exact Content — Clean, balanced glass tags */}
+          <div className="mt-5 md:mt-6 flex flex-wrap items-center justify-center gap-2.5 max-w-4xl px-2">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
+              <Building size={13} className="text-teal-400 shrink-0" />
+              <span>Commercial Leasing &amp; Floor Demising</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
+              <Wrench size={13} className="text-teal-400 shrink-0" />
+              <span>1,284+ Digital Asset Passports &amp; PPM</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
+              <ShieldCheck size={13} className="text-teal-400 shrink-0" />
+              <span>450+ Verified Vendors &amp; Escrow Payouts</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/70 shadow-md text-xs font-semibold text-slate-200 hover:border-teal-500/50 transition-colors">
+              <TrendingUp size={13} className="text-teal-400 shrink-0" />
+              <span>94% Statutory Compliance &amp; Rent Roll</span>
+            </div>
+          </div>
+
+        {/* Option-3 Dual-Entry Proposition Search Card — Sleek, streamlined command bar */}
+        <div className="w-full max-w-4xl mt-7 md:mt-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.45)] border border-white/30 overflow-hidden">
+          <div className="flex border-b border-slate-100 bg-slate-50/70">
             <button 
               onClick={() => setActiveSearchTab("space")}
-              className={`flex-1 py-3 md:py-4 px-2 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-3 px-3 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeSearchTab === "space" 
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
-                  : "border-transparent text-slate-400 hover:text-slate-650"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
               <Building size={13} />
-              <span className="truncate">Find Space</span>
+              <span>Find Space</span>
             </button>
             <button 
               onClick={() => setActiveSearchTab("vendor")}
-              className={`flex-1 py-3 md:py-4 px-2 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-3 px-3 text-[10px] sm:text-xs font-extrabold border-b-2 uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeSearchTab === "vendor" 
                   ? "border-[#0F8B7D] text-[#0F8B7D] bg-white font-black" 
-                  : "border-transparent text-slate-400 hover:text-slate-650"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
               <Wrench size={13} />
-              <span className="truncate">Hire Vendor</span>
+              <span>Hire Vendor</span>
             </button>
-            
           </div>
 
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-5">
             {activeSearchTab === "space" ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><MapPin size={16} /></span>
-                  <select 
-                    value={spaceCity}
-                    onChange={(e) => setSpaceCity(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
-                  >
-                    <optgroup label="Γ¡É Popular Indian Tech & Commercial Hubs">
-                      <option value="Gujarat">Gujarat (Ahmedabad / GIFT City / Gandhinagar)</option>
-                      <option value="Mumbai">Mumbai (BKC / Lower Parel / Powai)</option>
-                      <option value="Bengaluru">Bengaluru (ORR / Whitefield / Electronic City)</option>
-                      <option value="Delhi NCR">Delhi NCR (Gurugram Cyber City / Noida / Aerocity)</option>
-                      <option value="Hyderabad">Hyderabad (HITEC City / Financial District)</option>
-                      <option value="Pune">Pune (Hinjewadi / Kharadi / Baner)</option>
-                      <option value="Chennai">Chennai (OMR / Guindy / Mount Road)</option>
-                      <option value="Kolkata">Kolkata (Salt Lake Sector V / New Town)</option>
-                    </optgroup>
-                    <optgroup label="≡ƒÅó High-Growth Tier-2 Cities">
-                      <option value="Ahmedabad">Ahmedabad (SG Highway / Prahlad Nagar / SBR)</option>
-                      <option value="Gandhinagar">Gandhinagar & GIFT City (Fintech Hub)</option>
-                      <option value="Surat">Surat (Diamond Bourse & Ring Road)</option>
-                      <option value="Vadodara">Vadodara (Alkapuri & OP Road)</option>
-                      <option value="Jaipur">Jaipur (Malviya Nagar & Tonk Road)</option>
-                      <option value="Indore">Indore (Vijay Nagar & Super Corridor)</option>
-                      <option value="Kochi">Kochi (Infopark Kakkanad)</option>
-                      <option value="Chandigarh">Chandigarh & Mohali (IT City)</option>
-                      <option value="Lucknow">Lucknow (Gomti Nagar IT Hub)</option>
-                      <option value="Bhubaneswar">Bhubaneswar (Infocity)</option>
-                      <option value="Goa">Goa (Panaji & Verna Industrial)</option>
-                    </optgroup>
-                    <optgroup label="≡ƒç«≡ƒç│ All Indian States & UTs">
-                      <option value="Andhra Pradesh">Andhra Pradesh (Visakhapatnam)</option>
-                      <option value="Assam">Assam (Guwahati)</option>
-                      <option value="Bihar">Bihar (Patna)</option>
-                      <option value="Chhattisgarh">Chhattisgarh (Raipur)</option>
-                      <option value="Haryana">Haryana (Faridabad / Panchkula)</option>
-                      <option value="Kerala">Kerala (Thiruvananthapuram)</option>
-                      <option value="Madhya Pradesh">Madhya Pradesh (Bhopal)</option>
-                      <option value="Punjab">Punjab (Ludhiana / Amritsar)</option>
-                      <option value="Rajasthan">Rajasthan (Jodhpur / Udaipur)</option>
-                      <option value="Tamil Nadu">Tamil Nadu (Coimbatore)</option>
-                      <option value="Telangana">Telangana (Warangal)</option>
-                      <option value="Uttar Pradesh">Uttar Pradesh (Kanpur / Varanasi)</option>
-                      <option value="Uttarakhand">Uttarakhand (Dehradun)</option>
-                      <option value="West Bengal">West Bengal (Durgapur)</option>
-                    </optgroup>
-                  </select>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><MapPin size={15} /></span>
+                    <select 
+                      value={spaceCity}
+                      onChange={(e) => setSpaceCity(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <optgroup label="⭐ Tech & Commercial Hubs">
+                        <option value="Gujarat">Gujarat (Ahmedabad / GIFT City)</option>
+                        <option value="Mumbai">Mumbai (BKC / Lower Parel)</option>
+                        <option value="Bengaluru">Bengaluru (ORR / Whitefield)</option>
+                        <option value="Delhi NCR">Delhi NCR (Cyber City / Noida)</option>
+                        <option value="Hyderabad">Hyderabad (HITEC City)</option>
+                        <option value="Pune">Pune (Hinjewadi / Kharadi)</option>
+                        <option value="Chennai">Chennai (OMR / Guindy)</option>
+                        <option value="Kolkata">Kolkata (Salt Lake / New Town)</option>
+                      </optgroup>
+                      <optgroup label="🏢 High-Growth Cities">
+                        <option value="Ahmedabad">Ahmedabad (SG Highway)</option>
+                        <option value="Gandhinagar">Gandhinagar &amp; GIFT City</option>
+                        <option value="Surat">Surat (Diamond Bourse)</option>
+                        <option value="Vadodara">Vadodara (Alkapuri)</option>
+                        <option value="Jaipur">Jaipur (Malviya Nagar)</option>
+                        <option value="Indore">Indore (Vijay Nagar)</option>
+                        <option value="Kochi">Kochi (Infopark Kakkanad)</option>
+                        <option value="Chandigarh">Chandigarh &amp; Mohali</option>
+                        <option value="Lucknow">Lucknow (Gomti Nagar)</option>
+                        <option value="Bhubaneswar">Bhubaneswar (Infocity)</option>
+                        <option value="Goa">Goa (Panaji &amp; Verna)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><MapPin size={15} /></span>
+                    <input 
+                      type="text" 
+                      value={spaceArea}
+                      onChange={(e) => setSpaceArea(e.target.value)}
+                      placeholder="Area / Micromarket"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><DollarSign size={15} className="text-slate-400" /></span>
+                    <select 
+                      value={spaceBudget}
+                      onChange={(e) => setSpaceBudget(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <option value="All Ranges">Budget Range (All)</option>
+                      <option value="Below ₹1L">Below ₹1 Lakh/mo</option>
+                      <option value="₹1L - ₹5L">₹1L - ₹5 Lakh/mo</option>
+                      <option value="₹5L - ₹15L">₹5L - ₹15 Lakh/mo</option>
+                      <option value="Above ₹15L">Above ₹15 Lakh/mo</option>
+                    </select>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><Building size={15} /></span>
+                    <select 
+                      value={spaceGrade}
+                      onChange={(e) => setSpaceGrade(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <option value="All Grades">Building Grade (All)</option>
+                      <option value="Grade A">Grade A Premium</option>
+                      <option value="Grade B">Grade B Standard</option>
+                      <option value="Co-Working">Coworking Space</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <span className="absolute left-3 top-3.5 text-slate-400"><Map size={15} /></span>
-                  <input 
-                    type="text" 
-                    value={spaceArea}
-                    onChange={(e) => setSpaceArea(e.target.value)}
-                    placeholder="Area / Micromarket"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-semibold"
-                  />
-                </div>
-
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><DollarSign size={16} className="text-slate-400" /></span>
-                  <select 
-                    value={spaceBudget}
-                    onChange={(e) => setSpaceBudget(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-4 text-[11px] font-semibold text-slate-500">
+                    <span className="flex items-center gap-1.5"><Check size={13} className="text-emerald-500" /> Escrow Protected</span>
+                    <span className="flex items-center gap-1.5"><Check size={13} className="text-emerald-500" /> Verified Listings</span>
+                    <span className="hidden md:flex items-center gap-1.5"><Check size={13} className="text-emerald-500" /> Instant Demising</span>
+                  </div>
+                  <button 
+                    onClick={handleLandingSearch}
+                    className="w-full sm:w-auto px-8 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <option value="All Ranges">Budget Range (All)</option>
-                    <option value="Below Γé╣1L">Below Γé╣1 Lakh/mo</option>
-                    <option value="Γé╣1L - Γé╣5L">Γé╣1L - Γé╣5 Lakh/mo</option>
-                    <option value="Γé╣5L - Γé╣15L">Γé╣5L - Γé╣15 Lakh/mo</option>
-                    <option value="Above Γé╣15L">Above Γé╣15 Lakh/mo</option>
-                  </select>
+                    <Search size={14} />
+                    <span>Search Commercial Spaces</span>
+                  </button>
                 </div>
-
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><Building size={16} /></span>
-                  <select 
-                    value={spaceGrade}
-                    onChange={(e) => setSpaceGrade(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
-                  >
-                    <option value="All Grades">Building Grade (All)</option>
-                    <option value="Grade A">Grade A Premium</option>
-                    <option value="Grade B">Grade B Standard</option>
-                    <option value="Co-Working">Coworking Space</option>
-                  </select>
-                </div>
-              </div>
+              </>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><SlidersHorizontal size={16} /></span>
-                  <select 
-                    value={vendorCategory}
-                    onChange={(e) => setVendorCategory(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
-                  >
-                    <option value="HVAC Maintenance">HVAC Maintenance</option>
-                    <option value="Deep Cleaning">Deep Cleaning</option>
-                    <option value="Pest Control">Pest Control</option>
-                    <option value="Electrical Auditing">Electrical Auditing</option>
-                    <option value="Statutory NOC Support">Statutory NOC Support</option>
-                  </select>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><SlidersHorizontal size={15} /></span>
+                    <select 
+                      value={vendorCategory}
+                      onChange={(e) => setVendorCategory(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <option value="HVAC Maintenance">HVAC Maintenance</option>
+                      <option value="Deep Cleaning">Deep Cleaning</option>
+                      <option value="Pest Control">Pest Control</option>
+                      <option value="Electrical Auditing">Electrical Auditing</option>
+                      <option value="Statutory NOC Support">Statutory NOC Support</option>
+                    </select>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><MapPin size={15} /></span>
+                    <select 
+                      value={vendorCity}
+                      onChange={(e) => setVendorCity(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <option value="Mumbai">Mumbai</option>
+                      <option value="Bengaluru">Bengaluru</option>
+                      <option value="Pune">Pune</option>
+                      <option value="Ahmedabad">Ahmedabad</option>
+                      <option value="Delhi NCR">Delhi NCR</option>
+                    </select>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><DollarSign size={15} /></span>
+                    <select 
+                      value={vendorBudget}
+                      onChange={(e) => setVendorBudget(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <option value="All Budgets">Budget Estimate (All)</option>
+                      <option value="Under ₹50k">Under ₹50,000</option>
+                      <option value="₹50k - ₹2L">₹50k - ₹2 Lakhs</option>
+                      <option value="₹2L - ₹10L">₹2L - ₹10 Lakhs</option>
+                      <option value="Above ₹10L">Above ₹10 Lakhs</option>
+                    </select>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-slate-400"><Building size={15} /></span>
+                    <select 
+                      value={vendorType}
+                      onChange={(e) => setVendorType(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                    >
+                      <option value="Commercial Office">Commercial Office</option>
+                      <option value="IT Park Campus">IT Park Campus</option>
+                      <option value="Retail Mall">Retail Mall</option>
+                      <option value="Industrial Warehouse">Industrial Warehouse</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><MapPin size={16} /></span>
-                  <select 
-                    value={vendorCity}
-                    onChange={(e) => setVendorCity(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
+                <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-4 text-[11px] font-semibold text-slate-500">
+                    <span className="flex items-center gap-1.5"><Check size={13} className="text-emerald-500" /> 450+ Verified Vendors</span>
+                    <span className="flex items-center gap-1.5"><Check size={13} className="text-emerald-500" /> Milestone Escrow</span>
+                    <span className="hidden md:flex items-center gap-1.5"><Check size={13} className="text-emerald-500" /> SLA Guarantee</span>
+                  </div>
+                  <button 
+                    onClick={handleLandingSearch}
+                    className="w-full sm:w-auto px-8 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <option value="Mumbai">Mumbai</option>
-                    <option value="Bengaluru">Bengaluru</option>
-                    <option value="Pune">Pune</option>
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Delhi NCR">Delhi NCR</option>
-                  </select>
+                    <Search size={14} />
+                    <span>Search Verified Vendors</span>
+                  </button>
                 </div>
-
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><DollarSign size={16} /></span>
-                  <select 
-                    value={vendorBudget}
-                    onChange={(e) => setVendorBudget(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
-                  >
-                    <option value="All Budgets">Budget Estimate (All)</option>
-                    <option value="Under Γé╣50k">Under Γé╣50,000</option>
-                    <option value="Γé╣50k - Γé╣2L">Γé╣50,000 - Γé╣2 Lakhs</option>
-                    <option value="Γé╣2L - Γé╣10L">Γé╣2 Lakhs - Γé╣10 Lakhs</option>
-                    <option value="Above Γé╣10L">Above Γé╣10 Lakhs</option>
-                  </select>
-                </div>
-
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-400"><Building size={16} /></span>
-                  <select 
-                    value={vendorType}
-                    onChange={(e) => setVendorType(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#DFE4E1] focus:outline-none focus:border-[#0F8B7D] text-xs font-bold bg-white cursor-pointer"
-                  >
-                    <option value="Commercial Office">Commercial Office</option>
-                    <option value="IT Park Campus">IT Park Campus</option>
-                    <option value="Retail Mall">Retail Mall</option>
-                    <option value="Industrial Warehouse">Industrial Warehouse</option>
-                  </select>
-                </div>
-              </div>
+              </>
             )}
-
-            <div className="mt-5 flex justify-end">
-              <button 
-                onClick={handleLandingSearch}
-                className="w-full md:w-auto px-10 py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Search size={14} />
-                Search
-              </button>
-            </div>
           </div>
         </div>
 
@@ -532,85 +739,1141 @@ return () => clearInterval(timer);
         <div className="w-full mt-12 md:mt-14 py-3 md:py-3.5 bg-white/30 backdrop-blur-md border-y border-white/40 overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
           <div className="animate-marquee flex items-center gap-8 md:gap-12 text-[11px] md:text-xs font-black text-slate-900 uppercase tracking-widest whitespace-nowrap">
             <span className="whitespace-nowrap">TCS</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">WIPRO</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">INFOSYS</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">DLF COMMERCIAL</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">EMBASSY REIT</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">PRESTIGE GROUP</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">L&amp;T REALTY</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">BROOKFIELD</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">BLACKSTONE</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">K RAHEJA CORP</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">HCL TECH</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">COGNIZANT</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">ACCENTURE</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             {/* Seamless Repeat Track */}
             <span className="whitespace-nowrap">TCS</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">WIPRO</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">INFOSYS</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">DLF COMMERCIAL</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">EMBASSY REIT</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">GODREJ PROPERTIES</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">PRESTIGE GROUP</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">L&amp;T REALTY</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">BROOKFIELD</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">BLACKSTONE</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">K RAHEJA CORP</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">HCL TECH</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">COGNIZANT</span>
-            <span className="text-slate-500 opacity-60">ΓÇó</span>
+            <span className="text-slate-500 opacity-60">•</span>
             <span className="whitespace-nowrap">ACCENTURE</span>
           </div>
         </div>
 
         {/* Simulated Stats count-up row */}
-        <div className="max-w-4xl w-full grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-12 md:mt-16 text-center border-t border-slate-800/10 pt-8 md:pt-10">
+        <div className="max-w-4xl w-full grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-12 md:mt-16 text-center border-t border-slate-300/50 pt-8 md:pt-10">
           <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-950">{animateCount.sqft}M+</div>
-            <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">Sqft Managed</div>
+            <div className="text-2xl md:text-3xl font-black text-slate-900">{animateCount.sqft}M+</div>
+            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">Sqft Managed</div>
           </div>
           <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-950">{animateCount.vendors}+</div>
-            <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">Verified Vendors</div>
+            <div className="text-2xl md:text-3xl font-black text-slate-900">{animateCount.vendors}+</div>
+            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">Verified Vendors</div>
           </div>
           <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-950">Γé╣{animateCount.gtv}Cr+</div>
-            <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">GTV Processed</div>
+            <div className="text-2xl md:text-3xl font-black text-slate-900">₹{animateCount.gtv}Cr+</div>
+            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">GTV Processed</div>
           </div>
           <div>
-            <div className="text-2xl md:text-3xl font-black text-slate-950">{animateCount.uptime}%</div>
-            <div className="text-xs text-slate-700 font-bold uppercase tracking-wider mt-1">System Uptime</div>
+            <div className="text-2xl md:text-3xl font-black text-slate-900">{animateCount.uptime}%</div>
+            <div className="text-xs text-slate-600 font-bold uppercase tracking-wider mt-1">System Uptime</div>
           </div>
         </div>
+      </div>
+    </section>
+
+    {/* SECTION 02: ONE PLATFORM. EVERYTHING CONNECTED. — 6-Pillar Grid (Option 1 Wireframe Section 02) */}
+    <section id="one-platform" className="py-16 md:py-24 bg-[#F8FAFB] border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="text-center mb-10 md:mb-14">
+          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0D7A6E] bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+            CONNECTED ECOSYSTEM
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
+            One Platform. Everything Connected.
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 max-w-xl mx-auto">
+            Connect every domain of your commercial real estate lifecycle into one cohesive operating environment.
+          </p>
         </div>
-      </section>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
+          {[
+            { icon: Building, title: "Property", desc: "Manage assets, spaces & buildings", isComingSoon: false },
+            { icon: DollarSign, title: "Commercial", desc: "Lease, rent roll, billing & collections", isComingSoon: false },
+            { icon: Settings, title: "Operations", desc: "Facility, assets, vendors & tasks", isComingSoon: false },
+            { icon: Users, title: "Workplace", desc: "Experience, bookings, visitors & services", isComingSoon: false },
+            { icon: Shield, title: "Compliance", desc: "Risk, compliance, audits & safety", isComingSoon: false },
+            { icon: Cpu, title: "Intelligence", desc: "Analytics, AI insights & predictions", isComingSoon: true },
+          ].map((pillar, idx) => (
+            <div key={idx} className="flex flex-col items-center text-center p-5 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all group cursor-pointer relative overflow-hidden">
+              {pillar.isComingSoon && (
+                <div className="absolute top-2 right-2">
+                  <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[8px] font-black uppercase tracking-wider border border-amber-200">
+                    Coming Soon
+                  </span>
+                </div>
+              )}
+              <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors mb-3">
+                <pillar.icon size={20} />
+              </div>
+              <h3 className="text-sm font-extrabold text-slate-900 mb-1">{pillar.title}</h3>
+              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{pillar.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center mt-9">
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+            Powered by <span className="text-blue-600 font-black">OFFICEX CORE</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* SECTION 03: OFFICEX CORE — Exact 100% Static Diagram matching Option 1 Master Wireframe */}
+    <section id="officex-core" className="py-20 md:py-28 bg-white border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          
+          {/* LEFT COLUMN: Text Content (5 cols) — Exact Option 1 Typography */}
+          <div className="lg:col-span-5 flex flex-col justify-center">
+            {/* Eyebrow matching Option 1 */}
+            <div className="mb-3">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                Powered by{" "}
+              </span>
+              <span className="text-xs font-black text-blue-600 uppercase tracking-widest">
+                OFFICEX CORE
+              </span>
+            </div>
+
+            {/* Headline — 3 separate clean non-wrapping lines in #0D0D0F matching Option 1 */}
+            <h2 className="text-3xl sm:text-4xl lg:text-[38px] xl:text-[42px] font-black text-[#0D0D0F] tracking-tight leading-[1.16] uppercase">
+              <span className="block whitespace-nowrap">ONE CORE.</span>
+              <span className="block whitespace-nowrap">ONE DATA FOUNDATION.</span>
+              <span className="block whitespace-nowrap">ONE SOURCE OF TRUTH.</span>
+            </h2>
+            
+            <p className="mt-5 text-slate-600 text-sm md:text-base leading-relaxed font-medium max-w-lg">
+              OFFICEX Core connects your entire property ecosystem on a single, secure and intelligent data foundation.
+            </p>
+
+            {/* Checklist with Option 1 Copy */}
+            <div className="mt-7 space-y-3.5">
+              {[
+                "No more siloed systems",
+                "No duplicate data",
+                "No manual reconciliations",
+                "Real-time visibility across the portfolio",
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />
+                  </div>
+                  <span className="text-slate-800 font-semibold text-sm">{item}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="mt-8">
+              <button
+                onClick={() => setIsContactModalOpen(true)}
+                className="px-7 py-3.5 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span>EXPLORE CORE</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Architectural Radial Diagram (7 cols) — Enhanced with Beautiful Orbital Data Animations */}
+          <div className="lg:col-span-7 relative w-full max-w-[680px] aspect-[1.12] mx-auto flex items-center justify-center select-none p-2 sm:p-4">
+            
+            {/* SVG: Animated Concentric Rings + Flowing Data Beams + Traveling Data Packets */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+              <defs>
+                {/* Data stream glow gradient */}
+                <linearGradient id="beamGradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.4" />
+                </linearGradient>
+                {/* Core halo gradient */}
+                <radialGradient id="coreHalo" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#0F8B7D" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+
+              {/* Ambient radial halo behind the core */}
+              <circle cx="50" cy="50" r="32" fill="url(#coreHalo)" />
+
+              {/* Outer orbit ring — faint delicate dashed with slow graceful rotation */}
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="42" 
+                fill="none" 
+                stroke="#CBD5E1" 
+                strokeWidth="0.6" 
+                strokeDasharray="4 6" 
+                className="animate-spin-slow origin-center"
+              />
+
+              {/* Inner orbit ring — faint delicate dashed with counter rotation */}
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="25" 
+                fill="none" 
+                stroke="#CBD5E1" 
+                strokeWidth="0.6" 
+                strokeDasharray="3 5" 
+                className="animate-spin-reverse-slow origin-center"
+              />
+
+              {/* Tiny glowing orbital guide satellites drifting along the outer orbit ring */}
+              <g className="animate-spin-slow origin-center">
+                <circle cx="50" cy="8" r="1" fill="#0F8B7D" opacity="0.9" />
+                <circle cx="50" cy="92" r="1" fill="#06B6D4" opacity="0.8" />
+                <circle cx="92" cy="50" r="0.9" fill="#0F8B7D" opacity="0.75" />
+              </g>
+
+              {/* Static uniform connector lines from center to each node */}
+              {coreNodes.map((node) => (
+                <g key={node.id}>
+                  {/* Base blueprint track line */}
+                  <line
+                    x1="50"
+                    y1="50"
+                    x2={node.x}
+                    y2={node.y}
+                    stroke="#E2E8F0"
+                    strokeWidth="0.6"
+                    strokeDasharray="3 3"
+                  />
+                  {/* Streaming data beam overlay */}
+                  <line
+                    x1={node.x}
+                    y1={node.y}
+                    x2="50"
+                    y2="50"
+                    stroke="#0F8B7D"
+                    strokeWidth="0.8"
+                    strokeOpacity="0.6"
+                    className="animate-data-beam"
+                  />
+                  {/* Glowing data packet gliding into the core */}
+                  <circle r="0.9" fill="#0F8B7D" opacity="0.95">
+                    <animateMotion
+                      path={`M ${node.x} ${node.y} L 50 50`}
+                      dur="3.2s"
+                      repeatCount="indefinite"
+                      begin={`${(node.x * 0.05 + node.y * 0.03) % 3}s`}
+                    />
+                  </circle>
+                </g>
+              ))}
+
+              {/* Extension lines connecting APIs & Integrations (at x:6) across to Audit (at x:30) and Core */}
+              <line x1="12" y1="50" x2="26" y2="50" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3 3" />
+              <line x1="34" y1="50" x2="42" y2="50" stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="3 3" />
+              {/* Active data packet from APIs & Integrations into Audit */}
+              <circle r="1" fill="#06B6D4" opacity="0.9">
+                <animateMotion
+                  path="M 12 50 L 26 50"
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+            </svg>
+
+            {/* Center Core Node — Multi-layered breathing architectural hub */}
+            <div className="relative z-20 w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full flex items-center justify-center">
+              {/* Radar expanding ripple waves */}
+              <div className="absolute inset-0 rounded-full border-2 border-teal-500/35 animate-radar-ripple pointer-events-none" />
+              <div className="absolute inset-0 rounded-full border-2 border-cyan-500/25 animate-radar-ripple-delayed pointer-events-none" />
+
+              {/* Outer soft ambient glow ring */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#0F8B7D]/18 via-cyan-500/12 to-teal-500/18 blur-xl animate-pulse" />
+              
+              {/* Outer decorative dashed orbit border with slow rotation */}
+              <div className="absolute -inset-2 rounded-full border border-teal-500/30 border-dashed animate-spin-slow pointer-events-none" />
+              
+              {/* Inner core card with breathing shadow */}
+              <div className="relative w-full h-full rounded-full bg-white border-2 border-[#0F8B7D] animate-core-breathe flex flex-col items-center justify-center p-2.5 text-center cursor-pointer transition-transform hover:scale-105 duration-300">
+                {/* Live pulsing indicator beacon */}
+                <div className="relative flex h-2.5 w-2.5 mb-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0F8B7D]"></span>
+                </div>
+                <span className="text-[10px] md:text-[11px] font-black tracking-[0.25em] text-slate-400 uppercase">
+                  OFFICEX
+                </span>
+                <span className="text-xl md:text-2xl font-black text-[#0D7A6E] tracking-wider leading-none mt-0.5">
+                  CORE
+                </span>
+                <span className="text-[8px] md:text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                  Single Platform
+                </span>
+              </div>
+            </div>
+
+            {/* Satellite Pill Nodes — 100% Uniform, Spacious with Buoyant Float and Interactive Hover */}
+            {coreNodes.map((node, idx) => (
+              <div
+                key={node.id}
+                style={{
+                  left: `${node.x}%`,
+                  top: `${node.y}%`,
+                  animationDelay: `${(idx * 0.35)}s`,
+                }}
+                className="absolute z-30 px-3.5 py-1.5 rounded-full border border-slate-200/90 bg-white/95 backdrop-blur-xs text-slate-800 text-[11px] font-bold shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center gap-2 whitespace-nowrap animate-orbit-float cursor-pointer group hover:scale-105 hover:border-[#0F8B7D] hover:shadow-[0_4px_16px_rgba(15,139,125,0.18)] transition-all duration-300"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0F8B7D] group-hover:scale-125 transition-transform shrink-0" />
+                <span className="tracking-tight group-hover:text-[#0D7A6E] transition-colors">{node.name}</span>
+              </div>
+            ))}
+
+            {/* APIs & Integrations — left extension node (isolated at x:6%, 24% clear of Audit) */}
+            <div 
+              style={{ left: "6%", top: "50%", animationDelay: "1.2s" }}
+              className="absolute z-30 hidden sm:flex flex-col items-center animate-orbit-float cursor-pointer group hover:scale-105 transition-transform duration-300"
+            >
+              <div className="p-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-[0_4px_16px_rgba(0,0,0,0.06)] group-hover:border-[#0F8B7D] group-hover:shadow-[0_6px_20px_rgba(15,139,125,0.18)] transition-all flex flex-col items-center gap-1.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] relative">
+                  <Database size={16} />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                  </span>
+                </div>
+                <span className="text-[10px] font-extrabold text-slate-700 group-hover:text-[#0D7A6E] text-center leading-tight whitespace-nowrap transition-colors">
+                  APIs &amp;<br />Integrations
+                </span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* SECTION 04: COMMAND CENTRE SHOWCASE (Section 04 from Option 1 Wireframe) */}
+    <section id="command-centre" className="py-20 md:py-28 bg-[#F4F7F6] border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 md:mb-12 gap-6">
+          <div>
+            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0D7A6E] bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+              PORTFOLIO INTELLIGENCE
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
+              YOUR PORTFOLIO. ONE COMMAND CENTRE.
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 max-w-xl">
+              Live multi-metro visibility across leasing velocity, rent collections, operational tasks, and compliance risk.
+            </p>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#DFE4E1] text-xs font-bold text-slate-700 shadow-xs">
+              <Building size={14} className="text-[#0F8B7D]" />
+              <span>All Properties (24)</span>
+              <ChevronDown size={14} className="text-slate-400" />
+            </div>
+            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#DFE4E1] text-xs font-bold text-slate-700 shadow-xs">
+              <Calendar size={14} className="text-blue-600" />
+              <span>Last 30 Days</span>
+              <ChevronDown size={14} className="text-slate-400" />
+            </div>
+            <button 
+              onClick={() => router.push('/ops')}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <SlidersHorizontal size={13} />
+              <span>Customize</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Top 3 Summary KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
+          <div className="bg-white rounded-2xl p-5 md:p-6 border border-[#DFE4E1] shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Total Properties</span>
+              <div className="text-3xl md:text-4xl font-black text-slate-900 mt-1">24</div>
+              <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 4 Metros Covered
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-[#0F8B7D]">
+              <Building size={24} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 md:p-6 border border-[#DFE4E1] shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Total Leasable Area</span>
+              <div className="text-3xl md:text-4xl font-black text-slate-900 mt-1">8.4M <span className="text-base text-slate-500 font-bold">Sq.Ft.</span></div>
+              <span className="text-[11px] text-blue-600 font-bold flex items-center gap-1 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Grade-A Institutional Stock
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <Layers size={24} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 md:p-6 border border-[#DFE4E1] shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Average Occupancy</span>
+              <div className="text-3xl md:text-4xl font-black text-slate-900 mt-1">91.6%</div>
+              <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                <TrendingUp size={12} /> +2.4% vs last quarter
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <Activity size={24} />
+            </div>
+          </div>
+        </div>
+
+        {/* High-Fidelity Command Centre Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Revenue Overview (7 cols) */}
+          <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-[#DFE4E1] shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+              <div>
+                <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">REVENUE OVERVIEW</span>
+                <div className="flex items-baseline gap-3 mt-1">
+                  <span className="text-2xl md:text-3xl font-black text-slate-900">₹12.4 Cr</span>
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                    +112.5% vs last month
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-slate-400">Monthly Run Rate</span>
+            </div>
+
+            {/* SVG Trend Wave Graphic */}
+            <div className="h-36 w-full relative flex items-end">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#0F8B7D" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M0,90 Q70,95 120,70 T240,65 T360,35 T500,15 L500,120 L0,120 Z"
+                  fill="url(#revGrad)"
+                />
+                <path
+                  d="M0,90 Q70,95 120,70 T240,65 T360,35 T500,15"
+                  fill="none"
+                  stroke="#0F8B7D"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <circle cx="120" cy="70" r="4" fill="#0F8B7D" stroke="#fff" strokeWidth="2" />
+                <circle cx="240" cy="65" r="4" fill="#0F8B7D" stroke="#fff" strokeWidth="2" />
+                <circle cx="360" cy="35" r="4" fill="#0F8B7D" stroke="#fff" strokeWidth="2" />
+                <circle cx="500" cy="15" r="5" fill="#0F8B7D" stroke="#fff" strokeWidth="2" />
+              </svg>
+            </div>
+            
+            <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-3 pt-3 border-t border-slate-100">
+              <span>May (₹5.8 Cr)</span>
+              <span>Jun (₹7.2 Cr)</span>
+              <span>Jul (₹9.4 Cr)</span>
+              <span className="text-slate-900 font-extrabold">Aug (₹12.4 Cr)</span>
+            </div>
+          </div>
+
+          {/* Collections Donut (5 cols) */}
+          <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-[#DFE4E1] shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">COLLECTIONS BREAKDOWN</span>
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                87.1% Realized
+              </span>
+            </div>
+
+            <div className="flex items-center justify-center gap-6 my-auto py-2">
+              <div className="relative w-28 h-28 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#F1F5F9"
+                    strokeWidth="3.8"
+                  />
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#0F8B7D"
+                    strokeWidth="3.8"
+                    strokeDasharray="87, 100"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute text-center">
+                  <span className="text-base font-black text-slate-900">87%</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 text-xs">
+                <div>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D]"></span>
+                    <span>Collected</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-900 pl-4 mt-0.5">₹10.8 Cr</div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                    <span>Outstanding</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-900 pl-4 mt-0.5">₹1.6 Cr</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-400 font-semibold text-center border-t border-slate-100 pt-3">
+              Automated reminder notices active across all 30+ day aging accounts
+            </div>
+          </div>
+
+          {/* Lease Expiry Risk (4 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-[#DFE4E1] shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">LEASE EXPIRY (NEXT 90 DAYS)</span>
+              <AlertTriangle size={15} className="text-amber-500" />
+            </div>
+            
+            <div className="my-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900">7</span>
+                <span className="text-xs font-bold text-slate-500">Leases Expiring</span>
+              </div>
+              <div className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-3 flex items-center justify-between">
+                <span>Revenue at Risk:</span>
+                <span className="font-black text-sm">₹2.4 Cr</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => router.push('/leasing/pipeline')}
+              className="text-xs font-black text-[#0F8B7D] hover:underline flex items-center gap-1.5 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>Review Upcoming Renewals</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+
+          {/* Open Tasks (4 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-[#DFE4E1] shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">OPEN TASKS &amp; TICKETS</span>
+              <Wrench size={15} className="text-blue-500" />
+            </div>
+
+            <div className="my-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900">342</span>
+                <span className="text-xs font-bold text-slate-500">Active Work Orders</span>
+              </div>
+
+              <div className="space-y-2 mt-3 text-xs">
+                <div className="flex justify-between text-[11px] font-bold text-slate-600">
+                  <span>HVAC (142)</span>
+                  <span className="text-emerald-600">98% SLA</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full" style={{ width: "42%" }} />
+                </div>
+                <div className="flex justify-between text-[11px] font-bold text-slate-600">
+                  <span>Electrical &amp; Fire (110)</span>
+                  <span className="text-emerald-600">95% SLA</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: "32%" }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-bold text-slate-600 pt-2 border-t border-slate-100">
+              <span>Overall SLA:</span>
+              <span className="text-emerald-600 font-black">96% Achieved</span>
+            </div>
+          </div>
+
+          {/* Compliance & Assets (4 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-[#DFE4E1] shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">COMPLIANCE &amp; ASSETS</span>
+              <ShieldCheck size={15} className="text-emerald-500" />
+            </div>
+
+            <div className="my-4 space-y-3">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div>
+                  <div className="text-lg font-black text-slate-900">94%</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Statutory Compliance</div>
+                </div>
+                <div className="text-right text-[11px] font-bold">
+                  <span className="text-amber-600 block">8 Due Soon</span>
+                  <span className="text-rose-600 block">2 Critical</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div>
+                  <div className="text-lg font-black text-slate-900">1,284</div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Registered Assets</div>
+                </div>
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                  100% QR Tagged
+                </span>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => router.push('/properties/compliance')}
+              className="text-xs font-black text-[#0F8B7D] hover:underline flex items-center gap-1.5 pt-2 border-t border-slate-100 cursor-pointer"
+            >
+              <span>View Compliance Matrix</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+
+        </div>
+
+        {/* Command Centre Footer Link */}
+        <div className="text-center mt-10">
+          <button
+            onClick={() => router.push('/ops')}
+            className="inline-flex items-center gap-2 text-xs md:text-sm font-black text-[#0F8B7D] hover:text-[#0D7A6E] hover:gap-3 transition-all cursor-pointer"
+          >
+            <span>View Full Command Centre</span>
+            <ArrowRight size={16} />
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    {/* SECTION 05: PROPERTY LIFECYCLE (Section 05 from Option 1 Wireframe) */}
+    <section id="lifecycle" className="py-20 md:py-28 bg-white border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        
+        <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+            END-TO-END WORKFLOW
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
+            FROM PROPERTY TO INTELLIGENCE. THE COMPLETE LIFECYCLE.
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2.5 leading-relaxed">
+            Eliminate operational silos. See how every stakeholder, process, and asset connects into a single continuous chain of value.
+          </p>
+        </div>
+
+        {/* 8-Stage Interactive Stepper */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-3 mb-10">
+          {lifecycleSteps.map((step, idx) => {
+            const isActive = activeLifecycleStep === idx;
+            return (
+              <button
+                key={step.id}
+                onClick={() => setActiveLifecycleStep(idx)}
+                className={`p-3 md:p-3.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-between ${
+                  isActive
+                    ? "bg-slate-900 text-white border-slate-900 shadow-md scale-102"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-white"
+                }`}
+              >
+                <div className={`w-6 h-6 rounded-full text-[10px] font-black flex items-center justify-center mb-2 ${
+                  isActive ? "bg-white text-slate-900" : "bg-white border border-slate-300 text-slate-500"
+                }`}>
+                  {idx + 1}
+                </div>
+                <div className="font-black text-xs">{step.name}</div>
+                {step.isComingSoon && (
+                  <span className="mt-1 px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[8px] font-black uppercase tracking-wider">
+                    Soon
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Stage Dynamic Showcase Card */}
+        {(() => {
+          const cur = lifecycleSteps[activeLifecycleStep];
+          return (
+            <div className="rounded-3xl border border-[#DFE4E1] bg-slate-50/50 p-6 md:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-xs">
+              <div className="lg:col-span-7">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                    STAGE {activeLifecycleStep + 1}: {cur.badge}
+                  </span>
+                  {cur.isComingSoon && (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                      COMING SOON
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                  {cur.subtitle}
+                </h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-medium mt-3 leading-relaxed max-w-xl">
+                  {cur.desc}
+                </p>
+
+                {/* Capabilities list */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                  {cur.capabilities.map((cap, i) => (
+                    <div key={i} className="flex items-center gap-2.5 bg-white p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800">
+                      <CheckCircle size={14} className="text-[#0F8B7D] shrink-0" />
+                      <span>{cap}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Widget Preview */}
+              <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                  <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Key Target Outcome</span>
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Active Benchmark
+                  </span>
+                </div>
+
+                <div className="my-6 text-center">
+                  <div className="text-3xl md:text-4xl font-black text-slate-900">{cur.metric}</div>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Real-time portfolio benchmark across all enrolled properties</p>
+                </div>
+
+                <button
+                  onClick={() => setIsContactModalOpen(true)}
+                  className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>EXPLORE LIFECYCLE</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+      </div>
+    </section>
+
+    {/* SECTION 06: COMMERCIAL INTELLIGENCE (Section 06 from Option 1 Wireframe) */}
+    <section id="commercial" className="py-20 md:py-28 bg-slate-950 text-white px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          
+          {/* Left Text & Checklist (5 cols) */}
+          <div className="lg:col-span-5">
+            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/80 px-3.5 py-1 rounded-full border border-emerald-500/30">
+              COMMERCIAL EXCELLENCE
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight mt-4 leading-tight">
+              COMMERCIAL INTELLIGENCE THAT DRIVES PERFORMANCE.
+            </h2>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium mt-3 leading-relaxed">
+              Control revenue, leases, billing, collections and upcoming commercial risk from a single institutional operating pane.
+            </p>
+
+            <div className="mt-8 space-y-3.5">
+              {[
+                "Rent Roll & Lease Management",
+                "Billing, CAM & Utility Recoveries",
+                "Collections, Aging & Automated Notices",
+                "Escalations & Break-Option Tracking",
+                "Portfolio Revenue Forecasting",
+                "Asset-Level Property P&L",
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <span className="text-slate-200 font-bold text-xs sm:text-sm">{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-9">
+              <button
+                onClick={() => router.push('/leasing/pipeline')}
+                className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span>EXPLORE COMMERCIAL</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Live Rent Roll Overview Card (7 cols) */}
+          <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-md">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+              <div>
+                <span className="text-xs text-emerald-400 font-extrabold uppercase tracking-wider">RENT ROLL OVERVIEW</span>
+                <div className="text-sm font-bold text-slate-300 mt-0.5">Active Portfolio Cashflow Summary</div>
+              </div>
+              <span className="text-xs font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full">
+                Live Data
+              </span>
+            </div>
+
+            {/* Metrics Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 text-center">
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase">Total Rent</span>
+                <div className="text-lg font-black text-white mt-1">₹12.4 Cr</div>
+              </div>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase">Outstanding</span>
+                <div className="text-lg font-black text-amber-400 mt-1">₹1.6 Cr</div>
+              </div>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase">Active Leases</span>
+                <div className="text-lg font-black text-white mt-1">134</div>
+              </div>
+              <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase">Occupancy</span>
+                <div className="text-lg font-black text-emerald-400 mt-1">91.6%</div>
+              </div>
+            </div>
+
+            {/* Realistic Rent Roll Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                    <th className="pb-3 font-extrabold">Property</th>
+                    <th className="pb-3 font-extrabold">Occupancy</th>
+                    <th className="pb-3 font-extrabold">Total Rent</th>
+                    <th className="pb-3 font-extrabold">Collected</th>
+                    <th className="pb-3 font-extrabold">Outstanding</th>
+                    <th className="pb-3 font-extrabold text-right">Expiring</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tr className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 font-bold text-white">Business Park A</td>
+                    <td className="py-3 font-semibold text-emerald-400">95%</td>
+                    <td className="py-3 font-bold">₹4.2 Cr</td>
+                    <td className="py-3 text-slate-300">₹4.0 Cr</td>
+                    <td className="py-3 text-amber-400 font-bold">₹0.2 Cr</td>
+                    <td className="py-3 text-right font-black text-amber-400">2</td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 font-bold text-white">IT Park West</td>
+                    <td className="py-3 font-semibold text-emerald-400">92%</td>
+                    <td className="py-3 font-bold">₹3.1 Cr</td>
+                    <td className="py-3 text-slate-300">₹2.8 Cr</td>
+                    <td className="py-3 text-amber-400 font-bold">₹0.3 Cr</td>
+                    <td className="py-3 text-right font-black text-amber-400">1</td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 font-bold text-white">Tech Square</td>
+                    <td className="py-3 font-semibold text-emerald-400">90%</td>
+                    <td className="py-3 font-bold">₹2.7 Cr</td>
+                    <td className="py-3 text-slate-300">₹2.4 Cr</td>
+                    <td className="py-3 text-amber-400 font-bold">₹0.3 Cr</td>
+                    <td className="py-3 text-right font-black text-amber-400">3</td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 font-bold text-white">Downtown Towers</td>
+                    <td className="py-3 font-semibold text-emerald-400">88%</td>
+                    <td className="py-3 font-bold">₹1.4 Cr</td>
+                    <td className="py-3 text-slate-300">₹1.0 Cr</td>
+                    <td className="py-3 text-amber-400 font-bold">₹0.4 Cr</td>
+                    <td className="py-3 text-right font-black text-amber-400">1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-slate-800 flex justify-between items-center text-xs">
+              <span className="text-slate-400 font-medium">All financial values audited &amp; synced with ERP</span>
+              <button 
+                onClick={() => router.push('/leasing/pipeline')}
+                className="text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>View Full Commercial Dashboard</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    {/* SECTION 07: BUILT FOR EVERY STAKEHOLDER (Option 2/3 Section 9) */}
+    <section id="stakeholders" className="py-20 md:py-28 bg-[#F8FAFB] border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        
+        <div className="text-center max-w-3xl mx-auto mb-10 md:mb-14">
+          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0D7A6E] bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+            AUDIENCE &amp; USE CASES
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
+            ONE PLATFORM. EVERY STAKEHOLDER.
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
+            Tailored tools, permissions, and dashboards engineered for everyone who owns, operates, or occupies workspace.
+          </p>
+        </div>
+
+        {/* Stakeholder Tabs */}
+        <div className="flex items-center justify-center gap-2 flex-wrap mb-10">
+          {[
+            { id: "owner", label: "Property Owner / CEO" },
+            { id: "occupier", label: "Corporate Occupier" },
+            { id: "fm", label: "Facility Manager" },
+            { id: "vendor", label: "Vendor / Partner" },
+            { id: "investor", label: "Investor / REIT" },
+          ].map((tab) => {
+            const isSelected = activeStakeholder === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveStakeholder(tab.id as any)}
+                className={`px-4 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-[#0F8B7D] text-white shadow-md scale-102"
+                    : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:text-slate-900"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Dynamic Stakeholder Card */}
+        {(() => {
+          const data = stakeholderData[activeStakeholder];
+          return (
+            <div className="bg-white rounded-3xl p-6 md:p-10 border border-[#DFE4E1] shadow-md grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              
+              <div className="lg:col-span-7">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#0D7A6E] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  {data.badge}
+                </span>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 mt-3 tracking-tight">
+                  {data.headline}
+                </h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 italic">
+                  "{data.quote}"
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                  {data.points.map((pt, i) => (
+                    <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800">
+                      <CheckCircle size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                      <span>{pt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-5 bg-slate-900 text-white rounded-2xl p-6 flex flex-col justify-between shadow-lg">
+                <div className="border-b border-slate-800 pb-3 mb-6">
+                  <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider">Target Performance Metrics</span>
+                  <div className="text-sm font-black text-white mt-1">{data.role} Dashboard</div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mb-8 text-center">
+                  {data.metrics.map((m, idx) => (
+                    <div key={idx} className="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                      <div className="text-base sm:text-lg font-black text-emerald-400">{m.val}</div>
+                      <div className="text-[9px] text-slate-400 font-bold uppercase mt-1 leading-tight">{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setIsContactModalOpen(true)}
+                  className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                >
+                  <span>Schedule Tailored Walkthrough</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+
+            </div>
+          );
+        })()}
+
+      </div>
+    </section>
+
+    {/* SECTION 08: REAL OUTCOMES & BEFORE VS AFTER (Option 2 Section 13) */}
+    <section className="py-20 md:py-28 bg-white border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        
+        <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0D7A6E] bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+            BUSINESS VALUE &amp; ROI
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
+            Real Outcomes. Measurable Impact.
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2.5">
+            Shift from disconnected spreadsheets and delayed reporting to high-velocity operating confidence.
+          </p>
+        </div>
+
+        {/* 5 Big Impact Metric Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5 mb-14">
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">10M+</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase mt-1">Sq.Ft. on Platform</div>
+          </div>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-2xl sm:text-3xl font-black text-blue-600">500+</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase mt-1">Verified FM Vendors</div>
+          </div>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">1,000+</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase mt-1">Buildings Managed</div>
+          </div>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D]">30%</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase mt-1">Lower Operating Cost</div>
+          </div>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center col-span-2 sm:col-span-1">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600">95%</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase mt-1">Client Retention</div>
+          </div>
+        </div>
+
+        {/* Before vs After Comparison Container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* BEFORE OFFICEX Card */}
+          <div className="p-7 md:p-9 rounded-3xl bg-rose-50/40 border border-rose-200 flex flex-col justify-between">
+            <div>
+              <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-wider border border-rose-200">
+                BEFORE OFFICEX
+              </span>
+              <h3 className="text-xl font-black text-slate-900 mt-4 mb-2">
+                Manual Chaos, Silos &amp; Delayed Reporting
+              </h3>
+              <p className="text-xs text-slate-600 font-medium mb-6">
+                Critical tasks slip through cracks when property operations live across disconnected spreadsheets and messaging channels.
+              </p>
+
+              <div className="space-y-3">
+                {[
+                  "Disconnected Excel spreadsheets for rent roll and CAM",
+                  "Untracked vendor requests and informal WhatsApp groups",
+                  "Scattered compliance documents risking fire & labor fines",
+                  "Manual reconciliations and delayed month-end reporting",
+                  "Zero real-time visibility across multi-building portfolios"
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-700">
+                    <span className="w-4 h-4 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-black text-[10px] shrink-0">✕</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-4 border-t border-rose-200/80 text-[11px] font-extrabold text-rose-700">
+              Result: Revenue leakage, compliance fines, and tenant friction
+            </div>
+          </div>
+
+          {/* AFTER OFFICEX Card */}
+          <div className="p-7 md:p-9 rounded-3xl bg-emerald-50/40 border border-emerald-200 flex flex-col justify-between">
+            <div>
+              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200">
+                AFTER OFFICEX
+              </span>
+              <h3 className="text-xl font-black text-slate-900 mt-4 mb-2">
+                Unified Data Core &amp; Automated Operational Rigor
+              </h3>
+              <p className="text-xs text-slate-600 font-medium mb-6">
+                Connect every commercial lease, facility maintenance task, and tenant service request into a continuous digital ecosystem.
+              </p>
+
+              <div className="space-y-3">
+                {[
+                  "Single unified data foundation across all properties",
+                  "52-week PPM calendars and QR digital asset passports",
+                  "100% audit-ready statutory compliance matrix",
+                  "Verified vendor procurement with milestone escrow payments",
+                  "Instant executive portfolio dashboards and NOI analytics"
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-800">
+                    <CheckCircle size={15} className="text-emerald-600 shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 pt-4 border-t border-emerald-200/80 text-[11px] font-extrabold text-emerald-700">
+              Result: 30% lower operating overhead and institutional governance
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
 
       {/* SECTION 3: EVERYTHING YOU NEED, ONE PLATFORM (Bento Grid) */}
       <section id="features" className="py-16 md:py-20 bg-[#F6FAF9] border-t border-b border-[#DFE4E1] px-4 md:px-6 w-full max-w-full overflow-hidden">
@@ -731,9 +1994,9 @@ return () => clearInterval(timer);
                     <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors md:hidden" />
                   </h3>
                   <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-slate-900">Γé╣4.2L</span>
+                    <span className="text-3xl font-black text-slate-900">₹4.2L</span>
                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 flex items-center gap-0.5">
-                      Γåô12% <span className="font-medium text-[10px]">vs last month</span>
+                      ↓12% <span className="font-medium text-[10px]">vs last month</span>
                     </span>
                   </div>
                   <p className="text-slate-400 mt-2 font-medium text-[11px] leading-relaxed max-w-sm">
@@ -846,7 +2109,7 @@ return () => clearInterval(timer);
                   </div>
                 </div>
 
-                <span className="text-[10px] text-[#0F8B7D] font-bold group-hover:underline">Manage Compliance ΓÇ║</span>
+                <span className="text-[10px] text-[#0F8B7D] font-bold group-hover:underline">Manage Compliance ›</span>
               </div>
 
               {/* Card F: AI Automation */}
@@ -870,145 +2133,7 @@ return () => clearInterval(timer);
                   </p>
                 </div>
 
-                <span className="text-[10px] text-emerald-400 font-bold group-hover:underline">Configure AI ΓÇ║</span>
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      
-      {/* SECTION 3B: ONE CORE. ONE DATA FOUNDATION. ONE SOURCE OF TRUTH (Requested Architecture Diagram) */}
-      <section id="core-architecture" className="py-24 px-4 md:px-8 bg-slate-950 text-white relative overflow-hidden">
-        {/* Ambient Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-teal-500/10 blur-[140px] rounded-full pointer-events-none -z-0" />
-
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Left 45%: Narrative & Selected Node Details */}
-            <div className="lg:col-span-5 flex flex-col items-start text-left">
-              <span className="text-xs font-extrabold text-[#0F8B7D] uppercase tracking-widest">
-                Data Architecture & Integration
-              </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mt-2 tracking-tight">
-                One Core. One Data Foundation. One Source of Truth.
-              </h2>
-              <p className="text-slate-400 text-sm font-medium leading-relaxed mt-4">
-                OFFICEX Core connects your entire property ecosystem on a single, secure, and intelligent master-data backbone. Eliminate disconnected software stacks and fragmented records.
-              </p>
-
-              {/* 4 Value Pillars */}
-              <div className="mt-6 flex flex-col gap-3 w-full">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
-                  <span className="text-xs font-bold text-slate-200">No more siloed systems — All operational portals share one master schema</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
-                  <span className="text-xs font-bold text-slate-200">No duplicate data — Real-time entity-relationship continuity</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
-                  <span className="text-xs font-bold text-slate-200">No manual reconciliations — Instant automated financial & rent splits</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                  <CheckCircle size={18} className="text-[#0F8B7D] shrink-0" />
-                  <span className="text-xs font-bold text-slate-200">Real-time visibility — Live portfolio telemetry for institutional leadership</span>
-                </div>
-              </div>
-
-              {/* Dynamic Interactive Node Inspection Card */}
-              <div className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/90 border border-teal-500/30 w-full shadow-xl">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D] animate-ping" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-teal-400">
-                      Node: {activeNodeData.label}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 bg-white/10 px-2 py-0.5 rounded">
-                    {activeNodeData.category}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                  {activeNodeData.desc}
-                </p>
-                <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Connected to: <strong>OFFICEX CORE</strong></span>
-                  <span className="text-[#0F8B7D] font-bold">Encrypted & Audited</span>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <button 
-                  onClick={() => setIsContactModalOpen(true)}
-                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-lg transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <span>Request Architecture Whitepaper</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-
-            </div>
-
-            {/* Right 55%: Interactive Orbital Master Architecture Diagram */}
-            <div className="lg:col-span-7 flex flex-col items-center justify-center relative min-h-[520px]">
-              
-              {/* Outer Orbit Ring */}
-              <div className="relative w-full max-w-[500px] aspect-square rounded-full border border-teal-500/20 flex items-center justify-center p-8 animate-[spin_120s_linear_infinite]">
-                {/* Mid Orbit Ring */}
-                <div className="w-full h-full rounded-full border border-teal-500/30 border-dashed flex items-center justify-center p-12">
-                  {/* Inner Orbit Ring */}
-                  <div className="w-full h-full rounded-full border border-teal-500/40" />
-                </div>
-              </div>
-
-              {/* Central Core Element (Static in Center) */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-[#0F8B7D] via-[#0D7A6E] to-[#1E3A8A] p-1 shadow-[0_0_50px_rgba(15,139,125,0.6)] flex items-center justify-center text-center">
-                  <div className="w-full h-full rounded-full bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-2">
-                    <Database size={24} className="text-[#0F8B7D] mb-1" />
-                    <span className="text-xs font-black tracking-widest text-white">OFFICEX</span>
-                    <span className="text-[9px] font-bold text-teal-400 tracking-wider">CORE BUS</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 14 Interactive Satellite Nodes Positioned in Orbit */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
-                {coreNodes.map((node, i) => {
-                  const angle = (i / coreNodes.length) * 2 * Math.PI - Math.PI / 2;
-                  const radius = 210; // Distance from center
-                  const x = Math.round(Math.cos(angle) * radius);
-                  const y = Math.round(Math.sin(angle) * radius);
-                  const isSelected = selectedCoreNode === node.id;
-
-                  return (
-                    <button
-                      key={node.id}
-                      onClick={() => setSelectedCoreNode(node.id)}
-                      onMouseEnter={() => setSelectedCoreNode(node.id)}
-                      style={{
-                        transform: `translate(${x}px, ${y}px)`
-                      }}
-                      className={`absolute px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer z-40 whitespace-nowrap shadow-md flex items-center gap-1.5 ${
-                        isSelected
-                          ? "bg-[#0F8B7D] text-white scale-110 ring-2 ring-white shadow-[0_0_20px_rgba(15,139,125,0.8)]"
-                          : "bg-slate-900/90 text-slate-300 border border-slate-700/80 hover:border-teal-400 hover:text-white"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-teal-400"}`} />
-                      <span>{node.id}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="absolute bottom-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Hover or click any node to inspect data flow
+                <span className="text-[10px] text-emerald-400 font-bold group-hover:underline">Configure AI ›</span>
               </div>
 
             </div>
@@ -1025,7 +2150,7 @@ return () => clearInterval(timer);
             {/* Timeline info */}
             <div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                From Procurement to Payment ΓÇö Secure & Verified
+                From Procurement to Payment — Secure & Verified
               </h2>
               <p className="text-slate-500 mt-3 md:mt-4 max-w-md font-medium text-xs md:text-sm leading-relaxed">
                 An end-to-end transparent workflow designed to protect both facility managers and vendors.
@@ -1140,12 +2265,12 @@ return () => clearInterval(timer);
                     </div>
                     <div className="grid grid-cols-3 py-2.5 px-3 font-bold text-slate-800 border-b border-slate-100 items-center">
                       <span>QuickCool</span>
-                      <span className="text-[#0F8B7D]">Γé╣12,500</span>
+                      <span className="text-[#0F8B7D]">₹12,500</span>
                       <span className="text-emerald-600">99.2%</span>
                     </div>
                     <div className="grid grid-cols-3 py-2.5 px-3 font-bold text-slate-800 items-center">
                       <span>Apex CleanAir</span>
-                      <span>Γé╣11,800</span>
+                      <span>₹11,800</span>
                       <span className="text-slate-500">94.8%</span>
                     </div>
                   </div>
@@ -1189,7 +2314,7 @@ return () => clearInterval(timer);
                         <Building size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
                         <span className="text-slate-800">Enterprise Client</span>
                       </div>
-                      <span className="text-slate-500">Initiates Γé╣100,000 Payment</span>
+                      <span className="text-slate-500">Initiates ₹100,000 Payment</span>
                     </div>
 
                     {/* Arrow down connector */}
@@ -1332,7 +2457,7 @@ return () => clearInterval(timer);
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
                 <p className="text-xs text-slate-400 mt-1.5 font-semibold">For growing multi-site portfolios.</p>
-                <div className="text-3xl font-black text-slate-900 mt-6">Γé╣4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
+                <div className="text-3xl font-black text-slate-900 mt-6">₹4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
                 
                 <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
                   <li className="flex items-center gap-2"><CheckCircle size={15} className="text-emerald-500 shrink-0" /> Escrow Payments</li>
@@ -1514,6 +2639,9 @@ return () => clearInterval(timer);
           </div>
         </div>
       )}
+
+
+
 
     </div>
   );
