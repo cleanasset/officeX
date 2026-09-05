@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,6 +27,7 @@ import {
   ArrowUpRight,
   SlidersHorizontal,
   ChevronRight,
+  ChevronLeft,
   Shield,
   ClipboardList,
   Database,
@@ -54,7 +55,9 @@ import {
   Check,
   Laptop,
   Key,
-  Play
+  Play,
+  Pause,
+  LayoutGrid
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -234,6 +237,82 @@ export default function LandingPage() {
     }
   };
 
+  // Stakeholder auto-rotation & carousel state
+  const carouselTrackRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScrollRef = useRef(false);
+
+  const stakeholderKeys: ("owner" | "occupier" | "fm" | "vendor" | "investor")[] = [
+    "owner", "occupier", "fm", "vendor", "investor"
+  ];
+
+  // Auto-rotation timer (4.5s cycle)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveStakeholder((current) => {
+        const nextIdx = (stakeholderKeys.indexOf(current) + 1) % stakeholderKeys.length;
+        return stakeholderKeys[nextIdx];
+      });
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Handler to smoothly scroll to a stakeholder card
+  const scrollToStakeholder = (key: "owner" | "occupier" | "fm" | "vendor" | "investor") => {
+    setActiveStakeholder(key);
+
+    // Auto-scroll carousel track to matching card
+    if (carouselTrackRef.current) {
+      const targetCard = carouselTrackRef.current.querySelector(`[data-stakeholder-card="${key}"]`) as HTMLElement;
+      if (targetCard) {
+        isProgrammaticScrollRef.current = true;
+        targetCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        setTimeout(() => {
+          isProgrammaticScrollRef.current = false;
+        }, 500);
+      }
+    }
+  };
+
+  // Synchronize carousel when activeStakeholder changes
+  useEffect(() => {
+    // scroll carousel card into view if not already scrolling from manual scroll
+    if (carouselTrackRef.current && !isProgrammaticScrollRef.current) {
+      const targetCard = carouselTrackRef.current.querySelector(`[data-stakeholder-card="${activeStakeholder}"]`) as HTMLElement;
+      if (targetCard) {
+        isProgrammaticScrollRef.current = true;
+        targetCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        setTimeout(() => {
+          isProgrammaticScrollRef.current = false;
+        }, 500);
+      }
+    }
+  }, [activeStakeholder]);
+
+  const handleCarouselScroll = () => {
+    if (isProgrammaticScrollRef.current || !carouselTrackRef.current) return;
+    const container = carouselTrackRef.current;
+    const cards = container.querySelectorAll<HTMLElement>('[data-stakeholder-card]');
+    if (!cards.length) return;
+
+    const scrollLeft = container.scrollLeft;
+    let closestKey = activeStakeholder;
+    let minDiff = Infinity;
+
+    cards.forEach((card) => {
+      const diff = Math.abs(card.offsetLeft - scrollLeft);
+      if (diff < minDiff) {
+        minDiff = diff;
+        const key = card.getAttribute('data-stakeholder-card') as typeof activeStakeholder;
+        if (key) closestKey = key;
+      }
+    });
+
+    if (closestKey !== activeStakeholder && minDiff < container.clientWidth / 2) {
+      setActiveStakeholder(closestKey);
+    }
+  };
+
   // Contact Modal States
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [contactName, setContactName] = useState("");
@@ -293,14 +372,14 @@ export default function LandingPage() {
   const handleLandingSearch = () => {
     if (activeSearchTab === "space") {
       router.push(
-        `/public/search?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
+        `/discover?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
       );
     } else if (activeSearchTab === "vendor") {
       router.push(
-        `/marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
+        `/fm-marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
       );
     } else {
-      router.push('/login');
+      router.push('/managed-services');
     }
   };
 
@@ -392,7 +471,7 @@ export default function LandingPage() {
       {/* SECTION 1: ENTERPRISE TOP NAVBAR — LIGHT MODERN THEME MATCHING REST OF SITE */}
       <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between transition-all shadow-2xs relative">
         {/* Left: Brand Logo & Wordmark */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 lg:w-[250px]">
           <Link href="/" className="flex items-center gap-3.5 group">
             <Image 
               src="/logo-removebg-preview.png" 
@@ -416,21 +495,21 @@ export default function LandingPage() {
         </div>
 
         {/* Center: Main Navigation Menu Items */}
-        <nav className="hidden lg:flex items-center gap-7 text-xs sm:text-sm font-semibold text-slate-600 absolute left-1/2 -translate-x-1/2">
-          <button onClick={() => router.push("/marketplace")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">Buy / Lease</button>
-          <button onClick={() => router.push("/marketplace")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">FM Services</button>
-          <button onClick={() => scrollToSection("features")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">SaaS Platform</button>
-          <button onClick={() => scrollToSection("managed-services")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">Managed Services</button>
-          <button onClick={() => scrollToSection("insights")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">Insights</button>
+        <nav className="hidden lg:flex flex-1 justify-center items-center gap-7 text-xs sm:text-sm font-semibold text-slate-600">
+          <Link href="/discover" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Buy / Lease</Link>
+          <Link href="/fm-marketplace" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">FM Services</Link>
+          <Link href="/operations" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">SaaS Platform</Link>
+          <Link href="/managed-services" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Managed Services</Link>
+          <Link href="/intelligence" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Intelligence</Link>
           <button onClick={() => scrollToSection("faq")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">Company</button>
         </nav>
 
         {/* Right: Actions */}
-        <div className="hidden md:flex items-center gap-4 shrink-0">
+        <div className="hidden md:flex items-center justify-end gap-4 shrink-0 lg:w-[250px]">
           <button 
-            onClick={() => router.push("/marketplace")}
+            onClick={() => router.push("/public/search")}
             className="p-2 text-slate-600 hover:text-slate-900 transition-colors rounded-full hover:bg-slate-100 cursor-pointer"
-            title="Search"
+            title="Search Spaces"
           >
             <Search size={18} />
           </button>
@@ -470,11 +549,11 @@ export default function LandingPage() {
               style={{ width: "auto", height: "30px" }}
             />
           </div>
-          <button onClick={() => { setMobileMenuOpen(false); router.push("/marketplace"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Buy / Lease</button>
-          <button onClick={() => { setMobileMenuOpen(false); router.push("/marketplace"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services</button>
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("features"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">SaaS Platform</button>
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("managed-services"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Managed Services</button>
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("insights"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Insights</button>
+          <Link href="/discover" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Buy / Lease</Link>
+          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services</Link>
+          <Link href="/operations" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">SaaS Platform</Link>
+          <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Managed Services</Link>
+          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
           <button onClick={() => { setMobileMenuOpen(false); scrollToSection("faq"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Company</button>
           <hr className="border-slate-200" />
           <a href="/login" className="text-base font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Sign In</a>
@@ -750,7 +829,7 @@ export default function LandingPage() {
                     {/* Search Button */}
                     <div className="md:pl-2 shrink-0">
                       <button
-                        onClick={() => router.push('/public/wizard')}
+                        onClick={() => router.push('/managed-services')}
                         className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                       >
                         Explore
@@ -763,13 +842,13 @@ export default function LandingPage() {
 
             {/* Quick Links below Search Bar */}
             <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400">
-              <span onClick={() => setActiveSearchTab("space")} className="hover:text-white cursor-pointer transition-colors">Buy</span>
+              <Link href="/discover" className="hover:text-white transition-colors">Buy</Link>
               <span className="text-slate-600">|</span>
-              <span onClick={() => setActiveSearchTab("space")} className="hover:text-white cursor-pointer transition-colors">Lease</span>
+              <Link href="/discover" className="hover:text-white transition-colors">Lease</Link>
               <span className="text-slate-600">|</span>
-              <span onClick={() => setActiveSearchTab("space")} className="hover:text-white cursor-pointer transition-colors">Co-working</span>
+              <Link href="/discover" className="hover:text-white transition-colors">Co-working</Link>
               <span className="text-slate-600">|</span>
-              <span onClick={() => setActiveSearchTab("managed")} className="hover:text-white cursor-pointer transition-colors">Managed Offices</span>
+              <Link href="/managed-services" className="hover:text-white transition-colors">Managed Offices</Link>
             </div>
           </div>
         </div>
@@ -804,7 +883,7 @@ export default function LandingPage() {
               image: "/images/card_prop_hd.jpg",
               bgColor: "bg-[#00A86B]",
               arrowColor: "text-[#00A86B]",
-              href: "/marketplace",
+              href: "/discover",
               iconType: "arrow",
             },
             {
@@ -814,7 +893,7 @@ export default function LandingPage() {
               image: "/images/card_fm_hd.jpg",
               bgColor: "bg-[#F26522]",
               arrowColor: "text-[#F26522]",
-              href: "/marketplace",
+              href: "/fm-marketplace",
               iconType: "arrow",
             },
             {
@@ -824,7 +903,7 @@ export default function LandingPage() {
               image: "/images/card_saas_hd.jpg",
               bgColor: "bg-[#0F8B7D]",
               arrowColor: "text-[#0F8B7D]",
-              href: "#command-centre",
+              href: "/operations",
               iconType: "arrow",
             },
             {
@@ -834,7 +913,7 @@ export default function LandingPage() {
               image: "/images/card_managed_hd.jpg",
               bgColor: "bg-[#7C3AED]",
               arrowColor: "text-[#7C3AED]",
-              href: "/public/wizard",
+              href: "/managed-services",
               iconType: "arrow",
             },
             {
@@ -844,7 +923,7 @@ export default function LandingPage() {
               image: "/images/card_ai_hd.jpg",
               bgColor: "bg-[#DB2777]",
               arrowColor: "text-[#DB2777]",
-              href: "#command-centre",
+              href: "/intelligence",
               iconType: "sparkle",
             },
           ].map((card) => (
@@ -964,101 +1043,113 @@ export default function LandingPage() {
     </section>
 
     {/* SECTION 04: BUILT FOR EVERY STAKEHOLDER */}
-    <section id="stakeholders" className="py-16 md:py-24 bg-[#F8FAFC] border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
+    <section 
+      id="stakeholders" 
+      className="py-16 md:py-24 bg-[#F8FAFC] border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden"
+    >
       <div className="max-w-7xl mx-auto w-full">
         
-        <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
-          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
-            AUDIENCE &amp; USE CASES
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
-            ONE PLATFORM. EVERY STAKEHOLDER.
-          </h2>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
-            Tailored tools, permissions, and dashboards engineered for everyone who owns, operates, or occupies workspace.
-          </p>
+        {/* Header with Title */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-10">
+          <div className="max-w-2xl">
+            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
+              AUDIENCE &amp; USE CASES
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
+              ONE PLATFORM. EVERY STAKEHOLDER.
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
+              Tailored tools, permissions, and dashboards engineered for everyone who owns, operates, or occupies workspace.
+            </p>
+          </div>
         </div>
 
-        {/* Stakeholder Tabs */}
-        <div className="flex items-center justify-center gap-2 flex-wrap mb-8 sm:mb-10">
-          {[
-            { id: "owner", label: "Property Owner / CEO" },
-            { id: "occupier", label: "Corporate Occupier" },
-            { id: "fm", label: "Facility Manager" },
-            { id: "vendor", label: "Vendor / Partner" },
-            { id: "investor", label: "Investor / REIT" },
-          ].map((tab) => {
-            const isSelected = activeStakeholder === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveStakeholder(tab.id as any)}
-                className={`px-4 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-[#0F8B7D] text-white shadow-md font-extrabold scale-102"
-                    : "bg-white text-slate-600 border border-slate-200 hover:border-teal-200 hover:text-[#0F8B7D]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Carousel View */}
+        <div>
+          {/* Horizontal Scroll / Swipe Track */}
+          <div
+            ref={carouselTrackRef}
+            onScroll={handleCarouselScroll}
+            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar py-2 -mx-1 px-1"
+            tabIndex={0}
+            aria-label="Stakeholder Carousel"
+          >
+              {stakeholderKeys.map((key) => {
+                const data = stakeholderData[key];
+                const isActive = activeStakeholder === key;
 
-        {/* Dynamic Stakeholder Card */}
-        {(() => {
-          const data = stakeholderData[activeStakeholder];
-          return (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-slate-200 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              
-              <div className="lg:col-span-7">
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                  {data.badge}
-                </span>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 mt-3 tracking-tight">
-                  {data.headline}
-                </h3>
-                <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 italic">
-                  "{data.quote}"
-                </p>
+                return (
+                  <div
+                    key={key}
+                    data-stakeholder-card={key}
+                    className={`w-full min-w-full shrink-0 snap-start bg-white rounded-3xl p-6 sm:p-8 md:p-10 border transition-all duration-300 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center ${
+                      isActive 
+                        ? "border-teal-200 shadow-xl ring-1 ring-teal-100" 
+                        : "border-slate-200 shadow-sm opacity-90"
+                    }`}
+                  >
+                    {/* Left Column: Role Details */}
+                    <div className="lg:col-span-7">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                          {data.badge}
+                        </span>
+                        <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                          {data.role}
+                        </span>
+                      </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-                  {data.points.map((pt, i) => (
-                    <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800">
-                      <CheckCircle size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                      <span>{pt}</span>
+                      <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 mt-3 tracking-tight">
+                        {data.headline}
+                      </h3>
+
+                      <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 italic">
+                        "{data.quote}"
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                        {data.points.map((pt, i) => (
+                          <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800">
+                            <CheckCircle size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                            <span>{pt}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <div className="lg:col-span-5 bg-[#071324] text-white rounded-2xl p-6 sm:p-7 flex flex-col justify-between shadow-xl border border-slate-800">
-                <div className="border-b border-slate-800 pb-3 mb-6">
-                  <span className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">Target Performance Metrics</span>
-                  <div className="text-sm font-black text-white mt-1">{data.role} Dashboard</div>
-                </div>
+                    {/* Right Column: Dark Dashboard KPIs */}
+                    <div className="lg:col-span-5 bg-[#071324] text-white rounded-2xl p-6 sm:p-7 flex flex-col justify-between shadow-xl border border-slate-800">
+                      <div className="border-b border-slate-800 pb-3 mb-6 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">Target Performance Metrics</span>
+                          <div className="text-sm font-black text-white mt-1">{data.role} Dashboard</div>
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+                      </div>
 
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-8 text-center">
-                  {data.metrics.map((m, idx) => (
-                    <div key={idx} className="bg-slate-900/90 p-2.5 sm:p-3 rounded-xl border border-slate-800">
-                      <div className="text-base sm:text-lg font-black text-teal-400">{m.val}</div>
-                      <div className="text-[9px] text-slate-400 font-bold uppercase mt-1 leading-tight">{m.label}</div>
+                      <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-8 text-center">
+                        {data.metrics.map((m, idx) => (
+                          <div key={idx} className="bg-slate-900/90 p-2.5 sm:p-3 rounded-xl border border-slate-800">
+                            <div className="text-base sm:text-lg font-black text-teal-400">{m.val}</div>
+                            <div className="text-[9px] text-slate-400 font-bold uppercase mt-1 leading-tight">{m.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setIsContactModalOpen(true)}
+                        className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      >
+                        <span>Schedule Tailored Walkthrough</span>
+                        <ArrowRight size={14} />
+                      </button>
                     </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setIsContactModalOpen(true)}
-                  className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                >
-                  <span>Schedule Tailored Walkthrough</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-
+                  </div>
+                );
+              })}
             </div>
-          );
-        })()}
+
+          </div>
 
       </div>
     </section>

@@ -29,18 +29,18 @@ export default function Footer() {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={54} 
-              height={54} 
+              width={80} 
+              height={80} 
               className="object-contain filter brightness-0 invert group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "46px" }}
+              style={{ width: "auto", height: "70px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={185} 
-              height={44} 
+              width={250} 
+              height={60} 
               className="object-contain filter brightness-0 invert group-hover:opacity-90 transition-opacity"
-              style={{ width: "auto", height: "36px" }}
+              style={{ width: "auto", height: "55px" }}
             />
           </Link>
           <p className="text-xs text-slate-400 leading-relaxed mt-1 font-medium">
@@ -93,28 +93,28 @@ export default function Footer() {
           </h4>
           <ul className="mt-4 flex flex-col gap-3 text-xs text-slate-400 font-semibold">
             <li>
-              <Link href="/public/search" className="hover:text-white transition-colors">
-                Commercial Office Search
+              <Link href="/discover" className="hover:text-white transition-colors">
+                Commercial Office Discovery
               </Link>
             </li>
             <li>
-              <Link href="/public/wizard" className="hover:text-white transition-colors">
-                Requirement Submission
+              <Link href="/fm-marketplace" className="hover:text-white transition-colors">
+                FM Services Marketplace
               </Link>
             </li>
             <li>
-              <Link href="/marketplace" className="hover:text-white transition-colors">
-                FM Vendor Directory
+              <Link href="/operations" className="hover:text-white transition-colors">
+                Facility Operations SaaS
               </Link>
             </li>
             <li>
-              <Link href="/tenant" className="hover:text-white transition-colors">
-                Tenant Self-Service Portal
+              <Link href="/managed-services" className="hover:text-white transition-colors">
+                Managed Workspace Services
               </Link>
             </li>
             <li>
-              <Link href="/ops" className="hover:text-white transition-colors">
-                Facility Manager Console
+              <Link href="/intelligence" className="hover:text-white transition-colors">
+                Portfolio AI &amp; Intelligence
               </Link>
             </li>
           </ul>
