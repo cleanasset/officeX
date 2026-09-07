@@ -11,6 +11,7 @@ import FAQAccordion from "@/components/marketing/FAQAccordion";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import {
   Wrench, Calendar, LifeBuoy, Activity,
   Users, Bookmark, Smartphone, Send
@@ -21,6 +22,9 @@ export default function OperatePage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/operate" />
+
       {/* Hero Section */}
       <HeroSection
         badge="MODULE 02 — OPERATE"

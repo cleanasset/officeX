@@ -11,6 +11,7 @@ import FAQAccordion from "@/components/marketing/FAQAccordion";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import {
   Building2, Wrench, FileSpreadsheet, Cpu,
   ClipboardCheck, Radar, ShieldCheck, Briefcase
@@ -21,6 +22,9 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/marketplace" />
+
       {/* Hero Section */}
       <HeroSection
         badge="MODULE 01 — MARKETPLACE"

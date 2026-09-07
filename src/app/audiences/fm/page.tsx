@@ -6,49 +6,18 @@ import Image from "next/image";
 import HeroSection from "@/components/marketing/HeroSection";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import UserLandingBanner from "@/components/UserLandingBanner";
-import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
-import { Wrench, Calendar, LifeBuoy, ArrowRight } from "lucide-react";
+import { Wrench, Calendar, LifeBuoy, Activity, ShieldCheck, ArrowRight } from "lucide-react";
 
 export default function FacilityManagersJourney() {
   const [slideInOpen, setSlideInOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/logo-removebg-preview.png"
-            alt="OfficeX Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-            style={{ width: "auto", height: "42px" }}
-          />
-          <Image
-            src="/name-removebg-preview.png"
-            alt="OfficeX"
-            width={160}
-            height={36}
-            className="object-contain"
-            style={{ width: "auto", height: "30px" }}
-          />
-        </Link>
-        <div className="flex items-center gap-4 text-xs font-bold">
-          <Link href="/operate" className="text-gray-600 hover:text-[#2563EB]">
-            Operate CAFM
-          </Link>
-          <HeaderAuthButton />
-          <button
-            type="button"
-            onClick={() => setSlideInOpen(true)}
-            className="px-4 py-2 rounded-xl bg-[#2563EB] text-white font-extrabold hover:bg-blue-700 transition-all cursor-pointer"
-          >
-            Talk to Sales
-          </button>
-        </div>
-      </header>
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/audiences/fm" />
 
       {/* Post-Login Welcome & Subscription Status Banner */}
       <UserLandingBanner

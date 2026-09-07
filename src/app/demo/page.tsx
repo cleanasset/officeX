@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import EnquiryForm from "@/components/marketing/EnquiryForm";
-import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import { Calendar, CheckCircle, ShieldCheck, Sparkles, Building2, Users } from "lucide-react";
 
@@ -13,36 +13,8 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 font-sans flex flex-col justify-between">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/logo-removebg-preview.png"
-            alt="OfficeX Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-            style={{ width: "auto", height: "42px" }}
-          />
-          <Image
-            src="/name-removebg-preview.png"
-            alt="OfficeX"
-            width={160}
-            height={36}
-            className="object-contain"
-            style={{ width: "auto", height: "30px" }}
-          />
-        </Link>
-        <div className="flex items-center gap-4 text-xs font-bold">
-          <HeaderAuthButton />
-          <Link
-            href="/contact"
-            className="px-4 py-2 rounded-xl bg-[#071324] text-white font-extrabold hover:bg-slate-800 transition-all"
-          >
-            Contact Sales
-          </Link>
-        </div>
-      </header>
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/demo" />
 
       {/* Main Container */}
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">

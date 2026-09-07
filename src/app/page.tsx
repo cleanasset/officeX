@@ -183,7 +183,7 @@ export default function LandingPage() {
   ];
 
   // Stakeholder Solutions State & Data
-  const [activeStakeholder, setActiveStakeholder] = useState<"owner" | "occupier" | "fm" | "vendor" | "investor">("owner");
+  const [activeStakeholder, setActiveStakeholder] = useState<"owner" | "occupier" | "fm" | "vendor" | "investor" | "it">("owner");
 
   const stakeholderData = {
     owner: {
@@ -270,6 +270,23 @@ export default function LandingPage() {
         "Zero discrepancy between executed lease terms and actual billing",
         "Automated quarterly investor reporting packs and asset benchmarks"
       ]
+    },
+    it: {
+      role: "IT & Workplace Tech",
+      headline: "Enterprise APIs, Touchless Access & Scalable IoT Infrastructure",
+      quote: "Connect BMS telemetry, digital access credentials, and tenant apps on an institutional security foundation.",
+      badge: "Workplace Technology",
+      metrics: [
+        { label: "API Latency", val: "<45ms" },
+        { label: "Uptime SLA", val: "99.95%" },
+        { label: "Security Level", val: "SOC 2" },
+      ],
+      points: [
+        "SAML 2.0 & Okta SSO integration with automated directory syncing",
+        "Standardized BACnet/IP, Modbus TCP, and MQTT BMS telemetry connectors",
+        "Instant QR mobile visitor passes and NFC gate access provisioning",
+        "Complete compliance with India's DPDP Act 2023 and ISO 27001 standards"
+      ]
     }
   };
 
@@ -277,12 +294,12 @@ export default function LandingPage() {
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const isProgrammaticScrollRef = useRef(false);
 
-  const stakeholderKeys: ("owner" | "occupier" | "fm" | "vendor" | "investor")[] = [
-    "owner", "occupier", "fm", "vendor", "investor"
+  const stakeholderKeys: ("owner" | "occupier" | "fm" | "vendor" | "investor" | "it")[] = [
+    "owner", "occupier", "fm", "vendor", "investor", "it"
   ];
 
   // Handler to smoothly scroll the horizontal carousel track to a stakeholder card (never scrolls window)
-  const scrollToStakeholder = (key: "owner" | "occupier" | "fm" | "vendor" | "investor") => {
+  const scrollToStakeholder = (key: "owner" | "occupier" | "fm" | "vendor" | "investor" | "it") => {
     setActiveStakeholder(key);
 
     if (carouselTrackRef.current) {
@@ -1078,152 +1095,161 @@ export default function LandingPage() {
       <TrustStrip />
       <div ref={heroSentinelRef} className="h-1 w-full pointer-events-none" />
 
-      {/* SECTION 02: THE OFFICEX ECOSYSTEM — EVERYTHING CONNECTED */}
-      <section id="ecosystem" className="py-16 md:py-24 bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+      {/* SECTION 02: THE OFFICEX ECOSYSTEM */}
+      <section 
+        id="ecosystem" 
+        onClick={() => router.push('/login')}
+        className="py-16 md:py-20 bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden cursor-pointer select-none"
+      >
         <div className="max-w-7xl mx-auto w-full">
           {/* Header */}
-          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1.5 rounded-full border border-teal-100">
+          <div className="text-center mb-10 md:mb-12 flex flex-col items-center">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#0F8B7D] text-xs font-black uppercase tracking-widest mb-3 shadow-xs">
+              <Sparkles size={14} className="text-[#0F8B7D]" />
+              <span>Powered by OFFICEX CORE</span>
+            </div>
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#0F8B7D]">
               THE OFFICEX ECOSYSTEM
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
-              THE OFFICEX ECOSYSTEM — EVERYTHING CONNECTED.
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mt-2">
+              Everything you need. All connected.
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-2.5 font-medium">
-              One unified data foundation connecting five specialized modules across the commercial real estate lifecycle.
+            <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 max-w-xl mx-auto">
+              Click anywhere to sign in and access your workspace across all 5 integrated modules.
             </p>
           </div>
 
-          {/* Horizontal Ecosystem Flow Architecture */}
-          <div className="mb-14 bg-[#071324] text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-              <Link href="/marketplace" className="p-3.5 rounded-xl bg-teal-950/70 border border-teal-600/50 hover:border-teal-400 transition-all group">
-                <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 block">DISCOVER</span>
-                <span className="text-xs font-black text-white mt-1 block group-hover:text-teal-300">Marketplace</span>
-              </Link>
-              <Link href="/operate" className="p-3.5 rounded-xl bg-blue-950/70 border border-blue-600/50 hover:border-blue-400 transition-all group">
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block">RUN</span>
-                <span className="text-xs font-black text-white mt-1 block group-hover:text-blue-300">Operate</span>
-              </Link>
-              <Link href="/manage" className="p-3.5 rounded-xl bg-amber-950/70 border border-amber-600/50 hover:border-amber-400 transition-all group">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">TRACK</span>
-                <span className="text-xs font-black text-white mt-1 block group-hover:text-amber-300">Manage</span>
-              </Link>
-              <Link href="/intelligence" className="p-3.5 rounded-xl bg-purple-950/70 border border-purple-600/50 hover:border-purple-400 transition-all group">
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 block">DECIDE</span>
-                <span className="text-xs font-black text-white mt-1 block group-hover:text-purple-300">Intelligence</span>
-              </Link>
-              <Link href="/managed-services" className="p-3.5 rounded-xl bg-emerald-950/70 border border-emerald-600/50 hover:border-emerald-400 transition-all col-span-2 sm:col-span-1 group">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">OUTSOURCE</span>
-                <span className="text-xs font-black text-white mt-1 block group-hover:text-emerald-300">Managed Services</span>
-              </Link>
-            </div>
+          {/* 5 Vertical Colored Cards matching reference */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
+            {[
+              {
+                id: "property",
+                title: "Property Marketplace",
+                desc: "Discover, buy, lease, or monetize commercial spaces.",
+                image: "/images/card_prop_hd.jpg",
+                bgColor: "bg-[#00A86B]",
+                arrowColor: "text-[#00A86B]",
+                href: "/login",
+                iconType: "arrow",
+              },
+              {
+                id: "fm",
+                title: "FM Marketplace",
+                desc: "Find and engage certified facility service providers.",
+                image: "/images/card_fm_hd.jpg",
+                bgColor: "bg-[#F26522]",
+                arrowColor: "text-[#F26522]",
+                href: "/login",
+                iconType: "arrow",
+              },
+              {
+                id: "saas",
+                title: "OFFICEX PRO\n(SaaS Platform)",
+                desc: "Manage your entire property and workplace operations.",
+                image: "/images/card_saas_hd.jpg",
+                bgColor: "bg-[#0F8B7D]",
+                arrowColor: "text-[#0F8B7D]",
+                href: "/login",
+                iconType: "arrow",
+              },
+              {
+                id: "managed",
+                title: "Managed Services",
+                desc: "End-to-end property and facility management solutions.",
+                image: "/images/card_managed_hd.jpg",
+                bgColor: "bg-[#7C3AED]",
+                arrowColor: "text-[#7C3AED]",
+                href: "/login",
+                iconType: "arrow",
+              },
+              {
+                id: "intelligence",
+                title: "OFFICEX Intelligence",
+                desc: "Actionable insights, analytics, and predictions.",
+                image: "/images/card_ai_hd.jpg",
+                bgColor: "bg-[#DB2777]",
+                arrowColor: "text-[#DB2777]",
+                href: "/login",
+                iconType: "sparkle",
+              },
+            ].map((card) => (
+              <div
+                key={card.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push("/login");
+                }}
+                className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100"
+              >
+                {/* Top Half: Photo */}
+                <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
+                  <Image
+                    src={card.image}
+                    alt={card.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, 20vw"
+                  />
+                </div>
 
-            <div className="my-4 flex items-center justify-center gap-2 text-slate-500 font-mono text-[11px]">
-              <span>↓↓↓ Bi-directional Real-Time Event Stream &amp; Data Pipeline ↓↓↓</span>
-            </div>
+                {/* Bottom Half: Solid Vibrant Color Box */}
+                <div className={`${card.bgColor} p-5 flex flex-col justify-between flex-1 min-h-[170px]`}>
+                  <div>
+                    <h3 className="text-base font-extrabold text-white leading-snug whitespace-pre-line mb-2">
+                      {card.title}
+                    </h3>
+                    <p className="text-xs text-white/90 font-medium leading-relaxed">
+                      {card.desc}
+                    </p>
+                  </div>
 
-            <Link href="/platform" className="block p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all text-center group">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] block">
-                ══════ PLATFORM CORE FOUNDATION ══════
-              </span>
-              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-300 font-semibold mt-2">
-                <span>Identity &amp; RBAC</span>
-                <span>•</span>
-                <span>Razorpay Escrow</span>
-                <span>•</span>
-                <span>Unified Data Core</span>
-                <span>•</span>
-                <span>APIs &amp; Webhooks</span>
-                <span>•</span>
-                <span>DPDP Act 2023</span>
-                <span>•</span>
-                <span>Enterprise SLAs</span>
+                  {/* Bottom Action Circle */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-white/90 group-hover:text-white uppercase tracking-wider">
+                      Sign In &rarr;
+                    </span>
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
+                      {card.iconType === "sparkle" ? (
+                        <Sparkles size={16} className={card.arrowColor} />
+                      ) : (
+                        <ArrowRight size={16} className={card.arrowColor} />
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </Link>
+            ))}
           </div>
 
-          {/* 3+2 Grid of Module Cards */}
-          <div className="space-y-6">
-            {/* Top Row: 3 Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <ModuleCard
-                moduleName="Marketplace"
-                accentColor="#0F8B7D"
-                outcome="Discover"
-                tagline="Find verified commercial space and procure vetted FM services with escrow milestone protection."
-                benefits={[
-                  "Verified vendor directory with ratings & SLA scores",
-                  "Structured RFQ with side-by-side vendor comparison",
-                  "Escrow-protected milestone payments via Razorpay"
-                ]}
-                ctaHref="/marketplace"
-                audienceTag="For: Building Owners, Asset Managers, Occupiers"
-                icon={Store}
-              />
-
-              <ModuleCard
-                moduleName="Operate"
-                accentColor="#2563EB"
-                outcome="Run"
-                tagline="52-week PPM, real-time SLA tracking, and a helpdesk your tenants will actually use."
-                benefits={[
-                  "52-week PPM calendar auto-generated for all MEP assets",
-                  "Real-time SLA tracking with escalation workflows",
-                  "Tenant helpdesk with priority matrix & QR codes"
-                ]}
-                ctaHref="/operate"
-                audienceTag="For: Facility Managers, MEP Engineers, Shift Techs"
-                icon={Wrench}
-              />
-
-              <ModuleCard
-                moduleName="Manage"
-                accentColor="#D97706"
-                outcome="Track"
-                tagline="Automate rent roll, track statutory compliance, and never miss a renewal again."
-                benefits={[
-                  "Automated rent roll & CAM billing with Razorpay integration",
-                  "Statutory compliance tracker with 90/60/30-day alerts",
-                  "Auto-generated MIS reports delivered monthly"
-                ]}
-                ctaHref="/manage"
-                audienceTag="For: Property Owners, Asset Managers, Finance Heads"
-                icon={FileText}
-              />
+          {/* OFFICEX CORE Foundation Strip */}
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push('/login');
+            }}
+            className="mt-6 md:mt-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-50/90 via-slate-50 to-teal-50/90 border border-teal-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#0F8B7D] hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-10 h-10 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <span className="text-[11px] font-black text-[#0F8B7D] uppercase tracking-widest">
+                    POWERED BY OFFICEX CORE
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-[#0F8B7D]">
+                    One Connected Foundation
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                  Identity &amp; Access · Billing &amp; Payments · Document Vault · Audit &amp; Compliance · Integration Engine
+                </p>
+              </div>
             </div>
-
-            {/* Bottom Row: 2 Cards Centered */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              <ModuleCard
-                moduleName="Intelligence"
-                accentColor="#7C3AED"
-                outcome="Decide"
-                tagline="Turn operational and utility data into institutional intelligence and ESG reporting."
-                benefits={[
-                  "Portfolio NOI, WALE, and occupancy analytics in real time",
-                  "Energy & ESG dashboards with peer benchmarking",
-                  "Custom report builder with automated scheduled delivery"
-                ]}
-                ctaHref="/intelligence"
-                audienceTag="For: REITs, Institutional Investors, ESG Directors"
-                icon={Brain}
-              />
-
-              <ModuleCard
-                moduleName="Managed Services"
-                accentColor="#059669"
-                outcome="Outsource"
-                tagline="On-ground Property and Facility Management with digital tracking and SLA accountability."
-                benefits={[
-                  "SLA-backed on-ground property & facility management",
-                  "Auto-generated monthly MIS delivered to owner",
-                  "Statutory compliance renewals managed by OfficeX team"
-                ]}
-                ctaHref="/managed-services"
-                audienceTag="For: Absentee Landlords, Developers, Family Offices"
-                icon={Handshake}
-              />
+            <div className="flex items-center gap-2 text-xs font-black text-[#0F8B7D] group-hover:translate-x-1 transition-transform shrink-0">
+              <span>Sign In to Access Ecosystem</span>
+              <ArrowRight size={14} />
             </div>
           </div>
         </div>
@@ -1327,7 +1353,9 @@ export default function LandingPage() {
                   ? "Facility Mgrs"
                   : key === "vendor"
                   ? "Vendors"
-                  : "Investors";
+                  : key === "investor"
+                  ? "Investors"
+                  : "IT & Tech";
               const isActive = activeStakeholder === key;
 
               return (
@@ -1665,10 +1693,37 @@ export default function LandingPage() {
     <section id="outcomes" className="py-16 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto w-full">
         {/* Title — Exact match to screenshot */}
-        <div className="text-center mb-10 md:mb-14">
+        <div className="text-center mb-8 md:mb-10">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
             Real Outcomes. Measurable Impact.
           </h2>
+        </div>
+
+        {/* Enterprise Logos Row — Used by teams managing portfolios at */}
+        <div className="mb-12 text-center">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Used by teams managing portfolios at:
+          </span>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 opacity-80 transition-all">
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D]"></span> PRESTIGE GROUP
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> EMBASSY SERVICES
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-900"></span> BROOKFIELD
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span> RMZ CORP
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> DLF COMMERCIAL
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span> MINDSPACE REIT
+            </div>
+          </div>
         </div>
 
         {/* 5 KPI Stat Metrics — Exact Match to User Screenshot */}

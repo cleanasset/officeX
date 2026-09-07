@@ -11,6 +11,7 @@ import FAQAccordion from "@/components/marketing/FAQAccordion";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import {
   LineChart, Zap, FileSpreadsheet, Bot,
   Activity, LayoutGrid, Award, Info
@@ -21,6 +22,9 @@ export default function IntelligencePage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/intelligence" />
+
       {/* Phase 2 Transparency Banner */}
       <div className="bg-purple-50 border-b border-purple-200 py-2.5 px-4 text-center text-xs text-purple-900 font-medium">
         <span className="inline-flex items-center gap-1.5 font-bold">

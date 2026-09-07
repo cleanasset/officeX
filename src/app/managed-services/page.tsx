@@ -11,6 +11,7 @@ import FAQAccordion from "@/components/marketing/FAQAccordion";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import {
   Building2, ShieldCheck, FileCheck, CheckCircle2,
   TrendingUp, Users, Scale
@@ -21,6 +22,9 @@ export default function ManagedServicesPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/managed-services" />
+
       {/* Hero Section */}
       <HeroSection
         badge="MODULE 05 — MANAGED SERVICES"

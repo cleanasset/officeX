@@ -9,7 +9,7 @@ import HeroSection from "@/components/marketing/HeroSection";
 import FAQAccordion from "@/components/marketing/FAQAccordion";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import EnquiryForm from "@/components/marketing/EnquiryForm";
-import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 
 export default function PricingPage() {
@@ -38,43 +38,8 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
-      {/* Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/logo-removebg-preview.png"
-            alt="OfficeX Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-            style={{ width: "auto", height: "42px" }}
-          />
-          <Image
-            src="/name-removebg-preview.png"
-            alt="OfficeX"
-            width={160}
-            height={36}
-            className="object-contain"
-            style={{ width: "auto", height: "30px" }}
-          />
-        </Link>
-        <div className="flex items-center gap-4 text-xs font-bold">
-          <Link href="/marketplace" className="text-gray-600 hover:text-[#0F8B7D]">
-            Solutions
-          </Link>
-          <Link href="/platform" className="text-gray-600 hover:text-[#0F8B7D]">
-            Platform
-          </Link>
-          <HeaderAuthButton />
-          <button
-            type="button"
-            onClick={() => setSlideInOpen(true)}
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-extrabold hover:bg-[#0c7368] transition-all cursor-pointer"
-          >
-            Talk to Sales
-          </button>
-        </div>
-      </header>
+      {/* Universal Sticky Marketing Header */}
+      <MarketingHeader activePath="/pricing" />
 
       {/* Hero */}
       <HeroSection

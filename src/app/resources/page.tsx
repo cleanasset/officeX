@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Footer from "@/components/Footer";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
 import { BookOpen, FileText, Download, ArrowRight, Sparkles, Building } from "lucide-react";
 
 export default function ResourcesPage() {
@@ -13,82 +14,49 @@ export default function ResourcesPage() {
       title: "India Commercial Real Estate & FM Benchmark 2026",
       desc: "An in-depth analysis of Grade-A office leasing trends, CAM inflation, and digital procurement adoption across top 6 Indian metros.",
       readTime: "12 min read",
-      href: "#"
+      href: "/resources/india-cre-fm-benchmark-2026"
     },
     {
       category: "Playbook",
       title: "The Ultimate 52-Week PPM Guide for Commercial Buildings",
       desc: "Step-by-step preventative maintenance schedules for chillers, DG sets, transformers, and fire suppression systems.",
       readTime: "8 min read",
-      href: "#"
+      href: "/resources/52-week-ppm-guide-commercial-buildings"
     },
     {
       category: "Case Study",
       title: "Prestige Meridian: 18% OpEx Reduction via Escrow Procurement",
       desc: "How a 450,000 sq.ft. commercial park replaced manual vendor WhatsApp groups with structured RFQs and saved ₹32 Lakhs.",
       readTime: "6 min read",
-      href: "#"
+      href: "/resources/prestige-meridian-case-study"
     },
     {
       category: "Compliance",
       title: "Indian Commercial Real Estate Statutory Compliance Checklist",
       desc: "40 mandatory clearances: Fire NOC, Lift Licenses, State Pollution Control Board, and DPDP Act 2023 readiness.",
       readTime: "10 min read",
-      href: "#"
+      href: "/resources/commercial-real-estate-compliance-checklist"
     },
     {
       category: "Whitepaper",
       title: "ESG & SEBI BRSR Core for Asset Managers",
       desc: "A practical framework for institutional landlords to capture and audit Scope 1 & 2 emissions from multi-tenant commercial towers.",
       readTime: "15 min read",
-      href: "#"
+      href: "/resources/esg-sebi-brsr-core-asset-managers"
     },
     {
       category: "Technology",
       title: "CAFM vs ERP: Why Commercial Landlords Need Specialized Tech",
       desc: "Why generic accounting ERPs fail at facility maintenance, SLA enforcement, and tenant satisfaction.",
       readTime: "7 min read",
-      href: "#"
+      href: "/resources/cafm-vs-erp-commercial-landlords"
     }
   ];
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans flex flex-col justify-between">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/logo-removebg-preview.png"
-            alt="OfficeX Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-            style={{ width: "auto", height: "42px" }}
-          />
-          <Image
-            src="/name-removebg-preview.png"
-            alt="OfficeX"
-            width={160}
-            height={36}
-            className="object-contain"
-            style={{ width: "auto", height: "30px" }}
-          />
-        </Link>
-        <div className="flex items-center gap-4 text-xs font-bold">
-          <Link href="/marketplace" className="text-gray-600 hover:text-[#0F8B7D]">
-            Solutions
-          </Link>
-          <Link href="/contact" className="text-gray-700 hover:text-[#0F8B7D]">
-            Contact
-          </Link>
-          <Link
-            href="/demo"
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-extrabold hover:bg-[#0c7368] transition-all"
-          >
-            Book a Demo
-          </Link>
-        </div>
-      </header>
+      {/* Universal Marketing Header */}
+      <MarketingHeader activePath="/resources" />
 
       {/* Main Content */}
       <main className="flex-1 py-16 px-4 sm:px-6">
