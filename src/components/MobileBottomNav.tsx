@@ -64,30 +64,43 @@ const roleBottomTabs: Record<string, NavItem[]> = {
     { label: "MIS", href: "/reporting/mis", icon: DollarSign },
     { label: "ESG", href: "/reporting/esg", icon: Sparkles },
     { label: "AI Insights", href: "/reporting/ai", icon: Cpu }
+  ],
+  public: [
+    { label: "Search", href: "/public/search", icon: Building },
+    { label: "Offices", href: "/marketplace", icon: Layers },
+    { label: "FM", href: "/fm-marketplace", icon: Truck },
+    { label: "Login", href: "/login", icon: Users }
   ]
 };
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const [activePortal, setActivePortal] = useState<string>("properties");
+  const [selectedPortal, setSelectedPortal] = useState<string>("properties");
+
+  const matched = Object.keys(roleBottomTabs).find(key => 
+    pathname === `/${key}` || pathname.startsWith(`/${key}/`)
+  );
+  const activePortal = matched || selectedPortal || "properties";
 
   useEffect(() => {
-    const matched = Object.keys(roleBottomTabs).find(key => 
-      pathname === `/${key}` || pathname.startsWith(`/${key}/`)
-    );
     if (matched) {
-      setActivePortal(matched);
+      setSelectedPortal(matched);
+      try {
+        localStorage.setItem("officex_active_portal", matched);
+      } catch (e) {
+        // ignore
+      }
     } else {
       try {
         const saved = localStorage.getItem("officex_active_portal");
         if (saved && roleBottomTabs[saved]) {
-          setActivePortal(saved);
+          setSelectedPortal(saved);
         }
       } catch (e) {
         // ignore
       }
     }
-  }, [pathname]);
+  }, [pathname, matched]);
 
   const tabs = roleBottomTabs[activePortal] || roleBottomTabs.properties;
 

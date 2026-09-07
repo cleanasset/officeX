@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { Download, Lock, CheckCircle, Shield, ArrowRight, MoreVertical } from "lucide-react";
+import { Download, Lock, CheckCircle, Shield, ArrowRight, MoreVertical, DollarSign } from "lucide-react";
 
 export default function PaymentsAndEscrowLedger() {
   const [selectedMonth, setSelectedMonth] = useState("This Month");
@@ -12,10 +12,10 @@ export default function PaymentsAndEscrowLedger() {
   };
 
   const kpis = [
-    { label: "ESCROW HELD", value: "₹6.5L", icon: <Lock size={16} className="text-blue-500" /> },
-    { label: "RELEASED", value: "₹18.2L", icon: <CheckCircle size={16} className="text-emerald-500" />, valColor: "text-emerald-700" },
-    { label: "COMMISSION EARNED", value: "₹2.4L", icon: <Shield size={16} className="text-teal-500" />, valColor: "text-[#0F8B7D]" },
-    { label: "PENDING VERIFICATION", value: "3", icon: "📋" }
+    { label: "MARKETPLACE GTV (Q3 2026 YTD)", value: "₹28.5L", icon: <DollarSign size={16} className="text-[#0F8B7D]" /> },
+    { label: "ESCROW CURRENTLY HELD", value: "₹6.5L", icon: <Lock size={16} className="text-blue-500" /> },
+    { label: "RELEASED TO VENDORS (90%)", value: "₹18.2L", icon: <CheckCircle size={16} className="text-emerald-500" />, valColor: "text-emerald-700" },
+    { label: "OFFICEX COMMISSION EARNED (10%)", value: "₹2.85L", icon: <Shield size={16} className="text-teal-500" />, valColor: "text-[#0F8B7D]" }
   ];
 
   const initialTransactions = [

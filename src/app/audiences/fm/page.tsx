@@ -36,10 +36,10 @@ export default function FacilityManagersJourney() {
           href: "/signup"
         }}
         secondaryCta={{
-          label: "Request CAFM Demo",
+          label: "Schedule a Call",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         visualPlaceholderTitle="FM OPERATIONS CONSOLE"
         visualMetrics={[
           { label: "PPM Completion", value: "99.4%" },
@@ -58,25 +58,25 @@ export default function FacilityManagersJourney() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <span className="text-2xl font-mono font-black text-[#2563EB]">01</span>
+              <span className="text-2xl font-mono font-black text-[#0F8B7D]">01</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Asset QR Tagging &amp; 52-Week PPM</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
                 Scan asset QRs on-ground and execute step-by-step manufacturer maintenance checklists with <strong>Operate</strong>.
               </p>
-              <Link href="/operate" className="text-xs font-bold text-[#2563EB] mt-4 inline-flex items-center gap-1 hover:underline">
+              <Link href="/operate" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:underline">
                 <span>Explore Operate CAFM</span>
                 <ArrowRight size={13} />
               </Link>
             </div>
 
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <span className="text-2xl font-mono font-black text-[#0F8B7D]">02</span>
+              <span className="text-2xl font-mono font-black text-[#F26522]">02</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Emergency Contractor Dispatch</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Source specialized chiller, elevator, or fire safety contractors on <strong>Marketplace</strong> with verified SLA ratings and BOQs.
+                Source specialized chiller, elevator, or fire safety contractors on <strong>FM Marketplace</strong> with verified SLA ratings and BOQs.
               </p>
-              <Link href="/marketplace" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:underline">
-                <span>Explore Marketplace</span>
+              <Link href="/fm-marketplace" className="text-xs font-bold text-[#F26522] mt-4 inline-flex items-center gap-1 hover:underline">
+                <span>Explore FM Marketplace</span>
                 <ArrowRight size={13} />
               </Link>
             </div>
@@ -107,7 +107,7 @@ export default function FacilityManagersJourney() {
           label: "Talk to FM Lead",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
       />
 
       <EnquirySlideIn

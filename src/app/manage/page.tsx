@@ -29,7 +29,7 @@ export default function ManagePage() {
       <HeroSection
         badge="MODULE 03 — MANAGE"
         headline="The Property Management Platform for Indian Commercial Real Estate"
-        subheadline="Automate rent roll, track compliance, and never miss a renewal again."
+        subheadline="Automate rent roll, CAM billing, compliance tracking, and MIS reporting — never miss a renewal again."
         description="Eliminate spreadsheet chaos and compliance vulnerabilities. Digitize lease agreements, automate CAM billing, track statutory NOC renewals, and generate board-ready MIS reports in minutes."
         primaryCta={{
           label: "Start Free Trial",

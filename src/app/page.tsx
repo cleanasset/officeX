@@ -69,6 +69,7 @@ import EnquiryForm from "@/components/marketing/EnquiryForm";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import AudienceTile from "@/components/marketing/AudienceTile";
 import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
+import MarketplaceDualShowcase from "@/components/marketing/MarketplaceDualShowcase";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -78,7 +79,6 @@ export default function LandingPage() {
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
   const [isEnquirySlideInOpen, setIsEnquirySlideInOpen] = useState(false);
   const [enquiryPrefill, setEnquiryPrefill] = useState<{ audience?: string; modules?: string[] } | undefined>(undefined);
-  const [pricingView, setPricingView] = useState<"tiers" | "matrix">("tiers");
 
   const openEnquiry = (prefill?: { audience?: string; modules?: string[] }) => {
     setEnquiryPrefill(prefill);
@@ -191,6 +191,9 @@ export default function LandingPage() {
       headline: "Maximize Portfolio Yields & Protect Net Operating Income",
       quote: "Gain real-time visibility across rent roll, occupancy risk, and operating expenditure from a single dashboard.",
       badge: "Yield & Asset Optimization",
+      landingHref: "/audiences/owners",
+      portalHref: "/properties",
+      portalName: "Owner Portal",
       metrics: [
         { label: "Portfolio Occupancy", val: "91.6%" },
         { label: "Tracked Rent Roll", val: "₹12.4 Cr/mo" },
@@ -208,6 +211,9 @@ export default function LandingPage() {
       headline: "Empower Your Employees with Frictionless Workplace Operations",
       quote: "Self-service service requests, instant touchless visitor registration, and real-time billing clarity.",
       badge: "Tenant Experience",
+      landingHref: "/audiences/occupiers",
+      portalHref: "/tenant",
+      portalName: "Tenant Workplace",
       metrics: [
         { label: "Avg Request Resolution", val: "2.4 hrs" },
         { label: "App Adoption", val: "94%" },
@@ -225,6 +231,9 @@ export default function LandingPage() {
       headline: "Automate 52-Week Maintenance & Enforce Strict Vendor SLAs",
       quote: "Replace WhatsApp chaos and paper logs with digital asset passports, automated PPM, and instant escalations.",
       badge: "Operational Control",
+      landingHref: "/audiences/fm",
+      portalHref: "/ops",
+      portalName: "Facility Ops Console",
       metrics: [
         { label: "SLA Adherence", val: "96.2%" },
         { label: "PPM Completion", val: "98.5%" },
@@ -242,6 +251,9 @@ export default function LandingPage() {
       headline: "Win Grade-A Contracts & Enjoy Guaranteed Escrow Payouts",
       quote: "Direct access to high-value commercial RFQs with milestone payments locked in RBI-regulated escrow accounts.",
       badge: "Vendor Empowerment",
+      landingHref: "/audiences/vendors",
+      portalHref: "/vendor",
+      portalName: "Vendor Partner Desk",
       metrics: [
         { label: "Escrow Protection", val: "100%" },
         { label: "Avg Payout Speed", val: "24 hrs" },
@@ -259,6 +271,9 @@ export default function LandingPage() {
       headline: "Audit-Ready Data, Institutional Governance & Verifiable Returns",
       quote: "Standardized property metrics, audited compliance trails, and verified lease cash flows for diligence.",
       badge: "Institutional Trust",
+      landingHref: "/audiences/investors",
+      portalHref: "/leasing",
+      portalName: "Leasing & Investor CRM",
       metrics: [
         { label: "WALE Visibility", val: "4.8 yrs" },
         { label: "Statutory Compliance", val: "94%" },
@@ -276,6 +291,9 @@ export default function LandingPage() {
       headline: "Enterprise APIs, Touchless Access & Scalable IoT Infrastructure",
       quote: "Connect BMS telemetry, digital access credentials, and tenant apps on an institutional security foundation.",
       badge: "Workplace Technology",
+      landingHref: "/audiences/it",
+      portalHref: "/admin",
+      portalName: "Admin Command",
       metrics: [
         { label: "API Latency", val: "<45ms" },
         { label: "Uptime SLA", val: "99.95%" },
@@ -285,7 +303,7 @@ export default function LandingPage() {
         "SAML 2.0 & Okta SSO integration with automated directory syncing",
         "Standardized BACnet/IP, Modbus TCP, and MQTT BMS telemetry connectors",
         "Instant QR mobile visitor passes and NFC gate access provisioning",
-        "Complete compliance with India's DPDP Act 2023 and ISO 27001 standards"
+        "Complete compliance with SOC 2, GDPR, ISO 27001, and enterprise security standards"
       ]
     }
   };
@@ -396,38 +414,15 @@ export default function LandingPage() {
   };
 
   const handleLandingSearch = () => {
-    // Check if user is already logged in
-    const email = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : null;
-    const sub = typeof window !== "undefined" ? localStorage.getItem("officex_subscription") : null;
-
-    if (!email) {
-      // Unauthenticated: Lead to Login page per requirement
-      const intent = activeSearchTab === "space" ? "commercial-space" : "vendor-fm";
-      router.push(`/login?redirect=/marketplace&intent=${intent}`);
+    if (activeSearchTab === "vendor") {
+      router.push(`/fm-marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}`);
       return;
     }
-
-    // Logged in: Check subscription
-    if (sub === "active") {
-      if (activeSearchTab === "space") {
-        router.push(
-          `/discover?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
-        );
-      } else if (activeSearchTab === "vendor") {
-        router.push(
-          `/fm-marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
-        );
-      } else {
-        router.push('/managed-services');
-      }
-    } else {
-      // If subscription is not yet active, lead to their respective landing page
-      const role = localStorage.getItem("officex_user_role");
-      if (role === "Corporate Occupier") router.push("/audiences/occupiers");
-      else if (role === "Facility Manager") router.push("/audiences/fm");
-      else if (role === "FM Vendor") router.push("/audiences/vendors");
-      else router.push("/audiences/owners");
+    if (activeSearchTab === "space") {
+      router.push(`/public/search?city=${encodeURIComponent(spaceCity)}`);
+      return;
     }
+    router.push('/managed-services');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -481,7 +476,7 @@ export default function LandingPage() {
     },
     {
       q: "Is my facility data secure?",
-      a: "Yes, security is our primary focus. We use bank-grade AES-256 encryption at rest, TLS 1.3 in transit, and enforce role-based access control (RBAC). Our infrastructure is SOC 2 Type II compliant and hosted on secure AWS Indian region servers."
+      a: "Yes, security is our primary focus. We use bank-grade AES-256 encryption at rest, TLS 1.3 in transit, and enforce role-based access control (RBAC). Our infrastructure is SOC 2 Type II compliant and hosted on secure, enterprise-grade cloud infrastructure."
     },
     {
       q: "What is the typical onboarding time for the Professional tier?",
@@ -550,7 +545,7 @@ export default function LandingPage() {
           isScrolledPastHero ? "text-slate-300" : "text-slate-600"
         }`}>
           
-          {/* Marketplace Dropdown */}
+          {/* 1. Marketplace Dropdown */}
           <div className="relative group py-2">
             <Link href="/marketplace" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
               <span>Marketplace</span>
@@ -561,111 +556,97 @@ export default function LandingPage() {
                 <div className="text-xs font-bold text-slate-900">Commercial Property Discovery</div>
                 <div className="text-[11px] text-slate-500 font-normal">Verified Grade-A office spaces</div>
               </Link>
-              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">FM Vendor Marketplace</div>
+              <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <div className="text-xs font-bold text-[#0F8B7D]">FM Services Marketplace</div>
                 <div className="text-[11px] text-slate-500 font-normal">Pre-vetted MEP &amp; facility contractors</div>
               </Link>
-              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+              <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                 <div className="text-xs font-bold text-slate-900">Structured RFQ Engine</div>
                 <div className="text-[11px] text-slate-500 font-normal">Automated BOQs &amp; escrow bids</div>
               </Link>
             </div>
           </div>
 
-          {/* Operate Dropdown */}
+          {/* 2. Services Dropdown — Showing ALL Services (Hard FM, Soft FM & Managed) */}
           <div className="relative group py-2">
-            <Link href="/operate" className="hover:text-[#2563EB] transition-colors flex items-center gap-1">
-              <span>Operate</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#2563EB] group-hover:rotate-180 transition-transform" />
-            </Link>
+            <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+              <span>Services</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </button>
+            <div className="absolute top-full -left-20 w-[460px] bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="text-[10px] font-black uppercase tracking-wider text-[#0F8B7D] mb-2 px-1">
+                All Facility Management &amp; Property Services
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block px-2 py-1">Hard FM &amp; Engineering</span>
+                  <Link href="/fm-marketplace?category=MEP+Services" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">MEP &amp; Electrical</div>
+                    <div className="text-[10px] text-slate-500">11KV Substations, DG &amp; HT/LT</div>
+                  </Link>
+                  <Link href="/fm-marketplace?category=HVAC" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">HVAC &amp; Chillers</div>
+                    <div className="text-[10px] text-slate-500">Central plant, VRV/VRF AMC</div>
+                  </Link>
+                  <Link href="/fm-marketplace?category=Fire+Safety" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">Fire Safety &amp; NOC</div>
+                    <div className="text-[10px] text-slate-500">Alarms, hydrants &amp; CFO audit</div>
+                  </Link>
+                  <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">Elevator &amp; Lifts AMC</div>
+                    <div className="text-[10px] text-slate-500">24/7 rescue &amp; OEM parts</div>
+                  </Link>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block px-2 py-1">Soft FM &amp; Managed</span>
+                  <Link href="/fm-marketplace?category=Security" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">24/7 Security &amp; Access</div>
+                    <div className="text-[10px] text-slate-500">Manned guards &amp; biometrics</div>
+                  </Link>
+                  <Link href="/fm-marketplace?category=Cleaning" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">Deep Cleaning &amp; FM</div>
+                    <div className="text-[10px] text-slate-500">Corporate scrubbing &amp; hygiene</div>
+                  </Link>
+                  <Link href="/fm-marketplace?category=Pest+Control" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="font-bold text-slate-900">Pest &amp; Landscaping</div>
+                    <div className="text-[10px] text-slate-500">Commercial fumigation &amp; greens</div>
+                  </Link>
+                  <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors border border-teal-100 bg-teal-50/30">
+                    <div className="font-bold text-[#0F8B7D]">Turnkey Managed FM</div>
+                    <div className="text-[10px] text-teal-700">End-to-end IFM stewardship</div>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Platform Dropdown */}
+          <div className="relative group py-2">
+            <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+              <span>Platform</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </button>
             <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">CAFM &amp; 52-Week PPM</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated preventative maintenance</div>
-              </Link>
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Tenant Helpdesk &amp; SLAs</div>
-                <div className="text-[11px] text-slate-500 font-normal">Priority ticketing &amp; auto-escalations</div>
-              </Link>
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Visitor &amp; Amenity Booking</div>
-                <div className="text-[11px] text-slate-500 font-normal">QR gate passes &amp; conference rooms</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Manage Dropdown */}
-          <div className="relative group py-2">
-            <Link href="/manage" className="hover:text-[#D97706] transition-colors flex items-center gap-1">
-              <span>Manage</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#D97706] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Rent Roll &amp; CAM Billing</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated invoices &amp; Razorpay links</div>
+                <div className="text-xs font-bold text-slate-900">Operate (CAFM)</div>
+                <div className="text-[11px] text-slate-500 font-normal">52-week PPM &amp; tenant helpdesk</div>
               </Link>
               <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Statutory Compliance Radar</div>
-                <div className="text-[11px] text-slate-500 font-normal">90/60/30-day alerts for 40+ NOCs</div>
+                <div className="text-xs font-bold text-slate-900">Manage (Property SaaS)</div>
+                <div className="text-[11px] text-slate-500 font-normal">Rent roll, CAM &amp; compliance</div>
               </Link>
-              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Digital Lease Vault</div>
-                <div className="text-[11px] text-slate-500 font-normal">Lock-in schedules &amp; deposit tracking</div>
+              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Intelligence &amp; ESG</div>
+                <div className="text-[11px] text-slate-500 font-normal">Portfolio NOI &amp; benchmarks</div>
+              </Link>
+              <Link href="/platform" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors border-t border-slate-100 mt-1 pt-2">
+                <div className="text-xs font-bold text-[#0F8B7D]">Core Architecture &amp; APIs</div>
+                <div className="text-[11px] text-slate-500 font-normal">Single source of truth foundation</div>
               </Link>
             </div>
           </div>
 
-          {/* Intelligence Dropdown */}
-          <div className="relative group py-2">
-            <Link href="/intelligence" className="hover:text-[#7C3AED] transition-colors flex items-center gap-1">
-              <span>Intelligence</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#7C3AED] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Portfolio NOI &amp; WALE</div>
-                <div className="text-[11px] text-slate-500 font-normal">Live yield &amp; occupancy analytics</div>
-              </Link>
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Energy &amp; ESG Benchmarking</div>
-                <div className="text-[11px] text-slate-500 font-normal">kWh/sq.ft. &amp; SEBI BRSR Core packs</div>
-              </Link>
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Vendor SLA Benchmarking</div>
-                <div className="text-[11px] text-slate-500 font-normal">Cross-portfolio quartile metrics</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Managed Services Dropdown */}
-          <div className="relative group py-2">
-            <Link href="/managed-services" className="hover:text-[#059669] transition-colors flex items-center gap-1">
-              <span>Managed Services</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#059669] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">On-Ground Property Mgmt</div>
-                <div className="text-[11px] text-slate-500 font-normal">Turnkey building stewardship</div>
-              </Link>
-              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Integrated FM (IFM)</div>
-                <div className="text-[11px] text-slate-500 font-normal">Technical MEP, soft services &amp; security</div>
-              </Link>
-              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Monthly Audited MIS</div>
-                <div className="text-[11px] text-slate-500 font-normal">Open-book financial delivery</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Platform */}
-          <Link href="/platform" className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap">
-            Platform
-          </Link>
-
-          {/* Company Dropdown */}
+          {/* 4. Company Dropdown */}
           <div className="relative group py-2">
             <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
               <span>Company</span>
@@ -674,9 +655,6 @@ export default function LandingPage() {
             <div className="absolute top-full right-0 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <Link href="/about" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 About OfficeX
-              </Link>
-              <Link href="/careers" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
-                Careers
               </Link>
               <Link href="/resources" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 Resources &amp; Insights
@@ -692,21 +670,14 @@ export default function LandingPage() {
         </nav>
 
         {/* Right: Actions */}
-        <div className="hidden md:flex items-center justify-end gap-3 shrink-0 lg:w-[320px]">
+        <div className="hidden md:flex items-center justify-end gap-3 shrink-0">
           <HeaderAuthButton />
           <button 
             type="button"
-            onClick={() => router.push('/demo')}
-            className="px-4 py-2 rounded-xl border border-[#071324] text-[#071324] hover:bg-slate-50 text-xs sm:text-sm font-extrabold transition-all cursor-pointer"
-          >
-            Book a Demo
-          </button>
-          <button 
-            type="button"
             onClick={() => openEnquiry()}
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-all cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
           >
-            Talk to Sales
+            <span>Schedule a Call</span>
           </button>
         </div>
 
@@ -735,7 +706,8 @@ export default function LandingPage() {
               style={{ width: "auto", height: "30px" }}
             />
           </div>
-          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Marketplace</Link>
+          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Office Discovery Marketplace</Link>
+          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">FM Services Marketplace</Link>
           <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">Operate (CAFM)</Link>
           <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">Manage (Property SaaS)</Link>
           <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#7C3AED]">Intelligence</Link>
@@ -752,14 +724,7 @@ export default function LandingPage() {
             onClick={() => { setMobileMenuOpen(false); openEnquiry(); }}
             className="w-full py-3 rounded-xl bg-[#0F8B7D] text-white font-bold text-center shadow-md cursor-pointer text-sm"
           >
-            Talk to Sales
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setMobileMenuOpen(false); router.push('/demo'); }}
-            className="w-full py-3 rounded-xl border border-[#071324] text-[#071324] font-bold text-center cursor-pointer text-sm"
-          >
-            Book a Demo
+            Schedule a Call
           </button>
         </div>
       )}
@@ -785,26 +750,27 @@ export default function LandingPage() {
           {/* Left Column Content (approx 55% width) */}
           <div className="max-w-2xl text-left">
             
-            {/* Eyebrow */}
-            <p className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.2em] text-[#0F8B7D] md:text-teal-400 mb-3">
-              FIND. MANAGE. OPERATE. GROW.
-            </p>
+            {/* Eyebrow Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/25 text-teal-300 text-xs font-semibold tracking-wide mb-4 backdrop-blur-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+              <span>India&apos;s Integrated CRE &amp; FM Ecosystem</span>
+            </div>
 
-            {/* Main Headline in White */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[46px] font-black tracking-tight text-white leading-[1.14] mb-4">
-              India&apos;s Integrated CRE &amp; FM Ecosystem —{" "}
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-white leading-[1.18] mb-3.5">
+              Find Space. Procure Services.{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-300">
-                Find Space. Procure Services. Operate Buildings. Gain Intelligence.
+                Operate Buildings. Gain Intelligence.
               </span>
             </h1>
           
             {/* Subhead */}
-            <p className="text-xs sm:text-sm md:text-base font-normal text-slate-200 md:text-slate-300 leading-relaxed max-w-xl mb-6">
+            <p className="text-xs sm:text-sm md:text-base font-normal text-slate-300 leading-relaxed max-w-xl mb-6">
               One platform. Five modules. One data foundation. Built for commercial real estate owners, occupiers, and operators across India.
             </p>
 
             {/* Hero Action CTAs */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-7 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 w-full sm:w-auto">
               <Link
                 href="/marketplace"
                 className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-black shadow-md transition-all flex items-center justify-center gap-2 text-center"
@@ -814,7 +780,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/demo"
-                className="px-6 py-3 rounded-xl border border-white/40 hover:border-white text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xs text-center"
+                className="px-6 py-3 rounded-xl border border-white/40 hover:border-white text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xs text-center cursor-pointer"
               >
                 <span>Book a Demo</span>
               </Link>
@@ -1039,7 +1005,7 @@ export default function LandingPage() {
                         <option value="Mumbai">Mumbai</option>
                         <option value="Bengaluru">Bengaluru</option>
                         <option value="Gurugram">Gurugram</option>
-                        <option value="Pan-India">Pan-India Portfolio</option>
+                        <option value="Multi-City">Multi-City Portfolio</option>
                       </select>
                     </div>
 
@@ -1057,26 +1023,18 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Quick Links below Search Bar */}
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400">
-              <Link href="/marketplace" className="hover:text-white transition-colors">Buy</Link>
-              <span className="text-slate-600">|</span>
-              <Link href="/marketplace" className="hover:text-white transition-colors">Lease</Link>
-              <span className="text-slate-600">|</span>
-              <Link href="/marketplace" className="hover:text-white transition-colors">FM Services</Link>
-              <span className="text-slate-600">|</span>
-              <Link href="/managed-services" className="hover:text-white transition-colors">Managed Offices</Link>
-            </div>
-
-            {/* Talk to an expert link */}
-            <div className="mt-3 flex items-center gap-2 text-xs">
-              <span className="text-slate-400">Need personalized guidance?</span>
+            {/* Trust Badges & Expert Assistance below Search Bar */}
+            <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+              <span className="flex items-center gap-1.5 text-slate-300">
+                <ShieldCheck size={14} className="text-teal-400 shrink-0" />
+                <span>Verified Spaces · Pre-Audited Vendors · Escrow Protected</span>
+              </span>
               <button
                 type="button"
                 onClick={() => openEnquiry()}
-                className="font-bold text-teal-300 hover:text-white underline cursor-pointer inline-flex items-center gap-1"
+                className="font-bold text-teal-300 hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
               >
-                <span>or talk to an expert</span>
+                <span>Need help? Talk to an expert</span>
                 <ArrowRight size={12} />
               </button>
             </div>
@@ -1098,8 +1056,7 @@ export default function LandingPage() {
       {/* SECTION 02: THE OFFICEX ECOSYSTEM */}
       <section 
         id="ecosystem" 
-        onClick={() => router.push('/login')}
-        className="py-16 md:py-20 bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden cursor-pointer select-none"
+        className="py-10 md:py-12 bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden"
       >
         <div className="max-w-7xl mx-auto w-full">
           {/* Header */}
@@ -1111,70 +1068,77 @@ export default function LandingPage() {
               Everything you need. All connected.
             </h2>
             <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 max-w-xl mx-auto">
-              Click anywhere to sign in and access your workspace across all 5 integrated modules.
+              Five specialized modules unified on a single intelligent platform — select any module to explore capabilities.
             </p>
           </div>
 
-          {/* 5 Vertical Colored Cards matching reference */}
+          {/* 5 Vertical Colored Cards with 3 bullet benefits per client doc */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
             {[
               {
                 id: "property",
-                title: "Property Marketplace",
-                desc: "Discover, buy, lease, or monetize commercial spaces.",
+                title: "Office / CRE Discovery Marketplace",
+                desc: "Discover. Compare. Lease.",
+                benefits: ["Verified Grade-A listings across metros", "Side-by-side space comparison tools", "Direct owner/manager connection"],
+                audience: "For: Occupiers, Brokers, Owners",
                 image: "/images/card_prop_hd.jpg",
                 bgColor: "bg-[#00A86B]",
                 arrowColor: "text-[#00A86B]",
-                href: "/login",
+                href: "/marketplace",
                 iconType: "arrow",
               },
               {
                 id: "fm",
-                title: "FM Marketplace",
-                desc: "Find and engage certified facility service providers.",
+                title: "Facility Management Marketplace",
+                desc: "Connect with Trusted Professionals",
+                benefits: ["250+ pre-vetted FM vendors", "Structured RFQ with BOQ generation", "Escrow-protected milestone payments"],
+                audience: "For: Building Owners, FM Heads",
                 image: "/images/card_fm_hd.jpg",
                 bgColor: "bg-[#F26522]",
                 arrowColor: "text-[#F26522]",
-                href: "/login",
+                href: "/fm-marketplace",
                 iconType: "arrow",
               },
               {
                 id: "saas",
-                title: "OFFICEX PRO\n(SaaS Platform)",
-                desc: "Manage your entire property and workplace operations.",
+                title: "OfficeX PRO",
+                desc: "Operate & Manage your buildings digitally.",
+                benefits: ["52-week automated PPM calendar", "SLA-backed helpdesk & ticketing", "Rent roll, CAM billing & compliance"],
+                audience: "For: Facility & Property Managers",
                 image: "/images/card_saas_hd.jpg",
                 bgColor: "bg-[#0F8B7D]",
                 arrowColor: "text-[#0F8B7D]",
-                href: "/login",
+                href: "/operate",
                 iconType: "arrow",
               },
               {
                 id: "managed",
                 title: "Managed Services",
-                desc: "End-to-end property and facility management solutions.",
+                desc: "End-to-end PM & IFM with SLA guarantees.",
+                benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
+                audience: "For: Owners without in-house FM",
                 image: "/images/card_managed_hd.jpg",
                 bgColor: "bg-[#7C3AED]",
                 arrowColor: "text-[#7C3AED]",
-                href: "/login",
+                href: "/managed-services",
                 iconType: "arrow",
               },
               {
                 id: "intelligence",
                 title: "OFFICEX Intelligence",
-                desc: "Actionable insights, analytics, and predictions.",
+                desc: "Actionable insights & portfolio analytics.",
+                benefits: ["Portfolio NOI & WALE dashboards", "Energy benchmarking & ESG reports", "Predictive maintenance forecasting"],
+                audience: "For: Asset Managers, REITs, CFOs",
                 image: "/images/card_ai_hd.jpg",
                 bgColor: "bg-[#DB2777]",
                 arrowColor: "text-[#DB2777]",
-                href: "/login",
+                href: "/intelligence",
                 iconType: "sparkle",
               },
             ].map((card) => (
-              <div
+              <Link
                 key={card.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push("/login");
-                }}
+                href={card.href}
                 className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100"
               >
                 {/* Top Half: Photo */}
@@ -1189,132 +1153,173 @@ export default function LandingPage() {
                 </div>
 
                 {/* Bottom Half: Solid Vibrant Color Box */}
-                <div className={`${card.bgColor} p-5 flex flex-col justify-between flex-1 min-h-[170px]`}>
+                <div className={`${card.bgColor} p-5 flex flex-col justify-between flex-1 min-h-[210px]`}>
                   <div>
-                    <h3 className="text-base font-extrabold text-white leading-snug whitespace-pre-line mb-2">
+                    <h3 className="text-base font-extrabold text-white leading-snug mb-1.5">
                       {card.title}
                     </h3>
-                    <p className="text-xs text-white/90 font-medium leading-relaxed">
+                    <p className="text-[11px] text-white/80 font-medium mb-3">
                       {card.desc}
                     </p>
+                    {/* 3 Bullet Benefits */}
+                    <ul className="space-y-1.5">
+                      {card.benefits.map((b, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/90 font-semibold leading-tight">
+                          <Check size={10} className="text-white/70 shrink-0 mt-0.5" />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
-                  {/* Bottom Action Circle */}
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-white/90 group-hover:text-white uppercase tracking-wider">
-                      Sign In &rarr;
+                  {/* Audience Tag + Explore */}
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-white/60 uppercase tracking-wider">
+                      {card.audience}
                     </span>
-                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
+                    <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
                       {card.iconType === "sparkle" ? (
-                        <Sparkles size={16} className={card.arrowColor} />
+                        <Sparkles size={14} className={card.arrowColor} />
                       ) : (
-                        <ArrowRight size={16} className={card.arrowColor} />
+                        <ArrowRight size={14} className={card.arrowColor} />
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
-          {/* OFFICEX CORE Foundation Strip */}
-          <div 
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push('/login');
-            }}
-            className="mt-6 md:mt-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-50/90 via-slate-50 to-teal-50/90 border border-teal-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-[#0F8B7D] hover:shadow-md transition-all group"
-          >
-            <div className="flex items-center gap-3.5 text-center sm:text-left">
-              <div className="w-10 h-10 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <span className="text-[11px] font-black text-[#0F8B7D] uppercase tracking-widest">
-                    POWERED BY OFFICEX CORE
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-[#0F8B7D]">
-                    One Connected Foundation
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 font-medium mt-0.5">
-                  Identity &amp; Access · Billing &amp; Payments · Document Vault · Audit &amp; Compliance · Integration Engine
-                </p>
-              </div>
+          {/* DIVIDER: "Powered by OFFICEX CORE" with Downward Chevron matching user reference */}
+          <div className="relative my-8 sm:my-10 flex flex-col items-center justify-center w-full">
+            {/* Subtle horizontal line spanning full width */}
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-slate-200/90" />
             </div>
-            <div className="flex items-center gap-2 text-xs font-black text-[#0F8B7D] group-hover:translate-x-1 transition-transform shrink-0">
-              <span>Sign In to Access Ecosystem</span>
-              <ArrowRight size={14} />
+
+            {/* Centered Box with "Powered by OFFICEX CORE" */}
+            <div className="relative bg-white px-6 py-1 flex flex-col items-center z-10">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 tracking-wide">
+                Powered by
+              </span>
+              <span className="text-sm sm:text-base font-black text-[#0F8B7D] tracking-wider uppercase mt-0.5">
+                OFFICEX CORE
+              </span>
+            </div>
+
+            {/* Downward Brand Teal Chevron pointing to the Core section below */}
+            <div className="relative -mt-1 z-10 flex justify-center">
+              <svg 
+                width="160" 
+                height="24" 
+                viewBox="0 0 160 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+                className="overflow-visible"
+              >
+                <path 
+                  d="M4 3 L80 20 L156 3" 
+                  stroke="#0F8B7D" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* LOWER HALF: OFFICEX CORE DATA FOUNDATION & ARCHITECTURE DIAGRAM */}
+          <div 
+            id="officex-core" 
+            className="pt-2 sm:pt-4"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
+              
+              {/* LEFT COLUMN: Core Proposition & Services (6 cols) */}
+              <div className="lg:col-span-6 flex flex-col justify-center">
+                {/* Headline */}
+                <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-slate-950 tracking-tight leading-[1.18] uppercase mb-2">
+                  <span className="block">ONE CORE.</span>
+                  <span className="block">ONE DATA FOUNDATION.</span>
+                  <span className="block">ONE SOURCE OF TRUTH.</span>
+                </h2>
+                
+                <p className="mt-2 text-slate-600 text-sm sm:text-base leading-relaxed font-medium max-w-lg">
+                  OFFICEX Core connects your entire property ecosystem on a single, secure and intelligent data foundation.
+                </p>
+
+                {/* Checklist */}
+                <div className="mt-4 space-y-2">
+                  {[
+                    "No more siloed systems",
+                    "No duplicate data",
+                    "No manual reconciliations",
+                    "Real-time visibility across the portfolio",
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5 text-[#0F8B7D] stroke-[2.5]" />
+                      </div>
+                      <span className="text-slate-800 font-semibold text-sm">{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Integrated Core Capabilities Badges */}
+                <div className="mt-5 pt-4 border-t border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                    FOUNDATION SERVICES &amp; VAULT
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Identity & Access",
+                      "Billing & Payments",
+                      "Document Vault",
+                      "Audit & Compliance",
+                      "Integration Engine"
+                    ].map((service, idx) => (
+                      <span 
+                        key={idx} 
+                        className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-50 text-slate-700 border border-slate-200/80"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CTA Buttons */}
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => setIsContactModalOpen(true)}
+                    className="px-6 py-3 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>EXPLORE CORE</span>
+                    <ArrowRight size={14} />
+                  </button>
+                  <button
+                    onClick={() => router.push('/platform')}
+                    className="px-5 py-3 rounded-full bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase tracking-wider border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Platform Architecture</span>
+                    <ArrowUpRight size={14} className="text-slate-400" />
+                  </button>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Architectural Radial Diagram (6 cols) */}
+              <div className="lg:col-span-6 relative w-full flex items-center justify-center p-0">
+                <CoreArchitectureDiagram />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-    {/* SECTION 03: OFFICEX CORE — Exact 100% Static Diagram matching Option 1 Master Wireframe */}
-    <section id="officex-core" className="py-16 md:py-24 bg-white border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          
-          {/* LEFT COLUMN: Text Content (5 cols) — Exact Option 1 Typography */}
-          <div className="lg:col-span-5 flex flex-col justify-center">
-            {/* Eyebrow matching Option 1 */}
-            <div className="mb-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
-                Powered by{" "}
-              </span>
-              <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest">
-                OFFICEX CORE
-              </span>
-            </div>
-
-            {/* Headline — Responsive with sm:whitespace-nowrap for mobile perfection */}
-            <h2 className="text-2xl sm:text-3xl lg:text-[36px] xl:text-[40px] font-black text-slate-950 tracking-tight leading-[1.18] uppercase">
-              <span className="block sm:whitespace-nowrap">ONE CORE.</span>
-              <span className="block sm:whitespace-nowrap">ONE DATA FOUNDATION.</span>
-              <span className="block sm:whitespace-nowrap">ONE SOURCE OF TRUTH.</span>
-            </h2>
-            
-            <p className="mt-4 sm:mt-5 text-slate-600 text-xs sm:text-sm md:text-base leading-relaxed font-medium max-w-lg">
-              OFFICEX Core connects your entire property ecosystem on a single, secure and intelligent data foundation.
-            </p>
-
-            {/* Checklist with Option 1 Copy */}
-            <div className="mt-6 sm:mt-7 space-y-3 sm:space-y-3.5">
-              {[
-                "No more siloed systems",
-                "No duplicate data",
-                "No manual reconciliations",
-                "Real-time visibility across the portfolio",
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5 text-[#0F8B7D] stroke-[3]" />
-                  </div>
-                  <span className="text-slate-800 font-semibold text-xs sm:text-sm">{item}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA */}
-            <div className="mt-7 sm:mt-8">
-              <button
-                onClick={() => setIsContactModalOpen(true)}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>EXPLORE CORE</span>
-                <ArrowRight size={15} />
-              </button>
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN: Architectural Radial Diagram (7 cols) */}
-          <div className="lg:col-span-7 relative w-full max-w-[700px] mx-auto flex items-center justify-center p-0 sm:p-4">
-            <CoreArchitectureDiagram />
-          </div>
-        </div>
-      </div>
-    </section>
+    {/* SECTION: DUAL MARKETPLACE SHOWCASE (4 FM Vendor Services & 4 Commercial Offices) */}
+    <MarketplaceDualShowcase
+      onOpenEnquiry={(prefill) => openEnquiry(prefill)}
+    />
 
     {/* SECTION 04: BUILT FOR EVERY STAKEHOLDER */}
     <section 
@@ -1446,19 +1451,19 @@ export default function LandingPage() {
 
                       <div className="flex flex-col gap-2.5">
                         <Link
-                          href={`/audiences/${key === "owner" ? "owners" : key === "occupier" ? "occupiers" : key}`}
+                          href={data.landingHref}
                           className="w-full py-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-teal-500/30"
                         >
                           <span>See your journey</span>
                           <ArrowRight size={13} />
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => openEnquiry({ audience: data.role })}
+                        <Link
+                          href={`/login?redirect=${encodeURIComponent(data.portalHref)}`}
                           className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
                         >
-                          <span>Get a personalised demo for {data.role}</span>
-                        </button>
+                          <span>Launch {data.portalName}</span>
+                          <ArrowRight size={13} />
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -1625,10 +1630,10 @@ export default function LandingPage() {
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => router.push('/demo')}
+                  onClick={() => openEnquiry()}
                   className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
                 >
-                  Book a Demo
+                  Schedule a Call
                 </button>
                 <button
                   onClick={() => setIsContactModalOpen(true)}
@@ -1787,267 +1792,7 @@ export default function LandingPage() {
       </div>
     </section>
 
-      {/* SECTION 08: PRICING PLANS */}
-      <section id="pricing" className="py-16 md:py-24 bg-[#F8FAFC] border-t border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
-        <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-10 md:mb-14">
-            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
-              TRANSPARENT PLANS
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
-              Transparent Pricing for Every Scale
-            </h2>
-            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-2 md:mt-3">
-              Choose the right plan to manage and secure your operations.
-            </p>
 
-            {/* View Mode Switcher: Cards vs Matrix */}
-            <div className="mt-6 inline-flex items-center p-1 rounded-full bg-slate-200/80 border border-slate-300">
-              <button
-                type="button"
-                onClick={() => setPricingView("tiers")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  pricingView === "tiers"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Plan Overview
-              </button>
-              <button
-                type="button"
-                onClick={() => setPricingView("matrix")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  pricingView === "matrix"
-                    ? "bg-white text-[#0F8B7D] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Module &amp; Capability Matrix
-              </button>
-            </div>
-          </div>
-
-          {pricingView === "tiers" ? (
-            <div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
-                {/* Plan 1: Starter */}
-                <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">Starter</h3>
-                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">For single-site offices up to 10k sqft.</p>
-                    <div className="text-3xl font-black text-slate-900 mt-6">Free</div>
-                    
-                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Access to Marketplace</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Basic Helpdesk</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Up to 3 Users</li>
-                    </ul>
-                  </div>
-                  <button 
-                    onClick={() => router.push("/signup")}
-                    className="w-full py-3.5 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    Sign Up Free
-                  </button>
-                </div>
-
-                {/* Plan 2: Professional */}
-                <div className="rounded-3xl p-6 sm:p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-100 lg:scale-105">
-                  <span className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black uppercase tracking-widest shadow-md">MOST POPULAR</span>
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
-                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">For growing multi-site portfolios.</p>
-                    <div className="text-3xl font-black text-slate-900 mt-6">₹4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
-                    
-                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Escrow Payments</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> PPM Calendar</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Compliance Tracker</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Unlimited Users</li>
-                    </ul>
-                  </div>
-                  <div className="flex flex-col gap-2 mt-8">
-                    <button 
-                      onClick={() => router.push('/demo?plan=professional')}
-                      className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md"
-                    >
-                      Get Started
-                    </button>
-                    <button 
-                      onClick={() => router.push('/demo')}
-                      className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
-                    >
-                      Book a Demo
-                    </button>
-                  </div>
-                </div>
-
-                {/* Plan 3: Enterprise */}
-                <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">Enterprise</h3>
-                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">Custom deployment for large institutions.</p>
-                    <div className="text-3xl font-black text-slate-900 mt-6">Custom</div>
-                    
-                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> White-labeling</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> ERP Integrations</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Dedicated Success Mgr</li>
-                    </ul>
-                  </div>
-                  <button 
-                    onClick={() => openEnquiry({ modules: ['not-sure'] })}
-                    className="w-full py-3.5 rounded-xl bg-[#071324] hover:bg-slate-800 text-white font-bold text-xs mt-8 transition-colors cursor-pointer shadow-sm"
-                  >
-                    Talk to Sales
-                  </button>
-                </div>
-              </div>
-
-              {/* Integrated hook to switch to Capability Matrix view */}
-              <div className="mt-12 text-center">
-                <button
-                  type="button"
-                  onClick={() => setPricingView("matrix")}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 hover:text-[#0F8B7D] hover:border-teal-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <span>Compare detailed module access across Starter, Professional &amp; Enterprise</span>
-                  <ArrowRight size={14} className="text-[#0F8B7D]" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Module Access Matrix (Integrated View) */
-            <div className="max-w-5xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900">
-                    Detailed Plan Capability &amp; Module Access
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Compare features and modules included across Starter, Professional, and Enterprise.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPricingView("tiers")}
-                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  ← Back to Plan Cards
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="pb-4 text-slate-400 font-extrabold uppercase text-[10px] tracking-wider">
-                        Feature / Module
-                      </th>
-                      <th className="pb-4 text-center">
-                        <div className="font-extrabold text-slate-900 text-sm">Starter</div>
-                        <div className="text-slate-500 font-semibold text-xs mt-0.5">Free</div>
-                      </th>
-                      <th className="pb-4 text-center bg-teal-50/70 rounded-t-xl px-3">
-                        <div className="font-extrabold text-[#0F8B7D] text-sm">Professional</div>
-                        <div className="text-teal-700 font-semibold text-xs mt-0.5">₹4,999/mo</div>
-                      </th>
-                      <th className="pb-4 text-center">
-                        <div className="font-extrabold text-slate-900 text-sm">Enterprise</div>
-                        <div className="text-slate-500 font-semibold text-xs mt-0.5">Custom</div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Marketplace: Space &amp; Vendor Discovery</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Marketplace: RFQ &amp; Escrow Milestone Payouts</td>
-                      <td className="py-3.5 text-center text-slate-400">2 RFQs/mo</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Unlimited</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Unlimited + Volume Rates</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Operate: CAFM &amp; 52-Week PPM Automation</td>
-                      <td className="py-3.5 text-center text-slate-400">Basic</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Full Suite</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Full + IoT &amp; BMS Sync</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Manage: Automated Rent Roll &amp; CAM Billing</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓ (Razorpay)</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓ + Multi-Entity SPVs</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Manage: 90/60/30 Compliance Radar</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓ (40+ Statutory NOCs)</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓ + On-Ground Liaison</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Intelligence: Portfolio NOI &amp; ESG Reports</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Standard MIS</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">SEBI BRSR + Custom Data Sync</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Managed Services: On-Ground Technical Teams</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-slate-400 bg-teal-50/40">Available as Add-on</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Full Turnkey Deployment</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Enterprise SLA &amp; Dedicated Account Manager</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-slate-400 bg-teal-50/40">Standard Support</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Contractually Backed 99.9%</td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-slate-200">
-                      <td className="pt-5 font-bold text-slate-400">Action</td>
-                      <td className="pt-5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => router.push("/signup")}
-                          className="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          Sign Up Free
-                        </button>
-                      </td>
-                      <td className="pt-5 text-center bg-teal-50/40 rounded-b-xl px-3">
-                        <button
-                          type="button"
-                          onClick={() => router.push("/demo?plan=professional")}
-                          className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-sm"
-                        >
-                          Get Started
-                        </button>
-                      </td>
-                      <td className="pt-5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => openEnquiry({ modules: ["not-sure"] })}
-                          className="px-4 py-2 rounded-xl bg-[#071324] hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
-                        >
-                          Talk to Sales
-                        </button>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-        </div>
-      </section>
 
       {/* SECTION 09: FAQ ACCORDION */}
       <section id="faq" className="py-16 md:py-24 bg-white px-4 md:px-6 w-full max-w-full overflow-hidden border-b border-slate-200">

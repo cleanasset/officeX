@@ -99,6 +99,14 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Escrow Payments", href: "/marketplace/payments", icon: DollarSign }
   ],
 
+  // PUBLIC DISCOVERY (MARKETPLACE)
+  public: [
+    { name: "Search Spaces", href: "/public/search", icon: Building },
+    { name: "Office Marketplace", href: "/marketplace", icon: Layers },
+    { name: "FM Marketplace", href: "/fm-marketplace", icon: Truck },
+    { name: "Sign In / Register", href: "/login", icon: Users }
+  ],
+
   // SUPER ADMIN
   admin: [
     { name: "Super Admin Home", href: "/admin", icon: Shield },
@@ -117,7 +125,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   ]
 };
 
-// Mapping roles to their dashboard home routes & user identity
+// Mapping roles to their dashboard home routes & user identity (9 Portals)
 const roleHomes: Record<string, { label: string; roleName: string; route: string; email: string }> = {
   properties: { label: "Property Owner (SaaS)", roleName: "Property Owner", route: "/properties", email: "owner@officex.in" },
   ops: { label: "Facility Manager (Ops)", roleName: "Facility Manager", route: "/ops", email: "facilitymanager@officex.in" },
@@ -126,20 +134,32 @@ const roleHomes: Record<string, { label: string; roleName: string; route: string
   leasing: { label: "Leasing Broker (CRM)", roleName: "Leasing Broker", route: "/leasing", email: "broker@officex.in" },
   marketplace: { label: "FM Procurement (Marketplace)", roleName: "Procurement Lead", route: "/marketplace", email: "procurement@officex.in" },
   admin: { label: "Super Admin (Console)", roleName: "Super Admin", route: "/admin", email: "admin@officex.in" },
-  reporting: { label: "Auditor / Analyst (BI)", roleName: "Auditor / Analyst", route: "/reporting", email: "auditor@officex.in" }
+  reporting: { label: "Auditor / Analyst (BI)", roleName: "Auditor / Analyst", route: "/reporting", email: "auditor@officex.in" },
+  public: { label: "Public Discovery (Portal)", roleName: "Public Discovery", route: "/public/search", email: "guest@officex.in" }
 };
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [currentPortalKey, setCurrentPortalKey] = useState<string>("properties");
+  const [selectedRole, setSelectedRole] = useState<string>("properties");
   const [userEmail, setUserEmail] = useState<string>("");
+
+  // Synchronously compute active portal from URL first, ensuring immediate role rendering
+  const matchedFromPath = Object.keys(roleHomes).find(key => 
+    pathname === `/${key}` || pathname.startsWith(`/${key}/`)
+  );
+  const currentPortalKey = matchedFromPath || selectedRole || "properties";
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedEmail = localStorage.getItem("officex_user_email");
       if (storedEmail) setUserEmail(storedEmail);
+
+      const saved = localStorage.getItem("officex_active_portal");
+      if (saved && roleHomes[saved]) {
+        setSelectedRole(saved);
+      }
     }
   }, []);
 
@@ -151,43 +171,30 @@ export default function Sidebar() {
 
   useEffect(() => {
     setIsOpen(false);
-
-    // Only update portal key if the URL strictly matches a top-level role domain
-    const matchedRole = Object.keys(roleHomes).find(key => 
-      pathname === `/${key}` || pathname.startsWith(`/${key}/`)
-    );
-
-    if (matchedRole) {
-      setCurrentPortalKey(matchedRole);
+    if (matchedFromPath) {
+      setSelectedRole(matchedFromPath);
       try {
-        localStorage.setItem("officex_active_portal", matchedRole);
-      } catch (e) {
-        // ignore storage errors
-      }
-    } else {
-      try {
-        const saved = localStorage.getItem("officex_active_portal");
-        if (saved && roleHomes[saved]) {
-          setCurrentPortalKey(saved);
-        }
+        localStorage.setItem("officex_active_portal", matchedFromPath);
       } catch (e) {
         // ignore
       }
     }
-  }, [pathname]);
+  }, [pathname, matchedFromPath]);
 
   const activeRole = roleHomes[currentPortalKey] || roleHomes.properties;
   const activeMenu = roleSpecificMenus[currentPortalKey] || roleSpecificMenus.properties;
 
   const handleRoleChange = (key: string) => {
-    setCurrentPortalKey(key);
+    setSelectedRole(key);
     try {
       localStorage.setItem("officex_active_portal", key);
     } catch (e) {
       // ignore
     }
     const selected = roleHomes[key];
-    router.push(selected.route);
+    if (selected) {
+      router.push(selected.route);
+    }
   };
 
   return (
@@ -240,6 +247,7 @@ export default function Sidebar() {
               <option value="marketplace">FM Procurement (Marketplace)</option>
               <option value="admin">Super Admin (Console)</option>
               <option value="reporting">Auditor / Analyst (BI)</option>
+              <option value="public">Public Discovery (Portal)</option>
             </select>
           </div>
         </div>

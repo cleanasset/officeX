@@ -29,15 +29,15 @@ export default function MarketplacePage() {
       <HeroSection
         badge="MODULE 01 — MARKETPLACE"
         headline="India's Commercial Real Estate & FM Marketplace"
-        subheadline="Find the right space. Source the right vendor. All verified, all transparent."
+        subheadline="Discover space. Procure FM services. Transact with confidence — all verified, all transparent."
         description="Connect directly with verified Grade-A property listings and pre-vetted facility service providers. Structured RFQs, automated BOQ generation, and escrow-backed milestone payouts."
         primaryCta={{
-          label: "Explore Listings & RFQs",
-          href: "/signup"
+          label: "Explore Available Spaces",
+          href: "/public/search"
         }}
         secondaryCta={{
-          label: "Raise an Enquiry",
-          onClick: () => setSlideInOpen(true)
+          label: "List Your Property",
+          href: "/properties/add"
         }}
         accentColor="#0F8B7D"
         visualPlaceholderTitle="OFFICEX MARKETPLACE RADAR"
@@ -249,7 +249,7 @@ export default function MarketplacePage() {
           },
           {
             q: "Which commercial real estate markets are supported?",
-            a: "OfficeX operates across all major Indian commercial metros including Bengaluru, Mumbai MMR, Delhi NCR, Hyderabad, Pune, and Chennai."
+            a: "OfficeX operates across all major commercial metros including Bengaluru, Mumbai MMR, Delhi NCR, Hyderabad, Pune, Chennai, and expanding global regions."
           }
         ]}
       />

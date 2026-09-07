@@ -118,21 +118,49 @@ export default function OperationsDashboard() {
       {/* Top Hero: Proprietary Workplace Health Score (91/100) */}
       <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-2xs">
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 items-center">
-          {/* Health Score Gauge */}
-          <div className="lg:border-r border-gray-100 lg:pr-8 flex flex-col justify-center">
-            <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider flex items-center gap-1.5">
-              <HeartPulse size={14} className="text-teal-600" /> OFFICEX WORKPLACE HEALTH SCORE
-            </span>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-5xl font-black text-gray-900">91</span>
-              <span className="text-sm font-bold text-gray-400">/ 100</span>
+          {/* Health Score Circular Gauge (P3 Enhancement) */}
+          <div className="lg:border-r border-gray-100 lg:pr-8 flex flex-col sm:flex-row items-center gap-5">
+            <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="text-slate-100"
+                  strokeWidth="8"
+                  stroke="currentColor"
+                  fill="transparent"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="text-[#0F8B7D] transition-all duration-1000 ease-out"
+                  strokeWidth="8"
+                  strokeDasharray={251.2}
+                  strokeDashoffset={251.2 * (1 - 0.91)}
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="transparent"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center text-center">
+                <span className="text-2xl font-black text-slate-900 tracking-tight leading-none">91</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">SCORE</span>
+              </div>
             </div>
-            <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200 w-fit mt-2">
-              Optimal Operational Condition
-            </span>
-            <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-              Composite index across facility uptime, cleaning outcomes, air comfort, and SLA adherence.
-            </p>
+
+            <div className="flex flex-col text-center sm:text-left">
+              <span className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-wider flex items-center justify-center sm:justify-start gap-1">
+                <HeartPulse size={13} /> HEALTH INDEX
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200 w-fit mx-auto sm:mx-0 mt-1">
+                Optimal Condition
+              </span>
+              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed max-w-[200px]">
+                Composite index across MEP uptime, air comfort, cleaning, &amp; SLA compliance.
+              </p>
+            </div>
           </div>
 
           {/* 7 Supporting Dimensions */}

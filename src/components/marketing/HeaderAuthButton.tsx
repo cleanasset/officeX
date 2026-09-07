@@ -81,14 +81,14 @@ export default function HeaderAuthButton({ className = "" }: HeaderAuthButtonPro
       case "Tenant Admin":
         return "/audiences/occupiers";
       case "Facility Manager":
-        return "/audiences/fm";
+        return "/operate";
       case "Vendor / Contractor":
         return "/audiences/vendors";
       case "Investor / Asset Mgr":
-        return "/audiences/investors";
+        return "/intelligence";
       case "Commercial Owner":
       default:
-        return "/audiences/owners";
+        return "/manage";
     }
   };
 
@@ -182,25 +182,14 @@ export default function HeaderAuthButton({ className = "" }: HeaderAuthButtonPro
               <span>My Stakeholder Landing Page</span>
             </Link>
 
-            {isSubscribed ? (
-              <Link
-                href={getDashboardPath(userRole)}
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
-              >
-                <LayoutDashboard size={15} className="text-emerald-600" />
-                <span>Open Live Dashboard</span>
-              </Link>
-            ) : (
-              <Link
-                href="/pricing"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
-              >
-                <LayoutDashboard size={15} className="text-amber-600" />
-                <span>View Plans & Subscribe</span>
-              </Link>
-            )}
+            <Link
+              href={getDashboardPath(userRole)}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+            >
+              <LayoutDashboard size={15} className="text-emerald-600" />
+              <span>Open Live Dashboard</span>
+            </Link>
           </div>
 
           {/* Sign Out */}

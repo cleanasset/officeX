@@ -30,7 +30,7 @@ export default function OperatePage() {
         badge="MODULE 02 — OPERATE"
         headline="The FM Operations Platform for Grade-A Commercial Buildings"
         subheadline="52-week PPM, real-time SLA tracking, and a helpdesk your tenants will actually use."
-        description="Replace paper logbooks, WhatsApp groups, and missed maintenance schedules with an institutional CAFM platform built specifically for Indian commercial real estate facility teams."
+        description="Replace paper logbooks, WhatsApp groups, and missed maintenance schedules with an institutional CAFM platform built specifically for modern commercial real estate facility teams."
         primaryCta={{
           label: "Start Free Trial",
           href: "/signup"
@@ -39,7 +39,7 @@ export default function OperatePage() {
           label: "Raise an Enquiry",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         visualPlaceholderTitle="OFFICEX OPERATE CAFM CONSOLE"
         visualMetrics={[
           { label: "PPM Compliance", value: "98.7%" },
@@ -51,7 +51,7 @@ export default function OperatePage() {
       {/* Problem / Solution */}
       <ProblemSolution
         moduleName="Operate"
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         withoutItems={[
           "Missed MEP preventive maintenance leading to catastrophic chiller breakdowns, power trips, and emergency expense.",
           "Verbal tenant complaints and sticky-note work orders lost without accountability or timestamps.",
@@ -72,7 +72,7 @@ export default function OperatePage() {
       <FeatureGrid
         title="Comprehensive CAFM &amp; Workplace Operations"
         subtitle="Engineered for facility managers, property developers, and workplace experience directors."
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         features={[
           {
             icon: Wrench,
@@ -127,7 +127,7 @@ export default function OperatePage() {
 
       {/* Use Cases */}
       <UseCaseSection
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         useCases={[
           {
             audience: "Chief Facility Managers",
@@ -149,7 +149,7 @@ export default function OperatePage() {
 
       {/* Pricing Table */}
       <PricingTable
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         title="Operate Pricing"
         subtitle="Scalable per-square-foot pricing tailored to single commercial buildings or multi-city portfolios."
         tiers={[
@@ -207,7 +207,7 @@ export default function OperatePage() {
 
       {/* Onboarding Timeline */}
       <OnboardingTimeline
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         steps={[
           {
             step: "01",
@@ -260,7 +260,7 @@ export default function OperatePage() {
 
       {/* Final CTA */}
       <FinalCTABand
-        accentColor="#2563EB"
+        accentColor="#0F8B7D"
         headline="Ready to run your commercial property with institutional precision?"
         subheadline="Join leading asset owners and facility managers who have eliminated maintenance chaos with OfficeX Operate."
         primaryCta={{

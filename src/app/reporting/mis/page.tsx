@@ -252,6 +252,91 @@ export default function MonthlyMISReportGenerator() {
             </div>
           )}
 
+          {/* Energy & Power Consumption Analytics (P1 Priority Fix) */}
+          {includeEnergy && (
+            <div className="space-y-4 pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                  <span>⚡ Energy Consumption &amp; Power Telemetry</span>
+                </h2>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  22.8% Better Than Grade-A Benchmark
+                </span>
+              </div>
+
+              {/* Energy KPI Row */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">Total Power Consumed</span>
+                  <p className="text-base font-black text-gray-900 mt-0.5">1,84,600 kWh</p>
+                  <p className="text-[10px] text-emerald-600 font-bold mt-0.5">▼ 2.1% MoM (Savings: ₹1.4L)</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">Peak Demand / Sanctioned</span>
+                  <p className="text-base font-black text-gray-900 mt-0.5">820 / 1,000 kVA</p>
+                  <p className="text-[10px] text-blue-600 font-bold mt-0.5">82.0% Load Factor (Optimal)</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">Solar Carbon Offset</span>
+                  <p className="text-base font-black text-emerald-700 mt-0.5">23.4 tCO2e</p>
+                  <p className="text-[10px] text-emerald-600 font-bold mt-0.5">15.4% Solar Rooftop Share</p>
+                </div>
+              </div>
+
+              {/* Source Distribution Bar Chart */}
+              <div className="space-y-2 p-3.5 rounded-xl border border-gray-200 bg-gray-50/50">
+                <div className="flex justify-between text-[11px] font-bold text-gray-700">
+                  <span>Energy Source Distribution (kWh)</span>
+                  <span>Grid (77%) · Solar (15%) · DG Backup (8%)</span>
+                </div>
+                <div className="h-4 w-full bg-gray-200 rounded-full overflow-hidden flex">
+                  <div style={{ width: "76.9%" }} className="bg-[#0F8B7D] h-full" title="Grid Power: 1,42,000 kWh" />
+                  <div style={{ width: "15.4%" }} className="bg-amber-400 h-full" title="Rooftop Solar: 28,400 kWh" />
+                  <div style={{ width: "7.7%" }} className="bg-purple-600 h-full" title="Diesel Generator: 14,200 kWh" />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#0F8B7D]"></span> Grid: 1,42,000 kWh (₹11.2/unit)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Solar: 28,400 kWh (Zero Fuel Cost)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-600"></span> DG: 14,200 kWh (₹24.5/unit)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rent & CAM Collections Summary */}
+          {includeInvoices && (
+            <div className="space-y-3 pt-2 border-t border-gray-100">
+              <h2 className="text-sm font-bold text-gray-900">Rent &amp; CAM Collections Summary</h2>
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50/60 text-[10px] font-bold text-gray-400 uppercase">
+                    <th className="py-2 px-3">Category</th>
+                    <th className="py-2 px-3">Billed (INR)</th>
+                    <th className="py-2 px-3">Collected</th>
+                    <th className="py-2 px-3">Recovery Rate</th>
+                    <th className="py-2 px-3 text-right">Overdue &gt; 30d</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  <tr>
+                    <td className="py-2 px-3 font-semibold text-gray-900">Base Commercial Rent</td>
+                    <td className="py-2 px-3 font-bold text-gray-900">₹42,50,000</td>
+                    <td className="py-2 px-3 font-bold text-emerald-700">₹41,80,000</td>
+                    <td className="py-2 px-3 font-bold text-emerald-600">98.3%</td>
+                    <td className="py-2 px-3 text-right text-gray-500 font-mono">₹70,000</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-semibold text-gray-900">Common Area Maintenance (CAM)</td>
+                    <td className="py-2 px-3 font-bold text-gray-900">₹8,40,000</td>
+                    <td className="py-2 px-3 font-bold text-emerald-700">₹8,20,000</td>
+                    <td className="py-2 px-3 font-bold text-emerald-600">97.6%</td>
+                    <td className="py-2 px-3 text-right text-gray-500 font-mono">₹20,000</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* Footer of the PDF page */}
           <div className="pt-12 flex items-center justify-between text-[10px] text-gray-400 border-t border-gray-100">
             <span>Page 1 of 5</span>

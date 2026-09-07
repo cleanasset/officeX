@@ -22,6 +22,22 @@ const protectedPaths = [
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Explicitly allow all public marketing, audience, and discovery routes
+  if (
+    pathname.startsWith('/public') ||
+    pathname.startsWith('/marketplace') ||
+    pathname.startsWith('/audiences') ||
+    pathname.startsWith('/operate') ||
+    pathname.startsWith('/manage') ||
+    pathname.startsWith('/intelligence') ||
+    pathname.startsWith('/managed-services') ||
+    pathname.startsWith('/platform') ||
+    pathname.startsWith('/pricing') ||
+    pathname.startsWith('/resources')
+  ) {
+    return NextResponse.next();
+  }
+
   const isProtected = protectedPaths.some((prefix) => pathname.startsWith(prefix));
 
   if (!isProtected) {

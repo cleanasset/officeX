@@ -14,7 +14,7 @@ interface SubscriptionGateProps {
 
 export default function SubscriptionGate({
   children,
-  fallbackLandingPage = "/audiences/owners",
+  fallbackLandingPage = "/manage",
   portalName = "Operational Workspace"
 }: SubscriptionGateProps) {
   const router = useRouter();
@@ -44,8 +44,10 @@ export default function SubscriptionGate({
         router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
       } else {
         setIsLoggedIn(true);
-        // Only grant access if subscription is explicitly active
-        setIsSubscribed(sub === "active");
+        // Logged-in users have full operational dashboard access
+        localStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000";
+        setIsSubscribed(true);
       }
       setIsChecking(false);
     }

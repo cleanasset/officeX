@@ -8,7 +8,7 @@ export interface TrustStripProps {
 }
 
 export default function TrustStrip({
-  headline = "Trusted by commercial real estate owners, asset managers, and FM leaders across India"
+  headline = "Trusted by commercial real estate owners, asset managers, and enterprise FM leaders"
 }: TrustStripProps) {
   return (
     <div className="w-full bg-[#071324] text-white border-y border-slate-800 py-4 px-4 sm:px-6">

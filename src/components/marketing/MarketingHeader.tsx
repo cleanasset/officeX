@@ -67,154 +67,175 @@ export default function MarketingHeader({
           </Link>
         </div>
 
-        {/* Center: Main Navigation Menu Items with Dropdowns */}
-        <nav className="hidden lg:flex items-center justify-center gap-3.5 xl:gap-5 2xl:gap-6 text-xs xl:text-[13px] font-semibold text-slate-600 mx-auto">
-          {/* Marketplace Dropdown */}
+        {/* Center: Clean 4-Item Main Navigation */}
+        <nav className="hidden lg:flex items-center justify-center gap-6 xl:gap-8 text-xs xl:text-[13px] font-semibold text-slate-600 mx-auto">
+          {/* 1. Products & Modules Dropdown */}
           <div className="relative group py-2">
-            <Link
-              href="/marketplace"
-              className={`hover:text-[#0F8B7D] transition-colors flex items-center gap-1 ${
-                activePath === "/marketplace" ? "text-[#0F8B7D] font-extrabold" : ""
+            <button
+              className={`hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer ${
+                activePath === "/marketplace" ||
+                activePath === "/fm-marketplace" ||
+                activePath === "/operate" ||
+                activePath === "/manage" ||
+                activePath === "/managed-services" ||
+                activePath === "/intelligence" ||
+                activePath === "/platform"
+                  ? "text-[#0F8B7D] font-extrabold"
+                  : ""
               }`}
             >
-              <span>Marketplace</span>
+              <span>Products</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </button>
+            <div className="absolute top-full left-0 w-[520px] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Column 1: Marketplaces */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
+                    Marketplaces &amp; Discovery
+                  </div>
+                  <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">Commercial Property Marketplace</div>
+                    <div className="text-[11px] text-slate-500">Discover verified Grade-A office spaces</div>
+                  </Link>
+                  <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">FM Services Marketplace</div>
+                    <div className="text-[11px] text-slate-500">Pre-vetted MEP, HVAC &amp; facility vendors</div>
+                  </Link>
+                  <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">Managed Services (IFM &amp; PM)</div>
+                    <div className="text-[11px] text-slate-500">Turnkey property stewardship &amp; audits</div>
+                  </Link>
+                </div>
+
+                {/* Column 2: Software & Core */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
+                    Management &amp; Tech
+                  </div>
+                  <Link href="/operate" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">OfficeX PRO (Operate)</div>
+                    <div className="text-[11px] text-slate-500">CAFM, 52-week PPM &amp; helpdesk</div>
+                  </Link>
+                  <Link href="/manage" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">OfficeX Manage</div>
+                    <div className="text-[11px] text-slate-500">Rent roll, CAM billing &amp; compliance NOCs</div>
+                  </Link>
+                  <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">OFFICEX Intelligence</div>
+                    <div className="text-[11px] text-slate-500">NOI yield, ESG &amp; vendor benchmarks</div>
+                  </Link>
+                  <Link href="/platform" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">Platform Core Architecture</div>
+                    <div className="text-[11px] text-slate-500">Single schema, RBAC &amp; REST APIs</div>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Portals Dropdown */}
+          <div className="relative group py-2">
+            <Link
+              href="/login"
+              className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 font-semibold text-slate-600"
+            >
+              <span>Portals</span>
               <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
             </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Commercial Property Discovery</div>
-                <div className="text-[11px] text-slate-500 font-normal">Verified Grade-A office spaces</div>
-              </Link>
-              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">FM Vendor Marketplace</div>
-                <div className="text-[11px] text-slate-500 font-normal">Pre-vetted MEP &amp; facility contractors</div>
-              </Link>
-              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Structured RFQ Engine</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated BOQs &amp; escrow bids</div>
-              </Link>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-[340px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1">
+                Portals &amp; Workspaces
+              </div>
+              <div className="space-y-1">
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Commercial Spaces</div>
+                    <div className="text-[11px] text-slate-500">Discovery &amp; leasing</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/marketplace" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/properties/add" className="font-bold text-slate-600 hover:text-slate-900">List Space</Link>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">FM Services</div>
+                    <div className="text-[11px] text-slate-500">HVAC, MEP, Cleaning</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/fm-marketplace" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/marketplace/rfq" className="font-bold text-slate-600 hover:text-slate-900">Post RFQ</Link>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Facility Operations</div>
+                    <div className="text-[11px] text-slate-500">52-week PPM &amp; CAFM</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/operate" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/ops" className="font-bold text-slate-600 hover:text-slate-900">Ops Console</Link>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Property Owners</div>
+                    <div className="text-[11px] text-slate-500">Rent roll &amp; CAM billing</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/manage" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/properties" className="font-bold text-slate-600 hover:text-slate-900">Owner Portal</Link>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Corporate Tenants</div>
+                    <div className="text-[11px] text-slate-500">Tickets &amp; passes</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/audiences/occupiers" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/tenant" className="font-bold text-slate-600 hover:text-slate-900">Tenant App</Link>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">FM Vendors</div>
+                    <div className="text-[11px] text-slate-500">Job cards &amp; escrow</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/fm-marketplace" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/vendor" className="font-bold text-slate-600 hover:text-slate-900">Vendor Desk</Link>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Leasing Brokers</div>
+                    <div className="text-[11px] text-slate-500">Deal desk &amp; inventory</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                    <Link href="/marketplace" className="font-bold text-[#0F8B7D] hover:underline">Explore</Link>
+                    <span className="text-slate-300">•</span>
+                    <Link href="/login?redirect=/leasing" className="font-bold text-slate-600 hover:text-slate-900">Broker CRM</Link>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Operate Dropdown */}
-          <div className="relative group py-2">
-            <Link
-              href="/operate"
-              className={`hover:text-[#2563EB] transition-colors flex items-center gap-1 ${
-                activePath === "/operate" ? "text-[#2563EB] font-extrabold" : ""
-              }`}
-            >
-              <span>Operate</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#2563EB] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">CAFM &amp; 52-Week PPM</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated preventative maintenance</div>
-              </Link>
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Tenant Helpdesk &amp; SLAs</div>
-                <div className="text-[11px] text-slate-500 font-normal">Priority ticketing &amp; auto-escalations</div>
-              </Link>
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Visitor &amp; Amenity Booking</div>
-                <div className="text-[11px] text-slate-500 font-normal">QR gate passes &amp; conference rooms</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Manage Dropdown */}
-          <div className="relative group py-2">
-            <Link
-              href="/manage"
-              className={`hover:text-[#D97706] transition-colors flex items-center gap-1 ${
-                activePath === "/manage" ? "text-[#D97706] font-extrabold" : ""
-              }`}
-            >
-              <span>Manage</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#D97706] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Rent Roll &amp; CAM Billing</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated invoices &amp; Razorpay links</div>
-              </Link>
-              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Statutory Compliance Radar</div>
-                <div className="text-[11px] text-slate-500 font-normal">90/60/30-day alerts for 40+ NOCs</div>
-              </Link>
-              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Digital Lease Vault</div>
-                <div className="text-[11px] text-slate-500 font-normal">Lock-in schedules &amp; deposit tracking</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Intelligence Dropdown */}
-          <div className="relative group py-2">
-            <Link
-              href="/intelligence"
-              className={`hover:text-[#7C3AED] transition-colors flex items-center gap-1 ${
-                activePath === "/intelligence" ? "text-[#7C3AED] font-extrabold" : ""
-              }`}
-            >
-              <span>Intelligence</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#7C3AED] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Portfolio NOI &amp; WALE</div>
-                <div className="text-[11px] text-slate-500 font-normal">Live yield &amp; occupancy analytics</div>
-              </Link>
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Energy &amp; ESG Benchmarking</div>
-                <div className="text-[11px] text-slate-500 font-normal">kWh/sq.ft. &amp; SEBI BRSR Core packs</div>
-              </Link>
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Vendor SLA Benchmarking</div>
-                <div className="text-[11px] text-slate-500 font-normal">Cross-portfolio quartile metrics</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Managed Services Dropdown */}
-          <div className="relative group py-2">
-            <Link
-              href="/managed-services"
-              className={`hover:text-[#059669] transition-colors flex items-center gap-1 ${
-                activePath === "/managed-services" ? "text-[#059669] font-extrabold" : ""
-              }`}
-            >
-              <span>Managed Services</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#059669] group-hover:rotate-180 transition-transform" />
-            </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">On-Ground Property Mgmt</div>
-                <div className="text-[11px] text-slate-500 font-normal">Turnkey building stewardship</div>
-              </Link>
-              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Integrated FM (IFM)</div>
-                <div className="text-[11px] text-slate-500 font-normal">Technical MEP, soft services &amp; security</div>
-              </Link>
-              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Monthly Audited MIS</div>
-                <div className="text-[11px] text-slate-500 font-normal">Open-book financial delivery</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Platform */}
-          <Link
-            href="/platform"
-            className={`hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap ${
-              activePath === "/platform" ? "text-[#0F8B7D] font-extrabold" : ""
-            }`}
-          >
-            Platform
-          </Link>
-
-          {/* Pricing */}
+          {/* 3. Pricing */}
           <Link
             href="/pricing"
             className={`hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap ${
@@ -224,7 +245,7 @@ export default function MarketingHeader({
             Pricing
           </Link>
 
-          {/* Company Dropdown */}
+          {/* 4. Company Dropdown */}
           <div className="relative group py-2">
             <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
               <span>Company</span>
@@ -250,16 +271,15 @@ export default function MarketingHeader({
           </div>
         </nav>
 
-        {/* Right: Actions */}
+        {/* Right: Actions — per client doc Section 6.1 */}
         <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
           <HeaderAuthButton />
-          <button
-            type="button"
-            onClick={() => router.push("/demo")}
-            className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-800 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
+          <Link
+            href="/demo"
+            className="px-3.5 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 hover:text-white text-slate-800 text-xs font-bold transition-all whitespace-nowrap"
           >
             Book a Demo
-          </button>
+          </Link>
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
@@ -330,6 +350,13 @@ export default function MarketingHeader({
           <div className="py-1">
             <HeaderAuthButton />
           </div>
+          <Link
+            href="/demo"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-full py-3 rounded-xl border-2 border-slate-800 text-slate-800 font-bold text-center text-sm"
+          >
+            Book a Demo
+          </Link>
           <button
             type="button"
             onClick={() => {
@@ -339,16 +366,6 @@ export default function MarketingHeader({
             className="w-full py-3 rounded-xl bg-[#0F8B7D] text-white font-bold text-center shadow-md cursor-pointer text-sm"
           >
             Talk to Sales
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMobileMenuOpen(false);
-              router.push("/demo");
-            }}
-            className="w-full py-3 rounded-xl border border-[#071324] text-[#071324] font-bold text-center cursor-pointer text-sm"
-          >
-            Book a Demo
           </button>
         </div>
       )}

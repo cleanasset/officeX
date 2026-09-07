@@ -18,14 +18,14 @@ export default function RFQDirectory() {
   ];
 
   const rfqs = [
-    { id: "RFQ-089", title: "DG Maintenance", property: "Apex Tower", category: "MEP", posted: "20-Aug", deadline: "26-Aug", quotes: "5 received", status: "Open" },
-    { id: "RFQ-085", title: "Deep Cleaning", property: "Meridian Park", category: "Housekeeping", posted: "18-Aug", deadline: "24-Aug", quotes: "8 received", status: "Evaluating" },
-    { id: "RFQ-081", title: "24/7 Guard Service", property: "Nexus Hub", category: "Security", posted: "12-Aug", deadline: "18-Aug", quotes: "4 received", status: "Awarded" },
-    { id: "RFQ-078", title: "Annual Pest Control", property: "Crystal Tower", category: "Pest Control", posted: "10-Aug", deadline: "16-Aug", quotes: "6 received", status: "Closed" },
-    { id: "RFQ-075", title: "Elevator AMC", property: "Apex Tower", category: "MEP", posted: "05-Aug", deadline: "15-Aug", quotes: "3 received", status: "Awarded" },
-    { id: "RFQ-072", title: "Facade Cleaning", property: "Meridian Park", category: "Housekeeping", posted: "01-Aug", deadline: "10-Aug", quotes: "7 received", status: "Evaluating" },
-    { id: "RFQ-069", title: "Chiller Repair", property: "Nexus Hub", category: "HVAC", posted: "25-Jul", deadline: "05-Aug", quotes: "2 received", status: "Closed" },
-    { id: "RFQ-065", title: "CCTV Upgrade", property: "Crystal Tower", category: "Security", posted: "20-Jul", deadline: "30-Jul", quotes: "5 received", status: "Awarded" }
+    { id: "RFQ-089", title: "DG Maintenance", property: "Apex Tower", category: "MEP", posted: "20-Aug", deadline: "26-Aug", quotes: "5 received", status: "Open", vendorScore: "", slaRate: "" },
+    { id: "RFQ-085", title: "Deep Cleaning", property: "Meridian Park", category: "Housekeeping", posted: "18-Aug", deadline: "24-Aug", quotes: "8 received", status: "Evaluating", vendorScore: "", slaRate: "" },
+    { id: "RFQ-081", title: "24/7 Guard Service", property: "Nexus Hub", category: "Security", posted: "12-Aug", deadline: "18-Aug", quotes: "4 received", status: "Awarded", vendorScore: "4.9", slaRate: "99.2%" },
+    { id: "RFQ-078", title: "Annual Pest Control", property: "Crystal Tower", category: "Pest Control", posted: "10-Aug", deadline: "16-Aug", quotes: "6 received", status: "Closed", vendorScore: "4.7", slaRate: "96.5%" },
+    { id: "RFQ-075", title: "Elevator AMC", property: "Apex Tower", category: "MEP", posted: "05-Aug", deadline: "15-Aug", quotes: "3 received", status: "Awarded", vendorScore: "5.0", slaRate: "100%" },
+    { id: "RFQ-072", title: "Facade Cleaning", property: "Meridian Park", category: "Housekeeping", posted: "01-Aug", deadline: "10-Aug", quotes: "7 received", status: "Evaluating", vendorScore: "", slaRate: "" },
+    { id: "RFQ-069", title: "Chiller Repair", property: "Nexus Hub", category: "HVAC", posted: "25-Jul", deadline: "05-Aug", quotes: "2 received", status: "Closed", vendorScore: "4.8", slaRate: "98.1%" },
+    { id: "RFQ-065", title: "CCTV Upgrade", property: "Crystal Tower", category: "Security", posted: "20-Jul", deadline: "30-Jul", quotes: "5 received", status: "Awarded", vendorScore: "4.9", slaRate: "98.8%" }
   ];
 
   const statusStyle = (s: string) => {
@@ -55,12 +55,20 @@ export default function RFQDirectory() {
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">RFQ Directory</h1>
           <p className="text-sm text-gray-500 mt-1">Manage and track your Request for Quotations across properties.</p>
         </div>
-        <Link
-          href="/marketplace/create-rfq"
-          className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
-        >
-          <Plus size={14} /> Create New RFQ
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/marketplace/payments"
+            className="px-4 py-2.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-100/60 text-[#0F8B7D] text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all"
+          >
+            <span>Commission &amp; Escrow Ledger</span>
+          </Link>
+          <Link
+            href="/marketplace/create-rfq"
+            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all"
+          >
+            <Plus size={14} /> Create New RFQ
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -130,11 +138,10 @@ export default function RFQDirectory() {
               <th className="py-3 pr-3">Title</th>
               <th className="py-3 pr-3">Property</th>
               <th className="py-3 pr-3">Category</th>
-              <th className="py-3 pr-3">Posted Date</th>
-              <th className="py-3 pr-3">Deadline</th>
               <th className="py-3 pr-3">Quotes</th>
+              <th className="py-3 pr-3">Vendor Performance</th>
               <th className="py-3 pr-3">Status</th>
-              <th className="py-3">Actions</th>
+              <th className="py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -144,18 +151,27 @@ export default function RFQDirectory() {
                 <td className="py-4 pr-3 font-bold text-gray-900">{rfq.title}</td>
                 <td className="py-4 pr-3 text-gray-600">{rfq.property}</td>
                 <td className="py-4 pr-3 text-gray-600">{rfq.category}</td>
-                <td className="py-4 pr-3 text-gray-600">{rfq.posted}</td>
-                <td className="py-4 pr-3 text-gray-600">{rfq.deadline}</td>
                 <td className="py-4 pr-3 text-gray-600">{rfq.quotes}</td>
+                <td className="py-4 pr-3">
+                  {rfq.vendorScore ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#0F8B7D] font-bold text-[10px]">
+                      <span>⭐ {rfq.vendorScore}</span>
+                      <span className="text-gray-300">|</span>
+                      <span>{rfq.slaRate} SLA</span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 text-[10px] italic">Bidding in progress</span>
+                  )}
+                </td>
                 <td className="py-4 pr-3">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${statusStyle(rfq.status)}`}>
                     {rfq.status}
                   </span>
                 </td>
-                <td className="py-4">
+                <td className="py-4 text-right">
                   <Link
                     href="/marketplace/compare"
-                    className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1"
+                    className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer inline-flex items-center gap-1"
                   >
                     <Eye size={13} /> View Quotes
                   </Link>

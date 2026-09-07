@@ -85,7 +85,7 @@ export default function InvestorsREITsJourney() {
               <span className="text-2xl font-mono font-black text-[#0F8B7D]">03</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Automated BRSR &amp; GRESB</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Export verified Scope 1 &amp; 2 utility metrics and building sustainability scores compliant with Indian SEBI and international mandates.
+                Export verified Scope 1 &amp; 2 utility metrics and building sustainability scores compliant with global ESG, BRSR, and GRESB frameworks.
               </p>
               <Link href="/platform" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:underline">
                 <span>Explore Platform</span>

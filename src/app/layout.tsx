@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "OfficeX — India's CRE & FM Ecosystem",
-  description: "India's integrated platform for commercial real estate, facility management, workplace operations, and intelligent property services.",
+  title: "OfficeX — The Modern CRE & FM Ecosystem",
+  description: "The integrated platform for commercial real estate, facility management, workplace operations, and intelligent property services.",
 };
 
 export const viewport: Viewport = {

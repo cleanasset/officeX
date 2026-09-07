@@ -4,11 +4,9 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Footer from "@/components/Footer";
 import { 
   ChevronDown, 
   MapPin, 
-  Search,
   Wrench,
   ThermometerSnowflake,
   ShieldCheck,
@@ -17,7 +15,11 @@ import {
   Bug,
   ArrowRight,
   Menu,
-  X
+  X,
+  CheckCircle2,
+  Globe,
+  HelpCircle,
+  SlidersHorizontal
 } from "lucide-react";
 
 export default function FMMarketplacePage() {
@@ -27,320 +29,460 @@ export default function FMMarketplacePage() {
   const [cityOpen, setCityOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Select Category");
   const [selectedCity, setSelectedCity] = useState("Select City");
+  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
+  const [enquiryCategory, setEnquiryCategory] = useState("MEP Services");
+  const [submitted, setSubmitted] = useState(false);
 
-  const categories = ["MEP", "HVAC", "Security", "Cleaning", "Fire Safety", "Pest Control", "Housekeeping"];
-  const cities = ["Bengaluru", "Mumbai", "Delhi NCR", "Hyderabad", "Pune", "Chennai"];
+  const categories = [
+    "MEP Services", 
+    "HVAC", 
+    "Security", 
+    "Cleaning", 
+    "Fire Safety", 
+    "Pest Control"
+  ];
+  
+  const cities = [
+    "Bengaluru", 
+    "Mumbai", 
+    "Delhi NCR", 
+    "Hyderabad", 
+    "Pune", 
+    "Chennai",
+    "Singapore",
+    "Dubai"
+  ];
 
   const handleSearch = () => {
-    // In a real app, this would route to a search results page with params
-    router.push(`/dashboard?cat=${selectedCategory}&city=${selectedCity}`);
+    setEnquiryCategory(selectedCategory !== "Select Category" ? selectedCategory : "General FM");
+    setIsEnquiryModalOpen(true);
+  };
+
+  const handleCardClick = (catName: string) => {
+    setEnquiryCategory(catName);
+    setIsEnquiryModalOpen(true);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    setTimeout(() => {
+      setSubmitted(false);
+      setIsEnquiryModalOpen(false);
+    }, 2200);
   };
 
   return (
     <div className="flex flex-col min-h-screen font-sans text-slate-900 bg-slate-50">
       
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between transition-all shadow-2xs relative">
-        <div className="flex items-center shrink-0 lg:w-[250px]">
-          <Link href="/" className="flex items-center gap-3.5 group">
+      {/* 1. HEADER (Matching Figma Design) */}
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-3.5 flex items-center justify-between transition-all shadow-2xs">
+        {/* Logo */}
+        <div className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center gap-3 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={60} 
-              height={60} 
+              width={48} 
+              height={48} 
               priority
               className="object-contain"
-              style={{ width: "auto", height: "50px" }}
+              style={{ width: "auto", height: "42px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={200} 
-              height={44} 
+              width={160} 
+              height={36} 
               priority
               className="object-contain"
-              style={{ width: "auto", height: "38px" }}
+              style={{ width: "auto", height: "32px" }}
             />
           </Link>
         </div>
 
-        <nav className="hidden lg:flex flex-1 justify-center items-center gap-7 text-xs sm:text-sm font-semibold text-slate-600">
-          <Link href="/discover" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Buy / Lease</Link>
-          <Link href="/fm-marketplace" className="text-[#0F8B7D] font-bold whitespace-nowrap">FM Services</Link>
-          <Link href="/operations" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">SaaS Platform</Link>
-          <Link href="/managed-services" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Managed Services</Link>
-          <Link href="/intelligence" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Intelligence</Link>
+        {/* Center Nav */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+          <Link 
+            href="/fm-marketplace" 
+            className="text-[#0F8B7D] font-bold border-b-2 border-[#0F8B7D] pb-1"
+          >
+            Marketplace
+          </Link>
+          <button 
+            onClick={() => { setEnquiryCategory("All Categories"); setIsEnquiryModalOpen(true); }}
+            className="hover:text-[#0F8B7D] transition-colors pb-1 cursor-pointer"
+          >
+            Vendors
+          </button>
+          <Link 
+            href="/compliance" 
+            className="hover:text-[#0F8B7D] transition-colors pb-1"
+          >
+            Compliance
+          </Link>
+          <Link 
+            href="/pricing" 
+            className="hover:text-[#0F8B7D] transition-colors pb-1"
+          >
+            Pricing
+          </Link>
         </nav>
 
-        <div className="hidden md:flex items-center justify-end gap-4 shrink-0 lg:w-[250px]">
-          <a href="/login" className="text-xs sm:text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors px-2">
-            Sign In
-          </a>
-          <button 
-            onClick={() => router.push('/public/wizard')}
-            className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer"
+        {/* Right Actions */}
+        <div className="hidden md:flex items-center gap-5">
+          <Link 
+            href="/login" 
+            className="text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors"
           >
-            Book a Demo
+            Log In
+          </Link>
+          <button 
+            onClick={() => { setEnquiryCategory("Enterprise FM"); setIsEnquiryModalOpen(true); }}
+            className="px-6 py-2.5 rounded-lg bg-[#0F8B7D] text-white text-sm font-bold hover:bg-[#0D7A6E] shadow-sm hover:shadow-md transition-all cursor-pointer"
+          >
+            Get Started
           </button>
         </div>
 
-        <button className="md:hidden p-1 text-slate-700 hover:text-slate-900" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        {/* Mobile menu toggle */}
+        <button 
+          className="md:hidden p-1.5 text-slate-700 hover:text-slate-900" 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </header>
 
       {/* MOBILE MENU */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-5 md:hidden text-slate-900 shadow-2xl animate-fadeIn">
-          <Link href="/discover" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Buy / Lease</Link>
-          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">FM Services</Link>
-          <Link href="/operations" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">SaaS Platform</Link>
-          <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Managed Services</Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
+          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">Marketplace</Link>
+          <button onClick={() => { setMobileMenuOpen(false); setIsEnquiryModalOpen(true); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Vendors</button>
+          <Link href="/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Compliance</Link>
+          <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Pricing</Link>
           <hr className="border-slate-200" />
+          <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-slate-700">Log In</Link>
           <button 
-            onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
-            className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
+            onClick={() => { setMobileMenuOpen(false); setIsEnquiryModalOpen(true); }}
+            className="w-full py-3 rounded-lg bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
           >
-            Book a Demo
+            Get Started
           </button>
         </div>
       )}
 
-      {/* HERO SECTION (Gradient matching Figma design) */}
-      <section className="bg-gradient-to-br from-[#0e746a] to-[#4068c2] pt-16 pb-20 px-4 sm:px-6 relative overflow-hidden text-center text-white w-full max-w-full">
+      {/* 2. HERO BANNER WITH INTEGRATED FM FACILITY IMAGE (Matching Specification) */}
+      <section className="relative pt-18 pb-22 px-4 sm:px-6 lg:px-8 text-center text-white w-full max-w-full overflow-hidden">
         
-        {/* Top Pill */}
-        <div className="inline-block px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6">
-          ENTERPRISE FM SOLUTIONS
+        {/* Photorealistic Facility Operations Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/fm_hero_banner.jpg"
+            alt="Facility Management Operations Control Center"
+            fill
+            priority
+            className="object-cover object-center"
+            sizes="100vw"
+          />
+          {/* High-grade Teal-to-Navy Gradient Overlay matching Figma */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0b534c]/94 via-[#0d645c]/90 to-[#1e3a8a]/88 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/50" />
         </div>
-        
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight mb-4">
-          India's Trusted Facility Management Marketplace
-        </h1>
-        
-        <p className="text-sm sm:text-base text-white/90 font-medium max-w-2xl mx-auto mb-10 leading-relaxed">
-          Streamline your operations with verified vendors, compliance tracking, and secure escrow payments.
-        </p>
 
-        {/* Search Bar Container */}
-        <div className="max-w-4xl mx-auto bg-white rounded-xl sm:rounded-full p-2 shadow-2xl flex flex-col sm:flex-row items-center gap-2 border border-white/40 relative z-20">
+        {/* Content Container */}
+        <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
           
-          {/* Category Dropdown */}
-          <div className="flex-1 relative w-full sm:w-auto">
-            <div 
-              onClick={() => { setCategoryOpen(!categoryOpen); setCityOpen(false); }}
-              className="flex items-center justify-between w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg sm:rounded-full cursor-pointer border border-slate-200 transition-colors"
-            >
-               <div className="flex items-center gap-2 text-slate-700">
-                  <Search size={16} className="text-slate-500" />
-                  <span className="text-sm font-semibold truncate max-w-[140px]">{selectedCategory}</span>
-               </div>
-               <ChevronDown size={16} className={`text-slate-500 transition-transform ${categoryOpen ? "rotate-180" : ""}`} />
-            </div>
+          {/* Eyebrow Pill */}
+          <div className="inline-block px-4 py-1.5 rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-white text-[11px] sm:text-xs font-extrabold uppercase tracking-widest mb-5 shadow-2xs">
+            ENTERPRISE FM SOLUTIONS
+          </div>
+          
+          {/* Headline */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.15] mb-4 text-white drop-shadow-sm max-w-4xl">
+            The Trusted Facility Management Marketplace
+          </h1>
+          
+          {/* Subheadline */}
+          <p className="text-sm sm:text-base md:text-lg text-white/90 font-medium max-w-2xl mx-auto mb-10 leading-relaxed drop-shadow-xs">
+            Streamline your operations with verified vendors, compliance tracking, and secure escrow payments.
+          </p>
+
+          {/* Interactive Search Bar Card */}
+          <div className="w-full max-w-3xl bg-white rounded-2xl sm:rounded-full p-2.5 sm:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row items-center gap-2 border border-white/40 text-left">
             
-            {/* Category Menu */}
-            {categoryOpen && (
-              <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 text-left">
-                <div className="max-h-48 overflow-y-auto py-2">
+            {/* Category Dropdown */}
+            <div className="flex-1 relative w-full sm:w-auto">
+              <div 
+                onClick={() => { setCategoryOpen(!categoryOpen); setCityOpen(false); }}
+                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-transparent hover:bg-slate-50 rounded-xl sm:rounded-full cursor-pointer transition-colors"
+              >
+                 <div className="flex items-center gap-3 text-slate-700">
+                    <SlidersHorizontal size={17} className="text-slate-400 shrink-0" />
+                    <span className="text-sm font-semibold text-slate-800 truncate">
+                      {selectedCategory}
+                    </span>
+                 </div>
+                 <ChevronDown size={17} className={`text-slate-400 transition-transform ${categoryOpen ? "rotate-180" : ""}`} />
+              </div>
+              
+              {/* Category Dropdown Menu */}
+              {categoryOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-50 py-2">
                   {categories.map((cat) => (
                     <div 
                       key={cat}
                       onClick={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
-                      className="px-4 py-2 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700 cursor-pointer font-medium"
+                      className="px-4 py-2.5 text-sm text-slate-700 hover:bg-teal-50 hover:text-[#0F8B7D] cursor-pointer font-medium flex items-center justify-between"
                     >
-                      {cat}
+                      <span>{cat}</span>
+                      {selectedCategory === cat && <CheckCircle2 size={15} className="text-[#0F8B7D]" />}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-
-          <div className="hidden sm:block w-px h-10 bg-slate-200 shrink-0"></div>
-
-          {/* City Dropdown */}
-          <div className="flex-1 relative w-full sm:w-auto">
-            <div 
-              onClick={() => { setCityOpen(!cityOpen); setCategoryOpen(false); }}
-              className="flex items-center justify-between w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg sm:rounded-full cursor-pointer border border-slate-200 transition-colors"
-            >
-               <div className="flex items-center gap-2 text-slate-700">
-                  <MapPin size={16} className="text-slate-500" />
-                  <span className="text-sm font-semibold truncate max-w-[140px]">{selectedCity}</span>
-               </div>
-               <ChevronDown size={16} className={`text-slate-500 transition-transform ${cityOpen ? "rotate-180" : ""}`} />
+              )}
             </div>
 
-            {/* City Menu */}
-            {cityOpen && (
-              <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 text-left">
-                <div className="max-h-48 overflow-y-auto py-2">
+            <div className="hidden sm:block w-px h-8 bg-slate-200 shrink-0"></div>
+
+            {/* City Dropdown */}
+            <div className="flex-1 relative w-full sm:w-auto">
+              <div 
+                onClick={() => { setCityOpen(!cityOpen); setCategoryOpen(false); }}
+                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-transparent hover:bg-slate-50 rounded-xl sm:rounded-full cursor-pointer transition-colors"
+              >
+                 <div className="flex items-center gap-3 text-slate-700">
+                    <MapPin size={17} className="text-slate-400 shrink-0" />
+                    <span className="text-sm font-semibold text-slate-800 truncate">
+                      {selectedCity}
+                    </span>
+                 </div>
+                 <ChevronDown size={17} className={`text-slate-400 transition-transform ${cityOpen ? "rotate-180" : ""}`} />
+              </div>
+
+              {/* City Dropdown Menu */}
+              {cityOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-50 py-2">
                   {cities.map((city) => (
                     <div 
                       key={city}
                       onClick={() => { setSelectedCity(city); setCityOpen(false); }}
-                      className="px-4 py-2 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700 cursor-pointer font-medium"
+                      className="px-4 py-2.5 text-sm text-slate-700 hover:bg-teal-50 hover:text-[#0F8B7D] cursor-pointer font-medium flex items-center justify-between"
                     >
-                      {city}
+                      <span>{city}</span>
+                      {selectedCity === city && <CheckCircle2 size={15} className="text-[#0F8B7D]" />}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Find Vendors Button */}
+            <button 
+              onClick={handleSearch}
+              className="w-full sm:w-auto px-7 py-3 bg-[#0F8B7D] hover:bg-[#0c7266] text-white font-bold text-sm rounded-xl sm:rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2"
+            >
+              <span>Find Vendors</span>
+            </button>
           </div>
 
-          {/* Search Button */}
-          <button 
-            onClick={handleSearch}
-            className="w-full sm:w-auto px-8 py-3.5 bg-[#0F8B7D] hover:bg-[#0c7266] text-white font-bold text-sm rounded-lg sm:rounded-full shadow-md transition-all cursor-pointer whitespace-nowrap"
-          >
-            Find Vendors
-          </button>
-        </div>
+          {/* Popular Tags */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-8 text-xs font-semibold">
+             <span className="text-white/80 mr-1">Popular Tags:</span>
+             {["MEP", "HVAC", "Security", "Housekeeping"].map((tag, idx) => (
+               <button 
+                 key={idx} 
+                 onClick={() => { 
+                   setSelectedCategory(tag === "Housekeeping" ? "Cleaning" : tag);
+                   setEnquiryCategory(tag === "Housekeeping" ? "Cleaning" : tag);
+                   setIsEnquiryModalOpen(true);
+                 }}
+                 className="px-3.5 py-1.5 rounded-full border border-white/30 bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all cursor-pointer text-white"
+               >
+                 {tag}
+               </button>
+             ))}
+          </div>
 
-        {/* Popular Tags */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-8 text-xs font-semibold relative z-10">
-           <span className="text-white/70 mr-1">Popular Tags:</span>
-           {["MEP", "HVAC", "Security", "Housekeeping"].map((tag, idx) => (
-             <span 
-               key={idx} 
-               onClick={() => setSelectedCategory(tag)}
-               className="px-3 py-1 rounded-full border border-white/30 bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-             >
-               {tag}
-             </span>
-           ))}
         </div>
-
       </section>
 
-      {/* TRUSTED BY TICKER */}
-      <section className="bg-white py-6 border-b border-slate-200 w-full overflow-hidden">
+      {/* 3. TRUSTED BY ENTERPRISE LEADERS STRIP */}
+      <section className="bg-white py-6 border-b border-slate-200/90 w-full overflow-hidden">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase mb-4">
+          <p className="text-center text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.25em] uppercase mb-4">
             TRUSTED BY ENTERPRISE LEADERS
           </p>
-          <div className="flex items-center justify-center gap-8 md:gap-16 flex-wrap opacity-60 grayscale font-black text-slate-800 text-sm md:text-base">
-            <span>TCS</span>
-            <span>Wipro</span>
-            <span>Infosys</span>
-            <span>DLF</span>
-            <span>Godrej Properties</span>
-            <span className="hidden lg:block">TCS</span>
-            <span className="hidden lg:block">Wipro</span>
-            <span className="hidden lg:block">Infosys</span>
+          <div className="flex items-center justify-center gap-8 md:gap-14 lg:gap-18 flex-wrap font-black text-slate-700 text-sm sm:text-base opacity-75">
+            <span className="hover:opacity-100 transition-opacity">TCS</span>
+            <span className="hover:opacity-100 transition-opacity">Wipro</span>
+            <span className="hover:opacity-100 transition-opacity">Infosys</span>
+            <span className="hover:opacity-100 transition-opacity">DLF</span>
+            <span className="hover:opacity-100 transition-opacity">Godrej Properties</span>
+            <span className="hidden lg:block hover:opacity-100 transition-opacity">TCS</span>
+            <span className="hidden lg:block hover:opacity-100 transition-opacity">Wipro</span>
+            <span className="hidden lg:block hover:opacity-100 transition-opacity">Infosys</span>
+            <span className="hidden xl:block hover:opacity-100 transition-opacity">DLF</span>
+            <span className="hidden xl:block hover:opacity-100 transition-opacity">Godrej Properties</span>
           </div>
         </div>
       </section>
 
-      {/* COMPREHENSIVE FACILITY SERVICES GRID */}
-      <section className="bg-slate-50 py-16 px-4 sm:px-6 w-full max-w-full">
+      {/* 4. COMPREHENSIVE FACILITY SERVICES (6 Cards Grid Matching Figma) */}
+      <section className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 w-full max-w-full">
         <div className="max-w-6xl mx-auto w-full">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3">Comprehensive Facility Services</h2>
-            <p className="text-slate-500 text-sm font-medium">Discover vetted vendors across all major facility management categories.</p>
+          {/* Header */}
+          <div className="text-center mb-12 sm:mb-14">
+            <h2 className="text-2xl sm:text-3xl lg:text-[32px] font-black text-slate-900 tracking-tight mb-3">
+              Comprehensive Facility Services
+            </h2>
+            <p className="text-slate-500 text-sm sm:text-base font-medium max-w-xl mx-auto">
+              Discover vetted vendors across all major facility management categories.
+            </p>
           </div>
 
+          {/* 6 Category Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            {/* Card 1 */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/60 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Wrench size={18} className="text-[#0F8B7D]" />
+            {/* Card 1: MEP Services */}
+            <div 
+              onClick={() => handleCardClick("MEP Services")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <Wrench size={22} className="text-[#0F8B7D]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">MEP Services</h3>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">Mechanical, Electrical, and Plumbing solutions.</p>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-[#0F8B7D] transition-colors">
+                    MEP Services
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Mechanical, Electrical, and Plumbing solutions.
+                  </p>
                 </div>
               </div>
-              <div className="mt-auto pt-4 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold hover:gap-2 transition-all cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
                 <span>240+ Vendors</span>
                 <ArrowRight size={14} />
               </div>
             </div>
 
-            {/* Card 2 */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/60 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <ThermometerSnowflake size={18} className="text-blue-600" />
+            {/* Card 2: HVAC */}
+            <div 
+              onClick={() => handleCardClick("HVAC")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <ThermometerSnowflake size={22} className="text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">HVAC</h3>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">Heating, ventilation, and air conditioning maintenance.</p>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-blue-600 transition-colors">
+                    HVAC
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Heating, ventilation, and air conditioning maintenance.
+                  </p>
                 </div>
               </div>
-              <div className="mt-auto pt-4 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold hover:gap-2 transition-all cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
                 <span>180+ Vendors</span>
                 <ArrowRight size={14} />
               </div>
             </div>
 
-            {/* Card 3 */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/60 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <ShieldCheck size={18} className="text-indigo-600" />
+            {/* Card 3: Security */}
+            <div 
+              onClick={() => handleCardClick("Security")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <ShieldCheck size={22} className="text-indigo-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Security</h3>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">Manned guarding, surveillance, and access control.</p>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-indigo-600 transition-colors">
+                    Security
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Manned guarding, surveillance, and access control.
+                  </p>
                 </div>
               </div>
-              <div className="mt-auto pt-4 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold hover:gap-2 transition-all cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
                 <span>310+ Vendors</span>
                 <ArrowRight size={14} />
               </div>
             </div>
 
-            {/* Card 4 */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/60 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-cyan-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Sparkles size={18} className="text-cyan-600" />
+            {/* Card 4: Cleaning */}
+            <div 
+              onClick={() => handleCardClick("Cleaning")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <Sparkles size={22} className="text-cyan-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Cleaning</h3>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">Deep cleaning, facade, and daily housekeeping.</p>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-cyan-600 transition-colors">
+                    Cleaning
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Deep cleaning, facade, and daily housekeeping.
+                  </p>
                 </div>
               </div>
-              <div className="mt-auto pt-4 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold hover:gap-2 transition-all cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
                 <span>450+ Vendors</span>
                 <ArrowRight size={14} />
               </div>
             </div>
 
-            {/* Card 5 */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/60 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Flame size={18} className="text-red-500" />
+            {/* Card 5: Fire Safety */}
+            <div 
+              onClick={() => handleCardClick("Fire Safety")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <Flame size={22} className="text-red-500" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Fire Safety</h3>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">Audits, extinguisher maintenance, and alarm systems.</p>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-red-500 transition-colors">
+                    Fire Safety
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Audits, extinguisher maintenance, and alarm systems.
+                  </p>
                 </div>
               </div>
-              <div className="mt-auto pt-4 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold hover:gap-2 transition-all cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
                 <span>120+ Vendors</span>
                 <ArrowRight size={14} />
               </div>
             </div>
 
-            {/* Card 6 */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md border border-slate-200/60 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Bug size={18} className="text-green-600" />
+            {/* Card 6: Pest Control */}
+            <div 
+              onClick={() => handleCardClick("Pest Control")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <Bug size={22} className="text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Pest Control</h3>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">Commercial pest management and fumigation.</p>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-emerald-600 transition-colors">
+                    Pest Control
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Commercial pest management and fumigation.
+                  </p>
                 </div>
               </div>
-              <div className="mt-auto pt-4 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold hover:gap-2 transition-all cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
                 <span>150+ Vendors</span>
                 <ArrowRight size={14} />
               </div>
@@ -348,55 +490,250 @@ export default function FMMarketplacePage() {
 
           </div>
 
-          {/* HOW OFFICEX WORKS (Process Steps) */}
-          <div className="mt-16 bg-white rounded-3xl p-8 md:p-12 shadow-md border border-slate-200 relative">
-             <h2 className="text-center font-black text-slate-900 text-xl mb-12">How OfficeX Works</h2>
+          {/* 5. HOW OFFICEX WORKS (Matching Figma Design) */}
+          <div className="mt-16 sm:mt-20 bg-white rounded-3xl p-8 sm:p-12 md:p-14 shadow-sm border border-slate-200/90 relative">
+             <h2 className="text-center font-black text-slate-900 text-xl sm:text-2xl mb-12 sm:mb-14">
+               How OfficeX Works
+             </h2>
              
-             {/* Dotted Line connecting circles (Hidden on mobile) */}
-             <div className="hidden md:block absolute top-32 left-[15%] right-[15%] h-px border-t-2 border-dashed border-slate-200 z-0"></div>
+             {/* Subtle Connector Line */}
+             <div className="hidden md:block absolute top-[138px] left-[14%] right-[14%] h-0.5 border-t border-dashed border-slate-200 z-0"></div>
 
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-6 relative z-10">
+                
                 {/* Step 1 */}
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center font-bold text-slate-500 mb-4 z-10 shadow-sm">
+                  <div className="w-11 h-11 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center font-extrabold text-teal-800 text-sm mb-4 shadow-2xs">
                     1
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Post Requirement</h4>
-                  <p className="text-xs text-slate-500 max-w-[200px]">Define your SLA and budget clearly.</p>
+                  <h4 className="font-extrabold text-slate-900 text-sm mb-1.5">Post Requirement</h4>
+                  <p className="text-xs text-slate-500 font-medium max-w-[210px] leading-relaxed">
+                    Define your SLA and budget clearly.
+                  </p>
                 </div>
                 
                 {/* Step 2 */}
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center font-bold text-slate-500 mb-4 z-10 shadow-sm">
+                  <div className="w-11 h-11 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center font-extrabold text-teal-800 text-sm mb-4 shadow-2xs">
                     2
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Receive Quotes</h4>
-                  <p className="text-xs text-slate-500 max-w-[200px]">Get proposals from verified vendors.</p>
+                  <h4 className="font-extrabold text-slate-900 text-sm mb-1.5">Receive Quotes</h4>
+                  <p className="text-xs text-slate-500 font-medium max-w-[210px] leading-relaxed">
+                    Get proposals from verified vendors.
+                  </p>
                 </div>
 
-                {/* Step 3 */}
+                {/* Step 3 (Highlighted in Figma) */}
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-[#0F8B7D] text-white border-4 border-teal-100 flex items-center justify-center font-bold text-lg mb-4 z-10 shadow-md">
+                  <div className="w-12 h-12 rounded-full bg-[#0F8B7D] text-white border-4 border-teal-100 flex items-center justify-center font-black text-base mb-3.5 shadow-md -mt-0.5">
                     3
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Compare & Award</h4>
-                  <p className="text-xs text-slate-500 max-w-[200px]">Evaluate ratings and award contract.</p>
+                  <h4 className="font-extrabold text-slate-900 text-sm mb-1.5">Compare & Award</h4>
+                  <p className="text-xs text-slate-500 font-medium max-w-[210px] leading-relaxed">
+                    Evaluate ratings and award contract.
+                  </p>
                 </div>
 
                 {/* Step 4 */}
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center font-bold text-slate-500 mb-4 z-10 shadow-sm">
+                  <div className="w-11 h-11 rounded-full bg-teal-50 border-2 border-teal-200 flex items-center justify-center font-extrabold text-teal-800 text-sm mb-4 shadow-2xs">
                     4
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Track & Pay</h4>
-                  <p className="text-xs text-slate-500 max-w-[200px]">Manage SLAs and pay via secure escrow.</p>
+                  <h4 className="font-extrabold text-slate-900 text-sm mb-1.5">Track & Pay</h4>
+                  <p className="text-xs text-slate-500 font-medium max-w-[210px] leading-relaxed">
+                    Manage SLAs and pay via secure escrow.
+                  </p>
                 </div>
+
              </div>
           </div>
+
         </div>
       </section>
 
-      <Footer />
+      {/* 6. ENQUIRY & RFQ MODAL */}
+      {isEnquiryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 relative">
+            <button 
+              onClick={() => setIsEnquiryModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            {submitted ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-teal-50 text-[#0F8B7D] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 size={36} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900">RFQ Submitted Successfully</h3>
+                <p className="text-xs sm:text-sm text-slate-600 mt-2">
+                  Verified vendors matching your criteria will reach out with competitive SLA proposals within 2 hours.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                  Direct Vendor RFQ
+                </span>
+                <h3 className="text-xl font-black text-slate-900 mt-2.5">
+                  Request Bids for {enquiryCategory}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Connect with pre-audited, verified contractors with milestone escrow protection.
+                </p>
+
+                <form onSubmit={handleFormSubmit} className="mt-5 space-y-3.5 text-left">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Your Name</label>
+                    <input 
+                      required 
+                      type="text" 
+                      placeholder="e.g. Rahul Sharma" 
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Work Email</label>
+                      <input 
+                        required 
+                        type="email" 
+                        placeholder="name@company.com" 
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                      <input 
+                        required 
+                        type="tel" 
+                        placeholder="+91 98765 43210" 
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Selected Category</label>
+                      <select 
+                        value={enquiryCategory} 
+                        onChange={(e) => setEnquiryCategory(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F8B7D] bg-white"
+                      >
+                        {categories.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">City / Location</label>
+                      <select 
+                        defaultValue={selectedCity !== "Select City" ? selectedCity : "Bengaluru"}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F8B7D] bg-white"
+                      >
+                        {cities.map((ct) => (
+                          <option key={ct} value={ct}>{ct}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Facility Requirements & Scope</label>
+                    <textarea 
+                      rows={2}
+                      placeholder="Specify building area, monthly budget, or SLA expectations..." 
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F8B7D]"
+                    ></textarea>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer mt-2"
+                  >
+                    Submit RFQ & Get Verified Quotes
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 7. FOOTER (Matching Figma Dark Navy Design) */}
+      <footer className="bg-[#0B1528] text-slate-400 text-xs py-14 sm:py-16 px-4 sm:px-8 lg:px-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-10">
+          
+          {/* Brand Col */}
+          <div className="md:col-span-2 space-y-4">
+            <Link href="/" className="flex items-center gap-3">
+              <Image 
+                src="/logo-removebg-preview.png" 
+                alt="OfficeX Logo" 
+                width={40} 
+                height={40} 
+                className="brightness-200"
+                style={{ width: "auto", height: "36px" }}
+              />
+              <span className="text-white font-black text-xl tracking-wider">OFFICEX</span>
+            </Link>
+            <p className="text-slate-400 text-xs sm:text-[13px] leading-relaxed max-w-sm">
+              The leading B2B marketplace for facility management services. Ensuring trust, compliance, and quality for enterprises.
+            </p>
+          </div>
+
+          {/* Solutions Col */}
+          <div className="space-y-3">
+            <h4 className="text-white font-bold text-sm tracking-wide">Solutions</h4>
+            <ul className="space-y-2 text-slate-400">
+              <li><button onClick={() => { setEnquiryCategory("Enterprise FM"); setIsEnquiryModalOpen(true); }} className="hover:text-white transition-colors cursor-pointer text-left">For Enterprises</button></li>
+              <li><button onClick={() => { setEnquiryCategory("Vendor Onboarding"); setIsEnquiryModalOpen(true); }} className="hover:text-white transition-colors cursor-pointer text-left">For Vendors</button></li>
+              <li><button onClick={() => router.push('/compliance')} className="hover:text-white transition-colors cursor-pointer text-left">Escrow Payments</button></li>
+              <li><button onClick={() => router.push('/platform')} className="hover:text-white transition-colors cursor-pointer text-left">Compliance API</button></li>
+            </ul>
+          </div>
+
+          {/* Company Col */}
+          <div className="space-y-3">
+            <h4 className="text-white font-bold text-sm tracking-wide">Company</h4>
+            <ul className="space-y-2 text-slate-400">
+              <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+              <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
+              <li><Link href="/press" className="hover:text-white transition-colors">Press</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+            </ul>
+          </div>
+
+          {/* Legal Col */}
+          <div className="space-y-3">
+            <h4 className="text-white font-bold text-sm tracking-wide">Legal</h4>
+            <ul className="space-y-2 text-slate-400">
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Vendor Agreement</Link></li>
+              <li><Link href="/support" className="hover:text-white transition-colors">Trust & Safety Center</Link></li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom Sub-footer */}
+        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+          <p>© 2026 OfficeX by Scalezix Ventures LLP. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+              <Globe size={14} />
+              <span>Global</span>
+            </button>
+            <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+              <HelpCircle size={14} />
+              <span>Help Center</span>
+            </button>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }

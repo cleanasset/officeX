@@ -37,8 +37,8 @@ export default function IntelligencePage() {
       {/* Hero Section */}
       <HeroSection
         badge="MODULE 04 — INTELLIGENCE"
-        headline="The Analytics Engine for Commercial Real Estate"
-        subheadline="From energy benchmarks to portfolio NOI, turn operational data into institutional intelligence."
+        headline="Data-Driven Intelligence for Commercial Real Estate"
+        subheadline="Stop guessing. Start benchmarking. Know your NOI before your accountant does."
         description="Unify leasing rolls, asset maintenance logs, utility telemetry, and tenant feedback into institutional executive dashboards. Make capital allocation decisions based on verified operational facts."
         primaryCta={{
           label: "Explore Analytics Demo",
