@@ -1104,10 +1104,6 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto w-full">
           {/* Header */}
           <div className="text-center mb-10 md:mb-12 flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#0F8B7D] text-xs font-black uppercase tracking-widest mb-3 shadow-xs">
-              <Sparkles size={14} className="text-[#0F8B7D]" />
-              <span>Powered by OFFICEX CORE</span>
-            </div>
             <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#0F8B7D]">
               THE OFFICEX ECOSYSTEM
             </span>
