@@ -64,59 +64,50 @@ export default function UserLandingBanner({
 
   if (isLoggedIn) {
     return (
-      <div className="w-full bg-[#071324] text-white border-b border-slate-800 px-4 sm:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="w-full bg-gradient-to-r from-teal-50/70 via-white to-slate-50 border-b border-teal-100/80 px-4 sm:px-8 py-2.5 shadow-xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           {/* User info */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-xs border border-teal-500/30 shrink-0">
-              <User size={14} />
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-teal-100 text-[#0F8B7D] flex items-center justify-center font-bold text-xs shrink-0">
+              <User size={13} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-white">Welcome, {userName}</span>
-                <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">
-                  {roleName}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-extrabold text-slate-900">Welcome, {userName}</span>
+              <span className="text-[11px] font-medium text-slate-500 hidden md:inline">({roleName})</span>
+              {isSubscribed ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <CheckCircle size={10} /> Active Subscription
                 </span>
-                {isSubscribed ? (
-                  <span className="text-[10px] font-bold bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-800 flex items-center gap-1">
-                    <CheckCircle size={11} /> Plan Active • Unlocked
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full border border-amber-800 flex items-center gap-1">
-                    <Lock size={11} /> Plan Inactive • Dashboard Locked
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {isSubscribed
-                  ? "Your operational workspace is unlocked and ready for live management."
-                  : "You are signed in. Activate an operational subscription or start instant demo access to unlock your live dashboard."}
-              </p>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                  <Lock size={10} /> Preview Mode • Dashboard Locked
+                </span>
+              )}
             </div>
           </div>
 
           {/* Action CTAs */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {isSubscribed ? (
               <Link
                 href={dashboardHref}
-                className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Launch {dashboardName}</span>
-                <ArrowRight size={13} />
+                <ArrowRight size={12} />
               </Link>
             ) : (
               <>
                 <button
                   onClick={handleActivateAndLaunch}
-                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer hover:-translate-y-0.5"
                 >
-                  <Sparkles size={13} />
+                  <Sparkles size={12} />
                   <span>Subscribe &amp; Enter Dashboard</span>
                 </button>
                 <Link
                   href="/pricing"
-                  className="px-3.5 py-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
                 >
                   View Plans
                 </Link>
@@ -125,10 +116,10 @@ export default function UserLandingBanner({
 
             <button
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer ml-1"
               title="Sign Out"
             >
-              <LogOut size={15} />
+              <LogOut size={14} />
             </button>
           </div>
         </div>
@@ -136,20 +127,20 @@ export default function UserLandingBanner({
     );
   }
 
-  // Not logged in: Show login teaser
+  // Not logged in: Show clean subtle teaser
   return (
-    <div className="w-full bg-slate-50 text-slate-700 border-b border-slate-200 px-4 sm:px-8 py-2.5">
+    <div className="w-full bg-slate-50/70 text-slate-700 border-b border-slate-100 px-4 sm:px-8 py-2">
       <div className="max-w-7xl mx-auto flex items-center justify-between text-xs">
         <div className="flex items-center gap-2 font-medium">
-          <Shield size={14} className="text-[#0F8B7D]" />
-          <span>Already registered as a <strong>{roleName}</strong>? Sign in to view your tailored workspace.</span>
+          <Shield size={13} className="text-[#0F8B7D]" />
+          <span>Tailored for <strong>{roleName}</strong>. Sign in to access your customized portal.</span>
         </div>
         <Link
           href={`/login?redirect=${encodeURIComponent(dashboardHref)}`}
           className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 shrink-0"
         >
           <span>Sign In Here</span>
-          <ArrowRight size={12} />
+          <ArrowRight size={11} />
         </Link>
       </div>
     </div>

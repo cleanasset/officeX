@@ -40,7 +40,7 @@ export default function HeroSection({
 }: HeroSectionProps) {
   return (
     <section
-      className="relative w-full py-16 md:py-24 px-4 sm:px-6 overflow-hidden border-b border-gray-100"
+      className="relative w-full pt-10 pb-16 md:pt-12 md:pb-20 px-4 sm:px-6 overflow-hidden border-b border-gray-100"
       style={{
         background: `linear-gradient(180deg, ${accentColor}08 0%, rgba(255,255,255,1) 100%)`
       }}

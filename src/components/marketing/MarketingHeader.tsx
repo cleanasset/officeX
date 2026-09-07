@@ -44,31 +44,31 @@ export default function MarketingHeader({
         }`}
       >
         {/* Left: Brand Logo & Wordmark */}
-        <div className="flex items-center shrink-0 lg:w-[250px]">
-          <Link href="/" className="flex items-center gap-3.5 group">
+        <div className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center gap-3 group">
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={60}
-              height={60}
+              width={50}
+              height={50}
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "42px" }}
+              style={{ width: "auto", height: "38px" }}
             />
             <Image
               src="/name-removebg-preview.png"
               alt="OfficeX"
-              width={200}
-              height={44}
+              width={160}
+              height={36}
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "32px" }}
+              style={{ width: "auto", height: "28px" }}
             />
           </Link>
         </div>
 
         {/* Center: Main Navigation Menu Items with Dropdowns */}
-        <nav className="hidden lg:flex flex-1 justify-center items-center gap-6 text-xs sm:text-sm font-semibold text-slate-600">
+        <nav className="hidden lg:flex items-center justify-center gap-3.5 xl:gap-5 2xl:gap-6 text-xs xl:text-[13px] font-semibold text-slate-600 mx-auto">
           {/* Marketplace Dropdown */}
           <div className="relative group py-2">
             <Link
@@ -251,19 +251,19 @@ export default function MarketingHeader({
         </nav>
 
         {/* Right: Actions */}
-        <div className="hidden md:flex items-center justify-end gap-3 shrink-0 lg:w-[320px]">
+        <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
           <HeaderAuthButton />
           <button
             type="button"
             onClick={() => router.push("/demo")}
-            className="px-4 py-2 rounded-xl border border-[#071324] text-[#071324] hover:bg-slate-50 text-xs sm:text-sm font-extrabold transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-800 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
           >
             Book a Demo
           </button>
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
-            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-all cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >
             Talk to Sales
           </button>

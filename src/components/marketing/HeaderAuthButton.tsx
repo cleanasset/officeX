@@ -135,14 +135,14 @@ export default function HeaderAuthButton({ className = "" }: HeaderAuthButtonPro
       <button
         type="button"
         onClick={() => setMenuOpen(!menuOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold transition-all border border-slate-300 shadow-sm cursor-pointer"
-        title="Account Profile"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold transition-all border border-slate-200 shadow-2xs cursor-pointer"
+        title={`Signed in as ${userName}`}
       >
-        <div className="w-6 h-6 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center font-extrabold text-[11px] shrink-0">
+        <div className="w-5 h-5 rounded-full bg-[#0F8B7D] text-white flex items-center justify-center font-bold text-[10px] shrink-0 shadow-xs">
           {userName.charAt(0).toUpperCase()}
         </div>
-        <span className="max-w-[110px] truncate font-semibold">{userName}</span>
-        <ChevronDown size={14} className={`text-slate-500 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
+        <span className="max-w-[80px] truncate font-bold text-slate-800">{userName.split(" ")[0]}</span>
+        <ChevronDown size={12} className={`text-slate-400 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
       </button>
 
       {menuOpen && (
