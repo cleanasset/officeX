@@ -14,12 +14,48 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const demoAccounts = [
-    { email: "owner@officex.in", label: "Property Owner (Landlord)", redirect: "/properties" },
-    { email: "broker@officex.in", label: "Leasing Broker", redirect: "/leasing" },
-    { email: "facilitymanager@officex.in", label: "Facility Manager (Ops)", redirect: "/ops" },
-    { email: "tenant@officex.in", label: "Tenant Admin (Occupier)", redirect: "/tenant" },
-    { email: "vendor@officex.in", label: "FM Vendor (Partner)", redirect: "/vendor" },
-    { email: "admin@officex.in", label: "Super Admin", redirect: "/admin" }
+    {
+      email: "owner@officex.in",
+      label: "Property Owner (Landlord)",
+      role: "Property Owner",
+      landingPage: "/audiences/owners",
+      dashboard: "/properties"
+    },
+    {
+      email: "broker@officex.in",
+      label: "Leasing Broker",
+      role: "Leasing Broker",
+      landingPage: "/audiences/investors",
+      dashboard: "/leasing"
+    },
+    {
+      email: "facilitymanager@officex.in",
+      label: "Facility Manager (Ops)",
+      role: "Facility Manager",
+      landingPage: "/audiences/fm",
+      dashboard: "/ops"
+    },
+    {
+      email: "tenant@officex.in",
+      label: "Tenant Admin (Occupier)",
+      role: "Corporate Occupier",
+      landingPage: "/audiences/occupiers",
+      dashboard: "/tenant"
+    },
+    {
+      email: "vendor@officex.in",
+      label: "FM Vendor (Partner)",
+      role: "FM Vendor",
+      landingPage: "/audiences/vendors",
+      dashboard: "/vendor"
+    },
+    {
+      email: "admin@officex.in",
+      label: "Super Admin",
+      role: "Super Admin",
+      landingPage: "/audiences/owners",
+      dashboard: "/admin"
+    }
   ];
 
   const handleDemoLogin = (acc: typeof demoAccounts[0]) => {
@@ -28,8 +64,12 @@ export default function LoginPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_user_email", acc.email);
       localStorage.setItem("officex_user_name", acc.label);
+      localStorage.setItem("officex_user_role", acc.role);
+      localStorage.setItem("officex_dashboard", acc.dashboard);
+      document.cookie = "officex_auth=1; path=/; max-age=2592000";
     }
-    router.push(acc.redirect);
+    // Redirect to their respective landing page per requirement
+    router.push(acc.landingPage);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,18 +82,21 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
+    const match = demoAccounts.find(d => d.email.toLowerCase() === email.toLowerCase());
+    const role = match ? match.role : "Property Owner";
+    const landing = match ? match.landingPage : "/audiences/owners";
+    const dash = match ? match.dashboard : "/properties";
+
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_user_email", email.trim().toLowerCase());
+      localStorage.setItem("officex_user_name", match ? match.label : email.split("@")[0]);
+      localStorage.setItem("officex_user_role", role);
+      localStorage.setItem("officex_dashboard", dash);
+      document.cookie = "officex_auth=1; path=/; max-age=2592000";
     }
 
-    // Match redirect route
-    const match = demoAccounts.find(d => d.email.toLowerCase() === email.toLowerCase());
-    if (match) {
-      router.push(match.redirect);
-    } else {
-      // Default to Property Owner if custom new user email
-      router.push("/properties");
-    }
+    // Redirect to respective landing page
+    router.push(landing);
   };
 
   return (

@@ -50,14 +50,54 @@ export default function Footer() {
             <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-[#0F8B7D]" /> SOC 2 Type II</span>
             <span className="flex items-center gap-1"><Lock size={14} className="text-[#0F8B7D]" /> AES-256</span>
           </div>
+          <div className="flex items-center gap-3 mt-3">
+            <a
+              href="https://linkedin.com/company/officex"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
+              aria-label="OfficeX on LinkedIn"
+            >
+              in
+            </a>
+            <a
+              href="https://twitter.com/officex_in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
+              aria-label="OfficeX on X (Twitter)"
+            >
+              𝕏
+            </a>
+          </div>
         </div>
 
         {/* Legal & Governance Column */}
         <div>
           <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <FileCheck size={14} className="text-[#0F8B7D]" /> Trust & Legal
+            <FileCheck size={14} className="text-[#0F8B7D]" /> Trust & Company
           </h4>
           <ul className="mt-4 flex flex-col gap-3 text-xs text-slate-400 font-semibold">
+            <li>
+              <Link href="/about" className="hover:text-white transition-colors flex items-center gap-1.5">
+                <span>About OfficeX</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/careers" className="hover:text-white transition-colors flex items-center gap-1.5">
+                <span>Careers</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="hover:text-white transition-colors flex items-center gap-1.5">
+                <span>Contact Us</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/resources" className="hover:text-white transition-colors flex items-center gap-1.5">
+                <span>Resources &amp; Insights</span>
+              </Link>
+            </li>
             <li>
               <Link href="/terms" className="hover:text-white transition-colors flex items-center gap-1.5">
                 <span>Terms of Service</span>
@@ -68,53 +108,43 @@ export default function Footer() {
                 <span>Privacy Policy</span>
               </Link>
             </li>
-            <li>
-              <Link href="/compliance" className="hover:text-white transition-colors flex items-center gap-1.5">
-                <span>Compliance NOC</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/security" className="hover:text-white transition-colors flex items-center gap-1.5">
-                <span>Security Center</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/support" className="hover:text-white transition-colors flex items-center gap-1.5">
-                <span>Support & Help Desk</span>
-              </Link>
-            </li>
           </ul>
         </div>
 
         {/* Modules Column */}
         <div>
           <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Building size={14} className="text-[#0F8B7D]" /> Platform Portals
+            <Building size={14} className="text-[#0F8B7D]" /> Solutions
           </h4>
           <ul className="mt-4 flex flex-col gap-3 text-xs text-slate-400 font-semibold">
             <li>
-              <Link href="/discover" className="hover:text-white transition-colors">
-                Commercial Office Discovery
+              <Link href="/marketplace" className="hover:text-white transition-colors">
+                Marketplace (Discovery &amp; RFQs)
               </Link>
             </li>
             <li>
-              <Link href="/fm-marketplace" className="hover:text-white transition-colors">
-                FM Services Marketplace
+              <Link href="/operate" className="hover:text-white transition-colors">
+                Operate (CAFM &amp; 52-Wk PPM)
               </Link>
             </li>
             <li>
-              <Link href="/operations" className="hover:text-white transition-colors">
-                Facility Operations SaaS
-              </Link>
-            </li>
-            <li>
-              <Link href="/managed-services" className="hover:text-white transition-colors">
-                Managed Workspace Services
+              <Link href="/manage" className="hover:text-white transition-colors">
+                Manage (Rent Roll &amp; Compliance)
               </Link>
             </li>
             <li>
               <Link href="/intelligence" className="hover:text-white transition-colors">
-                Portfolio AI &amp; Intelligence
+                Intelligence (NOI &amp; ESG Analytics)
+              </Link>
+            </li>
+            <li>
+              <Link href="/managed-services" className="hover:text-white transition-colors">
+                Managed Services (On-Ground PM &amp; FM)
+              </Link>
+            </li>
+            <li>
+              <Link href="/platform" className="hover:text-white transition-colors text-slate-400">
+                Platform Core &amp; Security
               </Link>
             </li>
           </ul>

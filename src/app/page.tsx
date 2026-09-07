@@ -57,8 +57,18 @@ import {
   Key,
   Play,
   Pause,
-  LayoutGrid
+  LayoutGrid,
+  Store,
+  Brain,
+  Handshake,
+  Bot
 } from "lucide-react";
+import TrustStrip from "@/components/marketing/TrustStrip";
+import ModuleCard from "@/components/marketing/ModuleCard";
+import EnquiryForm from "@/components/marketing/EnquiryForm";
+import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import AudienceTile from "@/components/marketing/AudienceTile";
+import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -66,6 +76,32 @@ export default function LandingPage() {
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
+  const [isEnquirySlideInOpen, setIsEnquirySlideInOpen] = useState(false);
+  const [enquiryPrefill, setEnquiryPrefill] = useState<{ audience?: string; modules?: string[] } | undefined>(undefined);
+  const [pricingView, setPricingView] = useState<"tiers" | "matrix">("tiers");
+
+  const openEnquiry = (prefill?: { audience?: string; modules?: string[] }) => {
+    setEnquiryPrefill(prefill);
+    setIsEnquirySlideInOpen(true);
+  };
+
+  const [isScrolledPastHero, setIsScrolledPastHero] = useState(false);
+  const heroSentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = heroSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsScrolledPastHero(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   // Lifecycle Stepper State & Data
   const [activeLifecycleStep, setActiveLifecycleStep] = useState<number>(0);
@@ -245,49 +281,22 @@ export default function LandingPage() {
     "owner", "occupier", "fm", "vendor", "investor"
   ];
 
-  // Auto-rotation timer (4.5s cycle)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveStakeholder((current) => {
-        const nextIdx = (stakeholderKeys.indexOf(current) + 1) % stakeholderKeys.length;
-        return stakeholderKeys[nextIdx];
-      });
-    }, 4500);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Handler to smoothly scroll to a stakeholder card
+  // Handler to smoothly scroll the horizontal carousel track to a stakeholder card (never scrolls window)
   const scrollToStakeholder = (key: "owner" | "occupier" | "fm" | "vendor" | "investor") => {
     setActiveStakeholder(key);
 
-    // Auto-scroll carousel track to matching card
     if (carouselTrackRef.current) {
       const targetCard = carouselTrackRef.current.querySelector(`[data-stakeholder-card="${key}"]`) as HTMLElement;
       if (targetCard) {
         isProgrammaticScrollRef.current = true;
-        targetCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        const targetLeft = targetCard.offsetLeft - carouselTrackRef.current.offsetLeft;
+        carouselTrackRef.current.scrollTo({ left: targetLeft, behavior: "smooth" });
         setTimeout(() => {
           isProgrammaticScrollRef.current = false;
         }, 500);
       }
     }
   };
-
-  // Synchronize carousel when activeStakeholder changes
-  useEffect(() => {
-    // scroll carousel card into view if not already scrolling from manual scroll
-    if (carouselTrackRef.current && !isProgrammaticScrollRef.current) {
-      const targetCard = carouselTrackRef.current.querySelector(`[data-stakeholder-card="${activeStakeholder}"]`) as HTMLElement;
-      if (targetCard) {
-        isProgrammaticScrollRef.current = true;
-        targetCard.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
-        setTimeout(() => {
-          isProgrammaticScrollRef.current = false;
-        }, 500);
-      }
-    }
-  }, [activeStakeholder]);
 
   const handleCarouselScroll = () => {
     if (isProgrammaticScrollRef.current || !carouselTrackRef.current) return;
@@ -370,16 +379,37 @@ export default function LandingPage() {
   };
 
   const handleLandingSearch = () => {
-    if (activeSearchTab === "space") {
-      router.push(
-        `/discover?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
-      );
-    } else if (activeSearchTab === "vendor") {
-      router.push(
-        `/fm-marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
-      );
+    // Check if user is already logged in
+    const email = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : null;
+    const sub = typeof window !== "undefined" ? localStorage.getItem("officex_subscription") : null;
+
+    if (!email) {
+      // Unauthenticated: Lead to Login page per requirement
+      const intent = activeSearchTab === "space" ? "commercial-space" : "vendor-fm";
+      router.push(`/login?redirect=/marketplace&intent=${intent}`);
+      return;
+    }
+
+    // Logged in: Check subscription
+    if (sub === "active") {
+      if (activeSearchTab === "space") {
+        router.push(
+          `/discover?city=${encodeURIComponent(spaceCity)}&area=${encodeURIComponent(spaceArea)}&budget=${encodeURIComponent(spaceBudget)}&grade=${encodeURIComponent(spaceGrade)}`
+        );
+      } else if (activeSearchTab === "vendor") {
+        router.push(
+          `/fm-marketplace?category=${encodeURIComponent(vendorCategory)}&city=${encodeURIComponent(vendorCity)}&budget=${encodeURIComponent(vendorBudget)}&type=${encodeURIComponent(vendorType)}`
+        );
+      } else {
+        router.push('/managed-services');
+      }
     } else {
-      router.push('/managed-services');
+      // If subscription is not yet active, lead to their respective landing page
+      const role = localStorage.getItem("officex_user_role");
+      if (role === "Corporate Occupier") router.push("/audiences/occupiers");
+      else if (role === "Facility Manager") router.push("/audiences/fm");
+      else if (role === "FM Vendor") router.push("/audiences/vendors");
+      else router.push("/audiences/owners");
     }
   };
 
@@ -468,8 +498,12 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
       
-      {/* SECTION 1: ENTERPRISE TOP NAVBAR — LIGHT MODERN THEME MATCHING REST OF SITE */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between transition-all shadow-2xs relative">
+      {/* SECTION 1: ENTERPRISE TOP NAVBAR — DYNAMIC STICKY NAV VIA INTERSECTION OBSERVER */}
+      <header className={`sticky top-0 z-50 w-full transition-colors duration-300 px-4 sm:px-8 lg:px-12 py-3.5 flex items-center justify-between shadow-2xs relative ${
+        isScrolledPastHero
+          ? "bg-[#071324] text-white border-b border-slate-800"
+          : "bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200/80"
+      }`}>
         {/* Left: Brand Logo & Wordmark */}
         <div className="flex items-center shrink-0 lg:w-[250px]">
           <Link href="/" className="flex items-center gap-3.5 group">
@@ -479,8 +513,8 @@ export default function LandingPage() {
               width={60} 
               height={60} 
               priority
-              className="object-contain"
-              style={{ width: "auto", height: "50px" }}
+              className={`object-contain transition-all ${isScrolledPastHero ? "filter brightness-0 invert" : ""}`}
+              style={{ width: "auto", height: "46px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
@@ -488,39 +522,174 @@ export default function LandingPage() {
               width={200} 
               height={44} 
               priority
-              className="object-contain"
-              style={{ width: "auto", height: "38px" }}
+              className={`object-contain transition-all ${isScrolledPastHero ? "filter brightness-0 invert" : ""}`}
+              style={{ width: "auto", height: "35px" }}
             />
           </Link>
         </div>
 
-        {/* Center: Main Navigation Menu Items */}
-        <nav className="hidden lg:flex flex-1 justify-center items-center gap-7 text-xs sm:text-sm font-semibold text-slate-600">
-          <Link href="/discover" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Buy / Lease</Link>
-          <Link href="/fm-marketplace" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">FM Services</Link>
-          <Link href="/operations" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">SaaS Platform</Link>
-          <Link href="/managed-services" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Managed Services</Link>
-          <Link href="/intelligence" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Intelligence</Link>
-          <button onClick={() => scrollToSection("faq")} className="hover:text-[#0F8B7D] transition-colors cursor-pointer whitespace-nowrap">Company</button>
+        {/* Center: Main Navigation Menu Items with Dropdowns */}
+        <nav className={`hidden lg:flex flex-1 justify-center items-center gap-6 text-xs sm:text-sm font-semibold transition-colors ${
+          isScrolledPastHero ? "text-slate-300" : "text-slate-600"
+        }`}>
+          
+          {/* Marketplace Dropdown */}
+          <div className="relative group py-2">
+            <Link href="/marketplace" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
+              <span>Marketplace</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </Link>
+            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Commercial Property Discovery</div>
+                <div className="text-[11px] text-slate-500 font-normal">Verified Grade-A office spaces</div>
+              </Link>
+              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">FM Vendor Marketplace</div>
+                <div className="text-[11px] text-slate-500 font-normal">Pre-vetted MEP &amp; facility contractors</div>
+              </Link>
+              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Structured RFQ Engine</div>
+                <div className="text-[11px] text-slate-500 font-normal">Automated BOQs &amp; escrow bids</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Operate Dropdown */}
+          <div className="relative group py-2">
+            <Link href="/operate" className="hover:text-[#2563EB] transition-colors flex items-center gap-1">
+              <span>Operate</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#2563EB] group-hover:rotate-180 transition-transform" />
+            </Link>
+            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">CAFM &amp; 52-Week PPM</div>
+                <div className="text-[11px] text-slate-500 font-normal">Automated preventative maintenance</div>
+              </Link>
+              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Tenant Helpdesk &amp; SLAs</div>
+                <div className="text-[11px] text-slate-500 font-normal">Priority ticketing &amp; auto-escalations</div>
+              </Link>
+              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Visitor &amp; Amenity Booking</div>
+                <div className="text-[11px] text-slate-500 font-normal">QR gate passes &amp; conference rooms</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Manage Dropdown */}
+          <div className="relative group py-2">
+            <Link href="/manage" className="hover:text-[#D97706] transition-colors flex items-center gap-1">
+              <span>Manage</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#D97706] group-hover:rotate-180 transition-transform" />
+            </Link>
+            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Rent Roll &amp; CAM Billing</div>
+                <div className="text-[11px] text-slate-500 font-normal">Automated invoices &amp; Razorpay links</div>
+              </Link>
+              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Statutory Compliance Radar</div>
+                <div className="text-[11px] text-slate-500 font-normal">90/60/30-day alerts for 40+ NOCs</div>
+              </Link>
+              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Digital Lease Vault</div>
+                <div className="text-[11px] text-slate-500 font-normal">Lock-in schedules &amp; deposit tracking</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Intelligence Dropdown */}
+          <div className="relative group py-2">
+            <Link href="/intelligence" className="hover:text-[#7C3AED] transition-colors flex items-center gap-1">
+              <span>Intelligence</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#7C3AED] group-hover:rotate-180 transition-transform" />
+            </Link>
+            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Portfolio NOI &amp; WALE</div>
+                <div className="text-[11px] text-slate-500 font-normal">Live yield &amp; occupancy analytics</div>
+              </Link>
+              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Energy &amp; ESG Benchmarking</div>
+                <div className="text-[11px] text-slate-500 font-normal">kWh/sq.ft. &amp; SEBI BRSR Core packs</div>
+              </Link>
+              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Vendor SLA Benchmarking</div>
+                <div className="text-[11px] text-slate-500 font-normal">Cross-portfolio quartile metrics</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Managed Services Dropdown */}
+          <div className="relative group py-2">
+            <Link href="/managed-services" className="hover:text-[#059669] transition-colors flex items-center gap-1">
+              <span>Managed Services</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#059669] group-hover:rotate-180 transition-transform" />
+            </Link>
+            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">On-Ground Property Mgmt</div>
+                <div className="text-[11px] text-slate-500 font-normal">Turnkey building stewardship</div>
+              </Link>
+              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Integrated FM (IFM)</div>
+                <div className="text-[11px] text-slate-500 font-normal">Technical MEP, soft services &amp; security</div>
+              </Link>
+              <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Monthly Audited MIS</div>
+                <div className="text-[11px] text-slate-500 font-normal">Open-book financial delivery</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Platform */}
+          <Link href="/platform" className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap">
+            Platform
+          </Link>
+
+          {/* Company Dropdown */}
+          <div className="relative group py-2">
+            <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+              <span>Company</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </button>
+            <div className="absolute top-full right-0 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/about" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
+                About OfficeX
+              </Link>
+              <Link href="/careers" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
+                Careers
+              </Link>
+              <Link href="/resources" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
+                Resources &amp; Insights
+              </Link>
+              <Link href="/faq" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
+                FAQs
+              </Link>
+              <Link href="/contact" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-[#0F8B7D]">
+                Contact Us
+              </Link>
+            </div>
+          </div>
         </nav>
 
         {/* Right: Actions */}
-        <div className="hidden md:flex items-center justify-end gap-4 shrink-0 lg:w-[250px]">
+        <div className="hidden md:flex items-center justify-end gap-3 shrink-0 lg:w-[320px]">
+          <HeaderAuthButton />
           <button 
-            onClick={() => router.push("/public/search")}
-            className="p-2 text-slate-600 hover:text-slate-900 transition-colors rounded-full hover:bg-slate-100 cursor-pointer"
-            title="Search Spaces"
-          >
-            <Search size={18} />
-          </button>
-          <a href="/login" className="text-xs sm:text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors px-2">
-            Sign In
-          </a>
-          <button 
-            onClick={() => router.push('/public/wizard')}
-            className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer"
+            type="button"
+            onClick={() => router.push('/demo')}
+            className="px-4 py-2 rounded-xl border border-[#071324] text-[#071324] hover:bg-slate-50 text-xs sm:text-sm font-extrabold transition-all cursor-pointer"
           >
             Book a Demo
+          </button>
+          <button 
+            type="button"
+            onClick={() => openEnquiry()}
+            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-all cursor-pointer"
+          >
+            Talk to Sales
           </button>
         </div>
 
@@ -532,7 +701,7 @@ export default function LandingPage() {
 
       {/* Mobile Nav Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-5 md:hidden text-slate-900 shadow-2xl animate-fadeIn">
+        <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-4 md:hidden text-slate-900 shadow-2xl animate-fadeIn overflow-y-auto pb-10">
           <div className="flex items-center gap-3.5 mb-2">
             <Image 
               src="/logo-removebg-preview.png" 
@@ -549,17 +718,29 @@ export default function LandingPage() {
               style={{ width: "auto", height: "30px" }}
             />
           </div>
-          <Link href="/discover" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Buy / Lease</Link>
-          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services</Link>
-          <Link href="/operations" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">SaaS Platform</Link>
-          <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Managed Services</Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
-          <button onClick={() => { setMobileMenuOpen(false); scrollToSection("faq"); }} className="text-left text-base font-bold hover:text-[#0F8B7D]">Company</button>
-          <hr className="border-slate-200" />
-          <a href="/login" className="text-base font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>Sign In</a>
+          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Marketplace</Link>
+          <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">Operate (CAFM)</Link>
+          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">Manage (Property SaaS)</Link>
+          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#7C3AED]">Intelligence</Link>
+          <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#059669]">Managed Services</Link>
+          <Link href="/platform" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Platform Core</Link>
+          <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Resources &amp; Insights</Link>
+          <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Contact Us</Link>
+          <hr className="border-slate-200 my-2" />
+          <div className="py-1">
+            <HeaderAuthButton />
+          </div>
           <button 
-            onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
-            className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
+            type="button"
+            onClick={() => { setMobileMenuOpen(false); openEnquiry(); }}
+            className="w-full py-3 rounded-xl bg-[#0F8B7D] text-white font-bold text-center shadow-md cursor-pointer text-sm"
+          >
+            Talk to Sales
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setMobileMenuOpen(false); router.push('/demo'); }}
+            className="w-full py-3 rounded-xl border border-[#071324] text-[#071324] font-bold text-center cursor-pointer text-sm"
           >
             Book a Demo
           </button>
@@ -567,9 +748,9 @@ export default function LandingPage() {
       )}
 
       {/* SECTION 2: HERO — ORIGINAL DARK PRESTIGIOUS BANNER */}
-      <section className="relative min-h-[580px] md:min-h-[640px] lg:min-h-[680px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-14 md:pt-16 pb-14 md:pb-16 bg-[#071324]">
-        {/* Real prestigious commercial glass headquarters campus */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
+      <section className="relative min-h-[580px] md:min-h-[640px] lg:min-h-[680px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-14 md:pt-16 pb-14 md:pb-16 bg-gradient-to-b from-[#071324] via-[#071324] to-[#0F8B7D] md:bg-[#071324]">
+        {/* Real prestigious commercial glass headquarters campus — hidden on mobile to ensure crisp contrast */}
+        <div className="hidden md:block absolute inset-0 z-0 pointer-events-none">
           <Image
             src="/images/officex_recommended_hero_banner.jpg"
             alt="OfficeX Commercial Workspaces Operating System"
@@ -588,20 +769,39 @@ export default function LandingPage() {
           <div className="max-w-2xl text-left">
             
             {/* Eyebrow */}
-            <p className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.2em] text-[#0F8B7D] mb-3">
+            <p className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.2em] text-[#0F8B7D] md:text-teal-400 mb-3">
               FIND. MANAGE. OPERATE. GROW.
             </p>
 
             {/* Main Headline in White */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-black tracking-tight text-white leading-[1.12] mb-4">
-              Your Complete Property &amp;<br className="hidden sm:block" />
-              Workplace Ecosystem
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[46px] font-black tracking-tight text-white leading-[1.14] mb-4">
+              India&apos;s Integrated CRE &amp; FM Ecosystem —{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-300">
+                Find Space. Procure Services. Operate Buildings. Gain Intelligence.
+              </span>
             </h1>
           
             {/* Subhead */}
-            <p className="text-xs sm:text-sm md:text-base font-normal text-slate-300 leading-relaxed max-w-xl mb-7">
-              India&apos;s integrated platform for commercial real estate, facility management, workplace operations and intelligent property services.
+            <p className="text-xs sm:text-sm md:text-base font-normal text-slate-200 md:text-slate-300 leading-relaxed max-w-xl mb-6">
+              One platform. Five modules. One data foundation. Built for commercial real estate owners, occupiers, and operators across India.
             </p>
+
+            {/* Hero Action CTAs */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-7 w-full sm:w-auto">
+              <Link
+                href="/marketplace"
+                className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-black shadow-md transition-all flex items-center justify-center gap-2 text-center"
+              >
+                <span>Explore Marketplace</span>
+                <ArrowRight size={15} />
+              </Link>
+              <Link
+                href="/demo"
+                className="px-6 py-3 rounded-xl border border-white/40 hover:border-white text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xs text-center"
+              >
+                <span>Book a Demo</span>
+              </Link>
+            </div>
 
             {/* The 3-Tab Search Card Component */}
             <div className="w-full">
@@ -842,13 +1042,26 @@ export default function LandingPage() {
 
             {/* Quick Links below Search Bar */}
             <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400">
-              <Link href="/discover" className="hover:text-white transition-colors">Buy</Link>
+              <Link href="/marketplace" className="hover:text-white transition-colors">Buy</Link>
               <span className="text-slate-600">|</span>
-              <Link href="/discover" className="hover:text-white transition-colors">Lease</Link>
+              <Link href="/marketplace" className="hover:text-white transition-colors">Lease</Link>
               <span className="text-slate-600">|</span>
-              <Link href="/discover" className="hover:text-white transition-colors">Co-working</Link>
+              <Link href="/marketplace" className="hover:text-white transition-colors">FM Services</Link>
               <span className="text-slate-600">|</span>
               <Link href="/managed-services" className="hover:text-white transition-colors">Managed Offices</Link>
+            </div>
+
+            {/* Talk to an expert link */}
+            <div className="mt-3 flex items-center gap-2 text-xs">
+              <span className="text-slate-400">Need personalized guidance?</span>
+              <button
+                type="button"
+                onClick={() => openEnquiry()}
+                className="font-bold text-teal-300 hover:text-white underline cursor-pointer inline-flex items-center gap-1"
+              >
+                <span>or talk to an expert</span>
+                <ArrowRight size={12} />
+              </button>
             </div>
           </div>
         </div>
@@ -860,122 +1073,161 @@ export default function LandingPage() {
           <div className="w-8 h-0.5 bg-[#0F8B7D] mt-1.5 rounded-full" />
         </div>
       </section>
-    {/* SECTION 02: THE OFFICEX ECOSYSTEM — EXACT MATCH TO RECOMMENDED LANDING PAGE */}
-    <section id="ecosystem" className="py-16 md:py-20 bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full">
-        {/* Header */}
-        <div className="text-center mb-10 md:mb-12">
-          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#0F8B7D]">
-            THE OFFICEX ECOSYSTEM
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mt-2">
-            Everything you need. All connected.
-          </h2>
-        </div>
 
-        {/* 5 Vertical Colored Cards matching reference */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
-          {[
-            {
-              id: "property",
-              title: "Property Marketplace",
-              desc: "Discover, buy, lease, or monetize commercial spaces.",
-              image: "/images/card_prop_hd.jpg",
-              bgColor: "bg-[#00A86B]",
-              arrowColor: "text-[#00A86B]",
-              href: "/discover",
-              iconType: "arrow",
-            },
-            {
-              id: "fm",
-              title: "FM Marketplace",
-              desc: "Find and engage certified facility service providers.",
-              image: "/images/card_fm_hd.jpg",
-              bgColor: "bg-[#F26522]",
-              arrowColor: "text-[#F26522]",
-              href: "/fm-marketplace",
-              iconType: "arrow",
-            },
-            {
-              id: "saas",
-              title: "OFFICEX PRO\n(SaaS Platform)",
-              desc: "Manage your entire property and workplace operations.",
-              image: "/images/card_saas_hd.jpg",
-              bgColor: "bg-[#0F8B7D]",
-              arrowColor: "text-[#0F8B7D]",
-              href: "/operations",
-              iconType: "arrow",
-            },
-            {
-              id: "managed",
-              title: "Managed Services",
-              desc: "End-to-end property and facility management solutions.",
-              image: "/images/card_managed_hd.jpg",
-              bgColor: "bg-[#7C3AED]",
-              arrowColor: "text-[#7C3AED]",
-              href: "/managed-services",
-              iconType: "arrow",
-            },
-            {
-              id: "intelligence",
-              title: "OFFICEX Intelligence",
-              desc: "Actionable insights, analytics, and predictions.",
-              image: "/images/card_ai_hd.jpg",
-              bgColor: "bg-[#DB2777]",
-              arrowColor: "text-[#DB2777]",
-              href: "/intelligence",
-              iconType: "sparkle",
-            },
-          ].map((card) => (
-            <div
-              key={card.id}
-              onClick={() => {
-                if (card.href.startsWith("#")) {
-                  scrollToSection(card.href.replace("#", ""));
-                } else {
-                  router.push(card.href);
-                }
-              }}
-              className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100"
-            >
-              {/* Top Half: Photo */}
-              <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
-                <Image
-                  src={card.image}
-                  alt={card.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 768px) 100vw, 20vw"
-                />
-              </div>
+      {/* TRUST STRIP BELOW HERO */}
+      <TrustStrip />
+      <div ref={heroSentinelRef} className="h-1 w-full pointer-events-none" />
 
-              {/* Bottom Half: Solid Vibrant Color Box */}
-              <div className={`${card.bgColor} p-5 flex flex-col justify-between flex-1 min-h-[170px]`}>
-                <div>
-                  <h3 className="text-base font-extrabold text-white leading-snug whitespace-pre-line mb-2">
-                    {card.title}
-                  </h3>
-                  <p className="text-xs text-white/90 font-medium leading-relaxed">
-                    {card.desc}
-                  </p>
-                </div>
+      {/* SECTION 02: THE OFFICEX ECOSYSTEM — EVERYTHING CONNECTED */}
+      <section id="ecosystem" className="py-16 md:py-24 bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto w-full">
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1.5 rounded-full border border-teal-100">
+              THE OFFICEX ECOSYSTEM
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
+              THE OFFICEX ECOSYSTEM — EVERYTHING CONNECTED.
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-2.5 font-medium">
+              One unified data foundation connecting five specialized modules across the commercial real estate lifecycle.
+            </p>
+          </div>
 
-                {/* Bottom Action Circle */}
-                <div className="mt-4 flex items-center justify-start">
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
-                    {card.iconType === "sparkle" ? (
-                      <Sparkles size={16} className={card.arrowColor} />
-                    ) : (
-                      <ArrowRight size={16} className={card.arrowColor} />
-                    )}
-                  </div>
-                </div>
-              </div>
+          {/* Horizontal Ecosystem Flow Architecture */}
+          <div className="mb-14 bg-[#071324] text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+              <Link href="/marketplace" className="p-3.5 rounded-xl bg-teal-950/70 border border-teal-600/50 hover:border-teal-400 transition-all group">
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 block">DISCOVER</span>
+                <span className="text-xs font-black text-white mt-1 block group-hover:text-teal-300">Marketplace</span>
+              </Link>
+              <Link href="/operate" className="p-3.5 rounded-xl bg-blue-950/70 border border-blue-600/50 hover:border-blue-400 transition-all group">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block">RUN</span>
+                <span className="text-xs font-black text-white mt-1 block group-hover:text-blue-300">Operate</span>
+              </Link>
+              <Link href="/manage" className="p-3.5 rounded-xl bg-amber-950/70 border border-amber-600/50 hover:border-amber-400 transition-all group">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">TRACK</span>
+                <span className="text-xs font-black text-white mt-1 block group-hover:text-amber-300">Manage</span>
+              </Link>
+              <Link href="/intelligence" className="p-3.5 rounded-xl bg-purple-950/70 border border-purple-600/50 hover:border-purple-400 transition-all group">
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 block">DECIDE</span>
+                <span className="text-xs font-black text-white mt-1 block group-hover:text-purple-300">Intelligence</span>
+              </Link>
+              <Link href="/managed-services" className="p-3.5 rounded-xl bg-emerald-950/70 border border-emerald-600/50 hover:border-emerald-400 transition-all col-span-2 sm:col-span-1 group">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">OUTSOURCE</span>
+                <span className="text-xs font-black text-white mt-1 block group-hover:text-emerald-300">Managed Services</span>
+              </Link>
             </div>
-          ))}
+
+            <div className="my-4 flex items-center justify-center gap-2 text-slate-500 font-mono text-[11px]">
+              <span>↓↓↓ Bi-directional Real-Time Event Stream &amp; Data Pipeline ↓↓↓</span>
+            </div>
+
+            <Link href="/platform" className="block p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all text-center group">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] block">
+                ══════ PLATFORM CORE FOUNDATION ══════
+              </span>
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-300 font-semibold mt-2">
+                <span>Identity &amp; RBAC</span>
+                <span>•</span>
+                <span>Razorpay Escrow</span>
+                <span>•</span>
+                <span>Unified Data Core</span>
+                <span>•</span>
+                <span>APIs &amp; Webhooks</span>
+                <span>•</span>
+                <span>DPDP Act 2023</span>
+                <span>•</span>
+                <span>Enterprise SLAs</span>
+              </div>
+            </Link>
+          </div>
+
+          {/* 3+2 Grid of Module Cards */}
+          <div className="space-y-6">
+            {/* Top Row: 3 Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <ModuleCard
+                moduleName="Marketplace"
+                accentColor="#0F8B7D"
+                outcome="Discover"
+                tagline="Find verified commercial space and procure vetted FM services with escrow milestone protection."
+                benefits={[
+                  "Verified vendor directory with ratings & SLA scores",
+                  "Structured RFQ with side-by-side vendor comparison",
+                  "Escrow-protected milestone payments via Razorpay"
+                ]}
+                ctaHref="/marketplace"
+                audienceTag="For: Building Owners, Asset Managers, Occupiers"
+                icon={Store}
+              />
+
+              <ModuleCard
+                moduleName="Operate"
+                accentColor="#2563EB"
+                outcome="Run"
+                tagline="52-week PPM, real-time SLA tracking, and a helpdesk your tenants will actually use."
+                benefits={[
+                  "52-week PPM calendar auto-generated for all MEP assets",
+                  "Real-time SLA tracking with escalation workflows",
+                  "Tenant helpdesk with priority matrix & QR codes"
+                ]}
+                ctaHref="/operate"
+                audienceTag="For: Facility Managers, MEP Engineers, Shift Techs"
+                icon={Wrench}
+              />
+
+              <ModuleCard
+                moduleName="Manage"
+                accentColor="#D97706"
+                outcome="Track"
+                tagline="Automate rent roll, track statutory compliance, and never miss a renewal again."
+                benefits={[
+                  "Automated rent roll & CAM billing with Razorpay integration",
+                  "Statutory compliance tracker with 90/60/30-day alerts",
+                  "Auto-generated MIS reports delivered monthly"
+                ]}
+                ctaHref="/manage"
+                audienceTag="For: Property Owners, Asset Managers, Finance Heads"
+                icon={FileText}
+              />
+            </div>
+
+            {/* Bottom Row: 2 Cards Centered */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              <ModuleCard
+                moduleName="Intelligence"
+                accentColor="#7C3AED"
+                outcome="Decide"
+                tagline="Turn operational and utility data into institutional intelligence and ESG reporting."
+                benefits={[
+                  "Portfolio NOI, WALE, and occupancy analytics in real time",
+                  "Energy & ESG dashboards with peer benchmarking",
+                  "Custom report builder with automated scheduled delivery"
+                ]}
+                ctaHref="/intelligence"
+                audienceTag="For: REITs, Institutional Investors, ESG Directors"
+                icon={Brain}
+              />
+
+              <ModuleCard
+                moduleName="Managed Services"
+                accentColor="#059669"
+                outcome="Outsource"
+                tagline="On-ground Property and Facility Management with digital tracking and SLA accountability."
+                benefits={[
+                  "SLA-backed on-ground property & facility management",
+                  "Auto-generated monthly MIS delivered to owner",
+                  "Statutory compliance renewals managed by OfficeX team"
+                ]}
+                ctaHref="/managed-services"
+                audienceTag="For: Absentee Landlords, Developers, Family Offices"
+                icon={Handshake}
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
     {/* SECTION 03: OFFICEX CORE — Exact 100% Static Diagram matching Option 1 Master Wireframe */}
     <section id="officex-core" className="py-16 md:py-24 bg-white border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
@@ -1049,8 +1301,8 @@ export default function LandingPage() {
     >
       <div className="max-w-7xl mx-auto w-full">
         
-        {/* Header with Title */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-10">
+        {/* Header with Title and Persona Tabs */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 sm:mb-10">
           <div className="max-w-2xl">
             <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
               AUDIENCE &amp; USE CASES
@@ -1061,6 +1313,38 @@ export default function LandingPage() {
             <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
               Tailored tools, permissions, and dashboards engineered for everyone who owns, operates, or occupies workspace.
             </p>
+          </div>
+
+          {/* Interactive Persona Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {stakeholderKeys.map((key) => {
+              const label =
+                key === "owner"
+                  ? "Owners"
+                  : key === "occupier"
+                  ? "Occupiers"
+                  : key === "fm"
+                  ? "Facility Mgrs"
+                  : key === "vendor"
+                  ? "Vendors"
+                  : "Investors";
+              const isActive = activeStakeholder === key;
+
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => scrollToStakeholder(key)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-[#0F8B7D] text-white shadow-sm"
+                      : "bg-white text-slate-600 border border-slate-200 hover:border-teal-300 hover:text-slate-900"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1136,13 +1420,22 @@ export default function LandingPage() {
                         ))}
                       </div>
 
-                      <button
-                        onClick={() => setIsContactModalOpen(true)}
-                        className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                      >
-                        <span>Schedule Tailored Walkthrough</span>
-                        <ArrowRight size={14} />
-                      </button>
+                      <div className="flex flex-col gap-2.5">
+                        <Link
+                          href={`/audiences/${key === "owner" ? "owners" : key === "occupier" ? "occupiers" : key}`}
+                          className="w-full py-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-teal-500/30"
+                        >
+                          <span>See your journey</span>
+                          <ArrowRight size={13} />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => openEnquiry({ audience: data.role })}
+                          className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                        >
+                          <span>Get a personalised demo for {data.role}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1249,6 +1542,33 @@ export default function LandingPage() {
 
         </div>
 
+        {/* Mini Case Study Banner */}
+        <div className="mt-10 bg-[#071324] text-white rounded-3xl p-6 sm:p-8 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
+              <Award size={24} />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950 px-2.5 py-0.5 rounded-full border border-teal-800">
+                PROVEN RESULTS
+              </span>
+              <h4 className="text-base sm:text-lg font-black text-white mt-1.5">
+                Prestige Meridian — Bengaluru
+              </h4>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                Reduced FM vendor procurement turnaround by 60%, eliminated 45-day milestone payment disputes, and saved 18% on annual MEP AMC costs using OfficeX Marketplace &amp; Escrow disbursements.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/resources"
+            className="shrink-0 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/20"
+          >
+            <span>Read Case Studies</span>
+            <ArrowRight size={13} />
+          </Link>
+        </div>
+
       </div>
     </section>
     <section id="solutions-banner" className="py-14 md:py-20 bg-[#F8FAFC] border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
@@ -1281,7 +1601,7 @@ export default function LandingPage() {
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => router.push('/public/wizard')}
+                  onClick={() => router.push('/demo')}
                   className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
                 >
                   Book a Demo
@@ -1409,9 +1729,12 @@ export default function LandingPage() {
           </div>
         </div>
 
+        <div className="mt-8 text-center text-[11px] font-bold text-slate-400">
+          * Audited platform metrics as of Q3 2026 across commercial hubs in Bengaluru, Mumbai MMR, and Delhi NCR.
+        </div>
+
       </div>
     </section>
-
 
       {/* SECTION 08: PRICING PLANS */}
       <section id="pricing" className="py-16 md:py-24 bg-[#F8FAFC] border-t border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
@@ -1426,76 +1749,252 @@ export default function LandingPage() {
             <p className="text-slate-500 font-medium text-xs sm:text-sm mt-2 md:mt-3">
               Choose the right plan to manage and secure your operations.
             </p>
+
+            {/* View Mode Switcher: Cards vs Matrix */}
+            <div className="mt-6 inline-flex items-center p-1 rounded-full bg-slate-200/80 border border-slate-300">
+              <button
+                type="button"
+                onClick={() => setPricingView("tiers")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  pricingView === "tiers"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Plan Overview
+              </button>
+              <button
+                type="button"
+                onClick={() => setPricingView("matrix")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  pricingView === "matrix"
+                    ? "bg-white text-[#0F8B7D] shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Module &amp; Capability Matrix
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
-            
-            {/* Plan 1: Starter */}
-            <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
-              <div>
-                <h3 className="font-extrabold text-slate-900 text-base">Starter</h3>
-                <p className="text-xs text-slate-400 mt-1.5 font-semibold">For single-site offices up to 10k sqft.</p>
-                <div className="text-3xl font-black text-slate-900 mt-6">Free</div>
-                
-                <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Access to Marketplace</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Basic Helpdesk</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Up to 3 Users</li>
-                </ul>
-              </div>
-              <button 
-                onClick={() => router.push("/login?plan=starter")}
-                className="w-full py-3.5 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Sign Up
-              </button>
-            </div>
+          {pricingView === "tiers" ? (
+            <div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
+                {/* Plan 1: Starter */}
+                <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">Starter</h3>
+                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">For single-site offices up to 10k sqft.</p>
+                    <div className="text-3xl font-black text-slate-900 mt-6">Free</div>
+                    
+                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Access to Marketplace</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Basic Helpdesk</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Up to 3 Users</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => router.push("/signup")}
+                    className="w-full py-3.5 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    Sign Up Free
+                  </button>
+                </div>
 
-            {/* Plan 2: Professional */}
-            <div className="rounded-3xl p-6 sm:p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-100 lg:scale-105">
-              <span className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black uppercase tracking-widest shadow-md">MOST POPULAR</span>
-              <div>
-                <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
-                <p className="text-xs text-slate-400 mt-1.5 font-semibold">For growing multi-site portfolios.</p>
-                <div className="text-3xl font-black text-slate-900 mt-6">₹4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
-                
-                <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Escrow Payments</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> PPM Calendar</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Compliance Tracker</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Unlimited Users</li>
-                </ul>
-              </div>
-              <button 
-                onClick={() => router.push('/public/wizard?plan=professional')}
-                className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs mt-8 transition-colors cursor-pointer shadow-md"
-              >
-                Get Started
-              </button>
-            </div>
+                {/* Plan 2: Professional */}
+                <div className="rounded-3xl p-6 sm:p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-100 lg:scale-105">
+                  <span className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black uppercase tracking-widest shadow-md">MOST POPULAR</span>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
+                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">For growing multi-site portfolios.</p>
+                    <div className="text-3xl font-black text-slate-900 mt-6">₹4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
+                    
+                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Escrow Payments</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> PPM Calendar</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Compliance Tracker</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Unlimited Users</li>
+                    </ul>
+                  </div>
+                  <div className="flex flex-col gap-2 mt-8">
+                    <button 
+                      onClick={() => router.push('/demo?plan=professional')}
+                      className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md"
+                    >
+                      Get Started
+                    </button>
+                    <button 
+                      onClick={() => router.push('/demo')}
+                      className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Book a Demo
+                    </button>
+                  </div>
+                </div>
 
-            {/* Plan 3: Enterprise */}
-            <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
-              <div>
-                <h3 className="font-extrabold text-slate-900 text-base">Enterprise</h3>
-                <p className="text-xs text-slate-400 mt-1.5 font-semibold">Custom deployment for large institutions.</p>
-                <div className="text-3xl font-black text-slate-900 mt-6">Custom</div>
-                
-                <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> White-labeling</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> ERP Integrations</li>
-                  <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Dedicated Success Mgr</li>
-                </ul>
+                {/* Plan 3: Enterprise */}
+                <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">Enterprise</h3>
+                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">Custom deployment for large institutions.</p>
+                    <div className="text-3xl font-black text-slate-900 mt-6">Custom</div>
+                    
+                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> White-labeling</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> ERP Integrations</li>
+                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Dedicated Success Mgr</li>
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => openEnquiry({ modules: ['not-sure'] })}
+                    className="w-full py-3.5 rounded-xl bg-[#071324] hover:bg-slate-800 text-white font-bold text-xs mt-8 transition-colors cursor-pointer shadow-sm"
+                  >
+                    Talk to Sales
+                  </button>
+                </div>
               </div>
-              <button 
-                onClick={() => setIsContactModalOpen(true)}
-                className="w-full py-3.5 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Contact Sales
-              </button>
-            </div>
 
-          </div>
+              {/* Integrated hook to switch to Capability Matrix view */}
+              <div className="mt-12 text-center">
+                <button
+                  type="button"
+                  onClick={() => setPricingView("matrix")}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 hover:text-[#0F8B7D] hover:border-teal-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Compare detailed module access across Starter, Professional &amp; Enterprise</span>
+                  <ArrowRight size={14} className="text-[#0F8B7D]" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Module Access Matrix (Integrated View) */
+            <div className="max-w-5xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900">
+                    Detailed Plan Capability &amp; Module Access
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Compare features and modules included across Starter, Professional, and Enterprise.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPricingView("tiers")}
+                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  ← Back to Plan Cards
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="pb-4 text-slate-400 font-extrabold uppercase text-[10px] tracking-wider">
+                        Feature / Module
+                      </th>
+                      <th className="pb-4 text-center">
+                        <div className="font-extrabold text-slate-900 text-sm">Starter</div>
+                        <div className="text-slate-500 font-semibold text-xs mt-0.5">Free</div>
+                      </th>
+                      <th className="pb-4 text-center bg-teal-50/70 rounded-t-xl px-3">
+                        <div className="font-extrabold text-[#0F8B7D] text-sm">Professional</div>
+                        <div className="text-teal-700 font-semibold text-xs mt-0.5">₹4,999/mo</div>
+                      </th>
+                      <th className="pb-4 text-center">
+                        <div className="font-extrabold text-slate-900 text-sm">Enterprise</div>
+                        <div className="text-slate-500 font-semibold text-xs mt-0.5">Custom</div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Marketplace: Space &amp; Vendor Discovery</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">✓</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">✓</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Marketplace: RFQ &amp; Escrow Milestone Payouts</td>
+                      <td className="py-3.5 text-center text-slate-400">2 RFQs/mo</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Unlimited</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">Unlimited + Volume Rates</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Operate: CAFM &amp; 52-Week PPM Automation</td>
+                      <td className="py-3.5 text-center text-slate-400">Basic</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Full Suite</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">Full + IoT &amp; BMS Sync</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Manage: Automated Rent Roll &amp; CAM Billing</td>
+                      <td className="py-3.5 text-center text-slate-300">—</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓ (Razorpay)</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">✓ + Multi-Entity SPVs</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Manage: 90/60/30 Compliance Radar</td>
+                      <td className="py-3.5 text-center text-slate-300">—</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓ (40+ Statutory NOCs)</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">✓ + On-Ground Liaison</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Intelligence: Portfolio NOI &amp; ESG Reports</td>
+                      <td className="py-3.5 text-center text-slate-300">—</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Standard MIS</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">SEBI BRSR + Custom Data Sync</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Managed Services: On-Ground Technical Teams</td>
+                      <td className="py-3.5 text-center text-slate-300">—</td>
+                      <td className="py-3.5 text-center text-slate-400 bg-teal-50/40">Available as Add-on</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">Full Turnkey Deployment</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 font-bold text-slate-900">Enterprise SLA &amp; Dedicated Account Manager</td>
+                      <td className="py-3.5 text-center text-slate-300">—</td>
+                      <td className="py-3.5 text-center text-slate-400 bg-teal-50/40">Standard Support</td>
+                      <td className="py-3.5 text-center text-emerald-600 font-black">Contractually Backed 99.9%</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-slate-200">
+                      <td className="pt-5 font-bold text-slate-400">Action</td>
+                      <td className="pt-5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => router.push("/signup")}
+                          className="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          Sign Up Free
+                        </button>
+                      </td>
+                      <td className="pt-5 text-center bg-teal-50/40 rounded-b-xl px-3">
+                        <button
+                          type="button"
+                          onClick={() => router.push("/demo?plan=professional")}
+                          className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-sm"
+                        >
+                          Get Started
+                        </button>
+                      </td>
+                      <td className="pt-5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => openEnquiry({ modules: ["not-sure"] })}
+                          className="px-4 py-2 rounded-xl bg-[#071324] hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                        >
+                          Talk to Sales
+                        </button>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
         </div>
       </section>
 
@@ -1531,6 +2030,47 @@ export default function LandingPage() {
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/faq"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#0F8B7D] hover:underline"
+            >
+              <span>See all FAQs &amp; Knowledge Base</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 10: TALK TO US — INLINE ENQUIRY */}
+      <section id="enquiry" className="py-16 md:py-24 bg-slate-50 border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
+        <div className="max-w-4xl mx-auto w-full">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
+              COMMERCIAL ENQUIRY
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
+              Talk to Us — We Respond Within 24 Business Hours.
+            </h2>
+            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-2">
+              Connect directly with our solutions engineering desk for custom portfolio onboarding.
+            </p>
+          </div>
+
+          <EnquiryForm variant="inline" />
+
+          <div className="mt-8 text-center text-xs text-slate-500 font-medium">
+            Prefer an immediate consultation?{" "}
+            <a
+              href="https://calendly.com/officex-sales/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-[#0F8B7D] hover:underline"
+            >
+              Schedule a 30-minute call on Calendly →
+            </a>
           </div>
         </div>
       </section>
@@ -1647,9 +2187,14 @@ export default function LandingPage() {
         </div>
       )}
 
-
-
+      {/* TALK TO SALES SLIDE-IN DRAWER */}
+      <EnquirySlideIn
+        isOpen={isEnquirySlideInOpen}
+        onClose={() => setIsEnquirySlideInOpen(false)}
+        prefill={enquiryPrefill}
+      />
 
     </div>
   );
 }
+

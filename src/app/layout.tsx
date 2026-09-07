@@ -2,14 +2,16 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
+import CookieConsent from "@/components/marketing/CookieConsent";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "OfficeX — Workspaces, Simplified",
-  description: "Operating System for Commercial Real Estate and Facility Management in India",
+  title: "OfficeX — India's CRE & FM Ecosystem",
+  description: "India's integrated platform for commercial real estate, facility management, workplace operations, and intelligent property services.",
 };
 
 export const viewport: Viewport = {
@@ -28,6 +30,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground overflow-x-hidden w-full max-w-full">
         {children}
+        <CookieConsent />
       </body>
     </html>
   );

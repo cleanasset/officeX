@@ -1,201 +1,278 @@
 "use client";
+
 import React, { useState } from "react";
+import HeroSection from "@/components/marketing/HeroSection";
+import ProblemSolution from "@/components/marketing/ProblemSolution";
+import FeatureGrid from "@/components/marketing/FeatureGrid";
+import UseCaseSection from "@/components/marketing/UseCaseCard";
+import PricingTable from "@/components/marketing/PricingTable";
+import OnboardingTimeline from "@/components/marketing/OnboardingTimeline";
+import FAQAccordion from "@/components/marketing/FAQAccordion";
+import FinalCTABand from "@/components/marketing/FinalCTABand";
+import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import Footer from "@/components/Footer";
 import {
-  Plus, Search, Bell, HelpCircle, ArrowRight,
-  Wrench, Wind, Shield, Sparkles, Flame, Bug, ArrowUpDown, Trees,
-  Clock, CheckCircle, FileText, AlertTriangle, Eye
+  Building2, Wrench, FileSpreadsheet, Cpu,
+  ClipboardCheck, Radar, ShieldCheck, Briefcase
 } from "lucide-react";
-import Link from "next/link";
 
-export default function MarketplaceHome() {
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  const serviceCategories = [
-    { name: "MEP", vendors: 42, icon: Wrench, color: "bg-teal-50 text-teal-600" },
-    { name: "HVAC", vendors: 38, icon: Wind, color: "bg-blue-50 text-blue-600" },
-    { name: "Security", vendors: 65, icon: Shield, color: "bg-amber-50 text-amber-600" },
-    { name: "Housekeeping", vendors: 80, icon: Sparkles, color: "bg-purple-50 text-purple-600" },
-    { name: "Fire Safety", vendors: 25, icon: Flame, color: "bg-red-50 text-red-600" },
-    { name: "Pest Control", vendors: 30, icon: Bug, color: "bg-green-50 text-green-600" },
-    { name: "Lifts", vendors: 18, icon: ArrowUpDown, color: "bg-indigo-50 text-indigo-600" },
-    { name: "Landscaping", vendors: 22, icon: Trees, color: "bg-emerald-50 text-emerald-600" }
-  ];
-
-  const activeRfqs = [
-    { id: "RFQ-2025-012", title: "Annual HVAC AMC", category: "HVAC", quotes: "5 Quotes", deadline: "15 Feb 2025", status: "Open" },
-    { id: "RFQ-2025-009", title: "Pest Control Services", category: "Pest Control", quotes: "8 Quotes", deadline: "10 Feb 2025", status: "Evaluating" },
-    { id: "RFQ-2025-004", title: "Security Guard Deployment", category: "Security", quotes: "12 Quotes", deadline: "28 Jan 2025", status: "Awarded" },
-    { id: "RFQ-2025-015", title: "Lobby Cleaning Scope", category: "Housekeeping", quotes: "2 Quotes", deadline: "20 Feb 2025", status: "Open" },
-    { id: "RFQ-2025-001", title: "Lift Modernization Phase 1", category: "Lifts", quotes: "4 Quotes", deadline: "05 Jan 2025", status: "Closed" },
-    { id: "RFQ-2025-018", title: "Fire Alarm Panel Upgrade", category: "Fire Safety", quotes: "1 Quote", deadline: "25 Feb 2025", status: "Open" }
-  ];
-
-  const recentActivity = [
-    { text: "New bid submitted by Knight FM for HVAC AMC", time: "2 hours ago", color: "bg-emerald-500" },
-    { text: "Vendor 'SafeGuard Pro' verified", time: "5 hours ago", color: "bg-blue-500" },
-    { text: "Milestone payout released for Security Services", time: "Yesterday", color: "bg-teal-500" },
-    { text: "New RFQ published: Elevator Modernization", time: "2 days ago", color: "bg-gray-400" }
-  ];
-
-  const statusStyle = (s: string) => {
-    switch (s) {
-      case "Open": return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-      case "Evaluating": return "bg-amber-50 text-amber-700 border border-amber-200";
-      case "Awarded": return "bg-teal-50 text-teal-700 border border-teal-200";
-      case "Closed": return "bg-gray-100 text-gray-600 border border-gray-200";
-      default: return "bg-gray-100 text-gray-600";
-    }
-  };
+export default function MarketplacePage() {
+  const [slideInOpen, setSlideInOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-6 font-sans w-full max-w-full pb-12">
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
-          <CheckCircle size={16} className="text-emerald-400" />
-          <span>{toast}</span>
-        </div>
-      )}
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Hero Section */}
+      <HeroSection
+        badge="MODULE 01 — MARKETPLACE"
+        headline="India's Commercial Real Estate & FM Marketplace"
+        subheadline="Find the right space. Source the right vendor. All verified, all transparent."
+        description="Connect directly with verified Grade-A property listings and pre-vetted facility service providers. Structured RFQs, automated BOQ generation, and escrow-backed milestone payouts."
+        primaryCta={{
+          label: "Explore Listings & RFQs",
+          href: "/signup"
+        }}
+        secondaryCta={{
+          label: "Raise an Enquiry",
+          onClick: () => setSlideInOpen(true)
+        }}
+        accentColor="#0F8B7D"
+        visualPlaceholderTitle="OFFICEX MARKETPLACE RADAR"
+        visualMetrics={[
+          { label: "Verified Vendors", value: "312+" },
+          { label: "Active RFQs", value: "₹48.2L" },
+          { label: "Escrow Protected", value: "100%" }
+        ]}
+      />
 
-      {/* 3 Action Cards - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 w-full">
-        <Link href="/marketplace/create-rfq" className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0F8B7D] to-[#14B8A6] p-5 md:p-6 text-white hover:shadow-lg transition-all group cursor-pointer">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-base md:text-lg font-bold">Create RFQ</h3>
-              <p className="text-xs text-white/80 mt-0.5">Start a new request</p>
-            </div>
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-              <Plus size={18} />
-            </div>
-          </div>
-        </Link>
-        <Link href="/marketplace/ratings" className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0D7A6E] to-[#0F8B7D] p-5 md:p-6 text-white hover:shadow-lg transition-all group cursor-pointer">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-base md:text-lg font-bold">Browse Vendors</h3>
-              <p className="text-xs text-white/80 mt-0.5">Find pre-vetted partners</p>
-            </div>
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-              <Search size={18} />
-            </div>
-          </div>
-        </Link>
-        <Link href="/marketplace/work-orders" className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0F8B7D] to-[#14B8A6] p-5 md:p-6 text-white hover:shadow-lg transition-all group cursor-pointer">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-base md:text-lg font-bold">Active Work Orders</h3>
-              <p className="text-xs text-white/80 mt-0.5">Track ongoing jobs</p>
-            </div>
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-              <FileText size={18} />
-            </div>
-          </div>
-        </Link>
-      </div>
+      {/* Problem / Solution */}
+      <ProblemSolution
+        moduleName="Marketplace"
+        accentColor="#0F8B7D"
+        withoutItems={[
+          "Broker dependency with opaque brokerage commissions and stale, unverified property listings.",
+          "Fragmented vendor sourcing with wild price disparities, unverified credentials, and high default risk.",
+          "Manual RFQs exchanged across chaotic WhatsApp chats and spreadsheets with zero audit trails.",
+          "Payment delays and milestone disputes leading to vendor walkouts and delayed project handovers.",
+          "Zero historical SLA tracking or objective performance benchmarks when hiring contractors."
+        ]}
+        withItems={[
+          "100% verified commercial listings with direct owner/manager connection and zero phantom inventory.",
+          "Curated marketplace of pre-vetted FM vendors across 15+ MEP, HVAC, security, and civil trades.",
+          "Structured RFQ engine with automated BOQ generation and side-by-side bid comparison matrices.",
+          "Escrow-protected milestone payments via Razorpay — release funds only on verified sign-off.",
+          "Transparent Vendor Performance Radar with verified customer reviews and SLA scores."
+        ]}
+      />
 
-      {/* 4 KPI Cards - Responsive Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 w-full">
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 shadow-2xs">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Active RFQs</p>
-          <p className="text-2xl md:text-3xl font-black text-gray-900 mt-1">12</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 shadow-2xs">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quotes Received</p>
-          <p className="text-2xl md:text-3xl font-black text-gray-900 mt-1">34</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 shadow-2xs">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Work Orders</p>
-          <p className="text-2xl md:text-3xl font-black text-gray-900 mt-1">8</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 shadow-2xs">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Marketplace GTV</p>
-          <p className="text-2xl md:text-3xl font-black text-[#0F8B7D] mt-1">₹28.5L</p>
-        </div>
-      </div>
+      {/* Key Features */}
+      <FeatureGrid
+        title="Institutional Capabilities for Space & Services"
+        subtitle="End-to-end tooling designed to streamline commercial leasing discovery and procurement."
+        accentColor="#0F8B7D"
+        features={[
+          {
+            icon: Building2,
+            title: "Commercial Property Discovery",
+            description: "Direct discovery for verified Grade-A and Grade-B commercial assets, floor plates, statutory NOC status, and micro-market pricing benchmarks.",
+            tag: "Live"
+          },
+          {
+            icon: Wrench,
+            title: "FM Vendor Marketplace",
+            description: "Onboard pre-vetted contractors across MEP, HVAC AMC, integrated security, housekeeping, fire safety, and specialized civil works.",
+            tag: "Live"
+          },
+          {
+            icon: FileSpreadsheet,
+            title: "Structured RFQ Engine",
+            description: "Create standardized tender scopes with clear milestone definitions, submission cut-offs, and automated vendor notifications.",
+            tag: "Core"
+          },
+          {
+            icon: Cpu,
+            title: "AI-Assisted BOQ Generation",
+            description: "Automatically generate comprehensive Bills of Quantities based on building square footage, asset counts, and MEP specifications.",
+            tag: "Smart"
+          },
+          {
+            icon: ClipboardCheck,
+            title: "Work Order Management",
+            description: "Digital work order creation with legally binding SLAs, penalty clauses, deliverable milestones, and change-request logging.",
+            tag: "Workflow"
+          },
+          {
+            icon: Radar,
+            title: "Vendor Performance Radar",
+            description: "Real-time vendor scoring across job punctuality, resolution speed, statutory compliance audits, and tenant feedback.",
+            tag: "Analytics"
+          },
+          {
+            icon: ShieldCheck,
+            title: "Escrow-Protected Payments",
+            description: "Integrated Razorpay escrow infrastructure ensures client funds are safeguarded and released strictly upon approved milestone completion.",
+            tag: "Fintech"
+          },
+          {
+            icon: Briefcase,
+            title: "Leasing CRM for Brokers",
+            description: "Dedicated dashboard for commercial leasing teams to track tenant inquiries, manage site visits, generate LOIs, and reconcile commission payouts.",
+            tag: "CRM"
+          }
+        ]}
+      />
 
-      {/* Service Categories - Responsive Grid */}
-      <div className="w-full">
-        <h2 className="text-base md:text-lg font-black text-gray-900 mb-3 md:mb-4">Service Categories</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 md:gap-3">
-          {serviceCategories.map((cat) => {
-            const Icon = cat.icon;
-            return (
-              <div key={cat.name} className="bg-white rounded-2xl border border-gray-200 p-3 md:p-4 flex items-center gap-2.5 md:gap-3 hover:shadow-md transition-all cursor-pointer group">
-                <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center shrink-0 ${cat.color}`}>
-                  <Icon size={18} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs md:text-sm font-bold text-gray-900 truncate">{cat.name}</p>
-                  <p className="text-[10px] md:text-xs text-gray-500 truncate">{cat.vendors} Vendors</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Use Cases */}
+      <UseCaseSection
+        accentColor="#0F8B7D"
+        useCases={[
+          {
+            audience: "Building Asset Managers",
+            scenario: "Needed to tender an annual HVAC & MEP maintenance contract across a 450,000 sq.ft. commercial park in Bangalore.",
+            outcome: "Generated BOQ in 10 minutes, received 6 vetted bids within 4 days, and saved 18% on contracted costs with milestone escrow protection."
+          },
+          {
+            audience: "Corporate Occupiers",
+            scenario: "Expanding into 3 new regional hubs requiring rapid lease finalization, interior fit-out procurement, and immediate facility staffing.",
+            outcome: "Discovered verified properties, shortlisted certified fit-out contractors, and executed work orders with transparent milestone disbursements."
+          },
+          {
+            audience: "FM Service Vendors",
+            scenario: "Facing high client acquisition costs, payment defaults from unorganized developers, and long 90-day receivable cycles.",
+            outcome: "Access verified RFQ pipeline, receive advance escrow assurance, and build verified reputation scores that win enterprise business."
+          }
+        ]}
+      />
 
-      {/* 2 Bottom Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-        {/* Active RFQs Table */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-4 md:p-6 shadow-2xs">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-black text-gray-900 text-sm md:text-base">Active RFQs</h3>
-            <Link href="/marketplace/rfq" className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1">
-              View All <ArrowRight size={13} />
-            </Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase">
-                  <th className="pb-2.5">RFQ ID</th>
-                  <th className="pb-2.5">Title</th>
-                  <th className="pb-2.5">Category</th>
-                  <th className="pb-2.5">Quotes</th>
-                  <th className="pb-2.5">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {activeRfqs.map((rfq) => (
-                  <tr key={rfq.id} className="hover:bg-gray-50/50">
-                    <td className="py-3 font-mono font-bold text-[#0F8B7D]">{rfq.id}</td>
-                    <td className="py-3 font-semibold text-gray-900">{rfq.title}</td>
-                    <td className="py-3 text-gray-500">{rfq.category}</td>
-                    <td className="py-3 font-bold text-gray-700">{rfq.quotes}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${statusStyle(rfq.status)}`}>
-                        {rfq.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* Pricing Table */}
+      <PricingTable
+        accentColor="#0F8B7D"
+        title="Marketplace Pricing"
+        subtitle="Transparent subscription and transaction terms for occupiers, owners, and service providers."
+        tiers={[
+          {
+            name: "Starter",
+            price: "Free",
+            description: "Ideal for individual property discovery and initial vendor evaluations.",
+            features: [
+              "Search verified commercial listings",
+              "Access verified FM vendor directory",
+              "Publish up to 2 RFQs per month",
+              "Standard community support"
+            ],
+            ctaLabel: "Sign Up Free",
+            ctaHref: "/signup"
+          },
+          {
+            name: "Professional",
+            price: "₹4,999",
+            period: "month",
+            description: "Designed for active property managers and growing facility procurement teams.",
+            highlight: true,
+            features: [
+              "Unlimited RFQs and tender publishing",
+              "AI-assisted BOQ generation",
+              "Side-by-side vendor quotation comparison",
+              "Razorpay escrow milestone payments",
+              "Priority vendor dispatch & verification badges",
+              "Dedicated account support"
+            ],
+            ctaLabel: "Start Professional",
+            ctaHref: "/signup?plan=pro"
+          },
+          {
+            name: "Enterprise",
+            price: "Custom",
+            description: "Full-scale procurement suite for institutional portfolios and large REIT assets.",
+            features: [
+              "Custom vendor onboarding & SLA governance",
+              "Multi-property tender aggregation",
+              "ERP / SAP / Oracle accounting integrations",
+              "Custom escrow milestone disbursement logic",
+              "Dedicated enterprise account director",
+              "Contractually guaranteed SLA performance"
+            ],
+            ctaLabel: "Talk to Sales",
+            ctaHref: "/contact?interest=marketplace-enterprise"
+          }
+        ]}
+      />
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 shadow-2xs">
-          <h3 className="font-black text-gray-900 text-sm md:text-base mb-4">Marketplace Activity</h3>
-          <div className="space-y-3.5">
-            {recentActivity.map((act, i) => (
-              <div key={i} className="flex items-start gap-2.5 text-xs">
-                <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${act.color}`} />
-                <div>
-                  <p className="text-gray-800 font-semibold text-xs leading-snug">{act.text}</p>
-                  <span className="text-[10px] text-gray-400">{act.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Onboarding Timeline */}
+      <OnboardingTimeline
+        accentColor="#0F8B7D"
+        steps={[
+          {
+            step: "01",
+            title: "Register & Profile Setup",
+            description: "Sign up as a building owner, occupier, broker, or vendor. Set up role preferences.",
+            duration: "5 Minutes"
+          },
+          {
+            step: "02",
+            title: "Verification & Onboarding",
+            description: "Submit property documents or vendor statutory licenses for digital KYC verification.",
+            duration: "24-48 Hours"
+          },
+          {
+            step: "03",
+            title: "Publish Listing or RFQ",
+            description: "Create your first space requirement or broadcast a structured service tender with BOQ.",
+            duration: "15 Minutes"
+          },
+          {
+            step: "04",
+            title: "Transact with Escrow",
+            description: "Compare bids side-by-side, issue digital work orders, and fund milestone escrow securely.",
+            duration: "Go Live"
+          }
+        ]}
+      />
+
+      {/* FAQs */}
+      <FAQAccordion
+        faqs={[
+          {
+            q: "How are FM vendors vetted and verified on OfficeX Marketplace?",
+            a: "Every vendor undergoes a multi-point verification process including GSTIN verification, statutory PF/ESIC compliance, past client performance checks, financial stability reviews, and insurance coverage audits."
+          },
+          {
+            q: "How does escrow payment protection work?",
+            a: "When a contract or work order is awarded, funds are securely held in a dedicated Razorpay escrow account. Payment is released to the vendor only after you digitally inspect and sign off on completed milestones."
+          },
+          {
+            q: "Can commercial brokers list and manage inventory on OfficeX?",
+            a: "Yes. OfficeX provides a dedicated Leasing CRM for brokers with RERA compliance tagging, private requirement tracking, and direct co-broking collaboration tools."
+          },
+          {
+            q: "Which commercial real estate markets are supported?",
+            a: "OfficeX operates across all major Indian commercial metros including Bengaluru, Mumbai MMR, Delhi NCR, Hyderabad, Pune, and Chennai."
+          }
+        ]}
+      />
+
+      {/* Final CTA */}
+      <FinalCTABand
+        accentColor="#0F8B7D"
+        headline="Ready to streamline your CRE transactions and vendor procurement?"
+        subheadline="Join hundreds of commercial owners, facility managers, and verified vendors on India's premier platform."
+        primaryCta={{
+          label: "Start Free Trial",
+          href: "/signup"
+        }}
+        secondaryCta={{
+          label: "Talk to Our Marketplace Team",
+          onClick: () => setSlideInOpen(true)
+        }}
+      />
+
+      {/* Enquiry SlideIn */}
+      <EnquirySlideIn
+        isOpen={slideInOpen}
+        onClose={() => setSlideInOpen(false)}
+        prefill={{ modules: ["marketplace"] }}
+      />
+
+      <Footer />
     </div>
   );
 }

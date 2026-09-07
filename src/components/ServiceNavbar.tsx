@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, Menu, X, ArrowRight } from "lucide-react";
+import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
 
 interface ServiceNavbarProps {
   activePage?: "discover" | "fm" | "ops" | "managed" | "intelligence";
@@ -23,63 +24,51 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={60} 
-              height={60} 
-              priority
-              className="object-contain"
-              style={{ width: "auto", height: "46px" }}
+              width={42} 
+              height={42} 
+              priority 
+              className="object-contain" 
             />
             <Image 
               src="/name-removebg-preview.png" 
-              alt="OfficeX" 
-              width={200} 
-              height={44} 
-              priority
-              className="object-contain"
-              style={{ width: "auto", height: "34px" }}
+              alt="OfficeX Name" 
+              width={140} 
+              height={32} 
+              priority 
+              className="object-contain" 
             />
           </Link>
         </div>
 
-        {/* Center: Main Navigation Menu Items */}
-        <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-xs sm:text-sm font-semibold text-slate-600 absolute left-1/2 -translate-x-1/2">
+        {/* Center: Primary Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-8">
           <Link 
             href="/discover" 
-            className={`transition-colors whitespace-nowrap ${
-              activePage === "discover" ? "text-[#0F8B7D] font-black border-b-2 border-[#0F8B7D] pb-1" : "hover:text-[#0F8B7D]"
-            }`}
+            className={`text-sm font-bold tracking-tight transition-colors py-1 relative ${activePage === "discover" ? "text-[#0F8B7D] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#0F8B7D]" : "text-slate-600 hover:text-slate-900"}`}
           >
-            Office Discovery
+            Discover Spaces
           </Link>
           <Link 
             href="/fm-marketplace" 
-            className={`transition-colors whitespace-nowrap ${
-              activePage === "fm" ? "text-[#0F8B7D] font-black border-b-2 border-[#0F8B7D] pb-1" : "hover:text-[#0F8B7D]"
-            }`}
+            className={`text-sm font-bold tracking-tight transition-colors py-1 relative ${activePage === "fm" ? "text-[#0F8B7D] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#0F8B7D]" : "text-slate-600 hover:text-slate-900"}`}
           >
             FM Marketplace
           </Link>
           <Link 
             href="/operations" 
-            className={`transition-colors whitespace-nowrap ${
-              activePage === "ops" ? "text-[#0F8B7D] font-black border-b-2 border-[#0F8B7D] pb-1" : "hover:text-[#0F8B7D]"
-            }`}
+            className={`text-sm font-bold tracking-tight transition-colors py-1 relative ${activePage === "ops" ? "text-[#0F8B7D] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#0F8B7D]" : "text-slate-600 hover:text-slate-900"}`}
           >
-            Operations SaaS
+            Operations &amp; CAFM
           </Link>
           <Link 
             href="/managed-services" 
-            className={`transition-colors whitespace-nowrap ${
-              activePage === "managed" ? "text-[#0F8B7D] font-black border-b-2 border-[#0F8B7D] pb-1" : "hover:text-[#0F8B7D]"
-            }`}
+            className={`text-sm font-bold tracking-tight transition-colors py-1 relative ${activePage === "managed" ? "text-[#0F8B7D] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#0F8B7D]" : "text-slate-600 hover:text-slate-900"}`}
           >
-            Managed Services
+            Managed Offices
           </Link>
           <Link 
             href="/intelligence" 
-            className={`transition-colors whitespace-nowrap ${
-              activePage === "intelligence" ? "text-[#0F8B7D] font-black border-b-2 border-[#0F8B7D] pb-1" : "hover:text-[#0F8B7D]"
-            }`}
+            className={`text-sm font-bold tracking-tight transition-colors py-1 relative ${activePage === "intelligence" ? "text-[#0F8B7D] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#0F8B7D]" : "text-slate-600 hover:text-slate-900"}`}
           >
             Intelligence
           </Link>
@@ -94,9 +83,7 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
           >
             <Search size={18} />
           </button>
-          <Link href="/login" className="text-xs sm:text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors px-2">
-            Sign In
-          </Link>
+          <HeaderAuthButton />
           <button 
             onClick={() => router.push('/public/wizard')}
             className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer flex items-center gap-1.5"
@@ -170,9 +157,9 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
             Intelligence
           </Link>
           <hr className="border-slate-200" />
-          <Link href="/login" className="text-base font-bold hover:text-[#0F8B7D]" onClick={() => setMobileMenuOpen(false)}>
-            Sign In
-          </Link>
+          <div className="py-1">
+            <HeaderAuthButton />
+          </div>
           <button 
             onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
             className="w-full py-3.5 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"

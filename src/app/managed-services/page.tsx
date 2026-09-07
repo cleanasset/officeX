@@ -1,178 +1,273 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import HeroSection from "@/components/marketing/HeroSection";
+import ProblemSolution from "@/components/marketing/ProblemSolution";
+import FeatureGrid from "@/components/marketing/FeatureGrid";
+import UseCaseSection from "@/components/marketing/UseCaseCard";
+import PricingTable from "@/components/marketing/PricingTable";
+import OnboardingTimeline from "@/components/marketing/OnboardingTimeline";
+import FAQAccordion from "@/components/marketing/FAQAccordion";
+import FinalCTABand from "@/components/marketing/FinalCTABand";
+import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
-import { Search, MapPin, Building, ArrowRight, CheckCircle2, Menu, X, Users, Laptop, Briefcase } from "lucide-react";
+import {
+  Building2, ShieldCheck, FileCheck, CheckCircle2,
+  TrendingUp, Users, Scale
+} from "lucide-react";
 
 export default function ManagedServicesPage() {
-  const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [slideInOpen, setSlideInOpen] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 font-sans text-slate-900">
-      
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between transition-all shadow-2xs relative">
-        <div className="flex items-center shrink-0 lg:w-[250px]">
-          <Link href="/" className="flex items-center gap-3.5 group">
-            <Image 
-              src="/logo-removebg-preview.png" 
-              alt="OfficeX Logo" 
-              width={60} 
-              height={60} 
-              priority
-              className="object-contain"
-              style={{ width: "auto", height: "50px" }}
-            />
-            <Image 
-              src="/name-removebg-preview.png" 
-              alt="OfficeX" 
-              width={200} 
-              height={44} 
-              priority
-              className="object-contain"
-              style={{ width: "auto", height: "38px" }}
-            />
-          </Link>
-        </div>
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Hero Section */}
+      <HeroSection
+        badge="MODULE 05 — MANAGED SERVICES"
+        headline="Your Buildings, Managed by OfficeX"
+        subheadline="On-ground Property Management and Facility Management with digital tracking, SLA accountability, and monthly MIS delivered automatically."
+        description="Hand over the operational heavy-lifting to OfficeX. We deploy certified on-ground technical staff, enforce SLA-backed maintenance, manage statutory compliance renewals, and provide open-book financial reporting."
+        primaryCta={{
+          label: "Request Building Walkthrough",
+          href: "/signup"
+        }}
+        secondaryCta={{
+          label: "Raise an Enquiry",
+          onClick: () => setSlideInOpen(true)
+        }}
+        accentColor="#059669"
+        visualPlaceholderTitle="OFFICEX MANAGED PORTFOLIO OPS"
+        visualMetrics={[
+          { label: "On-Ground SLA", value: "99.8%" },
+          { label: "Cost Optimization", value: "18% Avg" },
+          { label: "Staff Punctuality", value: "99.1%" }
+        ]}
+      />
 
-        <nav className="hidden lg:flex flex-1 justify-center items-center gap-7 text-xs sm:text-sm font-semibold text-slate-600">
-          <Link href="/discover" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Buy / Lease</Link>
-          <Link href="/fm-marketplace" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">FM Services</Link>
-          <Link href="/operations" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">SaaS Platform</Link>
-          <Link href="/managed-services" className="text-[#0F8B7D] font-bold whitespace-nowrap">Managed Services</Link>
-          <Link href="/intelligence" className="hover:text-[#0F8B7D] transition-colors whitespace-nowrap">Intelligence</Link>
-        </nav>
+      {/* Problem / Solution */}
+      <ProblemSolution
+        moduleName="Managed Services"
+        accentColor="#059669"
+        withoutItems={[
+          "Unreliable local FM contractors cutting corners on technical staff strength and critical MEP servicing.",
+          "Opaque billing with hidden markups, inflated spare part quotes, and untraceable petty cash vouchers.",
+          "Inconsistent tenant experience and unresolved complaints leading to early lease terminations and vacancies.",
+          "Constant owner headaches handling staff attrition, labor disputes, vendor defaults, and government notices.",
+          "Zero digital accountability: building owners have no idea whether scheduled maintenance actually took place."
+        ]}
+        withItems={[
+          "Certified on-ground engineering, housekeeping, and security teams deployed directly by OfficeX.",
+          "Stringent contractually guaranteed SLAs backed by automatic financial penalties for performance lapses.",
+          "100% open-book pass-through accounting with zero hidden markups on manpower or equipment procurement.",
+          "Complete owner peace of mind: a dedicated Property Manager oversees daily operations, compliance, and tenant relations.",
+          "Live digital visibility: every technician checklist, tenant ticket, and expenditure is recorded in real time."
+        ]}
+      />
 
-        <div className="hidden md:flex items-center justify-end gap-4 shrink-0 lg:w-[250px]">
-          <a href="/login" className="text-xs sm:text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors px-2">
-            Sign In
-          </a>
-          <button 
-            onClick={() => router.push('/public/wizard')}
-            className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer"
-          >
-            Book a Demo
-          </button>
-        </div>
+      {/* Key Features */}
+      <FeatureGrid
+        title="Turnkey On-Ground Property &amp; Facility Operations"
+        subtitle="End-to-end physical management integrated with our digital operating system."
+        accentColor="#059669"
+        features={[
+          {
+            icon: Building2,
+            title: "Turnkey Property Management",
+            description: "Complete operational stewardship of your commercial asset: rent collection, tenant handover, fit-out guidelines, and asset preservation.",
+            tag: "Turnkey"
+          },
+          {
+            icon: Users,
+            title: "Integrated Facility Management (IFM)",
+            description: "Technical MEP operations (HVAC, DG, Transformers, STP/WTP), soft services, round-the-clock physical security, and landscape maintenance.",
+            tag: "IFM"
+          },
+          {
+            icon: ShieldCheck,
+            title: "SLA-Backed Performance Guarantee",
+            description: "Contractually committed uptime and resolution times. If our on-ground team misses an SLA milestone, penalty credits apply automatically.",
+            tag: "Accountability"
+          },
+          {
+            icon: FileCheck,
+            title: "Auto-Generated Monthly MIS",
+            description: "Institutional financial and operational audit delivered to the building owner by the 5th of every month with zero delays.",
+            tag: "Governance"
+          },
+          {
+            icon: Scale,
+            title: "Statutory Compliance Management",
+            description: "Our legal and liaison specialists manage all renewals for Fire Safety NOC, Lift licenses, DG permissions, and municipal documentation.",
+            tag: "Legal"
+          },
+          {
+            icon: CheckCircle2,
+            title: "Transparent Open-Book Billing",
+            description: "All vendor invoices and utility payments are passed through at verified actual cost with a fixed, transparent management fee.",
+            tag: "Finances"
+          },
+          {
+            icon: TrendingUp,
+            title: "Day-1 Revenue Optimization",
+            description: "Our audit team identifies unbilled common areas, renegotiates vendor contracts, and introduces energy conservation measures.",
+            tag: "Yield"
+          }
+        ]}
+      />
 
-        <button className="md:hidden p-1 text-slate-700 hover:text-slate-900" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </header>
+      {/* Use Cases */}
+      <UseCaseSection
+        accentColor="#059669"
+        useCases={[
+          {
+            audience: "Absentee or High-Net-Worth Landlords",
+            scenario: "Owning a 150,000 sq.ft. commercial office building in Gurgaon while residing overseas, struggling with unreliable local supervisors.",
+            outcome: "Transferred full management to OfficeX. Received monthly audited financial MIS, on-time rent deposits, and zero operational headaches."
+          },
+          {
+            audience: "Boutique Real Estate Developers",
+            scenario: "Delivering their first commercial office project and needing Grade-A facility management to attract Fortune 500 enterprise tenants.",
+            outcome: "Deployed OfficeX on-ground IFM team. Building achieved 95% occupancy within 8 months with top-tier multinational occupants."
+          },
+          {
+            audience: "Family Offices & Holding Companies",
+            scenario: "Managing 5 mixed commercial buildings with fragmented staff, high maintenance costs, and frequent compliance notices.",
+            outcome: "Consolidated all assets under OfficeX Managed Services, reducing total operating expenses by 18% through bulk procurement."
+          }
+        ]}
+      />
 
-      {/* MOBILE MENU */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-5 md:hidden text-slate-900 shadow-2xl animate-fadeIn">
-          <Link href="/discover" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Buy / Lease</Link>
-          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services</Link>
-          <Link href="/operations" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">SaaS Platform</Link>
-          <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">Managed Services</Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
-          <hr className="border-slate-200" />
-          <button 
-            onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
-            className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
-          >
-            Book a Demo
-          </button>
-        </div>
-      )}
+      {/* Pricing Table */}
+      <PricingTable
+        accentColor="#059669"
+        title="Managed Services Pricing"
+        subtitle="Transparent fee models tailored to building size, occupancy profile, and technical complexity."
+        tiers={[
+          {
+            name: "Property Management Only",
+            price: "3% - 5%",
+            period: "of collections or ₹3-8/sq.ft.",
+            description: "Comprehensive property oversight, rent roll collection, tenant management, and compliance governance.",
+            features: [
+              "Dedicated on-site Property Manager",
+              "Lease administration and rent roll collection",
+              "Full statutory compliance renewal management",
+              "CAM calculation and reconciliation",
+              "Automated monthly MIS reporting",
+              "Tenant dispute resolution"
+            ],
+            ctaLabel: "Get PM Proposal",
+            ctaHref: "/contact?interest=managed-pm"
+          },
+          {
+            name: "Integrated FM (IFM)",
+            price: "Base Fee + Markup",
+            period: "10-15% manpower markup",
+            description: "Complete technical operations, engineering, housekeeping, security, and maintenance manpower.",
+            highlight: true,
+            features: [
+              "Certified MEP technicians, electricians & plumbers",
+              "24/7 technical shift coverage & DG/HVAC maintenance",
+              "Soft services (cleaning, housekeeping & waste mgmt)",
+              "SLA-backed equipment uptime guarantee",
+              "Integrated OfficeX Operate CAFM software included",
+              "Open-book verified pass-through costs"
+            ],
+            ctaLabel: "Get IFM Proposal",
+            ctaHref: "/contact?interest=managed-ifm"
+          },
+          {
+            name: "Full Turnkey Managed Package",
+            price: "Custom",
+            description: "The complete commercial operating solution: PM + IFM + Leasing Representation + Guaranteed SLAs.",
+            features: [
+              "End-to-end property stewardship & technical IFM",
+              "Exclusive leasing representation via Marketplace",
+              "Guaranteed maintenance response SLAs with penalties",
+              "Capital expenditure planning & energy audit",
+              "Direct board representation & executive briefings",
+              "Institutional ESG reporting & certifications"
+            ],
+            ctaLabel: "Talk to Sales",
+            ctaHref: "/contact?interest=managed-turnkey"
+          }
+        ]}
+      />
 
-      {/* HERO SECTION */}
-      <section className="bg-[#071324] pt-20 pb-24 px-4 sm:px-6 relative overflow-hidden text-center">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          <span className="px-3.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-1.5">
-            <Briefcase size={14} /> End-to-End Enterprise Workspaces
-          </span>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-[1.1] mb-6">
-            Focus on Your Business.<br className="hidden sm:block" /> We'll Manage the Office.
-          </h1>
-          <p className="text-sm sm:text-base text-slate-300 font-medium max-w-2xl mb-10 leading-relaxed">
-            From custom fit-outs to daily hospitality, IT support, and pantry management, OfficeX provides fully managed workspace solutions for fast-growing enterprises.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full sm:w-auto px-8 py-4 bg-[#8B5CF6] hover:bg-purple-500 text-white font-black text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              Explore Managed Services <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </section>
+      {/* Onboarding Timeline */}
+      <OnboardingTimeline
+        accentColor="#059669"
+        steps={[
+          {
+            step: "01",
+            title: "Comprehensive Building Audit",
+            description: "Our senior technical engineers inspect all MEP plants, structural assets, and compliance files.",
+            duration: "Days 1 - 5"
+          },
+          {
+            step: "02",
+            title: "Scope Definition & SLA Agreement",
+            description: "Finalize staffing rosters, maintenance scopes, response SLAs, and transparent fee schedules.",
+            duration: "Days 6 - 10"
+          },
+          {
+            step: "03",
+            title: "Staff Mobilization & Shadowing",
+            description: "Deploy certified technicians, conduct asset taggings, and transition shift operations smoothly.",
+            duration: "Days 11 - 25"
+          },
+          {
+            step: "04",
+            title: "Digital Handover & Go-Live",
+            description: "Activate OfficeX Operate CAFM, distribute tenant onboarding packs, and initiate live management.",
+            duration: "Day 30 Go-Live"
+          }
+        ]}
+      />
 
-      {/* SHOWCASE SECTION 1 */}
-      <section className="py-20 px-4 sm:px-6 max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          <div className="order-2 lg:order-1 rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-200 h-[400px] flex items-center justify-center">
-            {/* Using a placeholder since we don't have a specific design for this in figma/1 */}
-            <div className="text-center p-8 text-slate-500">
-               <Laptop size={64} className="mx-auto mb-4 text-slate-400" />
-               <p className="font-bold text-lg">Custom Fit-out Design Dashboard</p>
-               <p className="text-sm">Visualize your custom enterprise office setup</p>
-            </div>
-          </div>
-          <div className="order-1 lg:order-2">
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight mb-4">
-              Bespoke Fit-Outs & Custom Branding
-            </h2>
-            <p className="text-slate-600 text-sm font-medium leading-relaxed mb-8">
-              Work with our award-winning architects to design an office that reflects your brand identity and culture. Zero upfront capital expenditure required.
-            </p>
-            <div className="space-y-4">
-              {[
-                "Zero-CapEx customizable fit-out models",
-                "Agile workspace planning and densification",
-                "Dedicated brand-compliant IT infrastructure",
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <CheckCircle2 size={18} className="text-[#8B5CF6]" />
-                  <span className="text-sm font-bold text-slate-800">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* FAQs */}
+      <FAQAccordion
+        faqs={[
+          {
+            q: "How does OfficeX Managed Services differ from traditional FM vendors?",
+            a: "Traditional FM companies only provide manpower without digital accountability or owner alignment. OfficeX combines seasoned on-ground engineering teams with proprietary software, contractually guaranteed SLAs, and open-book financial transparency."
+          },
+          {
+            q: "Can OfficeX transition and retain our existing trusted on-ground technicians?",
+            a: "Yes. Following a technical evaluation and background verification, we can absorb your existing high-performing technical staff into the OfficeX roster with structured training and benefits."
+          },
+          {
+            q: "What does open-book billing mean in practice?",
+            a: "You receive all original invoices from third-party vendors (such as diesel suppliers, elevator AMC contractors, or consumable suppliers) at actual pass-through cost without arbitrary markups. Our fee is completely transparent."
+          },
+          {
+            q: "What emergency response capabilities does OfficeX provide?",
+            a: "We maintain 24/7 technical on-call engineering desks in every metro region to support on-site staff during critical electrical trips, chiller shutdowns, or plumbing floods within 60 minutes."
+          }
+        ]}
+      />
 
-      {/* SHOWCASE SECTION 2 */}
-      <section className="py-20 px-4 sm:px-6 bg-white w-full border-y border-slate-200">
-        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          <div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight mb-4">
-              Premium Hospitality & Operations
-            </h2>
-            <p className="text-slate-600 text-sm font-medium leading-relaxed mb-8">
-              Our 5-star hospitality team ensures your workspace runs flawlessly. From concierge services and gourmet pantries to enterprise-grade security and housekeeping.
-            </p>
-            <div className="space-y-4">
-              {[
-                "Dedicated on-site community and facility managers",
-                "24/7 proactive maintenance and helpdesk",
-                "Curated employee engagement events",
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Users size={18} className="text-[#8B5CF6]" />
-                  <span className="text-sm font-bold text-slate-800">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-200 h-[400px] flex items-center justify-center">
-            {/* Using a placeholder since we don't have a specific design for this in figma/1 */}
-            <div className="text-center p-8 text-slate-500">
-               <Building size={64} className="mx-auto mb-4 text-slate-400" />
-               <p className="font-bold text-lg">Hospitality & Concierge Portal</p>
-               <p className="text-sm">Manage front-desk and employee requests</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Final CTA */}
+      <FinalCTABand
+        accentColor="#059669"
+        headline="Ready to experience world-class, hassle-free property management?"
+        subheadline="Schedule a physical building audit with our commercial engineering team today."
+        primaryCta={{
+          label: "Schedule Property Audit",
+          href: "/signup"
+        }}
+        secondaryCta={{
+          label: "Talk to Managed Services Team",
+          onClick: () => setSlideInOpen(true)
+        }}
+      />
+
+      {/* Enquiry SlideIn */}
+      <EnquirySlideIn
+        isOpen={slideInOpen}
+        onClose={() => setSlideInOpen(false)}
+        prefill={{ modules: ["managed-services"] }}
+      />
 
       <Footer />
     </div>

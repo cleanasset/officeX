@@ -5,12 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, Bell, Settings, Home, LayoutDashboard, Briefcase, FileText, Users, DollarSign, LogOut, ChevronRight, Building } from "lucide-react";
+import SubscriptionGate from "@/components/SubscriptionGate";
 
 export default function DashboardPage() {
   const router = useRouter();
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+    <SubscriptionGate fallbackLandingPage="/audiences/owners" portalName="Executive Dashboard">
+      <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
       
       {/* SIDEBAR */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col hidden md:flex shrink-0">
@@ -145,6 +147,7 @@ export default function DashboardPage() {
 
         </div>
       </main>
-    </div>
+      </div>
+    </SubscriptionGate>
   );
 }
