@@ -59,94 +59,171 @@ export default function ManagedServicesPage() {
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <MarketingHeader activePath="/managed-services" />
 
-      {/* ═══ HERO — Clean, Institutional & Executive ═══ */}
-      <section className="relative w-full overflow-hidden bg-slate-950">
-        {/* Architectural backdrop with smooth dark gradient overlay */}
+      {/* ═══ HERO — Sunlit, Bright, Executive & Institutional ═══ */}
+      <section className="relative w-full overflow-hidden bg-slate-50 border-b border-slate-200/80">
+        {/* Full-bleed sunlit lobby photography prominently visible */}
         <div className="absolute inset-0 z-0">
           <Image 
             src="/images/managed_services_hero.jpg" 
             alt="Commercial Real Estate Property Management" 
             fill 
             priority 
-            className="object-cover object-center opacity-30" 
+            className="object-cover object-right md:object-center opacity-90" 
             sizes="100vw" 
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/95 to-slate-950/80" />
+          {/* Directional gradient: clean white wash on the left for crisp typography legibility, fading out to reveal the full sunlit lobby & personnel */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 via-45% to-white/20 lg:from-white lg:via-white/90 lg:via-40% lg:to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
-          <div className="max-w-3xl">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             
-            {/* Clean Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 backdrop-blur-sm text-teal-300 text-xs font-bold uppercase tracking-wider mb-6">
-              <Shield size={14} className="text-teal-400" />
-              <span>Institutional Property Management &amp; IFM</span>
+            {/* Left Column: Authoritative Copy & Scope Cards */}
+            <div className="lg:col-span-7 max-w-2xl">
+              
+              {/* Clean Tagline Pill */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-200 bg-teal-50 text-[#0F8B7D] text-xs font-bold uppercase tracking-wider mb-5 shadow-xs">
+                <Shield size={14} className="text-[#0F8B7D]" />
+                <span>Turnkey Managed Services &amp; Property Stewardship</span>
+              </div>
+
+              {/* Confident, Authoritative Headline */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-black text-slate-900 tracking-tight leading-[1.15] mb-5">
+                Your Buildings, Managed by{" "}
+                <span className="text-[#0F8B7D]">OfficeX</span>.
+              </h1>
+
+              {/* Sub-headline directly from client spec */}
+              <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed mb-8">
+                Turnkey on-ground Property &amp; Facility Management with certified technical teams, contractually enforced SLAs, and automated monthly MIS delivered to your inbox.
+              </p>
+
+              {/* 3 Executive Scope Cards (Replaces generic bullet lines) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+                <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-xs hover:border-teal-300 transition-all">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Users size={18} className="text-[#0F8B7D]" />
+                    <span className="text-xs font-bold text-slate-900">On-Ground IFM</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">Certified MEP, HVAC, security &amp; housekeeping deployed on-site.</p>
+                </div>
+
+                <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-xs hover:border-teal-300 transition-all">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <ShieldCheck size={18} className="text-[#0F8B7D]" />
+                    <span className="text-xs font-bold text-slate-900">Guaranteed SLAs</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">Contractual 99.8% uptime backing with automated slip-up penalties.</p>
+                </div>
+
+                <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-xs hover:border-teal-300 transition-all">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <FileCheck size={18} className="text-[#0F8B7D]" />
+                    <span className="text-xs font-bold text-slate-900">Monthly MIS</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">Institutional-grade financial audits delivered on the 5th of every month.</p>
+                </div>
+              </div>
+
+              {/* Action CTAs */}
+              <div className="flex flex-wrap items-center gap-4 mb-8">
+                <button
+                  onClick={() => setSlideInOpen(true)}
+                  className="px-7 py-3.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
+                >
+                  Schedule Building Audit <ArrowRight size={16} />
+                </button>
+                <Link
+                  href="/operate"
+                  className="px-7 py-3.5 bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 font-semibold text-sm rounded-xl border border-slate-300 shadow-xs hover:border-slate-400 transition-all flex items-center gap-2"
+                >
+                  Explore Self-Managed SaaS
+                </Link>
+              </div>
+
+              {/* Target Audience Strip */}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span className="font-bold text-slate-700">Built for:</span>
+                <span className="bg-white/90 px-2.5 py-1 rounded-md border border-slate-200 font-medium text-slate-700">Commercial Building Owners</span>
+                <span className="bg-white/90 px-2.5 py-1 rounded-md border border-slate-200 font-medium text-slate-700">Institutional Landlords</span>
+                <span className="bg-white/90 px-2.5 py-1 rounded-md border border-slate-200 font-medium text-slate-700">Real Estate Developers</span>
+              </div>
+
             </div>
 
-            {/* Clear, Confident, Powerful Headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-extrabold text-white tracking-tight leading-[1.15] mb-5">
-              Turnkey Commercial Property Management.{" "}
-              <span className="text-teal-400">Guaranteed SLAs.</span>
-            </h1>
+            {/* Right Column: Live Operational Stewardship Hub (Floating Executive Glass Card) */}
+            <div className="lg:col-span-5 hidden lg:block">
+              <div className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-6 shadow-2xl">
+                
+                {/* Hub Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Stewardship Hub</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+                    SLA Active
+                  </span>
+                </div>
 
-            {/* Sub-headline */}
-            <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed mb-8 max-w-2xl">
-              We deploy certified on-ground technical teams, oversee 24/7 MEP operations, and manage statutory compliance — backed by contractually enforced SLAs and 100% open-book financial transparency.
-            </p>
+                {/* Live Performance Gauges */}
+                <div className="mt-5 space-y-4">
+                  
+                  {/* MEP Uptime Gauge */}
+                  <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-slate-600 font-semibold">Critical MEP Plant Uptime</span>
+                      <span className="text-slate-900 font-black">99.8%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div className="bg-[#0F8B7D] h-full rounded-full" style={{ width: "99.8%" }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
+                      <span>HVAC · Chiller · DG · STP</span>
+                      <span className="text-[#0F8B7D] font-bold">Zero Breaches</span>
+                    </div>
+                  </div>
 
-            {/* 4 Core Value Pillars */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-10 max-w-xl">
-              <div className="flex items-center gap-2.5 text-sm text-slate-200">
-                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
-                <span>Contractually Enforced 99.8% SLAs</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm text-slate-200">
-                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
-                <span>100% Open-Book Pass-Through Billing</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm text-slate-200">
-                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
-                <span>Zero Statutory Notice Penalty Guarantee</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm text-slate-200">
-                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
-                <span>24/7 Rapid Technical Emergency Desk</span>
-              </div>
-            </div>
+                  {/* Compliance & MIS Tiles */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Statutory NOCs</div>
+                      <div className="text-sm font-black text-slate-900 mt-1 flex items-center gap-1.5">
+                        <ShieldCheck size={16} className="text-teal-600 shrink-0" />
+                        <span>100% Current</span>
+                      </div>
+                      <div className="text-[10px] text-emerald-600 font-semibold mt-1">Zero Notice Guarantee</div>
+                    </div>
 
-            {/* Action CTAs */}
-            <div className="flex flex-wrap items-center gap-4 mb-12">
-              <button
-                onClick={() => setSlideInOpen(true)}
-                className="px-7 py-3.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
-              >
-                Schedule Building Audit <ArrowRight size={16} />
-              </button>
-              <Link
-                href="/operate"
-                className="px-7 py-3.5 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white font-semibold text-sm rounded-xl backdrop-blur-sm hover:bg-white/5 transition-all flex items-center gap-2"
-              >
-                Explore Self-Managed SaaS
-              </Link>
-            </div>
+                    <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Automated MIS</div>
+                      <div className="text-sm font-black text-slate-900 mt-1 flex items-center gap-1.5">
+                        <Clock size={16} className="text-[#0F8B7D] shrink-0" />
+                        <span>Delivered 5th</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-medium mt-1">Complete Audit Pack</div>
+                    </div>
+                  </div>
 
-            {/* Performance Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 border-t border-slate-800/90 max-w-3xl">
-              <div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">50+</div>
-                <div className="text-xs text-slate-400 font-medium mt-1">Buildings Managed</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">99.8%</div>
-                <div className="text-xs text-slate-400 font-medium mt-1">On-Ground SLA</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">18%</div>
-                <div className="text-xs text-slate-400 font-medium mt-1">Avg Cost Savings</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">&lt; 15 Mins</div>
-                <div className="text-xs text-slate-400 font-medium mt-1">Emergency SLA</div>
+                  {/* Financial Transparency Banner */}
+                  <div className="bg-teal-50/70 p-3.5 rounded-xl border border-teal-100/90 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Pass-Through Billing</div>
+                      <div className="text-[11px] text-slate-500">100% open-book · zero hidden markups</div>
+                    </div>
+                    <span className="text-[11px] font-black text-[#0F8B7D] bg-white px-2.5 py-1 rounded-md border border-teal-200/60 shadow-xs">
+                      Audited
+                    </span>
+                  </div>
+
+                </div>
+
+                {/* Hub Footer */}
+                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500">Dedicated On-Site Engineering Team</span>
+                  <span className="font-bold text-slate-800">OfficeX Managed</span>
+                </div>
+
               </div>
             </div>
 
