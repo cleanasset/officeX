@@ -197,9 +197,9 @@ export default function PropertyListingBuilder() {
         {currentStep === 1 && (
           <div className="space-y-4 text-xs">
             <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 flex items-center justify-between">
-              <span>1. Basic Property Information & Indian Location Intelligence</span>
+              <span>1. Basic Property Information & Location Intelligence</span>
               <span className="text-[10px] font-bold text-[#0F8B7D] bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100">
-                All 28 States & 8 UTs Active
+                Metro Hubs & Micro-Markets Active
               </span>
             </h2>
 

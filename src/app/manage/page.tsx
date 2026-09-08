@@ -27,8 +27,8 @@ export default function ManagePage() {
 
       {/* Hero Section */}
       <HeroSection
-        badge="MODULE 03 — MANAGE"
-        headline="The Property Management Platform for Indian Commercial Real Estate"
+        badge="MANAGE · PROPERTY & LEASE GOVERNANCE"
+        headline="The Property Management Platform for Commercial Real Estate"
         subheadline="Automate rent roll, CAM billing, compliance tracking, and MIS reporting — never miss a renewal again."
         description="Eliminate spreadsheet chaos and compliance vulnerabilities. Digitize lease agreements, automate CAM billing, track statutory NOC renewals, and generate board-ready MIS reports in minutes."
         primaryCta={{
@@ -39,19 +39,96 @@ export default function ManagePage() {
           label: "Raise an Enquiry",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#D97706"
-        visualPlaceholderTitle="OFFICEX MANAGE PORTFOLIO CONSOLE"
-        visualMetrics={[
-          { label: "Collection Rate", value: "99.2%" },
-          { label: "Compliance Score", value: "100%" },
-          { label: "Automated MIS", value: "< 2 Mins" }
-        ]}
+        accentColor="#0F8B7D"
+        bgImage="/images/officex_platform_dark_ecosystem.jpg"
+        customVisual={
+          <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                <span className="text-[11px] font-mono text-slate-400 ml-2 font-semibold">
+                  app.officex.in/manage
+                </span>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
+                ● RENT ROLL &amp; COMPLIANCE
+              </span>
+            </div>
+
+            {/* Live Rent Roll Ledger Card */}
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    MONTHLY COLLECTION RECOVERY
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-xl font-black text-white">₹4.82 Cr</span>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                      99.4% On-Time
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">ACTIVE LEASES</span>
+                  <span className="text-sm font-black text-white">48 Units</span>
+                </div>
+              </div>
+
+              {/* Tenant Ledger Rows */}
+              <div className="space-y-2">
+                <div className="bg-[#071324] rounded-xl p-2.5 border border-slate-800 flex items-center justify-between text-xs shadow-2xs">
+                  <div>
+                    <span className="font-extrabold text-white block">Google Enterprise Services</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Floor 8 · Entire Plate · 32k SqFt</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono font-bold text-white block">₹84,77,120</span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">Cleared RTGS</span>
+                  </div>
+                </div>
+
+                <div className="bg-[#071324] rounded-xl p-2.5 border border-slate-800 flex items-center justify-between text-xs shadow-2xs">
+                  <div>
+                    <span className="font-extrabold text-white block">Tata Digital Limited</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Floor 5 · East Wing · 24k SqFt</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono font-bold text-white block">₹63,24,800</span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">Auto-Reconciled</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statutory Compliance Strip */}
+              <div className="mt-3 pt-3 border-t border-slate-700/60 grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div className="bg-[#071324] rounded-lg p-1.5 border border-slate-800 font-bold text-emerald-400">
+                  Fire NOC: 100% Valid
+                </div>
+                <div className="bg-[#071324] rounded-lg p-1.5 border border-slate-800 font-bold text-emerald-400">
+                  Lift License: Active
+                </div>
+                <div className="bg-[#071324] rounded-lg p-1.5 border border-slate-800 font-bold text-teal-300">
+                  CAM: GST Auto-Billed
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Assurance */}
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+              <span className="font-semibold text-slate-300">Audit-Ready Statutory Vault</span>
+              <span className="text-emerald-400 font-extrabold">✓ Zero Revenue Leakage</span>
+            </div>
+          </div>
+        }
       />
 
       {/* Problem / Solution */}
       <ProblemSolution
         moduleName="Manage"
-        accentColor="#D97706"
+        accentColor="#0F8B7D"
         withoutItems={[
           "Manual rent rolls in fragile spreadsheets causing missed rent escalations, uncollected CAM dues, and revenue leakage.",
           "Overlooked statutory clearance dates (Fire NOC, Lift licenses, PCB approvals) risking punitive government sealing orders.",
@@ -72,7 +149,7 @@ export default function ManagePage() {
       <FeatureGrid
         title="Institutional Property Management &amp; Lease Governance"
         subtitle="Engineered for commercial landlords, asset managers, and property management companies."
-        accentColor="#D97706"
+        accentColor="#0F8B7D"
         features={[
           {
             icon: Receipt,
@@ -121,7 +198,7 @@ export default function ManagePage() {
 
       {/* Use Cases */}
       <UseCaseSection
-        accentColor="#D97706"
+        accentColor="#0F8B7D"
         useCases={[
           {
             audience: "Commercial Property Owners",
@@ -143,7 +220,7 @@ export default function ManagePage() {
 
       {/* Pricing Table */}
       <PricingTable
-        accentColor="#D97706"
+        accentColor="#0F8B7D"
         title="Manage Pricing"
         subtitle="Transparent per-square-foot pricing designed for commercial property portfolios."
         tiers={[
@@ -199,31 +276,29 @@ export default function ManagePage() {
 
       {/* Onboarding Timeline */}
       <OnboardingTimeline
-        accentColor="#D97706"
+        accentColor="#0F8B7D"
+        title="Same-Day Property &amp; Lease Activation"
+        subtitle="Zero 15-day delays. Digitize leases, configure CAM billing formulas, and begin automated collections in a single day."
         steps={[
           {
-            step: "01",
-            title: "Lease Digitization & Ingestion",
+            title: "Lease Data Ingestion",
             description: "Upload existing lease deeds, tenant profiles, and deposit records into the digital registry.",
-            duration: "Days 1 - 3"
+            duration: "Hour 1"
           },
           {
-            step: "02",
-            title: "Compliance Audit & Alerts Setup",
-            description: "Input statutory NOCs, lift certifications, and fire licenses to activate proactive alert clocks.",
-            duration: "Days 4 - 5"
+            title: "Compliance Audit & Alerts",
+            description: "Input statutory NOCs, lift certifications, and fire licenses to activate proactive alert radar.",
+            duration: "Hour 2"
           },
           {
-            step: "03",
             title: "Billing Rules & Payment Sync",
-            description: "Configure CAM formulas, utility sub-meter logic, and connect Razorpay collection accounts.",
-            duration: "Days 6 - 7"
+            description: "Configure CAM formulas, utility sub-meter logic, and connect collection accounts.",
+            duration: "Hour 3"
           },
           {
-            step: "04",
-            title: "First Automated Rent Roll",
-            description: "Generate and dispatch your first digital rent roll and begin collecting dues seamlessly.",
-            duration: "Day 8 Go-Live"
+            title: "Automated Rent Roll Go-Live",
+            description: "Generate and dispatch your first digital rent roll and begin collecting dues on day one.",
+            duration: "Same-Day Active"
           }
         ]}
       />
@@ -236,8 +311,8 @@ export default function ManagePage() {
             a: "The platform supports all standard commercial billing methods: proportionate super built-up area allocation, actual sub-meter consumption, fixed per-sq.ft. charges, and hybrid models with true-up reconciliations."
           },
           {
-            q: "Does OfficeX Manage support Indian GST and TDS compliance?",
-            a: "Yes. All invoices generated comply with Indian GST requirements (including e-invoicing standards and HSN/SAC codes). Inbuilt TDS tracking allows landlords and tenants to reconcile 194I tax deductions seamlessly."
+            q: "Does OfficeX Manage support statutory tax, GST, and TDS compliance?",
+            a: "Yes. All invoices generated comply with statutory GST requirements (including e-invoicing standards and HSN/SAC codes). Inbuilt TDS tracking allows landlords and tenants to reconcile tax deductions seamlessly."
           },
           {
             q: "Which statutory clearances are tracked out-of-the-box?",
@@ -252,7 +327,7 @@ export default function ManagePage() {
 
       {/* Final CTA */}
       <FinalCTABand
-        accentColor="#D97706"
+        accentColor="#0F8B7D"
         headline="Ready to eliminate rent leakage and compliance risks across your portfolio?"
         subheadline="Join forward-thinking property owners and asset managers who manage their commercial properties with OfficeX."
         primaryCta={{

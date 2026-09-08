@@ -42,7 +42,7 @@ export async function GET(request: Request) {
   const results: any[] = [];
   const seenPlaceKeys = new Set<string>();
 
-  // 1. Query Live OpenStreetMap Nominatim Engine (Strictly Filtered to India: countrycodes=in)
+  // 1. Query Live OpenStreetMap Nominatim Engine
   try {
     const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
       cleanQ
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
         if (!seenPlaceKeys.has(placeKey)) {
           seenPlaceKeys.add(placeKey);
           
-          const cleanDisplay = [name, area, city, state, pincode, "India"]
+          const cleanDisplay = [name, area, city, state, pincode]
             .filter(Boolean)
             .filter((val, idx, arr) => arr.indexOf(val) === idx)
             .join(", ");
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     console.warn("Live OSM Nominatim fetch failed:", err);
   }
 
-  // 2. Query Live Photon Geocoding Engine (Filtered to India)
+  // 2. Query Live Photon Geocoding Engine
   if (results.length < 5) {
     try {
       const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
             if (!seenPlaceKeys.has(placeKey)) {
               seenPlaceKeys.add(placeKey);
 
-              const cleanDisplay = [name, area, city, state, pincode, "India"]
+              const cleanDisplay = [name, area, city, state, pincode]
                 .filter(Boolean)
                 .filter((val, idx, arr) => arr.indexOf(val) === idx)
                 .join(", ");

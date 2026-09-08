@@ -15,7 +15,7 @@ const sections = [
     id: "acceptance", 
     title: "1. Acceptance of Terms & Scope", 
     icon: Scale,
-    content: `Welcome to OfficeX ("Platform", "we", "us", or "our"), operated by Scalezix Ventures LLP. By accessing or using the OfficeX platform, website, web applications, or related mobile dashboards (collectively, the "Services"), you ("User", "Entity", "Landlord", "Tenant", or "Vendor") agree to be legally bound by these Terms of Service ("Terms").\n\nOfficeX is a commercial real estate operating system and facility management suite built to facilitate office space discovery, leasing transactions, statutory compliance tracking, vendor procurement, and facility maintenance across commercial properties in India.` 
+    content: `Welcome to OfficeX ("Platform", "we", "us", or "our"), operated by Scalezix Ventures LLP. By accessing or using the OfficeX platform, website, web applications, or related mobile dashboards (collectively, the "Services"), you ("User", "Entity", "Landlord", "Tenant", or "Vendor") agree to be legally bound by these Terms of Service ("Terms").\n\nOfficeX is a commercial real estate operating system and facility management suite built to facilitate office space discovery, leasing transactions, statutory compliance tracking, vendor procurement, and facility maintenance across prime commercial properties and institutional portfolios.` 
   },
   { 
     id: "registration", 
@@ -57,13 +57,13 @@ const sections = [
     id: "liability", 
     title: "8. Limitation of Liability & Indemnity", 
     icon: AlertCircle,
-    content: `To the maximum extent permitted by applicable Indian law, OfficeX shall not be liable for any indirect, incidental, or consequential damages resulting from physical property downtime, vendor service delays, or third-party utility disruptions.\n\nUsers agree to indemnify and hold harmless Scalezix Ventures LLP against any claims arising from fraudulent property representations, breach of statutory labor compliance by contractors, or violation of third-party IP.` 
+    content: `To the maximum extent permitted by applicable commercial law, OfficeX shall not be liable for any indirect, incidental, or consequential damages resulting from physical property downtime, vendor service delays, or third-party utility disruptions.\n\nUsers agree to indemnify and hold harmless Scalezix Ventures LLP against any claims arising from fraudulent property representations, breach of statutory labor compliance by contractors, or violation of third-party IP.` 
   },
   { 
     id: "governing", 
     title: "9. Governing Law & Jurisdiction", 
     icon: Scale,
-    content: `These Terms shall be governed by and construed in accordance with the laws of the Republic of India.\n\nAny legal dispute, suit, or proceeding arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the competent courts in Mumbai, Maharashtra or GIFT City (Gujarat International Finance Tec-City), India.` 
+    content: `These Terms shall be governed by and construed in accordance with applicable enterprise commercial jurisdiction and statutory arbitration regulations.\n\nAny legal dispute, suit, or proceeding arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the competent institutional commercial arbitration forums.` 
   },
   { 
     id: "termination", 
@@ -165,7 +165,7 @@ export default function TermsOfServicePage() {
             </div>
             <span className="hidden sm:inline text-slate-300">•</span>
             <span className="hidden sm:inline bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-              Jurisdiction: India (Mumbai & GIFT City)
+              Jurisdiction: Institutional Commercial Arbitration
             </span>
           </div>
         </div>

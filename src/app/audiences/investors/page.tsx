@@ -40,6 +40,7 @@ export default function InvestorsREITsJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
+        bgImage="/images/officex_prestige_night_tower.jpg"
         visualPlaceholderTitle="INSTITUTIONAL INVESTOR PORTAL"
         visualMetrics={[
           { label: "Portfolio Yield", value: "8.6%" },

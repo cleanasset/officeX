@@ -161,7 +161,7 @@ function PropertySearchContent() {
   // Merge with real properties from database
   const [dbProperties, setDbProperties] = useState<PropertyListing[]>([]);
 
-  // City coordinate fallback dictionary for Indian hubs
+  // City coordinate fallback dictionary for metro hubs
   const cityCoords: Record<string, [number, number]> = {
     ahmedabad: [23.0225, 72.5714],
     nikol: [23.0515, 72.6737],
@@ -455,7 +455,7 @@ function PropertySearchContent() {
           <div className="flex items-center justify-between pb-2 border-b border-gray-200/70">
             <div>
               <h1 className="text-base md:text-lg font-black text-gray-900">
-                Commercial Workspaces in {city ? `${city}` : (searchQuery || "India")}
+                Commercial Workspaces in {city ? `${city}` : (searchQuery || "All Metro Hubs")}
               </h1>
               <p className="text-[11px] text-gray-400 mt-0.5">
                 Showing {filteredProperties.length} verified Grade-A landmark towers

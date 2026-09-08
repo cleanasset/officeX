@@ -55,7 +55,7 @@ export default function OperationsPage() {
             onClick={() => router.push('/public/wizard')}
             className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer"
           >
-            Book a Demo
+            Get Started
           </button>
         </div>
 
@@ -77,16 +77,28 @@ export default function OperationsPage() {
             onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
             className="w-full py-3 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
           >
-            Book a Demo
+            Get Started
           </button>
         </div>
       )}
 
       {/* HERO SECTION */}
-      <section className="bg-[#071324] pt-20 pb-24 px-4 sm:px-6 relative overflow-hidden text-center">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <section className="bg-[#071324] pt-20 pb-24 px-4 sm:px-6 relative overflow-hidden text-center border-b border-slate-800">
+        {/* Commercial Operations Background Banner */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <Image
+            src="/images/officex_hero_platform_tower.jpg"
+            alt="Operations Platform Tower"
+            fill
+            priority
+            unoptimized
+            className="object-cover object-center opacity-80"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/90 via-[#071324]/75 to-[#071324]" />
+        </div>
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          <span className="px-3.5 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-1.5">
+          <span className="px-3.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-1.5 backdrop-blur-sm">
             <Database size={14} /> Full Stack Operations
           </span>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-[1.1] mb-6">
@@ -98,7 +110,7 @@ export default function OperationsPage() {
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full sm:w-auto px-8 py-4 bg-[#3B82F6] hover:bg-blue-500 text-white font-black text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-8 py-4 bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               Access Dashboard <ArrowRight size={16} />
             </button>

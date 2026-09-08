@@ -36,7 +36,7 @@ export default function TenantsDirectory() {
       id: 2,
       name: "Priya Nair",
       title: "Director Workplace Services",
-      company: "Google India Pvt Ltd",
+      company: "Google Enterprise Services",
       building: "One BKC (Apex Tower)",
       space: "Floor 8, Entire Horizon Plate",
       area: "32,000 sq.ft.",

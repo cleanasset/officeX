@@ -76,8 +76,8 @@ const articlesMap: Record<string, ArticleData> = {
       }
     ]
   },
-  "india-cre-fm-benchmark-2026": {
-    title: "India Commercial Real Estate & FM Benchmark Report 2026",
+  "cre-fm-benchmark-2026": {
+    title: "Commercial Real Estate & FM Benchmark Report 2026",
     category: "Market Report",
     publishedDate: "July 2026",
     readTime: "12 min read",
@@ -94,7 +94,7 @@ const articlesMap: Record<string, ArticleData> = {
       {
         heading: "Executive Summary: Macro Trends Across Major CRE Hubs",
         body: [
-          "India's commercial office sector continues to demonstrate resilient leasing velocity, led by Global Capability Centers (GCCs) and institutional BFSI occupiers expanding in Bengaluru, Hyderabad, and Mumbai MMR.",
+          "The commercial office sector continues to demonstrate resilient leasing velocity, led by Global Capability Centers (GCCs) and institutional BFSI occupiers expanding in primary metro clusters.",
           "However, landlords face mounting margin compression driven by 14.2% average annual CAM inflation, escalating technical labor wages, and stringent municipal compliance requirements.",
           "Forward-looking property owners are responding by consolidating operational software into unified platforms that manage leasing discovery, preventive maintenance, and statutory compliance under one roof."
         ]
@@ -139,13 +139,13 @@ const articlesMap: Record<string, ArticleData> = {
     ]
   },
   "commercial-real-estate-compliance-checklist": {
-    title: "Indian Commercial Real Estate Statutory Compliance Checklist",
+    title: "Commercial Real Estate Statutory Compliance Checklist",
     category: "Compliance",
     publishedDate: "August 2026",
     readTime: "10 min read",
     author: "OfficeX Statutory Governance Team",
     authorRole: "Legal & Regulatory Affairs",
-    summary: "A practical guide covering 40+ mandatory Indian clearances: Fire NOC, Lift Licenses, State Pollution Control Board consents, and DPDP Act 2023 readiness.",
+    summary: "A practical guide covering 40+ mandatory statutory clearances: Fire NOC, Lift Licenses, State Pollution Control Board consents, and DPDP Act readiness.",
     metrics: [
       { label: "Mandatory NOCs", value: "40+" },
       { label: "Penalty Risk", value: "High / Cease-Work" },
@@ -155,7 +155,7 @@ const articlesMap: Record<string, ArticleData> = {
       {
         heading: "Zero-Tolerance Statutory Governance",
         body: [
-          "Commercial properties in India operate under strict municipal and state regulations. Lapses in Fire NOC renewals or labour contractor PF/ESIC deposits can lead to instant building sealings or severe criminal liabilities for directors.",
+          "Commercial properties operate under strict municipal and state regulations. Lapses in Fire NOC renewals or labour contractor PF/ESIC deposits can lead to instant building sealings or severe criminal liabilities for directors.",
           "OfficeX Manage provides an automated statutory compliance tracker with proactive 90, 60, and 30-day expiry notifications sent directly to asset managers."
         ]
       }
@@ -340,8 +340,8 @@ export default function ResourceDetailPage() {
         headline="Explore the full OfficeX Commercial Operating System"
         subheadline="From space discovery to 52-week PPM and statutory compliance — all in one platform."
         primaryCta={{
-          label: "Book a Demo",
-          href: "/demo"
+          label: "Start Free Trial",
+          href: "/signup"
         }}
         secondaryCta={{
           label: "Talk to Sales",

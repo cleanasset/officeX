@@ -132,15 +132,28 @@ export default function CompliancePage() {
       </header>
 
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-[#0F8B7D]/90 text-white py-12 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-400 text-xs font-bold mb-4">
+      <div className="relative overflow-hidden bg-[#071324] text-white py-14 px-4 md:px-8 border-b border-slate-800">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <Image
+            src="/images/officex_platform_dark_ecosystem.jpg"
+            alt="Statutory Compliance Banner"
+            fill
+            priority
+            unoptimized
+            className="object-cover object-right opacity-70"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#071324] via-[#071324]/90 md:via-[#071324]/75 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#071324] via-transparent to-[#071324]/50" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-bold mb-4 backdrop-blur-sm">
             <FileCheck size={14} />
             <span>Statutory Real Estate Standards</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-black tracking-tight">Statutory & Operational Compliance</h1>
           <p className="text-slate-300 text-xs md:text-sm max-w-2xl mt-3 font-medium leading-relaxed">
-            Verify real-time Occupation Certificates, Fire NOCs, Lift licenses, and labor law compliance for institutional commercial properties across India.
+            Verify real-time Occupation Certificates, Fire NOCs, Lift licenses, and labor law compliance for institutional commercial properties.
           </p>
 
           <div className="flex flex-wrap items-center gap-6 mt-6 text-xs text-slate-300 font-semibold border-t border-white/10 pt-4">

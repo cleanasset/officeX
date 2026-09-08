@@ -20,7 +20,7 @@ export const INDIAN_STATES: string[] = [
   "Ladakh", "Lakshadweep", "Puducherry"
 ];
 
-// Comprehensive Commercial Cities and Micro-Markets in India
+// Comprehensive Commercial Cities and Micro-Markets
 export const INDIAN_CITIES_AND_HUBS: IndianLocationItem[] = [
   // GUJARAT - AHMEDABAD & GANDHINAGAR & SURAT
   { id: "guj-state", name: "Gujarat", type: "state", city: "Gandhinagar", state: "Gujarat", popular: true },
@@ -236,7 +236,7 @@ export function searchIndianLocations(query: string): IndianLocationItem[] {
       name: `${capitalized} (Custom Locality)`,
       type: "micromarket",
       city: capitalized,
-      state: "India",
+      state: "Commercial Hub",
       microMarket: capitalized
     }
   ];

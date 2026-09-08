@@ -43,6 +43,7 @@ export default function ITWorkplaceTechJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#2563EB"
+        bgImage="/images/officex_digital_platform_v2.jpg"
         visualPlaceholderTitle="WORKPLACE TECH &amp; IOT CONSOLE"
         visualMetrics={[
           { label: "API Latency", value: "<45ms" },
@@ -92,7 +93,7 @@ export default function ITWorkplaceTechJourney() {
               <span className="text-2xl font-mono font-black text-[#2563EB]">03</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Enforce Institutional Security</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                Stream real-time audit logs into your SIEM, enforce Okta/Azure AD SAML SSO, and ensure all data processing complies with India’s Digital Personal Data Protection (DPDP) Act 2023.
+                Stream real-time audit logs into your SIEM, enforce Okta/Azure AD SAML SSO, and ensure all data processing complies with Digital Personal Data Protection (DPDP) and SOC 2 Type II standards.
               </p>
               <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-1.5 text-xs font-bold text-[#2563EB]">
                 <span>Connected Module: Platform Core</span>
@@ -130,7 +131,7 @@ export default function ITWorkplaceTechJourney() {
           {
             icon: Shield,
             title: "DPDP Act 2023 &amp; SOC 2 Type II",
-            description: "Bank-grade AES-256 encryption at rest, TLS 1.3 in transit, automated data retention schedules, and sovereign India-based data storage.",
+            description: "Bank-grade AES-256 encryption at rest, TLS 1.3 in transit, automated data retention schedules, and sovereign Tier-4 data center storage.",
             tag: "Compliance"
           },
           {

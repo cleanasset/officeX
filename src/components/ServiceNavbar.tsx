@@ -88,7 +88,7 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
             onClick={() => router.push('/public/wizard')}
             className="px-5 py-2.5 rounded-full bg-[#0F8B7D] text-white text-xs sm:text-sm font-extrabold hover:bg-[#0D7A6E] shadow-md transition-all cursor-pointer flex items-center gap-1.5"
           >
-            <span>Book a Demo</span>
+            <span>Get Started</span>
             <ArrowRight size={13} />
           </button>
         </div>
@@ -164,7 +164,7 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
             onClick={() => { setMobileMenuOpen(false); router.push('/public/wizard'); }}
             className="w-full py-3.5 rounded-full bg-[#0F8B7D] text-white font-bold text-center shadow-lg cursor-pointer text-sm"
           >
-            Book a Demo
+            Get Started
           </button>
         </div>
       )}

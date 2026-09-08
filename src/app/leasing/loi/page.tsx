@@ -87,7 +87,7 @@ export default function LOIAndLeaseWorkflow() {
     },
     {
       id: "DX-2024-112",
-      client: "Google India",
+      client: "Google Enterprise",
       property: "The Capital (Platina) — Cybernetic Floor",
       rent: "₹1.85L",
       stage: "Lease Executed",

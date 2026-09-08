@@ -13,11 +13,11 @@ import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import {
-  Building2, Wrench, FileSpreadsheet, Cpu,
-  ClipboardCheck, Radar, ShieldCheck, Briefcase
+  Building2, Calendar, FileText, Handshake,
+  CheckCircle2, KeyRound, ShieldCheck, Search
 } from "lucide-react";
 
-export default function MarketplacePage() {
+export default function PropertyMarketplacePage() {
   const [slideInOpen, setSlideInOpen] = useState(false);
 
   return (
@@ -25,14 +25,14 @@ export default function MarketplacePage() {
       {/* Universal Sticky Marketing Header */}
       <MarketingHeader activePath="/marketplace" />
 
-      {/* Hero Section */}
+      {/* Hero Section — Dedicated Commercial Property Marketplace */}
       <HeroSection
-        badge="MODULE 01 — MARKETPLACE"
-        headline="India's Commercial Real Estate & FM Marketplace"
-        subheadline="Discover space. Procure FM services. Transact with confidence — all verified, all transparent."
-        description="Connect directly with verified Grade-A property listings and pre-vetted facility service providers. Structured RFQs, automated BOQ generation, and escrow-backed milestone payouts."
+        badge="PROPERTY MARKETPLACE · SPACE LEASING"
+        headline="Commercial Real Estate Discovery & Leasing Marketplace"
+        subheadline="Discover space. Schedule site visits. Negotiate deals, sign LOIs, and execute leases — all verified, all transparent."
+        description="Connect directly with verified Grade-A tech parks, bare-shell floors, and managed enterprise suites. Zero phantom inventory, direct landlord collaboration, and structured digital lease execution."
         primaryCta={{
-          label: "Explore Available Spaces",
+          label: "Explore Commercial Spaces",
           href: "/public/search"
         }}
         secondaryCta={{
@@ -40,87 +40,140 @@ export default function MarketplacePage() {
           href: "/properties/add"
         }}
         accentColor="#0F8B7D"
-        visualPlaceholderTitle="OFFICEX MARKETPLACE RADAR"
-        visualMetrics={[
-          { label: "Verified Vendors", value: "312+" },
-          { label: "Active RFQs", value: "₹48.2L" },
-          { label: "Escrow Protected", value: "100%" }
-        ]}
+        bgImage="/images/officex_hero_atrium_clean.jpg"
+        customVisual={
+          <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                <span className="text-[11px] font-mono text-slate-400 ml-2 font-semibold">
+                  app.officex.in/marketplace
+                </span>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
+                ● LIVE DEAL ROOM
+              </span>
+            </div>
+
+            {/* Verified Listing Preview Card */}
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 mb-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-300 bg-teal-500/15 px-2 py-0.5 rounded-md border border-teal-500/30">
+                    Grade-A+ Commercial Suite
+                  </span>
+                  <h3 className="text-base font-black text-white mt-1.5">
+                    Apex Horizon Tower · Floor 8 Plate
+                  </h3>
+                  <p className="text-xs text-slate-300 font-medium">
+                    Central Business District · Prime Transit Corridor
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-base font-black text-white block">₹185</span>
+                  <span className="text-[10px] font-bold text-slate-400">/sq.ft./month</span>
+                </div>
+              </div>
+
+              {/* Specs Pill Grid */}
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-center">
+                <div className="bg-[#071324] rounded-xl p-2 border border-slate-800 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">AREA</span>
+                  <span className="text-xs font-black text-white">32,000 SqFt</span>
+                </div>
+                <div className="bg-[#071324] rounded-xl p-2 border border-slate-800 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">SEATS</span>
+                  <span className="text-xs font-black text-white">240 Workstations</span>
+                </div>
+                <div className="bg-[#071324] rounded-xl p-2 border border-slate-800 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">STATUS</span>
+                  <span className="text-xs font-black text-emerald-400">Immediate Move-in</span>
+                </div>
+              </div>
+
+              {/* Action Buttons Mockup */}
+              <div className="grid grid-cols-2 gap-2 mt-3.5">
+                <div className="py-2 px-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-[11px] font-bold text-center flex items-center justify-center gap-1.5 shadow-xs">
+                  <span>📅 Schedule Site Visit</span>
+                </div>
+                <div className="py-2 px-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-[11px] font-bold text-center flex items-center justify-center gap-1.5 shadow-xs">
+                  <span>📝 Digital LOI Deal Room</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Assurance */}
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+              <span className="font-semibold text-slate-300">100% Direct Landlord Representation</span>
+              <span className="text-emerald-400 font-extrabold">✓ Zero Phantom Listings</span>
+            </div>
+          </div>
+        }
       />
 
-      {/* Problem / Solution */}
+      {/* Problem / Solution — Commercial Property Leasing */}
       <ProblemSolution
-        moduleName="Marketplace"
+        moduleName="Property Marketplace"
         accentColor="#0F8B7D"
         withoutItems={[
-          "Broker dependency with opaque brokerage commissions and stale, unverified property listings.",
-          "Fragmented vendor sourcing with wild price disparities, unverified credentials, and high default risk.",
-          "Manual RFQs exchanged across chaotic WhatsApp chats and spreadsheets with zero audit trails.",
-          "Payment delays and milestone disputes leading to vendor walkouts and delayed project handovers.",
-          "Zero historical SLA tracking or objective performance benchmarks when hiring contractors."
+          "Broker dependency with inflated commission layers and 40%+ phantom or outdated commercial listings.",
+          "Endless back-and-forth WhatsApp threads to schedule physical site visits and verify floorplates.",
+          "Opaque commercial negotiations with zero visibility into micro-market benchmark rentals or CAM charges.",
+          "Weeks lost drafting, redlining, and couriering physical Letters of Intent (LOIs) and term sheets.",
+          "Zero upfront disclosure on statutory NOCs (Fire, Lift, Occupancy) leading to fit-out and handover delays."
         ]}
         withItems={[
-          "100% verified commercial listings with direct owner/manager connection and zero phantom inventory.",
-          "Curated marketplace of pre-vetted FM vendors across 15+ MEP, HVAC, security, and civil trades.",
-          "Structured RFQ engine with automated BOQ generation and side-by-side bid comparison matrices.",
-          "Escrow-protected milestone payments via Razorpay — release funds only on verified sign-off.",
-          "Transparent Vendor Performance Radar with verified customer reviews and SLA scores."
+          "100% verified commercial listings direct from institutional landlords, REITs, and Grade-A developers.",
+          "Instant digital site visit scheduling with verified floorplans, 3D virtual walkthroughs, and stacking charts.",
+          "Transparent commercial deal room with real-time rental comparisons, CAM breakdowns, and deposit terms.",
+          "Automated digital LOI generator with legally vetted standard covenants and instant e-signatures.",
+          "Pre-verified building passports with live statutory compliance documentation and utility capacity audits."
         ]}
       />
 
-      {/* Key Features */}
+      {/* Key Features — The 6 Core Stages of Property Marketplace */}
       <FeatureGrid
-        title="Institutional Capabilities for Space & Services"
-        subtitle="End-to-end tooling designed to streamline commercial leasing discovery and procurement."
+        title="End-to-End Commercial Leasing Workflow"
+        subtitle="Engineered to guide occupiers and landlords seamlessly from initial discovery to digital lease execution."
         accentColor="#0F8B7D"
         features={[
           {
-            icon: Building2,
-            title: "Commercial Property Discovery",
-            description: "Direct discovery for verified Grade-A and Grade-B commercial assets, floor plates, statutory NOC status, and micro-market pricing benchmarks.",
-            tag: "Live"
+            icon: Search,
+            title: "1. Discover Property",
+            description: "Search verified Grade-A & B tech parks, warm shells, bare shells, and plug-and-play enterprise workspaces filtered by city, sub-market, carpet area, and budget.",
+            tag: "Discovery"
           },
           {
-            icon: Wrench,
-            title: "FM Vendor Marketplace",
-            description: "Onboard pre-vetted contractors across MEP, HVAC AMC, integrated security, housekeeping, fire safety, and specialized civil works.",
-            tag: "Live"
+            icon: KeyRound,
+            title: "2. Lease & Buy Options",
+            description: "Flexible transaction structures for long-term institutional leases, short-term project suites, pre-commitments, and outright commercial asset acquisitions.",
+            tag: "Transaction"
           },
           {
-            icon: FileSpreadsheet,
-            title: "Structured RFQ Engine",
-            description: "Create standardized tender scopes with clear milestone definitions, submission cut-offs, and automated vendor notifications.",
-            tag: "Core"
+            icon: Calendar,
+            title: "3. Site Visit Scheduling",
+            description: "Book guided physical inspections or 3D digital walkthroughs. Automated calendar invites, visitor gate passes, and on-site property manager notifications.",
+            tag: "Inspection"
           },
           {
-            icon: Cpu,
-            title: "AI-Assisted BOQ Generation",
-            description: "Automatically generate comprehensive Bills of Quantities based on building square footage, asset counts, and MEP specifications.",
-            tag: "Coming Soon"
+            icon: Handshake,
+            title: "4. Deal Room & Negotiations",
+            description: "Collaborative digital workspace to negotiate base rentals, fit-out rent-free periods, CAM escalations, lock-in terms, and security deposit schedules.",
+            tag: "Deal Room"
           },
           {
-            icon: ClipboardCheck,
-            title: "Work Order Management",
-            description: "Digital work order creation with legally binding SLAs, penalty clauses, deliverable milestones, and change-request logging.",
-            tag: "Workflow"
+            icon: FileText,
+            title: "5. Digital LOI Generation",
+            description: "Generate institutional Letters of Intent in minutes with pre-approved legal clauses, commercial milestones, and secure Aadhaar / DocuSign e-signatures.",
+            tag: "LOI Engine"
           },
           {
-            icon: Radar,
-            title: "Vendor Performance Radar",
-            description: "Real-time vendor scoring across job punctuality, resolution speed, statutory compliance audits, and tenant feedback.",
-            tag: "Analytics"
-          },
-          {
-            icon: ShieldCheck,
-            title: "Escrow-Protected Payments",
-            description: "Integrated Razorpay escrow infrastructure ensures client funds are safeguarded and released strictly upon approved milestone completion.",
-            tag: "Fintech"
-          },
-          {
-            icon: Briefcase,
-            title: "Leasing CRM for Brokers",
-            description: "Dedicated dashboard for commercial leasing teams to track tenant inquiries, manage site visits, generate LOIs, and reconcile commission payouts.",
-            tag: "CRM"
+            icon: CheckCircle2,
+            title: "6. Lease Execution & Handover",
+            description: "Finalize standard commercial lease agreements with statutory stamp duty integration, milestone escrow, and automated transition into OfficeX Operate for fit-out.",
+            tag: "Execution"
           }
         ]}
       />
@@ -130,104 +183,103 @@ export default function MarketplacePage() {
         accentColor="#0F8B7D"
         useCases={[
           {
-            audience: "Building Asset Managers",
-            scenario: "Needed to tender an annual HVAC & MEP maintenance contract across a 450,000 sq.ft. commercial park in Bangalore.",
-            outcome: "Generated BOQ in 10 minutes, received 6 vetted bids within 4 days, and saved 18% on contracted costs with milestone escrow protection."
+            audience: "Corporate Real Estate Directors",
+            scenario: "Consolidating 65,000 sq.ft. of regional office space across Gurgaon and Bengaluru within a strict 60-day lease expiry deadline.",
+            outcome: "Shortlisted 8 verified tech park options, booked instant site visits, negotiated commercial terms, and executed digital LOIs in under 18 days."
           },
           {
-            audience: "Corporate Occupiers",
-            scenario: "Expanding into 3 new regional hubs requiring rapid lease finalization, interior fit-out procurement, and immediate facility staffing.",
-            outcome: "Discovered verified properties, shortlisted certified fit-out contractors, and executed work orders with transparent milestone disbursements."
+            audience: "Commercial Asset Owners & REITs",
+            scenario: "Struggling with 18% vacancy in newly completed Grade-A office towers due to broker fragmentation and stale aggregator listings.",
+            outcome: "Published verified floorplate listings, received pre-qualified occupier inquiries, and closed 3 enterprise leases with zero broker overlap."
           },
           {
-            audience: "FM Service Vendors",
-            scenario: "Facing high client acquisition costs, payment defaults from unorganized developers, and long 90-day receivable cycles.",
-            outcome: "Access verified RFQ pipeline, receive advance escrow assurance, and build verified reputation scores that win enterprise business."
+            audience: "Enterprise Managed Space Providers",
+            scenario: "Seeking to pre-lease 250+ dedicated enterprise seats to venture-backed tech firms and multinational satellite teams.",
+            outcome: "Showcased verified plug-and-play workspaces with transparent all-inclusive per-seat pricing, reducing sales cycle from 90 days to 2 weeks."
           }
         ]}
       />
 
-      {/* Pricing Table */}
+      {/* Plans / Pricing */}
       <PricingTable
         accentColor="#0F8B7D"
-        title="Marketplace Pricing"
-        subtitle="Transparent subscription and transaction terms for occupiers, owners, and service providers."
+        title="Property Marketplace Pricing"
+        subtitle="Transparent terms for occupiers, landlords, and commercial leasing brokers."
         tiers={[
           {
-            name: "Starter",
+            name: "Occupier / Space Seeker",
             price: "Free",
-            description: "Ideal for individual property discovery and initial vendor evaluations.",
+            description: "For corporate tenants and occupiers searching for commercial office spaces.",
             features: [
-              "Search verified commercial listings",
-              "Access verified FM vendor directory",
-              "Publish up to 2 RFQs per month",
-              "Standard community support"
+              "Search 100% verified commercial listings",
+              "Unlimited site visit scheduling & gate passes",
+              "Direct communication with asset owners",
+              "Access verified building compliance documents",
+              "Digital LOI generation and e-signing"
             ],
-            ctaLabel: "Sign Up Free",
-            ctaHref: "/signup"
+            ctaLabel: "Start Searching Free",
+            ctaHref: "/public/search"
           },
           {
-            name: "Professional",
-            price: "₹4,999",
-            period: "month",
-            description: "Designed for active property managers and growing facility procurement teams.",
+            name: "Landlord / Asset Owner",
+            price: "₹9,999",
+            period: "property / month",
+            description: "For commercial building owners, developers, and asset managers looking to lease space.",
             highlight: true,
             features: [
-              "Unlimited RFQs and tender publishing",
-              "AI-assisted BOQ generation",
-              "Side-by-side vendor quotation comparison",
-              "Razorpay escrow milestone payments",
-              "Priority vendor dispatch & verification badges",
-              "Dedicated account support"
+              "Verified Listing Badge & high-priority ranking",
+              "Floorplate stacking charts & 3D tour hosting",
+              "Direct occupier inquiry management & lead qualification",
+              "Digital Deal Room with term sheet negotiation",
+              "Automated LOI & lease agreement generation",
+              "Dedicated leasing account manager"
             ],
-            ctaLabel: "Start Professional",
-            ctaHref: "/signup?plan=pro"
+            ctaLabel: "List Your Commercial Space",
+            ctaHref: "/properties/add"
           },
           {
-            name: "Enterprise",
+            name: "Enterprise Portfolio",
             price: "Custom",
-            description: "Full-scale procurement suite for institutional portfolios and large REIT assets.",
+            description: "For institutional funds, developers, and REITs managing 500,000+ sq.ft.",
             features: [
-              "Custom vendor onboarding & SLA governance",
-              "Multi-property tender aggregation",
-              "ERP / SAP / Oracle accounting integrations",
-              "Custom escrow milestone disbursement logic",
-              "Dedicated enterprise account director",
-              "Contractually guaranteed SLA performance"
+              "Multi-building portfolio leasing portal",
+              "API integration with existing ERP / Yardi / MRI",
+              "Custom co-broking commission reconciliation",
+              "Automated vacant space marketing syndication",
+              "Institutional legal and lease compliance workflows",
+              "Dedicated enterprise leasing director"
             ],
-            ctaLabel: "Talk to Sales",
-            ctaHref: "/contact?interest=marketplace-enterprise"
+            ctaLabel: "Talk to Institutional Sales",
+            ctaHref: "/contact?interest=property-marketplace-enterprise"
           }
         ]}
       />
 
-      {/* Onboarding Timeline */}
+      {/* Onboarding Timeline — 1-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
+        title="1-Day Seamless Leasing Process"
+        subtitle="Zero 15-day delays. Complete property discovery, guided site visits, real-time negotiations, and digital lease execution in a single day."
         steps={[
           {
-            step: "01",
-            title: "Register & Profile Setup",
-            description: "Sign up as a building owner, occupier, broker, or vendor. Set up role preferences.",
-            duration: "5 Minutes"
+            title: "Discover & Filter Space",
+            description: "Explore verified Grade-A properties by micro-market, carpet area, and fit-out state with instant CAD floorplates.",
+            duration: "Hour 1"
           },
           {
-            step: "02",
-            title: "Verification & Onboarding",
-            description: "Submit property documents or vendor statutory licenses for digital KYC verification.",
-            duration: "24-48 Hours"
+            title: "Instant Digital Site Visit",
+            description: "Book same-day on-site inspections with verified building hosts and receive instant QR access passes.",
+            duration: "Hour 2"
           },
           {
-            step: "03",
-            title: "Publish Listing or RFQ",
-            description: "Create your first space requirement or broadcast a structured service tender with BOQ.",
-            duration: "15 Minutes"
+            title: "Direct Deal Room & Digital LOI",
+            description: "Negotiate commercial lease terms in real-time and generate digitally signed Letters of Intent in minutes.",
+            duration: "Hour 3"
           },
           {
-            step: "04",
-            title: "Transact with Escrow",
-            description: "Compare bids side-by-side, issue digital work orders, and fund milestone escrow securely.",
-            duration: "Go Live"
+            title: "Instant Digital Lease Execution",
+            description: "Execute standard commercial lease agreement, complete deposit escrow online, and receive digital keys.",
+            duration: "Same-Day Handover"
           }
         ]}
       />
@@ -236,20 +288,24 @@ export default function MarketplacePage() {
       <FAQAccordion
         faqs={[
           {
-            q: "How are FM vendors vetted and verified on OfficeX Marketplace?",
-            a: "Every vendor undergoes a multi-point verification process including GSTIN verification, statutory PF/ESIC compliance, past client performance checks, financial stability reviews, and insurance coverage audits."
+            q: "How does Property Marketplace differ from FM Marketplace?",
+            a: "Property Marketplace is exclusively dedicated to commercial space discovery and leasing — helping occupiers find, tour, and lease offices from building owners. FM Marketplace (available at /fm-marketplace) is exclusively dedicated to facility management services like MEP, HVAC maintenance, housekeeping, and security contracts."
           },
           {
-            q: "How does escrow payment protection work?",
-            a: "When a contract or work order is awarded, funds are securely held in a dedicated Razorpay escrow account. Payment is released to the vendor only after you digitally inspect and sign off on completed milestones."
+            q: "Are all commercial property listings on OfficeX verified?",
+            a: "Yes. Every property on OfficeX undergoes strict physical and documentation verification, including title checks, approved building plans, Fire NOC validity, and occupancy certificates to eliminate phantom inventory."
           },
           {
-            q: "Can commercial brokers list and manage inventory on OfficeX?",
-            a: "Yes. OfficeX provides a dedicated Leasing CRM for brokers with RERA compliance tagging, private requirement tracking, and direct co-broking collaboration tools."
+            q: "How does the digital site visit scheduling work?",
+            a: "You select an available inspection slot directly on the property page. The on-site property manager receives instant confirmation and generates a digital visitor pass for seamless lobby and turnstile access."
           },
           {
-            q: "Which commercial real estate markets are supported?",
-            a: "OfficeX operates across all major commercial metros including Bengaluru, Mumbai MMR, Delhi NCR, Hyderabad, Pune, Chennai, and expanding global regions."
+            q: "What is the Digital Deal Room and LOI Generator?",
+            a: "It is an online collaborative environment where occupiers and landlords finalize commercial terms (base rent, fit-out rent-free periods, CAM, lock-in) and generate legally binding standard Letters of Intent with e-signatures."
+          },
+          {
+            q: "Can commercial leasing brokers use OfficeX Property Marketplace?",
+            a: "Yes. Brokers can co-broke, manage client mandates, track site visits, and coordinate deal terms directly through dedicated broker workspaces with transparent commission audit trails."
           }
         ]}
       />
@@ -257,14 +313,14 @@ export default function MarketplacePage() {
       {/* Final CTA */}
       <FinalCTABand
         accentColor="#0F8B7D"
-        headline="Ready to streamline your CRE transactions and vendor procurement?"
-        subheadline="Join hundreds of commercial owners, facility managers, and verified vendors on India's premier platform."
+        headline="Ready to find or lease your next commercial property?"
+        subheadline="Join leading enterprises, institutional landlords, and fast-growing businesses on OfficeX Property Marketplace."
         primaryCta={{
-          label: "Start Free Trial",
-          href: "/signup"
+          label: "Explore Available Spaces",
+          href: "/public/search"
         }}
         secondaryCta={{
-          label: "Talk to Our Marketplace Team",
+          label: "Talk to Our Leasing Team",
           onClick: () => setSlideInOpen(true)
         }}
       />
@@ -280,3 +336,4 @@ export default function MarketplacePage() {
     </div>
   );
 }
+

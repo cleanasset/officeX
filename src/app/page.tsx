@@ -753,7 +753,7 @@ export default function LandingPage() {
             {/* Eyebrow Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/25 text-teal-300 text-xs font-semibold tracking-wide mb-4 backdrop-blur-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-              <span>India&apos;s Integrated CRE &amp; FM Ecosystem</span>
+              <span>Integrated CRE &amp; FM Ecosystem</span>
             </div>
 
             {/* Main Headline */}
@@ -766,7 +766,7 @@ export default function LandingPage() {
           
             {/* Subhead */}
             <p className="text-xs sm:text-sm md:text-base font-normal text-slate-300 leading-relaxed max-w-xl mb-6">
-              One platform. Five modules. One data foundation. Built for commercial real estate owners, occupiers, and operators across India.
+              One platform. Five modules. One data foundation. Built for commercial real estate owners, occupiers, and operators.
             </p>
 
             {/* Hero Action CTAs */}
@@ -778,12 +778,13 @@ export default function LandingPage() {
                 <span>Explore Marketplace</span>
                 <ArrowRight size={15} />
               </Link>
-              <Link
-                href="/demo"
+              <button
+                type="button"
+                onClick={() => openEnquiry()}
                 className="px-6 py-3 rounded-xl border border-white/40 hover:border-white text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xs text-center cursor-pointer"
               >
-                <span>Book a Demo</span>
-              </Link>
+                <span>Talk to Sales</span>
+              </button>
             </div>
 
             {/* The 3-Tab Search Card Component */}

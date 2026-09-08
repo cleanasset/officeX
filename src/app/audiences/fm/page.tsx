@@ -40,6 +40,7 @@ export default function FacilityManagersJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
+        bgImage="/images/fm_hero_banner.jpg"
         visualPlaceholderTitle="FM OPERATIONS CONSOLE"
         visualMetrics={[
           { label: "PPM Completion", value: "99.4%" },

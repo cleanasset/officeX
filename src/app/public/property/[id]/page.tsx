@@ -14,7 +14,7 @@ const fallbackProperties: { [id: string]: any } = {
     pincode: "400051",
     grade: "Grade A+",
     totalArea: 45000,
-    ownerName: "Brookfield India Real Estate",
+    ownerName: "Brookfield Real Estate Trust",
     ownerCompany: "Brookfield Properties",
     imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
     propertyScore: 86
@@ -149,7 +149,7 @@ export default function PropertyPage() {
     pincode: "400051",
     grade: "Grade A+",
     totalArea: 45000,
-    ownerName: "Brookfield India Real Estate",
+    ownerName: "Brookfield Real Estate Trust",
     ownerCompany: "Brookfield Properties",
     imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
     propertyScore: 86

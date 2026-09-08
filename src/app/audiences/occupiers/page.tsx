@@ -40,6 +40,7 @@ export default function CorporateOccupiersJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
+        bgImage="/images/officex_hero_atrium_clean.jpg"
         visualPlaceholderTitle="OCCUPIER WORKPLACE PORTAL"
         visualMetrics={[
           { label: "Helpdesk SLA", value: "< 2 Hrs" },

@@ -37,6 +37,7 @@ export default function PlatformPage() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
+        bgImage="/images/officex_digital_platform_v2.jpg"
         visualPlaceholderTitle="OFFICEX CORE ARCHITECTURE"
         visualMetrics={[
           { label: "Platform Uptime", value: "99.98%" },

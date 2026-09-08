@@ -8,7 +8,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "GSTIN parameter is required." }, { status: 400 });
     }
 
-    // Standard Indian GSTIN Regex (15 Characters)
+    // Standard GSTIN Regex (15 Characters)
     // 2 digits (state code), 10 char PAN format, 1 alphanumeric (entity code), 1 character (blank/check digit), 1 alphanumeric
     const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     

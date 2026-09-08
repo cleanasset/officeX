@@ -93,7 +93,7 @@ export default function RentRollMaster() {
       floor: "Floor 8",
       unit: "Entire Horizon Plate",
       tenantId: "TEN-102",
-      tenantName: "Google India Pvt Ltd",
+      tenantName: "Google Enterprise Services",
       leaseId: "LEASE-002",
       areaSqFt: 32000,
       leaseStart: "15-Oct-2024",
@@ -607,7 +607,7 @@ export default function RentRollMaster() {
               <tbody>
                 {[
                   { r: "REC-2026-881", t: "Tata Digital Ltd", d: "02-Aug-2026", a: "₹63,24,800", m: "RTGS / HDFC Bank", utr: "HDFCR520260802008912" },
-                  { r: "REC-2026-882", t: "Google India Pvt Ltd", d: "03-Aug-2026", a: "₹84,77,120", m: "Corporate Wire", utr: "CITIN20260803991204" },
+                  { r: "REC-2026-882", t: "Google Enterprise Services", d: "03-Aug-2026", a: "₹84,77,120", m: "Corporate Wire", utr: "CITIN20260803991204" },
                   { r: "REC-2026-883", t: "Wipro Cloud Infra", d: "05-Aug-2026", a: "₹32,17,860", m: "NEFT / ICICI", utr: "ICICN20260805128790" }
                 ].map((c, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
@@ -650,7 +650,7 @@ export default function RentRollMaster() {
               <tbody>
                 {[
                   { t: "Tata Digital Ltd", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
-                  { t: "Google India Pvt Ltd", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
+                  { t: "Google Enterprise Services", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" },
                   { t: "Deloitte Digital", c: "₹45,07,600", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹45,07,600", r: "14d Due (Moderate)", rColor: "bg-amber-50 text-amber-800" },
                   { t: "Wipro Cloud Infra", c: "₹0", d30: "₹0", d60: "₹0", d90: "₹0", tot: "₹0", r: "Low Risk", rColor: "bg-emerald-50 text-emerald-800" }
                 ].map((ag, i) => (
@@ -787,8 +787,8 @@ export default function RentRollMaster() {
               <tbody>
                 {[
                   { id: "TEN-101", n: "Tata Digital Limited", g: "27AAACT2727Q1ZB", pan: "AAACT2727Q", c: "Aditya Verma (Head RE)", e: "aditya.verma@tatadigital.com", m: "+91 98201 44821" },
-                  { id: "TEN-102", n: "Google India Private Limited", g: "27AAACG9014M1Z2", pan: "AAACG9014M", c: "Priya Nair (Director Workplace)", e: "pnair@google.com", m: "+91 98190 22391" },
-                  { id: "TEN-103", n: "Deloitte Digital India LLP", g: "27AABBD3910F1Z4", pan: "AABBD3910F", c: "Rahul Mehta (Partner RE)", e: "rmehta@deloitte.com", m: "+91 98210 55102" },
+                  { id: "TEN-102", n: "Google Enterprise Solutions Ltd", g: "27AAACG9014M1Z2", pan: "AAACG9014M", c: "Priya Nair (Director Workplace)", e: "pnair@google.com", m: "+91 98190 22391" },
+                  { id: "TEN-103", n: "Deloitte Digital Enterprise LLP", g: "27AABBD3910F1Z4", pan: "AABBD3910F", c: "Rahul Mehta (Partner RE)", e: "rmehta@deloitte.com", m: "+91 98210 55102" },
                   { id: "TEN-104", n: "Wipro Limited", g: "27AAACW1209K1ZY", pan: "AAACW1209K", c: "Sneha Rao (Admin VP)", e: "sneha.rao@wipro.com", m: "+91 98330 11984" }
                 ].map((t, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">

@@ -45,13 +45,14 @@ export default function PricingPage() {
       <HeroSection
         badge="TRANSPARENT ENTERPRISE PRICING"
         headline="Simple, Predictable Plans for Every CRE Portfolio"
-        subheadline="From single properties to pan-India multi-region assets. Choose between flexible plan cards or explore the full module-by-module capability matrix."
+        subheadline="From single properties to multi-region commercial portfolios. Choose between flexible plan cards or explore the full module-by-module capability matrix."
         primaryCta={{ label: "Start Free", href: "/signup" }}
-        secondaryCta={{ label: "Book a Demo", href: "/demo" }}
+        secondaryCta={{ label: "Talk to Sales", href: "/contact" }}
+        bgImage="/images/officex_luxury_twilight_campus.jpg"
         visualMetrics={[
           { label: "Transparent Tiers", value: "3 Plans" },
           { label: "Escrow Protection", value: "100%" },
-          { label: "Data Residency", value: "India Only" }
+          { label: "Data Residency", value: "Sovereign Tier-4" }
         ]}
       />
 
@@ -143,10 +144,10 @@ export default function PricingPage() {
                       Get Started
                     </button>
                     <button 
-                      onClick={() => router.push('/demo')}
+                      onClick={() => router.push('/contact')}
                       className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
                     >
-                      Book a Demo
+                      Talk to Sales
                     </button>
                   </div>
                 </div>

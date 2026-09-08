@@ -44,7 +44,7 @@ export default function Footer() {
             />
           </Link>
           <p className="text-xs text-slate-400 leading-relaxed mt-1 font-medium">
-            India’s unified operating system for commercial real estate discoverability, leasing transactions, statutory compliance, and facility operations.
+            The unified operating system for commercial real estate discoverability, leasing transactions, statutory compliance, and facility operations.
           </p>
           <div className="flex items-center gap-3 mt-2 text-[11px] font-semibold text-slate-400">
             <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-[#0F8B7D]" /> SOC 2 Type II</span>

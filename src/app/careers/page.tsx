@@ -68,10 +68,10 @@ export default function CareersPage() {
             Contact
           </Link>
           <Link
-            href="/demo"
+            href="/contact"
             className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-extrabold hover:bg-[#0c7368] transition-all"
           >
-            Book a Demo
+            Talk to Sales
           </Link>
         </div>
       </header>
@@ -87,7 +87,7 @@ export default function CareersPage() {
               Shape the Future of Commercial Real Estate Tech
             </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-4 max-w-2xl mx-auto font-medium leading-relaxed">
-              We&apos;re looking for mission-driven engineers, CRE experts, and operations leaders to modernize India&apos;s commercial landscape.
+              We&apos;re looking for mission-driven engineers, CRE experts, and operations leaders to modernize the commercial real estate landscape.
             </p>
           </div>
 

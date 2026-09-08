@@ -357,9 +357,9 @@ export default function RentPaymentGateway() {
               {/* Method 3: Netbanking */}
               {payMethod === "netbanking" && (
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Select Indian Bank</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Select Institutional Bank</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {["HDFC Bank", "ICICI Bank", "State Bank of India", "Axis Bank", "Kotak Mahindra", "IndusInd Bank"].map((b) => (
+                    {["HDFC Bank", "ICICI Bank", "SBI Bank", "Axis Bank", "Kotak Mahindra", "IndusInd Bank"].map((b) => (
                       <button
                         key={b}
                         type="button"

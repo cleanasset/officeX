@@ -274,16 +274,10 @@ export default function MarketingHeader({
         {/* Right: Actions — per client doc Section 6.1 */}
         <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
           <HeaderAuthButton />
-          <Link
-            href="/demo"
-            className="px-3.5 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 hover:text-white text-slate-800 text-xs font-bold transition-all whitespace-nowrap"
-          >
-            Book a Demo
-          </Link>
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
-            className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            className="px-4 py-2 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >
             Talk to Sales
           </button>
@@ -350,13 +344,6 @@ export default function MarketingHeader({
           <div className="py-1">
             <HeaderAuthButton />
           </div>
-          <Link
-            href="/demo"
-            onClick={() => setMobileMenuOpen(false)}
-            className="w-full py-3 rounded-xl border-2 border-slate-800 text-slate-800 font-bold text-center text-sm"
-          >
-            Book a Demo
-          </Link>
           <button
             type="button"
             onClick={() => {

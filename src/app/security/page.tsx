@@ -70,9 +70,22 @@ export default function SecurityPage() {
       </header>
 
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-[#0F8B7D]/90 text-white py-12 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-400 text-xs font-bold mb-4">
+      <div className="relative overflow-hidden bg-[#071324] text-white py-14 px-4 md:px-8 border-b border-slate-800">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <Image
+            src="/images/officex_digital_platform_v2.jpg"
+            alt="Security & Infrastructure Architecture Banner"
+            fill
+            priority
+            unoptimized
+            className="object-cover object-right opacity-70"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#071324] via-[#071324]/90 md:via-[#071324]/75 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#071324] via-transparent to-[#071324]/50" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-bold mb-4 backdrop-blur-sm">
             <ShieldCheck size={14} />
             <span>SOC 2 Type II & ISO 27001 Certified Framework</span>
           </div>
@@ -82,8 +95,8 @@ export default function SecurityPage() {
           </p>
 
           <div className="flex flex-wrap items-center gap-6 mt-6 text-xs text-slate-300 font-semibold border-t border-white/10 pt-4">
-            <span className="flex items-center gap-1 text-emerald-400 font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> System Status: 99.8% Uptime
+            <span className="flex items-center gap-1 text-teal-300 font-bold">
+              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span> System Status: 99.8% Uptime
             </span>
             <span>•</span>
             <span>PCI-DSS Level 1 Escrow Gateway</span>
@@ -201,7 +214,7 @@ export default function SecurityPage() {
                 <Lock size={24} className="text-purple-600" />
                 <div>
                   <h4 className="text-xs font-extrabold text-slate-900">PCI-DSS Level 1 Escrow Gateway</h4>
-                  <p className="text-[11px] text-slate-500 font-medium">Payment escrow nodal accounts processed under CERT-In and Reserve Bank of India (RBI) payment aggregator guidelines.</p>
+                  <p className="text-[11px] text-slate-500 font-medium">Payment escrow nodal accounts processed under CERT-In and Central Banking (RBI) payment aggregator guidelines.</p>
                 </div>
               </div>
             </div>

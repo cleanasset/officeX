@@ -74,7 +74,7 @@ const INITIAL_TICKETS: Ticket[] = [
     slaRemaining: "Breached", 
     slaState: "Breached", 
     created: "5h ago", 
-    requester: "Amit Shah (Google India)",
+    requester: "Amit Shah (Google Enterprise)",
     description: "Drain tray overflow dripping above conference table. Water supply isolated."
   },
   { 

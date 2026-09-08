@@ -174,20 +174,11 @@ export default function HeaderAuthButton({ className = "" }: HeaderAuthButtonPro
           {/* Links */}
           <div className="py-1">
             <Link
-              href={getLandingPath(userRole)}
+              href="/login"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-[#0F8B7D] hover:bg-teal-50 transition-colors"
             >
-              <User size={15} className="text-[#0F8B7D]" />
-              <span>My Stakeholder Landing Page</span>
-            </Link>
-
-            <Link
-              href={getDashboardPath(userRole)}
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
-            >
-              <LayoutDashboard size={15} className="text-emerald-600" />
+              <LayoutDashboard size={15} className="text-[#0F8B7D]" />
               <span>Open Live Dashboard</span>
             </Link>
           </div>

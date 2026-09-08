@@ -37,10 +37,10 @@ export default function AboutPage() {
             Contact
           </Link>
           <Link
-            href="/demo"
+            href="/contact"
             className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-extrabold hover:bg-[#0c7368] transition-all"
           >
-            Book a Demo
+            Talk to Sales
           </Link>
         </div>
       </header>
@@ -53,10 +53,10 @@ export default function AboutPage() {
               OUR MISSION
             </span>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#071324] tracking-tight mt-4 leading-tight">
-              Building India&apos;s Unified Operating System for Commercial Real Estate
+              Building the Unified Operating System for Commercial Real Estate
             </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-4 max-w-3xl mx-auto leading-relaxed font-medium">
-              Commercial real estate in India has historically operated on fragmented spreadsheets, verbal trust, and opaque brokerage. OfficeX was founded to introduce transparency, verifiable SLAs, and automated digital workflows across every square foot.
+              Commercial real estate has historically operated on fragmented spreadsheets, verbal trust, and opaque brokerage. OfficeX was founded to introduce transparency, verifiable SLAs, and automated digital workflows across every square foot.
             </p>
           </div>
 

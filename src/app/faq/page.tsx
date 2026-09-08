@@ -16,7 +16,7 @@ export default function FAQDirectoryPage() {
       faqs: [
         {
           q: "How does OfficeX comply with the Digital Personal Data Protection (DPDP) Act 2023?",
-          a: "OfficeX enforces strict tenant data isolation, AES-256 encryption at rest and TLS 1.3 in transit. Data principals retain full rights of correction and erasure. All primary databases are located in Tier-4 data centers within Indian borders."
+          a: "OfficeX enforces strict tenant data isolation, AES-256 encryption at rest and TLS 1.3 in transit. Data principals retain full rights of correction and erasure. All primary databases are located in sovereign Tier-4 data centers."
         },
         {
           q: "Can we integrate OfficeX with our existing ERP (SAP, Oracle, Tally Prime)?",
@@ -76,7 +76,7 @@ export default function FAQDirectoryPage() {
       faqs: [
         {
           q: "What reporting standards does OfficeX Intelligence support?",
-          a: "We provide automated report generation compliant with SEBI BRSR Core guidelines for Indian listed entities, as well as global GRESB and GRI sustainability frameworks."
+          a: "We provide automated report generation compliant with SEBI BRSR Core guidelines for listed commercial entities, as well as global GRESB and GRI sustainability frameworks."
         },
         {
           q: "When will the Natural Language AI assistant be released?",
@@ -120,10 +120,10 @@ export default function FAQDirectoryPage() {
             Contact
           </Link>
           <Link
-            href="/demo"
+            href="/contact"
             className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-extrabold hover:bg-[#0c7368] transition-all"
           >
-            Book a Demo
+            Talk to Sales
           </Link>
         </div>
       </header>

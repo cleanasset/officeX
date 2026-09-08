@@ -40,6 +40,7 @@ export default function FMVendorsJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
+        bgImage="/images/card_fm_hd.jpg"
         visualPlaceholderTitle="VENDOR RFQ DISPATCH CONSOLE"
         visualMetrics={[
           { label: "Active RFQ Pool", value: "₹48.2L" },
@@ -97,7 +98,7 @@ export default function FMVendorsJourney() {
       </section>
 
       <FinalCTABand
-        headline="Join India's most verified FM contractor network."
+        headline="Join the premier verified FM contractor network."
         subheadline="Register your company credentials today to access live commercial RFQs."
         primaryCta={{
           label: "Register Now",

@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
       category: "Financial & Escrow Payout Data",
       dataTypes: "Razorpay Virtual Nodal Account numbers, Bank IFSC Code, GST Tax Invoices, Escrow Release Sign-Offs",
       purpose: "Processing 90/10 milestone disbursements for FM work orders and lease commission payouts.",
-      retention: "8 years under Indian Income Tax Act & GST statutory audit mandates."
+      retention: "8 years under Income Tax & GST statutory audit mandates."
     },
     {
       category: "Facility Management Operational Logs",
@@ -112,7 +112,7 @@ export default function PrivacyPolicyPage() {
             </div>
             <h3 className="text-base font-extrabold text-slate-900">Sovereign Data Storage</h3>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed font-medium">
-              All commercial real estate databases, rent rolls, and visitor records are hosted strictly within AWS Indian Region data centers (ap-south-1) in compliance with local data localization mandates.
+              All commercial real estate databases, rent rolls, and visitor records are hosted strictly within AWS Sovereign Region data centers (ap-south-1) in compliance with local data localization mandates.
             </p>
           </div>
 
@@ -132,7 +132,7 @@ export default function PrivacyPolicyPage() {
             </div>
             <h3 className="text-base font-extrabold text-slate-900">DPDP Rights Enforced</h3>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed font-medium">
-              Users retain full rights to request access, correction, or erasure of personal profile data under India’s Digital Personal Data Protection Act (DPDP 2023).
+              Users retain full rights to request access, correction, or erasure of personal profile data under the Digital Personal Data Protection Act (DPDP 2023).
             </p>
           </div>
         </section>

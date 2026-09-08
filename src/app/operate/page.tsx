@@ -27,7 +27,7 @@ export default function OperatePage() {
 
       {/* Hero Section */}
       <HeroSection
-        badge="MODULE 02 — OPERATE"
+        badge="OPERATE · CAFM & FACILITY OPERATIONS"
         headline="The FM Operations Platform for Grade-A Commercial Buildings"
         subheadline="52-week PPM, real-time SLA tracking, and a helpdesk your tenants will actually use."
         description="Replace paper logbooks, WhatsApp groups, and missed maintenance schedules with an institutional CAFM platform built specifically for modern commercial real estate facility teams."
@@ -40,12 +40,86 @@ export default function OperatePage() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        visualPlaceholderTitle="OFFICEX OPERATE CAFM CONSOLE"
-        visualMetrics={[
-          { label: "PPM Compliance", value: "98.7%" },
-          { label: "Avg Resolution", value: "1.8 Hrs" },
-          { label: "Active Assets", value: "1,420" }
-        ]}
+        bgImage="/images/officex_hero_platform_tower.jpg"
+        customVisual={
+          <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                <span className="text-[11px] font-mono text-slate-400 ml-2 font-semibold">
+                  app.officex.in/operate
+                </span>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
+                ● LIVE CAFM &amp; PPM
+              </span>
+            </div>
+
+            {/* Live Operations Card */}
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    PPM ADHERENCE &amp; UPTIME
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-xl font-black text-white">99.8% Uptime</span>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                      PPM On-Schedule
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">TAGGED ASSETS</span>
+                  <span className="text-sm font-black text-white">1,420 MEP Units</span>
+                </div>
+              </div>
+
+              {/* Active Ticket Dispatch Preview */}
+              <div className="bg-[#071324] rounded-xl p-3 border border-slate-800 shadow-2xs mb-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold text-teal-300 bg-teal-500/15 border border-teal-500/30 px-1.5 py-0.5 rounded">
+                    TK-4492 · High Priority
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded">
+                    SLA: 8m Remaining
+                  </span>
+                </div>
+                <p className="font-bold text-xs text-white mt-1.5">
+                  Chiller-02 Diagnostic · Plant Room B1
+                </p>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                  <span>Assigned: Ramesh K. (Senior MEP Tech)</span>
+                  <span className="text-emerald-400 font-bold">In-Progress</span>
+                </div>
+              </div>
+
+              {/* Asset Health Strip */}
+              <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
+                  <span className="block text-[9px] text-slate-400">DG SETS</span>
+                  <span className="text-emerald-400 font-black">Standby 100%</span>
+                </div>
+                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
+                  <span className="block text-[9px] text-slate-400">HVAC AHUs</span>
+                  <span className="text-emerald-400 font-black">28/28 Online</span>
+                </div>
+                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
+                  <span className="block text-[9px] text-slate-400">PPM TASKS</span>
+                  <span className="text-teal-300 font-black">52-Wk Auto</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Assurance */}
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+              <span className="font-semibold text-slate-300">QR Asset Tagging Enforced</span>
+              <span className="text-emerald-400 font-extrabold">✓ Zero Paper Logbooks</span>
+            </div>
+          </div>
+        }
       />
 
       {/* Problem / Solution */}
@@ -205,33 +279,31 @@ export default function OperatePage() {
         ]}
       />
 
-      {/* Onboarding Timeline */}
+      {/* Onboarding Timeline — 1-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
+        title="1-Day Rapid CAFM &amp; PPM Deployment"
+        subtitle="Zero 15-day delays. Upload MEP equipment lists, auto-generate QR passports, and deploy mobile work orders in a single day."
         steps={[
           {
-            step: "01",
-            title: "Asset Audit & Digital Tagging",
-            description: "Our technical team audits your MEP assets and generates unique QR code identifiers.",
-            duration: "Days 1 - 3"
+            title: "Asset Import & Digital Tagging",
+            description: "Upload MEP asset registers, equipment specs, and auto-generate QR passports.",
+            duration: "Hour 1"
           },
           {
-            step: "02",
-            title: "52-Week PPM Configuration",
-            description: "Input OEM maintenance schedules, statutory compliance frequencies, and SLA criteria.",
-            duration: "Days 4 - 6"
+            title: "52-Week PPM Automation",
+            description: "Activate pre-configured OEM preventative maintenance routines and statutory frequencies.",
+            duration: "Hour 2"
           },
           {
-            step: "03",
-            title: "On-Ground Staff Training",
-            description: "Conduct hands-on mobile training for facility technicians, supervisors, and helpdesk teams.",
-            duration: "Days 7 - 9"
+            title: "Team & SLA Configuration",
+            description: "Assign technician shifts, escalation rules, and contractor SLA response timers.",
+            duration: "Hour 3"
           },
           {
-            step: "04",
-            title: "Tenant Onboarding & Go-Live",
-            description: "Distribute tenant login credentials, QR lobby posters, and activate digital helpdesk.",
-            duration: "Day 10 Go-Live"
+            title: "Digital Operations Go-Live",
+            description: "Roll out mobile work orders and tenant QR helpdesk live across the building.",
+            duration: "Same-Day Deployment"
           }
         ]}
       />

@@ -36,12 +36,12 @@ export default function IntelligencePage() {
 
       {/* Hero Section */}
       <HeroSection
-        badge="MODULE 04 — INTELLIGENCE"
+        badge="INTELLIGENCE · CRE ANALYTICS & ESG"
         headline="Data-Driven Intelligence for Commercial Real Estate"
         subheadline="Stop guessing. Start benchmarking. Know your NOI before your accountant does."
         description="Unify leasing rolls, asset maintenance logs, utility telemetry, and tenant feedback into institutional executive dashboards. Make capital allocation decisions based on verified operational facts."
         primaryCta={{
-          label: "Explore Analytics Demo",
+          label: "Explore Analytics",
           href: "/signup"
         }}
         secondaryCta={{
@@ -49,12 +49,81 @@ export default function IntelligencePage() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        visualPlaceholderTitle="OFFICEX PORTFOLIO INTELLIGENCE ENGINE"
-        visualMetrics={[
-          { label: "Portfolio NOI", value: "₹14.2 Cr" },
-          { label: "Energy Index", value: "-14% YoY" },
-          { label: "Avg WALE", value: "4.2 Yrs" }
-        ]}
+        bgImage="/images/officex_prestige_night_tower.jpg"
+        customVisual={
+          <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                <span className="text-[11px] font-mono text-slate-400 ml-2 font-semibold">
+                  app.officex.in/intelligence
+                </span>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
+                ● PORTFOLIO NOI &amp; ESG
+              </span>
+            </div>
+
+            {/* Live Analytics Preview Card */}
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    CONSOLIDATED PORTFOLIO NOI
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-xl font-black text-white">₹14.2 Cr</span>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                      +18.4% YoY Yield
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">PORTFOLIO WALE</span>
+                  <span className="text-sm font-black text-white">4.8 Years</span>
+                </div>
+              </div>
+
+              {/* Real-Time Telemetry Metrics */}
+              <div className="grid grid-cols-2 gap-2 mb-2.5">
+                <div className="bg-[#071324] rounded-xl p-2.5 border border-slate-800 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">ENERGY OPTIMIZATION</span>
+                  <span className="text-xs font-black text-emerald-400">-24% kWh Intensity</span>
+                  <span className="text-[9px] text-slate-500 block mt-0.5">Automated BMS Telemetry</span>
+                </div>
+                <div className="bg-[#071324] rounded-xl p-2.5 border border-slate-800 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">CAM RECOVERY ACCURACY</span>
+                  <span className="text-xs font-black text-white">98.6% True-Up</span>
+                  <span className="text-[9px] text-slate-500 block mt-0.5">Zero Leakage Verified</span>
+                </div>
+              </div>
+
+              {/* ESG & Statutory Strip */}
+              <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
+                  <span className="block text-[9px] text-slate-400">SEBI BRSR</span>
+                  <span className="text-emerald-400 font-black">Core Audited</span>
+                </div>
+                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
+                  <span className="block text-[9px] text-slate-400">SCOPE 1 &amp; 2</span>
+                  <span className="text-emerald-400 font-black">Automated</span>
+                </div>
+                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
+                  <span className="block text-[9px] text-slate-400">OCCUPANCY</span>
+                  <span className="text-teal-300 font-black">96.2% Leased</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Assurance */}
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+              <span className="font-semibold text-slate-300">AES-256 Encrypted Telemetry</span>
+              <span className="text-emerald-400 font-extrabold">✓ Institutional Grade</span>
+            </div>
+          </div>
+        }
       />
 
       {/* Problem / Solution */}
@@ -205,33 +274,31 @@ export default function IntelligencePage() {
         ]}
       />
 
-      {/* Onboarding Timeline */}
+      {/* Onboarding Timeline — 1-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
+        title="1-Day Analytics &amp; Telemetry Activation"
+        subtitle="Zero 15-day delays. Ingest historical rent rolls, configure smart utility meters, and launch executive BI boards in a single day."
         steps={[
           {
-            step: "01",
             title: "Historical Data Ingestion",
-            description: "Import historical rent rolls, electricity bills, and maintenance logs to build baseline data.",
-            duration: "Days 1 - 7"
+            description: "Import historical rent rolls, electricity bills, and maintenance logs into the telemetry lake.",
+            duration: "Hour 1"
           },
           {
-            step: "02",
-            title: "Target & KPI Baselining",
+            title: "KPI & Hurdle Baselining",
             description: "Define financial hurdle rates, energy intensity targets (kWh/sq.ft.), and SLA thresholds.",
-            duration: "Days 8 - 14"
+            duration: "Hour 2"
           },
           {
-            step: "03",
             title: "Executive Dashboard Setup",
             description: "Customize executive views for Owners, Asset Managers, and ESG Sustainability committees.",
-            duration: "Days 15 - 20"
+            duration: "Hour 3"
           },
           {
-            step: "04",
             title: "Automated Cadence & Go-Live",
             description: "Schedule automated weekly digests and monthly board packs distributed seamlessly.",
-            duration: "Day 21 Go-Live"
+            duration: "Same-Day Live"
           }
         ]}
       />
@@ -248,7 +315,7 @@ export default function IntelligencePage() {
             a: "Yes. OfficeX Intelligence provides automated daily sync connectors via REST APIs, webhook events, and direct secure SQL read replicas for enterprise BI stacks."
           },
           {
-            q: "Does the platform support Indian SEBI BRSR and global ESG standards?",
+            q: "Does the platform support statutory SEBI BRSR and global ESG standards?",
             a: "Yes. Pre-configured templates generate auditable Scope 1 and Scope 2 carbon footprint summaries aligned with SEBI BRSR Core guidelines as well as international GRESB and LEED requirements."
           },
           {

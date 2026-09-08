@@ -11,10 +11,10 @@ export default function ResourcesPage() {
   const articles = [
     {
       category: "Market Report",
-      title: "India Commercial Real Estate & FM Benchmark 2026",
-      desc: "An in-depth analysis of Grade-A office leasing trends, CAM inflation, and digital procurement adoption across top 6 Indian metros.",
+      title: "Commercial Real Estate & FM Benchmark Report 2026",
+      desc: "An in-depth analysis of Grade-A office leasing trends, CAM inflation, and digital procurement adoption across top commercial metros.",
       readTime: "12 min read",
-      href: "/resources/india-cre-fm-benchmark-2026"
+      href: "/resources/cre-fm-benchmark-2026"
     },
     {
       category: "Playbook",
@@ -32,7 +32,7 @@ export default function ResourcesPage() {
     },
     {
       category: "Compliance",
-      title: "Indian Commercial Real Estate Statutory Compliance Checklist",
+      title: "Commercial Real Estate Statutory Compliance Checklist",
       desc: "40 mandatory clearances: Fire NOC, Lift Licenses, State Pollution Control Board, and DPDP Act 2023 readiness.",
       readTime: "10 min read",
       href: "/resources/commercial-real-estate-compliance-checklist"
@@ -111,7 +111,7 @@ export default function ResourcesPage() {
           <div className="mt-16 bg-[#071324] text-white rounded-3xl p-8 sm:p-12 text-center max-w-4xl mx-auto shadow-xl">
             <h2 className="text-2xl font-black">Subscribe to the OfficeX CRE Briefing</h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-xl mx-auto font-medium">
-              Join 12,000+ asset managers and facility directors receiving our fortnightly analysis of Indian CRE benchmarks and statutory updates.
+              Join 12,000+ asset managers and facility directors receiving our fortnightly analysis of CRE benchmarks and statutory updates.
             </p>
             <form
               onSubmit={(e) => {
