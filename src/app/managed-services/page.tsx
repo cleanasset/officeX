@@ -12,81 +12,26 @@ import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
 
-/* ─── Pain-point & Platform Prevention Slides ─── */
-interface HeroSlide {
-  id: string;
-  tabLabel: string;
-  prefix: string;
-  pain: string;
-  resolution: string;
-  proof: string;
-}
-
-const heroSlides: HeroSlide[] = [
-  {
-    id: "vendors",
-    tabLabel: "Vendor Chaos",
-    prefix: "Managing a building is",
-    pain: "constant vendor chasing",
-    resolution: "Zero Headache with Guaranteed SLAs",
-    proof: "On-site engineers + QR checkpoints + contractually enforced SLA penalty credits prevent all vendor chaos."
-  },
-  {
-    id: "compliance",
-    tabLabel: "Compliance Risks",
-    prefix: "Statutory compliance is",
-    pain: "a fear of notices & fines",
-    resolution: "100% Guaranteed Zero Notice Penalties",
-    proof: "Automated 60-day renewal radar + dedicated municipal liaison engineers eliminate all statutory risks."
-  },
-  {
-    id: "tenants",
-    tabLabel: "Tenant Complaints",
-    prefix: "Tenant maintenance is",
-    pain: "slow & frustrating",
-    resolution: "15-Min Response via QR Helpdesk",
-    proof: "Instant QR ticketing directly routes to certified on-site technicians with strict 15-minute response SLAs."
-  },
-  {
-    id: "billing",
-    tabLabel: "Hidden Markups",
-    prefix: "Operational billing is",
-    pain: "opaque with markups",
-    resolution: "100% Open-Book Pass-Through",
-    proof: "Zero contractor markups. You pay direct actuals with an institutional monthly MIS audit by the 5th."
-  }
-];
-
 export default function ManagedServicesPage() {
   const [slideInOpen, setSlideInOpen] = useState(false);
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isPaused) return;
-    const t = setInterval(() => setActiveSlide((p) => (p + 1) % heroSlides.length), 5500);
-    return () => clearInterval(t);
-  }, [isPaused]);
-
-  const slide = heroSlides[activeSlide];
-
   const services = [
-    { icon: Building2, title: "Turnkey Property Management", desc: "Complete operational stewardship — rent collection, tenant handover, fit-out oversight, and asset preservation across your entire portfolio.", color: "emerald" },
-    { icon: Users, title: "Integrated Facility Management", desc: "Technical MEP operations (HVAC, DG, STP/WTP), soft services, 24/7 physical security, and landscape maintenance with certified on-ground teams.", color: "teal" },
+    { icon: Building2, title: "Turnkey Property Management", desc: "Complete operational stewardship — rent collection, tenant handover, fit-out oversight, and asset preservation across your entire portfolio.", color: "teal" },
+    { icon: Users, title: "Integrated Facility Management", desc: "Technical MEP operations (HVAC, DG, STP/WTP), soft services, 24/7 physical security, and landscape maintenance with certified on-ground teams.", color: "cyan" },
     { icon: Scale, title: "Statutory Compliance Management", desc: "Fire Safety NOC, Lift licenses, DG permissions, RERA filings, and all municipal documentation managed by our legal liaison specialists.", color: "amber" },
     { icon: FileCheck, title: "Auto-Generated Monthly MIS", desc: "Institutional-grade financial and operational audit delivered by the 5th of every month — zero delays, zero manual work.", color: "blue" },
-    { icon: Leaf, title: "Energy & Sustainability", desc: "Energy audits, BRSR/ESG compliance, water recycling optimization, and carbon footprint tracking for responsible building operations.", color: "green" },
-    { icon: TrendingUp, title: "Revenue Optimization", desc: "Identify unbilled common areas, renegotiate vendor contracts, and introduce conservation measures to maximize your building NOI.", color: "purple" },
+    { icon: Leaf, title: "Energy & Sustainability", desc: "Energy audits, BRSR/ESG compliance, water recycling optimization, and carbon footprint tracking for responsible building operations.", color: "emerald" },
+    { icon: TrendingUp, title: "Revenue Optimization", desc: "Identify unbilled common areas, renegotiate vendor contracts, and introduce conservation measures to maximize your building NOI.", color: "slate" },
   ];
 
   const colorMap: Record<string, { bg: string; border: string; icon: string }> = {
-    emerald: { bg: "bg-emerald-50", border: "border-emerald-100", icon: "text-emerald-600" },
-    teal: { bg: "bg-teal-50", border: "border-teal-100", icon: "text-teal-600" },
+    teal: { bg: "bg-teal-50", border: "border-teal-100", icon: "text-[#0F8B7D]" },
+    cyan: { bg: "bg-cyan-50", border: "border-cyan-100", icon: "text-cyan-700" },
     amber: { bg: "bg-amber-50", border: "border-amber-100", icon: "text-amber-600" },
     blue: { bg: "bg-blue-50", border: "border-blue-100", icon: "text-blue-600" },
-    green: { bg: "bg-green-50", border: "border-green-100", icon: "text-green-600" },
-    purple: { bg: "bg-purple-50", border: "border-purple-100", icon: "text-purple-600" },
+    emerald: { bg: "bg-emerald-50", border: "border-emerald-100", icon: "text-emerald-600" },
+    slate: { bg: "bg-slate-100", border: "border-slate-200", icon: "text-slate-700" },
   };
 
   const timeline = [
@@ -114,115 +59,95 @@ export default function ManagedServicesPage() {
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <MarketingHeader activePath="/managed-services" />
 
-      {/* ═══ HERO — Compact, Elegant NativeSutra-Inspired Hero ═══ */}
-      <section 
-        className="relative w-full overflow-hidden"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-      >
-        {/* Background image with refined dark gradient */}
+      {/* ═══ HERO — Clean, Institutional & Executive ═══ */}
+      <section className="relative w-full overflow-hidden bg-slate-950">
+        {/* Architectural backdrop with smooth dark gradient overlay */}
         <div className="absolute inset-0 z-0">
           <Image 
             src="/images/managed_services_hero.jpg" 
-            alt="Building Management" 
+            alt="Commercial Real Estate Property Management" 
             fill 
             priority 
-            className="object-cover object-center" 
+            className="object-cover object-center opacity-30" 
             sizes="100vw" 
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/90 to-slate-950/80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/95 to-slate-950/80" />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 pb-12 sm:pt-9 sm:pb-14 lg:pt-10 lg:pb-16">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
           <div className="max-w-3xl">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 backdrop-blur-sm text-teal-300 text-[11px] font-bold uppercase tracking-wider mb-4">
-              <Shield size={12} className="text-teal-400" />
-              <span>Turnkey Managed Services &amp; Property Stewardship</span>
+            
+            {/* Clean Pill Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 backdrop-blur-sm text-teal-300 text-xs font-bold uppercase tracking-wider mb-6">
+              <Shield size={14} className="text-teal-400" />
+              <span>Institutional Property Management &amp; IFM</span>
             </div>
 
-            {/* Dynamic Headline with Refined Typography & Clean Single-Line Strikethrough */}
-            <div className="min-h-[105px] sm:min-h-[95px] mb-3">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-bold text-white tracking-tight leading-[1.25]">
-                <span>{slide.prefix} </span>
-                <span className="relative inline-block mx-1">
-                  <span className="line-through text-white/40 decoration-rose-400 decoration-2 font-medium">
-                    {slide.pain}
-                  </span>
-                </span>
-                <br />
-                <span className="text-teal-400 font-extrabold inline-flex items-center gap-2 mt-1">
-                  <CheckCircle2 size={24} className="text-teal-400 shrink-0" />
-                  {slide.resolution}
-                </span>
-              </h1>
-            </div>
+            {/* Clear, Confident, Powerful Headline */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-extrabold text-white tracking-tight leading-[1.15] mb-5">
+              Turnkey Commercial Property Management.{" "}
+              <span className="text-teal-400">Guaranteed SLAs.</span>
+            </h1>
 
-            {/* Clean Subtitle */}
-            <p className="text-sm sm:text-base text-slate-300 font-normal max-w-2xl mb-5 leading-relaxed">
-              Your buildings, our team, your rules. SLA-backed property stewardship and on-ground IFM with contractually guaranteed zero operational slip-ups.
+            {/* Sub-headline */}
+            <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed mb-8 max-w-2xl">
+              We deploy certified on-ground technical teams, oversee 24/7 MEP operations, and manage statutory compliance — backed by contractually enforced SLAs and 100% open-book financial transparency.
             </p>
 
-            {/* Compact Platform Guarantee Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-xl bg-slate-900/80 border border-teal-500/30 backdrop-blur-md mb-6 text-xs text-slate-200">
-              <div className="flex items-center gap-1.5 shrink-0 font-bold text-teal-300">
-                <ShieldCheck size={15} className="text-teal-400 shrink-0" />
-                <span>OfficeX Platform Guarantee:</span>
+            {/* 4 Core Value Pillars */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-10 max-w-xl">
+              <div className="flex items-center gap-2.5 text-sm text-slate-200">
+                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
+                <span>Contractually Enforced 99.8% SLAs</span>
               </div>
-              <p className="text-slate-300 font-normal leading-normal">
-                {slide.proof}
-              </p>
+              <div className="flex items-center gap-2.5 text-sm text-slate-200">
+                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
+                <span>100% Open-Book Pass-Through Billing</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-sm text-slate-200">
+                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
+                <span>Zero Statutory Notice Penalty Guarantee</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-sm text-slate-200">
+                <CheckCircle2 size={18} className="text-teal-400 shrink-0" />
+                <span>24/7 Rapid Technical Emergency Desk</span>
+              </div>
             </div>
 
-            {/* Sleek Pain-Point Switcher Tabs */}
-            <div className="flex flex-wrap items-center gap-2 mb-7">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1 hidden sm:inline">
-                Common Pain Points:
-              </span>
-              {heroSlides.map((s, i) => (
-                <button
-                  key={s.id}
-                  onClick={() => setActiveSlide(i)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    i === activeSlide
-                      ? "bg-[#0F8B7D] text-white shadow-sm"
-                      : "bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 border border-white/5"
-                  }`}
-                >
-                  {s.tabLabel}
-                </button>
-              ))}
-            </div>
-
-            {/* High-Converting CTAs */}
-            <div className="flex flex-wrap items-center gap-3.5 mb-8">
+            {/* Action CTAs */}
+            <div className="flex flex-wrap items-center gap-4 mb-12">
               <button
                 onClick={() => setSlideInOpen(true)}
-                className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                className="px-7 py-3.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
               >
-                Schedule Building Audit <ArrowRight size={15} />
+                Schedule Building Audit <ArrowRight size={16} />
               </button>
               <Link
                 href="/operate"
-                className="px-6 py-2.5 border border-white/20 hover:border-white/40 text-white font-semibold text-xs sm:text-sm rounded-xl backdrop-blur-sm hover:bg-white/10 transition-all flex items-center gap-2"
+                className="px-7 py-3.5 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white font-semibold text-sm rounded-xl backdrop-blur-sm hover:bg-white/5 transition-all flex items-center gap-2"
               >
                 Explore Self-Managed SaaS
               </Link>
             </div>
 
-            {/* Compact Key Stats Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-white/10">
-              {[
-                { value: "99.8%", label: "On-Ground SLA" },
-                { value: "18%", label: "Avg Cost Savings" },
-                { value: "50+", label: "Buildings Managed" },
-                { value: "24/7", label: "Emergency Desk" },
-              ].map((s, i) => (
-                <div key={i}>
-                  <div className="text-xl sm:text-2xl font-extrabold text-teal-400">{s.value}</div>
-                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">{s.label}</div>
-                </div>
-              ))}
+            {/* Performance Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 border-t border-slate-800/90 max-w-3xl">
+              <div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">50+</div>
+                <div className="text-xs text-slate-400 font-medium mt-1">Buildings Managed</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">99.8%</div>
+                <div className="text-xs text-slate-400 font-medium mt-1">On-Ground SLA</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">18%</div>
+                <div className="text-xs text-slate-400 font-medium mt-1">Avg Cost Savings</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">&lt; 15 Mins</div>
+                <div className="text-xs text-slate-400 font-medium mt-1">Emergency SLA</div>
+              </div>
             </div>
 
           </div>
@@ -233,7 +158,7 @@ export default function ManagedServicesPage() {
       <section className="py-20 px-4 sm:px-8 bg-slate-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <span className="text-[11px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">End-to-End</span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-100">End-to-End</span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 mt-4 tracking-tight">What We Manage</h2>
             <p className="text-slate-500 text-sm sm:text-base mt-3 max-w-xl mx-auto">Turnkey on-ground property & facility operations integrated with our digital operating system.</p>
           </div>
@@ -284,9 +209,9 @@ export default function ManagedServicesPage() {
               </ul>
             </div>
             {/* With OfficeX */}
-            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-8">
-              <h3 className="font-extrabold text-emerald-700 text-sm uppercase tracking-wider mb-6 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600"><CheckCircle2 size={16} /></span>
+            <div className="bg-teal-50/50 border border-teal-100 rounded-2xl p-8">
+              <h3 className="font-extrabold text-[#0F8B7D] text-sm uppercase tracking-wider mb-6 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-[#0F8B7D]"><CheckCircle2 size={16} /></span>
                 With OfficeX
               </h3>
               <ul className="space-y-4">
@@ -297,8 +222,8 @@ export default function ManagedServicesPage() {
                   "Dedicated Property Manager for daily ops, compliance & tenant relations",
                   "Live digital visibility — every checklist, ticket & expense recorded",
                 ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-emerald-900/80">
-                    <span className="w-5 h-5 rounded-full bg-emerald-200/60 flex items-center justify-center shrink-0 mt-0.5 text-emerald-600"><CheckCircle2 size={11} /></span>
+                  <li key={i} className="flex items-start gap-3 text-sm text-teal-950/80">
+                    <span className="w-5 h-5 rounded-full bg-teal-200/60 flex items-center justify-center shrink-0 mt-0.5 text-[#0F8B7D]"><CheckCircle2 size={11} /></span>
                     {item}
                   </li>
                 ))}
@@ -317,16 +242,16 @@ export default function ManagedServicesPage() {
           </div>
           <div className="relative">
             {/* Connector */}
-            <div className="hidden md:block absolute top-8 left-[12%] right-[12%] h-0.5 border-t-2 border-dashed border-emerald-200 z-0" />
+            <div className="hidden md:block absolute top-8 left-[12%] right-[12%] h-0.5 border-t-2 border-dashed border-teal-200 z-0" />
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 relative z-10">
               {timeline.map((t, i) => (
                 <div key={i} className="flex flex-col items-center text-center">
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-lg mb-4 shadow-md ${i === 3 ? "bg-emerald-600 text-white" : "bg-white border-2 border-emerald-200 text-emerald-700"}`}>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center font-black text-lg mb-4 shadow-md ${i === 3 ? "bg-[#0F8B7D] text-white" : "bg-white border-2 border-teal-200 text-[#0F8B7D]"}`}>
                     {t.step}
                   </div>
                   <h4 className="font-extrabold text-slate-900 text-sm mb-1">{t.title}</h4>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">{t.desc}</p>
-                  <span className="mt-3 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">{t.duration}</span>
+                  <span className="mt-3 text-[10px] font-bold text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">{t.duration}</span>
                 </div>
               ))}
             </div>
@@ -343,7 +268,7 @@ export default function ManagedServicesPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
               <div key={i} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-7 relative">
-                <Quote size={28} className="text-emerald-100 absolute top-5 right-5" />
+                <Quote size={28} className="text-teal-100 absolute top-5 right-5" />
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: t.rating }).map((_, j) => (
                     <Star key={j} size={14} className="text-amber-400 fill-amber-400" />
@@ -373,24 +298,24 @@ export default function ManagedServicesPage() {
               { name: "Integrated FM (IFM)", price: "Base + 10–15%", period: "manpower markup", highlight: true, features: ["Certified MEP technicians & engineers", "24/7 shift coverage & DG/HVAC maintenance", "Soft services (cleaning, security, waste)", "SLA-backed equipment uptime guarantee", "OfficeX Operate CAFM included"], cta: "Get IFM Proposal" },
               { name: "Full Turnkey Package", price: "Custom", period: "PM + IFM + Leasing", features: ["End-to-end property & IFM stewardship", "Leasing representation via Marketplace", "Guaranteed SLAs with penalty clauses", "CapEx planning & energy audit", "ESG reporting & certifications"], cta: "Talk to Sales" },
             ].map((tier, i) => (
-              <div key={i} className={`rounded-2xl p-7 flex flex-col ${tier.highlight ? "bg-emerald-600 text-white ring-2 ring-emerald-600 shadow-xl scale-[1.02]" : "bg-white border border-slate-200 shadow-xs"}`}>
-                {tier.highlight && <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 text-white px-3 py-1 rounded-full self-start mb-3">Most Popular</span>}
+              <div key={i} className={`rounded-2xl p-7 flex flex-col ${tier.highlight ? "bg-[#071324] text-white ring-2 ring-[#0F8B7D] shadow-xl scale-[1.02]" : "bg-white border border-slate-200 shadow-xs"}`}>
+                {tier.highlight && <span className="text-[10px] font-black uppercase tracking-widest bg-[#0F8B7D] text-white px-3 py-1 rounded-full self-start mb-3">Most Popular</span>}
                 <h3 className={`font-extrabold text-lg ${tier.highlight ? "text-white" : "text-slate-900"}`}>{tier.name}</h3>
                 <div className="mt-3 mb-1">
-                  <span className={`text-2xl font-black ${tier.highlight ? "text-white" : "text-slate-900"}`}>{tier.price}</span>
-                  <span className={`text-xs ml-1.5 ${tier.highlight ? "text-emerald-100" : "text-slate-500"}`}>{tier.period}</span>
+                  <span className={`text-2xl font-black ${tier.highlight ? "text-teal-400" : "text-slate-900"}`}>{tier.price}</span>
+                  <span className={`text-xs ml-1.5 ${tier.highlight ? "text-slate-400" : "text-slate-500"}`}>{tier.period}</span>
                 </div>
                 <ul className="mt-5 space-y-3 flex-1">
                   {tier.features.map((f, j) => (
-                    <li key={j} className={`flex items-start gap-2.5 text-[13px] ${tier.highlight ? "text-emerald-50" : "text-slate-600"}`}>
-                      <CheckCircle2 size={14} className={`shrink-0 mt-0.5 ${tier.highlight ? "text-emerald-200" : "text-emerald-500"}`} />
+                    <li key={j} className={`flex items-start gap-2.5 text-[13px] ${tier.highlight ? "text-slate-200" : "text-slate-600"}`}>
+                      <CheckCircle2 size={14} className={`shrink-0 mt-0.5 ${tier.highlight ? "text-teal-400" : "text-[#0F8B7D]"}`} />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <button
                   onClick={() => setSlideInOpen(true)}
-                  className={`mt-6 w-full py-3 rounded-xl font-bold text-sm transition-all cursor-pointer ${tier.highlight ? "bg-white text-emerald-700 hover:bg-emerald-50" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
+                  className={`mt-6 w-full py-3 rounded-xl font-bold text-sm transition-all cursor-pointer ${tier.highlight ? "bg-[#0F8B7D] text-white hover:bg-[#0D7A6E] shadow-md" : "bg-slate-900 text-white hover:bg-slate-800"}`}
                 >
                   {tier.cta}
                 </button>
