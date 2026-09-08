@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 
 const protectedPaths = [
   '/discover',
-  '/fm-marketplace',
   '/operations',
   '/ops',
   '/properties',
@@ -26,6 +25,7 @@ export function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/public') ||
     pathname.startsWith('/marketplace') ||
+    pathname.startsWith('/fm-marketplace') ||
     pathname.startsWith('/audiences') ||
     pathname.startsWith('/operate') ||
     pathname.startsWith('/manage') ||
@@ -69,7 +69,6 @@ export default proxy;
 export const config = {
   matcher: [
     '/discover/:path*',
-    '/fm-marketplace/:path*',
     '/operations/:path*',
     '/ops/:path*',
     '/properties/:path*',

@@ -51,76 +51,37 @@ export default function IntelligencePage() {
         accentColor="#0F8B7D"
         bgImage="/images/work_intelligence_analytics.jpg"
         customVisual={
-          <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
-            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-amber-400" />
-                <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                <span className="text-[11px] font-mono text-slate-400 ml-2 font-semibold">
-                  app.officex.in/intelligence
+          <div className="flex flex-col gap-3 max-w-md ml-auto text-white">
+            {/* Holographic Digital Twin Telemetry Callout */}
+            <div className="bg-[#071324]/65 backdrop-blur-xl rounded-2xl border border-teal-500/40 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase text-teal-300 tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+                  OfficeX Spatial AI · Digital Twin Active
+                </span>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                  ● 3D Sync: 99.8%
                 </span>
               </div>
-              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
-                ● PORTFOLIO NOI &amp; ESG
-              </span>
-            </div>
-
-            {/* Live Analytics Preview Card */}
-            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    CONSOLIDATED PORTFOLIO NOI
-                  </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-xl font-black text-white">₹14.2 Cr</span>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                      +18.4% YoY Yield
-                    </span>
+              
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="bg-slate-900/70 rounded-xl p-2.5 border border-slate-800">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">AI PREDICTIVE YIELD</span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="text-base font-black text-white">₹14.2 Cr</span>
+                    <span className="text-[10px] font-bold text-emerald-400">+18.4%</span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">PORTFOLIO WALE</span>
-                  <span className="text-sm font-black text-white">4.8 Years</span>
+                <div className="bg-slate-900/70 rounded-xl p-2.5 border border-slate-800">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">ENERGY AI (BMS)</span>
+                  <span className="text-sm font-black text-emerald-400 block mt-0.5">-24% kWh</span>
                 </div>
               </div>
 
-              {/* Real-Time Telemetry Metrics */}
-              <div className="grid grid-cols-2 gap-2 mb-2.5">
-                <div className="bg-[#071324] rounded-xl p-2.5 border border-slate-800 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">ENERGY OPTIMIZATION</span>
-                  <span className="text-xs font-black text-emerald-400">-24% kWh Intensity</span>
-                  <span className="text-[9px] text-slate-500 block mt-0.5">Automated BMS Telemetry</span>
-                </div>
-                <div className="bg-[#071324] rounded-xl p-2.5 border border-slate-800 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">CAM RECOVERY ACCURACY</span>
-                  <span className="text-xs font-black text-white">98.6% True-Up</span>
-                  <span className="text-[9px] text-slate-500 block mt-0.5">Zero Leakage Verified</span>
-                </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[10px] text-slate-400">
+                <span>SEBI BRSR &amp; Scope 1-3 ESG Live</span>
+                <span className="text-teal-300 font-bold">Real-time Telemetry</span>
               </div>
-
-              {/* ESG & Statutory Strip */}
-              <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
-                  <span className="block text-[9px] text-slate-400">SEBI BRSR</span>
-                  <span className="text-emerald-400 font-black">Core Audited</span>
-                </div>
-                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
-                  <span className="block text-[9px] text-slate-400">SCOPE 1 &amp; 2</span>
-                  <span className="text-emerald-400 font-black">Automated</span>
-                </div>
-                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
-                  <span className="block text-[9px] text-slate-400">OCCUPANCY</span>
-                  <span className="text-teal-300 font-black">96.2% Leased</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Assurance */}
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-              <span className="font-semibold text-slate-300">AES-256 Encrypted Telemetry</span>
-              <span className="text-emerald-400 font-extrabold">✓ Institutional Grade</span>
             </div>
           </div>
         }

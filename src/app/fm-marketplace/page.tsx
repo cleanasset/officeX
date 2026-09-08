@@ -321,44 +321,45 @@ export default function FMMarketplacePage() {
       )}
 
       {/* 2. VEENDOOR-STYLE HERO BANNER WITH SEARCH ENGINE & LIVE PRO COUNTER */}
-      <section className="relative pt-18 pb-22 px-4 sm:px-6 lg:px-8 text-center text-white w-full max-w-full overflow-hidden">
-        {/* Operations Background Image */}
-        <div className="absolute inset-0 z-0">
+      <section className="relative pt-20 pb-24 px-4 sm:px-6 lg:px-8 text-center text-white w-full max-w-full overflow-hidden">
+        {/* Operations Background Image - Soft Blurred to Keep Atmosphere while Making Text Ultra-Readable */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
             src="/images/work_fm_technician.jpg"
             alt="Skilled Facility Maintenance & MEP Technicians at Work"
             fill
             priority
             unoptimized
-            className="object-cover object-center opacity-85"
+            className="object-cover object-center blur-[5px] scale-105"
             sizes="100vw"
           />
-          {/* Institutional Palette Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#071324]/92 via-[#093532]/85 to-[#071324]/80 mix-blend-multiply" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/60 via-transparent to-[#071324]/90" />
+          {/* Balanced Navy Scrim */}
+          <div className="absolute inset-0 bg-[#071324]/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/85 via-transparent to-[#071324]/90" />
         </div>
 
         {/* Hero Content Container */}
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
           
           {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-400/40 bg-teal-950/40 backdrop-blur-md text-teal-300 text-[11px] sm:text-xs font-black uppercase tracking-widest mb-5 shadow-2xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-400/40 bg-[#071324]/90 text-teal-300 text-[11px] sm:text-xs font-bold uppercase tracking-widest mb-5 shadow-md">
             <BadgeCheck size={14} className="text-teal-400" />
-            <span>ENTERPRISE FACILITY MANAGEMENT MARKETPLACE</span>
+            <span>Enterprise Facility Management Marketplace</span>
           </div>
           
-          {/* Headline */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.15] mb-4 text-white drop-shadow-sm max-w-4xl">
-            The Trusted Marketplace for Commercial Facility Management
+          {/* Solid, Crisp, High-Contrast Headline */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-black tracking-tight leading-[1.18] mb-4 max-w-4xl text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+            The Trusted Marketplace for{" "}
+            <span className="text-[#2DD4BF]">Commercial Facility Management</span>
           </h1>
           
-          {/* Subheadline */}
-          <p className="text-sm sm:text-base md:text-lg text-slate-200 font-medium max-w-3xl mx-auto mb-10 leading-relaxed drop-shadow-xs">
+          {/* Solid Subheadline */}
+          <p className="text-sm sm:text-base md:text-lg text-slate-100 font-medium max-w-3xl mx-auto mb-10 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             Find pre-vetted contractors for HVAC, MEP, Security, Housekeeping, and Specialized Building Engineering. Instant competitive quotes, transparent BOQs, and escrow-backed milestone payouts.
           </p>
 
           {/* Interactive Veendoor Search Bar */}
-          <div className="w-full max-w-3xl bg-white rounded-2xl sm:rounded-full p-2.5 sm:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.35)] flex flex-col sm:flex-row items-center gap-2 border border-white/30 text-left">
+          <div className="w-full max-w-3xl bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-full p-2.5 sm:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.45)] flex flex-col sm:flex-row items-center gap-2 border border-white/40 text-left">
             
             {/* Category Dropdown */}
             <div className="flex-1 relative w-full sm:w-auto">
@@ -448,7 +449,7 @@ export default function FMMarketplacePage() {
 
           {/* Popular Category Chips with Live Pro Counts (Veendoor pattern) */}
           <div className="flex flex-wrap items-center justify-center gap-2 mt-7 text-xs">
-             <span className="text-white/70 font-semibold mr-1">Popular Categories:</span>
+             <span className="text-slate-300 font-semibold mr-1 drop-shadow-sm">Popular Categories:</span>
              {[
                { name: "MEP Engineering", count: "240+ Pros" },
                { name: "HVAC Systems", count: "180+ Pros" },
@@ -460,7 +461,7 @@ export default function FMMarketplacePage() {
                <button 
                  key={chip.name} 
                  onClick={() => handleOpenRfq(chip.name)}
-                 className="px-3 py-1 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all cursor-pointer text-white font-medium flex items-center gap-1.5"
+                 className="px-3.5 py-1.5 rounded-full border border-white/25 bg-[#071324]/65 hover:bg-[#0F8B7D] hover:border-[#0F8B7D] backdrop-blur-md transition-all cursor-pointer text-slate-100 hover:text-white font-semibold flex items-center gap-1.5 shadow-md"
                >
                  <span>{chip.name}</span>
                  <span className="text-teal-300 font-bold text-[10px]">({chip.count})</span>
