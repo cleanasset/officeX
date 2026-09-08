@@ -274,31 +274,31 @@ export default function IntelligencePage() {
         ]}
       />
 
-      {/* Onboarding Timeline — 1-Day Process */}
+      {/* Onboarding Timeline — 15-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
-        title="1-Day Analytics &amp; Telemetry Activation"
-        subtitle="Zero 15-day delays. Ingest historical rent rolls, configure smart utility meters, and launch executive BI boards in a single day."
+        title="15-Day Analytics &amp; Telemetry Activation"
+        subtitle="Structured data ingestion, KPI hurdle configuration, and executive dashboard deployment."
         steps={[
           {
             title: "Historical Data Ingestion",
             description: "Import historical rent rolls, electricity bills, and maintenance logs into the telemetry lake.",
-            duration: "Hour 1"
+            duration: "Days 1 - 4"
           },
           {
             title: "KPI & Hurdle Baselining",
             description: "Define financial hurdle rates, energy intensity targets (kWh/sq.ft.), and SLA thresholds.",
-            duration: "Hour 2"
+            duration: "Days 5 - 8"
           },
           {
             title: "Executive Dashboard Setup",
             description: "Customize executive views for Owners, Asset Managers, and ESG Sustainability committees.",
-            duration: "Hour 3"
+            duration: "Days 9 - 12"
           },
           {
             title: "Automated Cadence & Go-Live",
             description: "Schedule automated weekly digests and monthly board packs distributed seamlessly.",
-            duration: "Same-Day Live"
+            duration: "Day 15 Go-Live"
           }
         ]}
       />

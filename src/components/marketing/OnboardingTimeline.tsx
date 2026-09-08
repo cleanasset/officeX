@@ -20,8 +20,8 @@ export interface OnboardingTimelineProps {
 }
 
 export default function OnboardingTimeline({
-  title = "Instant 1-Day Process: Up & Running Today",
-  subtitle = "No 15-day waiting period. Our unified system gets your properties, leases, and teams operational in a single day.",
+  title = "15-Day Structured Onboarding Process",
+  subtitle = "Our structured, white-glove onboarding gets your properties, leases, and teams operational with zero disruption.",
   steps,
   accentColor = "#0F8B7D",
   ctaHref = "/signup"
@@ -31,8 +31,7 @@ export default function OnboardingTimeline({
       <div className="max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider mb-3 bg-teal-50 text-[#0F8B7D] border border-teal-100">
-            <Zap size={13} className="text-[#0F8B7D]" />
-            <span>One-Day Streamlined Process</span>
+            <span>Structured 15-Day Process</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-[#071324] tracking-tight">
             {title}
@@ -54,7 +53,7 @@ export default function OnboardingTimeline({
                   <div className="flex items-center justify-between mb-4">
                     <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
                       <CheckCircle2 size={13} className="text-emerald-600" />
-                      <span>{st.duration || "Day 1"}</span>
+                      <span>{st.duration || `Stage ${idx + 1}`}</span>
                     </span>
 
                     {/* Stage indicator for connection */}
@@ -90,7 +89,7 @@ export default function OnboardingTimeline({
             className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
             style={{ backgroundColor: accentColor }}
           >
-            <span>Start in 1 Day</span>
+            <span>Start Onboarding Today</span>
             <ArrowRight size={14} />
           </Link>
         </div>

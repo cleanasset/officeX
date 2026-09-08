@@ -274,31 +274,31 @@ export default function ManagePage() {
         ]}
       />
 
-      {/* Onboarding Timeline */}
+      {/* Onboarding Timeline — 15-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
-        title="Same-Day Property &amp; Lease Activation"
-        subtitle="Zero 15-day delays. Digitize leases, configure CAM billing formulas, and begin automated collections in a single day."
+        title="15-Day Automated Onboarding Process"
+        subtitle="Structured, white-glove onboarding ensuring zero operational disruption."
         steps={[
           {
-            title: "Lease Data Ingestion",
+            title: "Lease Digitization & Ingestion",
             description: "Upload existing lease deeds, tenant profiles, and deposit records into the digital registry.",
-            duration: "Hour 1"
+            duration: "Days 1 - 4"
           },
           {
-            title: "Compliance Audit & Alerts",
-            description: "Input statutory NOCs, lift certifications, and fire licenses to activate proactive alert radar.",
-            duration: "Hour 2"
+            title: "Compliance Audit & Alerts Setup",
+            description: "Input statutory NOCs, lift certifications, and fire licenses to activate proactive alert clocks.",
+            duration: "Days 5 - 8"
           },
           {
             title: "Billing Rules & Payment Sync",
             description: "Configure CAM formulas, utility sub-meter logic, and connect collection accounts.",
-            duration: "Hour 3"
+            duration: "Days 9 - 12"
           },
           {
             title: "Automated Rent Roll Go-Live",
-            description: "Generate and dispatch your first digital rent roll and begin collecting dues on day one.",
-            duration: "Same-Day Active"
+            description: "Generate and dispatch your first digital rent roll and begin collecting dues seamlessly.",
+            duration: "Day 15 Go-Live"
           }
         ]}
       />

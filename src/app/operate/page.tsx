@@ -299,31 +299,31 @@ export default function OperatePage() {
         ]}
       />
 
-      {/* Onboarding Timeline — 1-Day Process */}
+      {/* Onboarding Timeline — 15-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
-        title="1-Day Rapid CAFM &amp; PPM Deployment"
-        subtitle="Zero 15-day delays. Upload MEP equipment lists, auto-generate QR passports, and deploy mobile work orders in a single day."
+        title="15-Day Rapid Deployment Pipeline"
+        subtitle="From physical asset tagging to complete staff training and digital go-live."
         steps={[
           {
-            title: "Asset Import & Digital Tagging",
-            description: "Upload MEP asset registers, equipment specs, and auto-generate QR passports.",
-            duration: "Hour 1"
+            title: "Asset Audit & Digital QR Tagging",
+            description: "Our technical team audits your MEP assets and generates unique QR code identifiers.",
+            duration: "Days 1 - 4"
           },
           {
-            title: "52-Week PPM Automation",
-            description: "Activate pre-configured OEM preventative maintenance routines and statutory frequencies.",
-            duration: "Hour 2"
+            title: "52-Week PPM Schedule Configuration",
+            description: "Input OEM maintenance schedules, statutory compliance frequencies, and SLA criteria.",
+            duration: "Days 5 - 8"
           },
           {
-            title: "Team & SLA Configuration",
-            description: "Assign technician shifts, escalation rules, and contractor SLA response timers.",
-            duration: "Hour 3"
+            title: "On-Ground Staff & Technician Training",
+            description: "Conduct hands-on mobile training for facility technicians, supervisors, and helpdesk teams.",
+            duration: "Days 9 - 12"
           },
           {
-            title: "Digital Operations Go-Live",
-            description: "Roll out mobile work orders and tenant QR helpdesk live across the building.",
-            duration: "Same-Day Deployment"
+            title: "Tenant Onboarding & Go-Live",
+            description: "Distribute tenant login credentials, QR lobby posters, and activate digital helpdesk.",
+            duration: "Day 15 Go-Live"
           }
         ]}
       />

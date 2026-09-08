@@ -255,31 +255,31 @@ export default function PropertyMarketplacePage() {
         ]}
       />
 
-      {/* Onboarding Timeline — 1-Day Process */}
+      {/* Onboarding Timeline — 15-Day Process */}
       <OnboardingTimeline
         accentColor="#0F8B7D"
-        title="1-Day Seamless Leasing Process"
-        subtitle="Zero 15-day delays. Complete property discovery, guided site visits, real-time negotiations, and digital lease execution in a single day."
+        title="15-Day Structured Transaction Process"
+        subtitle="From space discovery to digital LOI execution with verified audit trails."
         steps={[
           {
-            title: "Discover & Filter Space",
-            description: "Explore verified Grade-A properties by micro-market, carpet area, and fit-out state with instant CAD floorplates.",
-            duration: "Hour 1"
+            title: "Register & Requirement Scoping",
+            description: "Sign up as a building owner, occupier, broker, or vendor and configure spatial parameters.",
+            duration: "Days 1 - 3"
           },
           {
-            title: "Instant Digital Site Visit",
-            description: "Book same-day on-site inspections with verified building hosts and receive instant QR access passes.",
-            duration: "Hour 2"
+            title: "Digital Verification & Pre-Vetting",
+            description: "Submit property documents or vendor statutory licenses for fast-track compliance verification.",
+            duration: "Days 4 - 7"
           },
           {
-            title: "Direct Deal Room & Digital LOI",
-            description: "Negotiate commercial lease terms in real-time and generate digitally signed Letters of Intent in minutes.",
-            duration: "Hour 3"
+            title: "RFP Broadcast & Bid Evaluation",
+            description: "Publish your space requirement or broadcast a structured service tender with digital BOQs.",
+            duration: "Days 8 - 12"
           },
           {
-            title: "Instant Digital Lease Execution",
-            description: "Execute standard commercial lease agreement, complete deposit escrow online, and receive digital keys.",
-            duration: "Same-Day Handover"
+            title: "Escrow Funding & Deal Closing",
+            description: "Compare bids side-by-side, issue digital work orders, and fund milestone escrow securely.",
+            duration: "Day 15 Go-Live"
           }
         ]}
       />
