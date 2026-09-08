@@ -117,7 +117,7 @@ export default function PlatformPage() {
                 { name: "FM Services", sub: "Marketplace", color: "#F26522", bg: "bg-orange-50/70", border: "border-orange-200", text: "text-orange-900" },
                 { name: "OfficeX PRO", sub: "Operate / CAFM", color: "#0F8B7D", bg: "bg-teal-50/70", border: "border-teal-200", text: "text-teal-900" },
                 { name: "OfficeX Manage", sub: "Lease & CAM", color: "#D97706", bg: "bg-amber-50/70", border: "border-amber-200", text: "text-amber-900" },
-                { name: "Intelligence & AI", sub: "Analytics & ESG", color: "#7C3AED", bg: "bg-purple-50/70", border: "border-purple-200", text: "text-purple-900" }
+                { name: "Intelligence & AI", sub: "Analytics & ESG", color: "#0F8B7D", bg: "bg-teal-50/70", border: "border-teal-200", text: "text-teal-900" }
               ].map((mod, idx) => (
                 <div
                   key={idx}

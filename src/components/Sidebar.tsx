@@ -36,6 +36,7 @@ interface MenuItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ size: number; className?: string }>;
+  badge?: string;
 }
 
 // 1. Role-Specific Menus (Strict namespace isolation per portal)
@@ -121,7 +122,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Workplace Analytics", href: "/reporting", icon: BarChart3 },
     { name: "MIS Financial Ledger", href: "/reporting/mis", icon: DollarSign },
     { name: "ESG & Sustainability", href: "/reporting/esg", icon: Sparkles },
-    { name: "AI Predictive Engine", href: "/reporting/ai", icon: Cpu }
+    { name: "AI Predictive Engine", href: "/reporting/ai", icon: Cpu, badge: "Coming Soon" }
   ]
 };
 
@@ -274,7 +275,14 @@ export default function Sidebar() {
               >
                 <Icon size={16} className={isActive ? "text-white" : "text-gray-400"} />
                 <span className="truncate">{item.name}</span>
-                {isActive && <ChevronRight size={13} className="ml-auto text-white shrink-0" />}
+                {item.badge && (
+                  <span className={`ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                    isActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+                {isActive && !item.badge && <ChevronRight size={13} className="ml-auto text-white shrink-0" />}
               </Link>
             );
           })}

@@ -96,7 +96,7 @@ export default function MarketplacePage() {
             icon: Cpu,
             title: "AI-Assisted BOQ Generation",
             description: "Automatically generate comprehensive Bills of Quantities based on building square footage, asset counts, and MEP specifications.",
-            tag: "Smart"
+            tag: "Coming Soon"
           },
           {
             icon: ClipboardCheck,

@@ -56,9 +56,10 @@ export default function FeatureGrid({
                       <Icon size={24} />
                     </div>
 
-                    {feat.phase2 ? (
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                        Roadmap 2026 H2
+                    {feat.phase2 || feat.tag === "Coming Soon" || feat.title.toLowerCase().includes("ai") ? (
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
+                        <Sparkles size={11} className="text-amber-600" />
+                        Coming Soon
                       </span>
                     ) : feat.tag ? (
                       <span

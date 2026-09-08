@@ -43,8 +43,13 @@ export default function AIExecutiveSummaryDashboard() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-gray-900">AI Executive Summary</h1>
-        <p className="text-sm text-gray-500 mt-1">Configure parameters and generate institutional-grade narrative reports.</p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-black text-gray-900">AI Executive Summary</h1>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
+            Coming Soon
+          </span>
+        </div>
+        <p className="text-sm text-gray-500 mt-1">Configure parameters and generate institutional-grade narrative reports (Early Preview).</p>
       </div>
 
       {/* Main Grid: Left Configuration Panel + Right Document Editor */}

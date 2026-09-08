@@ -328,7 +328,7 @@ export default function MarketingHeader({
           <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">
             Manage (Rent Roll &amp; Compliance)
           </Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#7C3AED]">
+          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
             Intelligence (Analytics &amp; ESG)
           </Link>
           <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#059669]">

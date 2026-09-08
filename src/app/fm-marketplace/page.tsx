@@ -307,23 +307,51 @@ export default function FMMarketplacePage() {
         </div>
       </section>
 
-      {/* 3. TRUSTED BY ENTERPRISE LEADERS STRIP */}
-      <section className="bg-white py-6 border-b border-slate-200/90 w-full overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.25em] uppercase mb-4">
-            TRUSTED BY ENTERPRISE LEADERS
+      {/* 3. TRUSTED BY ENTERPRISE LEADERS & CRE PORTFOLIOS (Single-Line Only, Diverse Leaders) */}
+      <section className="bg-white py-5 border-b border-slate-200/90 w-full overflow-hidden relative">
+        <div className="max-w-7xl mx-auto px-4 mb-3">
+          <p className="text-center text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.25em] uppercase">
+            TRUSTED BY ENTERPRISE LEADERS &amp; REAL ESTATE DEVELOPERS
           </p>
-          <div className="flex items-center justify-center gap-8 md:gap-14 lg:gap-18 flex-wrap font-black text-slate-700 text-sm sm:text-base opacity-75">
-            <span className="hover:opacity-100 transition-opacity">TCS</span>
-            <span className="hover:opacity-100 transition-opacity">Wipro</span>
-            <span className="hover:opacity-100 transition-opacity">Infosys</span>
-            <span className="hover:opacity-100 transition-opacity">DLF</span>
-            <span className="hover:opacity-100 transition-opacity">Godrej Properties</span>
-            <span className="hidden lg:block hover:opacity-100 transition-opacity">TCS</span>
-            <span className="hidden lg:block hover:opacity-100 transition-opacity">Wipro</span>
-            <span className="hidden lg:block hover:opacity-100 transition-opacity">Infosys</span>
-            <span className="hidden xl:block hover:opacity-100 transition-opacity">DLF</span>
-            <span className="hidden xl:block hover:opacity-100 transition-opacity">Godrej Properties</span>
+        </div>
+
+        {/* Smooth gradient fade edges on desktop */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+        {/* Strictly Single-Line Infinite Marquee: Never wraps into a 2nd line */}
+        <div className="w-full overflow-hidden whitespace-nowrap py-1">
+          <div className="inline-flex items-center gap-10 md:gap-14 font-black text-slate-700 text-sm sm:text-base opacity-80 animate-marquee select-none">
+            {[
+              "DLF Commercial",
+              "Brookfield Properties",
+              "Google",
+              "Godrej Properties",
+              "Prestige Group",
+              "Morgan Stanley",
+              "Embassy REIT",
+              "HSBC Commercial",
+              "RMZ Corp",
+              "Deloitte",
+              "Tata Consultancy Services",
+              "Larsen & Toubro",
+              "DLF Commercial",
+              "Brookfield Properties",
+              "Google",
+              "Godrej Properties",
+              "Prestige Group",
+              "Morgan Stanley",
+              "Embassy REIT",
+              "HSBC Commercial",
+              "RMZ Corp",
+              "Deloitte",
+              "Tata Consultancy Services",
+              "Larsen & Toubro"
+            ].map((company, idx) => (
+              <span key={idx} className="shrink-0 hover:text-[#0F8B7D] hover:opacity-100 transition-colors cursor-default">
+                {company}
+              </span>
+            ))}
           </div>
         </div>
       </section>

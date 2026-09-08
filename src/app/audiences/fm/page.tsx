@@ -82,12 +82,12 @@ export default function FacilityManagersJourney() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <span className="text-2xl font-mono font-black text-[#7C3AED]">03</span>
+              <span className="text-2xl font-mono font-black text-[#0F8B7D]">03</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Automated Executive Reporting</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
                 Generate monthly FM review decks with uptime graphs, SLA compliance scores, and energy benchmarks via <strong>Intelligence</strong>.
               </p>
-              <Link href="/intelligence" className="text-xs font-bold text-[#7C3AED] mt-4 inline-flex items-center gap-1 hover:underline">
+              <Link href="/intelligence" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:underline">
                 <span>Explore Intelligence</span>
                 <ArrowRight size={13} />
               </Link>

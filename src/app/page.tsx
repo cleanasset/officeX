@@ -710,7 +710,7 @@ export default function LandingPage() {
           <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">FM Services Marketplace</Link>
           <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">Operate (CAFM)</Link>
           <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">Manage (Property SaaS)</Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#7C3AED]">Intelligence</Link>
+          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
           <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#059669]">Managed Services</Link>
           <Link href="/platform" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Platform Core</Link>
           <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Resources &amp; Insights</Link>
@@ -1118,8 +1118,8 @@ export default function LandingPage() {
                 benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
                 audience: "For: Owners without in-house FM",
                 image: "/images/card_managed_hd.jpg",
-                bgColor: "bg-[#7C3AED]",
-                arrowColor: "text-[#7C3AED]",
+                bgColor: "bg-[#0F8B7D]",
+                arrowColor: "text-[#0F8B7D]",
                 href: "/managed-services",
                 iconType: "arrow",
               },
@@ -1130,8 +1130,8 @@ export default function LandingPage() {
                 benefits: ["Portfolio NOI & WALE dashboards", "Energy benchmarking & ESG reports", "Predictive maintenance forecasting"],
                 audience: "For: Asset Managers, REITs, CFOs",
                 image: "/images/card_ai_hd.jpg",
-                bgColor: "bg-[#DB2777]",
-                arrowColor: "text-[#DB2777]",
+                bgColor: "bg-[#0D7A6E]",
+                arrowColor: "text-[#0D7A6E]",
                 href: "/intelligence",
                 iconType: "sparkle",
               },
@@ -1753,11 +1753,11 @@ export default function LandingPage() {
 
           {/* 3. 1,000+ */}
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0">
-              <Layers className="w-6 h-6 text-[#7C3AED]" />
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+              <Layers className="w-6 h-6 text-[#0F8B7D]" />
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#7C3AED] tracking-tight">1,000+</div>
+              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">1,000+</div>
               <div className="text-xs font-bold text-slate-500 leading-tight">Buildings Managed</div>
             </div>
           </div>

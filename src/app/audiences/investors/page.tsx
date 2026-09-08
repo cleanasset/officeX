@@ -39,7 +39,7 @@ export default function InvestorsREITsJourney() {
           label: "Book Fund Walkthrough",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         visualPlaceholderTitle="INSTITUTIONAL INVESTOR PORTAL"
         visualMetrics={[
           { label: "Portfolio Yield", value: "8.6%" },
@@ -58,12 +58,12 @@ export default function InvestorsREITsJourney() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <span className="text-2xl font-mono font-black text-[#7C3AED]">01</span>
+              <span className="text-2xl font-mono font-black text-[#0F8B7D]">01</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Fund NOI &amp; WALE Analytics</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
                 Live executive dashboards tracking rent collection efficiency, vacancy velocity, and Weighted Average Lease Expiry via <strong>Intelligence</strong>.
               </p>
-              <Link href="/intelligence" className="text-xs font-bold text-[#7C3AED] mt-4 inline-flex items-center gap-1 hover:underline">
+              <Link href="/intelligence" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:underline">
                 <span>Explore Intelligence</span>
                 <ArrowRight size={13} />
               </Link>
@@ -82,12 +82,12 @@ export default function InvestorsREITsJourney() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <span className="text-2xl font-mono font-black text-[#0F8B7D]">03</span>
+              <span className="text-2xl font-mono font-black text-[#0D7A6E]">03</span>
               <h3 className="text-base font-black text-gray-900 mt-2">Automated BRSR &amp; GRESB</h3>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
                 Export verified Scope 1 &amp; 2 utility metrics and building sustainability scores compliant with global ESG, BRSR, and GRESB frameworks.
               </p>
-              <Link href="/platform" className="text-xs font-bold text-[#0F8B7D] mt-4 inline-flex items-center gap-1 hover:underline">
+              <Link href="/platform" className="text-xs font-bold text-[#0D7A6E] mt-4 inline-flex items-center gap-1 hover:underline">
                 <span>Explore Platform</span>
                 <ArrowRight size={13} />
               </Link>
@@ -107,7 +107,7 @@ export default function InvestorsREITsJourney() {
           label: "Talk to Institutional Team",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
       />
 
       <EnquirySlideIn

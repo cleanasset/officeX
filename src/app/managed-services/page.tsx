@@ -12,26 +12,64 @@ import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
 
-/* ─── Pain-point slider lines ─── */
-const heroSlides = [
-  { before: "so much", after: "Zero", text: "Managing a building is {slot} work" },
-  { before: "always", after: "Never", text: "I {slot} worry about compliance notices" },
-  { before: "most of", after: "None of", text: "I spend {slot} my time chasing FM vendors" },
-  { before: "constant", after: "Zero", text: "Tenant complaints are a {slot} headache" },
+/* ─── Pain-point & Platform Prevention Slides ─── */
+interface HeroSlide {
+  id: string;
+  tabLabel: string;
+  prefix: string;
+  pain: string;
+  resolution: string;
+  proof: string;
+}
+
+const heroSlides: HeroSlide[] = [
+  {
+    id: "vendors",
+    tabLabel: "Vendor Chaos",
+    prefix: "Managing a building is",
+    pain: "constant vendor chasing",
+    resolution: "Zero Headache with Guaranteed SLAs",
+    proof: "On-site engineers + QR checkpoints + contractually enforced SLA penalty credits prevent all vendor chaos."
+  },
+  {
+    id: "compliance",
+    tabLabel: "Compliance Risks",
+    prefix: "Statutory compliance is",
+    pain: "a fear of notices & fines",
+    resolution: "100% Guaranteed Zero Notice Penalties",
+    proof: "Automated 60-day renewal radar + dedicated municipal liaison engineers eliminate all statutory risks."
+  },
+  {
+    id: "tenants",
+    tabLabel: "Tenant Complaints",
+    prefix: "Tenant maintenance is",
+    pain: "slow & frustrating",
+    resolution: "15-Min Response via QR Helpdesk",
+    proof: "Instant QR ticketing directly routes to certified on-site technicians with strict 15-minute response SLAs."
+  },
+  {
+    id: "billing",
+    tabLabel: "Hidden Markups",
+    prefix: "Operational billing is",
+    pain: "opaque with markups",
+    resolution: "100% Open-Book Pass-Through",
+    proof: "Zero contractor markups. You pay direct actuals with an institutional monthly MIS audit by the 5th."
+  }
 ];
 
 export default function ManagedServicesPage() {
   const [slideInOpen, setSlideInOpen] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    const t = setInterval(() => setActiveSlide((p) => (p + 1) % heroSlides.length), 4000);
+    if (isPaused) return;
+    const t = setInterval(() => setActiveSlide((p) => (p + 1) % heroSlides.length), 5500);
     return () => clearInterval(t);
-  }, []);
+  }, [isPaused]);
 
   const slide = heroSlides[activeSlide];
-  const parts = slide.text.split("{slot}");
 
   const services = [
     { icon: Building2, title: "Turnkey Property Management", desc: "Complete operational stewardship — rent collection, tenant handover, fit-out oversight, and asset preservation across your entire portfolio.", color: "emerald" },
@@ -76,78 +114,118 @@ export default function ManagedServicesPage() {
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <MarketingHeader activePath="/managed-services" />
 
-      {/* ═══ HERO — NativeSutra-inspired pain-point slider ═══ */}
-      <section className="relative w-full overflow-hidden">
-        {/* Background image */}
+      {/* ═══ HERO — Compact, Elegant NativeSutra-Inspired Hero ═══ */}
+      <section 
+        className="relative w-full overflow-hidden"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
+        {/* Background image with refined dark gradient */}
         <div className="absolute inset-0 z-0">
-          <Image src="/images/managed_services_hero.jpg" alt="Building Management" fill priority className="object-cover" sizes="100vw" />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/80 to-emerald-950/75" />
+          <Image 
+            src="/images/managed_services_hero.jpg" 
+            alt="Building Management" 
+            fill 
+            priority 
+            className="object-cover object-center" 
+            sizes="100vw" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/90 to-slate-950/80" />
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 py-24 sm:py-32 lg:py-36">
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 pb-12 sm:pt-9 sm:pb-14 lg:pt-10 lg:pb-16">
           <div className="max-w-3xl">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 backdrop-blur-sm text-emerald-300 text-[11px] font-extrabold uppercase tracking-widest mb-6">
-              <Shield size={13} /> Managed Services
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 backdrop-blur-sm text-teal-300 text-[11px] font-bold uppercase tracking-wider mb-4">
+              <Shield size={12} className="text-teal-400" />
+              <span>Turnkey Managed Services &amp; Property Stewardship</span>
             </div>
 
-            {/* Animated headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[56px] font-black text-white leading-[1.1] tracking-tight mb-3 min-h-[140px] sm:min-h-[120px]">
-              <span key={activeSlide} className="inline animate-fadeIn">
-                {parts[0]}
+            {/* Dynamic Headline with Refined Typography & Clean Single-Line Strikethrough */}
+            <div className="min-h-[105px] sm:min-h-[95px] mb-3">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-bold text-white tracking-tight leading-[1.25]">
+                <span>{slide.prefix} </span>
                 <span className="relative inline-block mx-1">
-                  <span className="line-through text-white/40 decoration-red-400 decoration-2">{slide.before}</span>
-                  <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-sm sm:text-base font-black px-3 py-0.5 rounded-md whitespace-nowrap shadow-lg">
-                    {slide.after}
+                  <span className="line-through text-white/40 decoration-rose-400 decoration-2 font-medium">
+                    {slide.pain}
                   </span>
                 </span>
-                {parts[1]}
-              </span>
-            </h1>
+                <br />
+                <span className="text-teal-400 font-extrabold inline-flex items-center gap-2 mt-1">
+                  <CheckCircle2 size={24} className="text-teal-400 shrink-0" />
+                  {slide.resolution}
+                </span>
+              </h1>
+            </div>
 
-            <p className="text-base sm:text-lg text-white/80 font-medium max-w-xl mt-8 mb-10 leading-relaxed">
-              Your buildings, our team, your rules. You see everything. We do everything.
-              SLA-backed property & facility management with complete digital transparency.
+            {/* Clean Subtitle */}
+            <p className="text-sm sm:text-base text-slate-300 font-normal max-w-2xl mb-5 leading-relaxed">
+              Your buildings, our team, your rules. SLA-backed property stewardship and on-ground IFM with contractually guaranteed zero operational slip-ups.
             </p>
 
-            {/* CTAs */}
-            <div className="flex flex-wrap gap-4">
+            {/* Compact Platform Guarantee Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-xl bg-slate-900/80 border border-teal-500/30 backdrop-blur-md mb-6 text-xs text-slate-200">
+              <div className="flex items-center gap-1.5 shrink-0 font-bold text-teal-300">
+                <ShieldCheck size={15} className="text-teal-400 shrink-0" />
+                <span>OfficeX Platform Guarantee:</span>
+              </div>
+              <p className="text-slate-300 font-normal leading-normal">
+                {slide.proof}
+              </p>
+            </div>
+
+            {/* Sleek Pain-Point Switcher Tabs */}
+            <div className="flex flex-wrap items-center gap-2 mb-7">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1 hidden sm:inline">
+                Common Pain Points:
+              </span>
+              {heroSlides.map((s, i) => (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveSlide(i)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    i === activeSlide
+                      ? "bg-[#0F8B7D] text-white shadow-sm"
+                      : "bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 border border-white/5"
+                  }`}
+                >
+                  {s.tabLabel}
+                </button>
+              ))}
+            </div>
+
+            {/* High-Converting CTAs */}
+            <div className="flex flex-wrap items-center gap-3.5 mb-8">
               <button
                 onClick={() => setSlideInOpen(true)}
-                className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
+                className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
               >
-                Schedule Building Audit <ArrowRight size={16} />
+                Schedule Building Audit <ArrowRight size={15} />
               </button>
               <Link
                 href="/operate"
-                className="px-8 py-3.5 border border-white/25 hover:border-white/50 text-white font-bold text-sm rounded-xl backdrop-blur-sm hover:bg-white/10 transition-all flex items-center gap-2"
+                className="px-6 py-2.5 border border-white/20 hover:border-white/40 text-white font-semibold text-xs sm:text-sm rounded-xl backdrop-blur-sm hover:bg-white/10 transition-all flex items-center gap-2"
               >
                 Explore Self-Managed SaaS
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/10">
+            {/* Compact Key Stats Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-white/10">
               {[
                 { value: "99.8%", label: "On-Ground SLA" },
                 { value: "18%", label: "Avg Cost Savings" },
                 { value: "50+", label: "Buildings Managed" },
-                { value: "24/7", label: "Emergency Response" },
+                { value: "24/7", label: "Emergency Desk" },
               ].map((s, i) => (
                 <div key={i}>
-                  <div className="text-2xl font-black text-emerald-400">{s.value}</div>
-                  <div className="text-xs text-white/60 font-semibold mt-0.5">{s.label}</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-teal-400">{s.value}</div>
+                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
 
-        {/* Slide indicators */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {heroSlides.map((_, i) => (
-            <button key={i} onClick={() => setActiveSlide(i)} className={`w-2 h-2 rounded-full transition-all cursor-pointer ${i === activeSlide ? "bg-emerald-400 w-6" : "bg-white/30"}`} />
-          ))}
+          </div>
         </div>
       </section>
 
@@ -348,22 +426,28 @@ export default function ManagedServicesPage() {
       </section>
 
       {/* ═══ FINAL CTA ═══ */}
-      <section className="py-20 px-4 sm:px-8 bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-900 text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4">
+      <section className="py-20 px-4 sm:px-8 bg-[#071324] text-white relative overflow-hidden border-t border-slate-800">
+        {/* Subtle radial glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#0F8B7D]/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-white">
             Ready for world-class, hassle-free property management?
           </h2>
-          <p className="text-emerald-100 text-sm sm:text-base mb-8 max-w-xl mx-auto">
+          <p className="text-slate-300 text-sm sm:text-base mb-8 max-w-xl mx-auto">
             Schedule a physical building audit with our commercial engineering team today. No commitment, no cost.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <button
               onClick={() => setSlideInOpen(true)}
-              className="px-8 py-3.5 bg-white text-emerald-800 font-bold text-sm rounded-xl shadow-lg hover:shadow-xl hover:bg-emerald-50 transition-all cursor-pointer flex items-center gap-2"
+              className="px-8 py-3.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
             >
               Schedule Property Audit <ArrowRight size={16} />
             </button>
-            <a href="tel:+919999999999" className="px-8 py-3.5 border border-white/30 hover:border-white/60 text-white font-bold text-sm rounded-xl backdrop-blur-sm hover:bg-white/10 transition-all flex items-center gap-2">
+            <a 
+              href="tel:+919999999999" 
+              className="px-8 py-3.5 border border-slate-700 hover:border-slate-500 text-slate-200 font-bold text-sm rounded-xl backdrop-blur-sm hover:bg-white/5 transition-all flex items-center gap-2"
+            >
               <Phone size={15} /> Talk to Our Team
             </a>
           </div>

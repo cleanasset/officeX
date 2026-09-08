@@ -25,13 +25,13 @@ export default function IntelligencePage() {
       {/* Universal Sticky Marketing Header */}
       <MarketingHeader activePath="/intelligence" />
 
-      {/* Phase 2 Transparency Banner */}
-      <div className="bg-purple-50 border-b border-purple-200 py-2.5 px-4 text-center text-xs text-purple-900 font-medium">
+      {/* AI Roadmap Transparency Banner */}
+      <div className="bg-amber-50 border-b border-amber-200 py-2.5 px-4 text-center text-xs text-amber-900 font-medium">
         <span className="inline-flex items-center gap-1.5 font-bold">
-          <Info size={14} className="text-purple-600" />
-          Roadmap Transparency:
+          <Info size={14} className="text-amber-600" />
+          AI Roadmap:
         </span>{" "}
-        Core Analytics &amp; ESG are live. Advanced Predictive AI features roll out in H2 2026 as operational telemetry accumulates.
+        Core Analytics, WALE, CAM Audits &amp; ESG telemetry are live. Advanced Predictive AI &amp; Natural Language Assistant are <span className="inline-block px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-black text-[10px] uppercase border border-amber-300 ml-1">Coming Soon</span>.
       </div>
 
       {/* Hero Section */}
@@ -48,7 +48,7 @@ export default function IntelligencePage() {
           label: "Raise an Enquiry",
           onClick: () => setSlideInOpen(true)
         }}
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         visualPlaceholderTitle="OFFICEX PORTFOLIO INTELLIGENCE ENGINE"
         visualMetrics={[
           { label: "Portfolio NOI", value: "₹14.2 Cr" },
@@ -60,7 +60,7 @@ export default function IntelligencePage() {
       {/* Problem / Solution */}
       <ProblemSolution
         moduleName="Intelligence"
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         withoutItems={[
           "Siloed operational data trapped across paper logbooks, utility bills, and disconnected Excel sheets.",
           "Zero real-time visibility into portfolio-wide NOI, Net Absorption, or Weighted Average Lease Expiry (WALE).",
@@ -81,7 +81,7 @@ export default function IntelligencePage() {
       <FeatureGrid
         title="Institutional Analytics &amp; ESG Intelligence"
         subtitle="Designed for asset managers, investment funds, and sustainability directors."
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         features={[
           {
             icon: LineChart,
@@ -130,7 +130,7 @@ export default function IntelligencePage() {
 
       {/* Use Cases */}
       <UseCaseSection
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         useCases={[
           {
             audience: "Private Equity Real Estate Funds",
@@ -152,7 +152,7 @@ export default function IntelligencePage() {
 
       {/* Pricing Table */}
       <PricingTable
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         title="Intelligence Pricing"
         subtitle="Portfolio-level analytics tiers designed for commercial asset owners and institutional investment funds."
         tiers={[
@@ -207,7 +207,7 @@ export default function IntelligencePage() {
 
       {/* Onboarding Timeline */}
       <OnboardingTimeline
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         steps={[
           {
             step: "01",
@@ -260,7 +260,7 @@ export default function IntelligencePage() {
 
       {/* Final CTA */}
       <FinalCTABand
-        accentColor="#7C3AED"
+        accentColor="#0F8B7D"
         headline="Ready to turn operational data into institutional alpha?"
         subheadline="Join institutional owners and asset managers who rely on OfficeX Intelligence for high-conviction decision making."
         primaryCta={{
