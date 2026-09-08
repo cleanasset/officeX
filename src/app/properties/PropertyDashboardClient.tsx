@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { 
   Building, 
   ShieldCheck, 
+  ShieldAlert,
   AlertTriangle, 
   Calendar, 
   ClipboardList, 
@@ -216,6 +217,30 @@ export default function PropertyDashboardClient({
         </div>
       </div>
 
+      {/* Time-Sensitive Statutory Renewal Alert Strip (per UI/UX Review) */}
+      <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+            <ShieldAlert size={18} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span className="font-black text-amber-950 text-xs uppercase tracking-wider">Urgent Statutory Compliance Action</span>
+            </div>
+            <p className="text-amber-800 text-xs font-medium mt-0.5">
+              Fire Safety NOC &amp; Lift Inspector Renewal due in <strong className="text-amber-950 font-black">3 days</strong> for Apex Business Tower (Phase 1).
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/properties/compliance"
+          className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs text-center"
+        >
+          Review &amp; Renew NOC →
+        </Link>
+      </div>
+
       {/* BLOCK 1: KPI BENTO GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         
@@ -283,6 +308,63 @@ export default function PropertyDashboardClient({
           </div>
         </Link>
 
+      </div>
+
+      {/* RECEIVABLES AGEING & RECOVERY LEDGER (per UI/UX Review Finding 2.3) */}
+      <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gray-50 pb-3">
+          <div>
+            <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider block">Collections &amp; Liquidity</span>
+            <h3 className="text-base font-bold text-gray-900 mt-0.5">Receivables Ageing Analysis (Last 90 Days)</h3>
+          </div>
+          <Link
+            href="/properties/collections"
+            className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
+          >
+            Full Invoice Ledger <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 0-30 Days Current */}
+          <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-bold text-emerald-900">0–30 Days (Current / On-Time)</span>
+              <span className="font-black text-emerald-700">92.4%</span>
+            </div>
+            <div className="text-xl font-black text-emerald-950">₹42,80,450</div>
+            <div className="w-full bg-emerald-200/60 h-2 rounded-full overflow-hidden mt-2.5">
+              <div className="bg-emerald-600 h-full rounded-full" style={{ width: "92.4%" }} />
+            </div>
+            <span className="text-[10px] text-emerald-700 font-semibold mt-1.5 block">14 Corporate Leases Cleared</span>
+          </div>
+
+          {/* 31-60 Days Follow-up */}
+          <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-bold text-amber-900">31–60 Days (Grace Period)</span>
+              <span className="font-black text-amber-700">6.8%</span>
+            </div>
+            <div className="text-xl font-black text-amber-950">₹3,15,000</div>
+            <div className="w-full bg-amber-200/60 h-2 rounded-full overflow-hidden mt-2.5">
+              <div className="bg-amber-500 h-full rounded-full" style={{ width: "6.8%" }} />
+            </div>
+            <span className="text-[10px] text-amber-700 font-semibold mt-1.5 block">2 Leases Pending Reconciliation</span>
+          </div>
+
+          {/* 61-90+ Days Overdue */}
+          <div className="bg-rose-50/60 border border-rose-100 rounded-xl p-4">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-bold text-rose-900">61–90+ Days (Overdue Notice)</span>
+              <span className="font-black text-rose-700">0.8%</span>
+            </div>
+            <div className="text-xl font-black text-rose-950">₹45,200</div>
+            <div className="w-full bg-rose-200/60 h-2 rounded-full overflow-hidden mt-2.5">
+              <div className="bg-rose-500 h-full rounded-full" style={{ width: "0.8%" }} />
+            </div>
+            <span className="text-[10px] text-rose-700 font-semibold mt-1.5 block">Statutory Reminder Dispatched</span>
+          </div>
+        </div>
       </div>
 
       {/* PORTFOLIO PROPERTY BUILDINGS LIST / EMPTY STATE */}

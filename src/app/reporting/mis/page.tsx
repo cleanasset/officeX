@@ -4,8 +4,9 @@ import { Download, Send, CheckCircle, FileText, Check } from "lucide-react";
 
 export default function MonthlyMISReportGenerator() {
   const [property, setProperty] = useState("Apex Business Tower");
-  const [month, setMonth] = useState("October");
-  const [year, setYear] = useState("2024");
+  const [timeframe, setTimeframe] = useState("Last 30 Days (Trailing)");
+  const [month, setMonth] = useState("September");
+  const [year, setYear] = useState("2026");
 
   const [includeExec, setIncludeExec] = useState(true);
   const [includeSla, setIncludeSla] = useState(true);
@@ -18,7 +19,7 @@ export default function MonthlyMISReportGenerator() {
   const [toast, setToast] = useState<string | null>(null);
 
   const handleGenerate = () => {
-    setToast("Generated live MIS preview report for October 2024!");
+    setToast(`Generated live MIS preview report for ${timeframe}!`);
     setTimeout(() => setToast(null), 3000);
   };
 
@@ -27,10 +28,15 @@ export default function MonthlyMISReportGenerator() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  const handleExport = (format: "PDF" | "XLSX" | "CSV") => {
+    setToast(`Exporting ${property} MIS Report as .${format.toLowerCase()} (${timeframe})...`);
+    setTimeout(() => setToast(null), 3000);
+  };
+
   return (
     <div className="flex flex-col gap-6 font-sans">
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-700 animate-in slide-in-from-bottom duration-200">
           <CheckCircle size={16} className="text-emerald-400" />
           <span>{toast}</span>
         </div>
@@ -58,35 +64,21 @@ export default function MonthlyMISReportGenerator() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
-                  MONTH
-                </label>
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 bg-white"
-                >
-                  <option>October</option>
-                  <option>September</option>
-                  <option>August</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
-                  YEAR
-                </label>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 bg-white"
-                >
-                  <option>2024</option>
-                  <option>2023</option>
-                </select>
-              </div>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+                REPORTING TIMEFRAME (AUDIT CADENCE)
+              </label>
+              <select
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 bg-white"
+              >
+                <option>Last 30 Days (Trailing)</option>
+                <option>Q3 FY2026 (Quarterly Pack)</option>
+                <option>Month to Date</option>
+                <option>Previous Full Month (August 2026)</option>
+                <option>Year to Date (FY2026)</option>
+              </select>
             </div>
 
             {/* Include Sections */}
@@ -108,7 +100,7 @@ export default function MonthlyMISReportGenerator() {
                     type="checkbox"
                     checked={sec.state}
                     onChange={(e) => sec.set(e.target.checked)}
-                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    className="w-4 h-4 accent-[#0F8B7D] cursor-pointer"
                   />
                 </div>
               ))}
@@ -116,44 +108,66 @@ export default function MonthlyMISReportGenerator() {
 
             <button
               onClick={handleGenerate}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center justify-center gap-2 transition-colors"
             >
-              🔄 Generate Report Preview
+              🔄 Refresh MIS Report Preview
             </button>
           </div>
 
-          {/* Distribution Settings Box */}
+          {/* Distribution & Multi-Format Exports Box */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">DISTRIBUTION SETTINGS</h3>
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">DISTRIBUTION &amp; EXPORTS</h3>
 
             <input
               value={recipients}
               onChange={(e) => setRecipients(e.target.value)}
               placeholder="Enter recipient emails (comma separated)"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:outline-none focus:border-blue-600"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
             />
 
             <div className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs text-gray-700">
-              <span className="flex items-center gap-1.5">🕒 Schedule Auto-Send (Monthly)</span>
+              <span className="flex items-center gap-1.5">🕒 Schedule Auto-Send (Monthly Cadence)</span>
               <input
                 type="checkbox"
                 checked={autoSend}
                 onChange={(e) => setAutoSend(e.target.checked)}
-                className="w-4 h-4 accent-blue-600 cursor-pointer"
+                className="w-4 h-4 accent-[#0F8B7D] cursor-pointer"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <button className="py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5">
-                <Download size={13} /> Download PDF
-              </button>
-              <button
-                onClick={handleDistribute}
-                className="py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <Send size={13} /> Distribute Now
-              </button>
+            {/* Export Format Actions: PDF, XLSX, CSV */}
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                DOWNLOAD FORMATS
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => handleExport("PDF")}
+                  className="py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download size={12} /> PDF
+                </button>
+                <button
+                  onClick={() => handleExport("XLSX")}
+                  className="py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-xs font-bold text-emerald-800 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download size={12} /> XLSX
+                </button>
+                <button
+                  onClick={() => handleExport("CSV")}
+                  className="py-2.5 rounded-xl border border-teal-200 bg-teal-50/50 hover:bg-teal-50 text-xs font-bold text-[#0F8B7D] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download size={12} /> CSV
+                </button>
+              </div>
             </div>
+
+            <button
+              onClick={handleDistribute}
+              className="w-full py-2.5 rounded-xl bg-[#0A1829] hover:bg-[#071324] text-white text-xs font-bold shadow-sm cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Send size={13} /> Distribute to Owners &amp; Board
+            </button>
           </div>
         </div>
 

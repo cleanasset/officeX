@@ -40,7 +40,7 @@ export default function FMVendorsJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        bgImage="/images/card_fm_hd.jpg"
+        bgImage="/images/work_fm_technician.jpg"
         visualPlaceholderTitle="VENDOR RFQ DISPATCH CONSOLE"
         visualMetrics={[
           { label: "Active RFQ Pool", value: "₹48.2L" },

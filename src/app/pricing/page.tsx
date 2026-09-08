@@ -48,7 +48,7 @@ export default function PricingPage() {
         subheadline="From single properties to multi-region commercial portfolios. Choose between flexible plan cards or explore the full module-by-module capability matrix."
         primaryCta={{ label: "Start Free", href: "/signup" }}
         secondaryCta={{ label: "Talk to Sales", href: "/contact" }}
-        bgImage="/images/officex_luxury_twilight_campus.jpg"
+        bgImage="/images/work_pricing_agreement.jpg"
         visualMetrics={[
           { label: "Transparent Tiers", value: "3 Plans" },
           { label: "Escrow Protection", value: "100%" },
@@ -138,7 +138,7 @@ export default function PricingPage() {
                   </div>
                   <div className="flex flex-col gap-2 mt-8">
                     <button 
-                      onClick={() => router.push('/demo?plan=professional')}
+                      onClick={() => router.push('/signup?plan=professional')}
                       className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md"
                     >
                       Get Started
@@ -293,7 +293,7 @@ export default function PricingPage() {
                       <td className="pt-5 text-center bg-teal-50/40 rounded-b-xl px-3">
                         <button
                           type="button"
-                          onClick={() => router.push("/demo?plan=professional")}
+                          onClick={() => router.push("/signup?plan=professional")}
                           className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-sm"
                         >
                           Get Started

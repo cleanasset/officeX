@@ -1,9 +1,17 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Star, CheckCircle, Clock } from "lucide-react";
+import { Star, CheckCircle, Clock, DollarSign, ArrowRight, Zap, CheckCircle2, Wallet, ShieldCheck } from "lucide-react";
 
 export default function VendorPortalDashboard() {
+  const [toast, setToast] = useState<string | null>(null);
+  const [earlyPayoutRequested, setEarlyPayoutRequested] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const performance = [
     { label: "Quality", pct: 90, color: "bg-[#0F8B7D]" },
     { label: "Timeliness", pct: 85, color: "bg-blue-600" },
@@ -33,35 +41,132 @@ export default function VendorPortalDashboard() {
 
   return (
     <div className="flex flex-col gap-6 font-sans">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-800">
+          <CheckCircle2 size={16} className="text-teal-400" />
+          <span>{toast}</span>
+        </div>
+      )}
+
       {/* Vendor Banner */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle size={20} className="text-emerald-600" /></div>
+          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+            <CheckCircle size={20} className="text-emerald-600" />
+          </div>
           <div>
-            <div className="flex items-center gap-2"><span className="text-sm font-bold text-gray-900">Verified Gold Vendor</span><CheckCircle size={14} className="text-[#0F8B7D]" /></div>
-            <div className="flex items-center gap-3 text-[10px] text-gray-500"><span>● Status: Active</span><span className="flex items-center gap-1"><Star size={10} className="text-amber-500 fill-amber-500" /> Rating: 4.4 (23 reviews)</span><span>Profile: 100% Complete</span></div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900">Verified Gold Vendor</span>
+              <CheckCircle size={14} className="text-[#0F8B7D]" />
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-500 mt-0.5">
+              <span>● Status: Active</span>
+              <span className="flex items-center gap-1">
+                <Star size={10} className="text-amber-500 fill-amber-500" /> Rating: 4.4 (23 reviews)
+              </span>
+              <span>Profile: 100% Complete</span>
+            </div>
           </div>
         </div>
-        <button className="px-4 py-2 rounded-xl border border-[#0F8B7D] text-xs font-bold text-[#0F8B7D] cursor-pointer">Update Profile</button>
+        <button 
+          onClick={() => showToast("Vendor profile credentials confirmed verified with GST & PSARA clearance.")}
+          className="px-4 py-2 rounded-xl border border-[#0F8B7D] text-xs font-bold text-[#0F8B7D] hover:bg-teal-50 cursor-pointer transition-colors"
+        >
+          View Verified Profile
+        </button>
+      </div>
+
+      {/* VENDOR WALLET & ESCROW PAYOUT SECTION (per UI/UX Review Finding 7.3) */}
+      <div className="bg-gradient-to-br from-[#071324] to-[#0A1829] rounded-2xl border border-slate-800 p-6 text-white shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300 shrink-0">
+              <Wallet size={20} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-teal-300 uppercase tracking-wider block">Vendor Escrow Wallet</span>
+              <h3 className="text-lg font-black text-white">Guaranteed Payout Balance</h3>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 rounded-full self-start sm:self-auto">
+            ● 0-Day Dispute Escrow
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 my-5">
+          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Withdrawable Balance</span>
+            <span className="text-2xl font-black text-emerald-400 mt-1 block">₹2,45,000</span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Net of 8.5% OfficeX fee</span>
+          </div>
+          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Gross Billed (Active WOs)</span>
+            <span className="text-2xl font-black text-white mt-1 block">₹2,67,750</span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">4 Verified work orders</span>
+          </div>
+          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">OfficeX Platform Fee</span>
+            <span className="text-2xl font-black text-teal-300 mt-1 block">₹22,750</span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">8.5% Standard Commission</span>
+          </div>
+          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Scheduled Auto-Transfer</span>
+              <span className="text-sm font-black text-white mt-1 block">Friday, 12:00 PM</span>
+              <span className="text-[10px] text-emerald-400 font-semibold block">HDFC Bank · A/c *8829</span>
+            </div>
+            <button
+              onClick={() => {
+                setEarlyPayoutRequested(true);
+                showToast("Instant T+1 settlement requested. Funds will be deposited within 24 hours.");
+              }}
+              disabled={earlyPayoutRequested}
+              className="mt-2 w-full py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7368] disabled:bg-slate-700 text-white font-bold text-[10px] transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <Zap size={11} /> {earlyPayoutRequested ? "Settlement Initiated" : "Request Instant T+1 Payout"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* KPIs + Performance */}
-      <div className="grid grid-cols-[1fr_1fr_340px] gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_340px] gap-4">
         <div className="grid grid-rows-2 gap-3">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5"><p className="text-[10px] font-bold text-gray-400 uppercase">Active Work Orders</p><p className="text-3xl font-black text-gray-900">4</p></div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5"><p className="text-[10px] font-bold text-gray-400 uppercase">Monthly Earnings</p><p className="text-2xl font-black text-gray-900">₹3,20,000</p></div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Active Work Orders</p>
+            <p className="text-3xl font-black text-gray-900">4</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Monthly Earnings</p>
+            <p className="text-2xl font-black text-gray-900">₹3,20,000</p>
+          </div>
         </div>
         <div className="grid grid-rows-2 gap-3">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5"><p className="text-[10px] font-bold text-gray-400 uppercase">Matched RFQs ●</p><p className="text-3xl font-black text-gray-900">6</p><p className="text-[10px] font-bold text-[#0F8B7D]">+2 Today</p></div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-5"><p className="text-[10px] font-bold text-gray-400 uppercase">Quality Score</p><div className="flex items-center gap-2"><span className="text-2xl font-black text-gray-900">88</span><span className="text-xs text-gray-500">Top 15% Vendor</span></div></div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Matched RFQs ●</p>
+            <p className="text-3xl font-black text-gray-900">6</p>
+            <p className="text-[10px] font-bold text-[#0F8B7D]">+2 Today</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Quality Score</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-gray-900">88</span>
+              <span className="text-xs text-gray-500 font-semibold">Top 15% Vendor</span>
+            </div>
+          </div>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <h3 className="text-sm font-bold text-gray-900 mb-3">Performance Radar</h3>
           <div className="space-y-2.5">
             {performance.map((p) => (
               <div key={p.label}>
-                <div className="flex justify-between text-[10px] mb-0.5"><span className="font-semibold text-gray-700">{p.label}</span><span className="font-bold text-gray-900">{p.pct}%</span></div>
-                <div className="w-full h-2 rounded-full bg-gray-200"><div className={`h-full rounded-full ${p.color}`} style={{ width: `${p.pct}%` }} /></div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="font-semibold text-gray-700">{p.label}</span>
+                  <span className="font-bold text-gray-900">{p.pct}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-gray-200">
+                  <div className={`h-full rounded-full ${p.color}`} style={{ width: `${p.pct}%` }} />
+                </div>
               </div>
             ))}
           </div>
@@ -69,20 +174,32 @@ export default function VendorPortalDashboard() {
       </div>
 
       {/* Matched RFQs + Earnings */}
-      <div className="grid grid-cols-[1fr_340px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4"><h2 className="text-base font-bold text-gray-900">New Matched RFQs</h2><button className="text-xs font-semibold text-[#0F8B7D] cursor-pointer">View All</button></div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-gray-900">New Matched RFQs</h2>
+            <Link href="/vendor/rfqs" className="text-xs font-semibold text-[#0F8B7D] cursor-pointer hover:underline">View All</Link>
+          </div>
           <div className="space-y-3">
             {matchedRfqs.map((r) => (
               <div key={r.title} className="border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-bold text-gray-900">{r.title}</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">{r.match} Match</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                      {r.match} Match
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-amber-600 flex items-center gap-1"><Clock size={10} /> {r.deadline}</span>
-                    <button className="px-4 py-2 rounded-lg bg-[#0F8B7D] text-white text-[10px] font-bold cursor-pointer">Quote Now</button>
+                    <span className="text-[10px] text-amber-600 flex items-center gap-1 font-medium">
+                      <Clock size={10} /> {r.deadline}
+                    </span>
+                    <button 
+                      onClick={() => showToast(`Opening RFQ submission desk for ${r.title}...`)}
+                      className="px-4 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-[10px] font-bold cursor-pointer transition-colors"
+                    >
+                      Quote Now
+                    </button>
                   </div>
                 </div>
                 <p className="text-[10px] text-gray-500">🏢 {r.property}  •  💰 Budget: {r.budget}</p>
@@ -90,18 +207,24 @@ export default function VendorPortalDashboard() {
             ))}
           </div>
         </div>
+
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h2 className="text-base font-bold text-gray-900 mb-4">Earnings Trend</h2>
           <div className="flex items-end gap-2 h-24 mb-4">
             {[40, 55, 50, 70, 65].map((h, i) => (
-              <div key={i} className="flex-1 bg-[#0F8B7D]/20 rounded-t" style={{ height: `${h}%` }}><div className="w-full bg-[#0F8B7D] rounded-t" style={{ height: "60%" }} /></div>
+              <div key={i} className="flex-1 bg-[#0F8B7D]/20 rounded-t" style={{ height: `${h}%` }}>
+                <div className="w-full bg-[#0F8B7D] rounded-t" style={{ height: "60%" }} />
+              </div>
             ))}
           </div>
           <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Recent Payouts</p>
           <div className="space-y-2">
             {payouts.map((p, i) => (
               <div key={i} className="flex justify-between text-xs">
-                <div><p className="font-semibold text-gray-900">{p.date}</p><p className="text-[10px] text-gray-500">{p.ref}</p></div>
+                <div>
+                  <p className="font-semibold text-gray-900">{p.date}</p>
+                  <p className="text-[10px] text-gray-500">{p.ref}</p>
+                </div>
                 <span className={`font-bold ${p.color}`}>{p.amount}</span>
               </div>
             ))}
@@ -128,16 +251,33 @@ export default function VendorPortalDashboard() {
                 <th className="py-3">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {workOrders.map((w) => (
-                <tr key={w.id} className="border-b border-gray-100 text-xs">
+                <tr key={w.id} className="text-xs">
                   <td className="py-3.5 pr-3 font-bold text-gray-500">{w.id}</td>
                   <td className="py-3.5 pr-3 font-semibold text-gray-900">{w.client}</td>
                   <td className="py-3.5 pr-3 text-gray-600">{w.property}</td>
-                  <td className="py-3.5 pr-3"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${w.catColor}`}>{w.category}</span></td>
+                  <td className="py-3.5 pr-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${w.catColor}`}>
+                      {w.category}
+                    </span>
+                  </td>
                   <td className="py-3.5 pr-3 text-gray-600">{w.timeline}</td>
-                  <td className="py-3.5 pr-3"><div className="flex items-center gap-2"><div className="w-20 h-2 rounded-full bg-gray-200"><div className="h-full rounded-full bg-[#0F8B7D]" style={{ width: `${w.progress}%` }} /></div><span className="text-[10px] font-bold">{w.progress}%</span></div></td>
-                  <td className="py-3.5"><span className={`text-[10px] font-bold ${w.status === "Completed" ? "text-emerald-600" : w.status === "In Progress" ? "text-[#0F8B7D]" : "text-blue-600"}`}>● {w.status}</span></td>
+                  <td className="py-3.5 pr-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-2 rounded-full bg-gray-200">
+                        <div className="h-full rounded-full bg-[#0F8B7D]" style={{ width: `${w.progress}%` }} />
+                      </div>
+                      <span className="text-[10px] font-bold">{w.progress}%</span>
+                    </div>
+                  </td>
+                  <td className="py-3.5">
+                    <span className={`text-[10px] font-bold ${
+                      w.status === "Completed" ? "text-emerald-600" : w.status === "In Progress" ? "text-[#0F8B7D]" : "text-blue-600"
+                    }`}>
+                      ● {w.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

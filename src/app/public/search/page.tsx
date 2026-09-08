@@ -155,6 +155,106 @@ function PropertySearchContent() {
       image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80",
       lat: 19.0637,
       lng: 72.8631
+    },
+    {
+      id: "prestige-tech-cloud",
+      title: "Prestige Tech Cloud — Cyber Pavilion",
+      buildingName: "Prestige Tech Cloud Campus",
+      location: "Bellary Road, Hebbal / ORR, Bengaluru",
+      subLocation: "Adjoining KIAL Expressway, Bengaluru",
+      area: "8,500 sqft",
+      capacity: "120 Seats",
+      furnishing: "Fully Furnished",
+      price: "₹1.45L",
+      pricePerSqft: "₹110/sq.ft.",
+      pricePerSeat: "₹11,000/seat",
+      propertyScore: 94,
+      readiness: "Immediate Move-in",
+      commuteScore: 92,
+      energyRating: "LEED Platinum",
+      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+      lat: 13.0358,
+      lng: 77.5970
+    },
+    {
+      id: "dlf-cyber-city",
+      title: "DLF Cyber City — Building 10 Tower B",
+      buildingName: "DLF Cyber City Tech Complex",
+      location: "DLF Phase 2, Gurugram, Delhi NCR",
+      subLocation: "Rapid Metro Station Cyber City",
+      area: "12,000 sqft",
+      capacity: "180 Seats",
+      furnishing: "Plug & Play",
+      price: "₹2.25L",
+      pricePerSqft: "₹145/sq.ft.",
+      pricePerSeat: "₹12,500/seat",
+      propertyScore: 96,
+      readiness: "Immediate Move-in",
+      commuteScore: 95,
+      energyRating: "LEED Platinum",
+      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80",
+      lat: 28.4907,
+      lng: 77.0888
+    },
+    {
+      id: "mindspace-hitec",
+      title: "Mindspace IT Park — Building 20 Horizon",
+      buildingName: "Mindspace Madhapur Business Park",
+      location: "HITEC City, Madhapur, Hyderabad",
+      subLocation: "Near Inorbit Mall, HITEC City",
+      area: "7,200 sqft",
+      capacity: "105 Seats",
+      furnishing: "Fully Furnished",
+      price: "₹1.15L",
+      pricePerSqft: "₹92/sq.ft.",
+      pricePerSeat: "₹9,800/seat",
+      propertyScore: 91,
+      readiness: "Move-in Ready (7d)",
+      commuteScore: 89,
+      energyRating: "IGBC Platinum",
+      image: "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80",
+      lat: 17.4399,
+      lng: 78.3807
+    },
+    {
+      id: "panchshil-pune",
+      title: "Panchshil Business Park — Tower A Wing 3",
+      buildingName: "Panchshil Business Park",
+      location: "Balewadi High Street, Baner, Pune",
+      subLocation: "Mumbai-Pune Expressway Connector",
+      area: "5,800 sqft",
+      capacity: "85 Seats",
+      furnishing: "Warm Shell Plus",
+      price: "₹98K",
+      pricePerSqft: "₹98/sq.ft.",
+      pricePerSeat: "₹10,500/seat",
+      propertyScore: 88,
+      readiness: "Available in 15d",
+      commuteScore: 87,
+      energyRating: "LEED Gold",
+      image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80",
+      lat: 18.5756,
+      lng: 73.7744
+    },
+    {
+      id: "gift-tower-one",
+      title: "Brigade IFSC — High-Rise Suite 1204",
+      buildingName: "Brigade International Financial Centre",
+      location: "GIFT SEZ, GIFT City, Gandhinagar",
+      subLocation: "Near GIFT One & Two, GIFT City",
+      area: "6,000 sqft",
+      capacity: "90 Seats",
+      furnishing: "Fully Furnished",
+      price: "₹85K",
+      pricePerSqft: "₹75/sq.ft.",
+      pricePerSeat: "₹8,500/seat",
+      propertyScore: 93,
+      readiness: "Immediate Move-in",
+      commuteScore: 90,
+      energyRating: "IGBC Platinum",
+      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+      lat: 23.1612,
+      lng: 72.6841
     }
   ];
 
@@ -254,6 +354,9 @@ function PropertySearchContent() {
 
     return matchesQuery;
   });
+
+  const isNoResults = filteredProperties.length === 0;
+  const displayProperties = isNoResults ? properties : filteredProperties;
 
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
 
@@ -368,7 +471,7 @@ function PropertySearchContent() {
                 <option value="Bhubaneswar">📍 Bhubaneswar</option>
                 <option value="Goa">📍 Goa</option>
               </optgroup>
-              <optgroup label="🇮🇳 States">
+              <optgroup label="Regional Hubs">
                 <option value="Andhra Pradesh">📍 Andhra Pradesh</option>
                 <option value="Assam">📍 Assam</option>
                 <option value="Bihar">📍 Bihar</option>
@@ -458,13 +561,41 @@ function PropertySearchContent() {
                 Commercial Workspaces in {city ? `${city}` : (searchQuery || "All Metro Hubs")}
               </h1>
               <p className="text-[11px] text-gray-400 mt-0.5">
-                Showing {filteredProperties.length} verified Grade-A landmark towers
+                {isNoResults ? (
+                  <span className="text-teal-700 font-semibold">
+                    Showing {displayProperties.length} featured landmark Grade-A spaces across key commercial hubs
+                  </span>
+                ) : (
+                  `Showing ${filteredProperties.length} verified Grade-A landmark towers`
+                )}
               </p>
             </div>
+            {isNoResults && (
+              <button
+                onClick={() => { setCity("all"); setSearchQuery(""); }}
+                className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold border border-teal-200 transition-colors cursor-pointer"
+              >
+                Reset Filter
+              </button>
+            )}
           </div>
 
+          {isNoResults && (
+            <div className="bg-teal-50/70 border border-teal-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs text-gray-700 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0">
+                  <Building size={16} />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">Preloaded Verified Grade-A Workspaces</p>
+                  <p className="text-[11px] text-gray-500">Explore landmark towers across Mumbai, Bengaluru, Gurugram, Pune &amp; GIFT City.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3.5 pb-20 md:pb-6">
-            {filteredProperties.map((prop) => {
+            {displayProperties.map((prop) => {
               const isComp = compareList.some((c) => c.id === prop.id);
               const isSelected = selectedProperty?.id === prop.id;
 
@@ -587,7 +718,7 @@ function PropertySearchContent() {
           }`}
         >
           <RealGoogleMap
-            properties={filteredProperties}
+            properties={displayProperties}
             selectedProperty={selectedProperty}
             onSelectProperty={(p) => setSelectedProperty(p)}
           />

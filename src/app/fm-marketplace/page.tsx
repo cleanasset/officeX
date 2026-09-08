@@ -19,7 +19,11 @@ import {
   CheckCircle2,
   Globe,
   HelpCircle,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Layers,
+  DollarSign,
+  TrendingUp,
+  Star
 } from "lucide-react";
 
 export default function FMMarketplacePage() {
@@ -39,7 +43,9 @@ export default function FMMarketplacePage() {
     "Security", 
     "Cleaning", 
     "Fire Safety", 
-    "Pest Control"
+    "Pest Control",
+    "Lifts & Elevators",
+    "Landscaping"
   ];
   
   const cities = [
@@ -178,16 +184,17 @@ export default function FMMarketplacePage() {
         {/* Photorealistic Facility Operations Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="/images/fm_hero_banner.jpg"
-            alt="Facility Management Operations Control Center"
+            src="/images/work_fm_technician.jpg"
+            alt="Skilled Facility Maintenance & HVAC Technician at Work"
             fill
             priority
-            className="object-cover object-center"
+            unoptimized
+            className="object-cover object-center opacity-85"
             sizes="100vw"
           />
-          {/* High-grade Teal-to-Navy Gradient Overlay matching Figma */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0b534c]/94 via-[#0d645c]/90 to-[#1e3a8a]/88 mix-blend-multiply" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/50" />
+          {/* High-grade Teal-to-Navy Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#071324]/90 via-[#0b534c]/80 to-[#071324]/65 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/50 via-transparent to-[#071324]/70" />
         </div>
 
         {/* Content Container */}
@@ -516,6 +523,144 @@ export default function FMMarketplacePage() {
               </div>
             </div>
 
+            {/* Card 7: Lifts & Vertical Mobility */}
+            <div 
+              onClick={() => handleCardClick("Lifts & Elevators")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <Layers size={22} className="text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-purple-600 transition-colors">
+                    Lifts &amp; Elevators
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    OEM elevator maintenance, hoistway &amp; ARD testing.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
+                <span>120+ Vendors</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+
+            {/* Card 8: Landscaping & Horticulture */}
+            <div 
+              onClick={() => handleCardClick("Landscaping")}
+              className="bg-white p-7 rounded-2xl shadow-2xs hover:shadow-xl border border-slate-200/80 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0 group-hover:scale-108 transition-transform shadow-2xs">
+                  <Sparkles size={22} className="text-[#0F8B7D]" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-[#0F8B7D] transition-colors">
+                    Landscaping &amp; Greens
+                  </h3>
+                  <p className="text-slate-500 text-xs sm:text-[13px] mt-1.5 leading-relaxed">
+                    Campus horticulture, vertical gardens &amp; irrigation.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-1.5 text-[#0F8B7D] text-xs font-bold group-hover:gap-2.5 transition-all">
+                <span>90+ Vendors</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Marketplace GTV & Commission Ledger (per UI/UX Review Finding 4.3) */}
+          <div className="mt-14 bg-[#071324] rounded-3xl p-6 sm:p-10 border border-slate-800 text-white shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/15 px-3 py-1 rounded-full border border-teal-500/30">
+                  Platform Monetization &amp; Escrow
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white mt-2">
+                  Marketplace GTV &amp; Commission Ledger
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Transparent pass-through commission tracking and escrow settlements across all awarded RFQs.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-teal-300 bg-[#0A1829] px-3.5 py-1.5 rounded-xl border border-slate-700 shrink-0">
+                ● Live Data · Last 30 Days (Q3 FY2026)
+              </span>
+            </div>
+
+            {/* 4 Financial Metric Tiles */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-[#0A1829] p-4 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Marketplace GTV</span>
+                <span className="text-xl font-black text-white mt-1 block">₹28,50,000</span>
+                <span className="text-[10px] text-teal-400 font-semibold mt-0.5 block">+18.2% vs last month</span>
+              </div>
+              <div className="bg-[#0A1829] p-4 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Awarded Work Orders</span>
+                <span className="text-xl font-black text-white mt-1 block">8 Active</span>
+                <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block">12 Under Evaluation</span>
+              </div>
+              <div className="bg-[#0A1829] p-4 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Platform Commission (8.5%)</span>
+                <span className="text-xl font-black text-teal-300 mt-1 block">₹2,42,250</span>
+                <span className="text-[10px] text-emerald-400 font-semibold mt-0.5 block">Auto-retained escrow</span>
+              </div>
+              <div className="bg-[#0A1829] p-4 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Vendor Net Disbursement</span>
+                <span className="text-xl font-black text-emerald-400 mt-1 block">₹26,07,750</span>
+                <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block">Milestone release (91.5%)</span>
+              </div>
+            </div>
+
+            {/* Sample Settlement Row Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                    <th className="pb-2.5">Work Order ID</th>
+                    <th className="pb-2.5">Category</th>
+                    <th className="pb-2.5">Gross Contract</th>
+                    <th className="pb-2.5">OfficeX Fee (8.5%)</th>
+                    <th className="pb-2.5">Vendor Net</th>
+                    <th className="pb-2.5">Vendor SLA</th>
+                    <th className="pb-2.5">Escrow State</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-medium">
+                  <tr>
+                    <td className="py-2.5 font-mono text-white">WO-4491</td>
+                    <td className="py-2.5">Chiller Overhaul (HVAC)</td>
+                    <td className="py-2.5 text-white font-bold">₹8,50,000</td>
+                    <td className="py-2.5 text-teal-300">₹72,250</td>
+                    <td className="py-2.5 text-emerald-400 font-bold">₹7,77,750</td>
+                    <td className="py-2.5 text-amber-300 font-bold">★ 4.9/5</td>
+                    <td className="py-2.5"><span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Milestone 2 Released</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 font-mono text-white">WO-4487</td>
+                    <td className="py-2.5">DG 500kVA Overhaul</td>
+                    <td className="py-2.5 text-white font-bold">₹5,20,000</td>
+                    <td className="py-2.5 text-teal-300">₹44,200</td>
+                    <td className="py-2.5 text-emerald-400 font-bold">₹4,75,800</td>
+                    <td className="py-2.5 text-amber-300 font-bold">★ 4.8/5</td>
+                    <td className="py-2.5"><span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 text-[10px] font-bold">In Progress</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 font-mono text-white">WO-4482</td>
+                    <td className="py-2.5">Fire Line Pressure Audit</td>
+                    <td className="py-2.5 text-white font-bold">₹2,80,000</td>
+                    <td className="py-2.5 text-teal-300">₹23,800</td>
+                    <td className="py-2.5 text-emerald-400 font-bold">₹2,56,200</td>
+                    <td className="py-2.5 text-amber-300 font-bold">★ 5.0/5</td>
+                    <td className="py-2.5"><span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Completed &amp; Settled</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* 5. HOW OFFICEX WORKS (Matching Figma Design) */}

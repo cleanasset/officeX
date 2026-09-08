@@ -40,7 +40,7 @@ export default function InvestorsREITsJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        bgImage="/images/officex_prestige_night_tower.jpg"
+        bgImage="/images/work_intelligence_analytics.jpg"
         visualPlaceholderTitle="INSTITUTIONAL INVESTOR PORTAL"
         visualMetrics={[
           { label: "Portfolio Yield", value: "8.6%" },
@@ -101,7 +101,7 @@ export default function InvestorsREITsJourney() {
         headline="Institutional-grade visibility for your real estate fund."
         subheadline="Schedule a confidential discussion with our institutional solutions director."
         primaryCta={{
-          label: "Request Fund Demo",
+          label: "Explore Fund Analytics",
           href: "/signup"
         }}
         secondaryCta={{

@@ -87,8 +87,8 @@ export default function DiscoverPage() {
         {/* Commercial Workspace Background Banner */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <Image
-            src="/images/officex_hero_atrium_clean.jpg"
-            alt="Commercial Workspace Discovery"
+            src="/images/work_marketplace_leasing.jpg"
+            alt="Commercial Workspace Discovery and Leasing at Work"
             fill
             priority
             unoptimized

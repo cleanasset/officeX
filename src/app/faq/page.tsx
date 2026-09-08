@@ -204,10 +204,10 @@ export default function FAQDirectoryPage() {
                 Contact Solutions Desk
               </Link>
               <Link
-                href="/demo"
+                href="/signup"
                 className="px-5 py-2.5 rounded-xl border border-slate-700 text-white font-black text-xs hover:bg-slate-800 transition-all"
               >
-                Schedule Demo Call
+                Start Free Trial
               </Link>
             </div>
           </div>

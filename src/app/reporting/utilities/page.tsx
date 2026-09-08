@@ -1,9 +1,22 @@
 "use client";
 import React, { useState } from "react";
-import { Download, Calendar, Zap, Droplet, Clock, DollarSign } from "lucide-react";
+import { Download, Calendar, Zap, Droplet, Clock, DollarSign, RefreshCw, CheckCircle } from "lucide-react";
 
 export default function EnergyAndUtilityDashboard() {
   const [timeRange, setTimeRange] = useState("Last 30 Days");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncTime, setSyncTime] = useState("Updated 2 mins ago");
+  const [toast, setToast] = useState<string | null>(null);
+
+  const handleSyncRefresh = () => {
+    setIsSyncing(true);
+    setTimeout(() => {
+      setIsSyncing(false);
+      setSyncTime("Updated just now");
+      setToast("Live BMS telemetry synchronized successfully across all sub-meters!");
+      setTimeout(() => setToast(null), 3000);
+    }, 900);
+  };
 
   const kpis = [
     { label: "Electricity", value: "45,200", unit: "kWh", change: "↓ 2.4% vs last mo", icon: <Zap size={16} className="text-blue-500" />, iconBg: "bg-blue-50" },
@@ -29,10 +42,32 @@ export default function EnergyAndUtilityDashboard() {
 
   return (
     <div className="flex flex-col gap-6 font-sans">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-700 animate-in slide-in-from-bottom duration-200">
+          <CheckCircle size={16} className="text-emerald-400" />
+          <span>{toast}</span>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Energy & Utility</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-gray-900">Energy &amp; Utility</h1>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Live BMS Sync</span>
+              <span className="text-[10px] text-emerald-600 font-normal">· {syncTime}</span>
+              <button
+                onClick={handleSyncRefresh}
+                disabled={isSyncing}
+                className="ml-0.5 p-0.5 hover:bg-emerald-100 rounded text-emerald-700 transition-colors cursor-pointer"
+                title="Sync Live BMS Telemetry"
+              >
+                <RefreshCw size={11} className={isSyncing ? "animate-spin text-emerald-600" : ""} />
+              </button>
+            </div>
+          </div>
           <p className="text-sm text-gray-500 mt-1">Monitor consumption, costs, and efficiency across the portfolio.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -45,7 +80,13 @@ export default function EnergyAndUtilityDashboard() {
             <option>Last 90 Days</option>
             <option>Year to Date</option>
           </select>
-          <button className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
+          <button 
+            onClick={() => {
+              setToast("Exporting Energy & Utility parametric audit report (.XLSX + PDF)...");
+              setTimeout(() => setToast(null), 3500);
+            }}
+            className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+          >
             <Download size={13} /> Export Report
           </button>
         </div>

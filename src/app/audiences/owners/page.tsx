@@ -42,7 +42,7 @@ export default function BuildingOwnersJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        bgImage="/images/officex_luxury_twilight_campus.jpg"
+        bgImage="/images/work_manage_governance.jpg"
         visualPlaceholderTitle="OWNER PORTFOLIO DASHBOARD"
         visualMetrics={[
           { label: "Collection Speed", value: "4 Days" },

@@ -87,8 +87,8 @@ export default function OperationsPage() {
         {/* Commercial Operations Background Banner */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <Image
-            src="/images/officex_hero_platform_tower.jpg"
-            alt="Operations Platform Tower"
+            src="/images/work_operate_cafm.jpg"
+            alt="Commercial Operations and CAFM Maintenance at Work"
             fill
             priority
             unoptimized

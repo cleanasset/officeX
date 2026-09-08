@@ -40,7 +40,7 @@ export default function CorporateOccupiersJourney() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        bgImage="/images/officex_hero_atrium_clean.jpg"
+        bgImage="/images/work_marketplace_leasing.jpg"
         visualPlaceholderTitle="OCCUPIER WORKPLACE PORTAL"
         visualMetrics={[
           { label: "Helpdesk SLA", value: "< 2 Hrs" },
@@ -99,7 +99,7 @@ export default function CorporateOccupiersJourney() {
 
       <FinalCTABand
         headline="Elevate your corporate office operations today."
-        subheadline="Connect with our workplace solutions team for a personalized demo."
+        subheadline="Connect with our workplace solutions team for a tailored operational consultation."
         primaryCta={{
           label: "Start Free Trial",
           href: "/signup"

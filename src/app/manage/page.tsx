@@ -40,7 +40,7 @@ export default function ManagePage() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        bgImage="/images/officex_platform_dark_ecosystem.jpg"
+        bgImage="/images/work_manage_governance.jpg"
         customVisual={
           <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
             <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
