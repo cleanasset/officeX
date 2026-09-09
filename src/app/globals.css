@@ -239,3 +239,78 @@ html, body {
 .animate-core-breathe {
   animation: core-breathe 4s ease-in-out infinite;
 }
+
+/* Connecting lines & downward arrow formation animation */
+@keyframes core-beam-left {
+  0% {
+    stroke-dashoffset: 520;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  45%, 80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  92%, 100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes core-beam-right {
+  0% {
+    stroke-dashoffset: 520;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  45%, 80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  92%, 100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes core-arrow-pulse {
+  0%, 42% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.7);
+  }
+  48% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.15);
+    filter: drop-shadow(0 2px 8px rgba(15, 139, 125, 0.75));
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(2px) scale(1);
+  }
+  90%, 100% {
+    opacity: 0;
+    transform: translateY(0px) scale(0.9);
+  }
+}
+
+.animate-core-beam-left {
+  animation: core-beam-left 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-core-beam-right {
+  animation: core-beam-right 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-core-arrow-pulse {
+  animation: core-arrow-pulse 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center;
+}
+

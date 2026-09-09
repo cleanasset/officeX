@@ -23,8 +23,20 @@ export default function MarketplaceDualShowcase({
 }: MarketplaceDualShowcaseProps) {
   const router = useRouter();
 
-  // 4 PRIMARY FM SERVICES (Single 4-card row)
+  // 4 PRIMARY FM SERVICES (Single 4-card row) - 4 Completely distinct services
   const vendors = [
+    {
+      id: "security-services",
+      category: "Soft FM",
+      image: "/images/showcase_security_guards.jpg",
+      title: "24/7 Manned Security",
+      facilities: "PSARA Uniformed Guards, Biometric Speed Gates & Perimeter Patrol",
+      price: "₹21,000",
+      period: "/ guard / mo",
+      vendorsCount: "310+ Agencies",
+      sla: "PSARA & ESI",
+      linkUrl: "/marketplace?category=security"
+    },
     {
       id: "mep-services",
       category: "Hard FM",
@@ -36,18 +48,6 @@ export default function MarketplaceDualShowcase({
       vendorsCount: "240+ Vendors",
       sla: "15-Min SLA",
       linkUrl: "/marketplace?category=mep"
-    },
-    {
-      id: "security-services",
-      category: "Soft FM",
-      image: "/images/showcase_security_hd.jpg",
-      title: "24/7 Security",
-      facilities: "Manned Guards, Biometric Speed Gates & CCTV Patrol",
-      price: "₹21,000",
-      period: "/ guard / mo",
-      vendorsCount: "310+ Agencies",
-      sla: "PSARA & ESI",
-      linkUrl: "/marketplace?category=security"
     },
     {
       id: "hvac-services",
@@ -75,54 +75,54 @@ export default function MarketplaceDualShowcase({
     }
   ];
 
-  // 4 PRIMARY COMMERCIAL OFFICES (Single 4-card row)
+  // 4 PRIMARY COMMERCIAL OFFICES (Single 4-card row) - 4 Completely distinct space formats
   const offices = [
     {
       id: "apex-bkc",
-      badge: "VERIFIED GRADE A",
-      image: "/images/card_prop_hd.jpg",
-      title: "Apex Business Tower",
+      badge: "GRADE-A TOWER",
+      image: "/images/showcase_single_tower.jpg",
+      title: "Apex Corporate Tower",
       location: "BKC, Mumbai",
-      facilities: "60 Seats · 4,500 sq.ft. · DG Backup · Fiber Internet · 4 Car Parks",
-      price: "₹1,25,000",
+      facilities: "120 Seats · 8,500 sq.ft. · Triple-Height Lobby · 100% DG Backup",
+      price: "₹2,85,000",
       period: "/ month",
-      specPill: "Plug & Play",
+      specPill: "Dedicated Floor",
       linkUrl: "/public/search?query=Apex+BKC"
     },
     {
       id: "meridian-whitefield",
       badge: "MANAGED IT SUITE",
-      image: "/images/card_managed_hd.jpg",
-      title: "Meridian Tech Park",
+      image: "/images/showcase_managed_coworking.jpg",
+      title: "Meridian Managed Suites",
       location: "Whitefield, Bengaluru",
-      facilities: "35 Seats · 2,800 sq.ft. · Smart Meeting Rooms · Metro Access",
+      facilities: "45 Desks · Ergonomic Chairs · Acoustic Phone Booths · Leased Line",
       price: "₹72,000",
       period: "/ month",
-      specPill: "Furnished",
+      specPill: "Plug & Play",
       linkUrl: "/public/search?query=Meridian+Whitefield"
     },
     {
       id: "tech-horizon",
-      badge: "ENTERPRISE HQ",
+      badge: "ENTERPRISE CAMPUS",
       image: "/images/showcase_office_techhorizon_hd.jpg",
       title: "Tech Horizon Campus",
       location: "Cyber City, Gurugram",
-      facilities: "120 Seats · 9,500 sq.ft. · Private Reception · Executive Terrace",
-      price: "₹2,40,000",
+      facilities: "180 Seats · 14,000 sq.ft. · Private Cafeteria · Server Room · EV Hub",
+      price: "₹4,20,000",
       period: "/ month",
-      specPill: "Dedicated Floor",
+      specPill: "Enterprise Wing",
       linkUrl: "/public/search?query=Tech+Horizon"
     },
     {
-      id: "nexus-hub",
-      badge: "TECH SEZ GRADE A",
-      image: "/images/officex_hero_atrium_clean.jpg",
-      title: "Nexus Innovation Hub",
+      id: "nexus-warmshell",
+      badge: "WARM SHELL FLOOR",
+      image: "/images/showcase_commercial_warmshell.jpg",
+      title: "Nexus Commercial Suites",
       location: "Hinjewadi, Pune",
-      facilities: "75 Seats · 5,500 sq.ft. · High-Speed Lifts · Food Court Access",
-      price: "₹38,500",
+      facilities: "6,500 sq.ft. Open Floor · Central AC Ducts · 4.2m Slab Height · Lifts",
+      price: "₹1,45,000",
       period: "/ month",
-      specPill: "Warm Shell+",
+      specPill: "Fit-out Ready",
       linkUrl: "/public/search?query=Nexus+Hub"
     }
   ];
@@ -130,39 +130,27 @@ export default function MarketplaceDualShowcase({
   return (
     <section
       id="marketplace-showcase"
-      className="py-12 md:py-16 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden"
+      className="py-10 md:py-14 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto w-full space-y-12 md:space-y-16">
+      <div className="max-w-7xl mx-auto w-full space-y-10 md:space-y-12">
 
         {/* ========================================================================= */}
         {/* SUBSECTION 1: OFFICE / CRE DISCOVERY MARKETPLACE                         */}
         {/* ========================================================================= */}
         <div>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+          {/* Header - Only Tagline as Headings */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#0F8B7D]">
-                  OFFICE / CRE DISCOVERY MARKETPLACE
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-xs text-slate-500 font-semibold">
-                  Discover. Compare. Lease.
-                </span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
-                Commercial Office Discovery Marketplace
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Discover. Compare. Lease.
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                Explore verified Grade-A spaces, managed IT suites, and enterprise campuses with 0% broker fee.
-              </p>
             </div>
 
             <Link
               href="/public/search"
               className="inline-flex items-center gap-1 text-xs font-bold text-[#0F8B7D] hover:text-[#0D7A6E] transition-colors whitespace-nowrap shrink-0 group"
             >
-              <span>Browse all 28 commercial offices</span>
+              <span>Explore all spaces</span>
               <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
@@ -253,31 +241,19 @@ export default function MarketplaceDualShowcase({
         {/* SUBSECTION 2: FACILITY MANAGEMENT MARKETPLACE                            */}
         {/* ========================================================================= */}
         <div>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+          {/* Header - Only Tagline as Headings */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#0F8B7D]">
-                  FACILITY MANAGEMENT MARKETPLACE
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-xs text-slate-500 font-semibold">
-                  Connect with Trusted Professionals — Find. Compare. Engage
-                </span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
-                Facility Management Services Marketplace
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Connect with Trusted Professionals
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                Pre-audited contractors, guaranteed response SLAs, and 100% escrow protection for building operations.
-              </p>
             </div>
 
             <Link
               href="/fm-marketplace"
               className="inline-flex items-center gap-1 text-xs font-bold text-[#0F8B7D] hover:text-[#0D7A6E] transition-colors whitespace-nowrap shrink-0 group"
             >
-              <span>Browse all 40+ FM services</span>
+              <span>Explore all services</span>
               <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
@@ -359,28 +335,6 @@ export default function MarketplaceDualShowcase({
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* UNIFIED BOTTOM STRIP */}
-        <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-          <span>Razorpay Escrow Protected · 0% Broker Markup · Pre-Audited Vendors · 100% Milestone Sign-Off</span>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/public/search"
-              className="text-[#0F8B7D] font-bold hover:underline flex items-center gap-1"
-            >
-              <span>Explore All Offices</span>
-              <ChevronRight size={13} />
-            </Link>
-            <span className="text-slate-300">•</span>
-            <Link
-              href="/fm-marketplace"
-              className="text-[#0F8B7D] font-bold hover:underline flex items-center gap-1"
-            >
-              <span>Explore All FM Services</span>
-              <ChevronRight size={13} />
-            </Link>
           </div>
         </div>
 

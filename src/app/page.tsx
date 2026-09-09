@@ -9,7 +9,10 @@ import CoreArchitectureDiagram from "@/components/CoreArchitectureDiagram";
 import {
   Search,
   Building,
+  Building2,
   CheckCircle,
+  CheckCircle2,
+  Globe,
   Calendar,
   TrendingUp,
   Sparkles,
@@ -187,10 +190,10 @@ export default function LandingPage() {
 
   const stakeholderData = {
     owner: {
-      role: "Property Owner / CEO",
-      headline: "Maximize Portfolio Yields & Protect Net Operating Income",
-      quote: "Gain real-time visibility across rent roll, occupancy risk, and operating expenditure from a single dashboard.",
-      badge: "Yield & Asset Optimization",
+      role: "Owners & Developers",
+      headline: "Maximize Portfolio Yields, Accelerate Leasing & Scale Assets",
+      quote: "Gain real-time visibility across rent roll, occupancy risk, demising cadences, and operating expenditure from a single dashboard.",
+      badge: "Asset & Yield Optimization",
       landingHref: "/audiences/owners",
       portalHref: "/properties",
       portalName: "Owner Portal",
@@ -206,11 +209,31 @@ export default function LandingPage() {
         "Institutional asset depreciation and capital expenditure auditing"
       ]
     },
+    investor: {
+      role: "REITs & Asset Managers",
+      headline: "Audit-Ready Data, Institutional Governance & Verifiable Returns",
+      quote: "Standardized property metrics, audited compliance trails, and verified lease cash flows for institutional diligence.",
+      badge: "Institutional Governance",
+      landingHref: "/audiences/investors",
+      portalHref: "/leasing",
+      portalName: "Leasing & Investor CRM",
+      metrics: [
+        { label: "WALE Visibility", val: "4.8 yrs" },
+        { label: "Statutory Compliance", val: "94%" },
+        { label: "Audit Readiness", val: "Instant" },
+      ],
+      points: [
+        "Portfolio-wide WALE, NOI, and tenant concentration analytics",
+        "Immutable statutory and environmental compliance records",
+        "Zero discrepancy between executed lease terms and actual billing",
+        "Automated quarterly investor reporting packs and asset benchmarks"
+      ]
+    },
     occupier: {
-      role: "Corporate Occupier",
+      role: "Occupiers & Enterprises",
       headline: "Empower Your Employees with Frictionless Workplace Operations",
-      quote: "Self-service service requests, instant touchless visitor registration, and real-time billing clarity.",
-      badge: "Tenant Experience",
+      quote: "Self-service service requests, instant touchless visitor registration, and real-time billing clarity across multi-city campuses.",
+      badge: "Workplace & Tenant Experience",
       landingHref: "/audiences/occupiers",
       portalHref: "/tenant",
       portalName: "Tenant Workplace",
@@ -227,10 +250,10 @@ export default function LandingPage() {
       ]
     },
     fm: {
-      role: "Facility Manager",
+      role: "Facility Management Companies",
       headline: "Automate 52-Week Maintenance & Enforce Strict Vendor SLAs",
-      quote: "Replace WhatsApp chaos and paper logs with digital asset passports, automated PPM, and instant escalations.",
-      badge: "Operational Control",
+      quote: "Replace WhatsApp chaos and paper logs with digital asset passports, automated PPM, and guaranteed 99.8% equipment uptime.",
+      badge: "CAFM & Operations Desk",
       landingHref: "/audiences/fm",
       portalHref: "/ops",
       portalName: "Facility Ops Console",
@@ -247,10 +270,10 @@ export default function LandingPage() {
       ]
     },
     vendor: {
-      role: "Vendor / Service Partner",
+      role: "Vendors & Contractors",
       headline: "Win Grade-A Contracts & Enjoy Guaranteed Escrow Payouts",
       quote: "Direct access to high-value commercial RFQs with milestone payments locked in RBI-regulated escrow accounts.",
-      badge: "Vendor Empowerment",
+      badge: "Contractor Empowerment",
       landingHref: "/audiences/vendors",
       portalHref: "/vendor",
       portalName: "Vendor Partner Desk",
@@ -264,26 +287,6 @@ export default function LandingPage() {
         "Guaranteed funds held in Razorpay Nodal Escrow before work begins",
         "Digital job cards, milestone verification, and photo inspection sign-offs",
         "Transparent compliance scorecards to win more portfolio assignments"
-      ]
-    },
-    investor: {
-      role: "Investor / REIT",
-      headline: "Audit-Ready Data, Institutional Governance & Verifiable Returns",
-      quote: "Standardized property metrics, audited compliance trails, and verified lease cash flows for diligence.",
-      badge: "Institutional Trust",
-      landingHref: "/audiences/investors",
-      portalHref: "/leasing",
-      portalName: "Leasing & Investor CRM",
-      metrics: [
-        { label: "WALE Visibility", val: "4.8 yrs" },
-        { label: "Statutory Compliance", val: "94%" },
-        { label: "Audit Readiness", val: "Instant" },
-      ],
-      points: [
-        "Portfolio-wide WALE, NOI, and tenant concentration analytics",
-        "Immutable statutory and environmental compliance records",
-        "Zero discrepancy between executed lease terms and actual billing",
-        "Automated quarterly investor reporting packs and asset benchmarks"
       ]
     },
     it: {
@@ -311,9 +314,10 @@ export default function LandingPage() {
   // Stakeholder auto-rotation & carousel state
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const isProgrammaticScrollRef = useRef(false);
+  const isInteractingStakeholderRef = useRef(false);
 
-  const stakeholderKeys: ("owner" | "occupier" | "fm" | "vendor" | "investor" | "it")[] = [
-    "owner", "occupier", "fm", "vendor", "investor", "it"
+  const stakeholderKeys: ("owner" | "investor" | "occupier" | "fm" | "vendor" | "it")[] = [
+    "owner", "investor", "occupier", "fm", "vendor", "it"
   ];
 
   // Handler to smoothly scroll the horizontal carousel track to a stakeholder card (never scrolls window)
@@ -332,6 +336,42 @@ export default function LandingPage() {
       }
     }
   };
+
+  const handlePrevStakeholder = () => {
+    const currentIndex = stakeholderKeys.indexOf(activeStakeholder);
+    const prevIndex = (currentIndex - 1 + stakeholderKeys.length) % stakeholderKeys.length;
+    scrollToStakeholder(stakeholderKeys[prevIndex]);
+  };
+
+  const handleNextStakeholder = () => {
+    const currentIndex = stakeholderKeys.indexOf(activeStakeholder);
+    const nextIndex = (currentIndex + 1) % stakeholderKeys.length;
+    scrollToStakeholder(stakeholderKeys[nextIndex]);
+  };
+
+  // Auto-scroll stakeholder carousel every 4.5s (pauses when user hovers or touches)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isInteractingStakeholderRef.current) return;
+      setActiveStakeholder((prev) => {
+        const idx = stakeholderKeys.indexOf(prev);
+        const nextKey = stakeholderKeys[(idx + 1) % stakeholderKeys.length];
+        if (carouselTrackRef.current) {
+          const targetCard = carouselTrackRef.current.querySelector(`[data-stakeholder-card="${nextKey}"]`) as HTMLElement;
+          if (targetCard) {
+            isProgrammaticScrollRef.current = true;
+            const targetLeft = targetCard.offsetLeft - carouselTrackRef.current.offsetLeft;
+            carouselTrackRef.current.scrollTo({ left: targetLeft, behavior: "smooth" });
+            setTimeout(() => {
+              isProgrammaticScrollRef.current = false;
+            }, 500);
+          }
+        }
+        return nextKey;
+      });
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [stakeholderKeys]);
 
   const handleCarouselScroll = () => {
     if (isProgrammaticScrollRef.current || !carouselTrackRef.current) return;
@@ -554,15 +594,11 @@ export default function LandingPage() {
             <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                 <div className="text-xs font-bold text-slate-900">Commercial Property Discovery</div>
-                <div className="text-[11px] text-slate-500 font-normal">Verified Grade-A office spaces</div>
+                <div className="text-[11px] text-slate-500 font-normal">Verified Grade-A spaces</div>
               </Link>
               <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                 <div className="text-xs font-bold text-[#0F8B7D]">FM Services Marketplace</div>
                 <div className="text-[11px] text-slate-500 font-normal">Pre-vetted MEP &amp; facility contractors</div>
-              </Link>
-              <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Structured RFQ Engine</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated BOQs &amp; escrow bids</div>
               </Link>
             </div>
           </div>
@@ -620,24 +656,32 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 3. Platform Dropdown */}
+          {/* 3. Platform Dropdown — Display SaaS Products & Services Separately */}
           <div className="relative group py-2">
             <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
               <span>Platform</span>
               <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
             </button>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Operate (CAFM)</div>
-                <div className="text-[11px] text-slate-500 font-normal">52-week PPM &amp; tenant helpdesk</div>
+            <div className="absolute top-full left-0 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link href="/properties/rent-roll" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Rent Roll Master</div>
+                <div className="text-[11px] text-slate-500 font-normal">Institutional lease indexation &amp; digital ledgers</div>
               </Link>
               <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Manage (Property SaaS)</div>
-                <div className="text-[11px] text-slate-500 font-normal">Rent roll, CAM &amp; compliance</div>
+                <div className="text-xs font-bold text-slate-900">CAM Billing &amp; Allocation</div>
+                <div className="text-[11px] text-slate-500 font-normal">Automated reconciliation &amp; invoicing</div>
+              </Link>
+              <Link href="/compliance" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Statutory Compliances &amp; NOCs</div>
+                <div className="text-[11px] text-slate-500 font-normal">Fire NOCs, lift licenses &amp; CFO audit radar</div>
+              </Link>
+              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
+                <div className="text-xs font-bold text-slate-900">Operate (CAFM &amp; PPM)</div>
+                <div className="text-[11px] text-slate-500 font-normal">52-week PPM calendar &amp; tenant helpdesk</div>
               </Link>
               <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
                 <div className="text-xs font-bold text-slate-900">Intelligence &amp; ESG</div>
-                <div className="text-[11px] text-slate-500 font-normal">Portfolio NOI &amp; benchmarks</div>
+                <div className="text-[11px] text-slate-500 font-normal">Portfolio NOI yields &amp; ESG benchmarks</div>
               </Link>
               <Link href="/platform" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors border-t border-slate-100 mt-1 pt-2">
                 <div className="text-xs font-bold text-[#0F8B7D]">Core Architecture &amp; APIs</div>
@@ -655,6 +699,9 @@ export default function LandingPage() {
             <div className="absolute top-full right-0 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <Link href="/about" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 About OfficeX
+              </Link>
+              <Link href="/careers" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
+                Careers
               </Link>
               <Link href="/resources" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 Resources &amp; Insights
@@ -706,13 +753,16 @@ export default function LandingPage() {
               style={{ width: "auto", height: "30px" }}
             />
           </div>
-          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Office Discovery Marketplace</Link>
+          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Commercial Spaces Marketplace</Link>
           <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">FM Services Marketplace</Link>
-          <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">Operate (CAFM)</Link>
-          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">Manage (Property SaaS)</Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence</Link>
+          <Link href="/properties/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">Rent Roll Master</Link>
+          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">CAM Billing &amp; Allocation</Link>
+          <Link href="/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-emerald-600">Statutory Compliances &amp; NOCs</Link>
+          <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">Operate (CAFM &amp; PPM)</Link>
+          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence &amp; ESG</Link>
           <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#059669]">Managed Services</Link>
-          <Link href="/platform" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Platform Core</Link>
+          <Link href="/platform" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Platform Core Architecture</Link>
+          <Link href="/careers" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Careers</Link>
           <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Resources &amp; Insights</Link>
           <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Contact Us</Link>
           <hr className="border-slate-200 my-2" />
@@ -729,330 +779,449 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO — ORIGINAL DARK PRESTIGIOUS BANNER */}
-      <section className="relative min-h-[580px] md:min-h-[640px] lg:min-h-[680px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-14 md:pt-16 pb-14 md:pb-16 bg-gradient-to-b from-[#071324] via-[#071324] to-[#0F8B7D] md:bg-[#071324]">
-        {/* Real prestigious commercial glass headquarters campus — hidden on mobile to ensure crisp contrast */}
-        <div className="hidden md:block absolute inset-0 z-0 pointer-events-none">
-          <Image
-            src="/images/officex_recommended_hero_banner.jpg"
-            alt="OfficeX Commercial Workspaces Operating System"
-            fill
-            priority
-            unoptimized
-            className="object-cover object-[center_right] md:object-right opacity-80"
-          />
-          {/* Multi-stop gradient scrims ensuring high readability on left */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#071324] via-[#071324]/90 md:via-[#071324]/75 to-transparent pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#071324] via-transparent to-[#071324]/60 pointer-events-none" />
+      {/* SECTION 2: HERO — MODERN LIGHT ENTERPRISE CRE & FM PLATFORM */}
+      <section className="relative w-full max-w-full overflow-hidden flex flex-col justify-center items-center pt-8 md:pt-14 pb-12 md:pb-16 bg-gradient-to-b from-teal-50/40 via-slate-50 to-white">
+        {/* Modern Geometric Grid & Ambient Lighting Backdrops (Zero cheap white-wash glare) */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* Subtle architectural precision dot-grid */}
+          <div className="absolute inset-0 bg-[radial-gradient(#0f8b7d18_1px,transparent_1px)] [background-size:24px_24px] opacity-70" />
+          {/* Subtle soft gradient glows for modern SaaS depth */}
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[720px] h-[340px] bg-gradient-to-b from-teal-400/15 via-emerald-300/10 to-transparent blur-3xl rounded-full" />
+          <div className="absolute top-1/3 -left-32 w-80 h-80 bg-teal-500/10 blur-3xl rounded-full" />
+          <div className="absolute top-1/4 -right-32 w-80 h-80 bg-cyan-500/10 blur-3xl rounded-full" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-          {/* Left Column Content (approx 55% width) */}
-          <div className="max-w-2xl text-left">
-            
-            {/* Eyebrow Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/25 text-teal-300 text-xs font-semibold tracking-wide mb-4 backdrop-blur-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-              <span>Integrated CRE &amp; FM Ecosystem</span>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-white leading-[1.18] mb-3.5">
-              Find Space. Procure Services.{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-300">
-                Operate Buildings. Gain Intelligence.
-              </span>
-            </h1>
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
           
-            {/* Subhead */}
-            <p className="text-xs sm:text-sm md:text-base font-normal text-slate-300 leading-relaxed max-w-xl mb-6">
-              One platform. Five modules. One data foundation. Built for commercial real estate owners, occupiers, and operators.
+          {/* Eyebrow badge */}
+          <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-[0.12em] text-[#0F8B7D] bg-white/90 backdrop-blur-md border border-teal-200/80 px-4 py-1.5 rounded-full mb-5 shadow-xs">
+            <span className="flex h-2 w-2 rounded-full bg-[#0F8B7D] animate-pulse" />
+            <span>India&apos;s Integrated CRE &amp; FM Operating System</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-600 font-semibold lowercase">5M+ sq.ft governed</span>
+          </div>
+
+          {/* Main Headline — Bold, crisp, distinct color contrast */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-extrabold tracking-tight text-slate-900 leading-[1.14] mb-4 max-w-4xl">
+            The Operating System for{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-emerald-600">
+              Commercial Real Estate &amp; FM
+            </span>
+          </h1>
+
+          {/* Subhead */}
+          <p className="text-sm sm:text-base md:text-lg font-medium text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8 text-center">
+            Discover Grade-A commercial spaces, hire pre-vetted FM contractors, and automate building operations — all under one unified data foundation.
+          </p>
+
+          {/* The 3-Tab Search Card Component — Elevated & Clean */}
+          <div className="w-full max-w-3xl mx-auto mb-10">
+            {/* Tabs */}
+            <div className="flex items-center justify-center gap-1.5 mb-0 overflow-x-auto no-scrollbar max-w-full">
+              <button
+                onClick={() => setActiveSearchTab("space")}
+                className={`px-4 sm:px-6 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  activeSearchTab === "space"
+                    ? "bg-white text-[#0F8B7D] border-t-2 border-t-[#0F8B7D] border-x border-slate-200 shadow-xs font-extrabold"
+                    : "bg-slate-100/90 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                }`}
+              >
+                <Building2 size={15} className={activeSearchTab === "space" ? "text-[#0F8B7D]" : "text-slate-400"} />
+                <span>Find Commercial Space</span>
+              </button>
+              <button
+                onClick={() => setActiveSearchTab("vendor")}
+                className={`px-4 sm:px-6 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  activeSearchTab === "vendor"
+                    ? "bg-white text-[#0F8B7D] border-t-2 border-t-[#0F8B7D] border-x border-slate-200 shadow-xs font-extrabold"
+                    : "bg-slate-100/90 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                }`}
+              >
+                <Wrench size={15} className={activeSearchTab === "vendor" ? "text-[#0F8B7D]" : "text-slate-400"} />
+                <span>Hire FM Vendors</span>
+              </button>
+              <button
+                onClick={() => setActiveSearchTab("managed")}
+                className={`px-4 sm:px-6 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  activeSearchTab === "managed"
+                    ? "bg-white text-[#0F8B7D] border-t-2 border-t-[#0F8B7D] border-x border-slate-200 shadow-xs font-extrabold"
+                    : "bg-slate-100/90 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                }`}
+              >
+                <ShieldCheck size={15} className={activeSearchTab === "managed" ? "text-[#0F8B7D]" : "text-slate-400"} />
+                <span>Managed Services</span>
+              </button>
+            </div>
+
+            {/* Main Search Bar Card */}
+            <div className="bg-white rounded-2xl rounded-tl-none shadow-xl shadow-slate-200/60 p-3.5 md:p-4 border border-slate-200 w-full text-left">
+              {activeSearchTab === "space" && (
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-0">
+                  {/* Field 1: Location */}
+                  <div className="flex-1 md:pr-4 md:border-r border-slate-200">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Commercial Hub / City
+                    </label>
+                    <select
+                      value={spaceCity}
+                      onChange={(e) => setSpaceCity(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="Mumbai">Mumbai (BKC, Lower Parel)</option>
+                      <option value="Bengaluru">Bengaluru (ORR, Whitefield)</option>
+                      <option value="Gurugram">Delhi NCR (Cyber City, Noida)</option>
+                      <option value="Pune">Pune (Hinjewadi, Kharadi)</option>
+                      <option value="Hyderabad">Hyderabad (HITEC City)</option>
+                      <option value="Ahmedabad">Ahmedabad (GIFT City, SG Hwy)</option>
+                    </select>
+                  </div>
+
+                  {/* Field 2: Space Size */}
+                  <div className="flex-1 md:px-4 md:border-r border-slate-200">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Plate Size / Requirement
+                    </label>
+                    <select
+                      value={spaceBudget}
+                      onChange={(e) => setSpaceBudget(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="All Sizes">Any Size Requirement</option>
+                      <option value="Under 5,000">1,000 - 5,000 Sq.Ft.</option>
+                      <option value="5,000 - 15,000">5,000 - 15,000 Sq.Ft.</option>
+                      <option value="15,000 - 50,000">15,000 - 50,000 Sq.Ft.</option>
+                      <option value="Above 50,000">50,000+ Sq.Ft. Campus</option>
+                    </select>
+                  </div>
+
+                  {/* Field 3: Type */}
+                  <div className="flex-1 md:px-4">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Workspace Model
+                    </label>
+                    <select
+                      value={spaceGrade}
+                      onChange={(e) => setSpaceGrade(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="Office / Coworking">Enterprise Managed Office</option>
+                      <option value="Commercial Office">Grade-A Commercial Tower</option>
+                      <option value="Managed Workspace">Dedicated Coworking Floor</option>
+                      <option value="Bare Shell">Bare-Shell Floor Plate</option>
+                    </select>
+                  </div>
+
+                  {/* Search Button */}
+                  <div className="md:pl-2 shrink-0">
+                    <button
+                      onClick={handleLandingSearch}
+                      className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-teal-700/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Search size={15} />
+                      <span>Search Spaces</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeSearchTab === "vendor" && (
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-0">
+                  {/* Field 1: FM Service */}
+                  <div className="flex-1 md:pr-4 md:border-r border-slate-200">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Facility Service Needed
+                    </label>
+                    <select
+                      value={vendorCategory}
+                      onChange={(e) => setVendorCategory(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="HVAC Maintenance">HVAC &amp; Chiller Overhaul</option>
+                      <option value="Deep Cleaning">Commercial Sanitization</option>
+                      <option value="Electrical Auditing">MEP &amp; 33kV Substation</option>
+                      <option value="Pest Control">Corporate Manned Security</option>
+                      <option value="Fire & Safety NOC">Fire Safety &amp; Lift AMCs</option>
+                    </select>
+                  </div>
+
+                  {/* Field 2: City */}
+                  <div className="flex-1 md:px-4 md:border-r border-slate-200">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Property Location
+                    </label>
+                    <select
+                      value={vendorCity}
+                      onChange={(e) => setVendorCity(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="Mumbai">Mumbai (BKC, Lower Parel)</option>
+                      <option value="Bengaluru">Bengaluru (ORR, Whitefield)</option>
+                      <option value="Gurugram">Delhi NCR (Cyber City)</option>
+                      <option value="Pune">Pune (Hinjewadi)</option>
+                      <option value="Hyderabad">Hyderabad (HITEC City)</option>
+                      <option value="Ahmedabad">Ahmedabad (GIFT City)</option>
+                    </select>
+                  </div>
+
+                  {/* Field 3: Scope */}
+                  <div className="flex-1 md:px-4">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Contract Term
+                    </label>
+                    <select
+                      value={vendorBudget}
+                      onChange={(e) => setVendorBudget(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="Annual Contract">Annual Maintenance (AMC)</option>
+                      <option value="Quarterly AMC">Quarterly Preventive Run</option>
+                      <option value="On-Demand">Emergency 30-min Ticket</option>
+                      <option value="Audit Only">Statutory Compliance Audit</option>
+                    </select>
+                  </div>
+
+                  {/* Search Button */}
+                  <div className="md:pl-2 shrink-0">
+                    <button
+                      onClick={handleLandingSearch}
+                      className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-teal-700/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Zap size={15} />
+                      <span>Post RFQ</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeSearchTab === "managed" && (
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-0">
+                  {/* Field 1: Managed Solution */}
+                  <div className="flex-1 md:pr-4 md:border-r border-slate-200">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Stewardship Scope
+                    </label>
+                    <select
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="Turnkey Fitout">Turnkey Property Stewardship</option>
+                      <option value="Integrated FM">Integrated Facility Management (IFM)</option>
+                      <option value="Energy & ESG">CAM Audit &amp; Reconciliation</option>
+                      <option value="Statutory Compliance">100% Statutory Compliance Vault</option>
+                    </select>
+                  </div>
+
+                  {/* Field 2: Portfolio Size */}
+                  <div className="flex-1 md:px-4 md:border-r border-slate-200">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Gross Leasable Area
+                    </label>
+                    <select
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="10k-50k">10,000 - 50,000 Sq.Ft.</option>
+                      <option value="50k-200k">50,000 - 200,000 Sq.Ft.</option>
+                      <option value="200k+">200,000+ Sq.Ft. Campus</option>
+                    </select>
+                  </div>
+
+                  {/* Field 3: City */}
+                  <div className="flex-1 md:px-4">
+                    <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                      Location
+                    </label>
+                    <select
+                      value={spaceCity}
+                      onChange={(e) => setSpaceCity(e.target.value)}
+                      className="w-full text-xs sm:text-sm font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer truncate"
+                    >
+                      <option value="Mumbai">Mumbai</option>
+                      <option value="Bengaluru">Bengaluru</option>
+                      <option value="Gurugram">Delhi NCR</option>
+                      <option value="Multi-City">Multi-City Portfolio</option>
+                    </select>
+                  </div>
+
+                  {/* Search Button */}
+                  <div className="md:pl-2 shrink-0">
+                    <button
+                      onClick={() => router.push('/managed-services')}
+                      className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-teal-700/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <ArrowRight size={15} />
+                      <span>Learn More</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* INTERACTIVE PLATFORM PREVIEW CARDS (Shows exactly what OfficeX does at a glance!) */}
+          <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-8">
+            
+            {/* Card 1: Commercial Space Discovery */}
+            <Link
+              href="/marketplace"
+              className="group p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-bl-full -z-0 pointer-events-none group-hover:scale-110 transition-transform" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-teal-50 text-[#0F8B7D] border border-teal-200">
+                    Space Discovery
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#0F8B7D] flex items-center gap-0.5 transition-colors">
+                    Explore <ArrowUpRight size={13} />
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl overflow-hidden relative shrink-0 border border-slate-200 shadow-2xs">
+                    <Image
+                      src="/images/showcase_commercial_warmshell.jpg"
+                      alt="Grade-A Tech Horizon Tower"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
+                      Grade-A Tech Horizon Tower
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      BKC Corridor · 32k sq.ft
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
+                <span className="text-[#0F8B7D] font-black">₹185 <span className="text-[10px] text-slate-400 font-normal">/sq.ft</span></span>
+                <span className="text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-extrabold">100% Verified</span>
+              </div>
+            </Link>
+
+            {/* Card 2: FM Vendor Marketplace (Featuring AI Uniformed Pro Image) */}
+            <Link
+              href="/fm-marketplace"
+              className="group p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-50 rounded-bl-full -z-0 pointer-events-none group-hover:scale-110 transition-transform" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200">
+                    FM Marketplace
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#0F8B7D] flex items-center gap-0.5 transition-colors">
+                    Hire Pros <ArrowUpRight size={13} />
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl overflow-hidden relative shrink-0 border border-slate-200 shadow-2xs">
+                    <Image
+                      src="/images/pro_hvac_engineer.jpg"
+                      alt="Verified OfficeX HVAC Pro"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
+                      Apex ElectroMech Eng.
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      HVAC, Chiller &amp; 33kV Substation
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
+                <span className="flex items-center gap-1 text-amber-500 font-black">
+                  ★ 4.9 <span className="text-[10px] text-slate-400 font-normal">(142 jobs)</span>
+                </span>
+                <span className="text-[11px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md font-extrabold">99.4% SLA</span>
+              </div>
+            </Link>
+
+            {/* Card 3: Managed Services & Operations */}
+            <Link
+              href="/managed-services"
+              className="group p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-0 pointer-events-none group-hover:scale-110 transition-transform" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Turnkey Stewardship
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#0F8B7D] flex items-center gap-0.5 transition-colors">
+                    View Scope <ArrowUpRight size={13} />
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl overflow-hidden relative shrink-0 border border-slate-200 shadow-2xs">
+                    <Image
+                      src="/images/pro_property_manager.jpg"
+                      alt="Dedicated Property Director"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
+                      Dedicated Building Director
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      100% Audited CAM &amp; Life Safety
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
+                <span className="text-slate-600 font-semibold">Zero-Notice Liability</span>
+                <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-extrabold">99.8% Uptime</span>
+              </div>
+            </Link>
+
+          </div>
+
+          {/* Institutional Trust Badges */}
+          <div className="flex flex-col items-center justify-center gap-2.5 max-w-4xl mx-auto text-center">
+            <p className="text-[11px] sm:text-xs font-semibold text-slate-400 tracking-wide text-center">
+              Trusted by commercial real estate owners, asset managers, and enterprise FM leaders
             </p>
-
-            {/* Hero Action CTAs */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 w-full sm:w-auto">
-              <Link
-                href="/marketplace"
-                className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-black shadow-md transition-all flex items-center justify-center gap-2 text-center"
-              >
-                <span>Explore Marketplace</span>
-                <ArrowRight size={15} />
-              </Link>
-              <button
-                type="button"
-                onClick={() => openEnquiry()}
-                className="px-6 py-3 rounded-xl border border-white/40 hover:border-white text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xs text-center cursor-pointer"
-              >
-                <span>Talk to Sales</span>
-              </button>
-            </div>
-
-            {/* The 3-Tab Search Card Component */}
-            <div className="w-full">
-              {/* 3 Tabs Header — Mobile optimized with horizontal touch scroll */}
-              <div className="flex items-center gap-1 sm:gap-1.5 mb-0 overflow-x-auto no-scrollbar max-w-full">
-                <button
-                  onClick={() => setActiveSearchTab("space")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    activeSearchTab === "space"
-                      ? "bg-[#0F8B7D] text-white shadow-md font-extrabold"
-                      : "bg-[#0B1E38]/85 text-slate-300 hover:text-white hover:bg-[#0B1E38] border-t border-x border-slate-700/60"
-                  }`}
-                >
-                  Office Space
-                </button>
-                <button
-                  onClick={() => setActiveSearchTab("vendor")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    activeSearchTab === "vendor"
-                      ? "bg-[#0F8B7D] text-white shadow-md font-extrabold"
-                      : "bg-[#0B1E38]/85 text-slate-300 hover:text-white hover:bg-[#0B1E38] border-t border-x border-slate-700/60"
-                  }`}
-                >
-                  FM Services
-                </button>
-                <button
-                  onClick={() => setActiveSearchTab("managed")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    activeSearchTab === "managed"
-                      ? "bg-[#0F8B7D] text-white shadow-md font-extrabold"
-                      : "bg-[#0B1E38]/85 text-slate-300 hover:text-white hover:bg-[#0B1E38] border-t border-x border-slate-700/60"
-                  }`}
-                >
-                  Managed Services
-                </button>
-              </div>
-
-              {/* Main Search Bar Card */}
-              <div className="bg-white rounded-b-2xl rounded-tr-2xl shadow-2xl p-3 md:p-3.5 border border-slate-200 w-full">
-                {activeSearchTab === "space" && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-0">
-                    {/* Field 1: Location */}
-                    <div className="flex-1 md:pr-4 md:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Location
-                      </label>
-                      <select
-                        value={spaceCity}
-                        onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="Bengaluru">Bengaluru</option>
-                        <option value="Gurugram">Gurugram</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Hyderabad">Hyderabad</option>
-                        <option value="Ahmedabad">Ahmedabad</option>
-                        <option value="Delhi NCR">Delhi NCR</option>
-                      </select>
-                    </div>
-
-                    {/* Field 2: Space Size */}
-                    <div className="flex-1 md:px-4 md:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Space Size
-                      </label>
-                      <select
-                        value={spaceBudget}
-                        onChange={(e) => setSpaceBudget(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="All Sizes">Any Size</option>
-                        <option value="Under 5,000">1,000 - 5,000 Sq.Ft.</option>
-                        <option value="5,000 - 15,000">5,000 - 15,000 Sq.Ft.</option>
-                        <option value="15,000 - 50,000">15,000 - 50,000 Sq.Ft.</option>
-                        <option value="Above 50,000">50,000+ Sq.Ft.</option>
-                      </select>
-                    </div>
-
-                    {/* Field 3: Type */}
-                    <div className="flex-1 md:px-4">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Type
-                      </label>
-                      <select
-                        value={spaceGrade}
-                        onChange={(e) => setSpaceGrade(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="Office / Coworking">Office / Coworking</option>
-                        <option value="Commercial Office">Commercial Office</option>
-                        <option value="Managed Workspace">Managed Workspace</option>
-                        <option value="Enterprise Campus">Enterprise Campus</option>
-                        <option value="Bare Shell">Bare Shell</option>
-                      </select>
-                    </div>
-
-                    {/* Search Button */}
-                    <div className="md:pl-2 shrink-0">
-                      <button
-                        onClick={handleLandingSearch}
-                        className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        Search
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {activeSearchTab === "vendor" && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-0">
-                    {/* Field 1: FM Service */}
-                    <div className="flex-1 md:pr-4 md:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        FM Service
-                      </label>
-                      <select
-                        value={vendorCategory}
-                        onChange={(e) => setVendorCategory(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="HVAC Maintenance">HVAC Maintenance</option>
-                        <option value="Deep Cleaning">Deep Cleaning</option>
-                        <option value="Electrical Auditing">Electrical Auditing</option>
-                        <option value="Pest Control">Pest Control</option>
-                        <option value="Fire & Safety NOC">Fire &amp; Safety NOC</option>
-                      </select>
-                    </div>
-
-                    {/* Field 2: City */}
-                    <div className="flex-1 md:px-4 md:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        City
-                      </label>
-                      <select
-                        value={vendorCity}
-                        onChange={(e) => setVendorCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="Bengaluru">Bengaluru</option>
-                        <option value="Gurugram">Gurugram</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Hyderabad">Hyderabad</option>
-                      </select>
-                    </div>
-
-                    {/* Field 3: Scope */}
-                    <div className="flex-1 md:px-4">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Scope
-                      </label>
-                      <select
-                        value={vendorBudget}
-                        onChange={(e) => setVendorBudget(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="On-Demand">On-Demand Ticket</option>
-                        <option value="Quarterly AMC">Quarterly AMC</option>
-                        <option value="Annual Contract">Annual Comprehensive Contract</option>
-                        <option value="Audit Only">Statutory Audit Only</option>
-                      </select>
-                    </div>
-
-                    {/* Search Button */}
-                    <div className="md:pl-2 shrink-0">
-                      <button
-                        onClick={handleLandingSearch}
-                        className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        Search FM
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {activeSearchTab === "managed" && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-0">
-                    {/* Field 1: Managed Solution */}
-                    <div className="flex-1 md:pr-4 md:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Managed Solution
-                      </label>
-                      <select
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="Turnkey Fitout">Turnkey Fitout</option>
-                        <option value="Integrated FM">Integrated FM</option>
-                        <option value="Energy & ESG">ESG &amp; Carbon Analytics</option>
-                        <option value="Statutory Compliance">100% Compliance</option>
-                      </select>
-                    </div>
-
-                    {/* Field 2: Portfolio Size */}
-                    <div className="flex-1 md:px-4 md:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Portfolio Size
-                      </label>
-                      <select
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="10k-50k">10,000 - 50,000 Sq.Ft.</option>
-                        <option value="50k-200k">50,000 - 200,000 Sq.Ft.</option>
-                        <option value="200k+">200,000+ Sq.Ft. Campus</option>
-                      </select>
-                    </div>
-
-                    {/* Field 3: City */}
-                    <div className="flex-1 md:px-4">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                        Location
-                      </label>
-                      <select
-                        value={spaceCity}
-                        onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
-                      >
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="Bengaluru">Bengaluru</option>
-                        <option value="Gurugram">Gurugram</option>
-                        <option value="Multi-City">Multi-City Portfolio</option>
-                      </select>
-                    </div>
-
-                    {/* Search Button */}
-                    <div className="md:pl-2 shrink-0">
-                      <button
-                        onClick={() => router.push('/managed-services')}
-                        className="w-full md:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        Explore
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Trust Badges & Expert Assistance below Search Bar */}
-            <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <ShieldCheck size={14} className="text-teal-400 shrink-0" />
-                <span>Verified Spaces · Pre-Audited Vendors · Escrow Protected</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-600 font-semibold">
+              <span className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <ShieldCheck size={13} className="text-[#0F8B7D] shrink-0" />
+                <span>SOC 2 Type II</span>
               </span>
-              <button
-                type="button"
-                onClick={() => openEnquiry()}
-                className="font-bold text-teal-300 hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
-              >
-                <span>Need help? Talk to an expert</span>
-                <ArrowRight size={12} />
-              </button>
+              <span className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <Lock size={13} className="text-[#0F8B7D] shrink-0" />
+                <span>AES-256 Vaulted</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                <span>DPDP Act 2023 Compliant</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <Award size={13} className="text-blue-600 shrink-0" />
+                <span>Razorpay Escrow Protected</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <Globe size={13} className="text-emerald-600 shrink-0" />
+                <span>100% Physically Audited Buildings</span>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Right Side Floating Callout (in bottom right corner) */}
-        <div className="hidden lg:flex flex-col items-start absolute bottom-10 right-8 xl:right-16 z-10 text-white bg-slate-900/60 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 shadow-lg">
-          <span className="text-xs sm:text-sm font-light tracking-wide text-slate-300">Space for</span>
-          <span className="text-sm sm:text-base font-extrabold tracking-tight text-white">a smarter tomorrow.</span>
-          <div className="w-8 h-0.5 bg-[#0F8B7D] mt-1.5 rounded-full" />
-        </div>
+        {/* Sticky Nav Sentinel */}
+        <div ref={heroSentinelRef} className="absolute bottom-0 left-0 right-0 h-1 pointer-events-none" />
       </section>
 
-      {/* TRUST STRIP BELOW HERO */}
-      <TrustStrip />
       <div ref={heroSentinelRef} className="h-1 w-full pointer-events-none" />
+
 
       {/* SECTION 02: THE OFFICEX ECOSYSTEM */}
       <section 
@@ -1073,7 +1242,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* 5 Vertical Colored Cards with 3 bullet benefits per client doc */}
+          {/* 5 Vertical Colored Cards with distinct vibrant colors matching client reference */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
             {[
               {
@@ -1082,7 +1251,7 @@ export default function LandingPage() {
                 desc: "Discover. Compare. Lease.",
                 benefits: ["Verified Grade-A listings across metros", "Side-by-side space comparison tools", "Direct owner/manager connection"],
                 audience: "For: Occupiers, Brokers, Owners",
-                image: "/images/card_prop_hd.jpg",
+                image: "/images/card_office_marketplace.jpg",
                 bgColor: "bg-[#00A86B]",
                 arrowColor: "text-[#00A86B]",
                 href: "/marketplace",
@@ -1102,13 +1271,13 @@ export default function LandingPage() {
               },
               {
                 id: "saas",
-                title: "OfficeX PRO",
-                desc: "Operate & Manage your buildings digitally.",
+                title: "Operate (CAFM & PPM)",
+                desc: "52-week automated PPM & digital ticketing.",
                 benefits: ["52-week automated PPM calendar", "SLA-backed helpdesk & ticketing", "Rent roll, CAM billing & compliance"],
                 audience: "For: Facility & Property Managers",
                 image: "/images/card_saas_hd.jpg",
-                bgColor: "bg-[#0F8B7D]",
-                arrowColor: "text-[#0F8B7D]",
+                bgColor: "bg-[#2563EB]",
+                arrowColor: "text-[#2563EB]",
                 href: "/operate",
                 iconType: "arrow",
               },
@@ -1119,8 +1288,8 @@ export default function LandingPage() {
                 benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
                 audience: "For: Owners without in-house FM",
                 image: "/images/card_managed_hd.jpg",
-                bgColor: "bg-[#0F8B7D]",
-                arrowColor: "text-[#0F8B7D]",
+                bgColor: "bg-[#7C3AED]",
+                arrowColor: "text-[#7C3AED]",
                 href: "/managed-services",
                 iconType: "arrow",
               },
@@ -1131,8 +1300,8 @@ export default function LandingPage() {
                 benefits: ["Portfolio NOI & WALE dashboards", "Energy benchmarking & ESG reports", "Predictive maintenance forecasting"],
                 audience: "For: Asset Managers, REITs, CFOs",
                 image: "/images/card_ai_hd.jpg",
-                bgColor: "bg-[#0D7A6E]",
-                arrowColor: "text-[#0D7A6E]",
+                bgColor: "bg-[#E11D48]",
+                arrowColor: "text-[#E11D48]",
                 href: "/intelligence",
                 iconType: "sparkle",
               },
@@ -1191,39 +1360,69 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* DIVIDER: "Powered by OFFICEX CORE" with Downward Chevron matching user reference */}
-          <div className="relative my-8 sm:my-10 flex flex-col items-center justify-center w-full">
-            {/* Subtle horizontal line spanning full width */}
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-slate-200/90" />
-            </div>
-
+          {/* DIVIDER: "Powered by OFFICEX CORE" with Downward Chevron seamlessly touching lines */}
+          <div className="w-full mt-5 mb-0 sm:mt-6 sm:mb-0 flex flex-col items-center justify-center">
             {/* Centered Box with "Powered by OFFICEX CORE" */}
-            <div className="relative bg-white px-6 py-1 flex flex-col items-center z-10">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 tracking-wide">
+            <div className="flex flex-col items-center mb-0.5 text-center">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 tracking-wider">
                 Powered by
               </span>
-              <span className="text-sm sm:text-base font-black text-[#0F8B7D] tracking-wider uppercase mt-0.5">
+              <span className="text-sm sm:text-base font-black text-[#0F8B7D] tracking-widest uppercase">
                 OFFICEX CORE
               </span>
             </div>
 
-            {/* Downward Brand Teal Chevron pointing to the Core section below */}
-            <div className="relative -mt-1 z-10 flex justify-center">
+            {/* Animated converging lines forming the downward arrow pointing directly to the diagram */}
+            <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center">
               <svg 
-                width="160" 
-                height="24" 
-                viewBox="0 0 160 24" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-                className="overflow-visible"
+                className="w-full h-7 overflow-visible" 
+                viewBox="0 0 1000 28" 
+                preserveAspectRatio="none"
               >
+                <defs>
+                  <linearGradient id="coreBeamLeftGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.2" />
+                    <stop offset="70%" stopColor="#14B8A6" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#2DD4BF" stopOpacity="1" />
+                  </linearGradient>
+                  <linearGradient id="coreBeamRightGrad" x1="100%" y1="0%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.2" />
+                    <stop offset="70%" stopColor="#14B8A6" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#2DD4BF" stopOpacity="1" />
+                  </linearGradient>
+                </defs>
+
+                {/* 1. Left animated beam: connects from left edge to center arrow tip */}
                 <path 
-                  d="M4 3 L80 20 L156 3" 
-                  stroke="#0F8B7D" 
-                  strokeWidth="2.5" 
+                  d="M0,3 L440,3 L500,20" 
+                  stroke="url(#coreBeamLeftGrad)" 
+                  strokeWidth="3" 
+                  fill="none" 
+                  vectorEffect="non-scaling-stroke" 
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
+                  className="animate-core-beam-left"
+                  strokeDasharray="520"
+                />
+
+                {/* 2. Right animated beam: connects from right edge to center arrow tip */}
+                <path 
+                  d="M1000,3 L560,3 L500,20" 
+                  stroke="url(#coreBeamRightGrad)" 
+                  strokeWidth="3" 
+                  fill="none" 
+                  vectorEffect="non-scaling-stroke" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="animate-core-beam-right"
+                  strokeDasharray="520"
+                />
+
+                {/* 3. Downward Arrow Head Indicator pointing directly to diagram below */}
+                <polygon 
+                  points="492,15 500,27 508,15" 
+                  fill="#0F8B7D" 
+                  className="animate-core-arrow-pulse"
                 />
               </svg>
             </div>
@@ -1232,46 +1431,46 @@ export default function LandingPage() {
           {/* LOWER HALF: OFFICEX CORE DATA FOUNDATION & ARCHITECTURE DIAGRAM */}
           <div 
             id="officex-core" 
-            className="pt-2 sm:pt-4"
+            className="pt-0 -mt-2 sm:-mt-3"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-start w-full">
               
-              {/* LEFT COLUMN: Core Proposition & Services (6 cols) */}
-              <div className="lg:col-span-6 flex flex-col justify-center">
+              {/* LEFT COLUMN: Core Proposition & Services (5 cols) */}
+              <div className="lg:col-span-5 flex flex-col justify-start pt-1 sm:pt-2">
                 {/* Headline */}
-                <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-slate-950 tracking-tight leading-[1.18] uppercase mb-2">
+                <h2 className="text-xl sm:text-2xl lg:text-[28px] font-black text-slate-950 tracking-tight leading-[1.2] uppercase mb-2">
                   <span className="block">ONE CORE.</span>
                   <span className="block">ONE DATA FOUNDATION.</span>
                   <span className="block">ONE SOURCE OF TRUTH.</span>
                 </h2>
                 
-                <p className="mt-2 text-slate-600 text-sm sm:text-base leading-relaxed font-medium max-w-lg">
+                <p className="mt-2 text-slate-600 text-xs sm:text-sm leading-relaxed font-normal max-w-lg">
                   OFFICEX Core connects your entire property ecosystem on a single, secure and intelligent data foundation.
                 </p>
 
                 {/* Checklist */}
-                <div className="mt-4 space-y-2">
+                <div className="mt-3.5 space-y-2">
                   {[
                     "No more siloed systems",
                     "No duplicate data",
                     "No manual reconciliations",
                     "Real-time visibility across the portfolio",
                   ].map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-                        <Check className="w-3.5 h-3.5 text-[#0F8B7D] stroke-[2.5]" />
+                    <div key={idx} className="flex items-center gap-2.5">
+                      <div className="w-4 h-4 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+                        <Check className="w-3 h-3 text-[#0F8B7D] stroke-[2.5]" />
                       </div>
-                      <span className="text-slate-800 font-semibold text-sm">{item}</span>
+                      <span className="text-slate-700 font-medium text-xs sm:text-sm">{item}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Integrated Core Capabilities Badges */}
-                <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="mt-4 pt-3.5 border-t border-slate-100">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
                     FOUNDATION SERVICES &amp; VAULT
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {[
                       "Identity & Access",
                       "Billing & Payments",
@@ -1281,7 +1480,7 @@ export default function LandingPage() {
                     ].map((service, idx) => (
                       <span 
                         key={idx} 
-                        className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-50 text-slate-700 border border-slate-200/80"
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-slate-50 text-slate-700 border border-slate-200/80"
                       >
                         {service}
                       </span>
@@ -1290,17 +1489,17 @@ export default function LandingPage() {
                 </div>
 
                 {/* CTA Buttons */}
-                <div className="mt-6 flex flex-wrap items-center gap-3">
+                <div className="mt-5 flex flex-wrap items-center gap-3">
                   <button
                     onClick={() => setIsContactModalOpen(true)}
-                    className="px-6 py-3 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="px-5 py-2.5 rounded-full bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>EXPLORE CORE</span>
                     <ArrowRight size={14} />
                   </button>
                   <button
                     onClick={() => router.push('/platform')}
-                    className="px-5 py-3 rounded-full bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase tracking-wider border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2.5 rounded-full bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase tracking-wider border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>Platform Architecture</span>
                     <ArrowUpRight size={14} className="text-slate-400" />
@@ -1308,8 +1507,8 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: Architectural Radial Diagram (6 cols) */}
-              <div className="lg:col-span-6 relative w-full flex items-center justify-center p-0">
+              {/* RIGHT COLUMN: Architectural Radial Diagram (7 cols - enlarged) */}
+              <div className="lg:col-span-7 relative w-full flex items-center justify-center p-0">
                 <CoreArchitectureDiagram />
               </div>
             </div>
@@ -1322,42 +1521,42 @@ export default function LandingPage() {
       onOpenEnquiry={(prefill) => openEnquiry(prefill)}
     />
 
-    {/* SECTION 04: BUILT FOR EVERY STAKEHOLDER */}
+    {/* SECTION 04: AUDIENCE & USE CASES (MERGED WITH A SMARTER WAY TO BUILD, MANAGE AND GROW) */}
     <section 
       id="stakeholders" 
-      className="py-16 md:py-24 bg-[#F8FAFC] border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden"
+      className="py-14 md:py-20 bg-[#F8FAFC] border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden"
     >
       <div className="max-w-7xl mx-auto w-full">
         
-        {/* Header with Title and Persona Tabs */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 sm:mb-10">
-          <div className="max-w-2xl">
-            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
-              AUDIENCE &amp; USE CASES
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
-              ONE PLATFORM. EVERY STAKEHOLDER.
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
-              Tailored tools, permissions, and dashboards engineered for everyone who owns, operates, or occupies workspace.
-            </p>
-          </div>
+        {/* Header: Merged Tagline + Title */}
+        <div className="max-w-3xl mb-8">
+          <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
+            AUDIENCE &amp; USE CASES
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3 leading-tight uppercase">
+            ONE PLATFORM. EVERY STAKEHOLDER.
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
+            Engineered specifically for Owners &amp; Developers, REITs &amp; Asset Managers, Occupiers &amp; Enterprises, and Facility Management Companies.
+          </p>
+        </div>
 
-          {/* Interactive Persona Tabs */}
+        {/* Interactive Persona Tabs + Carousel Arrow Controls */}
+        <div className="flex items-center justify-between gap-4 mb-5">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {stakeholderKeys.map((key) => {
               const label =
                 key === "owner"
-                  ? "Owners"
-                  : key === "occupier"
-                  ? "Occupiers"
-                  : key === "fm"
-                  ? "Facility Mgrs"
-                  : key === "vendor"
-                  ? "Vendors"
+                  ? "Owners & Developers"
                   : key === "investor"
-                  ? "Investors"
-                  : "IT & Tech";
+                  ? "REITs & Asset Managers"
+                  : key === "occupier"
+                  ? "Occupiers & Enterprises"
+                  : key === "fm"
+                  ? "Facility Management Companies"
+                  : key === "vendor"
+                  ? "Vendors & Contractors"
+                  : "IT & Workplace Tech";
               const isActive = activeStakeholder === key;
 
               return (
@@ -1376,119 +1575,246 @@ export default function LandingPage() {
               );
             })}
           </div>
+
+          {/* Arrow Controls for manual sliding */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handlePrevStakeholder}
+              className="w-8 h-8 rounded-full bg-white border border-slate-200 hover:border-teal-400 text-slate-600 hover:text-[#0F8B7D] flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+              aria-label="Previous persona"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextStakeholder}
+              className="w-8 h-8 rounded-full bg-white border border-slate-200 hover:border-teal-400 text-slate-600 hover:text-[#0F8B7D] flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+              aria-label="Next persona"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
 
-        {/* Carousel View */}
-        <div>
-          {/* Horizontal Scroll / Swipe Track */}
+        {/* Auto-scrolling Carousel View (No Visible Scrollbar) */}
+        <div
+          onMouseEnter={() => { isInteractingStakeholderRef.current = true; }}
+          onMouseLeave={() => { isInteractingStakeholderRef.current = false; }}
+          onTouchStart={() => { isInteractingStakeholderRef.current = true; }}
+          onTouchEnd={() => { isInteractingStakeholderRef.current = false; }}
+        >
+          {/* Horizontal Track with hidden scrollbar */}
           <div
             ref={carouselTrackRef}
             onScroll={handleCarouselScroll}
-            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar py-2 -mx-1 px-1"
+            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar [&::-webkit-scrollbar]:hidden py-2 -mx-1 px-1"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             tabIndex={0}
             aria-label="Stakeholder Carousel"
           >
-              {stakeholderKeys.map((key) => {
-                const data = stakeholderData[key];
-                const isActive = activeStakeholder === key;
+            {stakeholderKeys.map((key) => {
+              const data = stakeholderData[key];
+              const isActive = activeStakeholder === key;
 
-                return (
-                  <div
-                    key={key}
-                    data-stakeholder-card={key}
-                    className={`w-full min-w-full shrink-0 snap-start bg-white rounded-3xl p-6 sm:p-8 md:p-10 border transition-all duration-300 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center ${
-                      isActive 
-                        ? "border-teal-200 shadow-xl ring-1 ring-teal-100" 
-                        : "border-slate-200 shadow-sm opacity-90"
-                    }`}
-                  >
-                    {/* Left Column: Role Details */}
-                    <div className="lg:col-span-7">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                          {data.badge}
-                        </span>
-                        <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                          {data.role}
-                        </span>
-                      </div>
-
-                      <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 mt-3 tracking-tight">
-                        {data.headline}
-                      </h3>
-
-                      <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 italic">
-                        "{data.quote}"
-                      </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-                        {data.points.map((pt, i) => (
-                          <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800">
-                            <CheckCircle size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                            <span>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
+              return (
+                <div
+                  key={key}
+                  data-stakeholder-card={key}
+                  className={`w-full min-w-full shrink-0 snap-start bg-white rounded-3xl p-6 sm:p-8 md:p-10 border transition-all duration-300 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center ${
+                    isActive 
+                      ? "border-teal-200 shadow-xl ring-1 ring-teal-100" 
+                      : "border-slate-200 shadow-sm opacity-90"
+                  }`}
+                >
+                  {/* Left Column: Role Details */}
+                  <div className="lg:col-span-7">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                        {data.badge}
+                      </span>
+                      <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                        {data.role}
+                      </span>
                     </div>
 
-                    {/* Right Column: Dark Dashboard KPIs */}
-                    <div className="lg:col-span-5 bg-[#071324] text-white rounded-2xl p-6 sm:p-7 flex flex-col justify-between shadow-xl border border-slate-800">
-                      <div className="border-b border-slate-800 pb-3 mb-6 flex items-center justify-between">
-                        <div>
-                          <span className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">Target Performance Metrics</span>
-                          <div className="text-sm font-black text-white mt-1">{data.role} Dashboard</div>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 mt-3 tracking-tight">
+                      {data.headline}
+                    </h3>
+
+                    <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-2.5 italic">
+                      "{data.quote}"
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                      {data.points.map((pt, i) => (
+                        <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800">
+                          <CheckCircle size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                          <span>{pt}</span>
                         </div>
-                        <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-8 text-center">
-                        {data.metrics.map((m, idx) => (
-                          <div key={idx} className="bg-slate-900/90 p-2.5 sm:p-3 rounded-xl border border-slate-800">
-                            <div className="text-base sm:text-lg font-black text-teal-400">{m.val}</div>
-                            <div className="text-[9px] text-slate-400 font-bold uppercase mt-1 leading-tight">{m.label}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-col gap-2.5">
-                        <Link
-                          href={data.landingHref}
-                          className="w-full py-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-teal-500/30"
-                        >
-                          <span>See your journey</span>
-                          <ArrowRight size={13} />
-                        </Link>
-                        <Link
-                          href={`/login?redirect=${encodeURIComponent(data.portalHref)}`}
-                          className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                        >
-                          <span>Launch {data.portalName}</span>
-                          <ArrowRight size={13} />
-                        </Link>
-                      </div>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
+                  {/* Right Column: Dark Dashboard KPIs */}
+                  <div className="lg:col-span-5 bg-[#071324] text-white rounded-2xl p-6 sm:p-7 flex flex-col justify-between shadow-xl border border-slate-800">
+                    <div className="border-b border-slate-800 pb-3 mb-6 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">Target Performance Metrics</span>
+                        <div className="text-sm font-black text-white mt-1">{data.role} Dashboard</div>
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-8 text-center">
+                      {data.metrics.map((m, idx) => (
+                        <div key={idx} className="bg-slate-900/90 p-2.5 sm:p-3 rounded-xl border border-slate-800">
+                          <div className="text-base sm:text-lg font-black text-teal-400">{m.val}</div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase mt-1 leading-tight">{m.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                      <Link
+                        href={data.landingHref}
+                        className="w-full py-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-teal-500/30"
+                      >
+                        <span>See your journey</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                      <Link
+                        href={`/login?redirect=${encodeURIComponent(data.portalHref)}`}
+                        className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      >
+                        <span>Launch {data.portalName}</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        </div>
 
       </div>
     </section>
 
-    {/* SECTION 05: BEFORE VS AFTER COMPARISON */}
-    <section id="comparison" className="py-16 md:py-24 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+    {/* SECTION 05: REAL OUTCOMES & MEASURABLE IMPACT (MOVED BEFORE TRANSFORMATION & ROI) */}
+    <section id="outcomes" className="py-14 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        {/* Title */}
+        <div className="text-center mb-8 md:mb-10">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+            Real Outcomes. Measurable Impact.
+          </h2>
+        </div>
+
+        {/* Enterprise Logos Row */}
+        <div className="mb-12 text-center">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Used by teams managing portfolios at:
+          </span>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 opacity-80 transition-all">
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D]"></span> PRESTIGE GROUP
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> EMBASSY SERVICES
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-900"></span> BROOKFIELD
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span> RMZ CORP
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> DLF COMMERCIAL
+            </div>
+            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span> MINDSPACE REIT
+            </div>
+          </div>
+        </div>
+
+        {/* 5 KPI Stat Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-8 xl:gap-12 items-center justify-center max-w-6xl mx-auto">
+          {/* 1. 10M+ */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+              <Building className="w-6 h-6 text-[#00A86B]" />
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-[#00A86B] tracking-tight">10M+</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">Sq.Ft. of Space on Platform</div>
+            </div>
+          </div>
+
+          {/* 2. 500+ */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+              <Wrench className="w-6 h-6 text-[#0F8B7D]" />
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">500+</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">FM Vendors</div>
+            </div>
+          </div>
+
+          {/* 3. 1,000+ */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+              <Layers className="w-6 h-6 text-[#0F8B7D]" />
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">1,000+</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">Buildings Managed</div>
+            </div>
+          </div>
+
+          {/* 4. 30% */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-6 h-6 text-[#F26522]" />
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-[#F26522] tracking-tight">30%</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">Lower Operating Cost</div>
+            </div>
+          </div>
+
+          {/* 5. 95% */}
+          <div className="flex items-center gap-3.5 col-span-2 sm:col-span-1">
+            <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-200 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-6 h-6 text-[#DB2777]" />
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-[#DB2777] tracking-tight">95%</div>
+              <div className="text-xs font-bold text-slate-500 leading-tight">Client Retention</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 text-center text-[11px] font-bold text-slate-400">
+          * Audited platform metrics as of Q3 2026 across commercial hubs in Bengaluru, Mumbai MMR, and Delhi NCR.
+        </div>
+
+      </div>
+    </section>
+
+    {/* SECTION 06: BEFORE VS AFTER COMPARISON (TRANSFORMATION & ROI) */}
+    <section id="comparison" className="py-14 md:py-20 bg-slate-50/60 border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto w-full">
         
-        <div className="text-center max-w-3xl mx-auto mb-10 md:mb-14">
+        <div className="text-center max-w-3xl mx-auto mb-10 md:mb-12">
           <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
             TRANSFORMATION &amp; ROI
           </span>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight mt-3">
             Why Modern Teams Switch to OfficeX
           </h2>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2.5">
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-2">
             Shift from disconnected spreadsheets and delayed reporting to high-velocity operating confidence.
           </p>
         </div>
@@ -1497,7 +1823,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           
           {/* BEFORE OFFICEX Card */}
-          <div className="p-6 sm:p-8 md:p-9 rounded-3xl bg-slate-50/90 border border-slate-200 flex flex-col justify-between shadow-xs">
+          <div className="p-6 sm:p-8 md:p-9 rounded-3xl bg-white border border-slate-200 flex flex-col justify-between shadow-xs">
             <div>
               <span className="px-3 py-1 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-black uppercase tracking-wider border border-slate-300/80">
                 BEFORE OFFICEX
@@ -1572,305 +1898,98 @@ export default function LandingPage() {
 
         </div>
 
-        {/* Mini Case Study Banner */}
-        <div className="mt-10 bg-[#071324] text-white rounded-3xl p-6 sm:p-8 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
-              <Award size={24} />
+      </div>
+    </section>
+
+    {/* SECTION 07: QUESTIONS & ANSWERS (COMPACT FONTS & HEIGHTS) */}
+    <section id="faq" className="py-10 md:py-14 bg-white px-4 md:px-6 w-full max-w-full overflow-hidden border-b border-slate-200">
+      <div className="max-w-3xl mx-auto w-full">
+        <div className="text-center mb-6 md:mb-8">
+          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-0.5 rounded-full border border-teal-200">
+            QUESTIONS &amp; ANSWERS
+          </span>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight mt-2">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-slate-500 font-medium text-xs sm:text-[13px] mt-1.5">
+            Clear answers about vendor operations, billing security, and platform integrations.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2.5 md:gap-3">
+          {faqs.map((faq, idx) => (
+            <div key={idx} className="bg-[#F8FAFC] rounded-xl border border-slate-200/90 overflow-hidden shadow-2xs hover:border-slate-300 transition-colors">
+              <button 
+                onClick={() => toggleFAQ(idx)}
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 flex items-center justify-between font-bold text-slate-900 text-left hover:bg-slate-100/50 transition-colors"
+              >
+                <span className="text-xs sm:text-[13px] font-extrabold text-slate-800">{faq.q}</span>
+                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${activeFAQ === idx ? "transform rotate-180 text-[#0F8B7D]" : ""}`} />
+              </button>
+              {activeFAQ === idx && (
+                <div className="px-4 md:px-5 pb-3.5 text-xs text-slate-600 border-t border-slate-200/70 pt-2.5 leading-relaxed font-medium">
+                  {faq.a}
+                </div>
+              )}
             </div>
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950 px-2.5 py-0.5 rounded-full border border-teal-800">
-                PROVEN RESULTS
-              </span>
-              <h4 className="text-base sm:text-lg font-black text-white mt-1.5">
-                Prestige Meridian — Bengaluru
-              </h4>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Reduced FM vendor procurement turnaround by 60%, eliminated 45-day milestone payment disputes, and saved 18% on annual MEP AMC costs using OfficeX Marketplace &amp; Escrow disbursements.
-              </p>
-            </div>
-          </div>
+          ))}
+        </div>
+
+        <div className="mt-6 text-center">
           <Link
-            href="/resources"
-            className="shrink-0 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/20"
+            href="/faq"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0F8B7D] hover:underline"
           >
-            <span>Read Case Studies</span>
+            <span>See all FAQs &amp; Knowledge Base</span>
             <ArrowRight size={13} />
           </Link>
         </div>
-
-      </div>
-    </section>
-    <section id="solutions-banner" className="py-14 md:py-20 bg-[#F8FAFC] border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full">
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-          
-          {/* Left Dark Column (8 cols): Architecture photo on left, CTA on right */}
-          <div className="lg:col-span-8 bg-[#071324] text-white flex flex-col md:flex-row items-stretch relative overflow-hidden">
-            {/* Building Image */}
-            <div className="w-full md:w-5/12 relative min-h-[220px] md:min-h-[280px]">
-              <Image
-                src="/images/cta_building_hd.jpg"
-                alt="Commercial Workspaces"
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 35vw"
-              />
-              {/* Subtle gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#071324]/80 hidden md:block" />
-            </div>
-
-            {/* Text & CTAs */}
-            <div className="w-full md:w-7/12 p-8 md:p-10 flex flex-col justify-center">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
-                A Smarter Way to<br className="hidden sm:inline" /> Build, Manage and Grow.
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium mt-3 leading-relaxed max-w-md">
-                Join the organizations redefining property and workplace operations with OFFICEX.
-              </p>
-
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => openEnquiry()}
-                  className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
-                >
-                  Schedule a Call
-                </button>
-                <button
-                  onClick={() => setIsContactModalOpen(true)}
-                  className="px-6 py-2.5 rounded-xl bg-transparent hover:bg-white/10 text-white border border-white/30 font-bold text-xs sm:text-sm transition-all cursor-pointer"
-                >
-                  Talk to an Expert
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Light Column (4 cols): 4 Persona Links matching reference */}
-          <div className="lg:col-span-4 bg-[#F8FAFB] p-6 md:p-8 flex flex-col justify-center divide-y divide-slate-200/80">
-            {[
-              {
-                title: "Owners & Developers",
-                icon: Building,
-                target: "stakeholders",
-              },
-              {
-                title: "REITs & Asset Managers",
-                icon: BarChart3,
-                target: "stakeholders",
-              },
-              {
-                title: "Occupiers & Enterprises",
-                icon: Users,
-                target: "stakeholders",
-              },
-              {
-                title: "Facility Management Companies",
-                icon: Briefcase,
-                target: "stakeholders",
-              },
-            ].map((persona, idx) => (
-              <div
-                key={idx}
-                onClick={() => scrollToSection("stakeholders")}
-                className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between group cursor-pointer hover:translate-x-1 transition-transform"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:text-[#0F8B7D] group-hover:border-teal-300 shadow-xs transition-colors">
-                    <persona.icon size={18} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">
-                    {persona.title}
-                  </span>
-                </div>
-                <ChevronRight size={16} className="text-slate-400 group-hover:text-[#0F8B7D] transition-colors" />
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
 
-    {/* SECTION: REAL OUTCOMES & MEASURABLE IMPACT — EXACT MATCH TO USER SCREENSHOT */}
-    <section id="outcomes" className="py-16 md:py-20 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full">
-        {/* Title — Exact match to screenshot */}
-        <div className="text-center mb-8 md:mb-10">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-            Real Outcomes. Measurable Impact.
-          </h2>
+    {/* SECTION 08: COMMERCIAL ENQUIRY (CLEAN BANNER WITH BUTTONS) */}
+    <section id="enquiry" className="py-12 md:py-16 bg-gradient-to-b from-slate-50 to-teal-50/30 border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
+      <div className="max-w-4xl mx-auto w-full text-center">
+        <span className="text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
+          COMMERCIAL ENQUIRY
+        </span>
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3">
+          Talk to Us — We Respond Within 24 Business Hours.
+        </h2>
+        <p className="text-slate-600 font-medium text-xs sm:text-sm mt-2 max-w-xl mx-auto">
+          Connect directly with our solutions engineering desk for custom portfolio onboarding, vendor procurement, or platform integration.
+        </p>
+
+        {/* Action Buttons */}
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3.5">
+          <button
+            onClick={() => openEnquiry()}
+            className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <span>Open Commercial Enquiry</span>
+            <ArrowRight size={14} />
+          </button>
+          <button
+            onClick={() => setIsContactModalOpen(true)}
+            className="px-6 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <span>Talk to Sales Desk</span>
+          </button>
         </div>
 
-        {/* Enterprise Logos Row — Used by teams managing portfolios at */}
-        <div className="mb-12 text-center">
-          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-            Used by teams managing portfolios at:
-          </span>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 opacity-80 transition-all">
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D]"></span> PRESTIGE GROUP
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> EMBASSY SERVICES
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-900"></span> BROOKFIELD
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span> RMZ CORP
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> DLF COMMERCIAL
-            </div>
-            <div className="flex items-center gap-2 font-black text-slate-700 tracking-tight text-xs sm:text-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span> MINDSPACE REIT
-            </div>
-          </div>
+        <div className="mt-5 text-center text-xs text-slate-500 font-medium">
+          Prefer an immediate consultation?{" "}
+          <a
+            href="https://calendly.com/officex-sales/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-[#0F8B7D] hover:underline"
+          >
+            Schedule a 30-minute call on Calendly →
+          </a>
         </div>
-
-        {/* 5 KPI Stat Metrics — Exact Match to User Screenshot */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-8 xl:gap-12 items-center justify-center max-w-6xl mx-auto">
-          {/* 1. 10M+ */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-              <Building className="w-6 h-6 text-[#00A86B]" />
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#00A86B] tracking-tight">10M+</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Sq.Ft. of Space on Platform</div>
-            </div>
-          </div>
-
-          {/* 2. 500+ */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-              <Wrench className="w-6 h-6 text-[#0F8B7D]" />
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">500+</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">FM Vendors</div>
-            </div>
-          </div>
-
-          {/* 3. 1,000+ */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-              <Layers className="w-6 h-6 text-[#0F8B7D]" />
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] tracking-tight">1,000+</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Buildings Managed</div>
-            </div>
-          </div>
-
-          {/* 4. 30% */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-6 h-6 text-[#F26522]" />
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#F26522] tracking-tight">30%</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Lower Operating Cost</div>
-            </div>
-          </div>
-
-          {/* 5. 95% */}
-          <div className="flex items-center gap-3.5 col-span-2 sm:col-span-1">
-            <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-200 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-6 h-6 text-[#DB2777]" />
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-[#DB2777] tracking-tight">95%</div>
-              <div className="text-xs font-bold text-slate-500 leading-tight">Client Retention</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 text-center text-[11px] font-bold text-slate-400">
-          * Audited platform metrics as of Q3 2026 across commercial hubs in Bengaluru, Mumbai MMR, and Delhi NCR.
-        </div>
-
       </div>
     </section>
-
-
-
-      {/* SECTION 09: FAQ ACCORDION */}
-      <section id="faq" className="py-16 md:py-24 bg-white px-4 md:px-6 w-full max-w-full overflow-hidden border-b border-slate-200">
-        <div className="max-w-4xl mx-auto w-full">
-          <div className="text-center mb-10 md:mb-14">
-            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
-              QUESTIONS &amp; ANSWERS
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-2 md:mt-3">
-              Find clear answers about vendor operations, billing security, and integrations.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3.5 md:gap-4">
-            {faqs.map((faq, idx) => (
-              <div key={idx} className="bg-[#F8FAFC] rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition-colors">
-                <button 
-                  onClick={() => toggleFAQ(idx)}
-                  className="w-full px-5 md:px-6 py-4 md:py-5 flex items-center justify-between font-bold text-slate-900 text-left hover:bg-slate-100/50 transition-colors"
-                >
-                  <span className="text-xs sm:text-sm font-extrabold text-slate-800">{faq.q}</span>
-                  <ChevronDown size={18} className={`text-slate-400 transition-transform duration-200 ${activeFAQ === idx ? "transform rotate-180 text-[#0F8B7D]" : ""}`} />
-                </button>
-                {activeFAQ === idx && (
-                  <div className="px-5 md:px-6 pb-4 md:pb-5 text-xs text-slate-600 border-t border-slate-200/70 pt-3 md:pt-4 leading-relaxed font-medium">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <Link
-              href="/faq"
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#0F8B7D] hover:underline"
-            >
-              <span>See all FAQs &amp; Knowledge Base</span>
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 10: TALK TO US — INLINE ENQUIRY */}
-      <section id="enquiry" className="py-16 md:py-24 bg-slate-50 border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
-        <div className="max-w-4xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
-              COMMERCIAL ENQUIRY
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
-              Talk to Us — We Respond Within 24 Business Hours.
-            </h2>
-            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-2">
-              Connect directly with our solutions engineering desk for custom portfolio onboarding.
-            </p>
-          </div>
-
-          <EnquiryForm variant="inline" />
-
-          <div className="mt-8 text-center text-xs text-slate-500 font-medium">
-            Prefer an immediate consultation?{" "}
-            <a
-              href="https://calendly.com/officex-sales/30min"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-[#0F8B7D] hover:underline"
-            >
-              Schedule a 30-minute call on Calendly →
-            </a>
-          </div>
-        </div>
-      </section>
 
       {/* FOOTER */}
       <Footer />

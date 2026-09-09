@@ -23,13 +23,35 @@ export default function HeaderAuthButton({ className = "" }: HeaderAuthButtonPro
     setMounted(true);
     const checkAuth = () => {
       if (typeof window === "undefined") return;
-      const email = localStorage.getItem("officex_user_email");
-      const authCookie = document.cookie.includes("officex_auth=1");
-      const name = localStorage.getItem("officex_user_name") || "Member";
-      const role = localStorage.getItem("officex_user_role") || "Commercial Owner";
-      const sub = localStorage.getItem("officex_subscription") === "active" || document.cookie.includes("officex_subscription=active");
+      const sessionActive = sessionStorage.getItem("officex_session_active") === "1";
 
-      if (email || authCookie) {
+      if (!sessionActive) {
+        // Clear any stale demo credentials from previous tests so the site opens logged out by default
+        if (localStorage.getItem("officex_user_email") || document.cookie.includes("officex_auth=1")) {
+          localStorage.removeItem("officex_user_email");
+          localStorage.removeItem("officex_user_name");
+          localStorage.removeItem("officex_user_role");
+          localStorage.removeItem("officex_user");
+          localStorage.removeItem("officex_subscription");
+          localStorage.removeItem("officex_dashboard");
+          localStorage.removeItem("officex_active_portal");
+          document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+          document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+          document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+        }
+        setIsLoggedIn(false);
+        setUserName("");
+        setUserRole("");
+        setIsSubscribed(false);
+        return;
+      }
+
+      const email = sessionStorage.getItem("officex_user_email") || localStorage.getItem("officex_user_email");
+      const name = sessionStorage.getItem("officex_user_name") || localStorage.getItem("officex_user_name") || "Member";
+      const role = sessionStorage.getItem("officex_user_role") || localStorage.getItem("officex_user_role") || "Commercial Owner";
+      const sub = sessionStorage.getItem("officex_subscription") === "active" || localStorage.getItem("officex_subscription") === "active";
+
+      if (email) {
         setIsLoggedIn(true);
         setUserName(name);
         setUserRole(role);
@@ -60,12 +82,15 @@ export default function HeaderAuthButton({ className = "" }: HeaderAuthButtonPro
 
   const handleSignOut = () => {
     if (typeof window !== "undefined") {
+      sessionStorage.clear();
       localStorage.removeItem("officex_user_email");
       localStorage.removeItem("officex_user_name");
       localStorage.removeItem("officex_user_role");
       localStorage.removeItem("officex_user");
       localStorage.removeItem("officex_subscription");
       localStorage.removeItem("officex_auth");
+      localStorage.removeItem("officex_dashboard");
+      localStorage.removeItem("officex_active_portal");
       document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";

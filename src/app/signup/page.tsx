@@ -112,8 +112,14 @@ export default function SignupPage() {
         return;
       }
 
-      // Store session in localStorage for client-side use
+      // Store session in sessionStorage and localStorage for client-side use
       if (typeof window !== "undefined") {
+        sessionStorage.setItem("officex_session_active", "1");
+        sessionStorage.setItem("officex_user_id", data.user?.id || "");
+        sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
+        sessionStorage.setItem("officex_user_name", fullName);
+        sessionStorage.setItem("officex_user_role", selectedRole);
+
         localStorage.setItem("officex_user_id", data.user?.id || "");
         localStorage.setItem("officex_user_email", email.trim().toLowerCase());
         localStorage.setItem("officex_user_name", fullName);
@@ -124,6 +130,7 @@ export default function SignupPage() {
         // Initialize empty arrays for the brand-new account
         localStorage.setItem("officex_user_properties", JSON.stringify([]));
         localStorage.setItem("officex_user_partnerships", JSON.stringify([]));
+        document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
       }
 
       // Redirect to the chosen portal

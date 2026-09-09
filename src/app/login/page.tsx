@@ -93,12 +93,20 @@ function LoginForm() {
     setIsLoading(true);
     setError("");
     if (typeof window !== "undefined") {
+      sessionStorage.setItem("officex_session_active", "1");
+      sessionStorage.setItem("officex_user_email", portal.email);
+      sessionStorage.setItem("officex_user_name", portal.label);
+      sessionStorage.setItem("officex_user_role", portal.role);
+      sessionStorage.setItem("officex_dashboard", portal.dashboard);
+      sessionStorage.setItem("officex_subscription", "active");
+
       localStorage.setItem("officex_user_email", portal.email);
       localStorage.setItem("officex_user_name", portal.label);
       localStorage.setItem("officex_user_role", portal.role);
       localStorage.setItem("officex_dashboard", portal.dashboard);
       localStorage.setItem("officex_subscription", "active");
-      document.cookie = "officex_auth=1; path=/; max-age=2592000";
+      document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+      document.cookie = "officex_subscription=active; path=/; max-age=86400; SameSite=Lax";
     }
 
     // Redirect to the intended redirectUrl if specified, or directly to their operational portal
@@ -121,12 +129,20 @@ function LoginForm() {
     const dash = match ? match.dashboard : "/properties";
 
     if (typeof window !== "undefined") {
+      sessionStorage.setItem("officex_session_active", "1");
+      sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
+      sessionStorage.setItem("officex_user_name", match ? match.label : email.split("@")[0]);
+      sessionStorage.setItem("officex_user_role", role);
+      sessionStorage.setItem("officex_dashboard", dash);
+      sessionStorage.setItem("officex_subscription", "active");
+
       localStorage.setItem("officex_user_email", email.trim().toLowerCase());
       localStorage.setItem("officex_user_name", match ? match.label : email.split("@")[0]);
       localStorage.setItem("officex_user_role", role);
       localStorage.setItem("officex_dashboard", dash);
       localStorage.setItem("officex_subscription", "active");
-      document.cookie = "officex_auth=1; path=/; max-age=2592000";
+      document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+      document.cookie = "officex_subscription=active; path=/; max-age=86400; SameSite=Lax";
     }
 
     const destination = redirectUrl || dash;

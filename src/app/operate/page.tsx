@@ -40,10 +40,10 @@ export default function OperatePage() {
           onClick: () => setSlideInOpen(true)
         }}
         accentColor="#0F8B7D"
-        bgImage="/images/work_operate_cafm.jpg"
+        bgImage="/images/pro_mep_technician.jpg"
         customVisual={
-          <div className="bg-[#0a1829]/90 backdrop-blur-xl rounded-3xl border border-slate-700/80 shadow-2xl p-5 overflow-hidden relative text-white">
-            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 overflow-hidden relative text-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-400" />
                 <div className="w-3 h-3 rounded-full bg-amber-400" />
@@ -52,91 +52,91 @@ export default function OperatePage() {
                   app.officex.in/operate
                 </span>
               </div>
-              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200">
                 ● LIVE CAFM &amp; PPM
               </span>
             </div>
 
             {/* Live Operations & Workplace Health Score Widget */}
-            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 p-4 mb-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     WORKPLACE HEALTH SCORE
                   </span>
                   <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-2xl font-black text-teal-300">91<span className="text-xs text-slate-400 font-normal">/100</span></span>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                    <span className="text-2xl font-black text-slate-900">91<span className="text-xs text-slate-400 font-normal">/100</span></span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                       ● Optimal Grade-A
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">CRITICAL UPTIME</span>
-                  <span className="text-sm font-black text-emerald-400">99.8% MEP Uptime</span>
+                  <span className="text-sm font-black text-emerald-600">99.8% MEP Uptime</span>
                 </div>
               </div>
 
               {/* 7 Health Dimensions Sub-Components */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-[10px]">
-                <div className="bg-[#071324] p-1.5 rounded-lg border border-slate-800 text-center">
-                  <span className="text-slate-400 block text-[9px]">Infrastructure</span>
-                  <span className="font-bold text-white">94%</span>
+                <div className="bg-white p-2 rounded-lg border border-slate-200 text-center shadow-2xs">
+                  <span className="text-slate-400 block text-[9px] font-medium">Infrastructure</span>
+                  <span className="font-extrabold text-slate-900">94%</span>
                 </div>
-                <div className="bg-[#071324] p-1.5 rounded-lg border border-slate-800 text-center">
-                  <span className="text-slate-400 block text-[9px]">Asset Uptime</span>
-                  <span className="font-bold text-emerald-400">97%</span>
+                <div className="bg-white p-2 rounded-lg border border-slate-200 text-center shadow-2xs">
+                  <span className="text-slate-400 block text-[9px] font-medium">Asset Uptime</span>
+                  <span className="font-extrabold text-emerald-600">97%</span>
                 </div>
-                <div className="bg-[#071324] p-1.5 rounded-lg border border-slate-800 text-center">
-                  <span className="text-slate-400 block text-[9px]">SLA Response</span>
-                  <span className="font-bold text-teal-300">96%</span>
+                <div className="bg-white p-2 rounded-lg border border-slate-200 text-center shadow-2xs">
+                  <span className="text-slate-400 block text-[9px] font-medium">SLA Response</span>
+                  <span className="font-extrabold text-[#0F8B7D]">96%</span>
                 </div>
-                <div className="bg-[#071324] p-1.5 rounded-lg border border-slate-800 text-center">
-                  <span className="text-slate-400 block text-[9px]">Occupier CSAT</span>
-                  <span className="font-bold text-white">91%</span>
+                <div className="bg-white p-2 rounded-lg border border-slate-200 text-center shadow-2xs">
+                  <span className="text-slate-400 block text-[9px] font-medium">Occupier CSAT</span>
+                  <span className="font-extrabold text-slate-900">91%</span>
                 </div>
               </div>
 
               {/* Active Ticket Dispatch Preview */}
-              <div className="bg-[#071324] rounded-xl p-3 border border-slate-800 shadow-2xs mb-2.5">
+              <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs mb-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-bold text-red-400 bg-red-500/15 border border-red-500/30 px-1.5 py-0.5 rounded">
+                  <span className="font-mono text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
                     CRITICAL · Server AC Condenser Leak
                   </span>
-                  <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
                     38m SLA Left
                   </span>
                 </div>
-                <p className="font-bold text-xs text-white mt-1.5">
+                <p className="font-bold text-xs text-slate-900 mt-1.5">
                   Server Room A · Apex Tower Floor 3
                 </p>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
                   <span>Assigned: Senior MEP Tech</span>
-                  <span className="text-emerald-400 font-bold">Dispatched</span>
+                  <span className="text-emerald-600 font-bold">Dispatched</span>
                 </div>
               </div>
 
               {/* Asset Health Strip */}
               <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
-                  <span className="block text-[9px] text-slate-400">DG SETS</span>
-                  <span className="text-emerald-400 font-black">Standby 100%</span>
+                <div className="bg-white rounded-lg p-2 border border-slate-200 font-bold text-slate-900 shadow-2xs">
+                  <span className="block text-[9px] text-slate-400 font-medium">DG SETS</span>
+                  <span className="text-emerald-600 font-black">Standby 100%</span>
                 </div>
-                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
-                  <span className="block text-[9px] text-slate-400">HVAC AHUs</span>
-                  <span className="text-emerald-400 font-black">28/28 Online</span>
+                <div className="bg-white rounded-lg p-2 border border-slate-200 font-bold text-slate-900 shadow-2xs">
+                  <span className="block text-[9px] text-slate-400 font-medium">HVAC AHUs</span>
+                  <span className="text-emerald-600 font-black">28/28 Online</span>
                 </div>
-                <div className="bg-[#071324] rounded-lg p-2 border border-slate-800 font-bold text-white">
-                  <span className="block text-[9px] text-slate-400">PPM TASKS</span>
-                  <span className="text-teal-300 font-black">52-Wk Auto</span>
+                <div className="bg-white rounded-lg p-2 border border-slate-200 font-bold text-slate-900 shadow-2xs">
+                  <span className="block text-[9px] text-slate-400 font-medium">PPM TASKS</span>
+                  <span className="text-[#0F8B7D] font-black">52-Wk Auto</span>
                 </div>
               </div>
             </div>
 
             {/* Bottom Assurance */}
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-              <span className="font-semibold text-slate-300">QR Asset Tagging Enforced</span>
-              <span className="text-emerald-400 font-extrabold">✓ Zero Paper Logbooks</span>
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+              <span className="font-semibold text-slate-700">QR Asset Tagging Enforced</span>
+              <span className="text-emerald-600 font-extrabold">✓ Zero Paper Logbooks</span>
             </div>
           </div>
         }

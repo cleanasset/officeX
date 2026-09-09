@@ -96,7 +96,7 @@ export default function MarketingHeader({
                   </div>
                   <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                     <div className="text-xs font-bold text-slate-900">Commercial Property Marketplace</div>
-                    <div className="text-[11px] text-slate-500">Discover verified Grade-A office spaces</div>
+                    <div className="text-[11px] text-slate-500">Discover verified Grade-A spaces</div>
                   </Link>
                   <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                     <div className="text-xs font-bold text-slate-900">FM Services Marketplace</div>
@@ -111,15 +111,23 @@ export default function MarketingHeader({
                 {/* Column 2: Software & Core */}
                 <div className="space-y-1">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
-                    Management &amp; Tech
+                    Management &amp; Tech SaaS
                   </div>
-                  <Link href="/operate" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="text-xs font-bold text-slate-900">OfficeX PRO (Operate)</div>
-                    <div className="text-[11px] text-slate-500">CAFM, 52-week PPM &amp; helpdesk</div>
+                  <Link href="/properties/rent-roll" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">Rent Roll Master</div>
+                    <div className="text-[11px] text-slate-500">Institutional lease indexation &amp; ledgers</div>
                   </Link>
                   <Link href="/manage" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="text-xs font-bold text-slate-900">OfficeX Manage</div>
-                    <div className="text-[11px] text-slate-500">Rent roll, CAM billing &amp; compliance NOCs</div>
+                    <div className="text-xs font-bold text-slate-900">CAM Billing &amp; Allocation</div>
+                    <div className="text-[11px] text-slate-500">Automated reconciliation &amp; invoicing</div>
+                  </Link>
+                  <Link href="/compliance" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">Statutory Compliances &amp; NOCs</div>
+                    <div className="text-[11px] text-slate-500">Fire NOCs, lift licenses &amp; CFO audit radar</div>
+                  </Link>
+                  <Link href="/operate" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                    <div className="text-xs font-bold text-slate-900">Operate (CAFM &amp; PPM)</div>
+                    <div className="text-[11px] text-slate-500">52-week PPM schedules &amp; helpdesk</div>
                   </Link>
                   <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                     <div className="text-xs font-bold text-slate-900">OFFICEX Intelligence</div>
@@ -314,13 +322,22 @@ export default function MarketingHeader({
           </div>
 
           <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
-            Marketplace
+            Commercial Spaces Marketplace
+          </Link>
+          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
+            FM Services Marketplace
+          </Link>
+          <Link href="/properties/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">
+            Rent Roll Master
+          </Link>
+          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">
+            CAM Billing &amp; Allocation
+          </Link>
+          <Link href="/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-emerald-600">
+            Statutory Compliances &amp; NOCs
           </Link>
           <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">
             Operate (CAFM &amp; PPM)
-          </Link>
-          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">
-            Manage (Rent Roll &amp; Compliance)
           </Link>
           <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
             Intelligence (Analytics &amp; ESG)
@@ -329,10 +346,13 @@ export default function MarketingHeader({
             Managed Services (PM &amp; IFM)
           </Link>
           <Link href="/platform" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
-            Platform Core
+            Platform Core Architecture
           </Link>
           <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
             Pricing
+          </Link>
+          <Link href="/careers" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
+            Careers
           </Link>
           <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
             Resources &amp; Insights

@@ -63,12 +63,16 @@ export default function SubscriptionGate({
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
+      sessionStorage.clear();
       localStorage.removeItem("officex_user_email");
       localStorage.removeItem("officex_user_name");
       localStorage.removeItem("officex_user_role");
       localStorage.removeItem("officex_subscription");
+      localStorage.removeItem("officex_dashboard");
+      localStorage.removeItem("officex_active_portal");
       document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+      document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       router.push("/login");
     }
   };

@@ -33,6 +33,8 @@ import {
   HelpCircle,
   Briefcase
 } from "lucide-react";
+import MarketingHeader from "@/components/marketing/MarketingHeader";
+import Footer from "@/components/Footer";
 
 interface Contractor {
   id: string;
@@ -215,161 +217,50 @@ export default function FMMarketplacePage() {
   return (
     <div className="flex flex-col min-h-screen font-sans text-slate-900 bg-slate-50">
       
-      {/* 1. HEADER (High-Precision Navigation) */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-3.5 flex items-center justify-between transition-all shadow-2xs">
-        <div className="flex items-center shrink-0">
-          <Link href="/" className="flex items-center gap-3 group">
-            <Image 
-              src="/logo-removebg-preview.png" 
-              alt="OfficeX Logo" 
-              width={48} 
-              height={48} 
-              priority
-              className="object-contain"
-              style={{ width: "auto", height: "42px" }}
-            />
-            <Image 
-              src="/name-removebg-preview.png" 
-              alt="OfficeX" 
-              width={160} 
-              height={36} 
-              priority
-              className="object-contain"
-              style={{ width: "auto", height: "32px" }}
-            />
-          </Link>
-        </div>
+      {/* 1. UNIVERSAL STICKY MARKETING HEADER */}
+      <MarketingHeader activePath="/fm-marketplace" />
 
-        {/* Center Navigation */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-          <Link 
-            href="/fm-marketplace" 
-            className="text-[#0F8B7D] font-bold border-b-2 border-[#0F8B7D] pb-1"
-          >
-            FM Marketplace
-          </Link>
-          <a 
-            href="#contractors" 
-            className="hover:text-[#0F8B7D] transition-colors pb-1"
-          >
-            Verified Contractors
-          </a>
-          <a 
-            href="#how-it-works" 
-            className="hover:text-[#0F8B7D] transition-colors pb-1"
-          >
-            How it Works
-          </a>
-          <a 
-            href="#pricing" 
-            className="hover:text-[#0F8B7D] transition-colors pb-1"
-          >
-            Pricing
-          </a>
-          <Link 
-            href="/compliance" 
-            className="hover:text-[#0F8B7D] transition-colors pb-1"
-          >
-            Compliance Vault
-          </Link>
-        </nav>
-
-        {/* Right Actions */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link 
-            href="/login" 
-            className="text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors px-3 py-2"
-          >
-            Log In
-          </Link>
-          <button 
-            onClick={() => handleOpenRfq()}
-            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-black hover:bg-[#0D7A6E] shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center gap-2"
-          >
-            <Zap size={14} />
-            <span>Post an RFQ</span>
-          </button>
-        </div>
-
-        {/* Mobile menu toggle */}
-        <button 
-          className="md:hidden p-1.5 text-slate-700 hover:text-slate-900" 
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </header>
-
-      {/* MOBILE DRAWER */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-5 md:hidden text-slate-900 shadow-2xl animate-fadeIn">
-          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">FM Marketplace</Link>
-          <a href="#contractors" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Verified Contractors</a>
-          <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">How it Works</a>
-          <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Pricing</a>
-          <Link href="/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Compliance Vault</Link>
-          <hr className="border-slate-200" />
-          <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-slate-700">Log In</Link>
-          <button 
-            onClick={() => { setMobileMenuOpen(false); handleOpenRfq(); }}
-            className="w-full py-3.5 rounded-xl bg-[#0F8B7D] text-white font-black text-center shadow-lg cursor-pointer text-sm flex items-center justify-center gap-2"
-          >
-            <Zap size={15} />
-            <span>Post an RFQ &amp; Get 3 Quotes</span>
-          </button>
-        </div>
-      )}
-
-      {/* 2. VEENDOOR-STYLE HERO BANNER WITH SEARCH ENGINE & LIVE PRO COUNTER */}
-      <section className="relative pt-20 pb-24 px-4 sm:px-6 lg:px-8 text-center text-white w-full max-w-full overflow-hidden">
-        {/* Operations Background Image - Soft Blurred to Keep Atmosphere while Making Text Ultra-Readable */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <Image
-            src="/images/work_fm_technician.jpg"
-            alt="Skilled Facility Maintenance & MEP Technicians at Work"
-            fill
-            priority
-            unoptimized
-            className="object-cover object-center blur-[5px] scale-105"
-            sizes="100vw"
-          />
-          {/* Balanced Navy Scrim */}
-          <div className="absolute inset-0 bg-[#071324]/70" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/85 via-transparent to-[#071324]/90" />
-        </div>
+      {/* 2. VEENDOOR-STYLE LIGHT HERO BANNER WITH SEARCH ENGINE & LIVE PRO COUNTER */}
+      <section className="relative pt-12 md:pt-16 pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 text-center bg-gradient-to-b from-teal-50/60 via-white to-slate-50 border-b border-slate-200 overflow-hidden">
+        {/* Soft background accents */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-teal-300/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-1/3 right-10 w-80 h-80 bg-emerald-300/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(#0f8b7d15_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none" />
 
         {/* Hero Content Container */}
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
           
           {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-400/40 bg-[#071324]/90 text-teal-300 text-[11px] sm:text-xs font-bold uppercase tracking-widest mb-5 shadow-md">
-            <BadgeCheck size={14} className="text-teal-400" />
-            <span>Enterprise Facility Management Marketplace</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-200 bg-white text-[#0F8B7D] text-xs font-extrabold uppercase tracking-wider mb-5 shadow-2xs">
+            <BadgeCheck size={14} className="text-[#0F8B7D]" />
+            <span>Pre-Vetted FM Contractors · Escrow Protected Payouts</span>
           </div>
           
           {/* Solid, Crisp, High-Contrast Headline */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-black tracking-tight leading-[1.18] mb-4 max-w-4xl text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
-            The Trusted Marketplace for{" "}
-            <span className="text-[#2DD4BF]">Commercial Facility Management</span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.15] mb-4 max-w-4xl text-slate-900">
+            Hire Verified Contractors for{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-emerald-600">
+              Commercial Facility Management
+            </span>
           </h1>
           
           {/* Solid Subheadline */}
-          <p className="text-sm sm:text-base md:text-lg text-slate-100 font-medium max-w-3xl mx-auto mb-10 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-            Find pre-vetted contractors for HVAC, MEP, Security, Housekeeping, and Specialized Building Engineering. Instant competitive quotes, transparent BOQs, and escrow-backed milestone payouts.
+          <p className="text-sm sm:text-base md:text-lg text-slate-600 font-medium max-w-3xl mx-auto mb-9 leading-relaxed">
+            Connect with pre-vetted contractors for HVAC, MEP, Security, Housekeeping, and Specialized Building Engineering. Instant competitive quotes, transparent digital BOQs, and milestone escrow guarantees.
           </p>
 
           {/* Interactive Veendoor Search Bar */}
-          <div className="w-full max-w-3xl bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-full p-2.5 sm:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.45)] flex flex-col sm:flex-row items-center gap-2 border border-white/40 text-left">
+          <div className="w-full max-w-3xl bg-white rounded-2xl p-2.5 sm:p-3 shadow-xl shadow-slate-200/80 flex flex-col sm:flex-row items-center gap-2 border border-slate-200 text-left">
             
             {/* Category Dropdown */}
             <div className="flex-1 relative w-full sm:w-auto">
               <div 
                 onClick={() => { setCategoryOpen(!categoryOpen); setCityOpen(false); }}
-                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-transparent hover:bg-slate-50 rounded-xl sm:rounded-full cursor-pointer transition-colors"
+                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200"
               >
                  <div className="flex items-center gap-3 text-slate-700">
                     <SlidersHorizontal size={17} className="text-[#0F8B7D] shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                       {selectedCategory}
                     </span>
                  </div>
@@ -377,7 +268,7 @@ export default function FMMarketplacePage() {
               </div>
               
               {categoryOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 py-2">
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 py-2">
                   <div 
                     onClick={() => { setSelectedCategory("All Service Categories"); setCategoryOpen(false); }}
                     className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
@@ -404,11 +295,11 @@ export default function FMMarketplacePage() {
             <div className="flex-1 relative w-full sm:w-auto">
               <div 
                 onClick={() => { setCityOpen(!cityOpen); setCategoryOpen(false); }}
-                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-transparent hover:bg-slate-50 rounded-xl sm:rounded-full cursor-pointer transition-colors"
+                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200"
               >
                  <div className="flex items-center gap-3 text-slate-700">
                     <MapPin size={17} className="text-[#0F8B7D] shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                       {selectedCity}
                     </span>
                  </div>
@@ -416,7 +307,7 @@ export default function FMMarketplacePage() {
               </div>
 
               {cityOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 py-2">
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 py-2">
                   <div 
                     onClick={() => { setSelectedCity("All Commercial Hubs"); setCityOpen(false); }}
                     className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
@@ -440,16 +331,16 @@ export default function FMMarketplacePage() {
             {/* Find Verified Pros Button */}
             <button 
               onClick={() => handleOpenRfq(selectedCategory !== "All Service Categories" ? selectedCategory : undefined)}
-              className="w-full sm:w-auto px-7 py-3 bg-[#0F8B7D] hover:bg-[#0c7266] text-white font-black text-xs sm:text-sm rounded-xl sm:rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-7 py-3 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-teal-700/20 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2"
             >
-              <span>Find Verified Pros</span>
-              <ArrowRight size={15} />
+              <Zap size={15} />
+              <span>Get 3 Free Quotes</span>
             </button>
           </div>
 
-          {/* Popular Category Chips with Live Pro Counts (Veendoor pattern) */}
+          {/* Popular Category Chips with Live Pro Counts (Veendoor pattern in Light Theme) */}
           <div className="flex flex-wrap items-center justify-center gap-2 mt-7 text-xs">
-             <span className="text-slate-300 font-semibold mr-1 drop-shadow-sm">Popular Categories:</span>
+             <span className="text-slate-500 font-bold mr-1">Popular Categories:</span>
              {[
                { name: "MEP Engineering", count: "240+ Pros" },
                { name: "HVAC Systems", count: "180+ Pros" },
@@ -461,10 +352,10 @@ export default function FMMarketplacePage() {
                <button 
                  key={chip.name} 
                  onClick={() => handleOpenRfq(chip.name)}
-                 className="px-3.5 py-1.5 rounded-full border border-white/25 bg-[#071324]/65 hover:bg-[#0F8B7D] hover:border-[#0F8B7D] backdrop-blur-md transition-all cursor-pointer text-slate-100 hover:text-white font-semibold flex items-center gap-1.5 shadow-md"
+                 className="px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:border-[#0F8B7D] hover:bg-teal-50/50 transition-all cursor-pointer text-slate-700 font-bold flex items-center gap-1.5 shadow-2xs"
                >
                  <span>{chip.name}</span>
-                 <span className="text-teal-300 font-bold text-[10px]">({chip.count})</span>
+                 <span className="text-[#0F8B7D] font-extrabold text-[10px]">({chip.count})</span>
                </button>
              ))}
           </div>
@@ -473,8 +364,7 @@ export default function FMMarketplacePage() {
       </section>
 
       {/* 3. LIVE MARKETPLACE TRUST TICKER & ENTERPRISE MARQUEE */}
-      <section className="bg-white py-6 border-b border-slate-200/90 w-full overflow-hidden relative">
-        {/* High-Impact Stat Metrics Bar */}
+      <section className="bg-white py-6 border-b border-slate-200 w-full overflow-hidden relative">
         <div className="max-w-6xl mx-auto px-4 mb-5">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center border-b border-slate-100 pb-5">
             <div>
@@ -523,12 +413,7 @@ export default function FMMarketplacePage() {
               "RMZ Corp",
               "Deloitte Workplace",
               "Tata Realty",
-              "Larsen & Toubro Realty",
-              "DLF Commercial",
-              "Brookfield Properties",
-              "Google Campus",
-              "Godrej Properties",
-              "Prestige Group"
+              "Larsen & Toubro Realty"
             ].map((company, idx) => (
               <span key={idx} className="shrink-0 hover:text-[#0F8B7D] transition-colors cursor-default flex items-center gap-2">
                 <Building2 size={15} className="text-slate-400" />
@@ -539,124 +424,162 @@ export default function FMMarketplacePage() {
         </div>
       </section>
 
-      {/* 4. COMPREHENSIVE FACILITY SERVICE CATEGORIES (8-Card Grid) */}
-      <section className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 w-full">
+      {/* 4. SNABBIT-INSPIRED UNIFORMED SERVICE SPECIALISTS SHOWCASE */}
+      <section className="bg-slate-50/70 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 w-full border-b border-slate-200">
         <div className="max-w-6xl mx-auto w-full">
-          <div className="text-center mb-12">
-            <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200/60 px-3 py-1 rounded-full">
-              Full-Spectrum FM Coverage
-            </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-slate-900 tracking-tight mt-3 mb-3">
-              Comprehensive Facility Services
-            </h2>
-            <p className="text-slate-500 text-sm sm:text-base font-medium max-w-2xl mx-auto">
-              Broadcast structured RFQs and procure pre-vetted contractors across all core hard and soft facility management disciplines.
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+            <div>
+              <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
+                Pre-Screened Uniformed Personnel
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-slate-900 tracking-tight mt-3">
+                Expert Facility Services &amp; Uniformed Professionals
+              </h2>
+            </div>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium max-w-md mt-2 md:mt-0">
+              Every professional dispatched through OfficeX is trained, background-audited, and deployed in standardized uniforms with digital proof of work.
             </p>
           </div>
 
-          {/* 8 Categories Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Snabbit Visual Cards with Real Uniformed Personnel */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                name: "MEP Engineering",
-                desc: "Mechanical, Electrical, and Substation 33kV operations with zero downtime.",
-                count: "240+ Vendors",
-                icon: Wrench,
-                color: "teal",
-                bg: "bg-teal-50",
-                text: "text-[#0F8B7D]"
+                id: "hvac",
+                name: "HVAC & Chiller Engineering",
+                desc: "Centrifugal chillers, VRV/VRF multi-splits, cooling towers, and indoor air balance.",
+                image: "/images/pro_hvac_engineer.jpg",
+                badge: "OEM Authorized",
+                pricing: "From ₹18,500/mo AMC",
+                sla: "30-min Emergency SLA",
+                count: "180+ Certified Engineers"
               },
               {
-                name: "HVAC Systems",
-                desc: "Central water chillers, VRV/VRF ducting, and indoor air quality IAQ balancing.",
-                count: "180+ Vendors",
-                icon: ThermometerSnowflake,
-                color: "blue",
-                bg: "bg-blue-50",
-                text: "text-blue-600"
+                id: "cleaning",
+                name: "Commercial Sanitization",
+                desc: "Grade-A lobby housekeeping, robotic auto-scrubbers, bio-hygiene, and high-rise facades.",
+                image: "/images/pro_housekeeping_specialist.jpg",
+                badge: "Green Seal Certified",
+                pricing: "From ₹2.80/sq.ft/mo",
+                sla: "Daily Audited Logs",
+                count: "450+ Vetted Specialists"
               },
               {
-                name: "Security & Guarding",
-                desc: "PSARA-licensed manned guarding, command center CCTV, and turnstile access.",
-                count: "310+ Vendors",
-                icon: ShieldCheck,
-                color: "indigo",
-                bg: "bg-indigo-50",
-                text: "text-indigo-600"
+                id: "security",
+                name: "Corporate Security & Guarding",
+                desc: "PSARA compliant manned guarding, visitor turnstile badge checks, and CCTV control.",
+                image: "/images/pro_security_officer.jpg",
+                badge: "PSARA Licensed",
+                pricing: "From ₹28,000/guard/mo",
+                sla: "Full Background Clear",
+                count: "310+ Manned Guards"
               },
               {
-                name: "Commercial Cleaning",
-                desc: "Deep sanitation, robotic scrubbing, high-rise facade cradles, and housekeeping.",
-                count: "450+ Vendors",
-                icon: Sparkles,
-                color: "cyan",
-                bg: "bg-cyan-50",
-                text: "text-cyan-600"
+                id: "mep",
+                name: "MEP & High-Voltage Electrical",
+                desc: "33kV electrical substations, DG auto-synchronization, thermography, and pump upkeep.",
+                image: "/images/pro_mep_technician.jpg",
+                badge: "33kV Govt License",
+                pricing: "From ₹24,000/mo AMC",
+                sla: "99.8% Uptime SLA",
+                count: "240+ Master Engineers"
               },
               {
+                id: "stewardship",
+                name: "Turnkey Property Stewardship",
+                desc: "Dedicated on-ground Property Director managing full-spectrum IFM and CAM billing.",
+                image: "/images/pro_property_manager.jpg",
+                badge: "Executive Leadership",
+                pricing: "Custom Portfolio Scope",
+                sla: "Zero-Notice Liability",
+                count: "50+ Building Directors"
+              },
+              {
+                id: "lifts",
+                name: "Lifts & Vertical Mobility",
+                desc: "High-speed passenger elevator AMCs, ARD safety systems, and hoistway certifications.",
+                image: "/images/showcase_lifts_hd.jpg",
+                badge: "TÜV SÜD Certified",
+                pricing: "From ₹9,500/lift/mo",
+                sla: "24/7 Trapped Cell",
+                count: "95+ OEM Specialists"
+              },
+              {
+                id: "fire",
                 name: "Fire Safety & Life Support",
-                desc: "NFPA/NBC compliant audits, hydrant testing, and statutory NOC renewals.",
-                count: "120+ Vendors",
-                icon: Flame,
-                color: "red",
-                bg: "bg-red-50",
-                text: "text-red-500"
+                desc: "Hydrant lines, smoke damper testing, statutory fire NOC renewals, and evacuation drills.",
+                image: "/images/showcase_fire_hd.jpg",
+                badge: "NBC / NFPA Standard",
+                pricing: "From ₹15,000/audit",
+                sla: "Statutory Safe Guarantee",
+                count: "120+ Fire Engineers"
               },
               {
-                name: "Pest Management",
-                desc: "HACCP compliant bio-organic pest eradication and subterranean termite barriers.",
-                count: "150+ Vendors",
-                icon: Bug,
-                color: "emerald",
-                bg: "bg-emerald-50",
-                text: "text-emerald-600"
-              },
-              {
-                name: "Lifts & Elevators",
-                desc: "OEM passenger elevator AMCs, ARD fail-safe testing, and hoistway inspection.",
-                count: "95+ Vendors",
-                icon: Layers,
-                color: "purple",
-                bg: "bg-purple-50",
-                text: "text-purple-600"
-              },
-              {
-                name: "Landscaping & Greens",
-                desc: "Biophilic indoor plant maintenance, rooftop terrace gardens, and drip automation.",
-                count: "110+ Vendors",
-                icon: Briefcase,
-                color: "amber",
-                bg: "bg-amber-50",
-                text: "text-amber-600"
+                id: "landscaping",
+                name: "Biophilic Greens & Horticulture",
+                desc: "Living green walls, atrium biophilic maintenance, and automated IoT drip irrigation.",
+                image: "/images/showcase_landscaping_hd.jpg",
+                badge: "IGBC Green Partner",
+                pricing: "From ₹12,000/mo",
+                sla: "Native Flora Care",
+                count: "110+ Horticulturists"
               }
-            ].map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <div 
-                  key={cat.name}
-                  onClick={() => handleOpenRfq(cat.name)}
-                  className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-xl hover:border-[#0F8B7D]/40 transition-all duration-300 group flex flex-col justify-between cursor-pointer hover:-translate-y-1"
-                >
-                  <div>
-                    <div className={`w-11 h-11 rounded-xl ${cat.bg} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-2xs`}>
-                      <Icon size={20} className={cat.text} />
-                    </div>
-                    <h3 className="font-extrabold text-slate-900 text-base group-hover:text-[#0F8B7D] transition-colors">
-                      {cat.name}
-                    </h3>
-                    <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">
-                      {cat.desc}
-                    </p>
-                  </div>
-                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#0F8B7D]">
-                    <span className="text-[11px] text-slate-400 font-semibold">{cat.count}</span>
-                    <span className="flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                      Request RFQ <ArrowRight size={13} />
+            ].map((service) => (
+              <div
+                key={service.id}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Photo with uniform personnel */}
+                  <div className="relative h-44 w-full overflow-hidden bg-slate-100">
+                    <Image
+                      src={service.image}
+                      alt={service.name}
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-extrabold text-[10px] uppercase px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
+                      {service.badge}
+                    </span>
+                    <span className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                      {service.count}
                     </span>
                   </div>
+
+                  {/* Body Content */}
+                  <div className="p-4">
+                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base group-hover:text-[#0F8B7D] transition-colors leading-snug">
+                      {service.name}
+                    </h3>
+                    <p className="text-slate-500 text-xs mt-1.5 leading-relaxed line-clamp-2">
+                      {service.desc}
+                    </p>
+
+                    <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Rate Guide</span>
+                        <span className="font-black text-slate-900 text-xs">{service.pricing}</span>
+                      </div>
+                      <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                        {service.sla}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
+
+                {/* Card Action */}
+                <div className="p-4 pt-0">
+                  <button
+                    onClick={() => handleOpenRfq(service.name)}
+                    className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-[#0F8B7D] text-slate-800 hover:text-white border border-slate-200 hover:border-[#0F8B7D] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Request Quotation</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1566,29 +1489,7 @@ export default function FMMarketplacePage() {
       </section>
 
       {/* 14. FOOTER */}
-      <footer className="bg-[#050e1b] border-t border-slate-800 text-slate-400 py-10 px-4 sm:px-8 text-xs">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Image 
-              src="/logo-removebg-preview.png" 
-              alt="OfficeX Logo" 
-              width={32} 
-              height={32} 
-              className="object-contain"
-              style={{ width: "auto", height: "28px" }}
-            />
-            <span className="text-slate-200 font-bold">OfficeX Facility Marketplace</span>
-          </div>
-          <div className="flex items-center gap-6">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <Link href="/compliance" className="hover:text-white transition-colors">Compliance Standards</Link>
-          </div>
-          <p className="text-slate-500">
-            © {new Date().getFullYear()} OfficeX Ecosystems. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       {/* 15. INTERACTIVE MULTI-STEP RFQ / QUOTE CALCULATOR MODAL (Veendoor.com Pattern) */}
       {isRfqModalOpen && (

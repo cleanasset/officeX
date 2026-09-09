@@ -59,7 +59,7 @@ export default function CoreArchitectureDiagram() {
 
   return (
     <div 
-      className="relative w-full max-w-[530px] mx-auto flex flex-col items-center select-none py-1"
+      className="relative w-full max-w-[660px] lg:max-w-[720px] mx-auto flex flex-col items-center select-none pt-0 pb-1 -mt-4 sm:-mt-6 lg:-mt-8"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -155,23 +155,23 @@ export default function CoreArchitectureDiagram() {
         {/* =========================================================================
             CENTRAL CORE: Dynamic Live Hub with Real-Time Sync Indicator
             ========================================================================= */}
-        <div className="relative z-20 w-26 h-26 sm:w-32 sm:h-32 rounded-full flex items-center justify-center">
+        <div className="relative z-20 w-28 h-28 sm:w-36 sm:h-36 rounded-full flex items-center justify-center">
           {/* Ambient Glow */}
           <div className="absolute inset-0 rounded-full bg-[#0F8B7D]/15 blur-md animate-pulse" />
 
           {/* Core Circle */}
-          <div className="relative w-full h-full rounded-full bg-gradient-to-b from-teal-50/95 via-white to-teal-50/80 border-2 border-teal-300 shadow-[0_6px_20px_rgba(15,139,125,0.18)] flex flex-col items-center justify-center p-1.5 text-center transition-all duration-300">
-            <span className="text-[8px] sm:text-[9.5px] font-extrabold tracking-widest text-[#0F8B7D] uppercase leading-none">
+          <div className="relative w-full h-full rounded-full bg-gradient-to-b from-teal-50/95 via-white to-teal-50/80 border-2 border-teal-300 shadow-[0_6px_22px_rgba(15,139,125,0.2)] flex flex-col items-center justify-center p-2 text-center transition-all duration-300">
+            <span className="text-[8.5px] sm:text-[10.5px] font-extrabold tracking-widest text-[#0F8B7D] uppercase leading-none">
               OFFICEX
             </span>
-            <span className="text-base sm:text-xl font-black text-slate-900 tracking-wider leading-none mt-0.5">
+            <span className="text-lg sm:text-2xl font-black text-slate-900 tracking-wider leading-none mt-0.5">
               CORE
             </span>
 
             {/* Dynamic Active Module Pill */}
-            <div className="mt-1 px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[8px] sm:text-[9px] font-extrabold tracking-tight flex items-center gap-1 shadow-2xs">
+            <div className="mt-1 px-2.5 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[8.5px] sm:text-[10px] font-extrabold tracking-tight flex items-center gap-1 shadow-2xs">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-              <span className="truncate max-w-[75px] sm:max-w-[95px]">
+              <span className="truncate max-w-[85px] sm:max-w-[110px]">
                 {currentNode ? currentNode.name : "SYNCING"}
               </span>
             </div>
@@ -192,11 +192,11 @@ export default function CoreArchitectureDiagram() {
               onMouseLeave={() => setHoveredNode(null)}
               onClick={() => setActiveNodeIndex(idx)}
               className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 cursor-pointer ${
-                isActive ? "scale-105" : "hover:scale-102"
+                isActive ? "scale-108" : "hover:scale-104"
               }`}
             >
               <div
-                className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg border text-[8.5px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg border text-[9px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
                   isActive
                     ? "border-[#0F8B7D] bg-white text-[#0F8B7D] font-bold shadow-md ring-2 ring-[#0F8B7D]/25"
                     : "border-slate-200/90 bg-white text-slate-700 hover:border-teal-300 shadow-2xs"
