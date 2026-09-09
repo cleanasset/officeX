@@ -796,22 +796,20 @@ export default function LandingPage() {
           {/* Eyebrow badge */}
           <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-[0.12em] text-[#0F8B7D] bg-white/90 backdrop-blur-md border border-teal-200/80 px-4 py-1.5 rounded-full mb-5 shadow-xs">
             <span className="flex h-2 w-2 rounded-full bg-[#0F8B7D] animate-pulse" />
-            <span>India&apos;s Integrated CRE &amp; FM Operating System</span>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-600 font-semibold lowercase">5M+ sq.ft governed</span>
+            <span>Integrated CRE &amp; FM Ecosystem</span>
           </div>
 
-          {/* Main Headline — Bold, crisp, distinct color contrast */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-extrabold tracking-tight text-slate-900 leading-[1.14] mb-4 max-w-4xl">
-            The Operating System for{" "}
+          {/* Main Headline */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] font-extrabold tracking-tight text-slate-900 leading-[1.15] mb-4 max-w-4xl">
+            Find Space. Procure Services.{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-emerald-600">
-              Commercial Real Estate &amp; FM
+              Operate Buildings. Gain Intelligence.
             </span>
           </h1>
 
           {/* Subhead */}
           <p className="text-sm sm:text-base md:text-lg font-medium text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8 text-center">
-            Discover Grade-A commercial spaces, hire pre-vetted FM contractors, and automate building operations — all under one unified data foundation.
+            One platform. Five modules. One data foundation. Built for commercial real estate owners, occupiers, and operators.
           </p>
 
           {/* The 3-Tab Search Card Component — Elevated & Clean */}
@@ -1056,138 +1054,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* INTERACTIVE PLATFORM PREVIEW CARDS (Shows exactly what OfficeX does at a glance!) */}
-          <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-8">
-            
-            {/* Card 1: Commercial Space Discovery */}
-            <Link
-              href="/marketplace"
-              className="group p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-bl-full -z-0 pointer-events-none group-hover:scale-110 transition-transform" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-teal-50 text-[#0F8B7D] border border-teal-200">
-                    Space Discovery
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#0F8B7D] flex items-center gap-0.5 transition-colors">
-                    Explore <ArrowUpRight size={13} />
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl overflow-hidden relative shrink-0 border border-slate-200 shadow-2xs">
-                    <Image
-                      src="/images/showcase_commercial_warmshell.jpg"
-                      alt="Grade-A Tech Horizon Tower"
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
-                      Grade-A Tech Horizon Tower
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      BKC Corridor · 32k sq.ft
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
-                <span className="text-[#0F8B7D] font-black">₹185 <span className="text-[10px] text-slate-400 font-normal">/sq.ft</span></span>
-                <span className="text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-extrabold">100% Verified</span>
-              </div>
-            </Link>
-
-            {/* Card 2: FM Vendor Marketplace (Featuring AI Uniformed Pro Image) */}
-            <Link
-              href="/fm-marketplace"
-              className="group p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-50 rounded-bl-full -z-0 pointer-events-none group-hover:scale-110 transition-transform" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200">
-                    FM Marketplace
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#0F8B7D] flex items-center gap-0.5 transition-colors">
-                    Hire Pros <ArrowUpRight size={13} />
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl overflow-hidden relative shrink-0 border border-slate-200 shadow-2xs">
-                    <Image
-                      src="/images/pro_hvac_engineer.jpg"
-                      alt="Verified OfficeX HVAC Pro"
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
-                      Apex ElectroMech Eng.
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      HVAC, Chiller &amp; 33kV Substation
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
-                <span className="flex items-center gap-1 text-amber-500 font-black">
-                  ★ 4.9 <span className="text-[10px] text-slate-400 font-normal">(142 jobs)</span>
-                </span>
-                <span className="text-[11px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md font-extrabold">99.4% SLA</span>
-              </div>
-            </Link>
-
-            {/* Card 3: Managed Services & Operations */}
-            <Link
-              href="/managed-services"
-              className="group p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-0 pointer-events-none group-hover:scale-110 transition-transform" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    Turnkey Stewardship
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 group-hover:text-[#0F8B7D] flex items-center gap-0.5 transition-colors">
-                    View Scope <ArrowUpRight size={13} />
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl overflow-hidden relative shrink-0 border border-slate-200 shadow-2xs">
-                    <Image
-                      src="/images/pro_property_manager.jpg"
-                      alt="Dedicated Property Director"
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
-                      Dedicated Building Director
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      100% Audited CAM &amp; Life Safety
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
-                <span className="text-slate-600 font-semibold">Zero-Notice Liability</span>
-                <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-extrabold">99.8% Uptime</span>
-              </div>
-            </Link>
-
-          </div>
-
           {/* Institutional Trust Badges */}
-          <div className="flex flex-col items-center justify-center gap-2.5 max-w-4xl mx-auto text-center">
+          <div className="flex flex-col items-center justify-center gap-2.5 max-w-4xl mx-auto text-center mt-10">
             <p className="text-[11px] sm:text-xs font-semibold text-slate-400 tracking-wide text-center">
               Trusted by commercial real estate owners, asset managers, and enterprise FM leaders
             </p>
