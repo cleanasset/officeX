@@ -616,127 +616,96 @@ export default function LandingPage() {
           isScrolledPastHero ? "text-slate-300" : "text-slate-600"
         }`}>
           
-          {/* 1. Marketplace Dropdown */}
+          {/* 1. Find Spaces Dropdown */}
           <div className="relative group py-2">
-            <Link href="/marketplace" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
-              <span>Marketplace</span>
+            <Link href="/marketplace" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+              <span>Find Spaces</span>
               <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
             </Link>
-            <div className="absolute top-full left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Commercial Property Discovery</div>
-                <div className="text-[11px] text-slate-500 font-normal">Verified Grade-A spaces</div>
-              </Link>
-              <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                <div className="text-xs font-bold text-[#0F8B7D]">FM Services Marketplace</div>
-                <div className="text-[11px] text-slate-500 font-normal">Pre-vetted MEP &amp; facility contractors</div>
-              </Link>
-            </div>
-          </div>
-
-          {/* 2. Services Dropdown — Showing ALL Services (Hard FM, Soft FM & Managed) */}
-          <div className="relative group py-2">
-            <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
-              <span>Services</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
-            </button>
-            <div className="absolute top-full -left-20 w-[460px] bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div className="text-[10px] font-black uppercase tracking-wider text-[#0F8B7D] mb-2 px-1">
-                All Facility Management &amp; Property Services
+            <div className="absolute top-full left-0 w-[290px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
+                Explore Office Spaces
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block px-2 py-1">Hard FM &amp; Engineering</span>
-                  <Link href="/fm-marketplace?category=MEP+Services" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">MEP &amp; Electrical</div>
-                    <div className="text-[10px] text-slate-500">11KV Substations, DG &amp; HT/LT</div>
-                  </Link>
-                  <Link href="/fm-marketplace?category=HVAC" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">HVAC &amp; Chillers</div>
-                    <div className="text-[10px] text-slate-500">Central plant, VRV/VRF AMC</div>
-                  </Link>
-                  <Link href="/fm-marketplace?category=Fire+Safety" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">Fire Safety &amp; NOC</div>
-                    <div className="text-[10px] text-slate-500">Alarms, hydrants &amp; CFO audit</div>
-                  </Link>
-                  <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">Elevator &amp; Lifts AMC</div>
-                    <div className="text-[10px] text-slate-500">24/7 rescue &amp; OEM parts</div>
-                  </Link>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block px-2 py-1">Soft FM &amp; Managed</span>
-                  <Link href="/fm-marketplace?category=Security" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">24/7 Security &amp; Access</div>
-                    <div className="text-[10px] text-slate-500">Manned guards &amp; biometrics</div>
-                  </Link>
-                  <Link href="/fm-marketplace?category=Cleaning" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">Deep Cleaning &amp; FM</div>
-                    <div className="text-[10px] text-slate-500">Corporate scrubbing &amp; hygiene</div>
-                  </Link>
-                  <Link href="/fm-marketplace?category=Pest+Control" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="font-bold text-slate-900">Pest &amp; Landscaping</div>
-                    <div className="text-[10px] text-slate-500">Commercial fumigation &amp; greens</div>
-                  </Link>
-                  <Link href="/managed-services" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors border border-teal-100 bg-teal-50/30">
-                    <div className="font-bold text-[#0F8B7D]">Turnkey Managed FM</div>
-                    <div className="text-[10px] text-teal-700">End-to-end IFM stewardship</div>
-                  </Link>
-                </div>
+              <div className="space-y-1">
+                <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">All Commercial Spaces</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Search verified Grade-A offices</div>
+                </Link>
+                <Link href="/marketplace?type=managed" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Managed Offices</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Turnkey enterprise suites</div>
+                </Link>
+                <Link href="/marketplace?type=coworking" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Coworking &amp; Shared Desks</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Flexible desks &amp; team cabins</div>
+                </Link>
+                <Link href="/marketplace?type=campus" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Enterprise Tech Campuses</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Large floor plates (25,000+ sq.ft.)</div>
+                </Link>
               </div>
             </div>
           </div>
 
-          {/* 3. Platform Dropdown — Display SaaS Products & Services Separately */}
+          {/* 2. FM Services Dropdown */}
           <div className="relative group py-2">
-            <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
-              <span>Platform</span>
+            <Link href="/fm-marketplace" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+              <span>FM Services</span>
               <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
-            </button>
-            <div className="absolute top-full left-0 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <Link href="/properties/rent-roll" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Rent Roll Master</div>
-                <div className="text-[11px] text-slate-500 font-normal">Institutional lease indexation &amp; digital ledgers</div>
-              </Link>
-              <Link href="/manage" className="block p-2 rounded-xl hover:bg-amber-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">CAM Billing &amp; Allocation</div>
-                <div className="text-[11px] text-slate-500 font-normal">Automated reconciliation &amp; invoicing</div>
-              </Link>
-              <Link href="/compliance" className="block p-2 rounded-xl hover:bg-emerald-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Statutory Compliances &amp; NOCs</div>
-                <div className="text-[11px] text-slate-500 font-normal">Fire NOCs, lift licenses &amp; CFO audit radar</div>
-              </Link>
-              <Link href="/operate" className="block p-2 rounded-xl hover:bg-blue-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Operate (CAFM &amp; PPM)</div>
-                <div className="text-[11px] text-slate-500 font-normal">52-week PPM calendar &amp; tenant helpdesk</div>
-              </Link>
-              <Link href="/intelligence" className="block p-2 rounded-xl hover:bg-purple-50/60 transition-colors">
-                <div className="text-xs font-bold text-slate-900">Intelligence &amp; ESG</div>
-                <div className="text-[11px] text-slate-500 font-normal">Portfolio NOI yields &amp; ESG benchmarks</div>
-              </Link>
-              <Link href="/platform" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors border-t border-slate-100 mt-1 pt-2">
-                <div className="text-xs font-bold text-[#0F8B7D]">Core Architecture &amp; APIs</div>
-                <div className="text-[11px] text-slate-500 font-normal">Single source of truth foundation</div>
-              </Link>
+            </Link>
+            <div className="absolute top-full left-0 w-[300px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
+                Verified Facilities Contractors
+              </div>
+              <div className="space-y-1">
+                <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">All FM Services &amp; AMCs</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Pre-vetted contractors across 8 trades</div>
+                </Link>
+                <Link href="/fm-marketplace?category=hvac" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">HVAC &amp; Chiller AMCs</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Commercial cooling &amp; maintenance</div>
+                </Link>
+                <Link href="/fm-marketplace?category=housekeeping" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Housekeeping &amp; Deep Cleaning</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Mechanized corporate hygiene</div>
+                </Link>
+                <Link href="/fm-marketplace?category=mep" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">MEP, Electrical &amp; DG Sets</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Power backup &amp; electrical audits</div>
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* 4. Company Dropdown */}
+          {/* 3. List Your Space */}
+          <Link
+            href="/properties/add"
+            className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
+          >
+            List Your Space
+          </Link>
+
+          {/* 4. Pricing */}
+          <Link
+            href="/pricing"
+            className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
+          >
+            Pricing
+          </Link>
+
+          {/* 5. Company Dropdown */}
           <div className="relative group py-2">
             <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
               <span>Company</span>
               <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
             </button>
-            <div className="absolute top-full right-0 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <div className="absolute top-full right-0 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
               <Link href="/about" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 About OfficeX
               </Link>
               <Link href="/careers" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 Careers
-              </Link>
-              <Link href="/resources" className="block p-2 rounded-xl hover:bg-teal-50/60 text-xs font-bold text-[#0F8B7D] flex items-center justify-between">
-                <span>Case Studies</span>
-                <span className="text-[9px] bg-teal-100 text-[#0F8B7D] px-1.5 py-0.5 rounded-full font-extrabold">Results</span>
               </Link>
               <Link href="/resources" className="block p-2 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-900">
                 Resources &amp; Insights
@@ -788,18 +757,13 @@ export default function LandingPage() {
               style={{ width: "auto", height: "30px" }}
             />
           </div>
-          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Commercial Spaces Marketplace</Link>
-          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">FM Services Marketplace</Link>
-          <Link href="/properties/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">Rent Roll Master</Link>
-          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#D97706]">CAM Billing &amp; Allocation</Link>
-          <Link href="/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-emerald-600">Statutory Compliances &amp; NOCs</Link>
-          <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#2563EB]">Operate (CAFM &amp; PPM)</Link>
-          <Link href="/intelligence" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Intelligence &amp; ESG</Link>
-          <Link href="/managed-services" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#059669]">Managed Services</Link>
-          <Link href="/platform" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Platform Core Architecture</Link>
-          <Link href="/careers" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Careers</Link>
-          <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">Case Studies &amp; Client Results</Link>
+          <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Office Spaces</Link>
+          <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services Marketplace</Link>
+          <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">List Your Space</Link>
+          <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Pricing</Link>
+          <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">About OfficeX</Link>
           <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Resources &amp; Insights</Link>
+          <Link href="/faq" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FAQs</Link>
           <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Contact Us</Link>
           <hr className="border-slate-200 my-2" />
           <div className="py-1">

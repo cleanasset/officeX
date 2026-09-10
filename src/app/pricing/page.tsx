@@ -167,7 +167,7 @@ export default function PricingPage() {
                   </div>
                   <button 
                     onClick={() => setSlideInOpen(true)}
-                    className="w-full py-3.5 rounded-xl bg-[#071324] hover:bg-slate-800 text-white font-bold text-xs mt-8 transition-colors cursor-pointer shadow-sm"
+                    className="w-full py-3.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold text-xs mt-8 transition-colors cursor-pointer shadow-2xs"
                   >
                     Talk to Sales
                   </button>
@@ -303,7 +303,7 @@ export default function PricingPage() {
                         <button
                           type="button"
                           onClick={() => setSlideInOpen(true)}
-                          className="px-4 py-2 rounded-xl bg-[#071324] hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                          className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold text-xs transition-colors cursor-pointer"
                         >
                           Talk to Sales
                         </button>
@@ -325,20 +325,20 @@ export default function PricingPage() {
       />
 
       {/* Inline Enquiry Section */}
-      <section className="py-16 md:py-24 bg-[#071324] text-white px-4 md:px-6">
+      <section className="py-16 md:py-24 bg-gradient-to-b from-teal-50/50 via-white to-slate-50 text-slate-900 border-t border-slate-200 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-teal-400 bg-teal-950/60 px-3 py-1 rounded-full border border-teal-800">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
               CUSTOM PRICING &amp; ENQUIRIES
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mt-3 text-slate-900">
               Need a Custom Multi-City Enterprise Quote?
             </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-2">
+            <p className="text-xs sm:text-sm text-slate-500 mt-2">
               Our enterprise solutions team responds within 24 business hours with detailed scoping.
             </p>
           </div>
-          <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-2xl">
+          <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200">
             <EnquiryForm />
           </div>
         </div>

@@ -227,7 +227,7 @@ export default function ManagePage() {
           {
             name: "Starter",
             price: "Free",
-            period: "with Marketplace Pro",
+            period: "with Marketplace Plan",
             description: "Basic lease register and manual rent roll generation for single-property owners.",
             features: [
               "Up to 10 active leases stored digitally",
@@ -235,8 +235,8 @@ export default function ManagePage() {
               "Standard statutory compliance checklists",
               "Basic collection ledger"
             ],
-            ctaLabel: "Included in Pro",
-            ctaHref: "/signup?plan=pro"
+            ctaLabel: "Get Started Free",
+            ctaHref: "/signup?plan=manage-starter"
           },
           {
             name: "Professional",
@@ -254,7 +254,7 @@ export default function ManagePage() {
               "Priority phone & email support"
             ],
             ctaLabel: "Start Professional",
-            ctaHref: "/signup?plan=manage-pro"
+            ctaHref: "/signup?plan=manage-professional"
           },
           {
             name: "Enterprise",

@@ -197,8 +197,8 @@ export default function IntelligencePage() {
               "Pre-built monthly PDF MIS export",
               "Quarterly vendor SLA summary"
             ],
-            ctaLabel: "Included in Pro",
-            ctaHref: "/signup?plan=pro"
+            ctaLabel: "Included in Plan",
+            ctaHref: "/signup?plan=professional"
           },
           {
             name: "Intelligence Add-on",

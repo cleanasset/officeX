@@ -129,7 +129,7 @@ export default function PropertyMarketplacePage() {
       subtitle: "Bespoke private floors custom-built for teams of 30 to 500+",
       pricing: "From ₹115 / sq.ft",
       badge: "Most Popular for Enterprises",
-      image: "/images/office_marketplace_hero_luxury.jpg",
+      image: "/images/workspace_managed_suite.jpg",
       perks: ["Zero Capex & Fit-out Cost", "Dedicated Reception & IT", "Custom Corporate Branding", "All-inclusive CAM & Utilities"]
     },
     {
@@ -138,7 +138,7 @@ export default function PropertyMarketplacePage() {
       subtitle: "Plug-and-play dedicated desks with 24/7 access in Grade-A hubs",
       pricing: "From ₹6,500 / desk / mo",
       badge: "Instant Move-in",
-      image: "/images/showcase_managed_coworking.jpg",
+      image: "/images/workspace_dedicated_desks.jpg",
       perks: ["High-Speed Fiber Internet", "Meeting Room Credits", "Pantry & Premium Coffee", "Community & Networking Events"]
     },
     {
@@ -147,7 +147,7 @@ export default function PropertyMarketplacePage() {
       subtitle: "Lockable sound-insulated acoustic suites for 4 to 25 members",
       pricing: "From ₹8,999 / seat / mo",
       badge: "High Privacy",
-      image: "/images/card_office_marketplace.jpg",
+      image: "/images/workspace_private_cabin.jpg",
       perks: ["Biometric Access Control", "Whiteboard & Ergonomic Seating", "Daily Sanitization", "Mail & Package Handling"]
     },
     {
@@ -287,7 +287,7 @@ export default function PropertyMarketplacePage() {
       rate: "₹105",
       unit: "sq.ft/mo",
       tag: "IFSC Special Zone",
-      image: "/images/card_office_marketplace.jpg",
+      image: "/images/space_gift_one_tower.jpg",
       features: ["SEZ Tax Benefits", "Triple Height Atrium", "Multi-Tier Security", "District Cooling"],
       verified: true
     },
@@ -301,7 +301,7 @@ export default function PropertyMarketplacePage() {
       rate: "₹88",
       unit: "sq.ft/mo",
       tag: "Premium CBD",
-      image: "/images/showcase_managed_coworking.jpg",
+      image: "/images/space_prahlad_capital.jpg",
       features: ["Valet Parking", "Acoustic Phone Booths", "Barista Lounge", "Fiber Internet"],
       verified: true
     },
@@ -531,48 +531,56 @@ export default function PropertyMarketplacePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
           {workspaceModels.map((model) => (
             <div
               key={model.id}
-              className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md hover:border-teal-400 transition-all duration-300 flex flex-col group"
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col h-full justify-between group"
             >
-              <div className="relative h-28 w-full overflow-hidden bg-slate-100">
+              {/* Image Area (h-52: 208px - More than content area) */}
+              <div className="relative h-52 w-full overflow-hidden bg-slate-100 shrink-0">
                 <Image
                   src={model.image}
                   alt={model.title}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <span className="absolute top-2 left-2 bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-extrabold text-[9px] uppercase px-2 py-0.5 rounded border border-teal-200 shadow-2xs">
+                <span className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md border border-teal-200 shadow-2xs">
                   {model.badge}
                 </span>
               </div>
-              <div className="p-3.5 flex-1 flex flex-col justify-between">
+
+              {/* Content Area (Compact ~140px) */}
+              <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-sm font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors truncate">
+                  <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide block truncate h-4 leading-4">
+                    Commercial Model
+                  </span>
+                  <h3 className="text-sm font-black text-slate-900 mt-1 group-hover:text-[#0F8B7D] transition-colors truncate h-5 leading-5" title={model.title}>
                     {model.title}
                   </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1 leading-snug">
+                  <p className="text-xs text-slate-500 mt-1 truncate h-4 leading-4" title={model.subtitle}>
                     {model.subtitle}
                   </p>
-                  <div className="flex flex-wrap gap-1 mt-2.5">
+
+                  <div className="h-6 overflow-hidden flex items-center gap-1.5 mt-3">
                     {model.perks.slice(0, 2).map((perk, i) => (
-                      <span key={i} className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">
+                      <span key={i} className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md truncate max-w-[125px]">
                         <Check size={10} className="text-[#0F8B7D] shrink-0" />
-                        <span className="truncate max-w-[110px]">{perk}</span>
+                        <span className="truncate">{perk}</span>
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+
+                <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
                   <div>
                     <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Starting</span>
                     <span className="text-xs font-black text-slate-900 leading-none">{model.pricing}</span>
                   </div>
                   <button
                     onClick={() => setSlideInOpen(true)}
-                    className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white font-bold text-xs transition-all cursor-pointer"
                   >
                     <span>Inquire</span>
                     <ArrowRight size={12} />
@@ -604,13 +612,14 @@ export default function PropertyMarketplacePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
             {featuredSpaces.map((space) => (
               <div
                 key={space.id}
-                className="bg-slate-50/70 rounded-2xl border border-slate-200 overflow-hidden hover:bg-white hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col group"
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col h-full justify-between group"
               >
-                <div className="relative h-44 w-full overflow-hidden bg-slate-200">
+                {/* Image Area (h-52: 208px - More than content area) */}
+                <div className="relative h-52 w-full overflow-hidden bg-slate-200 shrink-0">
                   <Image
                     src={space.image}
                     alt={space.name}
@@ -618,7 +627,7 @@ export default function PropertyMarketplacePage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1">
-                    <span className="bg-[#0F8B7D] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-xs">
+                    <span className="bg-[#0F8B7D] text-white text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-xs">
                       {space.tag}
                     </span>
                   </div>
@@ -627,36 +636,39 @@ export default function PropertyMarketplacePage() {
                   </div>
                 </div>
 
+                {/* Content Area (Compact ~140px) */}
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide">
+                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide block truncate h-4 leading-4">
                       {space.type}
                     </span>
-                    <h3 className="text-sm font-black text-slate-900 mt-0.5 group-hover:text-[#0F8B7D] transition-colors">
+                    <h3 className="text-sm font-black text-slate-900 mt-1 group-hover:text-[#0F8B7D] transition-colors truncate h-5 leading-5" title={space.name}>
                       {space.name}
                     </h3>
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 truncate h-4 leading-4" title={space.location}>
                       <MapPin size={11} className="text-slate-400 shrink-0" />
                       <span className="truncate">{space.location}</span>
                     </p>
 
-                    <div className="flex flex-wrap gap-1 mt-3">
-                      {space.features.slice(0, 3).map((f, i) => (
-                        <span key={i} className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                          {f}
+                    <div className="h-6 overflow-hidden flex items-center gap-1.5 mt-3">
+                      {space.features.slice(0, 2).map((f, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md truncate max-w-[125px]">
+                          <Check size={10} className="text-[#0F8B7D] shrink-0" />
+                          <span className="truncate">{f}</span>
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between">
+                  <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
                     <div>
-                      <span className="text-sm font-black text-slate-900">{space.rate}</span>
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Rental Rate</span>
+                      <span className="text-xs font-black text-slate-900 leading-none">{space.rate}</span>
                       <span className="text-[10px] text-slate-500 font-medium"> /{space.unit}</span>
                     </div>
                     <button
                       onClick={() => setSlideInOpen(true)}
-                      className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
                     >
                       Book Tour
                     </button>
@@ -711,90 +723,88 @@ export default function PropertyMarketplacePage() {
           </div>
         </div>
 
-        {/* 6 Rich Photo Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 6 Rich Photo Cards Grid - identical 4-column size & h-52 image */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
           {filteredDistricts.map((district) => (
             <div
               key={district.id}
-              className="group bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-teal-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col h-full justify-between group"
             >
-              {/* Card Image Header with Badges */}
-              <div className="relative h-48 w-full overflow-hidden bg-slate-900">
+              {/* Image Area (h-52: 208px - EXACT SAME AS SECTION 1 & 2) */}
+              <div className="relative h-52 w-full overflow-hidden bg-slate-900 shrink-0">
                 <Image
                   src={district.image}
                   alt={district.name}
                   fill
-                  className="object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                {/* Gradient Scrims for Readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-black/40 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/30 pointer-events-none" />
 
-                {/* Top Floating Badges */}
-                <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-                  <span className="backdrop-blur-md bg-white/95 text-teal-900 font-extrabold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/60 shadow-2xs">
+                {/* Top Badges */}
+                <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+                  <span className="backdrop-blur-md bg-white/95 text-teal-900 font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md border border-white/60 shadow-2xs">
                     {district.tag}
                   </span>
-                  <span className="backdrop-blur-md bg-slate-900/80 text-white font-bold text-[11px] px-2.5 py-1 rounded-md border border-white/20 shadow-2xs flex items-center gap-1.5">
+                  <span className="backdrop-blur-md bg-slate-900/80 text-white font-bold text-[10px] px-2 py-0.5 rounded-md border border-white/20 shadow-2xs flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     {district.spaces}
                   </span>
                 </div>
 
-                {/* Bottom Overlay Info on Image */}
-                <div className="absolute bottom-3 left-3 right-3 z-10 flex items-center justify-between text-white">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold drop-shadow-sm text-slate-200">
-                    <MapPin size={13} className="text-teal-400 shrink-0" />
+                {/* Bottom Overlay Pin */}
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 text-white">
+                  <div className="flex items-center gap-1 text-[11px] font-semibold drop-shadow-sm text-slate-100 truncate">
+                    <MapPin size={11} className="text-teal-400 shrink-0" />
                     <span className="truncate">{district.city}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Card Body */}
-              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+              {/* Content Area (Compact ~140px - EXACT SAME AS SECTION 1 & 2) */}
+              <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors">
+                  <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide block truncate h-4 leading-4">
+                    Prime Corridor
+                  </span>
+                  <h3 className="text-sm font-black text-slate-900 mt-1 group-hover:text-[#0F8B7D] transition-colors truncate h-5 leading-5" title={district.name}>
                     {district.name}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-slate-500 mt-1 truncate h-4 leading-4" title={district.desc}>
                     {district.desc}
                   </p>
 
-                  {/* Visual Highlights Badges (Replaces plain boring text) */}
-                  <div className="flex flex-wrap gap-1.5 mt-3.5">
-                    {district.highlights.map((highlight, idx) => (
+                  <div className="h-6 overflow-hidden flex items-center gap-1.5 mt-3">
+                    {district.highlights.slice(0, 2).map((highlight, idx) => (
                       <span
                         key={idx}
-                        className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-700 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md truncate max-w-[125px]"
                       >
-                        <Check size={11} className="text-[#0F8B7D] shrink-0" />
-                        <span>{highlight}</span>
+                        <Check size={10} className="text-[#0F8B7D] shrink-0" />
+                        <span className="truncate">{highlight}</span>
                       </span>
                     ))}
                   </div>
                 </div>
 
-                {/* Card Bottom Bar */}
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
                   <div>
-                    <span className="text-[9px] uppercase font-extrabold tracking-wider text-slate-400 block leading-none mb-1">
-                      Avg. Rental Rate
+                    <span className="text-[9px] uppercase font-bold text-slate-400 block leading-none mb-0.5">
+                      Avg. Rental
                     </span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-sm sm:text-base font-black text-slate-900 leading-none">
-                        {district.rate}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-semibold leading-none">
-                        /{district.unit}
-                      </span>
-                    </div>
+                    <span className="text-xs font-black text-slate-900 leading-none">
+                      {district.rate}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-semibold leading-none">
+                      /{district.unit}
+                    </span>
                   </div>
 
                   <Link
                     href={`/public/search?city=${encodeURIComponent(district.searchCity)}&q=${encodeURIComponent(district.searchQuery)}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white font-black text-xs transition-all duration-200 shadow-2xs group-hover:bg-[#0F8B7D] group-hover:text-white cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white font-bold text-xs transition-all shadow-2xs group-hover:bg-[#0F8B7D] group-hover:text-white cursor-pointer"
                   >
-                    <span>Explore Spaces</span>
-                    <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                    <span>Explore</span>
+                    <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
               </div>

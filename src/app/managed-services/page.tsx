@@ -873,33 +873,33 @@ export default function ManagedServicesPage() {
             ].map((tier, i) => (
               <div
                 key={i}
-                className={`rounded-2xl p-7 flex flex-col justify-between ${
+                className={`rounded-2xl p-7 flex flex-col justify-between transition-all ${
                   tier.highlight
-                    ? "bg-[#071324] text-white ring-2 ring-[#0F8B7D] shadow-xl scale-[1.02]"
-                    : "bg-white border border-slate-200 shadow-xs"
+                    ? "bg-white border-2 border-[#0F8B7D] text-slate-900 shadow-xl shadow-teal-900/10 scale-[1.02]"
+                    : "bg-white border border-slate-200 text-slate-900 shadow-xs hover:shadow-md"
                 }`}
               >
                 <div>
                   {tier.highlight && (
-                    <span className="text-[10px] font-black uppercase tracking-widest bg-[#0F8B7D] text-white px-3 py-1 rounded-full self-start mb-3 inline-block">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-[#0F8B7D] text-white px-3 py-1 rounded-full self-start mb-3 inline-block shadow-xs">
                       Most Popular
                     </span>
                   )}
-                  <h3 className={`font-extrabold text-lg ${tier.highlight ? "text-white" : "text-slate-900"}`}>
+                  <h3 className="font-extrabold text-lg text-slate-900">
                     {tier.name}
                   </h3>
                   <div className="mt-3 mb-1">
-                    <span className={`text-2xl font-black ${tier.highlight ? "text-teal-400" : "text-slate-900"}`}>
+                    <span className="text-2xl font-black text-slate-900">
                       {tier.price}
                     </span>
-                    <span className={`text-xs ml-1.5 ${tier.highlight ? "text-slate-400" : "text-slate-500"}`}>
+                    <span className="text-xs ml-1.5 text-slate-500">
                       {tier.period}
                     </span>
                   </div>
                   <ul className="mt-5 space-y-3">
                     {tier.features.map((f, j) => (
-                      <li key={j} className={`flex items-start gap-2.5 text-[13px] ${tier.highlight ? "text-slate-200" : "text-slate-600"}`}>
-                        <CheckCircle2 size={14} className={`shrink-0 mt-0.5 ${tier.highlight ? "text-teal-400" : "text-[#0F8B7D]"}`} />
+                      <li key={j} className="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
+                        <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-[#0F8B7D]" />
                         {f}
                       </li>
                     ))}
@@ -910,8 +910,8 @@ export default function ManagedServicesPage() {
                   onClick={() => setSlideInOpen(true)}
                   className={`mt-6 w-full py-3 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                     tier.highlight
-                      ? "bg-[#0F8B7D] text-white hover:bg-[#0D7A6E] shadow-md"
-                      : "bg-slate-900 text-white hover:bg-slate-800"
+                      ? "bg-[#0F8B7D] text-white hover:bg-[#0D7A6E] shadow-md shadow-[#0F8B7D]/20"
+                      : "bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200"
                   }`}
                 >
                   {tier.cta}

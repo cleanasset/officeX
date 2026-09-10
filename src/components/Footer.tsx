@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Send, CheckCircle2, ShieldCheck, FileCheck, Lock, HelpCircle, Building, ArrowRight } from "lucide-react";
+import { Send, CheckCircle2, ShieldCheck, Lock, Building } from "lucide-react";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -21,7 +21,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-[#111828] text-white py-14 px-4 md:px-6 border-t border-slate-800 w-full max-w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
+      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
         
         {/* 1. Brand Column */}
         <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
@@ -111,61 +111,21 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* 3. Case Studies Column (Moved from homepage PROVEN RESULTS) */}
-        <div>
-          <h4 className="font-extrabold text-xs uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
-            <FileCheck size={14} className="text-[#0F8B7D]" /> Case Studies
-          </h4>
-          <ul className="mt-4 flex flex-col gap-3 text-xs text-slate-400 font-semibold">
-            <li>
-              <Link href="/resources" className="hover:text-white transition-colors block group">
-                <span className="text-white group-hover:text-teal-400 transition-colors block font-bold">Prestige Meridian</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">60% Faster FM Procurement</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/resources" className="hover:text-white transition-colors block group">
-                <span className="text-white group-hover:text-teal-400 transition-colors block font-bold">Embassy TechZone</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">18% MEP AMC Cost Savings</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/resources" className="hover:text-white transition-colors block group">
-                <span className="text-white group-hover:text-teal-400 transition-colors block font-bold">DLF CyberCity</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">100% Audit-Ready NOCs</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/resources" className="hover:text-white transition-colors block group">
-                <span className="text-white group-hover:text-teal-400 transition-colors block font-bold">Brookfield Tower</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">Automated 52-Week PPM</span>
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* 4. Trust & Company Column */}
+        {/* 3. Trust & Company Column */}
         <div>
           <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <ShieldCheck size={14} className="text-[#0F8B7D]" /> Trust &amp; Company
           </h4>
 
-          {/* Featured Case Study Button */}
-          <div className="mt-3.5 mb-3">
-            <Link
-              href="/resources"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-bold transition-all shadow-xs group"
-            >
-              <FileCheck size={13} className="text-teal-400 group-hover:scale-110 transition-transform" />
-              <span>Case Studies</span>
-              <ArrowRight size={11} className="text-teal-400 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-
-          <ul className="flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
+          <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
             <li>
               <Link href="/about" className="hover:text-white transition-colors">
                 About OfficeX
+              </Link>
+            </li>
+            <li>
+              <Link href="/resources" className="hover:text-white transition-colors">
+                Case Studies
               </Link>
             </li>
             <li>
