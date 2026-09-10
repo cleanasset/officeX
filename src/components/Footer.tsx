@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Send, CheckCircle2, ShieldCheck, FileCheck, Lock, HelpCircle, Building } from "lucide-react";
+import { Send, CheckCircle2, ShieldCheck, FileCheck, Lock, HelpCircle, Building, ArrowRight } from "lucide-react";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -149,7 +149,20 @@ export default function Footer() {
           <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <ShieldCheck size={14} className="text-[#0F8B7D]" /> Trust &amp; Company
           </h4>
-          <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
+
+          {/* Featured Case Study Button */}
+          <div className="mt-3.5 mb-3">
+            <Link
+              href="/resources"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-bold transition-all shadow-xs group"
+            >
+              <FileCheck size={13} className="text-teal-400 group-hover:scale-110 transition-transform" />
+              <span>Case Studies</span>
+              <ArrowRight size={11} className="text-teal-400 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+
+          <ul className="flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
             <li>
               <Link href="/about" className="hover:text-white transition-colors">
                 About OfficeX

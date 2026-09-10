@@ -314,3 +314,39 @@ html, body {
   transform-origin: center;
 }
 
+/* Hero Animated Slow Progressive Blur-To-Clear Focus (7.2s Cinematic Rack) */
+@keyframes hero-rack-focus {
+  0% {
+    filter: blur(20px) brightness(1.05);
+    transform: scale(1.05) translate3d(0, 0, 0);
+  }
+  22% {
+    filter: blur(14px) brightness(1.04);
+    transform: scale(1.036) translate3d(-2px, -1px, 0);
+  }
+  48% {
+    filter: blur(7px) brightness(1.02);
+    transform: scale(1.022) translate3d(-1px, 0px, 0);
+  }
+  72% {
+    filter: blur(0px) brightness(1.0);
+    transform: scale(1.005) translate3d(1px, 1px, 0);
+  }
+  90% {
+    filter: blur(0px) brightness(1.0);
+    transform: scale(1.00) translate3d(0, 0, 0);
+  }
+  100% {
+    filter: blur(0px) brightness(1.0);
+    transform: scale(1.00) translate3d(0, 0, 0);
+  }
+}
+
+.animate-hero-focus {
+  animation: hero-rack-focus 7.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  will-change: transform, filter;
+}
+
+
+
+

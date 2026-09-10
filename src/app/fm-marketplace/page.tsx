@@ -3,578 +3,1025 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  ChevronDown, 
-  MapPin, 
-  Wrench,
-  ThermometerSnowflake,
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  MapPin,
   ShieldCheck,
-  Sparkles,
-  Flame,
-  Bug,
-  ArrowRight,
-  Menu,
-  X,
-  CheckCircle2,
-  SlidersHorizontal,
-  Layers,
-  DollarSign,
-  TrendingUp,
   Star,
+  Users,
+  Phone,
+  CheckCircle2,
+  ArrowRight,
   Clock,
   Building2,
-  Users,
-  Award,
-  BadgeCheck,
+  Wrench,
   Zap,
+  Sparkles,
+  Award,
+  Shield,
   Check,
   FileText,
-  Send,
+  ChevronRight,
+  TrendingUp,
+  Filter,
+  ExternalLink,
+  Flame,
+  Bug,
   HelpCircle,
-  Briefcase
+  Briefcase,
+  SlidersHorizontal,
+  X
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
+import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 
-interface Contractor {
+interface Vendor {
   id: string;
   name: string;
   category: string;
+  initials: string;
   rating: number;
   reviewsCount: number;
-  responseTime: string;
-  slaScore: string;
-  coverage: string;
-  badges: string[];
+  yearsInBusiness: string;
+  phone: string;
+  location: string;
+  verified: boolean;
+  tier: "Elite" | "Verified Pro" | "Premium";
+  description: string;
   specialties: string[];
-  verifiedYears: string;
-  completedJobs: string;
+  responseTime: string;
+  image?: string;
 }
 
 export default function FMMarketplacePage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [cityOpen, setCityOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("All Service Categories");
-  const [selectedCity, setSelectedCity] = useState("All Commercial Hubs");
-  
-  // Interactive RFQ Modal State (Veendoor pattern)
-  const [isRfqModalOpen, setIsRfqModalOpen] = useState(false);
-  const [rfqStep, setRfqStep] = useState<1 | 2>(1);
-  const [rfqData, setRfqData] = useState({
-    category: "MEP Engineering",
-    buildingArea: "50,000 - 150,000 sq.ft.",
-    urgency: "Scheduled AMC (Within 30 Days)",
-    preferredVendor: "",
-    notes: "",
-    company: "",
-    contactName: "",
-    phone: "",
-    email: "",
-    city: "Mumbai (BKC & Lower Parel)"
-  });
-  const [rfqSubmitted, setRfqSubmitted] = useState(false);
+  const router = useRouter();
+  const [slideInOpen, setSlideInOpen] = useState(false);
+  const [searchService, setSearchService] = useState("");
+  const [searchLocation, setSearchLocation] = useState("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [selectedVendorForClaim, setSelectedVendorForClaim] = useState<Vendor | null>(null);
 
-  // Active persona tab
-  const [activePersona, setActivePersona] = useState<"supers" | "owners" | "vendors">("supers");
-
-  // Filter for contractor directory
-  const [contractorFilter, setContractorFilter] = useState("all");
-
-  const categories = [
-    "MEP Engineering", 
-    "HVAC Systems", 
-    "Security & Guarding", 
-    "Commercial Housekeeping", 
-    "Fire Safety & Life Support", 
-    "Pest Management",
-    "Lifts & Elevators",
-    "Landscaping & Horticulture"
-  ];
-  
-  const commercialHubs = [
-    "Mumbai (BKC & Lower Parel)", 
-    "Bengaluru (ORR & Whitefield)", 
-    "Delhi NCR (Cyber City & Noida)", 
-    "Hyderabad (HITEC City & Gachibowli)", 
-    "Pune (Hinjewadi & Kharadi)", 
-    "Chennai (OMR & Guindy)",
-    "Ahmedabad (GIFT City & SG Highway)"
-  ];
-
-  // Verified Contractor Directory Data (Veendoor.com inspired)
-  const verifiedContractors: Contractor[] = [
+  // Veendoor 8 Core Service Categories with pastel accent icon containers
+  const serviceCategories = [
     {
-      id: "apex-electromech",
-      name: "Apex ElectroMech Engineering",
-      category: "MEP Engineering",
-      rating: 4.9,
-      reviewsCount: 142,
-      responseTime: "< 30 mins",
-      slaScore: "99.4%",
-      coverage: "BKC, Lower Parel & Andheri East",
-      badges: ["ISO 9001:2015", "Grade-A Master Contractor", "Govt Licensed 33kV"],
-      specialties: ["33kV Substation AMC", "Centrifugal Chiller Overhaul", "Plumbing Pressure Pumps"],
-      verifiedYears: "7+ Years on OfficeX",
-      completedJobs: "1,240+ Work Orders"
+      id: "plumbing",
+      name: "Plumbing & Piping",
+      count: "340+ Vendors",
+      icon: Wrench,
+      bg: "bg-blue-50 text-blue-600 border-blue-100",
+      desc: "Drain clearing, hydro-jetting, booster pumps & backflow prevention"
     },
     {
-      id: "coolbreeze-thermal",
-      name: "CoolBreeze Thermal HVAC Solutions",
-      category: "HVAC Systems",
-      rating: 4.9,
-      reviewsCount: 98,
-      responseTime: "< 45 mins",
-      slaScore: "99.1%",
-      coverage: "Whitefield, ORR & Electronic City",
-      badges: ["OEM Authorized Daikin/Carrier", "AHU Certified", "IAQ Specialists"],
-      specialties: ["VRV/VRF Central Plants", "Duct Acoustics & Cleaning", "BMS Chilled Water Balancing"],
-      verifiedYears: "5+ Years on OfficeX",
-      completedJobs: "890+ Work Orders"
+      id: "electrical",
+      name: "Electrical Systems",
+      count: "280+ Vendors",
+      icon: Zap,
+      bg: "bg-amber-50 text-amber-600 border-amber-100",
+      desc: "Substations, DG backup, panel maintenance & compliance audits"
     },
     {
-      id: "sterling-security",
-      name: "Sterling Security & Guarding Forces",
-      category: "Security & Guarding",
-      rating: 4.8,
-      reviewsCount: 210,
-      responseTime: "< 15 mins",
-      slaScore: "99.8%",
-      coverage: "DLF Cyber City, Golf Course & Noida",
-      badges: ["PSARA Compliant", "Ex-Defense Management", "Full Background Cleared"],
-      specialties: ["Manned Corporate Guarding", "Biometric Turnstile Access", "Command Room CCTV Surveillance"],
-      verifiedYears: "8+ Years on OfficeX",
-      completedJobs: "3,100+ Shifts Deployed"
+      id: "hvac",
+      name: "HVAC & Climate Control",
+      count: "410+ Vendors",
+      icon: Sparkles,
+      bg: "bg-rose-50 text-rose-600 border-rose-100",
+      desc: "Chiller overhauls, VRV/VRF systems, duct sanitization & IAQ"
     },
     {
-      id: "ecoclean-sanitization",
-      name: "EcoClean Commercial Sanitization",
-      category: "Commercial Housekeeping",
-      rating: 4.8,
-      reviewsCount: 185,
-      responseTime: "< 60 mins",
-      slaScore: "98.9%",
-      coverage: "Hinjewadi, Baner & Viman Nagar",
-      badges: ["Green Seal Certified", "Robotic Floor Tech", "Cradle Facade Certified"],
-      specialties: ["High-Rise Facade Cradles", "Robotic Auto-Scrubbers", "Bio-Enzymatic Restroom Hygiene"],
-      verifiedYears: "6+ Years on OfficeX",
-      completedJobs: "2,450+ Service Cycles"
+      id: "housekeeping",
+      name: "Commercial Housekeeping",
+      count: "520+ Vendors",
+      icon: Sparkles,
+      bg: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      desc: "Deep sanitization, facade cleaning cradles & robotic scrubbing"
     },
     {
-      id: "vertex-vertical",
-      name: "Vertex Lifts & Vertical Mobility",
-      category: "Lifts & Elevators",
-      rating: 4.9,
-      reviewsCount: 86,
-      responseTime: "< 25 mins",
-      slaScore: "99.7%",
-      coverage: "HITEC City, Madhapur & Financial District",
-      badges: ["TÜV SÜD Certified", "OEM Multi-Brand License", "24/7 Trapped Passenger Cell"],
-      specialties: ["High-Speed Passenger Lifts", "Automated Rescue Device (ARD)", "Annual Hoistway Load Testing"],
-      verifiedYears: "4+ Years on OfficeX",
-      completedJobs: "620+ Elevator AMCs"
+      id: "security",
+      name: "Security & Guarding",
+      count: "260+ Vendors",
+      icon: ShieldCheck,
+      bg: "bg-indigo-50 text-indigo-600 border-indigo-100",
+      desc: "PSARA vetted manned guards, biometric access & CCTV rooms"
     },
     {
-      id: "greenscape-horticulture",
-      name: "GreenScape Corporate Horticulture",
-      category: "Landscaping & Horticulture",
-      rating: 4.8,
-      reviewsCount: 114,
-      responseTime: "< 3 hours",
-      slaScore: "98.6%",
-      coverage: "OMR, Guindy & Mount Poonamallee",
-      badges: ["IGBC Biophilic Partner", "Automated Drip Certified", "Native Flora Specialists"],
-      specialties: ["Atrium Living Green Walls", "Rooftop Biophilic Terraces", "Automated IoT Drip Irrigation"],
-      verifiedYears: "5+ Years on OfficeX",
-      completedJobs: "480+ Landscape Contracts"
+      id: "fire",
+      name: "Fire Safety & Life Support",
+      count: "190+ Vendors",
+      icon: Flame,
+      bg: "bg-orange-50 text-orange-600 border-orange-100",
+      desc: "Hydrant lines, smoke damper tests, NOC audits & alarms"
+    },
+    {
+      id: "lifts",
+      name: "Elevators & Mobility",
+      count: "175+ Vendors",
+      icon: Building2,
+      bg: "bg-purple-50 text-purple-600 border-purple-100",
+      desc: "High-speed traction lifts, escalators & 24/7 rescue dispatch"
+    },
+    {
+      id: "landscaping",
+      name: "Landscaping & Greenery",
+      count: "210+ Vendors",
+      icon: CheckCircle2,
+      bg: "bg-teal-50 text-teal-600 border-teal-100",
+      desc: "Vertical living walls, biophilic landscaping & automated drip"
     }
   ];
 
-  const filteredContractors = contractorFilter === "all" 
-    ? verifiedContractors 
-    : verifiedContractors.filter(c => c.category.toLowerCase().includes(contractorFilter.toLowerCase()));
+  // Veendoor-Style Featured Service Providers
+  const featuredVendors: Vendor[] = [
+    {
+      id: "vendor-1",
+      name: "Apex ElectroMech Engineering",
+      category: "MEP & Electrical",
+      initials: "AE",
+      rating: 4.9,
+      reviewsCount: 142,
+      yearsInBusiness: "15+ years",
+      phone: "+91 22 4982 1100",
+      location: "BKC & Lower Parel, Mumbai",
+      verified: true,
+      tier: "Elite",
+      description: "Master electromechanical contractors handling 33kV substation overhauls, primary chiller plant AMCs, and pressure booster arrays.",
+      specialties: ["33kV Substation AMC", "Centrifugal Chiller Overhaul", "Plumbing Pumps"],
+      responseTime: "< 30 mins",
+      image: "/images/pro_mep_technician.jpg"
+    },
+    {
+      id: "vendor-2",
+      name: "CoolBreeze Thermal HVAC Solutions",
+      category: "HVAC Systems",
+      initials: "CB",
+      rating: 4.9,
+      reviewsCount: 98,
+      yearsInBusiness: "12+ years",
+      phone: "+91 80 6710 4420",
+      location: "Outer Ring Road & Whitefield, Bengaluru",
+      verified: true,
+      tier: "Verified Pro",
+      description: "Authorized central HVAC engineers specializing in VRV/VRF systems, chilled water balancing, and cleanroom duct acoustics.",
+      specialties: ["VRV/VRF Central Plants", "Duct Sanitization", "BMS Chilled Water"],
+      responseTime: "< 45 mins",
+      image: "/images/pro_hvac_engineer.jpg"
+    },
+    {
+      id: "vendor-3",
+      name: "Sterling Security & Guarding Forces",
+      category: "Security & Guarding",
+      initials: "SS",
+      rating: 4.8,
+      reviewsCount: 210,
+      yearsInBusiness: "18+ years",
+      phone: "+91 11 4105 8890",
+      location: "Cyber City & Golf Course, Gurugram",
+      verified: true,
+      tier: "Elite",
+      description: "PSARA compliant corporate security solutions, manned turnstile guards, command room CCTV operators, and executive escorts.",
+      specialties: ["Manned Guarding", "Biometric Access Control", "24/7 CCTV Control Room"],
+      responseTime: "< 15 mins",
+      image: "/images/pro_security_officer.jpg"
+    },
+    {
+      id: "vendor-4",
+      name: "EcoClean Commercial Sanitization",
+      category: "Commercial Housekeeping",
+      initials: "EC",
+      rating: 4.8,
+      reviewsCount: 185,
+      yearsInBusiness: "10+ years",
+      phone: "+91 20 6640 2210",
+      location: "Hinjewadi & Kharadi, Pune",
+      verified: true,
+      tier: "Verified Pro",
+      description: "Grade-A corporate facility cleaning, robotic floor scrubbers, high-rise cradle facade washing, and Green Seal consumables.",
+      specialties: ["High-Rise Facade Cradles", "Robotic Auto-Scrubbers", "Restroom Hygiene"],
+      responseTime: "< 60 mins",
+      image: "/images/pro_housekeeping_specialist.jpg"
+    },
+    {
+      id: "vendor-5",
+      name: "Vertex Lifts & Vertical Mobility",
+      category: "Elevators & Mobility",
+      initials: "VL",
+      rating: 4.9,
+      reviewsCount: 86,
+      yearsInBusiness: "14+ years",
+      phone: "+91 40 4488 3320",
+      location: "HITEC City, Hyderabad",
+      verified: true,
+      tier: "Premium",
+      description: "Multi-brand elevator maintenance, high-speed passenger hoistways, automated rescue devices (ARD), and certified annual load tests.",
+      specialties: ["Passenger Lift AMC", "Automated Rescue Devices", "Hoistway Load Testing"],
+      responseTime: "< 25 mins",
+      image: "/images/showcase_lifts_hd.jpg"
+    },
+    {
+      id: "vendor-6",
+      name: "GreenScape Corporate Horticulture",
+      category: "Landscaping & Greenery",
+      initials: "GS",
+      rating: 4.8,
+      reviewsCount: 114,
+      yearsInBusiness: "9+ years",
+      phone: "+91 44 2855 7760",
+      location: "OMR & Guindy, Chennai",
+      verified: true,
+      tier: "Verified Pro",
+      description: "Turnkey biophilic design, double-height atrium living walls, rooftop garden terraces, and automated IoT smart drip irrigation.",
+      specialties: ["Living Green Walls", "Rooftop Biophilic Terraces", "Automated Smart Drip"],
+      responseTime: "< 3 hours",
+      image: "/images/showcase_landscaping_hd.jpg"
+    }
+  ];
 
-  const handleOpenRfq = (categoryName?: string, vendorName?: string) => {
-    setRfqData(prev => ({
-      ...prev,
-      category: categoryName || prev.category,
-      preferredVendor: vendorName || ""
-    }));
-    setRfqStep(1);
-    setIsRfqModalOpen(true);
+  // Membership Tiers (Veendoor Pricing Model)
+  const pricingTiers = [
+    {
+      name: "Basic Listing",
+      price: "Free",
+      period: "forever",
+      desc: "Essential directory visibility for emerging contractors and independent trade specialists.",
+      badge: "Starter",
+      popular: false,
+      btnColor: "bg-slate-100 hover:bg-slate-200 text-slate-800",
+      btnText: "Get Started Free",
+      features: [
+        "Business profile & contact info",
+        "1 primary service category",
+        "Standard directory visibility",
+        "Direct client quote requests",
+        "OfficeX verified badge eligible"
+      ]
+    },
+    {
+      name: "Verified Pro",
+      price: "₹2,499",
+      period: "per month",
+      desc: "The standard choice for licensed FM contractors seeking steady commercial leads.",
+      badge: "Most Popular",
+      popular: true,
+      btnColor: "bg-[#2563EB] hover:bg-blue-700 text-white shadow-md",
+      btnText: "Start 14-Day Free Trial",
+      features: [
+        "Blue 'VERIFIED PRO' trust badge",
+        "Up to 5 service categories & hubs",
+        "Priority placement in search results",
+        "Verified customer reviews showcase",
+        "Fast-track 24hr license audit",
+        "Direct click-to-call phone display"
+      ]
+    },
+    {
+      name: "Premium Partner",
+      price: "₹6,999",
+      period: "per month",
+      desc: "For mid-sized FM companies competing for multi-building corporate maintenance AMCs.",
+      badge: "High Growth",
+      popular: false,
+      btnColor: "bg-slate-900 hover:bg-slate-800 text-white shadow-md",
+      btnText: "Upgrade to Partner",
+      features: [
+        "All Verified Pro features included",
+        "Access to commercial RFP tender board",
+        "Hero banner branding on category page",
+        "Dedicated account manager & SLA desk",
+        "Unlimited service categories & regions",
+        "Monthly lead & performance analytics"
+      ]
+    },
+    {
+      name: "Elite Showcase",
+      price: "₹14,999",
+      period: "per month",
+      desc: "For institutional Grade-A facilities management conglomerates and OEM networks.",
+      badge: "Enterprise",
+      popular: false,
+      btnColor: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md",
+      btnText: "Contact Enterprise Sales",
+      features: [
+        "Top-of-page featured spotlight",
+        "Custom video showcases & portfolio",
+        "API integration with building CAFM",
+        "Multi-city enterprise tender bidding",
+        "Escrow protected milestone payouts",
+        "Quarterly vendor governance reports"
+      ]
+    }
+  ];
+
+  // Industry Insights (Veendoor Maintenance Hub)
+  const maintenanceHubArticles = [
+    {
+      id: "art-1",
+      category: "Facility Management",
+      readTime: "5 min read",
+      date: "Aug 28, 2026",
+      title: "How to Vet a Reliable HVAC Contractor for Grade-A Commercial Towers",
+      excerpt: "Key criteria every property manager must verify before signing an annual chilled water and VRV maintenance agreement."
+    },
+    {
+      id: "art-2",
+      category: "SLA & Compliance",
+      readTime: "4 min read",
+      date: "Sep 02, 2026",
+      title: "Essential Preventative Maintenance Checklist for Modern Commercial Properties",
+      excerpt: "A monthly cadence covering 33kV electrical panels, pressure relief valves, smoke dampers, and facade cradles."
+    },
+    {
+      id: "art-3",
+      category: "Vendor Governance",
+      readTime: "6 min read",
+      date: "Sep 06, 2026",
+      title: "Escrow Protection & SLA Governance in Facility Contractor Engagements",
+      excerpt: "How structured digital milestones and audit logs eliminate dispute overhead between property owners and FM service crews."
+    }
+  ];
+
+  const filteredVendors = selectedCategoryFilter === "All"
+    ? featuredVendors
+    : featuredVendors.filter(v => v.category.toLowerCase().includes(selectedCategoryFilter.toLowerCase()));
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (searchService) params.set("service", searchService);
+    if (searchLocation) params.set("location", searchLocation);
+    router.push(`/public/search?type=fm&${params.toString()}`);
   };
 
-  const handleRfqSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setRfqSubmitted(true);
-    setTimeout(() => {
-      setRfqSubmitted(false);
-      setIsRfqModalOpen(false);
-      setRfqStep(1);
-    }, 2800);
+  const handleClaimBusiness = (vendor: Vendor) => {
+    setSelectedVendorForClaim(vendor);
+    setClaimModalOpen(true);
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-sans text-slate-900 bg-slate-50">
-      
-      {/* 1. UNIVERSAL STICKY MARKETING HEADER */}
-      <MarketingHeader activePath="/fm-marketplace" />
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+      <MarketingHeader />
 
-      {/* 2. VEENDOOR-STYLE LIGHT HERO BANNER WITH SEARCH ENGINE & LIVE PRO COUNTER */}
-      <section className="relative pt-12 md:pt-16 pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 text-center bg-gradient-to-b from-teal-50/60 via-white to-slate-50 border-b border-slate-200 overflow-hidden">
-        {/* Soft background accents */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-teal-300/10 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 right-10 w-80 h-80 bg-emerald-300/10 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#0f8b7d15_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none" />
+      {/* 1. VEENDOOR-STYLE HERO SECTION */}
+      <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-slate-50 to-slate-100/70 border-b border-slate-200 overflow-hidden">
+        
+        {/* Subtle Background Elements */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-1/3 left-10 w-80 h-80 bg-indigo-500/5 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(#2563eb10_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
 
-        {/* Hero Content Container */}
-        <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
-          
-          {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-200 bg-white text-[#0F8B7D] text-xs font-extrabold uppercase tracking-wider mb-5 shadow-2xs">
-            <BadgeCheck size={14} className="text-[#0F8B7D]" />
-            <span>Pre-Vetted FM Contractors · Escrow Protected Payouts</span>
-          </div>
-          
-          {/* Solid, Crisp, High-Contrast Headline */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.15] mb-4 max-w-4xl text-slate-900">
-            Hire Verified Contractors for{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-emerald-600">
-              Commercial Facility Management
-            </span>
-          </h1>
-          
-          {/* Solid Subheadline */}
-          <p className="text-sm sm:text-base md:text-lg text-slate-600 font-medium max-w-3xl mx-auto mb-9 leading-relaxed">
-            Connect with pre-vetted contractors for HVAC, MEP, Security, Housekeeping, and Specialized Building Engineering. Instant competitive quotes, transparent digital BOQs, and milestone escrow guarantees.
-          </p>
-
-          {/* Interactive Veendoor Search Bar */}
-          <div className="w-full max-w-3xl bg-white rounded-2xl p-2.5 sm:p-3 shadow-xl shadow-slate-200/80 flex flex-col sm:flex-row items-center gap-2 border border-slate-200 text-left">
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             
-            {/* Category Dropdown */}
-            <div className="flex-1 relative w-full sm:w-auto">
-              <div 
-                onClick={() => { setCategoryOpen(!categoryOpen); setCityOpen(false); }}
-                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200"
-              >
-                 <div className="flex items-center gap-3 text-slate-700">
-                    <SlidersHorizontal size={17} className="text-[#0F8B7D] shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                      {selectedCategory}
-                    </span>
-                 </div>
-                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${categoryOpen ? "rotate-180" : ""}`} />
-              </div>
+            {/* Left Column: Headline, Search Card, Trust Stats */}
+            <div className="lg:col-span-7 text-left">
               
-              {categoryOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 py-2">
-                  <div 
-                    onClick={() => { setSelectedCategory("All Service Categories"); setCategoryOpen(false); }}
-                    className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
-                  >
-                    All Service Categories
-                  </div>
-                  {categories.map((cat) => (
-                    <div 
-                      key={cat}
-                      onClick={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
-                      className="px-4 py-2.5 text-xs font-bold text-slate-800 hover:bg-teal-50 hover:text-[#0F8B7D] cursor-pointer flex items-center justify-between"
-                    >
-                      <span>{cat}</span>
-                      {selectedCategory === cat && <CheckCircle2 size={14} className="text-[#0F8B7D]" />}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="hidden sm:block w-px h-8 bg-slate-200 shrink-0" />
-
-            {/* City / Commercial Hub Dropdown */}
-            <div className="flex-1 relative w-full sm:w-auto">
-              <div 
-                onClick={() => { setCityOpen(!cityOpen); setCategoryOpen(false); }}
-                className="flex items-center justify-between w-full px-4 py-3 sm:py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200"
-              >
-                 <div className="flex items-center gap-3 text-slate-700">
-                    <MapPin size={17} className="text-[#0F8B7D] shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                      {selectedCity}
-                    </span>
-                 </div>
-                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${cityOpen ? "rotate-180" : ""}`} />
+              {/* Eyebrow Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-200 bg-blue-50/70 text-[#2563EB] text-xs font-black uppercase tracking-wider mb-4 shadow-2xs">
+                <ShieldCheck size={14} className="text-[#2563EB]" />
+                <span>The Premier Property Services Network</span>
               </div>
 
-              {cityOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 py-2">
-                  <div 
-                    onClick={() => { setSelectedCity("All Commercial Hubs"); setCityOpen(false); }}
-                    className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
-                  >
-                    All Commercial Hubs
+              {/* Veendoor-Exact Headline with Blue Accent */}
+              <h1 className="text-3xl sm:text-5xl md:text-[52px] font-black text-slate-900 tracking-tight leading-[1.15] mb-4">
+                Connect with <span className="text-[#2563EB]">Trusted Professionals</span>
+              </h1>
+
+              {/* Subhead */}
+              <p className="text-sm sm:text-base md:text-lg text-slate-600 font-medium max-w-xl mb-7 leading-relaxed">
+                The premier network for property managers and building supers to find vetted contractors, certified engineers, and building maintenance providers.
+              </p>
+
+              {/* Veendoor Interactive Search Card */}
+              <div className="bg-white rounded-2xl shadow-xl shadow-slate-900/5 border border-slate-200 p-4 sm:p-5 mb-8">
+                <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* Service needed input */}
+                  <div className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2563EB] flex items-center gap-2.5 transition-all">
+                    <Search size={18} className="text-slate-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={searchService}
+                      onChange={(e) => setSearchService(e.target.value)}
+                      placeholder="Service needed (e.g., HVAC, Plumbing, Electrical)..."
+                      className="w-full text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
+                    />
                   </div>
-                  {commercialHubs.map((hub) => (
-                    <div 
-                      key={hub}
-                      onClick={() => { setSelectedCity(hub); setCityOpen(false); }}
-                      className="px-4 py-2.5 text-xs font-bold text-slate-800 hover:bg-teal-50 hover:text-[#0F8B7D] cursor-pointer flex items-center justify-between"
+
+                  {/* Location input */}
+                  <div className="sm:w-56 border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#2563EB] flex items-center gap-2.5 transition-all">
+                    <MapPin size={18} className="text-slate-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={searchLocation}
+                      onChange={(e) => setSearchLocation(e.target.value)}
+                      placeholder="Location, city, or hub..."
+                      className="w-full text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Find Vendors CTA */}
+                  <button
+                    type="submit"
+                    className="px-6 py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <span>Find Vendors</span>
+                    <ArrowRight size={15} />
+                  </button>
+                </form>
+
+                {/* Quick Service Pills */}
+                <div className="flex flex-wrap items-center gap-2 mt-3.5 pt-3.5 border-t border-slate-100 text-xs">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Popular:</span>
+                  {["Plumbing", "Electrical", "HVAC", "Housekeeping", "Security"].map((pill) => (
+                    <button
+                      key={pill}
+                      type="button"
+                      onClick={() => setSearchService(pill)}
+                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-blue-50 hover:text-[#2563EB] text-slate-600 font-semibold transition-colors cursor-pointer text-[11px]"
                     >
-                      <span>{hub}</span>
-                      {selectedCity === hub && <CheckCircle2 size={14} className="text-[#0F8B7D]" />}
-                    </div>
+                      {pill}
+                    </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => { setSearchService(""); setSelectedCategoryFilter("All"); }}
+                    className="px-2.5 py-1 rounded-md bg-blue-50 text-[#2563EB] font-bold text-[11px] cursor-pointer hover:underline"
+                  >
+                    All Services →
+                  </button>
                 </div>
-              )}
+              </div>
+
+              {/* Veendoor Trust Stats Row */}
+              <div className="grid grid-cols-3 gap-4 pt-2 border-t border-slate-200/80">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] shrink-0">
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <span className="block text-base sm:text-lg font-black text-slate-900 leading-none">2,500+</span>
+                    <span className="text-[11px] text-slate-500 font-semibold">Verified Vendors</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] shrink-0">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <span className="block text-base sm:text-lg font-black text-slate-900 leading-none">100%</span>
+                    <span className="text-[11px] text-slate-500 font-semibold">Vetted Pros</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB] shrink-0">
+                    <TrendingUp size={18} />
+                  </div>
+                  <div>
+                    <span className="block text-base sm:text-lg font-black text-slate-900 leading-none">4.9 / 5</span>
+                    <span className="text-[11px] text-slate-500 font-semibold">Avg Rating</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            {/* Find Verified Pros Button */}
-            <button 
-              onClick={() => handleOpenRfq(selectedCategory !== "All Service Categories" ? selectedCategory : undefined)}
-              className="w-full sm:w-auto px-7 py-3 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-teal-700/20 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2"
-            >
-              <Zap size={15} />
-              <span>Get 3 Free Quotes</span>
-            </button>
-          </div>
+            {/* Right Column: 2x2 Asymmetric Media Grid */}
+            <div className="lg:col-span-5 grid grid-cols-2 gap-3.5">
+              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 group">
+                <Image
+                  src="/images/pro_hvac_engineer.jpg"
+                  alt="HVAC Certified Technician"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-xs text-[#2563EB] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
+                  HVAC &amp; Chillers
+                </span>
+              </div>
 
-          {/* Popular Category Chips with Live Pro Counts (Veendoor pattern in Light Theme) */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-7 text-xs">
-             <span className="text-slate-500 font-bold mr-1">Popular Categories:</span>
-             {[
-               { name: "MEP Engineering", count: "240+ Pros" },
-               { name: "HVAC Systems", count: "180+ Pros" },
-               { name: "Security & Guarding", count: "310+ Pros" },
-               { name: "Commercial Cleaning", count: "450+ Pros" },
-               { name: "Fire Safety", count: "120+ Pros" },
-               { name: "Lifts & Elevators", count: "95+ Pros" }
-             ].map((chip) => (
-               <button 
-                 key={chip.name} 
-                 onClick={() => handleOpenRfq(chip.name)}
-                 className="px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:border-[#0F8B7D] hover:bg-teal-50/50 transition-all cursor-pointer text-slate-700 font-bold flex items-center gap-1.5 shadow-2xs"
-               >
-                 <span>{chip.name}</span>
-                 <span className="text-[#0F8B7D] font-extrabold text-[10px]">({chip.count})</span>
-               </button>
-             ))}
-          </div>
+              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 mt-4 group">
+                <Image
+                  src="/images/pro_mep_technician.jpg"
+                  alt="MEP Electrical Engineer"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-xs text-[#2563EB] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
+                  Electrical &amp; DG
+                </span>
+              </div>
 
+              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 -mt-2 group">
+                <Image
+                  src="/images/pro_housekeeping_specialist.jpg"
+                  alt="Corporate Sanitization Specialist"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-xs text-[#2563EB] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
+                  Commercial Hygiene
+                </span>
+              </div>
+
+              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 mt-2 group">
+                <Image
+                  src="/images/pro_security_officer.jpg"
+                  alt="PSARA Corporate Security Guard"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-xs text-[#2563EB] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
+                  Guarding &amp; Access
+                </span>
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      {/* 3. LIVE MARKETPLACE TRUST TICKER & ENTERPRISE MARQUEE */}
-      <section className="bg-white py-6 border-b border-slate-200 w-full overflow-hidden relative">
-        <div className="max-w-6xl mx-auto px-4 mb-5">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center border-b border-slate-100 pb-5">
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900">250+</p>
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Verified Contractors</p>
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-[#0F8B7D]">₹28.5L</p>
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Monthly GTV Run-Rate</p>
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-emerald-600">&lt; 45 Mins</p>
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Avg Emergency Dispatch</p>
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-indigo-600">100%</p>
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Escrow Fund Protected</p>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
-              <p className="text-xl sm:text-2xl font-black text-slate-900">99.2%</p>
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">SLA Compliance</p>
-            </div>
-          </div>
-          
-          <p className="text-center text-[10px] sm:text-[11px] font-black text-slate-400 tracking-[0.25em] uppercase mt-4">
-            TRUSTED BY INSTITUTIONAL COMMERCIAL LANDLORDS &amp; REITS
+      {/* 2. VEENDOOR SERVICE CATEGORIES GRID ("Find Services by Category") */}
+      <section className="py-14 md:py-18 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <span className="text-xs font-black uppercase tracking-widest text-[#2563EB] block mb-1">
+            Service Directory
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+            Find Services by Category
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2">
+            Browse our curated network of vetted professionals by trade and specialized property discipline
           </p>
         </div>
 
-        {/* Fading Edge Masks */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
-
-        {/* Single-Line Marquee */}
-        <div className="w-full overflow-hidden whitespace-nowrap py-1">
-          <div className="inline-flex items-center gap-10 md:gap-14 font-black text-slate-700 text-sm sm:text-base opacity-85 animate-marquee select-none">
-            {[
-              "DLF Commercial",
-              "Brookfield Properties",
-              "Google Campus",
-              "Godrej Properties",
-              "Prestige Group",
-              "Morgan Stanley Real Estate",
-              "Embassy REIT",
-              "HSBC Commercial",
-              "RMZ Corp",
-              "Deloitte Workplace",
-              "Tata Realty",
-              "Larsen & Toubro Realty"
-            ].map((company, idx) => (
-              <span key={idx} className="shrink-0 hover:text-[#0F8B7D] transition-colors cursor-default flex items-center gap-2">
-                <Building2 size={15} className="text-slate-400" />
-                {company}
-              </span>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {serviceCategories.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  setSearchService(cat.name);
+                  setSelectedCategoryFilter(cat.name);
+                  const el = document.getElementById("vendors-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="bg-white rounded-xl border border-slate-200 p-5 text-left hover:shadow-lg hover:border-blue-400 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+              >
+                <div>
+                  <div className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-3.5 transition-transform group-hover:scale-110 duration-300 ${cat.bg}`}>
+                    <Icon size={22} />
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 group-hover:text-[#2563EB] transition-colors mb-1">
+                    {cat.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {cat.desc}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="font-extrabold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded">
+                    {cat.count}
+                  </span>
+                  <span className="text-slate-400 group-hover:text-[#2563EB] group-hover:translate-x-1 transition-all flex items-center gap-0.5 font-bold">
+                    Browse <ChevronRight size={14} />
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* 4. SNABBIT-INSPIRED UNIFORMED SERVICE SPECIALISTS SHOWCASE */}
-      <section className="bg-slate-50/70 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 w-full border-b border-slate-200">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
-              <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
-                Pre-Screened Uniformed Personnel
-              </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-slate-900 tracking-tight mt-3">
-                Expert Facility Services &amp; Uniformed Professionals
-              </h2>
-            </div>
-            <p className="text-slate-500 text-xs sm:text-sm font-medium max-w-md mt-2 md:mt-0">
-              Every professional dispatched through OfficeX is trained, background-audited, and deployed in standardized uniforms with digital proof of work.
+      {/* 3. VALUE PROPOSITION ("Why Choose OfficeX Pro?") */}
+      <section className="py-14 bg-white border-y border-slate-200 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-xs font-black uppercase tracking-widest text-[#2563EB] block mb-1">
+              Quality Assurance
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              Why Choose OfficeX Pro?
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2">
+              We make finding, auditing, and contracting reliable building service providers simple and stress-free
             </p>
           </div>
 
-          {/* Snabbit Visual Cards with Real Uniformed Personnel */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                id: "hvac",
-                name: "HVAC & Chiller Engineering",
-                desc: "Centrifugal chillers, VRV/VRF multi-splits, cooling towers, and indoor air balance.",
-                image: "/images/pro_hvac_engineer.jpg",
-                badge: "OEM Authorized",
-                pricing: "From ₹18,500/mo AMC",
-                sla: "30-min Emergency SLA",
-                count: "180+ Certified Engineers"
-              },
-              {
-                id: "cleaning",
-                name: "Commercial Sanitization",
-                desc: "Grade-A lobby housekeeping, robotic auto-scrubbers, bio-hygiene, and high-rise facades.",
-                image: "/images/pro_housekeeping_specialist.jpg",
-                badge: "Green Seal Certified",
-                pricing: "From ₹2.80/sq.ft/mo",
-                sla: "Daily Audited Logs",
-                count: "450+ Vetted Specialists"
-              },
-              {
-                id: "security",
-                name: "Corporate Security & Guarding",
-                desc: "PSARA compliant manned guarding, visitor turnstile badge checks, and CCTV control.",
-                image: "/images/pro_security_officer.jpg",
-                badge: "PSARA Licensed",
-                pricing: "From ₹28,000/guard/mo",
-                sla: "Full Background Clear",
-                count: "310+ Manned Guards"
-              },
-              {
-                id: "mep",
-                name: "MEP & High-Voltage Electrical",
-                desc: "33kV electrical substations, DG auto-synchronization, thermography, and pump upkeep.",
-                image: "/images/pro_mep_technician.jpg",
-                badge: "33kV Govt License",
-                pricing: "From ₹24,000/mo AMC",
-                sla: "99.8% Uptime SLA",
-                count: "240+ Master Engineers"
-              },
-              {
-                id: "stewardship",
-                name: "Turnkey Property Stewardship",
-                desc: "Dedicated on-ground Property Director managing full-spectrum IFM and CAM billing.",
-                image: "/images/pro_property_manager.jpg",
-                badge: "Executive Leadership",
-                pricing: "Custom Portfolio Scope",
-                sla: "Zero-Notice Liability",
-                count: "50+ Building Directors"
-              },
-              {
-                id: "lifts",
-                name: "Lifts & Vertical Mobility",
-                desc: "High-speed passenger elevator AMCs, ARD safety systems, and hoistway certifications.",
-                image: "/images/showcase_lifts_hd.jpg",
-                badge: "TÜV SÜD Certified",
-                pricing: "From ₹9,500/lift/mo",
-                sla: "24/7 Trapped Cell",
-                count: "95+ OEM Specialists"
-              },
-              {
-                id: "fire",
-                name: "Fire Safety & Life Support",
-                desc: "Hydrant lines, smoke damper testing, statutory fire NOC renewals, and evacuation drills.",
-                image: "/images/showcase_fire_hd.jpg",
-                badge: "NBC / NFPA Standard",
-                pricing: "From ₹15,000/audit",
-                sla: "Statutory Safe Guarantee",
-                count: "120+ Fire Engineers"
-              },
-              {
-                id: "landscaping",
-                name: "Biophilic Greens & Horticulture",
-                desc: "Living green walls, atrium biophilic maintenance, and automated IoT drip irrigation.",
-                image: "/images/showcase_landscaping_hd.jpg",
-                badge: "IGBC Green Partner",
-                pricing: "From ₹12,000/mo",
-                sla: "Native Flora Care",
-                count: "110+ Horticulturists"
-              }
-            ].map((service) => (
-              <div
-                key={service.id}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col items-center">
+              <div className="w-13 h-13 rounded-2xl bg-blue-100/80 text-[#2563EB] flex items-center justify-center mb-4 shadow-2xs">
+                <ShieldCheck size={26} />
+              </div>
+              <h3 className="text-base font-black text-slate-900 mb-2">Pre-Vetted Professionals</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Every vendor is screened for valid government licensing, active liability insurance, and audited safety standards.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col items-center">
+              <div className="w-13 h-13 rounded-2xl bg-amber-100/80 text-amber-600 flex items-center justify-center mb-4 shadow-2xs">
+                <Clock size={26} />
+              </div>
+              <h3 className="text-base font-black text-slate-900 mb-2">Save Time &amp; Money</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Skip tedious multi-week procurement phases. Access qualified commercial contractors with pre-negotiated rate cards.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col items-center">
+              <div className="w-13 h-13 rounded-2xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center mb-4 shadow-2xs">
+                <Users size={26} />
+              </div>
+              <h3 className="text-base font-black text-slate-900 mb-2">Verified Reviews</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Read honest, audited feedback from fellow enterprise facility managers, property developers, and building supers.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center flex flex-col items-center">
+              <div className="w-13 h-13 rounded-2xl bg-purple-100/80 text-purple-600 flex items-center justify-center mb-4 shadow-2xs">
+                <Award size={26} />
+              </div>
+              <h3 className="text-base font-black text-slate-900 mb-2">Quality SLA Guarantee</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                All vendors commit to defined SLA response times, work order digital logs, and escrow-backed milestone payouts.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. VEENDOOR FEATURED SERVICE PROVIDERS SHOWCASE */}
+      <section id="vendors-section" className="py-14 md:py-18 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
+          <div>
+            <span className="text-xs font-black uppercase tracking-widest text-[#2563EB] block mb-1">
+              Top-Rated Contractors
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Featured Service Providers
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+              Discover top-rated professionals across all membership tiers — from verified experts to elite partners
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-4 md:mt-0">
+            {["All", "MEP", "HVAC", "Security", "Housekeeping"].map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setSelectedCategoryFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  selectedCategoryFilter === f
+                    ? "bg-[#2563EB] text-white shadow-2xs"
+                    : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300"
+                }`}
               >
-                <div>
-                  {/* Photo with uniform personnel */}
-                  <div className="relative h-44 w-full overflow-hidden bg-slate-100">
-                    <Image
-                      src={service.image}
-                      alt={service.name}
-                      fill
-                      unoptimized
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-extrabold text-[10px] uppercase px-2.5 py-1 rounded-md border border-teal-200 shadow-2xs">
-                      {service.badge}
-                    </span>
-                    <span className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                      {service.count}
-                    </span>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Vendor Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredVendors.map((vendor) => (
+            <div
+              key={vendor.id}
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col justify-between group"
+            >
+              <div className="p-5">
+                {/* Header: Initials Avatar + Name + Verified Badge */}
+                <div className="flex items-start gap-3.5 mb-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-base flex items-center justify-center shadow-xs shrink-0">
+                    {vendor.initials}
                   </div>
-
-                  {/* Body Content */}
-                  <div className="p-4">
-                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base group-hover:text-[#0F8B7D] transition-colors leading-snug">
-                      {service.name}
-                    </h3>
-                    <p className="text-slate-500 text-xs mt-1.5 leading-relaxed line-clamp-2">
-                      {service.desc}
-                    </p>
-
-                    <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Rate Guide</span>
-                        <span className="font-black text-slate-900 text-xs">{service.pricing}</span>
-                      </div>
-                      <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        {service.sla}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-[#2563EB] transition-colors truncate">
+                        {vendor.name}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[#2563EB] font-black text-[10px] tracking-wider uppercase">
+                        <CheckCircle2 size={11} /> VERIFIED
                       </span>
+                      <span className="text-[11px] font-bold text-slate-400">•</span>
+                      <span className="text-[11px] font-bold text-slate-500 truncate">{vendor.category}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Card Action */}
-                <div className="p-4 pt-0">
+                {/* Location */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mb-3">
+                  <MapPin size={14} className="text-slate-400 shrink-0" />
+                  <span className="truncate">{vendor.location}</span>
+                </div>
+
+                {/* Rating + Reviews + Experience Row */}
+                <div className="flex items-center gap-4 bg-slate-50 rounded-xl p-2.5 mb-3.5 text-xs font-bold text-slate-700">
+                  <div className="flex items-center gap-1 text-amber-500">
+                    <Star size={14} className="fill-amber-400 text-amber-400" />
+                    <span className="font-black text-slate-900">{vendor.rating}</span>
+                    <span className="text-slate-400 font-normal">({vendor.reviewsCount})</span>
+                  </div>
+                  <span className="text-slate-300">|</span>
+                  <div className="text-slate-600 font-medium">
+                    {vendor.yearsInBusiness}
+                  </div>
+                  <span className="text-slate-300">|</span>
+                  <div className="text-emerald-700 font-bold">
+                    {vendor.responseTime}
+                  </div>
+                </div>
+
+                {/* Phone click-to-call link */}
+                <a
+                  href={`tel:${vendor.phone.replace(/[^0-9+]/g, "")}`}
+                  className="inline-flex items-center gap-2 text-xs font-bold text-[#2563EB] hover:underline mb-3"
+                >
+                  <Phone size={13} />
+                  <span>{vendor.phone}</span>
+                </a>
+
+                {/* Description */}
+                <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-3.5">
+                  {vendor.description}
+                </p>
+
+                {/* Specialty Tags */}
+                <div className="flex flex-wrap gap-1">
+                  {vendor.specialties.map((spec, i) => (
+                    <span key={i} className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {spec}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dual Action Buttons */}
+              <div className="p-4 bg-slate-50/80 border-t border-slate-100 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSlideInOpen(true)}
+                  className="flex-1 py-2.5 px-3 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-800 font-extrabold text-xs transition-all text-center cursor-pointer"
+                >
+                  View Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleClaimBusiness(vendor)}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all text-center cursor-pointer"
+                >
+                  Claim Business
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Browse All CTA */}
+        <div className="mt-10 text-center">
+          <Link
+            href="/public/search?type=fm"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-xl border-2 border-[#2563EB] text-[#2563EB] hover:bg-blue-50 font-black text-xs sm:text-sm transition-all"
+          >
+            <span>Browse All 2,500+ Service Providers</span>
+            <ArrowRight size={15} />
+          </Link>
+        </div>
+      </section>
+
+      {/* 5. VEENDOOR ROYAL BLUE VENDOR ACQUISITION CTA BANNER */}
+      <section className="py-14 md:py-18 bg-[#2563EB] text-white px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Background ambient accents */}
+        <div className="absolute -right-20 -top-20 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-black/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            
+            {/* Left Column: Vendor Value Props & CTA */}
+            <div className="lg:col-span-7 text-left">
+              <span className="text-xs font-black uppercase tracking-widest text-blue-200 block mb-2">
+                Join the Network
+              </span>
+              <h2 className="text-2xl sm:text-4xl md:text-[42px] font-black tracking-tight leading-[1.18] mb-4 text-white">
+                Are You a Service Provider?
+              </h2>
+              <p className="text-sm sm:text-base text-blue-100 max-w-xl mb-6 font-medium leading-relaxed">
+                Join thousands of trusted professionals already connecting with commercial property managers and building supers through OfficeX.
+              </p>
+
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-white">
+                  <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                    <Award size={16} className="text-white" />
+                  </div>
+                  <span>Get verified and stand out from unvetted competitors</span>
+                </li>
+                <li className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-white">
+                  <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                    <Building2 size={16} className="text-white" />
+                  </div>
+                  <span>Access exclusive commercial property maintenance RFPs &amp; tender leads</span>
+                </li>
+                <li className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-white">
+                  <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                    <TrendingUp size={16} className="text-white" />
+                  </div>
+                  <span>Manage your digital profile, verified reviews, and milestone payouts</span>
+                </li>
+              </ul>
+
+              <button
+                type="button"
+                onClick={() => setSlideInOpen(true)}
+                className="px-8 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-[#2563EB] font-black text-xs sm:text-sm shadow-xl transition-all inline-flex items-center gap-2 cursor-pointer"
+              >
+                <span>Find &amp; Claim Your Business</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+
+            {/* Right Column: 3-Step Setup Card */}
+            <div className="lg:col-span-5 bg-white/10 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/20 text-white">
+              <h3 className="text-lg font-black mb-1">Quick &amp; Easy Setup</h3>
+              <p className="text-xs text-blue-100 mb-6">
+                Complete the verification process in just a few minutes and start receiving qualified leads.
+              </p>
+
+              <div className="space-y-5">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-full bg-white text-[#2563EB] font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white mb-0.5">Search or Create Listing</h4>
+                    <p className="text-[11px] text-blue-100">Find your existing business profile or register a new commercial entity.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-full bg-white text-[#2563EB] font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white mb-0.5">Get Verified in 24–48 Hours</h4>
+                    <p className="text-[11px] text-blue-100">Upload licensing, GST, and insurance documents for compliance audit.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-full bg-white text-[#2563EB] font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white mb-0.5">Start Receiving Quality Leads</h4>
+                    <p className="text-[11px] text-blue-100">Direct quote inquiries from Grade-A property owners and building supers.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 6. VEENDOOR PRICING TIERS ("Choose Your Professional Tier") */}
+      <section className="py-14 md:py-18 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs font-black uppercase tracking-widest text-[#2563EB] block mb-1">
+            Membership Plans
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+            Choose Your Professional Tier
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2">
+            Start with a free listing and upgrade as your commercial business grows. No long-term contracts.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {pricingTiers.map((tier, idx) => (
+            <div
+              key={idx}
+              className={`bg-white rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative ${
+                tier.popular
+                  ? "border-[#2563EB] ring-2 ring-blue-600/20 shadow-xl"
+                  : "border-slate-200 shadow-2xs hover:shadow-md"
+              }`}
+            >
+              {tier.popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#2563EB] text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow-xs">
+                  {tier.badge}
+                </span>
+              )}
+
+              <div>
+                <h3 className="text-base font-black text-slate-900 mb-1">{tier.name}</h3>
+                <p className="text-xs text-slate-500 mb-4 min-h-[36px]">{tier.desc}</p>
+
+                <div className="mb-5 pb-4 border-b border-slate-100">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900">{tier.price}</span>
+                  <span className="text-xs text-slate-500 font-semibold ml-1">/{tier.period}</span>
+                </div>
+
+                <ul className="space-y-2.5 mb-6 text-xs text-slate-600 font-medium">
+                  {tier.features.map((feat, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <Check size={14} className="text-[#2563EB] shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSlideInOpen(true)}
+                className={`w-full py-2.5 px-4 rounded-xl font-extrabold text-xs transition-all cursor-pointer text-center ${tier.btnColor}`}
+              >
+                {tier.btnText}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center text-xs sm:text-sm text-slate-500">
+          Need a custom enterprise multi-city procurement contract?{" "}
+          <button
+            type="button"
+            onClick={() => setSlideInOpen(true)}
+            className="text-[#2563EB] font-bold hover:underline cursor-pointer"
+          >
+            Contact Enterprise Sales →
+          </button>
+        </div>
+      </section>
+
+      {/* 7. THE MAINTENANCE HUB (Industry Insights & Blog Cards) */}
+      <section className="py-14 bg-white border-t border-slate-200 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
+            <div>
+              <span className="text-xs font-black uppercase tracking-widest text-[#2563EB] block mb-1">
+                The Maintenance Hub
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Industry Insights &amp; Resources
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                Stay ahead with expert advice, preventative checklists, and operational best practices
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSlideInOpen(true)}
+              className="text-xs font-black text-[#2563EB] hover:underline flex items-center gap-1 mt-3 sm:mt-0 cursor-pointer"
+            >
+              <span>View All Articles</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {maintenanceHubArticles.map((art) => (
+              <div
+                key={art.id}
+                className="bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col justify-between hover:shadow-lg hover:border-blue-300 transition-all duration-300 group"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-3">
+                    <span className="bg-blue-50 text-[#2563EB] px-2.5 py-0.5 rounded-full border border-blue-100">
+                      {art.category}
+                    </span>
+                    <span>{art.date} • {art.readTime}</span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 group-hover:text-[#2563EB] transition-colors mb-2 leading-snug">
+                    {art.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {art.excerpt}
+                  </p>
+                </div>
+                <div className="mt-5 pt-3 border-t border-slate-200/60">
                   <button
-                    onClick={() => handleOpenRfq(service.name)}
-                    className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-[#0F8B7D] text-slate-800 hover:text-white border border-slate-200 hover:border-[#0F8B7D] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    type="button"
+                    onClick={() => setSlideInOpen(true)}
+                    className="text-xs font-bold text-[#2563EB] group-hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <span>Request Quotation</span>
+                    <span>Read Article</span>
                     <ArrowRight size={13} />
                   </button>
                 </div>
@@ -584,1133 +1031,92 @@ export default function FMMarketplacePage() {
         </div>
       </section>
 
-      {/* 5. [CORE VEENDOOR FEATURE] FEATURED VERIFIED CONTRACTORS DIRECTORY */}
-      <section id="contractors" className="bg-white py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-y border-slate-200/80">
-        <div className="max-w-6xl mx-auto">
-          {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-            <div>
-              <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200/60 px-3 py-1 rounded-full">
-                Pre-Vetted Directory
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3">
-                Featured Verified Service Providers
-              </h2>
-              <p className="text-slate-500 text-sm font-medium mt-1">
-                Directly request quotes from contractors with audited track records, verified licenses, and active escrow accounts.
-              </p>
-            </div>
-
-            {/* Category Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2">
-              {[
-                { id: "all", label: "All Categories" },
-                { id: "mep", label: "MEP" },
-                { id: "hvac", label: "HVAC" },
-                { id: "security", label: "Security" },
-                { id: "cleaning", label: "Housekeeping" }
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setContractorFilter(f.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    contractorFilter === f.id
-                      ? "bg-[#0F8B7D] text-white shadow-xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Contractors Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredContractors.map((c) => (
-              <div 
-                key={c.id}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-xl hover:border-[#0F8B7D]/40 transition-all flex flex-col justify-between group"
-              >
-                <div>
-                  {/* Top Bar: Category & Verified Badge */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="px-2.5 py-1 rounded-md bg-teal-50 text-[#0F8B7D] text-[10px] font-black uppercase tracking-wider border border-teal-100">
-                      {c.category}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      <BadgeCheck size={12} className="text-emerald-600" />
-                      Verified Pro
-                    </span>
-                  </div>
-
-                  {/* Contractor Name */}
-                  <h3 className="text-base font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-snug">
-                    {c.name}
-                  </h3>
-
-                  {/* Rating & Response Metrics */}
-                  <div className="flex items-center gap-3 mt-2 text-xs font-bold text-slate-700">
-                    <div className="flex items-center gap-1 text-amber-500">
-                      <Star size={14} className="fill-amber-400 text-amber-400" />
-                      <span className="text-slate-900 font-black">{c.rating}</span>
-                      <span className="text-slate-400 font-normal">({c.reviewsCount})</span>
-                    </div>
-                    <span className="text-slate-300">•</span>
-                    <div className="flex items-center gap-1 text-slate-500 text-[11px]">
-                      <Clock size={12} className="text-teal-600" />
-                      <span>{c.responseTime}</span>
-                    </div>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-[11px] text-emerald-600 font-extrabold">{c.slaScore} SLA</span>
-                  </div>
-
-                  {/* Location & Coverage */}
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2.5">
-                    <MapPin size={13} className="text-slate-400 shrink-0" />
-                    <span className="truncate">{c.coverage}</span>
-                  </div>
-
-                  {/* Compliance Badges */}
-                  <div className="flex flex-wrap gap-1.5 mt-3.5">
-                    {c.badges.map((b, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold">
-                        {b}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Specialties List */}
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5">Key Capabilities</p>
-                    <div className="space-y-1">
-                      {c.specialties.map((s, idx) => (
-                        <p key={idx} className="text-xs text-slate-600 flex items-center gap-1.5 font-medium">
-                          <Check size={12} className="text-teal-600 shrink-0" />
-                          <span>{s}</span>
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Actions (Veendoor pattern) */}
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center gap-2">
-                  <button
-                    onClick={() => handleOpenRfq(c.category, c.name)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                  >
-                    <Send size={12} />
-                    <span>Request Quote</span>
-                  </button>
-                  <button
-                    onClick={() => handleOpenRfq(c.category, c.name)}
-                    className="px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                    title="View Profile & Credentials"
-                  >
-                    Inspect
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <p className="text-xs text-slate-500 font-medium">
-              Are you a licensed commercial facility contractor?{" "}
-              <Link href="/signup?role=vendor" className="text-[#0F8B7D] font-extrabold hover:underline">
-                Apply to become an OfficeX Verified Pro →
-              </Link>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. PROBLEM / SOLUTION MATRIX (From Redesign PDF Specification) */}
-      <section className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Why Traditional FM Procurement Fails
-            </h2>
-            <p className="text-slate-500 text-sm font-medium mt-1.5 max-w-xl mx-auto">
-              How OfficeX transforms fragmented contractor chaos into transparent, SLA-enforced operations.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Without Marketplace (Pain) */}
-            <div className="bg-white rounded-2xl border border-red-200/80 p-7 shadow-xs">
-              <div className="flex items-center gap-2.5 mb-5 text-red-700">
-                <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center font-black">✕</div>
-                <h3 className="text-lg font-black tracking-tight">Without OfficeX Marketplace</h3>
-              </div>
-              <ul className="space-y-4 text-xs sm:text-sm text-slate-600 font-medium">
-                {[
-                  "FM vendor sourcing fragmented across WhatsApp, personal phonebooks, and unvetted referrals.",
-                  "Zero comparable quotations: lack of standardized BOQs leads to arbitrary cost inflation.",
-                  "Payment delays of 45 to 90 days create friction, contractor disputes, and delayed maintenance.",
-                  "Zero documented performance history: contractor quality, safety compliance, and past uptime are pure guesswork.",
-                  "Contractors abandon small corrective tickets to pursue larger capital projects."
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3">
-                    <span className="text-red-500 font-black shrink-0 mt-0.5">✕</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* With OfficeX Marketplace (Outcomes) */}
-            <div className="bg-gradient-to-br from-[#071324] to-[#0d2a27] text-white rounded-2xl border border-teal-500/30 p-7 shadow-xl">
-              <div className="flex items-center gap-2.5 mb-5 text-teal-300">
-                <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center font-black text-teal-300">✓</div>
-                <h3 className="text-lg font-black tracking-tight text-white">With OfficeX Marketplace</h3>
-              </div>
-              <ul className="space-y-4 text-xs sm:text-sm text-slate-200 font-medium">
-                {[
-                  "Verified contractor directory with audited GSTIN, PSARA clearance, workmen insurance, and SLA ratings.",
-                  "Structured RFQ engine delivering 3 side-by-side comparable quotes with automated digital BOQs.",
-                  "Escrow-protected milestone payments: funds held securely and released only upon verified completion.",
-                  "Persistent SLA scorecard and audit trail visible on every vendor profile before you award work.",
-                  "Automated emergency dispatch network guaranteeing < 45-minute on-site technician response."
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3">
-                    <CheckCircle2 size={16} className="text-teal-400 shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. PERSONA JOURNEYS ("WHO IS OFFICEX FOR?") */}
-      <section className="bg-white py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200/60 px-3 py-1 rounded-full">
-              Tailored for Every Stakeholder
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3">
-              Built for Commercial Real Estate Ecosystems
-            </h2>
-          </div>
-
-          {/* Tab Selector */}
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200/80 gap-1 text-xs font-bold">
-              <button
-                onClick={() => setActivePersona("supers")}
-                className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                  activePersona === "supers"
-                    ? "bg-[#0F8B7D] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                For Facility Managers &amp; Supers
-              </button>
-              <button
-                onClick={() => setActivePersona("owners")}
-                className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                  activePersona === "owners"
-                    ? "bg-[#0F8B7D] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                For Landlords &amp; Asset Owners
-              </button>
-              <button
-                onClick={() => setActivePersona("vendors")}
-                className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                  activePersona === "vendors"
-                    ? "bg-[#0F8B7D] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                For Service Contractors
-              </button>
-            </div>
-          </div>
-
-          {/* Tab Content Cards */}
-          <div className="bg-slate-50 rounded-3xl border border-slate-200/80 p-6 sm:p-10 shadow-xs">
-            {activePersona === "supers" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <div className="inline-block px-3 py-1 rounded-lg bg-teal-50 text-[#0F8B7D] text-xs font-black uppercase mb-3">
-                    Operations &amp; Maintenance
-                  </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-3">
-                    Eliminate Emergency Contractor Scrambles
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed mb-5">
-                    When a DG synchronization fails or a 500-TR chiller trips, you cannot afford hours searching contacts. OfficeX guarantees instant emergency dispatches with pre-credentialed technicians ready with digital passes.
-                  </p>
-                  <ul className="space-y-2 text-xs sm:text-sm text-slate-700 font-bold mb-6">
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> Guaranteed &lt; 45-minute on-site response for critical faults</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> Digital work orders with photo evidence before and after</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> Unified logbook updating equipment maintenance registers</li>
-                  </ul>
-                  <button
-                    onClick={() => handleOpenRfq()}
-                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-black hover:bg-[#0D7A6E] transition-colors cursor-pointer"
-                  >
-                    Explore FM Directory
-                  </button>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <span className="text-xs font-black text-slate-800">Dispatch Speed Benchmark</span>
-                    <span className="text-[11px] font-bold text-emerald-600">92% Faster Resolution</span>
-                  </div>
-                  <div className="space-y-2.5 text-xs">
-                    <div>
-                      <div className="flex justify-between text-slate-500 mb-1">
-                        <span>Traditional Sourcing</span>
-                        <span className="font-bold text-red-600">4 to 6 Hours</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-red-100 overflow-hidden">
-                        <div className="w-4/5 h-full bg-red-500 rounded-full" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-slate-500 mb-1">
-                        <span>OfficeX Verified Dispatch</span>
-                        <span className="font-bold text-emerald-600">32 Minutes Average</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-emerald-100 overflow-hidden">
-                        <div className="w-1/4 h-full bg-[#0F8B7D] rounded-full" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activePersona === "owners" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <div className="inline-block px-3 py-1 rounded-lg bg-teal-50 text-[#0F8B7D] text-xs font-black uppercase mb-3">
-                    Financial Governance &amp; NOI
-                  </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-3">
-                    Transparent Competitive Bids &amp; Escrow Safety
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed mb-5">
-                    Eliminate arbitrary vendor kickbacks and opaque markups. Receive 3 comparable, itemized BOQs for every major AMC or capital overhaul, with funds protected in escrow until physical verification.
-                  </p>
-                  <ul className="space-y-2 text-xs sm:text-sm text-slate-700 font-bold mb-6">
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> 15% to 22% average reduction in annual AMC expenditure</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> Razorpay Nodal Escrow holds funds safely until sign-off</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> 100% auditable GST and statutory compliance documentation</li>
-                  </ul>
-                  <button
-                    onClick={() => handleOpenRfq()}
-                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-black hover:bg-[#0D7A6E] transition-colors cursor-pointer"
-                  >
-                    Compare Contractor Bids
-                  </button>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-                  <div className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2">Portfolio Escrow Snapshot</div>
-                  <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Funds in Escrow</p>
-                      <p className="text-base font-black text-slate-900">₹14,50,000</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                      Protected
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Average Savings on Tender</p>
-                      <p className="text-base font-black text-[#0F8B7D]">18.4% Cost Saved</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px] font-black">
-                      Audited
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activePersona === "vendors" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <div className="inline-block px-3 py-1 rounded-lg bg-teal-50 text-[#0F8B7D] text-xs font-black uppercase mb-3">
-                    Contractor Growth &amp; Payouts
-                  </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-3">
-                    Guaranteed Timely Payments &amp; Grade-A Tenders
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed mb-5">
-                    Stop chasing clients for 90-day overdue payments. OfficeX secures project funds in escrow before you deploy manpower, releasing money automatically upon milestone completion.
-                  </p>
-                  <ul className="space-y-2 text-xs sm:text-sm text-slate-700 font-bold mb-6">
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> T+1 instant payout option upon verified milestone sign-off</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> Direct access to institutional Grade-A commercial tenders</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-teal-600" /> Persistent verified reputation profile and rating badges</li>
-                  </ul>
-                  <Link
-                    href="/signup?role=vendor"
-                    className="inline-block px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-black hover:bg-[#0D7A6E] transition-colors cursor-pointer"
-                  >
-                    Apply as Verified Contractor
-                  </Link>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-                  <div className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2">Vendor Payout Guarantee</div>
-                  <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-emerald-800 font-bold uppercase">Standard Payment Cycle</p>
-                      <p className="text-base font-black text-emerald-900">Friday Scheduled or T+1</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 text-[10px] font-black">
-                      Zero Bad Debt
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Platform Take-Rate</p>
-                      <p className="text-base font-black text-slate-900">8.5% Transparent Fee</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-black">
-                      No Hidden Cuts
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* 8. 4-STEP STRUCTURED PROCUREMENT WORKFLOW */}
-      <section id="how-it-works" className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200/60 px-3 py-1 rounded-full">
-              Simple &amp; Frictionless
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3">
-              How OfficeX FM Marketplace Works
-            </h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">
-              From initial scope broadcast to verified milestone payout in 4 seamless stages.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
-            {[
-              {
-                step: "Stage 1",
-                title: "Post RFQ or Pick Vendor",
-                desc: "Specify your maintenance category, building square footage, and required response urgency.",
-                time: "5 Minutes",
-                icon: FileText
-              },
-              {
-                step: "Stage 2",
-                title: "Get 3 Itemized Quotes",
-                desc: "Receive side-by-side transparent BOQs with contractor SLA scores and verified insurance.",
-                time: "Within 24 Hours",
-                icon: SlidersHorizontal
-              },
-              {
-                step: "Stage 3",
-                title: "Escrow-Backed Award",
-                desc: "Award work order with milestone funds safely held in Razorpay Nodal Escrow before work begins.",
-                time: "Instant Escrow",
-                icon: DollarSign
-              },
-              {
-                step: "Stage 4",
-                title: "Verified Sign-off & Payout",
-                desc: "Approve completed work with photo logs. Funds are released and persistent SLA rating is logged.",
-                time: "Milestone Release",
-                icon: BadgeCheck
-              }
-            ].map((st, idx) => {
-              const Icon = st.icon;
-              return (
-                <div 
-                  key={st.step}
-                  className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between hover:shadow-lg transition-all"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="px-2.5 py-1 rounded-md bg-teal-50 text-[#0F8B7D] text-xs font-black uppercase tracking-wider border border-teal-100">
-                        {st.step}
-                      </span>
-                      <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                        {st.time}
-                      </span>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3">
-                      <Icon size={18} />
-                    </div>
-                    <h3 className="text-base font-black text-slate-900 mb-1.5">{st.title}</h3>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{st.desc}</p>
-                  </div>
-                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center text-[11px] font-extrabold text-[#0F8B7D]">
-                    <span>Stage {idx + 1} of 4</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-10 text-center">
+      {/* Interactive Claim Business Modal */}
+      {claimModalOpen && selectedVendorForClaim && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-slate-200 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
-              onClick={() => handleOpenRfq()}
-              className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer inline-flex items-center gap-2"
-            >
-              <Zap size={14} />
-              <span>Broadcast Your First RFQ Today</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 9. MARKETPLACE GTV & TRANSPARENT COMMISSION LEDGER (Standout Feature) */}
-      <section className="bg-white py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200/60 px-3 py-1 rounded-full">
-              Financial Integrity
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3 mb-2">
-              Marketplace GTV &amp; Transparent Commission Ledger
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm font-medium">
-              Real-time audit telemetry tracking transaction volume, standardized 8.5% platform commissions, and verified contractor payouts.
-            </p>
-          </div>
-
-          {/* Metric Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                GROSS TRANSACTION VALUE (GTV)
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-slate-900">₹28.5L</span>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  Last 30 Days · Q3 FY2026
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-2">
-                Total commercial facility contracts executed through escrow.
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                OFFICEX PLATFORM COMMISSION (8.5%)
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-[#0F8B7D]">₹2.42L</span>
-                <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
-                  Transparent Fixed Take
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-2">
-                Standardized 8.5% platform fee with zero hidden margins.
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                CONTRACTOR DISBURSEMENT (91.5%)
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-emerald-600">₹26.08L</span>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  100% Escrow Released
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-2">
-                Directly disbursed to verified vendors upon completed milestones.
-              </p>
-            </div>
-          </div>
-
-          {/* Live Settlement Ledger Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-4 sm:px-6 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Live Contract Settlements &amp; SLA Compliance Log
-                </span>
-              </div>
-              <span className="text-[11px] font-semibold text-slate-400">
-                Audited by Escrow Nodal Bank
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-medium">
-                <thead>
-                  <tr className="bg-slate-50/40 text-slate-400 uppercase text-[10px] font-extrabold border-b border-slate-100">
-                    <th className="py-3 px-6">Work Order ID</th>
-                    <th className="py-3 px-6">Contractor &amp; Discipline</th>
-                    <th className="py-3 px-6">Gross Contract</th>
-                    <th className="py-3 px-6">OfficeX Fee (8.5%)</th>
-                    <th className="py-3 px-6">Net Vendor Payout</th>
-                    <th className="py-3 px-6">SLA Score</th>
-                    <th className="py-3 px-6">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-6 font-mono font-bold text-slate-900">WO-2026-881</td>
-                    <td className="py-3.5 px-6">
-                      <span className="font-bold text-slate-900 block">Apex ElectroMech</span>
-                      <span className="text-[11px] text-slate-400">MEP Transformer Overhaul</span>
-                    </td>
-                    <td className="py-3.5 px-6 font-bold text-slate-900">₹4,20,000</td>
-                    <td className="py-3.5 px-6 text-[#0F8B7D] font-bold">₹35,700</td>
-                    <td className="py-3.5 px-6 text-emerald-600 font-bold">₹3,84,300</td>
-                    <td className="py-3.5 px-6">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black">
-                        99.6% SLA
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-6">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 size={11} /> Settled
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-6 font-mono font-bold text-slate-900">WO-2026-879</td>
-                    <td className="py-3.5 px-6">
-                      <span className="font-bold text-slate-900 block">CoolBreeze Thermal</span>
-                      <span className="text-[11px] text-slate-400">Chiller Descaling &amp; Gas Recharge</span>
-                    </td>
-                    <td className="py-3.5 px-6 font-bold text-slate-900">₹2,80,000</td>
-                    <td className="py-3.5 px-6 text-[#0F8B7D] font-bold">₹23,800</td>
-                    <td className="py-3.5 px-6 text-emerald-600 font-bold">₹2,56,200</td>
-                    <td className="py-3.5 px-6">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black">
-                        98.8% SLA
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-6">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 size={11} /> Settled
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-6 font-mono font-bold text-slate-900">WO-2026-874</td>
-                    <td className="py-3.5 px-6">
-                      <span className="font-bold text-slate-900 block">Sterling Security Forces</span>
-                      <span className="text-[11px] text-slate-400">Access Control &amp; Guard Deployment</span>
-                    </td>
-                    <td className="py-3.5 px-6 font-bold text-slate-900">₹6,50,000</td>
-                    <td className="py-3.5 px-6 text-[#0F8B7D] font-bold">₹55,250</td>
-                    <td className="py-3.5 px-6 text-emerald-600 font-bold">₹5,94,750</td>
-                    <td className="py-3.5 px-6">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black">
-                        99.8% SLA
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-6">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 size={11} /> Settled
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 10. PLANS & PRICING SUMMARY (From Redesign PDF Specification) */}
-      <section id="pricing" className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="text-xs font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-200/60 px-3 py-1 rounded-full">
-              Transparent Pricing
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3">
-              Simple, Predictable Marketplace Plans
-            </h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">
-              Procure on-demand or subscribe for portfolio-wide automated tendering and escrow protection.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Starter Plan */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">FOR SINGLE BUILDINGS</span>
-                <h3 className="text-xl font-black text-slate-900">Starter</h3>
-                <div className="mt-3 mb-4">
-                  <span className="text-3xl font-black text-slate-900">Free</span>
-                  <span className="text-xs text-slate-400 font-semibold block mt-0.5">Forever free for basic procurement</span>
-                </div>
-                <ul className="space-y-2.5 text-xs text-slate-600 font-medium pt-3 border-t border-slate-100">
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Browse verified contractor directory</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Up to 3 RFQ broadcasts per month</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Basic quote comparison inbox</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Standard email support</li>
-                </ul>
-              </div>
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <Link
-                  href="/signup?plan=starter"
-                  className="w-full py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-black transition-colors block text-center"
-                >
-                  Start Free
-                </Link>
-              </div>
-            </div>
-
-            {/* Professional Plan (Highlighted) */}
-            <div className="bg-white rounded-2xl border-2 border-[#0F8B7D] p-6 shadow-xl flex flex-col justify-between relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[10px] font-black uppercase tracking-wider">
-                MOST POPULAR
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-widest block mb-2">FOR ACTIVE COMMERCIAL PARKS</span>
-                <h3 className="text-xl font-black text-slate-900">Professional</h3>
-                <div className="mt-3 mb-4">
-                  <span className="text-3xl font-black text-slate-900">₹4,999</span>
-                  <span className="text-xs text-slate-400 font-semibold">/ month per building</span>
-                </div>
-                <ul className="space-y-2.5 text-xs text-slate-600 font-medium pt-3 border-t border-slate-100">
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Unlimited structured RFQs &amp; BOQ generator</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Side-by-side contractor bid comparisons</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Digital work order tracking with photo logs</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Escrow payment protection on all milestones</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Persistent contractor SLA rating scorecard</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Priority phone &amp; WhatsApp support</li>
-                </ul>
-              </div>
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <Link
-                  href="/signup?plan=professional"
-                  className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black transition-colors block text-center shadow-md"
-                >
-                  Start Free Trial
-                </Link>
-              </div>
-            </div>
-
-            {/* Enterprise Plan */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">FOR REITS &amp; LARGE DEVELOPERS</span>
-                <h3 className="text-xl font-black text-slate-900">Enterprise</h3>
-                <div className="mt-3 mb-4">
-                  <span className="text-3xl font-black text-slate-900">Custom</span>
-                  <span className="text-xs text-slate-400 font-semibold block mt-0.5">Multi-property master procurement</span>
-                </div>
-                <ul className="space-y-2.5 text-xs text-slate-600 font-medium pt-3 border-t border-slate-100">
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Dedicated procurement account director</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Custom SLA penalty automated deductions</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Multi-site master contract consolidation</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Enterprise ERP &amp; SAP procurement sync</li>
-                  <li className="flex items-center gap-2"><Check size={14} className="text-[#0F8B7D]" /> Full SOC-2 &amp; statutory compliance vault</li>
-                </ul>
-              </div>
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <button
-                  onClick={() => handleOpenRfq("Enterprise Procurement")}
-                  className="w-full py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-black transition-colors block text-center cursor-pointer"
-                >
-                  Contact Enterprise Team
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 11. 15-DAY STRUCTURED ONBOARDING TIMELINE */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider mb-3 bg-teal-50 text-[#0F8B7D] border border-teal-100">
-              <span>Structured 15-Day Process</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#071324] tracking-tight">
-              15-Day Structured Transaction Process
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-2 font-medium">
-              From requirement scoping to contractor onboarding and escrow closing with verified audit trails.
-            </p>
-          </div>
-
-          {/* 4 Steps */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                duration: "Days 1 - 3",
-                title: "Register & Requirement Scoping",
-                desc: "Sign up as a building owner, occupier, or contractor and configure spatial parameters and service requirements."
-              },
-              {
-                duration: "Days 4 - 7",
-                title: "Digital Verification & Pre-Vetting",
-                desc: "Submit property documents or contractor statutory licenses (GSTIN, PSARA, insurance) for digital verification."
-              },
-              {
-                duration: "Days 8 - 12",
-                title: "RFP Broadcast & Bid Evaluation",
-                desc: "Broadcast your requirement, receive comparable contractor quotations with standardized BOQs, and review ratings."
-              },
-              {
-                duration: "Day 15 Go-Live",
-                title: "Escrow Funding & Deal Closing",
-                desc: "Award work order, fund milestone escrow securely, and commence transparent operations with zero disruption."
-              }
-            ].map((st) => (
-              <div
-                key={st.duration}
-                className="bg-slate-50 rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between hover:border-[#0F8B7D]/40 hover:shadow-md transition-all"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-                      <CheckCircle2 size={13} className="text-emerald-600" />
-                      <span>{st.duration}</span>
-                    </span>
-                  </div>
-                  <h3 className="text-base font-black text-slate-900 mb-2">{st.title}</h3>
-                  <p className="text-xs text-slate-600 font-medium leading-relaxed">{st.desc}</p>
-                </div>
-                <div className="mt-6 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-400">
-                  <span className="text-[#0F8B7D] font-extrabold flex items-center gap-1">
-                    Continuous Flow <ArrowRight size={11} />
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <Link
-              href="/signup"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
-            >
-              <span>Start Onboarding Today</span>
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 12. FREQUENTLY ASKED QUESTIONS */}
-      <section className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">
-              Everything you need to know about contractor verification, escrow protection, and tendering.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              {
-                q: "How are FM contractors vetted and verified on OfficeX Marketplace?",
-                a: "Every vendor undergoes an extensive multi-tier verification process: active GSTIN verification, PSARA security clearance validation, workmen compensation and third-party liability insurance audits, financial solvency checks, and reference interviews with commercial building managers."
-              },
-              {
-                q: "How does Razorpay Nodal Escrow payment protection work?",
-                a: "When a contract or work order is awarded, client funds are deposited into a dedicated Razorpay Nodal Escrow account. Funds remain locked until the client digitally inspects photographic proof of completion and signs off on the milestone, after which funds disburse automatically to the contractor."
-              },
-              {
-                q: "Can we manage our existing contracted vendors through OfficeX?",
-                a: "Yes. OfficeX supports vendor onboarding workflows where you can invite your current contractors to register their licenses and operate under your unified dashboard with digital work orders and SLA tracking."
-              },
-              {
-                q: "What is the turnaround time for emergency corrective dispatches?",
-                a: "Our network maintains on-call rapid response teams for MEP and HVAC breakdowns with an average on-site dispatch time under 45 minutes in major commercial corridors (such as BKC, Lower Parel, Whitefield, and DLF Cyber City)."
-              },
-              {
-                q: "How are quotations made comparable through automated BOQs?",
-                a: "Instead of receiving disparate PDF estimates with different rate cards, our structured RFQ engine breaks each job into standardized labor, material, and machinery line items. This lets you compare vendor bids side-by-side without hidden line-item surprises."
-              }
-            ].map((faq, idx) => (
-              <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs">
-                <h3 className="text-sm sm:text-base font-black text-slate-900 mb-2 flex items-start gap-2.5">
-                  <HelpCircle size={18} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                  <span>{faq.q}</span>
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed pl-7">
-                  {faq.a}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 13. FINAL CTA BAND */}
-      <section className="bg-gradient-to-r from-[#071324] via-[#093532] to-[#071324] py-16 px-4 sm:px-6 lg:px-8 text-white text-center">
-        <div className="max-w-4xl mx-auto">
-          <span className="text-xs font-black text-teal-300 uppercase tracking-widest bg-teal-900/50 border border-teal-500/30 px-3 py-1 rounded-full">
-            Modernize Your Facility Procurement
-          </span>
-          <h2 className="text-2xl sm:text-4xl font-black tracking-tight mt-4 mb-3 text-white">
-            Ready to Run Your Buildings with Verified Precision?
-          </h2>
-          <p className="text-slate-300 text-xs sm:text-base font-medium max-w-2xl mx-auto mb-8 leading-relaxed">
-            Join hundreds of property directors and facility superintendents who procure with escrow confidence and guaranteed SLAs on OfficeX.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
-            <Link
-              href="/signup"
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm shadow-lg transition-all"
-            >
-              Start Free Trial
-            </Link>
-            <button
-              onClick={() => handleOpenRfq()}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white font-black text-xs sm:text-sm transition-all cursor-pointer"
-            >
-              Request Vendor Consultation
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 14. FOOTER */}
-      <Footer />
-
-      {/* 15. INTERACTIVE MULTI-STEP RFQ / QUOTE CALCULATOR MODAL (Veendoor.com Pattern) */}
-      {isRfqModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative">
-            <button 
-              onClick={() => setIsRfqModalOpen(false)}
-              className="absolute top-5 right-5 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              type="button"
+              onClick={() => setClaimModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
             >
               <X size={20} />
             </button>
 
-            {rfqSubmitted ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center mx-auto mb-4 text-[#0F8B7D]">
-                  <CheckCircle2 size={32} />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 mb-1.5">
-                  RFQ Broadcast Successfully!
-                </h3>
-                <p className="text-xs text-slate-600 font-medium max-w-sm mx-auto leading-relaxed">
-                  Your requirement for <strong>{rfqData.category}</strong> has been matched with 3 pre-vetted contractors. You will receive structured, comparable quotes in your inbox within 24 hours.
-                </p>
-                <div className="mt-6 p-3 rounded-xl bg-slate-50 text-[11px] text-slate-500 font-bold">
-                  Escrow Protection Active · Zero Commitment Fee
-                </div>
-              </div>
-            ) : (
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center mb-4">
+              <ShieldCheck size={24} />
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 mb-1">
+              Claim Business Listing
+            </h3>
+            <p className="text-xs text-slate-500 mb-5">
+              Verify your ownership of <strong className="text-slate-800">{selectedVendorForClaim.name}</strong> to manage ratings, update rate cards, and receive leads.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setClaimModalOpen(false);
+                setSlideInOpen(true);
+              }}
+              className="space-y-3.5"
+            >
               <div>
-                {/* Modal Header */}
-                <div className="mb-6">
-                  <span className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-widest bg-teal-50 border border-teal-100 px-2.5 py-0.5 rounded-md">
-                    INSTANT RFQ BUILDER
-                  </span>
-                  <h3 className="text-xl font-black text-slate-900 mt-2">
-                    Request 3 Comparable Quotes
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    {rfqData.preferredVendor ? (
-                      <span>Direct enquiry for <strong>{rfqData.preferredVendor}</strong></span>
-                    ) : (
-                      <span>Broadcast to matched verified contractors across your micro-market</span>
-                    )}
-                  </p>
-                </div>
-
-                <form onSubmit={handleRfqSubmit} className="space-y-4">
-                  {rfqStep === 1 && (
-                    <div className="space-y-3.5">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          SERVICE CATEGORY
-                        </label>
-                        <select
-                          value={rfqData.category}
-                          onChange={(e) => setRfqData({ ...rfqData, category: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          {categories.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          PROPERTY CARPET AREA (SQ.FT.)
-                        </label>
-                        <select
-                          value={rfqData.buildingArea}
-                          onChange={(e) => setRfqData({ ...rfqData, buildingArea: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          <option>Up to 25,000 sq.ft.</option>
-                          <option>25,000 - 50,000 sq.ft.</option>
-                          <option>50,000 - 150,000 sq.ft.</option>
-                          <option>150,000 - 500,000 sq.ft.</option>
-                          <option>500,000+ sq.ft. (Campus / SEZ)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          DISPATCH TIMELINE &amp; URGENCY
-                        </label>
-                        <select
-                          value={rfqData.urgency}
-                          onChange={(e) => setRfqData({ ...rfqData, urgency: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          <option>Immediate Emergency (&lt; 2 Hours)</option>
-                          <option>Corrective Repair (Within 48 Hours)</option>
-                          <option>Scheduled AMC (Within 30 Days)</option>
-                          <option>Tender Bid for Next Quarter</option>
-                        </select>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setRfqStep(2)}
-                        className="w-full mt-2 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <span>Next: Contact &amp; Location Details</span>
-                        <ArrowRight size={13} />
-                      </button>
-                    </div>
-                  )}
-
-                  {rfqStep === 2 && (
-                    <div className="space-y-3.5">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          COMMERCIAL HUB / METRO
-                        </label>
-                        <select
-                          value={rfqData.city}
-                          onChange={(e) => setRfqData({ ...rfqData, city: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          {commercialHubs.map((h) => (
-                            <option key={h} value={h}>{h}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                            COMPANY / BUILDING NAME
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            placeholder="e.g. Apex Tower"
-                            value={rfqData.company}
-                            onChange={(e) => setRfqData({ ...rfqData, company: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                            YOUR FULL NAME
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            placeholder="e.g. Rahul Sharma"
-                            value={rfqData.contactName}
-                            onChange={(e) => setRfqData({ ...rfqData, contactName: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                            WORK EMAIL
-                          </label>
-                          <input
-                            required
-                            type="email"
-                            placeholder="name@company.com"
-                            value={rfqData.email}
-                            onChange={(e) => setRfqData({ ...rfqData, email: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                            MOBILE NUMBER
-                          </label>
-                          <input
-                            required
-                            type="tel"
-                            placeholder="+91 98765 43210"
-                            value={rfqData.phone}
-                            onChange={(e) => setRfqData({ ...rfqData, phone: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          SPECIFIC SCOPE NOTES (OPTIONAL)
-                        </label>
-                        <textarea
-                          rows={2}
-                          placeholder="Describe specific equipment models, chiller tonnage, or SLA expectations..."
-                          value={rfqData.notes}
-                          onChange={(e) => setRfqData({ ...rfqData, notes: e.target.value })}
-                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-3 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setRfqStep(1)}
-                          className="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="submit"
-                          className="flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
-                        >
-                          <Send size={13} />
-                          <span>Broadcast RFQ &amp; Match Contractors</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </form>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  className="w-full text-xs font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                />
               </div>
-            )}
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                  Official Business Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@company.com"
+                  className="w-full text-xs font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="+91 98765 43210"
+                  className="w-full text-xs font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-black text-xs shadow-md transition-all cursor-pointer mt-2"
+              >
+                Submit Claim Verification
+              </button>
+            </form>
           </div>
         </div>
       )}
 
+      {/* Enquiry Slide-In Drawer */}
+      <EnquirySlideIn
+        isOpen={slideInOpen}
+        onClose={() => setSlideInOpen(false)}
+        prefill={{ modules: ["fm-marketplace"] }}
+      />
+
+      <Footer />
     </div>
   );
 }
