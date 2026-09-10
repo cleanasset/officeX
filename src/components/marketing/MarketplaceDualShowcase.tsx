@@ -245,7 +245,7 @@ export default function MarketplaceDualShowcase({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Connect with Trusted Professionals
+                Connect with Trusted Professionals — <span className="text-[#0F8B7D]">Find. Compare. Engage.</span>
               </h2>
             </div>
 

@@ -365,14 +365,19 @@ export default function PropertyMarketplacePage() {
 
         <div className="max-w-5xl mx-auto relative z-10 text-center">
           
-          {/* Main Headline — Modern Global Enterprise Heading */}
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[46px] font-black text-white tracking-tight leading-[1.18] mb-3 max-w-4xl mx-auto drop-shadow-md">
-            Flexible Commercial &amp; Office Spaces for Teams of Every Size
+          {/* Eyebrow Chip */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-400/30 bg-teal-500/10 text-teal-300 text-xs font-bold uppercase tracking-wider mb-3.5 backdrop-blur-xs">
+            <span>Office / CRE Discovery Marketplace</span>
+          </div>
+
+          {/* Main Headline — Specific Tagline */}
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight mb-3 max-w-4xl mx-auto drop-shadow-md">
+            Discover. Compare. <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-400">Lease.</span>
           </h1>
 
           {/* Subhead */}
           <p className="text-xs sm:text-base md:text-lg text-slate-200 font-medium max-w-2xl mx-auto mb-8 drop-shadow-sm">
-            Choose between office space, pay-per-use plans or fixed desks for large enterprises and individuals
+            Flexible Commercial &amp; Office Spaces for Teams of Every Size
           </p>
 
           {/* myHQ-Style Multi-Tier Search Widget */}

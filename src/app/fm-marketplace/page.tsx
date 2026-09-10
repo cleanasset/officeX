@@ -541,7 +541,7 @@ export default function FMMarketplacePage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-[#0F8B7D] selection:text-white">
-      <MarketingHeader />
+      <MarketingHeader activePath="/fm-marketplace" />
 
       {/* ========================================================================= */}
       {/* 1. HERO SECTION (Snabbit-Clean Aesthetic + Veendoor B2B Dual Search)     */}
@@ -553,91 +553,107 @@ export default function FMMarketplacePage() {
         <div className="absolute inset-0 bg-[radial-gradient(#0F8B7D10_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
 
         <div className="max-w-6xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             
             {/* Left Column: Eyebrow, Title, Search Box, Trust Indicators */}
             <div className="lg:col-span-7 text-left">
               
               {/* Eyebrow Chip */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-teal-200 bg-teal-50 text-[#0F8B7D] text-xs font-black uppercase tracking-wider mb-4 shadow-2xs">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-teal-200 bg-teal-50 text-[#0F8B7D] text-xs font-bold tracking-wide mb-3 shadow-2xs">
                 <ShieldCheck size={14} className="text-[#0F8B7D]" />
-                <span>OfficeX Verified Facility Ecosystem</span>
+                <span>Facility Management Marketplace</span>
               </div>
 
               {/* Title with OfficeX Teal Accent */}
-              <h1 className="text-3xl sm:text-5xl md:text-[52px] font-black text-slate-900 tracking-tight leading-[1.14] mb-4">
-                Commercial Facility &amp; <span className="text-[#0F8B7D]">Contractor Marketplace</span>
+              <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-black text-slate-900 tracking-tight leading-tight mb-2">
+                Connect with <span className="text-[#0F8B7D]">Trusted Professionals</span>
               </h1>
 
-              {/* Subhead */}
-              <p className="text-sm sm:text-base md:text-lg text-slate-600 font-medium max-w-xl mb-7 leading-relaxed">
-                Procure pre-audited commercial MEP, HVAC, security, and life-safety contractors for Grade-A office buildings, tech parks, and commercial portfolios with SLA assurance.
+              {/* Tagline - Requested by user */}
+              <p className="text-lg sm:text-xl font-black text-[#0F8B7D] tracking-wide mb-2">
+                Find. Compare. Engage.
               </p>
 
-              {/* Dual-Input Search Card */}
-              <div className="bg-white rounded-2xl shadow-xl shadow-slate-900/5 border border-slate-200 p-4 sm:p-5 mb-8">
+              {/* Subhead - Short, crisp sentence */}
+              <p className="text-sm sm:text-base text-slate-600 font-medium max-w-lg mb-6 leading-normal">
+                Hire pre-vetted commercial contractors with guaranteed SLAs and audited compliance.
+              </p>
+
+              {/* Search Card - Clean, spacious & perfectly organized */}
+              <div className="bg-white rounded-2xl shadow-lg shadow-slate-900/5 border border-slate-200/90 p-4 sm:p-5 mb-6">
                 
-                {/* Contract Type Toggle Bar */}
-                <div className="flex items-center gap-2 mb-3.5 pb-3 border-b border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Requirement:</span>
-                  <div className="inline-flex p-0.5 rounded-lg bg-slate-100 text-xs font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setContractTypeFilter("all")}
-                      className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                        contractTypeFilter === "all"
-                          ? "bg-white text-slate-900 shadow-2xs"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      All Services
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContractTypeFilter("amc")}
-                      className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                        contractTypeFilter === "amc"
-                          ? "bg-[#0F8B7D] text-white shadow-2xs"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      Annual AMC
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContractTypeFilter("ondemand")}
-                      className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
-                        contractTypeFilter === "ondemand"
-                          ? "bg-[#0F8B7D] text-white shadow-2xs"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      Emergency On-Demand
-                    </button>
+                {/* Contract Type Toggle Bar + Post RFQ */}
+                <div className="flex items-center justify-between gap-2 mb-3.5 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Requirement:</span>
+                    <div className="inline-flex p-0.5 rounded-lg bg-slate-100 text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setContractTypeFilter("all")}
+                        className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                          contractTypeFilter === "all"
+                            ? "bg-white text-slate-900 shadow-2xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        All Services
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContractTypeFilter("amc")}
+                        className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                          contractTypeFilter === "amc"
+                            ? "bg-[#0F8B7D] text-white shadow-2xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Annual AMC
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContractTypeFilter("ondemand")}
+                        className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                          contractTypeFilter === "ondemand"
+                            ? "bg-[#0F8B7D] text-white shadow-2xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        On-Demand
+                      </button>
+                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRequestRfq()}
+                    className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                  >
+                    <span>Post an RFQ</span>
+                    <ArrowRight size={13} />
+                  </button>
                 </div>
 
                 <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   {/* Service needed input */}
-                  <div className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2.5 transition-all">
-                    <Search size={18} className="text-slate-400 shrink-0" />
+                  <div className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50/80 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2.5 transition-all min-w-0">
+                    <Search size={17} className="text-slate-400 shrink-0" />
                     <input
                       type="text"
                       value={searchService}
                       onChange={(e) => setSearchService(e.target.value)}
-                      placeholder="Service needed (e.g., HVAC, 33kV Substation, Security)..."
+                      placeholder="Service (e.g. HVAC, MEP, Cleaning)..."
                       className="w-full text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
                     />
                   </div>
 
                   {/* Location input */}
-                  <div className="sm:w-52 border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2.5 transition-all">
-                    <MapPin size={18} className="text-slate-400 shrink-0" />
+                  <div className="sm:w-48 border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50/80 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2.5 transition-all min-w-0">
+                    <MapPin size={17} className="text-slate-400 shrink-0" />
                     <input
                       type="text"
                       value={searchLocation}
                       onChange={(e) => setSearchLocation(e.target.value)}
-                      placeholder="City or micro-market..."
+                      placeholder="City or region..."
                       className="w-full text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
                     />
                   </div>
@@ -645,17 +661,17 @@ export default function FMMarketplacePage() {
                   {/* Find Vendors CTA */}
                   <button
                     type="submit"
-                    className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm shadow-md shadow-[#0F8B7D]/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0F8B7D]/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <span>Find Contractors</span>
-                    <ArrowRight size={15} />
+                    <ArrowRight size={14} />
                   </button>
                 </form>
 
-                {/* Quick Service Pills */}
-                <div className="flex flex-wrap items-center gap-2 mt-3.5 pt-3.5 border-t border-slate-100 text-xs">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Popular:</span>
-                  {["HVAC & Chillers", "33kV Substation", "PSARA Security", "Facade Cleaning", "Fire Safety", "Lifts"].map((pill) => (
+                {/* Single-line clean popular tags */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-xs overflow-x-auto no-scrollbar">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] shrink-0">Popular:</span>
+                  {["HVAC & Chillers", "Electrical & DG", "Deep Cleaning", "PSARA Security", "Fire Safety"].map((pill) => (
                     <button
                       key={pill}
                       type="button"
@@ -664,7 +680,7 @@ export default function FMMarketplacePage() {
                         const el = document.getElementById("vendors-directory");
                         if (el) el.scrollIntoView({ behavior: "smooth" });
                       }}
-                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-teal-50 hover:text-[#0F8B7D] text-slate-600 font-semibold transition-colors cursor-pointer text-[11px]"
+                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-teal-50 hover:text-[#0F8B7D] text-slate-600 font-semibold transition-colors cursor-pointer text-[11px] whitespace-nowrap shrink-0"
                     >
                       {pill}
                     </button>
@@ -672,125 +688,125 @@ export default function FMMarketplacePage() {
                   <button
                     type="button"
                     onClick={() => handleRequestRfq()}
-                    className="px-2.5 py-1 rounded-md bg-teal-50 text-[#0F8B7D] font-bold text-[11px] cursor-pointer hover:underline flex items-center gap-1"
+                    className="sm:hidden px-2.5 py-1 rounded-md bg-teal-50 text-[#0F8B7D] font-bold text-[11px] cursor-pointer whitespace-nowrap shrink-0"
                   >
-                    <span>Post an RFQ →</span>
+                    Post RFQ →
                   </button>
                 </div>
               </div>
 
-              {/* Trust Statistics Strip */}
-              <div className="grid grid-cols-3 gap-4 pt-2 border-t border-slate-200/80">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
-                    <Users size={18} />
+              {/* Trust Statistics Strip - Spacious & Balanced */}
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100/80 flex items-center justify-center text-[#0F8B7D] shrink-0">
+                    <Users size={17} />
                   </div>
                   <div>
-                    <span className="block text-base sm:text-lg font-black text-slate-900 leading-none">2,500+</span>
-                    <span className="text-[11px] text-slate-500 font-semibold">Verified Contractors</span>
+                    <span className="block text-base font-black text-slate-900 leading-tight">2,500+</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Verified Vendors</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
-                    <ShieldCheck size={18} />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100/80 flex items-center justify-center text-[#0F8B7D] shrink-0">
+                    <ShieldCheck size={17} />
                   </div>
                   <div>
-                    <span className="block text-base sm:text-lg font-black text-slate-900 leading-none">100%</span>
-                    <span className="text-[11px] text-slate-500 font-semibold">Compliance Audited</span>
+                    <span className="block text-base font-black text-slate-900 leading-tight">100%</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Compliance Audited</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
-                    <TrendingUp size={18} />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100/80 flex items-center justify-center text-[#0F8B7D] shrink-0">
+                    <TrendingUp size={17} />
                   </div>
                   <div>
-                    <span className="block text-base sm:text-lg font-black text-slate-900 leading-none">4.92 / 5</span>
-                    <span className="text-[11px] text-slate-500 font-semibold">SLA Quality Score</span>
+                    <span className="block text-base font-black text-slate-900 leading-tight">4.92 / 5</span>
+                    <span className="text-[11px] text-slate-500 font-medium">SLA Quality Score</span>
                   </div>
                 </div>
               </div>
 
             </div>
 
-            {/* Right Column: Snabbit-Inspired Clean Photographic 2x2 Showcase */}
-            <div className="lg:col-span-5 grid grid-cols-2 gap-3.5 relative">
-              
-              {/* Card 1: HVAC Engineer */}
-              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 group">
-                <Image
-                  src="/images/pro_hvac_engineer.jpg"
-                  alt="HVAC Certified Engineer"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
-                    HVAC &amp; Chillers
-                  </span>
-                  <span className="text-white text-[10px] font-bold opacity-80">420+ Vendors</span>
+            {/* Right Column: Perfectly Aligned 2x2 Showcase */}
+            <div className="lg:col-span-5">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Card 1: HVAC Engineer */}
+                <div className="relative h-40 sm:h-44 md:h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-200 group">
+                  <Image
+                    src="/images/pro_hvac_engineer.jpg"
+                    alt="HVAC Certified Engineer"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
+                      HVAC &amp; Chillers
+                    </span>
+                    <span className="text-white text-[10px] font-semibold opacity-90">420+ Vendors</span>
+                  </div>
+                </div>
+
+                {/* Card 2: MEP Electrical */}
+                <div className="relative h-40 sm:h-44 md:h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-200 group">
+                  <Image
+                    src="/images/pro_mep_technician.jpg"
+                    alt="Commercial MEP Technician"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
+                      Electrical &amp; DG
+                    </span>
+                    <span className="text-white text-[10px] font-semibold opacity-90">&lt; 25m SLA</span>
+                  </div>
+                </div>
+
+                {/* Card 3: Commercial Hygiene */}
+                <div className="relative h-40 sm:h-44 md:h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-200 group">
+                  <Image
+                    src="/images/pro_housekeeping_specialist.jpg"
+                    alt="Commercial Hygiene Specialist"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
+                      Hygiene &amp; Facade
+                    </span>
+                    <span className="text-white text-[10px] font-semibold opacity-90">Green Seal</span>
+                  </div>
+                </div>
+
+                {/* Card 4: PSARA Security */}
+                <div className="relative h-40 sm:h-44 md:h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-200 group">
+                  <Image
+                    src="/images/pro_security_officer.jpg"
+                    alt="PSARA Corporate Security"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
+                      Guarding &amp; CCTV
+                    </span>
+                    <span className="text-white text-[10px] font-semibold opacity-90">PSARA Certified</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Card 2: MEP Electrical */}
-              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 mt-4 group">
-                <Image
-                  src="/images/pro_mep_technician.jpg"
-                  alt="Commercial MEP Technician"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
-                    Electrical &amp; DG
-                  </span>
-                  <span className="text-white text-[10px] font-bold opacity-80">&lt; 25m SLA</span>
-                </div>
+              {/* Live Adherence Badge - Cleanly positioned below grid */}
+              <div className="mt-3 py-2 px-3.5 rounded-xl bg-white border border-teal-100 shadow-xs flex items-center justify-center gap-2 text-xs font-bold text-slate-700">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="truncate">99.2% On-Time SLA Adherence across 18M+ sq.ft.</span>
               </div>
-
-              {/* Card 3: Commercial Hygiene */}
-              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 -mt-2 group">
-                <Image
-                  src="/images/pro_housekeeping_specialist.jpg"
-                  alt="Commercial Hygiene Specialist"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
-                    Hygiene &amp; Facade
-                  </span>
-                  <span className="text-white text-[10px] font-bold opacity-80">Green Seal</span>
-                </div>
-              </div>
-
-              {/* Card 4: PSARA Security */}
-              <div className="relative h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200 mt-2 group">
-                <Image
-                  src="/images/pro_security_officer.jpg"
-                  alt="PSARA Corporate Security"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-black text-[10px] px-2.5 py-1 rounded-md shadow-2xs">
-                    Guarding &amp; CCTV
-                  </span>
-                  <span className="text-white text-[10px] font-bold opacity-80">PSARA Certified</span>
-                </div>
-              </div>
-
-              {/* Floating Live Adherence Pill */}
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-teal-100 shadow-lg text-slate-800 text-xs font-black flex items-center gap-2 whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>99.2% On-Time SLA Adherence across 18M+ sq.ft.</span>
-              </div>
-
             </div>
 
           </div>

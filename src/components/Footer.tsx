@@ -50,12 +50,12 @@ export default function Footer() {
             <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-[#0F8B7D]" /> SOC 2 Type II</span>
             <span className="flex items-center gap-1"><Lock size={14} className="text-[#0F8B7D]" /> AES-256</span>
           </div>
-          <div className="flex items-center gap-2.5 mt-2">
+          <div className="flex items-center gap-2 mt-2">
             <a
               href="https://linkedin.com/company/officex"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
+              className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
               aria-label="OfficeX on LinkedIn"
             >
               in
@@ -64,10 +64,34 @@ export default function Footer() {
               href="https://twitter.com/officex_in"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
+              className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all text-xs font-bold"
               aria-label="OfficeX on X (Twitter)"
             >
               𝕏
+            </a>
+            <a
+              href="https://instagram.com/officex_india"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all"
+              aria-label="OfficeX on Instagram"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+              </svg>
+            </a>
+            <a
+              href="https://facebook.com/officexindia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#0F8B7D] transition-all"
+              aria-label="OfficeX on Facebook"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+              </svg>
             </a>
           </div>
         </div>
