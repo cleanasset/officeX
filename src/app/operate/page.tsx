@@ -1,1242 +1,1178 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Wrench,
   Calendar,
-  LifeBuoy,
-  Activity,
   Users,
-  Bookmark,
-  Smartphone,
-  Send,
   Check,
-  X,
   ShieldCheck,
   ArrowRight,
-  Zap,
-  Clock,
-  Star,
-  TrendingUp,
-  Building2,
-  AlertCircle,
   ChevronDown,
-  CheckCircle2,
-  ChevronRight,
   Gauge,
-  Layers,
   Sparkles,
-  Sliders,
   QrCode,
-  FileText,
+  DollarSign,
+  ArrowUpRight,
+  Handshake,
+  Download,
+  AlertTriangle,
   Building,
-  CheckCheck,
-  PhoneCall,
-  HardHat,
-  Eye,
-  BarChart3,
+  CheckCircle2,
+  Clock,
+  Briefcase,
+  Star,
+  Activity,
+  FileText,
+  Search,
+  Bell,
+  Lock,
+  Flame,
+  CheckSquare,
+  HelpCircle,
+  TrendingUp,
   Cpu
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 
+// Deterministic number formatter to guarantee SSR and Client HTML match identically
+function formatNum(val: number): string {
+  const s = Math.round(val).toString();
+  if (s.length <= 3) return s;
+  const lastThree = s.substring(s.length - 3);
+  const otherNumbers = s.substring(0, s.length - 3);
+  return otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree;
+}
+
 export default function OperatePage() {
   const [slideInOpen, setSlideInOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"ppm" | "sla" | "health" | "visitors">("ppm");
+  const [enquiryPrefill, setEnquiryPrefill] = useState<{ modules?: string[] } | undefined>(undefined);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  
+  // Active SaaS Screen inside the Interactive Showcase
+  const [activeScreen, setActiveScreen] = useState<
+    "rentroll" | "visitors" | "compliance" | "ppm" | "crm" | "tenant"
+  >("rentroll");
 
-  // Interactive ROI Calculator State
-  const [buildingArea, setBuildingArea] = useState<number>(450000);
-  const [assetCount, setAssetCount] = useState<number>(620);
+  // Interaction Feedback
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3200);
+  };
 
-  // Dynamic ROI Calculations
-  const calculatedSavings = useMemo(() => {
-    const annualSavingsLakhs = ((buildingArea * 3.4 + assetCount * 820) / 100000).toFixed(1);
-    const manHoursSaved = Math.round(buildingArea * 0.0048 + assetCount * 2.1);
-    const breakdownRiskReduction = 42;
-    return {
-      savingsLakhs: annualSavingsLakhs,
-      manHours: manHoursSaved.toLocaleString(),
-      breakdownReduction: breakdownRiskReduction
-    };
-  }, [buildingArea, assetCount]);
+  const openEnquiry = (mod: string) => {
+    setEnquiryPrefill({ modules: [mod] });
+    setSlideInOpen(true);
+  };
 
-  // Stakeholder Use Cases with Real Photography
-  const stakeholders = [
-    {
-      role: "Chief Facility Managers",
-      subtitle: "Enterprise Technical Operations",
-      image: "/images/pro_mep_technician.jpg",
-      quote: "We eliminated surprise chiller breakdowns and digitized 45 technician shifts across 1.8M sq.ft. without paper logbooks.",
-      metrics: [
-        { label: "PPM Adherence", value: "100%" },
-        { label: "Asset Downtime", value: "-42%" },
-        { label: "Annual Cost Saved", value: "₹34L" }
-      ],
-      highlights: [
-        "Automated 52-week maintenance checklists",
-        "QR code offline mobile asset audits",
-        "Auto-generated vendor SLA penalty reports"
+  // SaaS Screen Metadata matching OfficeX Business Specifications
+  const SAAS_SCREENS = {
+    rentroll: {
+      portalId: "P04 · Property Management",
+      screenId: "S04-03 · Rent Roll Registry",
+      tabLabel: "Rent Roll Master",
+      tagline: "Commercial Lease & Revenue Intelligence",
+      title: "Automated Rent Roll & Financial Governance",
+      accentColor: "#0F8B7D",
+      route: "/properties/rent-roll",
+      actionLabel: "Launch Live Rent Roll",
+      description: "Eliminate spreadsheet leakage across multi-tenant commercial assets. Automate escalations, CAM allocations, and Razorpay GST e-invoices with 100% auditability.",
+      bullets: [
+        "5% Auto-Escalation Triggers: Proactive 90-day alert before anniversary date.",
+        "CAM Reconciliation: Pool and distribute common area maintenance costs transparently.",
+        "Direct Bank Escrow: Automatic reconciliation via Razorpay nodal accounts."
       ]
     },
-    {
-      role: "Corporate Workplace Directors",
-      subtitle: "Tenant Experience & Uptime",
-      image: "/images/pro_property_manager.jpg",
-      quote: "Our Fortune 500 tenants log AC and electrical issues in 10 seconds. Resolution times dropped from 4 hours to 32 minutes.",
-      metrics: [
-        { label: "Avg SLA Response", value: "32m" },
-        { label: "Tenant CSAT", value: "4.9/5" },
-        { label: "Ticket Auto-Routing", value: "98%" }
-      ],
-      highlights: [
-        "White-labeled tenant mobile app & WhatsApp bot",
-        "Interactive boardroom & amenity bookings",
-        "Transparent live ticket status trackers"
+    visitors: {
+      portalId: "P06 · Tenant Portal",
+      screenId: "S06-05 · Visitor Pre-Registration",
+      tabLabel: "Visitor Management",
+      tagline: "Speed-Gate Turnstiles & Lobby Flow",
+      title: "Touchless Pre-Registration & Turnstile Access",
+      accentColor: "#2563EB",
+      route: "/tenant/visitors",
+      actionLabel: "Launch Live Visitor App",
+      description: "Replace physical sign-in registers with WhatsApp digital fast-passes and bi-directional optical turnstile sync. Reduce lobby check-in times to under 18 seconds.",
+      bullets: [
+        "Instant WhatsApp QR Passes: Pre-scheduled invites sent directly to guest phones.",
+        "Turnstile & Speed-Gate Sync: Zero human intervention required at security lobbies.",
+        "Full Security Audit Trail: Real-time dashboard of all occupants currently on-premise."
       ]
     },
-    {
-      role: "Security & Operations Heads",
-      subtitle: "Perimeter & Lobby Flow Control",
-      image: "/images/pro_security_officer.jpg",
-      quote: "Lobby congestion vanished. Over 800 daily visitors pass through optical turnstiles in under 20 seconds with digital QR passes.",
-      metrics: [
-        { label: "Lobby Check-in", value: "< 18s" },
-        { label: "Daily QR Passes", value: "850+" },
-        { label: "Security Audit Logs", value: "100%" }
-      ],
-      highlights: [
-        "Pre-registered touchless visitor invites",
-        "Optical speed-gate turnstile integration",
-        "Instant host arrival WhatsApp notifications"
+    compliance: {
+      portalId: "P04 · Property Management",
+      screenId: "S04-06 · Statutory Compliance Radar",
+      tabLabel: "Statutory Compliance",
+      tagline: "100% Audit Readiness & Immunity",
+      title: "Statutory Compliance Radar & Document Locker",
+      accentColor: "#8B5CF6",
+      route: "/compliance",
+      actionLabel: "View Compliance Tracker",
+      description: "Manage 48+ mandatory Indian commercial licenses across Fire NOC Form B, PWD Lift Inspectorate, and MPCB Consent to Operate. Never face unexpected stop-work notices.",
+      bullets: [
+        "Proactive 90-Day Renewal Alerts: Automated escalation to facility and legal heads.",
+        "Certified Document Locker: Tamper-proof storage for statutory certificates and NOCs.",
+        "One-Click Audit Export: Instant compliance readiness dossiers for municipal inspections."
+      ]
+    },
+    ppm: {
+      portalId: "P08 · FM Operations Portal",
+      screenId: "S08-06 · 52-Week PPM Matrix",
+      tabLabel: "52-Week PPM & CAFM",
+      tagline: "Preventive Maintenance & Asset Lifecycle",
+      title: "52-Week Preventive Maintenance & CAFM Matrix",
+      accentColor: "#F59E0B",
+      route: "/operations",
+      actionLabel: "Explore CAFM Cockpit",
+      description: "Schedule, track, and verify maintenance for chillers, DG sets, fire suppression pumps, and lifts according to OEM specifications. Protect multi-crore building plant capital.",
+      bullets: [
+        "52-Week OEM Calendar: Structured matrix view of every planned preventive task.",
+        "QR Equipment Passports: Technicians scan physical machinery tags to verify on-site work.",
+        "Tiered SLA Monitoring: Automatic escalation when critical equipment downtime occurs."
+      ]
+    },
+    crm: {
+      portalId: "P02 · Leasing Portal",
+      screenId: "S02-04 · Pipeline Kanban Board",
+      tabLabel: "Lease CRM Pipeline",
+      tagline: "Commercial Deal Velocity",
+      title: "Commercial Lease CRM & Deal Velocity Kanban",
+      accentColor: "#0284C7",
+      route: "/leasing/pipeline",
+      actionLabel: "Launch Lease CRM",
+      description: "Track enterprise occupier requirements from discovery to site inspection, LOI sign-off, and lease execution. Connect property owners directly with Fortune 500 space seekers.",
+      bullets: [
+        "Visual Stage Progression: Leads → Site Tour → LOI Execution → Signed Agreement.",
+        "Demising & Fit-out Calculator: Real-time area splitting and rent modeling.",
+        "Commission Settlement Ledger: Transparent broker brokerage and invoice tracking."
+      ]
+    },
+    tenant: {
+      portalId: "P06 · Tenant Experience",
+      screenId: "S06-03 · Tenant Helpdesk & Amenity Desk",
+      tabLabel: "Tenant Experience",
+      tagline: "10-Second QR Ticketing & Booking",
+      title: "Occupier Experience & Rapid Helpdesk Ticketing",
+      accentColor: "#E11D48",
+      route: "/tenant/tickets",
+      actionLabel: "Launch Tenant Helpdesk",
+      description: "Empower corporate occupiers to log maintenance issues in 10 seconds via desk QR codes, reserve boardroom amenities, and review monthly utility allocations seamlessly.",
+      bullets: [
+        "10-Second QR Ticketing: Occupiers scan QR tags on AC diffusers or desks to file tickets.",
+        "Executive Amenity Booking: Seamless scheduling for shared boardrooms and training halls.",
+        "Real-Time Resolution Tracking: Transparent status updates directly on tenant phones."
       ]
     }
-  ];
+  };
 
-  // Pricing Tiers (strictly without "Pro")
-  const pricingTiers = [
-    {
-      name: "Standard",
-      price: "₹1.50",
-      period: "sq.ft./month",
-      desc: "For standalone commercial buildings seeking essential digital maintenance hygiene and QR tagging.",
-      badge: "Commercial",
-      popular: false,
-      btnColor: "bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold",
-      features: [
-        "Up to 500 assets registered with QR tags",
-        "52-Week automated PPM calendar",
-        "Multi-channel tenant ticketing (Web & App)",
-        "Technician offline mobile checklists",
-        "Standard SLA tracking & incident logs",
-        "Standard email & chat support"
-      ]
-    },
-    {
-      name: "Enterprise",
-      price: "₹2.80",
-      period: "sq.ft./month",
-      desc: "For Grade-A commercial towers requiring strict multi-tiered SLA enforcement and visitor automation.",
-      badge: "Most Popular",
-      popular: true,
-      btnColor: "bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white shadow-lg shadow-[#0F8B7D]/20 font-bold",
-      features: [
-        "Unlimited assets & digital logbooks",
-        "Automated 52-week OEM maintenance schedules",
-        "Multi-tier SLA escalation with SMS/WhatsApp alerts",
-        "Touchless visitor management & QR gate passes",
-        "Meeting room & boardroom amenity scheduling",
-        "Tenant experience mobile portal & CSAT scores",
-        "Workplace Health Score live dashboard",
-        "Priority 24/7 engineering support"
-      ]
-    },
-    {
-      name: "Institutional Campus",
-      price: "₹4.50",
-      period: "sq.ft./month",
-      desc: "For large IT parks, SEZs, and institutional REIT portfolios exceeding 250,000 sq.ft.",
-      badge: "Portfolio Tier",
-      popular: false,
-      btnColor: "bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold",
-      features: [
-        "Everything in Enterprise tier",
-        "Custom BMS & IoT sensor telemetry connectors (BACnet)",
-        "Central command room portfolio multi-tower view",
-        "Automated contractor SLA penalty calculation engine",
-        "Dedicated on-site CAFM deployment lead",
-        "SAP & ERP financial billing connectors",
-        "Contractually guaranteed 99.9% uptime SLA"
-      ]
-    }
-  ];
-
-  // FAQs
-  const faqs = [
-    {
-      q: "Can OfficeX Operate integrate with existing Building Management Systems (BMS)?",
-      a: "Yes. OfficeX Operate includes native BACnet, Modbus, and REST API connectors to ingest telemetry from Honeywell, Siemens, Schneider Electric, and Johnson Controls systems into unified operations dashboards."
-    },
-    {
-      q: "Do facility technicians require specialized handheld devices?",
-      a: "No. Technicians use any standard iOS or Android smartphone. The mobile interface works offline in basements and plant rooms, syncing checklists and photo evidence once connectivity is restored."
-    },
-    {
-      q: "How does the automated 52-week PPM calendar handle statutory compliance?",
-      a: "The system comes pre-configured with National Building Code (NBC 2016), CFO Fire Safety guidelines, and OEM service cadences. It automatically generates scheduled work orders for DG sets, chillers, elevators, and transformers."
-    },
-    {
-      q: "What happens when an SLA response or resolution threshold is breached?",
-      a: "The multi-tier escalation engine triggers immediate notifications: first to the assigned technician, then to the shift supervisor after 15 minutes, and directly to the Chief Facility Director if unresolved within 30 minutes."
-    },
-    {
-      q: "How long does physical deployment and asset tagging take?",
-      a: "Our standard deployment takes 15 days. Days 1–4 cover physical MEP asset audits and QR tagging, Days 5–8 configure the PPM calendar, Days 9–12 train on-ground technicians, and Day 15 is full tenant go-live."
-    }
-  ];
+  const activeData = SAAS_SCREENS[activeScreen];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-[#0F8B7D] selection:text-white">
-      <MarketingHeader activePath="/operate" />
+    <div className="min-h-screen bg-[#F0F4F8] text-[#1E293B] antialiased selection:bg-[#0F8B7D] selection:text-white flex flex-col font-sans">
+      <MarketingHeader />
 
-      {/* ========================================================================= */}
-      {/* 1. HERO SECTION: Interactive Live Facility Cockpit                       */}
-      {/* ========================================================================= */}
-      <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-teal-50/25 to-[#F8FAFC] border-b border-slate-200 overflow-hidden">
-        {/* Luminous Ambient Background Elements */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#0F8B7D]/8 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 left-10 w-80 h-80 bg-teal-600/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#0F8B7D10_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#111827] text-white px-5 py-3.5 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-fade-in text-sm font-medium">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+      {/* =========================================================================
+          HERO SECTION: Clean, spacious, Stripe/Linear aesthetic
+          ========================================================================= */}
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#F0F4F8] via-[#F8FAFC] to-[#F0F4F8]">
+        {/* Subtle decorative ambient glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-teal-200/30 to-blue-200/20 blur-3xl rounded-full pointer-events-none -z-10" />
+
+        <div className="max-w-5xl mx-auto text-center">
+          {/* Eyebrow Pill */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-semibold text-[#0F8B7D] mb-6">
+            <span className="w-2 h-2 rounded-full bg-[#0F8B7D] animate-pulse" />
+            <span>The Connected Workplace Operations Platform</span>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#0F172A] tracking-tight leading-[1.12] mb-6">
+            The Operating System for{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-[#2563EB]">
+              Commercial Workspaces
+            </span>
+          </h1>
+
+          {/* Subheading */}
+          <p className="max-w-3xl mx-auto text-lg sm:text-xl text-slate-600 leading-relaxed font-normal mb-10">
+            Centralize your entire property lifecycle — from Rent Roll and Visitor Management to Statutory Compliance and 52-Week PPM — on one unified institutional platform.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <button
+              onClick={() => openEnquiry("All-in-One Workplace SaaS Suite")}
+              className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-[#0F8B7D] to-[#14B8A6] hover:from-[#0D7A6E] hover:to-[#0F8B7D] text-white font-semibold rounded-xl shadow-lg shadow-teal-700/15 hover:shadow-teal-700/25 transition-all duration-200 flex items-center justify-center gap-2 text-base group"
+            >
+              <span>Schedule a Demo</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
+            <a
+              href="#interactive-showcase"
+              className="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl border border-slate-200 shadow-sm transition-all duration-200 text-base"
+            >
+              Explore Live Modules
+            </a>
+          </div>
+
+          {/* Proof / Trust Metrics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+            <div className="text-center p-3">
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">15M+</div>
+              <div className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Sq.Ft Managed</div>
+            </div>
+            <div className="text-center p-3 border-l border-slate-100">
+              <div className="text-2xl sm:text-3xl font-extrabold text-teal-600 tracking-tight">450+</div>
+              <div className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Vetted FM Partners</div>
+            </div>
+            <div className="text-center p-3 border-l border-slate-100">
+              <div className="text-2xl sm:text-3xl font-extrabold text-blue-600 tracking-tight">₹18 Cr+</div>
+              <div className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Annualized Rent Roll</div>
+            </div>
+            <div className="text-center p-3 border-l border-slate-100">
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">100%</div>
+              <div className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Statutory Compliance</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          INTERACTIVE SAAS SHOWCASE: The Facilio-style Command Center
+          ========================================================================= */}
+      <section id="interactive-showcase" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        {/* Section Header */}
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-xs font-semibold text-[#0F8B7D] mb-3">
+            <Gauge className="w-3.5 h-3.5" />
+            <span>CONNECTED SAAS SUITE</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Experience the Live Operating Products
+          </h2>
+          <p className="text-base text-slate-600 mt-3">
+            Select any module below to inspect real commercial workflows and launch live sandbox applications.
+          </p>
+        </div>
+
+        {/* Segmented Control Bar */}
+        <div className="flex items-center justify-start lg:justify-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
+          {[
+            { id: "rentroll", label: "Rent Roll Master", icon: DollarSign },
+            { id: "visitors", label: "Visitor Management", icon: Users },
+            { id: "compliance", label: "Statutory Compliance", icon: ShieldCheck },
+            { id: "ppm", label: "52-Week PPM & CAFM", icon: Calendar },
+            { id: "crm", label: "Lease CRM Pipeline", icon: Handshake },
+            { id: "tenant", label: "Tenant Helpdesk", icon: QrCode }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeScreen === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveScreen(tab.id as any)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                  isActive
+                    ? "bg-white text-slate-900 shadow-sm border border-slate-200 font-semibold ring-2 ring-teal-500/20"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent"
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? "text-[#0F8B7D]" : "text-slate-400"}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* The Showcase Stage Container (Spacious 2-Column Split) */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-lg shadow-slate-200/50 p-6 sm:p-8 lg:p-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             
-            {/* Left Column: Eyebrow, Punchy Headline, Clear CTAs & Proof */}
-            <div className="lg:col-span-6 text-left">
-              
-              {/* Eyebrow Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-200 bg-teal-50 text-[#0F8B7D] text-xs font-black uppercase tracking-wider mb-5 shadow-2xs">
-                <Gauge size={14} className="text-[#0F8B7D]" />
-                <span>Next-Gen CAFM &amp; Facility OS</span>
+            {/* Left Column: Product Value Story (5 Cols) */}
+            <div className="lg:col-span-5 flex flex-col justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-slate-100 text-xs font-semibold text-slate-600 mb-4">
+                  <span>{activeData.portalId}</span>
+                </div>
+                
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug mb-4">
+                  {activeData.title}
+                </h3>
+                
+                <p className="text-slate-600 text-base leading-relaxed mb-6">
+                  {activeData.description}
+                </p>
+
+                {/* Capability checklist */}
+                <div className="space-y-3 mb-8">
+                  {activeData.bullets.map((b, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className="mt-0.5 w-5 h-5 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+                        <Check className="w-3 h-3 text-[#0F8B7D]" />
+                      </div>
+                      <span className="text-sm text-slate-700 leading-snug">{b}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              {/* High-Impact Headline */}
-              <h1 className="text-3xl sm:text-5xl md:text-[50px] font-black text-slate-900 tracking-tight leading-[1.12] mb-5">
-                Run Commercial Real Estate Operations with <span className="text-[#0F8B7D]">Institutional Precision</span>
-              </h1>
-
-              {/* Concise, Scannable Subhead */}
-              <p className="text-sm sm:text-base md:text-lg text-slate-600 font-medium max-w-xl mb-8 leading-relaxed">
-                Replace chaotic paper logbooks, WhatsApp groups, and missed maintenance with automated 52-week PPM schedules, real-time SLA escalation, and touchless tenant visitor flow.
-              </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 mb-8">
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
                 <Link
-                  href="/signup?plan=operate-trial"
-                  className="px-7 py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-sm shadow-lg shadow-[#0F8B7D]/20 transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                  href={activeData.route}
+                  className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-medium rounded-xl text-sm shadow-sm transition-all flex items-center gap-2"
                 >
-                  <span>Start 14-Day Free Trial</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <span>{activeData.actionLabel}</span>
+                  <ArrowUpRight className="w-4 h-4" />
                 </Link>
-
                 <button
-                  type="button"
-                  onClick={() => setSlideInOpen(true)}
-                  className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => openEnquiry(activeData.tabLabel)}
+                  className="px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium rounded-xl text-sm border border-slate-200 transition-all"
                 >
-                  <span>Book Product Tour</span>
+                  Book Walkthrough
                 </button>
               </div>
-
-              {/* Trust & Deployment Proof */}
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-slate-500 font-semibold pt-4 border-t border-slate-200/80">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-[#0F8B7D]" />
-                  <span>42M+ Sq.Ft. Managed</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-[#0F8B7D]" />
-                  <span>99.8% MEP Uptime</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-[#0F8B7D]" />
-                  <span>15-Day Go-Live</span>
-                </div>
-              </div>
-
             </div>
 
-            {/* Right Column: Live Interactive Operations Cockpit Preview */}
-            <div className="lg:col-span-6 relative">
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-900/10 p-5 sm:p-6 relative text-slate-900 overflow-hidden">
-                
-                {/* Browser Header Strip */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    <span className="text-[11px] font-mono text-slate-400 ml-2 font-medium">
-                      app.officex.in/operate/tower-a
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Live Facility Telemetry</span>
-                  </div>
+            {/* Right Column: Live High-Fidelity UI Window (7 Cols) */}
+            <div className="lg:col-span-7 bg-[#F8FAFC] rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-inner">
+              {/* Window Chrome */}
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-rose-400" />
+                  <div className="w-3 h-3 rounded-full bg-amber-400" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                  <span className="ml-2 text-xs font-mono text-slate-400">
+                    app.officex.in{activeData.route}
+                  </span>
                 </div>
-
-                {/* Score & Uptime Highlight */}
-                <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/70 mb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Workplace Health Index
-                      </span>
-                      <div className="flex items-baseline gap-2 mt-0.5">
-                        <span className="text-3xl font-black text-slate-900">91</span>
-                        <span className="text-xs text-slate-400 font-medium">/ 100</span>
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
-                          Optimal Grade-A
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Critical MEP Uptime
-                      </span>
-                      <span className="text-lg font-black text-emerald-600 block mt-0.5">
-                        99.8%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 4 Dimension Progress Bars */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200/60 text-center">
-                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[9px] text-slate-400 block font-medium">HVAC Air IAQ</span>
-                      <span className="text-xs font-black text-slate-800">96% Good</span>
-                    </div>
-                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[9px] text-slate-400 block font-medium">Power Grid</span>
-                      <span className="text-xs font-black text-emerald-600">0.99 PF</span>
-                    </div>
-                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[9px] text-slate-400 block font-medium">SLA Resolution</span>
-                      <span className="text-xs font-black text-[#0F8B7D]">32m Avg</span>
-                    </div>
-                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-[9px] text-slate-400 block font-medium">Tenant CSAT</span>
-                      <span className="text-xs font-black text-slate-800">4.9 / 5</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Live Critical Ticket Alert Card */}
-                <div className="bg-white rounded-2xl p-4 border-2 border-rose-200/90 shadow-sm mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                      <AlertCircle size={12} className="text-rose-600" />
-                      P1 CRITICAL · Chiller #02 Water Pressure Low
-                    </span>
-                    <span className="text-[10px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      ⏱ 28m SLA Left
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                    <span>Basement Plant Room 02 · Sensor #SN-882</span>
-                    <span className="text-emerald-600 font-black">Dispatched</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5 pt-2 border-t border-slate-100">
-                    <span>Assigned: Senior MEP Engineer</span>
-                    <span className="text-slate-400 font-mono">Geo-Logged · 4m Away</span>
-                  </div>
-                </div>
-
-                {/* 3 Live Telemetry Badges */}
-                <div className="grid grid-cols-3 gap-2.5 text-center text-[10px]">
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200/80">
-                    <span className="text-slate-400 block font-medium">DG SYNCHRONIZATION</span>
-                    <span className="font-black text-emerald-600">100% Standby</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200/80">
-                    <span className="text-slate-400 block font-medium">ELEVATOR ARD</span>
-                    <span className="font-black text-emerald-600">12/12 Online</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200/80">
-                    <span className="text-slate-400 block font-medium">52-WK PPM AUTO</span>
-                    <span className="font-black text-[#0F8B7D]">Week 36 Active</span>
-                  </div>
-                </div>
-
-                {/* Visual Glow Accent */}
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#0F8B7D]/10 rounded-full blur-2xl pointer-events-none" />
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 2. THE VISUAL UPGRADE: Chaos vs. Institutional Digital Control            */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-            Operational Evolution
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-            The OfficeX Transformation
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            See how modern commercial towers replace manual paper registers with automated digital governance
-          </p>
-        </div>
-
-        {/* 2 Visual Contrast Showcases */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          
-          {/* Card A: The Status Quo (Without OfficeX Operate) */}
-          <div className="bg-white rounded-3xl border border-rose-200 p-6 sm:p-8 relative overflow-hidden shadow-sm flex flex-col justify-between">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-bl-full pointer-events-none" />
-            <div>
-              <div className="mb-5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black uppercase">
-                  <X size={13} className="text-rose-600" />
-                  Without Operate
+                <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  LIVE DEMO
                 </span>
               </div>
 
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 mb-4">
-                Reactive Headaches &amp; Breakdowns
-              </h3>
-
-              <div className="space-y-3.5 text-xs text-slate-600 font-medium">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <X size={12} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Missed Preventive Maintenance</span>
-                    <span className="text-[11px] text-slate-500">Unrecorded chiller and DG checkups leading to unexpected power cuts and repair bills.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <X size={12} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Lost WhatsApp &amp; Verbal Tickets</span>
-                    <span className="text-[11px] text-slate-500">Tenant complaints slip through without timestamps, accountability, or technician dispatch proof.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <X size={12} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Congested 8-Minute Lobby Lines</span>
-                    <span className="text-[11px] text-slate-500">Physical paper visitor registers cause security blindspots and frustrated corporate guests.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-rose-100 flex items-center justify-between text-xs text-rose-600 font-bold">
-              <span>Risk: Catastrophic Downtime &amp; Audits</span>
-              <span>High Operational Overhead</span>
-            </div>
-          </div>
-
-          {/* Card B: With OfficeX Operate */}
-          <div className="bg-white rounded-3xl border-2 border-teal-500/80 p-6 sm:p-8 relative overflow-hidden shadow-xl shadow-teal-900/5 flex flex-col justify-between">
-            <div className="absolute top-0 right-0 w-36 h-36 bg-teal-50 rounded-bl-full pointer-events-none" />
-            <div>
-              <div className="mb-5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#0F8B7D] text-xs font-black uppercase">
-                  <Check size={13} className="text-[#0F8B7D]" />
-                  With OfficeX Operate
-                </span>
-              </div>
-
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 mb-4">
-                Predictable 99.8% Uptime &amp; SLAs
-              </h3>
-
-              <div className="space-y-3.5 text-xs text-slate-600 font-medium">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-teal-50/50 border border-teal-200/70">
-                  <div className="w-5 h-5 rounded-full bg-teal-100 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={12} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">Automated 52-Week PPM Engine</span>
-                    <span className="text-[11px] text-slate-600">OEM checklist schedules auto-trigger to technicians with mandatory offline photo evidence.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-teal-50/50 border border-teal-200/70">
-                  <div className="w-5 h-5 rounded-full bg-teal-100 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={12} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">QR Asset Tagging &amp; 32m SLA Clocks</span>
-                    <span className="text-[11px] text-slate-600">Scan any equipment QR code to log issues. Multi-tiered escalations alert directors before breach.</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-teal-50/50 border border-teal-200/70">
-                  <div className="w-5 h-5 rounded-full bg-teal-100 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={12} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block">18-Second Touchless QR Lobby Entry</span>
-                    <span className="text-[11px] text-slate-600">Pre-invited guests scan mobile passes directly at speed-gates with 100% digital security trails.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-teal-100 flex items-center justify-between text-xs text-[#0F8B7D] font-bold">
-              <span>Result: 42% Less Downtime</span>
-              <span>Zero Paper Logbooks</span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Quantified Metrics Ribbon */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 text-center shadow-2xs">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 block">-42%</span>
-            <span className="text-xs text-slate-500 font-semibold">Equipment Downtime</span>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 text-center shadow-2xs">
-            <span className="text-2xl sm:text-3xl font-black text-[#0F8B7D] block">32 Mins</span>
-            <span className="text-xs text-slate-500 font-semibold">Avg SLA Resolution</span>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 text-center shadow-2xs">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-600 block">&lt; 18 Sec</span>
-            <span className="text-xs text-slate-500 font-semibold">Lobby QR Check-in</span>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 text-center shadow-2xs">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 block">100%</span>
-            <span className="text-xs text-slate-500 font-semibold">Statutory Audit Ready</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 3. INTERACTIVE BENTO GRID: Visual CAFM & Facility Suite                   */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 bg-white border-y border-slate-200 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
-              <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-                Integrated Product Modules
-              </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                The Complete Commercial CAFM Suite
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                Visual operations engineered for facility directors, chief engineers, and tenant experience teams
-              </p>
-            </div>
-
-            {/* Interactive Module Filter Tabs */}
-            <div className="mt-4 md:mt-0 flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setActiveTab("ppm")}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  activeTab === "ppm" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                52-Wk PPM
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("sla")}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  activeTab === "sla" ? "bg-[#0F8B7D] text-white shadow-2xs" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                SLA Engine
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("health")}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  activeTab === "health" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Health Score
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("visitors")}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  activeTab === "visitors" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Visitor Flow
-              </button>
-            </div>
-          </div>
-
-          {/* Visual Bento Grid Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Bento Card 1: 52-Week Automated PPM Calendar (Large 2-Col Span) */}
-            <div className="md:col-span-2 bg-[#F8FAFC] rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between group">
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center">
-                      <Calendar size={20} />
+              {/* Dynamic Screen Content */}
+              {activeScreen === "rentroll" && (
+                <div className="space-y-4">
+                  {/* Metric row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Rent Roll</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">₹52.4L / mo</div>
                     </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Deposits Held</div>
+                      <div className="text-lg sm:text-xl font-bold text-teal-600 mt-0.5">₹1.56 Cr</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Avg Rent/Sq.Ft</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">₹142.00</div>
+                    </div>
+                  </div>
+
+                  {/* Clean Table */}
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 flex justify-between items-center">
+                      <span>Apex Business Tower · Active Leases</span>
+                      <span className="text-slate-400">4 Leases</span>
+                    </div>
+                    <div className="divide-y divide-slate-100 text-xs">
+                      <div className="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                          <div className="font-semibold text-slate-900">Tata Consultancy Services (TCS)</div>
+                          <div className="text-slate-500 text-[11px]">Floor 12 · 42,500 sq.ft</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-slate-900">₹70.1L / mo</div>
+                          <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Paid</span>
+                        </div>
+                      </div>
+                      <div className="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                          <div className="font-semibold text-slate-900">Deloitte Consulting USI</div>
+                          <div className="text-slate-500 text-[11px]">Floor 09 · 35,000 sq.ft</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-slate-900">₹57.7L / mo</div>
+                          <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Paid</span>
+                        </div>
+                      </div>
+                      <div className="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                          <div className="font-semibold text-slate-900">Freshworks Technologies</div>
+                          <div className="text-slate-500 text-[11px]">Floor 06 · 18,400 sq.ft</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-slate-900">₹30.2L / mo</div>
+                          <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Paid</span>
+                        </div>
+                      </div>
+                      <div className="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                          <div className="font-semibold text-slate-900">Wipro Limited</div>
+                          <div className="text-slate-500 text-[11px]">Floor 04 · 65,000 sq.ft</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-slate-900">₹1.05 Cr / mo</div>
+                          <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-semibold">Due in 3d</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Banner */}
+                  <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-black text-slate-900">52-Week Preventive Maintenance Calendar</h3>
-                      <span className="text-xs text-slate-500 font-semibold">Auto-scheduled OEM &amp; statutory compliance checklists</span>
+                      <div className="text-xs font-bold text-purple-900">Upcoming 5% Escalation: Deloitte USI</div>
+                      <div className="text-[11px] text-purple-700">Contract completes Year 2 on 15-Nov-2026 (+₹2.53L/mo)</div>
+                    </div>
+                    <button
+                      onClick={() => showToast("5% Step-Up Escalation approved & notice drafted for Deloitte")}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      Approve Revision
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeScreen === "visitors" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Expected Today</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">85 Visitors</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Checked In</div>
+                      <div className="text-lg sm:text-xl font-bold text-blue-600 mt-0.5">62 Inside</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Lobby Transit</div>
+                      <div className="text-lg sm:text-xl font-bold text-emerald-600 mt-0.5">18s Avg</div>
                     </div>
                   </div>
-                  <span className="hidden sm:inline-block px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase border border-emerald-200">
-                    NBC 2016 Aligned
-                  </span>
-                </div>
 
-                {/* Simulated Interactive Calendar Tasks View */}
-                <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs mt-4">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-3 pb-2 border-b border-slate-100">
-                    <span>WEEK 36 SCHEDULE · CHILLERS &amp; POWER</span>
-                    <span className="text-[#0F8B7D]">12 Tasks Active</span>
-                  </div>
-
-                  <div className="space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <div>
-                          <span className="font-bold text-slate-900 block">33kV Substation Transformer Oil BDV Test</span>
-                          <span className="text-[10px] text-slate-500">Substation Bay 01 · Tech: Rajesh M. (CEA Certified)</span>
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-semibold text-slate-700">Live Turnstile Stream</span>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-medium">Turnstiles Online</span>
+                    </div>
+                    <div className="space-y-2.5 text-xs">
+                      <div className="p-2.5 bg-slate-50 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                            RS
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-900">Rajesh Sharma (KPMG)</div>
+                            <div className="text-slate-500 text-[11px]">Host: Priya Mehta (TCS) · Floor 12</div>
+                          </div>
                         </div>
+                        <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-1 rounded">Turnstile 02 Passed</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                        Completed ✓
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        <div>
-                          <span className="font-bold text-slate-900 block">500 TR Chiller Condenser Tube Descaling</span>
-                          <span className="text-[10px] text-slate-500">HVAC Plant Room B2 · Crew: Apex ElectroMech</span>
+                      <div className="p-2.5 bg-slate-50 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
+                            PN
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-900">Priya Nair (McKinsey)</div>
+                            <div className="text-slate-500 text-[11px]">Host: Arun Sen (Deloitte) · Floor 09</div>
+                          </div>
                         </div>
+                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-1 rounded">QR Fast-Pass Issued</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold text-[10px]">
-                        In Progress
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2 h-2 rounded-full bg-slate-400" />
-                        <div>
-                          <span className="font-bold text-slate-900 block">Wet Riser Hydrant Pressure &amp; Hose Audit</span>
-                          <span className="text-[10px] text-slate-500">Towers A &amp; B · Fire Safety Annual Renewal</span>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 font-bold text-[10px]">
-                        Scheduled (Fri)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-6 py-3.5 bg-slate-100/70 border-t border-slate-200 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-600">Eliminate paper logbooks with mandatory photo geotags</span>
-                <span className="font-bold text-[#0F8B7D] flex items-center gap-1">Learn PPM Automation <ChevronRight size={14} /></span>
-              </div>
-            </div>
-
-            {/* Bento Card 2: Workplace Health Score Gauge */}
-            <div className="bg-[#F8FAFC] rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center">
-                    <Activity size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">Workplace Health Score</h3>
-                    <span className="text-xs text-slate-500 font-semibold">Real-time building operational score</span>
-                  </div>
-                </div>
-
-                {/* Score Circular Dial Preview */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 text-center shadow-2xs my-2">
-                  <div className="relative w-32 h-32 mx-auto flex items-center justify-center mb-2">
-                    {/* SVG Progress Circle */}
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      <path
-                        className="text-slate-100"
-                        strokeWidth="3.5"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className="text-[#0F8B7D]"
-                        strokeDasharray="91, 100"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <div className="absolute text-center">
-                      <span className="text-3xl font-black text-slate-900 block leading-none">91</span>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Score</span>
                     </div>
                   </div>
 
-                  <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
-                    Grade-A Certified Uptime
-                  </span>
-                </div>
-              </div>
-
-              <div className="px-6 py-3.5 bg-slate-100/70 border-t border-slate-200 text-xs text-slate-500 font-semibold">
-                Evaluates air quality, power factor, fire readiness &amp; CSAT
-              </div>
-            </div>
-
-            {/* Bento Card 3: Real-Time SLA Escalation Clocks */}
-            <div className="bg-[#F8FAFC] rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center">
-                    <LifeBuoy size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">Multi-Tier SLA Engine</h3>
-                    <span className="text-xs text-slate-500 font-semibold">Automated escalation to facility leads</span>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-rose-600">P1 Emergency SLA</span>
-                    <span className="font-mono text-slate-900">&lt; 30 Mins Target</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-rose-500 h-full rounded-full" style={{ width: "78%" }} />
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    If unresolved within 20 mins, automatic WhatsApp alert triggers to the Property General Manager.
-                  </p>
-                </div>
-              </div>
-
-              <div className="px-6 py-3.5 bg-slate-100/70 border-t border-slate-200 text-xs text-slate-500 font-semibold">
-                Average commercial resolution: 32 minutes
-              </div>
-            </div>
-
-            {/* Bento Card 4: Touchless Visitor & Turnstile Flow */}
-            <div className="bg-[#F8FAFC] rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">Touchless Lobby Access</h3>
-                    <span className="text-xs text-slate-500 font-semibold">Pre-invite QR passes for turnstiles</span>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 bg-slate-900 rounded-xl flex items-center justify-center text-white shrink-0">
-                      <QrCode size={30} className="text-white" />
-                    </div>
+                  <div className="p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-900 block">Fast-Track Gate Pass</span>
-                      <span className="text-[10px] text-slate-400 block">Guest: Dr. Aryan Mehta</span>
-                      <span className="inline-block mt-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                        Valid Turnstile 01–04
-                      </span>
+                      <div className="text-xs font-bold text-blue-900">Issue Instant WhatsApp Guest Pass</div>
+                      <div className="text-[11px] text-blue-700">Send time-restricted optical speed-gate QR code</div>
                     </div>
+                    <button
+                      onClick={() => showToast("WhatsApp QR fast-pass dispatched to visitor")}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      Issue Fast-Pass
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="px-6 py-3.5 bg-slate-100/70 border-t border-slate-200 text-xs text-slate-500 font-semibold">
-                Lobby wait times reduced from 8 mins to 18 seconds
-              </div>
-            </div>
-
-            {/* Bento Card 5: QR Asset Tagging & Digital Logbooks */}
-            <div className="bg-[#F8FAFC] rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
-              <div className="p-6 sm:p-8">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center">
-                    <Wrench size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">QR Asset Register</h3>
-                    <span className="text-xs text-slate-500 font-semibold">Instant equipment history &amp; warranties</span>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs text-xs space-y-2">
-                  <div className="flex items-center justify-between font-bold text-slate-800">
-                    <span>York Chiller 500TR</span>
-                    <span className="font-mono text-[11px] text-[#0F8B7D]">#CH-02-B2</span>
-                  </div>
-                  <div className="text-[11px] text-slate-500 flex justify-between">
-                    <span>Last Overhaul: 12 Aug 2026</span>
-                    <span className="text-emerald-600 font-bold">Health: 98%</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">
-                    OEM Manuals &amp; Spare Parts Catalog attached
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-6 py-3.5 bg-slate-100/70 border-t border-slate-200 text-xs text-slate-500 font-semibold">
-                Every physical asset serialized with weatherproof tags
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. INTERACTIVE ROI CALCULATOR: Savings for Commercial Properties          */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="bg-gradient-to-br from-teal-50/70 via-white to-slate-50 rounded-3xl p-6 sm:p-10 text-slate-900 border border-teal-200/80 shadow-xl relative overflow-hidden">
-          
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#0F8B7D]/10 blur-3xl rounded-full pointer-events-none" />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
-            
-            {/* Left Column: Sliders */}
-            <div className="lg:col-span-7">
-              <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-2">
-                Operational ROI Simulator
-              </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3">
-                Calculate Your Annual Maintenance Savings
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-8 max-w-xl">
-                Adjust your property area and asset volume to see estimated cost reductions, man-hours saved, and breakdown prevention.
-              </p>
-
-              {/* Slider 1: Building Area */}
-              <div className="mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-700">
-                    Total Super Built-up Area
-                  </label>
-                  <span className="text-sm font-black text-[#0F8B7D]">
-                    {buildingArea.toLocaleString()} sq.ft.
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="50000"
-                  max="2000000"
-                  step="25000"
-                  value={buildingArea}
-                  onChange={(e) => setBuildingArea(Number(e.target.value))}
-                  className="w-full accent-[#0F8B7D] cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
-                  <span>50,000 sq.ft.</span>
-                  <span>1,000,000 sq.ft.</span>
-                  <span>2,000,000 sq.ft.</span>
-                </div>
-              </div>
-
-              {/* Slider 2: Asset Count */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-700">
-                    Total MEP &amp; Facility Assets (HVAC, DG, Lifts)
-                  </label>
-                  <span className="text-sm font-black text-[#0F8B7D]">
-                    {assetCount.toLocaleString()} Assets
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="100"
-                  max="2000"
-                  step="20"
-                  value={assetCount}
-                  onChange={(e) => setAssetCount(Number(e.target.value))}
-                  className="w-full accent-[#0F8B7D] cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
-                  <span>100 Assets</span>
-                  <span>1,000 Assets</span>
-                  <span>2,000 Assets</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Calculated Outputs */}
-            <div className="lg:col-span-5 bg-white rounded-2xl border border-teal-200 shadow-lg p-6 text-center">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Estimated Annual Value Reclaimed
-              </span>
-              <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight my-2">
-                ₹{calculatedSavings.savingsLakhs} <span className="text-xl font-bold text-[#0F8B7D]">Lakhs</span>
-              </div>
-              <span className="text-xs text-slate-500 block mb-6">
-                Direct savings through avoided repairs &amp; SLA penalty control
-              </span>
-
-              <div className="grid grid-cols-2 gap-3 text-left mb-6">
-                <div className="bg-teal-50/60 p-3 rounded-xl border border-teal-100">
-                  <span className="text-[10px] text-slate-500 block font-medium">Technician Hours Saved</span>
-                  <span className="text-base font-black text-slate-900">{calculatedSavings.manHours} hrs/yr</span>
-                </div>
-                <div className="bg-teal-50/60 p-3 rounded-xl border border-teal-100">
-                  <span className="text-[10px] text-slate-500 block font-medium">Breakdown Risk</span>
-                  <span className="text-base font-black text-[#0F8B7D]">-{calculatedSavings.breakdownReduction}% Risk</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSlideInOpen(true)}
-                className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm shadow-md shadow-[#0F8B7D]/20 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Request Custom Campus Audit</span>
-                <ArrowRight size={15} />
-              </button>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 5. STAKEHOLDER PROOF: Real Commercial Operations Outcomes                 */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 bg-white border-t border-slate-200 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-              Field-Proven Results
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-              Built for Every Operational Stakeholder
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Delivering measurable ROI and peace of mind across facility and workplace leadership
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {stakeholders.map((sh, idx) => (
-              <div
-                key={idx}
-                className="bg-[#F8FAFC] rounded-3xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  {/* Photo Header */}
-                  <div className="relative h-48 w-full overflow-hidden bg-slate-900">
-                    <Image
-                      src={sh.image}
-                      alt={sh.role}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-black/20 to-transparent" />
-                    <div className="absolute bottom-3 left-4 right-4">
-                      <span className="text-white text-base font-black block leading-snug">{sh.role}</span>
-                      <span className="text-teal-300 text-[11px] font-bold">{sh.subtitle}</span>
+              {activeScreen === "compliance" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Statutory Items</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">48 Total</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">100% Valid</div>
+                      <div className="text-lg sm:text-xl font-bold text-emerald-600 mt-0.5">42 Verified</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Expiring &lt;60d</div>
+                      <div className="text-lg sm:text-xl font-bold text-amber-600 mt-0.5">6 Tracked</div>
                     </div>
                   </div>
 
-                  {/* Body */}
-                  <div className="p-5">
-                    <p className="text-xs text-slate-600 italic leading-relaxed mb-4">
-                      &ldquo;{sh.quote}&rdquo;
-                    </p>
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div className="divide-y divide-slate-100 text-xs">
+                      <div className="p-3 flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-slate-900">Fire Safety NOC (Form B)</div>
+                          <div className="text-slate-500 text-[11px]">CFO Mumbai · Annual Hydrant & Sprinkler Audit</div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Valid (284d)</span>
+                      </div>
+                      <div className="p-3 flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-slate-900">Lift Inspectorate License (Form A)</div>
+                          <div className="text-slate-500 text-[11px]">PWD Mumbai · 6 Passenger & 2 Service Elevators</div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-semibold">Expiring in 42d</span>
+                      </div>
+                      <div className="p-3 flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-slate-900">Consent to Operate (CTO) — Air & Water</div>
+                          <div className="text-slate-500 text-[11px]">MPCB · STP 150 KLD & DG Emission Standards</div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Valid (410d)</span>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* 3 Metric Pills */}
-                    <div className="grid grid-cols-3 gap-2 text-center mb-4">
-                      {sh.metrics.map((m, mIdx) => (
-                        <div key={mIdx} className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                          <span className="text-xs font-black text-slate-900 block">{m.value}</span>
-                          <span className="text-[9px] text-slate-400 font-medium">{m.label}</span>
+                  <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-amber-900">Action Required: Lift Form A Renewal</div>
+                      <div className="text-[11px] text-amber-700">Contractor Schindler India assigned for inspection</div>
+                    </div>
+                    <button
+                      onClick={() => showToast("Inspection scheduled with Schindler engineer & PWD dossier prepared")}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      Schedule PWD Audit
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeScreen === "ppm" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Critical Assets</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">240 Units</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">MEP Uptime</div>
+                      <div className="text-lg sm:text-xl font-bold text-emerald-600 mt-0.5">99.8%</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Week 38 Status</div>
+                      <div className="text-lg sm:text-xl font-bold text-teal-600 mt-0.5">100% Executed</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                    <div className="text-xs font-semibold text-slate-700 mb-3">52-Week Matrix Grid (Q3 Weeks 35–42)</div>
+                    <div className="space-y-2.5 text-xs">
+                      {[
+                        { name: "Cummins DG Set 750 kVA #1", vendor: "Sterling & Wilson", status: "Completed" },
+                        { name: "York Centrifugal Chiller 450 TR", vendor: "Johnson Controls", status: "Completed" },
+                        { name: "Schindler 3300 Pass Lift #3", vendor: "Schindler India", status: "Scheduled W39" }
+                      ].map((item, idx) => (
+                        <div key={idx} className="p-2.5 bg-slate-50 rounded-lg flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-slate-900">{item.name}</div>
+                            <div className="text-[11px] text-slate-500">{item.vendor}</div>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                            item.status === "Completed" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
+                          }`}>
+                            {item.status}
+                          </span>
                         </div>
                       ))}
                     </div>
+                  </div>
 
-                    {/* Key Capability Chips */}
-                    <ul className="space-y-1.5 text-xs text-slate-600 font-medium">
-                      {sh.highlights.map((h, hIdx) => (
-                        <li key={hIdx} className="flex items-center gap-2">
-                          <Check size={13} className="text-[#0F8B7D] shrink-0" />
-                          <span>{h}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-emerald-900">QR Asset Tagging Active</div>
+                      <div className="text-[11px] text-emerald-700">Technicians scan physical tags on plant floor</div>
+                    </div>
+                    <button
+                      onClick={() => showToast("Technician digital logbook verified with GPS & timestamp")}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      Audit Logbook
+                    </button>
                   </div>
                 </div>
+              )}
 
-                <div className="p-4 bg-slate-100/80 border-t border-slate-200 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setSlideInOpen(true)}
-                    className="text-xs font-black text-[#0F8B7D] hover:underline"
-                  >
-                    View Role Workflows →
-                  </button>
+              {activeScreen === "crm" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Active Pipeline</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">₹4.2 Cr TCV</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Tours Scheduled</div>
+                      <div className="text-lg sm:text-xl font-bold text-blue-600 mt-0.5">6 Visits</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Avg Deal Velocity</div>
+                      <div className="text-lg sm:text-xl font-bold text-emerald-600 mt-0.5">22 Days</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="font-semibold text-slate-900">KPMG India</div>
+                      <div className="text-slate-500 text-[11px] mt-0.5">30,000 sq.ft · BKC Tower B</div>
+                      <div className="mt-2 text-blue-600 font-bold">Stage: LOI Drafting</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="font-semibold text-slate-900">Google Cloud Partner</div>
+                      <div className="text-slate-500 text-[11px] mt-0.5">50,000 sq.ft · Whitefield</div>
+                      <div className="mt-2 text-emerald-600 font-bold">Stage: Agreement Signed</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-blue-900">Automated LOI Generation</div>
+                      <div className="text-[11px] text-blue-700">Pre-fill terms, lock-in, escalation & security deposit</div>
+                    </div>
+                    <button
+                      onClick={() => showToast("LOI PDF generated with digital e-signature fields")}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      Generate LOI
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
 
+              {activeScreen === "tenant" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Avg SLA Close</div>
+                      <div className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">3.2 Hours</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Occupier CSAT</div>
+                      <div className="text-lg sm:text-xl font-bold text-rose-600 mt-0.5">4.9 / 5.0</div>
+                    </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">SLA Met Rate</div>
+                      <div className="text-lg sm:text-xl font-bold text-emerald-600 mt-0.5">99.4%</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm text-xs space-y-2.5">
+                    <div className="p-2.5 bg-slate-50 rounded-lg flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-slate-900">HVAC Thermostat Calibration</div>
+                        <div className="text-slate-500 text-[11px]">Floor 12, Zone C · Assigned to CleanPro</div>
+                      </div>
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded">Resolved in 45m</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 rounded-lg flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-slate-900">Executive Boardroom Reservation</div>
+                        <div className="text-slate-500 text-[11px]">Floor 09 · Tomorrow 10:00 AM – 1:00 PM</div>
+                      </div>
+                      <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">Confirmed</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-rose-900">10-Second QR Issue Ticket</div>
+                      <div className="text-[11px] text-rose-700">Instant dispatch to on-duty floor technician</div>
+                    </div>
+                    <button
+                      onClick={() => showToast("Maintenance ticket dispatched with high priority")}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      Test Dispatch
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+          </div>
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 6. 15-DAY RAPID DEPLOYMENT ROADMAP                                       */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-            Turnkey Implementation
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-            15-Day Rapid Deployment Pipeline
+      {/* =========================================================================
+          OPERATIONAL PILLARS: 3 Spacious, Uncluttered Cards
+          ========================================================================= */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-600 mb-3">
+            <span>INSTITUTIONAL FOUNDATION</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Engineered for Commercial Asset Scale
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            From physical asset tagging to complete staff training and digital go-live
+          <p className="text-base text-slate-600 mt-3">
+            OfficeX replaces fragmented desktop spreadsheets with a single connected data layer across owners, occupiers, and vendors.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {[
-            {
-              step: "01",
-              title: "Asset Audit & QR Tagging",
-              days: "Days 1 – 4",
-              desc: "On-site engineering team catalogs all MEP, HVAC, and power gear with weather-resistant QR barcodes."
-            },
-            {
-              step: "02",
-              title: "52-Week PPM Setup",
-              days: "Days 5 – 8",
-              desc: "Import manufacturer maintenance frequencies, OEM checklists, and CFO statutory safety rules."
-            },
-            {
-              step: "03",
-              title: "Staff & Tech Training",
-              days: "Days 9 – 12",
-              desc: "Hands-on mobile app coaching for shift technicians, security supervisors, and helpdesk dispatchers."
-            },
-            {
-              step: "04",
-              title: "Tenant Onboarding & Go-Live",
-              days: "Day 15 Go-Live",
-              desc: "Deploy lobby QR check-in posters, distribute tenant login credentials, and activate live telemetry."
-            }
-          ].map((s, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-2xl p-6 border border-slate-200 relative overflow-hidden shadow-2xs hover:shadow-lg transition-all"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Pillar 1 */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] mb-6">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">
+                Financial & Lease Governance
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                Full lifecycle rent roll with automated 5% escalation triggers, CAM reconciliation pools, and direct Razorpay nodal escrow settlement. Never miss a billing milestone.
+              </p>
+            </div>
+            <Link
+              href="/properties/rent-roll"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0F8B7D] hover:text-[#0D7A6E] pt-4 border-t border-slate-100"
             >
-              <span className="text-4xl font-black text-slate-100 absolute top-3 right-4 select-none">
-                {s.step}
-              </span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] text-[11px] font-black uppercase mb-3 border border-teal-200">
-                {s.days}
-              </span>
-              <h3 className="text-base font-black text-slate-900 mb-2">{s.title}</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">{s.desc}</p>
+              <span>Explore Rent Roll Portal</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Pillar 2 */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-6">
+                <Users className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">
+                Workplace Experience & Access
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                Touchless WhatsApp pre-registration, 18-second lobby turnstile throughput, and 10-second occupier ticketing directly from desk QR tags.
+              </p>
             </div>
-          ))}
+            <Link
+              href="/tenant/visitors"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 pt-4 border-t border-slate-100"
+            >
+              <span>Explore Visitor System</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Pillar 3 */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 mb-6">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">
+                Statutory Immunity & 52-Week PPM
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                48 statutory licenses tracked with 90-day renewal warnings, coupled with a 52-week preventive maintenance calendar for critical plant machinery.
+              </p>
+            </div>
+            <Link
+              href="/compliance"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 hover:text-purple-700 pt-4 border-t border-slate-100"
+            >
+              <span>Explore Compliance Calendar</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 7. TRANSPARENT PRICING TIERS                                             */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 bg-white border-y border-slate-200 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-              Predictable Per-Sq.Ft. Pricing
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-              Invest in Flawless Facility Operations
+      {/* =========================================================================
+          OPERATIONAL LIFECYCLE & ESCROW SETTLEMENT (Split Flow)
+          ========================================================================= */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-xs font-semibold text-[#0F8B7D] mb-3">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>ENTERPRISE ESCROW ARCHITECTURE</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Milestone-Protected Operations & Payouts
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Scalable pricing based on your commercial portfolio scale with zero hidden implementation fees
+            <p className="text-base text-slate-600 mt-3">
+              OfficeX combines structured operational lifecycles with bank-grade escrow security to safeguard both property managers and service partners.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-            {pricingTiers.map((tier, idx) => (
-              <div
-                key={idx}
-                className={`rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 ${
-                  tier.popular
-                    ? "bg-white border-2 border-[#0F8B7D] shadow-xl shadow-teal-900/10 relative scale-100 md:scale-[1.02]"
-                    : "bg-white border border-slate-200 shadow-xs hover:shadow-md"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-base font-black text-slate-900">{tier.name}</span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                      tier.popular
-                        ? "bg-[#0F8B7D] text-white"
-                        : "bg-slate-200 text-slate-700"
-                    }`}>
-                      {tier.badge}
-                    </span>
-                  </div>
-
-                  <div className="mb-4">
-                    <span className="text-3xl sm:text-4xl font-black text-slate-900">{tier.price}</span>
-                    <span className="text-xs text-slate-400 font-semibold ml-1.5">/ {tier.period}</span>
-                  </div>
-
-                  <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                    {tier.desc}
-                  </p>
-
-                  <div className="space-y-2.5 pt-4 border-t border-slate-200/80 mb-8 text-xs text-slate-600 font-medium">
-                    {tier.features.map((f, fIdx) => (
-                      <div key={fIdx} className="flex items-start gap-2">
-                        <Check size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                        <span>{f}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            {/* Left: 5-step operational lifecycle */}
+            <div className="lg:col-span-6 bg-[#F8FAFC] rounded-2xl border border-slate-200 p-8 flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 mb-6">
+                  5-Stage Operational Lifecycle
+                </h3>
+                <div className="space-y-6">
+                  {[
+                    { step: "1", title: "Digital Property & Asset Onboarding", desc: "Demised spatial stacking, asset register QR tagging, and initial statutory document audit." },
+                    { step: "2", title: "PPM & Rent Roll Automation", desc: "Automate 52-week maintenance schedules, lease escalations, and CAM collection pools." },
+                    { step: "3", title: "Fast-Track Turnstile & Occupier Flow", desc: "Deploy pre-registered WhatsApp QR passes and 10-second helpdesk ticketing." },
+                    { step: "4", title: "Verified Work Order Milestone Sign-Off", desc: "Facility managers audit maintenance and repair deliverables before funds release." },
+                    { step: "5", title: "Escrow-Protected Milestone Settlement", desc: "Razorpay Escrow releases 90% vendor disbursement immediately upon sign-off." }
+                  ].map((item) => (
+                    <div key={item.step} className="flex items-start gap-4">
+                      <div className="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 shadow-sm">
+                        {item.step}
                       </div>
-                    ))}
-                  </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                        <div className="text-xs text-slate-600 mt-0.5 leading-relaxed">{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Escrow flow diagram */}
+            <div className="lg:col-span-6 bg-[#F8FAFC] rounded-2xl border border-slate-200 p-8 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Escrow Payment Split Flow
+                  </h3>
+                  <span className="text-xs font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                    Razorpay Nodal
+                  </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSlideInOpen(true)}
-                  className={`w-full py-3 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer text-center ${tier.btnColor}`}
-                >
-                  Choose {tier.name}
-                </button>
+                <div className="space-y-4">
+                  {/* Step 1 */}
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
+                    <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">1. Property Client Deposits Contract Value</div>
+                    <div className="text-base font-bold text-slate-900 mt-1">100% Locked in Escrow Nodal Account</div>
+                  </div>
+
+                  <div className="flex justify-center text-slate-300">
+                    <ArrowRight className="w-5 h-5 rotate-90" />
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="p-4 bg-teal-50/60 rounded-xl border border-teal-200 shadow-sm text-center">
+                    <div className="text-xs font-semibold text-teal-800 uppercase tracking-wider">2. Verified Facility Milestone Sign-Off</div>
+                    <div className="text-sm font-medium text-teal-900 mt-1">Property Manager audits and approves on-ground deliverables</div>
+                  </div>
+
+                  <div className="flex justify-center text-slate-300">
+                    <ArrowRight className="w-5 h-5 rotate-90" />
+                  </div>
+
+                  {/* Step 3: Split */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
+                      <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">90% Vendor Payout</div>
+                      <div className="text-sm font-bold text-emerald-900 mt-1">Direct Bank Release</div>
+                    </div>
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-center">
+                      <div className="text-xs font-semibold text-blue-800 uppercase tracking-wider">10% Platform Fee</div>
+                      <div className="text-sm font-bold text-blue-900 mt-1">OfficeX Facilitation</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+
+              <div className="mt-8 pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                <span>Governed by Indian Escrow & Banking Regulations</span>
+                <span className="font-semibold text-slate-700">100% Auditable</span>
+              </div>
+            </div>
           </div>
 
+          {/* Social Proof / Client Testimonials */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            <div className="bg-[#F8FAFC] p-6 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-1 text-amber-400 mb-3">
+                {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+              </div>
+              <p className="text-xs sm:text-sm text-slate-700 italic leading-relaxed mb-4">
+                &ldquo;Rent collection cycle dropped from 28 days to 4 days across our commercial tower. The automated CAM reconciliation is flawless.&rdquo;
+              </p>
+              <div className="text-xs font-bold text-slate-900">Rajesh V.</div>
+              <div className="text-[11px] text-slate-500">VP Commercial Leasing · Embassy Office Parks</div>
+            </div>
+
+            <div className="bg-[#F8FAFC] p-6 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-1 text-amber-400 mb-3">
+                {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+              </div>
+              <p className="text-xs sm:text-sm text-slate-700 italic leading-relaxed mb-4">
+                &ldquo;Our chillers and DGs operate at 99.8% uptime with the 52-week automated PPM. Zero paper logbooks across 2.2M sq.ft.&rdquo;
+              </p>
+              <div className="text-xs font-bold text-slate-900">Suresh N.</div>
+              <div className="text-[11px] text-slate-500">Head Facility Operations · Prestige Group</div>
+            </div>
+
+            <div className="bg-[#F8FAFC] p-6 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-1 text-amber-400 mb-3">
+                {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+              </div>
+              <p className="text-xs sm:text-sm text-slate-700 italic leading-relaxed mb-4">
+                &ldquo;Over 850 daily visitors pass through our optical turnstiles in 18 seconds with WhatsApp QR passes. Lobby congestion is gone.&rdquo;
+              </p>
+              <div className="text-xs font-bold text-slate-900">Amit S.</div>
+              <div className="text-[11px] text-slate-500">General Manager · Brigade Tech Gardens</div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 8. FAQS ACCORDION                                                        */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-            Frequently Asked Questions
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Everything About Deploying OfficeX Operate
+      {/* =========================================================================
+          PRICING TIERS: Clean, Legible Per-Sq.Ft Pricing
+          ========================================================================= */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-600 mb-3">
+            <span>PREDICTABLE COMMERCIAL SUBSCRIPTION</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Transparent Per-Square-Foot Pricing
           </h2>
+          <p className="text-base text-slate-600 mt-3">
+            Scaled to your commercial asset footprint with zero hidden implementation fees.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+          {/* Starter */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Starter</div>
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold text-slate-900">₹1.50</span>
+                <span className="text-xs text-slate-500 font-medium">/ sq.ft / month</span>
+              </div>
+              <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+                For standalone commercial buildings seeking digital maintenance hygiene, QR tagging, and basic visitor flow.
+              </p>
+              <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                {[
+                  "Property Master & Units Database",
+                  "Up to 50,000 sq.ft managed area",
+                  "Basic Visitor Pre-Registration",
+                  "Asset QR Tagging & Registry",
+                  "Standard Email Support"
+                ].map((feat, i) => (
+                  <div key={i} className="flex items-center gap-2.5 text-xs text-slate-700">
+                    <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => openEnquiry("Starter Plan - ₹1.50/sq.ft")}
+              className="mt-8 w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-200 text-sm transition-all"
+            >
+              Get Started
+            </button>
+          </div>
+
+          {/* Professional (Featured) */}
+          <div className="bg-white rounded-2xl border-2 border-[#0F8B7D] p-8 shadow-xl shadow-teal-900/5 relative flex flex-col justify-between">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#0F8B7D] text-white text-[11px] font-bold rounded-full uppercase tracking-wider">
+              Most Popular
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-[#0F8B7D] uppercase tracking-wider">Professional</div>
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold text-slate-900">₹2.80</span>
+                <span className="text-xs text-slate-500 font-medium">/ sq.ft / month</span>
+              </div>
+              <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+                The complete Connected SaaS Suite for Grade-A commercial towers requiring Rent Roll, Compliance & Turnstiles.
+              </p>
+              <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                {[
+                  "Full 39-Column Rent Roll & Collections",
+                  "Optical Turnstile Speed-Gate Integration",
+                  "Statutory Compliance Radar (48 Licenses)",
+                  "52-Week PPM Matrix & CAFM Work Orders",
+                  "Tenant Helpdesk & Amenity Reservations",
+                  "Dedicated Relationship Manager"
+                ].map((feat, i) => (
+                  <div key={i} className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+                    <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => openEnquiry("Professional Plan - ₹2.80/sq.ft")}
+              className="mt-8 w-full py-2.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-semibold rounded-xl text-sm shadow-md shadow-teal-700/20 transition-all"
+            >
+              Start 14-Day Free Pilot
+            </button>
+          </div>
+
+          {/* Enterprise */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enterprise</div>
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold text-slate-900">₹4.50</span>
+                <span className="text-xs text-slate-500 font-medium">/ sq.ft / month</span>
+              </div>
+              <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+                For large IT parks, SEZs, and institutional REIT portfolios exceeding 250,000 sq.ft. requiring ERP integration.
+              </p>
+              <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                {[
+                  "Unlimited Square Footage & Multi-Tower Setup",
+                  "Custom SAP / Oracle ERP Integration",
+                  "Razorpay Automated Escrow Split Engine",
+                  "Automated ESG & Energy Utility Analytics",
+                  "24/7 SLA with 1-Hour Critical Incident Response",
+                  "Full Multi-Role RBAC & Audit Trail Logs"
+                ].map((feat, i) => (
+                  <div key={i} className="flex items-center gap-2.5 text-xs text-slate-700">
+                    <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => openEnquiry("Enterprise Plan - Custom")}
+              className="mt-8 w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-200 text-sm transition-all"
+            >
+              Contact Enterprise Sales
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          FAQ ACCORDION: Focused & Clean
+          ========================================================================= */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-sm text-slate-600 mt-2">
+            Answers to common questions from commercial property directors and facility heads.
+          </p>
         </div>
 
         <div className="space-y-3">
-          {faqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs"
-            >
-              <button
-                type="button"
-                onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
-                className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-sm text-slate-900 hover:text-[#0F8B7D] transition-colors cursor-pointer"
+          {[
+            {
+              q: "How fast can we onboard our property's rent roll and asset data?",
+              a: "Standard deployment takes 5 to 7 business days. Our customer engineering team ingests your existing rent roll Excel sheets, leases, and plant registers into OfficeX with automated schema validation."
+            },
+            {
+              q: "Does the Visitor Management system integrate with our existing turnstiles?",
+              a: "Yes. OfficeX supports bi-directional API and Wiegand/TCP-IP relay controllers compatible with major speed-gate hardware including Boon Edam, Gunnebo, and Hikvision."
+            },
+            {
+              q: "How does the statutory compliance tracking prevent lapses?",
+              a: "Every statutory license (Fire NOC Form B, Lift Form A, PCB CTO, etc.) is configured with automated 90-day, 60-day, and 30-day proactive triggers alerting legal, facility, and property heads."
+            },
+            {
+              q: "How does the escrow payment flow protect our transactions?",
+              a: "All FM milestone contracts are processed via Razorpay Nodal Escrow accounts governed under RBI regulations. Funds are only disbursed to contractors after verified digital sign-off by your facility manager."
+            }
+          ].map((faq, i) => {
+            const isOpen = activeFaq === i;
+            return (
+              <div
+                key={i}
+                className="bg-white rounded-xl border border-slate-200/90 shadow-sm overflow-hidden"
               >
-                <span>{faq.q}</span>
-                <ChevronDown
-                  size={16}
-                  className={`shrink-0 transition-transform ${activeFaq === idx ? "rotate-180 text-[#0F8B7D]" : "text-slate-400"}`}
-                />
-              </button>
-              {activeFaq === idx && (
-                <div className="px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                  {faq.a}
-                </div>
-              )}
-            </div>
-          ))}
+                <button
+                  onClick={() => setActiveFaq(isOpen ? null : i)}
+                  className="w-full px-6 py-4 text-left flex items-center justify-between text-sm font-semibold text-slate-900 hover:text-[#0F8B7D] transition-colors"
+                >
+                  <span>{faq.q}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ml-4 ${
+                      isOpen ? "rotate-180 text-[#0F8B7D]" : ""
+                    }`}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-6 pb-4 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 9. FINAL HIGH-CONVERSION CTA BAND                                        */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto mb-16">
-        <div className="bg-[#0F8B7D] rounded-3xl p-8 sm:p-12 text-white text-center relative overflow-hidden shadow-xl">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff15_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
-          
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <span className="inline-block px-3 py-1 rounded-full bg-white/15 text-teal-100 text-xs font-black uppercase tracking-wider mb-4 border border-white/20">
-              Ready for Zero-Downtime Operations?
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-4">
-              Deploy OfficeX Operate on Your Commercial Building in 15 Days
+      {/* =========================================================================
+          CLOSING CTA BANNER: High-Impact, uncluttered
+          ========================================================================= */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full mb-12">
+        <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="max-w-2xl mx-auto relative z-10">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
+              Ready to Modernize Your Commercial Portfolio?
             </h2>
-            <p className="text-xs sm:text-sm text-teal-100 font-medium mb-8 leading-relaxed">
-              Join leading tech parks, SEZs, and Grade-A commercial asset managers who have eliminated maintenance chaos and paper logbooks.
+            <p className="text-slate-300 text-sm sm:text-base mb-8 leading-relaxed">
+              Join over 450+ commercial property teams streamlining rent rolls, visitor gates, and 52-week maintenance on OfficeX.
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <Link
-                href="/signup?plan=operate-trial"
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-white text-[#0F8B7D] font-black text-sm shadow-md hover:bg-teal-50 transition-all text-center cursor-pointer"
-              >
-                Start Free 14-Day Pilot
-              </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                type="button"
-                onClick={() => setSlideInOpen(true)}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-teal-800/60 hover:bg-teal-800 text-white font-bold text-sm border border-white/20 transition-all text-center cursor-pointer"
+                onClick={() => openEnquiry("All-in-One Workplace SaaS Suite")}
+                className="w-full sm:w-auto px-7 py-3.5 bg-gradient-to-r from-[#0F8B7D] to-[#14B8A6] hover:from-[#0D7A6E] hover:to-[#0F8B7D] text-white font-semibold rounded-xl shadow-lg shadow-teal-700/20 text-sm transition-all"
               >
-                Schedule Engineering Demo
+                Schedule a Product Demo
               </button>
+              <Link
+                href="/properties/rent-roll"
+                className="w-full sm:w-auto px-7 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 text-sm transition-all"
+              >
+                Explore Live Portals
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Slide-In Modal */}
+      {/* Slide-In Lead Form */}
       <EnquirySlideIn
         isOpen={slideInOpen}
         onClose={() => setSlideInOpen(false)}
-        prefill={{ modules: ["operate"] }}
+        prefill={enquiryPrefill}
       />
 
       <Footer />

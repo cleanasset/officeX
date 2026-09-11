@@ -1147,9 +1147,9 @@ export default function LandingPage() {
               },
               {
                 id: "saas",
-                title: "Operate (CAFM & PPM)",
-                desc: "52-week automated PPM & digital ticketing.",
-                benefits: ["52-week automated PPM calendar", "SLA-backed helpdesk & ticketing", "Rent roll, CAM billing & compliance"],
+                title: "Operate & Manage",
+                desc: "CAFM, Rent roll & Visitor Management.",
+                benefits: ["CAFM & 52-week automated PPM", "Rent roll, CAM billing & compliance", "Visitor management & touchless access"],
                 audience: "For: Facility & Property Managers",
                 image: "/images/card_saas_hd.jpg",
                 bgColor: "bg-[#2563EB]",
@@ -1159,7 +1159,7 @@ export default function LandingPage() {
               },
               {
                 id: "managed",
-                title: "Managed Services",
+                title: "Property Management",
                 desc: "End-to-end PM & IFM with SLA guarantees.",
                 benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
                 audience: "For: Owners without in-house FM",
