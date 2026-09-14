@@ -794,24 +794,29 @@ export default function LandingPage() {
 
         {/* Centered Enterprise Hero Column */}
         <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-          <div className="max-w-3xl text-center flex flex-col items-center">
+          <div className="max-w-4xl text-center flex flex-col items-center">
             
-            {/* Eyebrow badge — Compact & Tasteful */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#071726]/85 border border-teal-400/40 text-teal-300 text-[10px] sm:text-xs font-bold tracking-wider mb-3 backdrop-blur-md shadow-md mx-auto">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-300 animate-pulse" />
-              <span>THE FUTURE OF COMMERCIAL WORKPLACE OPERATIONS</span>
+            {/* Eyebrow badge — Refined, Ethereal & Elegant */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#071726]/80 border border-teal-400/25 text-teal-300 text-[10px] sm:text-[11px] font-medium tracking-[0.12em] mb-4 backdrop-blur-md shadow-sm mx-auto">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse shadow-[0_0_8px_rgba(45,212,191,0.8)]" />
+              <span className="uppercase text-teal-200/90">The Future of Commercial Workplace Operations</span>
             </div>
 
-            {/* Main Headline — Managed Proportional Size */}
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-extrabold tracking-tight text-white leading-[1.2] mb-3 text-center uppercase">
-              THE INTEGRATED ECOSYSTEM <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-100 to-emerald-300">
-                for SMARTER WORKPLACE OPERATIONS
+            {/* Main Headline — Balanced Typography & Perfect Spacing */}
+            <h1 className="leading-[1.25] mb-4 text-center max-w-3xl mx-auto">
+              <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-bold text-white tracking-[0.04em] drop-shadow-xs">
+                THE INTEGRATED ECOSYSTEM
+              </span>
+              <span className="block text-lg sm:text-2xl md:text-3xl lg:text-[32px] font-bold mt-1 sm:mt-1.5 tracking-[0.03em] text-transparent bg-clip-text bg-gradient-to-r from-teal-200 via-teal-100 to-emerald-200">
+                <span className="font-normal text-teal-200/75 lowercase text-[0.72em] mr-2 tracking-normal align-middle inline-block">
+                  for
+                </span>
+                SMARTER WORKPLACE OPERATIONS
               </span>
             </h1>
 
-            {/* Subhead — Balanced & Clean */}
-            <p className="text-xs sm:text-sm md:text-[15px] font-normal text-slate-200/90 leading-relaxed max-w-xl mb-5 text-center mx-auto">
+            {/* Subhead — Clean, Airy & Readable */}
+            <p className="text-xs sm:text-sm md:text-[15px] font-normal text-slate-200/90 leading-relaxed max-w-xl mb-6 text-center mx-auto tracking-normal">
               Find commercial spaces, source verified services, and manage building operations — all from one platform.
             </p>
 
@@ -822,10 +827,10 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("space")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-semibold tracking-normal transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "space"
-                      ? "bg-[#0F8B7D] text-white shadow-xl"
-                      : "bg-[#071726]/85 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/20"
+                      ? "bg-[#0F8B7D] text-white shadow-lg font-bold"
+                      : "bg-[#071726]/85 backdrop-blur-md text-slate-300 hover:text-white hover:bg-[#0a1c2e] border-t border-x border-white/15"
                   }`}
                 >
                   <Building2 size={15} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
@@ -834,10 +839,10 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("vendor")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-semibold tracking-normal transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "vendor"
-                      ? "bg-[#0F8B7D] text-white shadow-xl"
-                      : "bg-[#071726]/85 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/20"
+                      ? "bg-[#0F8B7D] text-white shadow-lg font-bold"
+                      : "bg-[#071726]/85 backdrop-blur-md text-slate-300 hover:text-white hover:bg-[#0a1c2e] border-t border-x border-white/15"
                   }`}
                 >
                   <Wrench size={15} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
@@ -846,10 +851,10 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("managed")}
-                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-semibold tracking-normal transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "managed"
-                      ? "bg-[#0F8B7D] text-white shadow-xl"
-                      : "bg-[#071726]/85 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/20"
+                      ? "bg-[#0F8B7D] text-white shadow-lg font-bold"
+                      : "bg-[#071726]/85 backdrop-blur-md text-slate-300 hover:text-white hover:bg-[#0a1c2e] border-t border-x border-white/15"
                   }`}
                 >
                   <ShieldCheck size={15} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
@@ -857,19 +862,19 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              {/* Main Search Bar Card — Brilliant High-Contrast White Surface */}
-              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.35)] p-4 sm:p-6 lg:p-7 border border-white/80 w-full text-left">
+              {/* Main Search Bar Card — High-End Clean Surface */}
+              <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] p-4 sm:p-5 lg:p-6 border border-slate-100 w-full text-left">
                 {activeSearchTab === "space" && (
                   <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
                     {/* Field 1: Location */}
                     <div className="flex-[1.1] md:pr-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Commercial Hub / City
                       </label>
                       <select
                         value={spaceCity}
                         onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="Mumbai">Mumbai (BKC)</option>
                         <option value="Bengaluru">Bengaluru (ORR)</option>
@@ -882,13 +887,13 @@ export default function LandingPage() {
 
                     {/* Field 2: Space Size */}
                     <div className="flex-1 md:px-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Plate Size / Requirement
                       </label>
                       <select
                         value={spaceBudget}
                         onChange={(e) => setSpaceBudget(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="All Sizes">Any Size Plate</option>
                         <option value="Under 5,000">1k - 5k Sq.Ft.</option>
@@ -900,13 +905,13 @@ export default function LandingPage() {
 
                     {/* Field 3: Type */}
                     <div className="flex-[1.15] md:px-5">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Workspace Model
                       </label>
                       <select
                         value={spaceGrade}
                         onChange={(e) => setSpaceGrade(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="Managed Office">Managed Office</option>
                         <option value="Commercial Office">Commercial Office</option>
@@ -920,9 +925,9 @@ export default function LandingPage() {
                     <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
                       <button
                         onClick={handleLandingSearch}
-                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full md:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-[13px] tracking-wide transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Search size={16} />
+                        <Search size={15} />
                         <span>Search Spaces</span>
                       </button>
                     </div>
@@ -933,13 +938,13 @@ export default function LandingPage() {
                   <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
                     {/* Field 1: FM Service */}
                     <div className="flex-1 md:pr-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Facility Service Needed
                       </label>
                       <select
                         value={vendorCategory}
                         onChange={(e) => setVendorCategory(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="HVAC Maintenance">HVAC &amp; Chiller Overhaul</option>
                         <option value="Deep Cleaning">Commercial Sanitization</option>
@@ -951,13 +956,13 @@ export default function LandingPage() {
 
                     {/* Field 2: City */}
                     <div className="flex-1 md:px-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Property Location
                       </label>
                       <select
                         value={vendorCity}
                         onChange={(e) => setVendorCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="Mumbai">Mumbai (BKC)</option>
                         <option value="Bengaluru">Bengaluru (ORR)</option>
@@ -970,11 +975,11 @@ export default function LandingPage() {
 
                     {/* Field 3: Scope */}
                     <div className="flex-1 md:px-5">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Contract Term
                       </label>
                       <select
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="Annual AMC">Annual Maintenance Contract (AMC)</option>
                         <option value="One-Time Service">One-Time Project / Overhaul</option>
@@ -986,9 +991,9 @@ export default function LandingPage() {
                     <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
                       <button
                         onClick={handleLandingSearch}
-                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full md:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-[13px] tracking-wide transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Search size={16} />
+                        <Search size={15} />
                         <span>Find Vendors</span>
                       </button>
                     </div>
@@ -999,11 +1004,11 @@ export default function LandingPage() {
                   <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
                     {/* Field 1: Managed Solution */}
                     <div className="flex-1 md:pr-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Stewardship Scope
                       </label>
                       <select
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="Turnkey Fitout">Turnkey Stewardship</option>
                         <option value="Integrated FM">Integrated IFM Operations</option>
@@ -1014,11 +1019,11 @@ export default function LandingPage() {
 
                     {/* Field 2: Portfolio Size */}
                     <div className="flex-1 md:px-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Gross Leasable Area
                       </label>
                       <select
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="10k-50k">10,000 - 50,000 Sq.Ft.</option>
                         <option value="50k-200k">50,000 - 200,000 Sq.Ft.</option>
@@ -1028,13 +1033,13 @@ export default function LandingPage() {
 
                     {/* Field 3: City */}
                     <div className="flex-1 md:px-5">
-                      <label className="block text-[11px] sm:text-xs font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                         Location
                       </label>
                       <select
                         value={spaceCity}
                         onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[15px] font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
                       >
                         <option value="Mumbai">Mumbai</option>
                         <option value="Bengaluru">Bengaluru</option>
@@ -1047,9 +1052,9 @@ export default function LandingPage() {
                     <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
                       <button
                         onClick={() => router.push('/managed-services')}
-                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                        className="w-full md:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-[13px] tracking-wide transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                       >
-                        <ArrowRight size={16} />
+                        <ArrowRight size={15} />
                         <span>Learn More</span>
                       </button>
                     </div>
