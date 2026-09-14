@@ -139,15 +139,15 @@ export default function MarketplaceDualShowcase({
             </Link>
           </div>
 
-          {/* 4 CARDS DISPLAY (COMPACT & BALANCED 4-COLUMN RESPONSIVE GRID) */}
+          {/* 4 CARDS DISPLAY (ELEVATED IMAGE HEIGHT & STREAMLINED CONTENT) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {offices.map((office) => (
               <div
                 key={office.id}
-                className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col justify-between group"
+                className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
               >
-                {/* Photo with Overlay Chips */}
-                <div className="relative h-36 sm:h-40 w-full overflow-hidden bg-slate-100">
+                {/* Photo with Overlay Chips — Expanded Visual Height */}
+                <div className="relative h-56 sm:h-60 w-full overflow-hidden bg-slate-100 shrink-0">
                   <Image
                     src={office.image}
                     alt={office.title}
@@ -155,44 +155,44 @@ export default function MarketplaceDualShowcase({
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
                   <div className="absolute top-2.5 left-2.5">
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded bg-teal-600 text-white uppercase tracking-wider shadow-xs">
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-teal-600 text-white uppercase tracking-wider shadow-xs">
                       {office.badge}
                     </span>
                   </div>
 
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white">
-                    <span className="text-[11px] font-bold text-white/95 flex items-center gap-1 backdrop-blur-xs bg-black/40 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold text-white/95 flex items-center gap-1 backdrop-blur-xs bg-black/50 px-2 py-0.5 rounded-md">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                       Verified Grade-A
                     </span>
-                    <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-white/95 text-slate-900 shadow-2xs">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/95 text-slate-900 shadow-2xs">
                       {office.specPill}
                     </span>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-4 flex flex-col justify-between flex-1">
+                {/* Content — Sleek & Compact */}
+                <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1">
                   <div>
-                    <h3 className="text-sm sm:text-[15px] font-extrabold text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-snug">
+                    <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight truncate">
                       {office.title}
                     </h3>
-                    <p className="text-[11.5px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                    <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mt-0.5 truncate">
                       <MapPin size={11} className="text-[#0F8B7D] shrink-0" />
                       <span>{office.location}</span>
                     </p>
 
-                    <p className="text-[11.5px] sm:text-xs text-slate-500 font-normal mt-2 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] text-slate-500 font-normal mt-1.5 leading-snug line-clamp-1">
                       {office.facilities}
                     </p>
                   </div>
 
-                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[11.5px] text-slate-500 font-semibold flex items-center gap-1">
-                      <BadgeCheck size={13} className="text-[#0F8B7D]" />
+                  <div className="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500 font-semibold flex items-center gap-1">
+                      <BadgeCheck size={12} className="text-[#0F8B7D]" />
                       <span>0% Broker Fee</span>
                     </span>
 
@@ -208,7 +208,7 @@ export default function MarketplaceDualShowcase({
                           router.push(office.linkUrl);
                         }
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[11.5px] font-bold transition-all shadow-2xs cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[11px] font-bold transition-all shadow-2xs cursor-pointer"
                     >
                       <span>Explore</span>
                       <ArrowRight size={11} />
@@ -241,15 +241,15 @@ export default function MarketplaceDualShowcase({
             </Link>
           </div>
 
-          {/* 4 CARDS DISPLAY (COMPACT & BALANCED 4-COLUMN RESPONSIVE GRID) */}
+          {/* 4 CARDS DISPLAY (ELEVATED IMAGE HEIGHT & STREAMLINED CONTENT) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {vendors.map((vendor) => (
               <div
                 key={vendor.id}
-                className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col justify-between group"
+                className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col justify-between group"
               >
-                {/* Photo with Overlay Chips */}
-                <div className="relative h-36 sm:h-40 w-full overflow-hidden bg-slate-100">
+                {/* Photo with Overlay Chips — Expanded Visual Height */}
+                <div className="relative h-56 sm:h-60 w-full overflow-hidden bg-slate-100 shrink-0">
                   <Image
                     src={vendor.image}
                     alt={vendor.title}
@@ -257,42 +257,42 @@ export default function MarketplaceDualShowcase({
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                    <span className="text-[9.5px] font-black px-2 py-0.5 rounded bg-slate-900/85 backdrop-blur-xs text-white">
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-900/85 backdrop-blur-xs text-white">
                       {vendor.category}
                     </span>
-                    <span className="text-[9.5px] font-bold px-2 py-0.5 rounded bg-emerald-600/90 text-white">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-600/90 text-white">
                       {vendor.vendorsCount}
                     </span>
                   </div>
 
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white">
-                    <span className="text-[11px] font-bold text-white/95 flex items-center gap-1 backdrop-blur-xs bg-black/40 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold text-white/95 flex items-center gap-1 backdrop-blur-xs bg-black/50 px-2 py-0.5 rounded-md">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                       Verified Vendor
                     </span>
-                    <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-white/95 text-slate-900 shadow-2xs">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/95 text-slate-900 shadow-2xs">
                       {vendor.sla}
                     </span>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-4 flex flex-col justify-between flex-1">
+                {/* Content — Sleek & Compact */}
+                <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1">
                   <div>
-                    <h3 className="text-sm sm:text-[15px] font-extrabold text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-snug">
+                    <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight truncate">
                       {vendor.title}
                     </h3>
-                    <p className="text-[11.5px] sm:text-xs text-slate-500 font-normal mt-1.5 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] text-slate-500 font-normal mt-1.5 leading-snug line-clamp-1">
                       {vendor.facilities}
                     </p>
                   </div>
 
-                  <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[11.5px] font-semibold text-emerald-700 flex items-center gap-1">
-                      <ShieldCheck size={13} className="text-emerald-600" />
+                  <div className="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                      <ShieldCheck size={12} className="text-emerald-600" />
                       <span>100% Escrow</span>
                     </span>
 
@@ -308,7 +308,7 @@ export default function MarketplaceDualShowcase({
                           router.push(vendor.linkUrl);
                         }
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-slate-900 hover:bg-[#0F8B7D] text-white text-[11.5px] font-bold transition-all shadow-2xs cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-slate-900 hover:bg-[#0F8B7D] text-white text-[11px] font-bold transition-all shadow-2xs cursor-pointer"
                     >
                       <span>Get Bids</span>
                       <ArrowRight size={11} />
