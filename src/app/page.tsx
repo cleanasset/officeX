@@ -770,10 +770,10 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO — PRESTIGIOUS ENTERPRISE WORKPLACE PLATFORM (CENTERED & HIGH CONTRAST) */}
-      <section className="relative min-h-[580px] md:min-h-[620px] lg:min-h-[660px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 md:pt-14 lg:pt-16 pb-12 md:pb-16 lg:pb-18 bg-[#071324]">
+      {/* SECTION 2: HERO — PRESTIGIOUS ENTERPRISE WORKPLACE PLATFORM (CENTERED & REFINED SCALE) */}
+      <section className="relative min-h-[540px] md:min-h-[580px] lg:min-h-[620px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-8 md:pt-12 lg:pt-14 pb-10 md:pb-14 lg:pb-16 bg-[#0b1c2e]">
         
-        {/* Background: Majestic Commercial Glass Skyscraper Architecture (Classic Dark Theme) */}
+        {/* Background: Majestic Commercial Glass Skyscraper Architecture (Refined Lighter Scrim) */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
           <Image
             src="/images/officex_prestige_cre_hero.jpg"
@@ -781,12 +781,12 @@ export default function LandingPage() {
             fill
             priority
             unoptimized
-            className="object-cover object-center"
+            className="object-cover object-center opacity-90"
           />
 
-          {/* Clean balanced gradient scrim allowing skyscraper to be visible while maintaining text contrast */}
-          <div className="absolute inset-0 bg-[#071324]/75 pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/85 via-[#071324]/50 to-[#071324]/90 pointer-events-none" />
+          {/* Slightly lighter, balanced gradient scrim allowing architectural facets to breathe */}
+          <div className="absolute inset-0 bg-[#0b1c2e]/60 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0b1c2e]/70 via-[#0b1c2e]/40 to-[#0b1c2e]/80 pointer-events-none" />
           
           {/* Subtle architectural precision dot-grid */}
           <div className="absolute inset-0 bg-[radial-gradient(#0f8b7d25_1px,transparent_1px)] [background-size:24px_24px] opacity-25 pointer-events-none" />
@@ -794,24 +794,24 @@ export default function LandingPage() {
 
         {/* Centered Enterprise Hero Column */}
         <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-          <div className="max-w-4xl text-center flex flex-col items-center">
+          <div className="max-w-3xl text-center flex flex-col items-center">
             
-            {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#06121e]/90 border border-teal-400/50 text-teal-300 text-xs sm:text-sm font-black tracking-wide mb-4 sm:mb-5 backdrop-blur-md shadow-lg mx-auto">
-              <span className="w-2 h-2 rounded-full bg-teal-300 animate-pulse" />
+            {/* Eyebrow badge — Compact & Tasteful */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#071726]/85 border border-teal-400/40 text-teal-300 text-[10px] sm:text-xs font-bold tracking-wider mb-3 backdrop-blur-md shadow-md mx-auto">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-300 animate-pulse" />
               <span>THE FUTURE OF COMMERCIAL WORKPLACE OPERATIONS</span>
             </div>
 
-            {/* Main Headline — Exact Requested Tag Line */}
-            <h1 className="text-3xl sm:text-5xl lg:text-[52px] font-black tracking-tight text-white leading-[1.15] mb-3.5 sm:mb-4 text-center uppercase">
+            {/* Main Headline — Managed Proportional Size */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-extrabold tracking-tight text-white leading-[1.2] mb-3 text-center uppercase">
               THE INTEGRATED ECOSYSTEM <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-100 to-emerald-300">
                 for SMARTER WORKPLACE OPERATIONS
               </span>
             </h1>
 
-            {/* Subhead — Clean Readable Slate */}
-            <p className="text-sm sm:text-base md:text-lg font-normal text-slate-200 leading-relaxed max-w-2xl mb-6 sm:mb-7 text-center mx-auto">
+            {/* Subhead — Balanced & Clean */}
+            <p className="text-xs sm:text-sm md:text-[15px] font-normal text-slate-200/90 leading-relaxed max-w-xl mb-5 text-center mx-auto">
               Find commercial spaces, source verified services, and manage building operations — all from one platform.
             </p>
 
@@ -822,37 +822,37 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("space")}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "space"
                       ? "bg-[#0F8B7D] text-white shadow-xl"
-                      : "bg-[#06121e]/90 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/25"
+                      : "bg-[#071726]/85 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/20"
                   }`}
                 >
-                  <Building2 size={16} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
+                  <Building2 size={15} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
                   <span>Find Commercial Space</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("vendor")}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "vendor"
                       ? "bg-[#0F8B7D] text-white shadow-xl"
-                      : "bg-[#06121e]/90 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/25"
+                      : "bg-[#071726]/85 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/20"
                   }`}
                 >
-                  <Wrench size={16} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
+                  <Wrench size={15} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
                   <span>Hire FM Vendors</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("managed")}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "managed"
                       ? "bg-[#0F8B7D] text-white shadow-xl"
-                      : "bg-[#06121e]/90 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/25"
+                      : "bg-[#071726]/85 backdrop-blur-md text-white hover:bg-[#0a1c2e] border-t border-x border-white/20"
                   }`}
                 >
-                  <ShieldCheck size={16} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
+                  <ShieldCheck size={15} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
                   <span>Operate &amp; Manage Spaces</span>
                 </button>
               </div>
