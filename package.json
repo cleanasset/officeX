@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node --max-http-header-size=32768 node_modules/next/dist/bin/next dev",
+    "dev:https": "node --max-http-header-size=32768 node_modules/next/dist/bin/next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
