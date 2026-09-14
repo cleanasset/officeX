@@ -15,6 +15,7 @@ import {
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
+import OfficeSpaceCalculator from "@/components/marketplace/OfficeSpaceCalculator";
 
 export default function PropertyMarketplacePage() {
   const router = useRouter();
@@ -352,9 +353,21 @@ export default function PropertyMarketplacePage() {
           </h1>
 
           {/* Subhead */}
-          <p className="text-xs sm:text-base md:text-lg text-slate-200 font-medium max-w-2xl mx-auto mb-8 drop-shadow-sm">
+          <p className="text-xs sm:text-base md:text-lg text-slate-200 font-medium max-w-2xl mx-auto mb-4 drop-shadow-sm">
             Flexible Commercial &amp; Office Spaces for Teams of Every Size
           </p>
+
+          {/* Quick CalQ Calculator Link */}
+          <div className="mb-8">
+            <a
+              href="#calq"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-400/15 hover:bg-teal-400/25 border border-teal-400/40 text-teal-300 text-xs font-bold transition-all shadow-sm backdrop-blur-xs cursor-pointer group"
+            >
+              <span className="text-sm">🧮</span>
+              <span>Need to estimate your space? <b>Try CalQ Space &amp; Rent Calculator</b></span>
+              <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+            </a>
+          </div>
 
           {/* myHQ-Style Multi-Tier Search Widget */}
           <div className="w-full max-w-4xl mx-auto">
@@ -795,6 +808,16 @@ export default function PropertyMarketplacePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* 4.5 OFFICEX CALQ: OFFICE SPACE FOOTPRINT & RENT CALCULATOR */}
+      <section className="py-14 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-slate-50 to-slate-100 border-t border-slate-200" id="calq">
+        <OfficeSpaceCalculator
+          onExploreSpaces={(city, micromarket) => {
+            router.push(`/public/search?city=${encodeURIComponent(city)}&q=${encodeURIComponent(micromarket)}`);
+          }}
+          onOpenAdvisor={() => setSlideInOpen(true)}
+        />
       </section>
 
       {/* 5. WHY CHOOSE OFFICEX WORKSPACES (myHQ Value Proposition) */}
