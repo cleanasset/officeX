@@ -797,21 +797,18 @@ export default function LandingPage() {
           <div className="max-w-4xl text-center flex flex-col items-center">
             
             {/* Eyebrow badge — Refined, Ethereal & Elegant */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#071726]/80 border border-teal-400/25 text-teal-300 text-[10px] sm:text-[11px] font-medium tracking-[0.12em] mb-4 backdrop-blur-md shadow-sm mx-auto">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#071726]/80 border border-teal-400/25 text-teal-300 text-[10px] sm:text-[11.5px] font-semibold tracking-wide mb-4 backdrop-blur-md shadow-sm mx-auto">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse shadow-[0_0_8px_rgba(45,212,191,0.8)]" />
-              <span className="uppercase text-teal-200/90">The Future of Commercial Workplace Operations</span>
+              <span className="text-teal-200/90">The Future of Commercial Workplace Operations</span>
             </div>
 
-            {/* Main Headline — Balanced Typography & Perfect Spacing */}
-            <h1 className="leading-[1.25] mb-4 text-center max-w-3xl mx-auto">
-              <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-bold text-white tracking-[0.04em] drop-shadow-xs">
-                THE INTEGRATED ECOSYSTEM
+            {/* Main Headline — Natural Title Case & Balanced Typography */}
+            <h1 className="leading-[1.2] sm:leading-[1.22] mb-4 text-center max-w-4xl mx-auto">
+              <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-[44px] font-bold text-white tracking-tight drop-shadow-xs">
+                The Integrated Ecosystem
               </span>
-              <span className="block text-lg sm:text-2xl md:text-3xl lg:text-[32px] font-bold mt-1 sm:mt-1.5 tracking-[0.03em] text-transparent bg-clip-text bg-gradient-to-r from-teal-200 via-teal-100 to-emerald-200">
-                <span className="font-normal text-teal-200/75 lowercase text-[0.72em] mr-2 tracking-normal align-middle inline-block">
-                  for
-                </span>
-                SMARTER WORKPLACE OPERATIONS
+              <span className="block text-xl sm:text-2xl md:text-3xl lg:text-[36px] font-bold mt-1 sm:mt-2 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-200 via-teal-100 to-emerald-200">
+                For Smarter Workplace Operations
               </span>
             </h1>
 
