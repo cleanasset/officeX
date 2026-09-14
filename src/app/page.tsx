@@ -770,25 +770,26 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO — PRESTIGIOUS ENTERPRISE WORKPLACE PLATFORM (HIGH CONTRAST & VISIBILITY) */}
-      <section className="relative min-h-[580px] md:min-h-[620px] lg:min-h-[660px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 md:pt-14 lg:pt-16 pb-12 md:pb-16 lg:pb-18 bg-[#091827]">
+      {/* SECTION 2: HERO — PRESTIGIOUS ENTERPRISE WORKPLACE PLATFORM (CENTERED & HIGH CONTRAST) */}
+      <section className="relative min-h-[580px] md:min-h-[620px] lg:min-h-[660px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 md:pt-14 lg:pt-16 pb-12 md:pb-16 lg:pb-18 bg-[#071324]">
         
-        {/* Background: Visible Daylight Commercial Glass Skyscraper Architecture */}
+        {/* Background: Majestic Commercial Glass Skyscraper Architecture (Classic Dark Theme) */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
           <Image
-            src="/images/officex_hero_daylight_tower.jpg"
+            src="/images/officex_prestige_cre_hero.jpg"
             alt="OfficeX Commercial Workplace Operations Ecosystem"
             fill
             priority
             unoptimized
-            className="object-cover object-center opacity-85"
+            className="object-cover object-center"
           />
 
-          {/* Clean balanced gradient scrim allowing skyscraper to be clearly visible while maintaining text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#091827]/80 via-[#091827]/45 to-[#091827]/85 pointer-events-none" />
+          {/* Clean balanced gradient scrim allowing skyscraper to be visible while maintaining text contrast */}
+          <div className="absolute inset-0 bg-[#071324]/75 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#071324]/85 via-[#071324]/50 to-[#071324]/90 pointer-events-none" />
           
           {/* Subtle architectural precision dot-grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(#0f8b7d30_1px,transparent_1px)] [background-size:24px_24px] opacity-25 pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(#0f8b7d25_1px,transparent_1px)] [background-size:24px_24px] opacity-25 pointer-events-none" />
         </div>
 
         {/* Centered Enterprise Hero Column */}
@@ -801,11 +802,11 @@ export default function LandingPage() {
               <span>THE FUTURE OF COMMERCIAL WORKPLACE OPERATIONS</span>
             </div>
 
-            {/* Main Headline — Crisp & Clean Typography Without Smudged Shadows */}
-            <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-black tracking-tight text-white leading-[1.2] mb-3.5 sm:mb-4 text-center">
-              The Integrated Ecosystem for <br className="hidden sm:inline" />
+            {/* Main Headline — Exact Requested Tag Line */}
+            <h1 className="text-3xl sm:text-5xl lg:text-[52px] font-black tracking-tight text-white leading-[1.15] mb-3.5 sm:mb-4 text-center uppercase">
+              THE INTEGRATED ECOSYSTEM <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-100 to-emerald-300">
-                Smarter Workplace Operations
+                for SMARTER WORKPLACE OPERATIONS
               </span>
             </h1>
 
@@ -852,7 +853,7 @@ export default function LandingPage() {
                   }`}
                 >
                   <ShieldCheck size={16} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
-                  <span>Managed Services</span>
+                  <span>Operate &amp; Manage Spaces</span>
                 </button>
               </div>
 
