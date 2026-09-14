@@ -99,7 +99,7 @@ export default function FMMarketplacePage() {
       id: "hvac",
       name: "HVAC & Chillers",
       shortName: "HVAC",
-      count: "420+ Contractors",
+      count: "420+ Vendors",
       icon: Sparkles,
       image: "/images/showcase_hvac_hd.jpg",
       desc: "Centrifugal chiller overhauls, VRV/VRF multi-splits, cooling towers, duct sanitization & IAQ air balancing",
@@ -112,7 +112,7 @@ export default function FMMarketplacePage() {
       id: "mep",
       name: "MEP & Electrical",
       shortName: "MEP & Electrical",
-      count: "340+ Contractors",
+      count: "340+ Vendors",
       icon: Zap,
       image: "/images/showcase_mep_hd.jpg",
       desc: "33kV substations, DG synchronization, HT/LT panel maintenance, power factor compensation & thermography audits",
@@ -125,7 +125,7 @@ export default function FMMarketplacePage() {
       id: "housekeeping",
       name: "Commercial Hygiene",
       shortName: "Housekeeping",
-      count: "560+ Contractors",
+      count: "560+ Vendors",
       icon: Sparkles,
       image: "/images/showcase_cleaning_hd.jpg",
       desc: "BMU cradle high-rise facade cleaning, robotic floor scrubbers, cleanroom sanitization & automated waste stewardship",
@@ -138,7 +138,7 @@ export default function FMMarketplacePage() {
       id: "security",
       name: "Security & Guarding",
       shortName: "Security",
-      count: "290+ Contractors",
+      count: "290+ Vendors",
       icon: ShieldCheck,
       image: "/images/showcase_security_guards.jpg",
       desc: "PSARA licensed manned guarding, optical speed-gate turnstiles, 24/7 central CCTV command room & perimeter surveillance",
@@ -151,7 +151,7 @@ export default function FMMarketplacePage() {
       id: "fire",
       name: "Fire & Life Safety",
       shortName: "Fire Safety",
-      count: "210+ Contractors",
+      count: "210+ Vendors",
       icon: Flame,
       image: "/images/showcase_fire_hd.jpg",
       desc: "Wet riser hydrant lines, addressable smoke dampers, automatic sprinkler arrays & CFO / DGMS Fire NOC renewals",
@@ -164,7 +164,7 @@ export default function FMMarketplacePage() {
       id: "lifts",
       name: "Lifts & Mobility",
       shortName: "Lifts",
-      count: "185+ Contractors",
+      count: "185+ Vendors",
       icon: Building2,
       image: "/images/showcase_lifts_hd.jpg",
       desc: "High-speed traction elevators, automated rescue devices (ARD), escalator maintenance & certified annual load testing",
@@ -177,7 +177,7 @@ export default function FMMarketplacePage() {
       id: "landscaping",
       name: "Landscaping & Greenery",
       shortName: "Landscaping",
-      count: "225+ Contractors",
+      count: "225+ Vendors",
       icon: CheckCircle2,
       image: "/images/showcase_landscaping_hd.jpg",
       desc: "Double-height atrium living walls, biophilic office greenery, rooftop garden terraces & IoT smart automated drip irrigation",
@@ -190,7 +190,7 @@ export default function FMMarketplacePage() {
       id: "pest",
       name: "Pest Defense",
       shortName: "Pest Control",
-      count: "170+ Contractors",
+      count: "170+ Vendors",
       icon: Bug,
       image: "/images/showcase_pest_hd.jpg",
       desc: "Integrated pest management (IPM), ultrasonic rodent repellent arrays, odorless gel baiting & commercial HACCP compliance",
@@ -395,81 +395,6 @@ export default function FMMarketplacePage() {
     });
   }, [selectedCategoryFilter, selectedCityFilter, searchService, searchLocation]);
 
-  // Pricing Tiers for Service Providers (Veendoor Model strictly without "Pro")
-  const pricingTiers = [
-    {
-      name: "Basic Directory",
-      price: "Free",
-      period: "forever",
-      desc: "Essential digital listing for verified local trade specialists and subcontractors.",
-      badge: "Starter",
-      popular: false,
-      btnColor: "bg-slate-100 hover:bg-slate-200 text-slate-800",
-      btnText: "Get Started Free",
-      features: [
-        "Verified company profile & contact info",
-        "1 primary commercial trade category",
-        "Standard search directory visibility",
-        "Direct client quote inquiries",
-        "OfficeX verified badge eligible"
-      ]
-    },
-    {
-      name: "Verified Partner",
-      price: "₹2,499",
-      period: "per month",
-      desc: "The standard choice for licensed commercial FM contractors seeking steady corporate leads.",
-      badge: "Most Popular",
-      popular: true,
-      btnColor: "bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white shadow-md shadow-[#0F8B7D]/20",
-      btnText: "Start 14-Day Free Trial",
-      features: [
-        "Teal 'OFFICEX VERIFIED' trust badge",
-        "Up to 6 trade categories & metro micro-markets",
-        "Priority top-tier search placement",
-        "Audited Grade-A client reviews showcase",
-        "Fast-track 24hr statutory license audit",
-        "Direct click-to-call phone & RFQ link"
-      ]
-    },
-    {
-      name: "Enterprise Growth",
-      price: "₹6,999",
-      period: "per month",
-      desc: "For mid-sized FM organizations bidding on campus-wide commercial maintenance AMCs.",
-      badge: "High Growth",
-      popular: false,
-      btnColor: "bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold",
-      btnText: "Upgrade to Growth",
-      features: [
-        "All Verified Partner features included",
-        "Access to commercial RFP tender board",
-        "Hero banner spotlight on category pages",
-        "Dedicated account manager & SLA desk",
-        "Unlimited service categories & metro corridors",
-        "Monthly lead & performance analytics"
-      ]
-    },
-    {
-      name: "Institutional Partner",
-      price: "₹14,999",
-      period: "per month",
-      desc: "For institutional Grade-A facilities conglomerates and nationwide OEM networks.",
-      badge: "Enterprise",
-      popular: false,
-      btnColor: "bg-[#0F8B7D]/90 hover:bg-[#0F8B7D] text-white shadow-md",
-      btnText: "Contact Enterprise Sales",
-      features: [
-        "Top-of-marketplace homepage spotlight",
-        "Custom video showcases & portfolio albums",
-        "Bidirectional API integration with OfficeX CAFM",
-        "Multi-city institutional tender bidding",
-        "Escrow protected milestone payouts",
-        "Quarterly vendor governance & SLA audit reports"
-      ]
-    }
-  ];
-
   // Industry Insights & SOP Guides (The Maintenance Hub)
   const maintenanceHubArticles = [
     {
@@ -576,7 +501,7 @@ export default function FMMarketplacePage() {
 
               {/* Subhead - Short, crisp sentence */}
               <p className="text-sm sm:text-base text-slate-600 font-medium max-w-lg mb-6 leading-normal">
-                Hire pre-vetted commercial contractors with guaranteed SLAs and audited compliance.
+                Hire pre-vetted commercial vendors with guaranteed SLAs and audited compliance.
               </p>
 
               {/* Search Card - Clean, spacious & perfectly organized */}
@@ -663,7 +588,7 @@ export default function FMMarketplacePage() {
                     type="submit"
                     className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0F8B7D]/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
                   >
-                    <span>Find Contractors</span>
+                    <span>Find Vendors</span>
                     <ArrowRight size={14} />
                   </button>
                 </form>
@@ -826,7 +751,7 @@ export default function FMMarketplacePage() {
               Commercial FM Service Categories
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Explore vetted contractors by specialized engineering trade, statutory discipline, and equipment scale
+              Explore vetted vendors by specialized engineering trade, statutory discipline, and equipment scale
             </p>
           </div>
 
@@ -1361,80 +1286,6 @@ export default function FMMarketplacePage() {
             </div>
 
           </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 7. VENDOR MEMBERSHIP TIERS (Veendoor Architecture, strictly NO "Pro")     */}
-      {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
-            Contractor Growth Plans
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-            Choose Your Commercial Partner Tier
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-2">
-            Scale your commercial FM business with verified trust badges, priority lead routing, and tender boards.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {pricingTiers.map((tier, idx) => (
-            <div
-              key={idx}
-              className={`bg-white rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative ${
-                tier.popular
-                  ? "border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xl"
-                  : "border-slate-200 shadow-2xs hover:shadow-md"
-              }`}
-            >
-              {tier.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0F8B7D] text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow-xs">
-                  {tier.badge}
-                </span>
-              )}
-
-              <div>
-                <h3 className="text-base font-black text-slate-900 mb-1">{tier.name}</h3>
-                <p className="text-xs text-slate-500 mb-4 min-h-[36px]">{tier.desc}</p>
-
-                <div className="mb-5 pb-4 border-b border-slate-100">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-900">{tier.price}</span>
-                  <span className="text-xs text-slate-500 font-semibold ml-1">/{tier.period}</span>
-                </div>
-
-                <ul className="space-y-2.5 mb-6 text-xs text-slate-600 font-medium">
-                  {tier.features.map((feat, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <Check size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSlideInOpen(true)}
-                className={`w-full py-2.5 px-4 rounded-xl font-extrabold text-xs transition-all cursor-pointer text-center ${tier.btnColor}`}
-              >
-                {tier.btnText}
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 text-center text-xs sm:text-sm text-slate-500">
-          Need a multi-city enterprise procurement agreement for national assets?{" "}
-          <button
-            type="button"
-            onClick={() => setSlideInOpen(true)}
-            className="text-[#0F8B7D] font-bold hover:underline cursor-pointer"
-          >
-            Contact Enterprise FM Desk →
-          </button>
         </div>
       </section>
 

@@ -4,7 +4,19 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CheckCircle, ArrowRight, Sparkles, HelpCircle, ShieldCheck, Lock } from "lucide-react";
+import {
+  CheckCircle2,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+  Lock,
+  Building2,
+  Clock,
+  Wrench,
+  Layers,
+  HelpCircle,
+  FileCheck2
+} from "lucide-react";
 import HeroSection from "@/components/marketing/HeroSection";
 import FAQAccordion from "@/components/marketing/FAQAccordion";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
@@ -15,24 +27,33 @@ import Footer from "@/components/Footer";
 export default function PricingPage() {
   const router = useRouter();
   const [slideInOpen, setSlideInOpen] = useState(false);
-  const [pricingView, setPricingView] = useState<"tiers" | "matrix">("tiers");
+  const [selectedAudience, setSelectedAudience] = useState<string>("Commercial Property Portfolio");
+
+  const openAudienceEnquiry = (audienceName: string) => {
+    setSelectedAudience(audienceName);
+    setSlideInOpen(true);
+  };
 
   const pricingFaqs = [
     {
-      q: "Can I upgrade or downgrade my tier at any time?",
-      a: "Yes. You can upgrade immediately to access advanced modules like automated rent roll, CAM billing, and compliance radar. If downgrading, your existing data remains securely archived in accordance with statutory requirements."
+      q: "When will public pricing be officially revealed?",
+      a: "Public subscription tiers are scheduled to launch following our closed enterprise beta rollout. In the meantime, custom commercial terms tailored to your square footage and operational scope are actively available upon request."
+    },
+    {
+      q: "Can I get a custom commercial proposal today?",
+      a: "Yes. Our enterprise advisory team provides comprehensive, confidential commercial proposals within 24 business hours based on your leasable area, number of assets, and required software modules."
+    },
+    {
+      q: "What advantages do early charter partners receive?",
+      a: "Early partners receive grandfathered launch-tier pricing for up to 3 years, prioritized feature onboarding, dedicated account directors, and waived initial asset ingestion fees."
     },
     {
       q: "How does escrow pricing work in the Marketplace?",
-      a: "For all procurement and contractor work orders executed through OfficeX Marketplace, milestone-based funds are held in a secure Razorpay Escrow account and released only upon your explicit digital sign-off."
+      a: "For all procurement and contractor work orders executed through OfficeX Marketplace, milestone-based funds are held in a secure, audited escrow account and released only upon explicit digital completion sign-off."
     },
     {
-      q: "Is there a long-term lock-in?",
-      a: "Standard subscriptions run on flexible annual or multi-year terms tailored to commercial real estate budget cycles. Starter plans are available with monthly billing options."
-    },
-    {
-      q: "Are statutory compliance reports audit-ready?",
-      a: "Yes. All Fire, HVAC, Lift, ESG, and DPDP Act 2023 reports generated from OfficeX include cryptographically verified timestamps, engineer sign-offs, and complete audit trail logs."
+      q: "Are pilot trials available for commercial office towers?",
+      a: "Yes. We offer qualified Grade-A commercial properties a 30-day guided pilot encompassing visitor speed-gate management, automated rent roll generation, and compliance radar tracking."
     }
   ];
 
@@ -43,299 +64,246 @@ export default function PricingPage() {
 
       {/* Hero */}
       <HeroSection
-        badge="TRANSPARENT ENTERPRISE PRICING"
-        headline="Simple, Predictable Plans for Every CRE Portfolio"
-        subheadline="From single properties to multi-region commercial portfolios. Choose between flexible plan cards or explore the full module-by-module capability matrix."
-        primaryCta={{ label: "Start Free", href: "/signup" }}
-        secondaryCta={{ label: "Talk to Sales", href: "/contact" }}
+        badge="OFFICIAL PRICING ANNOUNCEMENT"
+        headline="Commercial Plans & Pricing — Coming Soon"
+        subheadline="We are currently curating tailored pricing structures for commercial property portfolios, occupiers, and FM contractors. In the interim, bespoke commercial proposals and early pilot access are available on request."
+        primaryCta={{ label: "Request Custom Proposal", href: "#custom-quote" }}
+        secondaryCta={{ label: "Schedule a Call", onClick: () => setSlideInOpen(true) }}
         bgImage="/images/work_pricing_agreement.jpg"
         visualMetrics={[
-          { label: "Transparent Tiers", value: "3 Plans" },
-          { label: "Escrow Protection", value: "100%" },
-          { label: "Data Residency", value: "Sovereign Tier-4" }
+          { label: "Custom Proposals", value: "Available Now" },
+          { label: "Charter Privileges", value: "Active" },
+          { label: "Public Rates", value: "Coming Soon" }
         ]}
       />
 
-      {/* Main Pricing & Matrix Section */}
+      {/* Coming Soon Announcement & Early Partner Cards */}
       <section className="py-16 md:py-24 bg-[#F8FAFC] border-t border-b border-slate-200 px-4 md:px-6 w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-10 md:mb-14">
+          
+          {/* Header Banner */}
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
             <span className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3.5 py-1 rounded-full border border-teal-200">
-              PLAN COMPARISON
+              PRICING UNDER WRAP
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-3">
-              Plans &amp; Feature Capabilities
+              Tailored Commercials Built Around Your Scale
             </h2>
-            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-2 md:mt-3">
-              Switch between card overview and detailed module capability matrix anytime.
+            <p className="text-slate-600 font-medium text-xs sm:text-sm md:text-base mt-3 leading-relaxed">
+              Commercial real estate operations require precision economics, not one-size-fits-all pricing. Select your stakeholder category below to request a tailored commercial proposal.
             </p>
+          </div>
 
-            {/* View Mode Switcher */}
-            <div className="mt-6 inline-flex items-center p-1 rounded-full bg-slate-200/80 border border-slate-300">
-              <button
-                type="button"
-                onClick={() => setPricingView("tiers")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  pricingView === "tiers"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
+          {/* 3 Stakeholder Proposal Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
+            
+            {/* Card 1: Property Owners & Asset Managers */}
+            <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all">
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] mb-4">
+                  <Building2 size={20} />
+                </div>
+                <div className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full mb-2">
+                  Owners &amp; Landlords
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-lg sm:text-xl">
+                  Asset &amp; Portfolio Management
+                </h3>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  Per-sq.ft. subscription scaled to your gross leasable area, covering rent roll, CAM billing, and compliance vault.
+                </p>
+
+                <div className="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pricing Model</div>
+                  <div className="text-base font-black text-slate-900 mt-0.5">Bespoke / Sq.Ft.</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Discounts for multi-tower portfolios</div>
+                </div>
+                
+                <ul className="space-y-3 text-xs text-slate-600 font-semibold">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Automated rent roll &amp; utility CAM allocations</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Statutory compliance tracker (40+ municipal NOCs)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Razorpay split online collection engine</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Dedicated Property Director onboarding support</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button 
+                onClick={() => openAudienceEnquiry("Commercial Property Owners & Asset Managers")}
+                className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs mt-8 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
               >
-                Plan Overview
+                <span>Request Owner Proposal</span>
+                <ArrowRight size={14} />
               </button>
-              <button
-                type="button"
-                onClick={() => setPricingView("matrix")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  pricingView === "matrix"
-                    ? "bg-white text-[#0F8B7D] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
+            </div>
+
+            {/* Card 2: Facility Managers & Corporate Occupiers */}
+            <div className="rounded-3xl p-6 sm:p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-100 lg:scale-105 hover:shadow-2xl transition-all">
+              <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full bg-[#0F8B7D] text-white text-[10px] font-black uppercase tracking-widest shadow-md">
+                HIGH DEMAND
+              </span>
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0F8B7D] mb-4">
+                  <Layers size={20} />
+                </div>
+                <div className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full mb-2">
+                  Facility Managers &amp; Teams
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-lg sm:text-xl">
+                  Operate CAFM &amp; Maintenance
+                </h3>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  Unified work-order tracking, 52-week automated PPM schedule, and touchless visitor management.
+                </p>
+
+                <div className="my-6 p-4 rounded-2xl bg-teal-50/60 border border-teal-100">
+                  <div className="text-xs font-bold text-teal-700 uppercase tracking-wider">Pricing Model</div>
+                  <div className="text-base font-black text-slate-900 mt-0.5">Flexible Pilot + Monthly</div>
+                  <div className="text-[11px] text-teal-800 mt-0.5">30-day pilot on qualified properties</div>
+                </div>
+                
+                <ul className="space-y-3 text-xs text-slate-600 font-semibold">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Full CAFM with asset QR code registry</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>52-week PPM scheduling with automated engineer alerts</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Optical speed-gate turnstile access integration</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Tenant helpdesk ticketing &amp; meeting room booking</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-2 mt-8">
+                <button 
+                  onClick={() => openAudienceEnquiry("Facility Operations & CAFM Teams")}
+                  className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
+                >
+                  <span>Request Operator Pilot</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Card 3: FM Contractors & Service Providers */}
+            <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all">
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] mb-4">
+                  <Wrench size={20} />
+                </div>
+                <div className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full mb-2">
+                  FM Vendors &amp; Subcontractors
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-lg sm:text-xl">
+                  Contractor Partner Network
+                </h3>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  Marketplace directory presence, direct client RFQ lead routing, and milestone-backed escrow payout guarantees.
+                </p>
+
+                <div className="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pricing Model</div>
+                  <div className="text-base font-black text-slate-900 mt-0.5">Charter Partner Tier</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Zero listing fee during launch phase</div>
+                </div>
+                
+                <ul className="space-y-3 text-xs text-slate-600 font-semibold">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Verified trade trust badge &amp; compliance check</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Access to high-value commercial RFP tender board</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Guaranteed milestone escrow payout protection</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>Multi-city corporate vendor listing privileges</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button 
+                onClick={() => openAudienceEnquiry("FM Contractors & Service Providers")}
+                className="w-full py-3.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold text-xs mt-8 transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-2"
               >
-                Module &amp; Capability Matrix
+                <span>Join Partner Waitlist</span>
+                <ArrowRight size={14} />
               </button>
             </div>
           </div>
 
-          {pricingView === "tiers" ? (
-            <div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch max-w-6xl mx-auto">
-                {/* Plan 1: Starter */}
-                <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">Starter</h3>
-                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">For single-site offices up to 10k sqft.</p>
-                    <div className="text-3xl font-black text-slate-900 mt-6">Free</div>
-                    
-                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Access to Marketplace</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Basic Helpdesk</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Up to 3 Users</li>
-                    </ul>
-                  </div>
-                  <button 
-                    onClick={() => router.push("/signup")}
-                    className="w-full py-3.5 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs mt-8 hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    Sign Up Free
-                  </button>
-                </div>
-
-                {/* Plan 2: Professional */}
-                <div className="rounded-3xl p-6 sm:p-8 border-2 border-[#0F8B7D] bg-white flex flex-col justify-between relative shadow-xl scale-100 lg:scale-105">
-                  <span className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black uppercase tracking-widest shadow-md">MOST POPULAR</span>
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">Professional</h3>
-                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">For growing multi-site portfolios.</p>
-                    <div className="text-3xl font-black text-slate-900 mt-6">₹4,999<span className="text-xs font-semibold text-slate-400">/mo</span></div>
-                    
-                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Escrow Payments</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> PPM Calendar</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Compliance Tracker</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Unlimited Users</li>
-                    </ul>
-                  </div>
-                  <div className="flex flex-col gap-2 mt-8">
-                    <button 
-                      onClick={() => router.push('/signup?plan=professional')}
-                      className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-md"
-                    >
-                      Get Started
-                    </button>
-                    <button 
-                      onClick={() => router.push('/contact')}
-                      className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors cursor-pointer"
-                    >
-                      Talk to Sales
-                    </button>
-                  </div>
-                </div>
-
-                {/* Plan 3: Enterprise */}
-                <div className="rounded-3xl p-6 sm:p-8 border border-slate-200 bg-white flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">Enterprise</h3>
-                    <p className="text-xs text-slate-400 mt-1.5 font-semibold">Custom deployment for large institutions.</p>
-                    <div className="text-3xl font-black text-slate-900 mt-6">Custom</div>
-                    
-                    <ul className="mt-8 flex flex-col gap-3.5 text-xs text-slate-600 font-bold">
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> White-labeling</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> ERP Integrations</li>
-                      <li className="flex items-center gap-2"><CheckCircle size={15} className="text-[#0F8B7D] shrink-0" /> Dedicated Success Mgr</li>
-                    </ul>
-                  </div>
-                  <button 
-                    onClick={() => setSlideInOpen(true)}
-                    className="w-full py-3.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold text-xs mt-8 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Talk to Sales
-                  </button>
-                </div>
+          {/* Charter Partner Privileges Strip */}
+          <div className="mt-14 max-w-5xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center md:text-left">
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">Privilege 01</span>
+                <h4 className="text-sm font-bold text-slate-900">Grandfathered Rates</h4>
+                <p className="text-xs text-slate-500">Locked-in launch terms for multi-year stability.</p>
               </div>
-
-              {/* Hook to Capability Matrix view */}
-              <div className="mt-12 text-center">
-                <button
-                  type="button"
-                  onClick={() => setPricingView("matrix")}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 hover:text-[#0F8B7D] hover:border-teal-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <span>Compare detailed module access across Starter, Professional &amp; Enterprise</span>
-                  <ArrowRight size={14} className="text-[#0F8B7D]" />
-                </button>
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">Privilege 02</span>
+                <h4 className="text-sm font-bold text-slate-900">Zero Ingestion Fee</h4>
+                <p className="text-xs text-slate-500">Free digital migration of existing rent rolls &amp; CAD files.</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">Privilege 03</span>
+                <h4 className="text-sm font-bold text-slate-900">Dedicated Account Team</h4>
+                <p className="text-xs text-slate-500">Direct Slack/WhatsApp hotline with solutions engineers.</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">Privilege 04</span>
+                <h4 className="text-sm font-bold text-slate-900">100% Escrow Security</h4>
+                <p className="text-xs text-slate-500">Audited milestone protection for vendor work orders.</p>
               </div>
             </div>
-          ) : (
-            /* Module Access Matrix View */
-            <div className="max-w-5xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900">
-                    Detailed Plan Capability &amp; Module Access
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Compare features and modules included across Starter, Professional, and Enterprise.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPricingView("tiers")}
-                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  ← Back to Plan Cards
-                </button>
-              </div>
+          </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="pb-4 text-slate-400 font-extrabold uppercase text-[10px] tracking-wider">
-                        Feature / Module
-                      </th>
-                      <th className="pb-4 text-center">
-                        <div className="font-extrabold text-slate-900 text-sm">Starter</div>
-                        <div className="text-slate-500 font-semibold text-xs mt-0.5">Free</div>
-                      </th>
-                      <th className="pb-4 text-center bg-teal-50/70 rounded-t-xl px-3">
-                        <div className="font-extrabold text-[#0F8B7D] text-sm">Professional</div>
-                        <div className="text-teal-700 font-semibold text-xs mt-0.5">₹4,999/mo</div>
-                      </th>
-                      <th className="pb-4 text-center">
-                        <div className="font-extrabold text-slate-900 text-sm">Enterprise</div>
-                        <div className="text-slate-500 font-semibold text-xs mt-0.5">Custom</div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Marketplace: Space &amp; Vendor Discovery</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Marketplace: RFQ &amp; Escrow Milestone Payouts</td>
-                      <td className="py-3.5 text-center text-slate-400">2 RFQs/mo</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Unlimited</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Unlimited + Volume Rates</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Operate: CAFM &amp; 52-Week PPM Automation</td>
-                      <td className="py-3.5 text-center text-slate-400">Basic</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Full Suite</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Full + IoT &amp; BMS Sync</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Manage: Automated Rent Roll &amp; CAM Billing</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓ (Razorpay)</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓ + Multi-Entity SPVs</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Manage: 90/60/30 Compliance Radar</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">✓ (40+ Statutory NOCs)</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">✓ + On-Ground Liaison</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Intelligence: Portfolio NOI &amp; ESG Reports</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black bg-teal-50/40">Standard MIS</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">SEBI BRSR + Custom Data Sync</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Managed Services: On-Ground Technical Teams</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-slate-400 bg-teal-50/40">Available as Add-on</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Full Turnkey Deployment</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3.5 font-bold text-slate-900">Enterprise SLA &amp; Dedicated Account Manager</td>
-                      <td className="py-3.5 text-center text-slate-300">—</td>
-                      <td className="py-3.5 text-center text-slate-400 bg-teal-50/40">Standard Support</td>
-                      <td className="py-3.5 text-center text-emerald-600 font-black">Contractually Backed 99.9%</td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-slate-200">
-                      <td className="pt-5 font-bold text-slate-400">Action</td>
-                      <td className="pt-5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => router.push("/signup")}
-                          className="px-4 py-2 rounded-xl border border-slate-300 text-slate-800 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          Sign Up Free
-                        </button>
-                      </td>
-                      <td className="pt-5 text-center bg-teal-50/40 rounded-b-xl px-3">
-                        <button
-                          type="button"
-                          onClick={() => router.push("/signup?plan=professional")}
-                          className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs transition-colors cursor-pointer shadow-sm"
-                        >
-                          Get Started
-                        </button>
-                      </td>
-                      <td className="pt-5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setSlideInOpen(true)}
-                          className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 font-bold text-xs transition-colors cursor-pointer"
-                        >
-                          Talk to Sales
-                        </button>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       </section>
 
       {/* Pricing FAQs */}
       <FAQAccordion
-        title="Frequently Asked Pricing Questions"
-        subtitle="Common questions regarding billing cycles, escrow protections, and tier upgrades."
+        title="Frequently Asked Commercial Questions"
+        subtitle="Common questions regarding proposal turnarounds, charter partner benefits, and escrow operations."
         faqs={pricingFaqs}
       />
 
       {/* Inline Enquiry Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-b from-teal-50/50 via-white to-slate-50 text-slate-900 border-t border-slate-200 px-4 md:px-6">
+      <section id="custom-quote" className="py-16 md:py-24 bg-gradient-to-b from-teal-50/50 via-white to-slate-50 text-slate-900 border-t border-slate-200 px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <span className="text-xs font-bold uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-              CUSTOM PRICING &amp; ENQUIRIES
+              CUSTOM PROPOSALS &amp; ENQUIRIES
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mt-3 text-slate-900">
-              Need a Custom Multi-City Enterprise Quote?
+              Request Your Custom Commercial Proposal
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-2">
-              Our enterprise solutions team responds within 24 business hours with detailed scoping.
+              Our enterprise solutions team responds within 24 business hours with detailed scoping and commercials.
             </p>
           </div>
           <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200">

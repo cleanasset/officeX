@@ -5,7 +5,6 @@ import HeroSection from "@/components/marketing/HeroSection";
 import ProblemSolution from "@/components/marketing/ProblemSolution";
 import FeatureGrid from "@/components/marketing/FeatureGrid";
 import UseCaseSection from "@/components/marketing/UseCaseCard";
-import PricingTable from "@/components/marketing/PricingTable";
 import OnboardingTimeline from "@/components/marketing/OnboardingTimeline";
 import FAQAccordion from "@/components/marketing/FAQAccordion";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
@@ -176,61 +175,6 @@ export default function IntelligencePage() {
             audience: "Portfolio Asset Directors",
             scenario: "Comparing facility management vendor performance across 12 commercial properties to renegotiate master service contracts.",
             outcome: "Objective SLA quartile data identified underperforming contractors and unlocked ₹45L in SLA penalty clawbacks and volume discounts."
-          }
-        ]}
-      />
-
-      {/* Pricing Table */}
-      <PricingTable
-        accentColor="#0F8B7D"
-        title="Intelligence Pricing"
-        subtitle="Portfolio-level analytics tiers designed for commercial asset owners and institutional investment funds."
-        tiers={[
-          {
-            name: "Standard Analytics",
-            price: "Free",
-            period: "with Professional",
-            description: "Essential portfolio analytics and standard monthly reporting for single-building owners.",
-            features: [
-              "Portfolio occupancy and WALE tracking",
-              "Standard energy and water consumption charts",
-              "Pre-built monthly PDF MIS export",
-              "Quarterly vendor SLA summary"
-            ],
-            ctaLabel: "Included in Plan",
-            ctaHref: "/signup?plan=professional"
-          },
-          {
-            name: "Intelligence Add-on",
-            price: "₹1L - ₹5L",
-            period: "building/year",
-            description: "Advanced ESG compliance, custom KPI builder, and predictive maintenance capabilities.",
-            highlight: true,
-            features: [
-              "SEBI BRSR and GRESB ESG reporting packs",
-              "Custom financial KPI builder & alerts",
-              "Utility sub-meter IoT telemetry connectors",
-              "Vendor performance quartile benchmarking",
-              "Early access to Phase 2 AI Assistant",
-              "Dedicated data analyst support"
-            ],
-            ctaLabel: "Add Intelligence",
-            ctaHref: "/contact?interest=intelligence-addon"
-          },
-          {
-            name: "Institutional Enterprise",
-            price: "Custom",
-            description: "Dedicated data warehouse and multi-fund business intelligence architecture.",
-            features: [
-              "Direct Snowflake / BigQuery / Databricks sync",
-              "Multi-entity fund consolidation & waterfall modeling",
-              "Custom machine learning predictive models",
-              "Automated quarterly investor portal feeds",
-              "Dedicated enterprise data engineer",
-              "Full SOC 2 Type II data isolation guarantee"
-            ],
-            ctaLabel: "Talk to Sales",
-            ctaHref: "/contact?interest=intelligence-enterprise"
           }
         ]}
       />

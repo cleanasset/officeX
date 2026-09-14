@@ -5,7 +5,6 @@ import HeroSection from "@/components/marketing/HeroSection";
 import ProblemSolution from "@/components/marketing/ProblemSolution";
 import FeatureGrid from "@/components/marketing/FeatureGrid";
 import UseCaseSection from "@/components/marketing/UseCaseCard";
-import PricingTable from "@/components/marketing/PricingTable";
 import OnboardingTimeline from "@/components/marketing/OnboardingTimeline";
 import FAQAccordion from "@/components/marketing/FAQAccordion";
 import FinalCTABand from "@/components/marketing/FinalCTABand";
@@ -214,62 +213,6 @@ export default function ManagePage() {
             audience: "Institutional Real Estate Investors",
             scenario: "Requiring consistent quarterly financial reporting and audit-ready tenant billing data across an acquired office portfolio.",
             outcome: "Automated monthly MIS delivery reduced financial close time from 3 weeks to 2 business days."
-          }
-        ]}
-      />
-
-      {/* Pricing Table */}
-      <PricingTable
-        accentColor="#0F8B7D"
-        title="Manage Pricing"
-        subtitle="Transparent per-square-foot pricing designed for commercial property portfolios."
-        tiers={[
-          {
-            name: "Starter",
-            price: "Free",
-            period: "with Marketplace Plan",
-            description: "Basic lease register and manual rent roll generation for single-property owners.",
-            features: [
-              "Up to 10 active leases stored digitally",
-              "Manual rent roll & invoice generation",
-              "Standard statutory compliance checklists",
-              "Basic collection ledger"
-            ],
-            ctaLabel: "Get Started Free",
-            ctaHref: "/signup?plan=manage-starter"
-          },
-          {
-            name: "Professional",
-            price: "₹2.50 - ₹3.50",
-            period: "sq.ft./month",
-            description: "Comprehensive property management and compliance engine for Grade-A assets.",
-            highlight: true,
-            features: [
-              "Unlimited leases & tenant profiles",
-              "Automated CAM billing & utility allocations",
-              "Statutory compliance alert engine (90/60/30 days)",
-              "Razorpay online collections & auto-receipting",
-              "Digital lease repository with document locker",
-              "Auto-generated monthly MIS reporting",
-              "Priority phone & email support"
-            ],
-            ctaLabel: "Start Professional",
-            ctaHref: "/signup?plan=manage-professional"
-          },
-          {
-            name: "Enterprise",
-            price: "Custom",
-            description: "For institutional funds, developers, and REIT portfolios with complex corporate structures.",
-            features: [
-              "Multi-entity consolidation & SPV accounting",
-              "Custom ERP / SAP / Tally Prime integration",
-              "Bespoke investor reporting templates",
-              "Dedicated compliance audit specialist",
-              "Full white-label landlord & tenant portal",
-              "24/7 dedicated enterprise SLA"
-            ],
-            ctaLabel: "Talk to Sales",
-            ctaHref: "/contact?interest=manage-enterprise"
           }
         ]}
       />

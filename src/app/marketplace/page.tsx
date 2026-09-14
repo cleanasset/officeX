@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Building2, Calendar, FileText, Handshake,
+  Building2, Building, Boxes, LayoutGrid, Calendar, FileText, Handshake,
   CheckCircle2, KeyRound, ShieldCheck, Search,
   MapPin, Users, Sparkles, ArrowRight, ArrowUpRight,
   Filter, Check, Star, Phone, Clock, ChevronRight,
@@ -24,9 +24,9 @@ export default function PropertyMarketplacePage() {
 
   const [activeSolution, setActiveSolution] = useState<SolutionType>("longterm");
   const [activeSubPills, setActiveSubPills] = useState<Record<SolutionType, string>>({
-    longterm: "coworking",
+    longterm: "office",
     daypass: "single",
-    events: "meeting",
+    events: "coworking",
     virtual: "company",
   });
   const [searchLocationQuery, setSearchLocationQuery] = useState("");
@@ -47,17 +47,17 @@ export default function PropertyMarketplacePage() {
   > = {
     longterm: {
       pills: [
-        { id: "coworking", label: "Coworking Space", icon: Building2 },
-        { id: "managed", label: "Managed Office", icon: Building2 },
-        { id: "commercial", label: "Office / Commercial", icon: Building2 },
+        { id: "office", label: "Office Space", icon: Building2 },
+        { id: "industry", label: "Industry", icon: Building },
+        { id: "warehouse", label: "Warehouse", icon: Boxes },
       ],
       descriptions: {
-        coworking: "Rent dedicated seats and private cabins in fully-equipped coworking spaces",
-        managed: "Custom-built, fully managed private floors for enterprise teams of 20 to 500+",
-        commercial: "Bare-shell and warm-shell commercial floor plates for institutional corporate leasing",
+        office: "Grade-A corporate office floor plates, commercial towers, and private enterprise suites",
+        industry: "Manufacturing facilities, industrial sheds, factories, and development plots",
+        warehouse: "Grade-A warehousing, logistics parks, cold storage, and regional distribution centers",
       },
-      buttonText: "View Workspaces",
-      placeholder: "Search location, tech park, or building...",
+      buttonText: "View Spaces",
+      placeholder: "Search location, industrial zone, or tech park...",
     },
     daypass: {
       pills: [
@@ -75,17 +75,15 @@ export default function PropertyMarketplacePage() {
     },
     events: {
       pills: [
-        { id: "meeting", label: "Meeting Rooms (4-12)", icon: Users },
-        { id: "boardroom", label: "Boardrooms (12-25)", icon: Building2 },
-        { id: "event", label: "Event Spaces (30-100+)", icon: Sparkles },
+        { id: "coworking", label: "Coworking Space", icon: Building2 },
+        { id: "cabins", label: "Private Team Cabins", icon: Users },
       ],
       descriptions: {
-        meeting: "Book hourly meeting rooms equipped with 4K AV displays and high-speed Wi-Fi",
-        boardroom: "Executive boardrooms with premium video conferencing and presentation setups",
-        event: "Spacious townhalls and event venues for corporate workshops and conferences",
+        coworking: "Dedicated desks, flexible hot desks, and private seats in Grade-A coworking hubs",
+        cabins: "Sound-insulated lockable acoustic cabins with meeting room credits and high-speed Wi-Fi",
       },
-      buttonText: "Find Meeting Rooms",
-      placeholder: "Search conference and meeting spaces...",
+      buttonText: "Find Workspaces",
+      placeholder: "Search coworking hubs or locations...",
     },
     virtual: {
       pills: [
@@ -105,7 +103,7 @@ export default function PropertyMarketplacePage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (activeSolution === "events" || activeSolution === "virtual") {
+    if (activeSolution === "virtual") {
       setSlideInOpen(true);
       return;
     }
@@ -115,19 +113,20 @@ export default function PropertyMarketplacePage() {
     if (activeSolution === "daypass") {
       params.set("type", "daypass");
       params.set("passType", activeSubPills.daypass);
+    } else if (activeSolution === "events") {
+      params.set("type", activeSubPills.events);
     } else {
       params.set("category", activeSubPills.longterm);
     }
     router.push(`/public/search?${params.toString()}`);
   };
 
-  // myHQ-inspired Workspace Models
+  // myHQ-inspired Workspace Models without pricing
   const workspaceModels = [
     {
       id: "managed",
       title: "Enterprise Managed Offices",
       subtitle: "Bespoke private floors custom-built for teams of 30 to 500+",
-      pricing: "From ₹115 / sq.ft",
       badge: "Most Popular for Enterprises",
       image: "/images/workspace_managed_suite.jpg",
       perks: ["Zero Capex & Fit-out Cost", "Dedicated Reception & IT", "Custom Corporate Branding", "All-inclusive CAM & Utilities"]
@@ -136,7 +135,6 @@ export default function PropertyMarketplacePage() {
       id: "coworking",
       title: "Dedicated Coworking Desks",
       subtitle: "Plug-and-play dedicated desks with 24/7 access in Grade-A hubs",
-      pricing: "From ₹6,500 / desk / mo",
       badge: "Instant Move-in",
       image: "/images/workspace_dedicated_desks.jpg",
       perks: ["High-Speed Fiber Internet", "Meeting Room Credits", "Pantry & Premium Coffee", "Community & Networking Events"]
@@ -145,7 +143,6 @@ export default function PropertyMarketplacePage() {
       id: "cabin",
       title: "Private Team Cabins",
       subtitle: "Lockable sound-insulated acoustic suites for 4 to 25 members",
-      pricing: "From ₹8,999 / seat / mo",
       badge: "High Privacy",
       image: "/images/workspace_private_cabin.jpg",
       perks: ["Biometric Access Control", "Whiteboard & Ergonomic Seating", "Daily Sanitization", "Mail & Package Handling"]
@@ -154,7 +151,6 @@ export default function PropertyMarketplacePage() {
       id: "warmshell",
       title: "Commercial Warm & Bare Shells",
       subtitle: "Institutional floor plates ready for long-term commercial leases",
-      pricing: "From ₹65 / sq.ft / mo",
       badge: "Direct Landlord Leases",
       image: "/images/showcase_commercial_warmshell.jpg",
       perks: ["100% Power & DG Backup", "Multi-Level Car Parking", "Fire NOC & OC Certified", "Flexible Rent-free Fit-out"]
@@ -173,8 +169,6 @@ export default function PropertyMarketplacePage() {
       region: "ahmedabad",
       tag: "Top Tech Corridor",
       spaces: "48+ Verified Spaces",
-      rate: "₹55 - ₹95",
-      unit: "sq.ft / mo",
       desc: "Ahmedabad's premier IT backbone hosting Grade-A commercial tech parks and Titanium City Center.",
       image: "/images/district_sghighway.jpg",
       highlights: ["Titanium City Center", "Grade-A IT Towers", "S.P. Ring Road Access"],
@@ -189,8 +183,6 @@ export default function PropertyMarketplacePage() {
       region: "ahmedabad",
       tag: "Global FinTech Hub",
       spaces: "34+ Verified Spaces",
-      rate: "₹80 - ₹140",
-      unit: "sq.ft / mo",
       desc: "India's flagship International Financial Services Centre offering 100% tax exemptions and global banking.",
       image: "/images/district_giftcity.jpg",
       highlights: ["FinTech SEZ / IFSC", "Tax Holiday Exemptions", "Dual Currency Gateway"],
@@ -205,8 +197,6 @@ export default function PropertyMarketplacePage() {
       region: "ahmedabad",
       tag: "Boutique CBD",
       spaces: "29+ Verified Spaces",
-      rate: "₹70 - ₹110",
-      unit: "sq.ft / mo",
       desc: "Upscale corporate boulevard with boutique executive towers, Michelin-standard dining, and premier retail.",
       image: "/images/district_prahladnagar.jpg",
       highlights: ["Executive Turnkey Suites", "Fine Dining & Retail", "Prime SG Road Proximity"],
@@ -221,8 +211,6 @@ export default function PropertyMarketplacePage() {
       region: "mumbai",
       tag: "Financial Capital",
       spaces: "62+ Verified Spaces",
-      rate: "₹180 - ₹350",
-      unit: "sq.ft / mo",
       desc: "The nerve center of Indian banking, global investment firms, consulates, and Fortune 100 conglomerates.",
       image: "/images/district_mumbaibkc.jpg",
       highlights: ["BFSI Corporate Hub", "IGBC Platinum Assets", "Bullet Train Terminal"],
@@ -237,8 +225,6 @@ export default function PropertyMarketplacePage() {
       region: "bengaluru",
       tag: "Silicon Plateau",
       spaces: "75+ Verified Spaces",
-      rate: "₹95 - ₹165",
-      unit: "sq.ft / mo",
       desc: "The silicon heartbeat of India, home to massive GCC campuses, hyperscalers, and deep-tech innovation parks.",
       image: "/images/district_bangaloreorr.jpg",
       highlights: ["Global Capability Centers", "Integrated Campuses", "Metro Blue Line"],
@@ -253,8 +239,6 @@ export default function PropertyMarketplacePage() {
       region: "ncr",
       tag: "Fortune 500 Hub",
       spaces: "58+ Verified Spaces",
-      rate: "₹120 - ₹210",
-      unit: "sq.ft / mo",
       desc: "Futuristic integrated business district featuring direct Rapid Metro connectivity and world-class CyberHub.",
       image: "/images/district_cybercity.jpg",
       highlights: ["Fortune 500 Campuses", "Integrated Rapid Metro", "CyberHub Social Hub"],
@@ -270,8 +254,6 @@ export default function PropertyMarketplacePage() {
       type: "Enterprise Managed Floor",
       area: "18,500 Sq.Ft.",
       seats: "180 Seats",
-      rate: "₹75",
-      unit: "sq.ft/mo",
       tag: "Immediate Move-in",
       image: "/images/showcase_office_techhorizon_hd.jpg",
       features: ["Metro 400m", "100% DG Backup", "Cafeteria", "LEED Gold Certified"],
@@ -284,8 +266,6 @@ export default function PropertyMarketplacePage() {
       type: "Grade-A+ Commercial Suite",
       area: "32,000 Sq.Ft.",
       seats: "320 Workstations",
-      rate: "₹105",
-      unit: "sq.ft/mo",
       tag: "IFSC Special Zone",
       image: "/images/space_gift_one_tower.jpg",
       features: ["SEZ Tax Benefits", "Triple Height Atrium", "Multi-Tier Security", "District Cooling"],
@@ -298,8 +278,6 @@ export default function PropertyMarketplacePage() {
       type: "Boutique Executive Office",
       area: "12,000 Sq.Ft.",
       seats: "110 Seats",
-      rate: "₹88",
-      unit: "sq.ft/mo",
       tag: "Premium CBD",
       image: "/images/space_prahlad_capital.jpg",
       features: ["Valet Parking", "Acoustic Phone Booths", "Barista Lounge", "Fiber Internet"],
@@ -312,8 +290,6 @@ export default function PropertyMarketplacePage() {
       type: "Enterprise Headquarters Plate",
       area: "45,000 Sq.Ft.",
       seats: "450 Seats",
-      rate: "₹240",
-      unit: "sq.ft/mo",
       tag: "Prestige Headquarters",
       image: "/images/officex_prestige_cre_hero.jpg",
       features: ["Helipad Access", "IGBC Platinum", "Dedicated High-Speed Elevators", "Concierge"],
@@ -419,8 +395,8 @@ export default function PropertyMarketplacePage() {
                     : "bg-black/55 hover:bg-black/75 text-white font-bold backdrop-blur-md border-t border-x border-white/15"
                 }`}
               >
-                <Users size={22} className={activeSolution === "events" ? "text-[#0F8B7D]" : "text-white/80"} />
-                <span className="text-xs sm:text-sm">Meetings &amp; Events</span>
+                <LayoutGrid size={22} className={activeSolution === "events" ? "text-[#0F8B7D]" : "text-white/80"} />
+                <span className="text-xs sm:text-sm text-center leading-tight">Coworking Space</span>
               </button>
 
               <button
@@ -580,8 +556,11 @@ export default function PropertyMarketplacePage() {
 
                 <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
                   <div>
-                    <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Starting</span>
-                    <span className="text-xs font-black text-slate-900 leading-none">{model.pricing}</span>
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Availability</span>
+                    <span className="text-xs font-bold text-teal-700 leading-none flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Verified Spaces
+                    </span>
                   </div>
                   <button
                     onClick={() => setSlideInOpen(true)}
@@ -667,9 +646,11 @@ export default function PropertyMarketplacePage() {
 
                   <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
                     <div>
-                      <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Rental Rate</span>
-                      <span className="text-xs font-black text-slate-900 leading-none">{space.rate}</span>
-                      <span className="text-[10px] text-slate-500 font-medium"> /{space.unit}</span>
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Status</span>
+                      <span className="text-xs font-bold text-teal-700 leading-none flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Available Now
+                      </span>
                     </div>
                     <button
                       onClick={() => setSlideInOpen(true)}
@@ -794,13 +775,11 @@ export default function PropertyMarketplacePage() {
                 <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
                   <div>
                     <span className="text-[9px] uppercase font-bold text-slate-400 block leading-none mb-0.5">
-                      Avg. Rental
+                      Inventory
                     </span>
-                    <span className="text-xs font-black text-slate-900 leading-none">
-                      {district.rate}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold leading-none">
-                      /{district.unit}
+                    <span className="text-xs font-bold text-teal-700 leading-none flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      {district.spaces}
                     </span>
                   </div>
 

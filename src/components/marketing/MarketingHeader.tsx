@@ -20,6 +20,7 @@ export default function MarketingHeader({
   const router = useRouter();
   const pathname = usePathname();
   const isFmMarketplace = pathname === "/fm-marketplace" || activePath === "/fm-marketplace";
+  const isOfficeMarketplace = pathname === "/marketplace" || activePath === "/marketplace";
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -93,7 +94,7 @@ export default function MarketingHeader({
                   <div className="space-y-1">
                     <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                       <div className="text-xs font-bold text-slate-900">All FM Services &amp; AMCs</div>
-                      <div className="text-[11px] text-slate-500">Pre-vetted contractors across 8 trades</div>
+                      <div className="text-[11px] text-slate-500">Pre-vetted vendors across 8 trades</div>
                     </Link>
                     <Link href="/fm-marketplace?category=hvac" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
                       <div className="text-xs font-bold text-slate-900">HVAC &amp; Chiller</div>
@@ -115,53 +116,15 @@ export default function MarketingHeader({
                 </div>
               </div>
 
-              {/* 2. HVAC & Chiller Category with Repair, Maintenance, AMC Subcategories */}
-              <div className="relative group py-2">
-                <Link
-                  href="/fm-marketplace?category=hvac"
-                  className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer font-bold text-slate-800"
-                >
-                  <span>HVAC &amp; Chiller</span>
-                  <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
-                </Link>
-                <div className="absolute top-full left-0 w-[320px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
-                    HVAC &amp; Chiller Solutions
-                  </div>
-                  <div className="space-y-1">
-                    <Link href="/fm-marketplace?category=hvac" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">All HVAC &amp; Chiller Services</div>
-                      <div className="text-[11px] text-slate-500">Complete cooling, chillers &amp; air treatment</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=hvac&service=repair" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">Emergency &amp; Breakdown Repair</div>
-                      <div className="text-[11px] text-slate-500">30-min SLA dispatch for compressor &amp; chiller faults</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=hvac&service=maintenance" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">Preventive Maintenance (PPM)</div>
-                      <div className="text-[11px] text-slate-500">Coil cleaning, filter changes &amp; pressure testing</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=hvac&service=amc" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">Annual Maintenance Contracts (AMC)</div>
-                      <div className="text-[11px] text-slate-500">Comprehensive &amp; Non-Comprehensive annual plans</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=hvac&service=chillers" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">Chiller Plant Overhaul &amp; Descaling</div>
-                      <div className="text-[11px] text-slate-500">Centrifugal &amp; screw chiller condenser tube cleaning</div>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Find Contractors */}
+              {/* 2. Find Vendors */}
               <Link
                 href="/fm-marketplace#vendors-directory"
                 className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
               >
-                Find Contractors
+                Find Vendors
               </Link>
 
-              {/* 4. Post an RFQ */}
+              {/* 3. Post an RFQ */}
               <Link
                 href="/fm-marketplace#rfq-section"
                 className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
@@ -169,12 +132,12 @@ export default function MarketingHeader({
                 Post an RFQ
               </Link>
 
-              {/* 4. Join as Contractor (replaces "List Your Space") */}
+              {/* 4. Join as Vendor */}
               <Link
                 href="/vendor"
                 className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap font-bold text-[#0F8B7D]"
               >
-                Join as Contractor
+                Join as Vendor
               </Link>
 
               {/* 5. How It Works */}
@@ -226,41 +189,43 @@ export default function MarketingHeader({
                 </div>
               </div>
 
-              {/* 2. FM Services Dropdown */}
-              <div className="relative group py-2">
-                <Link
-                  href="/fm-marketplace"
-                  className={`hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer ${
-                    activePath === "/fm-marketplace" ? "text-[#0F8B7D] font-extrabold" : ""
-                  }`}
-                >
-                  <span>FM Services</span>
-                  <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
-                </Link>
-                <div className="absolute top-full left-0 w-[300px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
-                    Verified Facilities Contractors
-                  </div>
-                  <div className="space-y-1">
-                    <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">All FM Services &amp; AMCs</div>
-                      <div className="text-[11px] text-slate-500">Pre-vetted contractors across 8 trades</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=hvac" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">HVAC &amp; Chiller AMCs</div>
-                      <div className="text-[11px] text-slate-500">Commercial cooling &amp; VRV maintenance</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=housekeeping" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">Housekeeping &amp; Deep Cleaning</div>
-                      <div className="text-[11px] text-slate-500">Façade cleaning &amp; mechanized hygiene</div>
-                    </Link>
-                    <Link href="/fm-marketplace?category=mep" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                      <div className="text-xs font-bold text-slate-900">MEP, Electrical &amp; DG Sets</div>
-                      <div className="text-[11px] text-slate-500">Power backup &amp; electrical safety audits</div>
-                    </Link>
+              {/* 2. FM Services Dropdown (hidden on Office Marketplace landing page) */}
+              {!isOfficeMarketplace && (
+                <div className="relative group py-2">
+                  <Link
+                    href="/fm-marketplace"
+                    className={`hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer ${
+                      activePath === "/fm-marketplace" ? "text-[#0F8B7D] font-extrabold" : ""
+                    }`}
+                  >
+                    <span>FM Services</span>
+                    <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+                  </Link>
+                  <div className="absolute top-full left-0 w-[300px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
+                      Verified Facilities Vendors
+                    </div>
+                    <div className="space-y-1">
+                      <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                        <div className="text-xs font-bold text-slate-900">All FM Services &amp; AMCs</div>
+                        <div className="text-[11px] text-slate-500">Pre-vetted vendors across 8 trades</div>
+                      </Link>
+                      <Link href="/fm-marketplace?category=hvac" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                        <div className="text-xs font-bold text-slate-900">HVAC &amp; Chiller AMCs</div>
+                        <div className="text-[11px] text-slate-500">Commercial cooling &amp; VRV maintenance</div>
+                      </Link>
+                      <Link href="/fm-marketplace?category=housekeeping" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                        <div className="text-xs font-bold text-slate-900">Housekeeping &amp; Deep Cleaning</div>
+                        <div className="text-[11px] text-slate-500">Façade cleaning &amp; mechanized hygiene</div>
+                      </Link>
+                      <Link href="/fm-marketplace?category=mep" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                        <div className="text-xs font-bold text-slate-900">MEP, Electrical &amp; DG Sets</div>
+                        <div className="text-[11px] text-slate-500">Power backup &amp; electrical safety audits</div>
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* 3. List Your Space (Landlords & Brokers) */}
               <Link
@@ -272,17 +237,7 @@ export default function MarketingHeader({
                 List Your Space
               </Link>
 
-              {/* 4. Pricing */}
-              <Link
-                href="/pricing"
-                className={`hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap ${
-                  activePath === "/pricing" ? "text-[#0F8B7D] font-extrabold" : ""
-                }`}
-              >
-                Pricing
-              </Link>
-
-              {/* 5. Company Dropdown */}
+              {/* 4. Company Dropdown */}
               <div className="relative group py-2">
                 <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
                   <span>Company</span>
@@ -357,22 +312,14 @@ export default function MarketingHeader({
               <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
                 All FM Services
               </Link>
-              <div className="pl-3 border-l-2 border-teal-200 py-1 space-y-1">
-                <Link href="/fm-marketplace?category=hvac" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-bold text-slate-900 hover:text-[#0F8B7D]">
-                  HVAC &amp; Chiller
-                </Link>
-                <div className="text-[11px] text-slate-500 font-medium">
-                  Repair · Maintenance · Annual AMC · Overhaul
-                </div>
-              </div>
               <Link href="/fm-marketplace#vendors-directory" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
-                Find Contractors
+                Find Vendors
               </Link>
               <Link href="/fm-marketplace#rfq-section" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
                 Post an RFQ
               </Link>
               <Link href="/vendor" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
-                Join as Contractor
+                Join as Vendor
               </Link>
               <Link href="/fm-marketplace#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
                 How It Works
@@ -383,14 +330,13 @@ export default function MarketingHeader({
               <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
                 Find Office Spaces
               </Link>
-              <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
-                FM Services Marketplace
-              </Link>
+              {!isOfficeMarketplace && (
+                <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
+                  FM Services Marketplace
+                </Link>
+              )}
               <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
                 List Your Space
-              </Link>
-              <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
-                Pricing
               </Link>
               <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
                 About OfficeX
