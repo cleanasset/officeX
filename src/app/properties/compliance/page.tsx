@@ -89,7 +89,7 @@ export default function ComplianceTrackerDashboard() {
       issueDate: "13-Sep-2025",
       expiry: "12-Sep-2026",
       expiryDateObj: "2026-09-12",
-      daysRemaining: -2,
+      daysRemaining: -3,
       status: "Expired",
       inspectingOfficer: "Er. Ramesh Kulkarni, Dy CFO",
       inspectionCycle: "Annual Mandatory",
@@ -105,45 +105,45 @@ export default function ComplianceTrackerDashboard() {
       authority: "PWD Electrical Inspectorate (Govt of Maharashtra)",
       regNumber: "PWD-LFT-MUM-8821",
       issueDate: "02-Jan-2026",
-      expiry: "01-Jan-2027",
+      expiry: "25-Oct-2026",
       expiryDateObj: "2026-10-25",
-      daysRemaining: 41,
+      daysRemaining: 40,
       status: "Expiring Soon",
       inspectingOfficer: "S. V. Patil, Senior Inspector",
       inspectionCycle: "Half-Yearly Mandatory",
-      penaltyClause: "Immediate suspension of Bank 2 Lifts",
+      penaltyClause: "Immediate suspension of Bank 2 Lifts (Units L1-L6)",
       documentUrl: "LIFT_FITNESS_APEX_2026.pdf"
     },
     {
       id: "CERT-003",
       name: "PESO Diesel Storage & Class-B Fuel License",
       category: "peso",
-      categoryLabel: "Petroleum & Explosives (DG Fuel)",
+      categoryLabel: "Petroleum & DG Fuel (PESO)",
       property: "Maker Maxity Mumbai",
       authority: "Petroleum and Explosives Safety Organisation (PESO)",
       regNumber: "PESO-DL-WZ-55901",
       issueDate: "16-Jul-2023",
-      expiry: "15-Jul-2026",
-      expiryDateObj: "2026-09-15",
-      daysRemaining: 1,
+      expiry: "22-Sep-2026",
+      expiryDateObj: "2026-09-22",
+      daysRemaining: 7,
       status: "Expiring Soon",
       inspectingOfficer: "Controller of Explosives, West Circle",
       inspectionCycle: "Triennial (3-Year)",
-      penaltyClause: "Immediate closure of 1,500 kVA DG Fuel Substation",
+      penaltyClause: "Immediate seal on 20KL underground diesel tank",
       documentUrl: "PESO_DIESEL_MAKER_2023.pdf"
     },
     {
       id: "CERT-004",
       name: "MPCB Consent to Operate (Air & Water Pollution)",
       category: "pcb",
-      categoryLabel: "Pollution Control (STP & DG)",
+      categoryLabel: "Pollution Control (MPCB)",
       property: "Godrej BKC Horizon",
       authority: "Maharashtra Pollution Control Board (MPCB)",
       regNumber: "MPCB-RO-MUM-CTO-1029",
       issueDate: "01-Dec-2023",
       expiry: "30-Nov-2026",
       expiryDateObj: "2026-11-30",
-      daysRemaining: 77,
+      daysRemaining: 76,
       status: "Valid",
       inspectingOfficer: "Regional Officer - Bandra Kurla",
       inspectionCycle: "3-Year Renewal",
@@ -158,28 +158,28 @@ export default function ComplianceTrackerDashboard() {
       property: "One BKC (Apex Tower)",
       authority: "HDFC ERGO General Insurance Co.",
       regNumber: "POL-CRE-HDFC-992011",
-      issueDate: "23-Aug-2025",
-      expiry: "22-Aug-2026",
-      expiryDateObj: "2026-09-22",
-      daysRemaining: 8,
+      issueDate: "28-Sep-2025",
+      expiry: "27-Sep-2026",
+      expiryDateObj: "2026-09-27",
+      daysRemaining: 12,
       status: "Expiring Soon",
       inspectingOfficer: "Lead Underwriter: Commercial Property Div",
       inspectionCycle: "Annual Policy",
-      penaltyClause: "Mortgage default clause with Senior Lender",
+      penaltyClause: "Mortgage compliance covenant breach with Senior Lenders",
       documentUrl: "HDFC_INSURANCE_ONE_BKC.pdf"
     },
     {
       id: "CERT-006",
       name: "Structural Stability & Wind Load Certification",
       category: "structural",
-      categoryLabel: "Structural Engineering",
+      categoryLabel: "Structural & HVAC",
       property: "Maker Maxity Mumbai",
       authority: "Municipal Corporation of Greater Mumbai (MCGM)",
       regNumber: "MCGM-STR-AUD-3301",
       issueDate: "10-May-2024",
       expiry: "09-May-2029",
-      expiryDateObj: "2026-09-28",
-      daysRemaining: 14,
+      expiryDateObj: "2029-05-09",
+      daysRemaining: 966,
       status: "Valid",
       inspectingOfficer: "Chartered Structural Engineer V. Deshmukh",
       inspectionCycle: "5-Year Audit",
@@ -194,15 +194,177 @@ export default function ComplianceTrackerDashboard() {
       property: "One BKC (Apex Tower)",
       authority: "Directorate of Industrial Safety & Health (DISH)",
       regNumber: "DISH-PV-HVAC-7712",
-      issueDate: "15-Sep-2025",
-      expiry: "14-Sep-2026",
-      expiryDateObj: "2026-09-14",
-      daysRemaining: 0,
-      status: "Expiring Soon",
-      inspectingOfficer: "Chief Inspector of Boilers & Pressure Vessels",
-      inspectionCycle: "Annual",
+      issueDate: "18-Sep-2025",
+      expiry: "17-Sep-2026",
+      expiryDateObj: "2026-09-17",
+      daysRemaining: 2,
+      status: "In Renewal",
+      inspectingOfficer: "Bureau Veritas India Ltd (Assigned Vendor)",
+      inspectionCycle: "Annual Mandatory",
       penaltyClause: "Mandatory shutdown of 3 x 400 TR chillers",
       documentUrl: "HVAC_VESSEL_APEX_2025.pdf"
+    },
+    {
+      id: "CERT-008",
+      name: "Fire Safety NOC & Evacuation Plan",
+      category: "fire",
+      categoryLabel: "Fire & Life Safety",
+      property: "Maker Maxity Mumbai",
+      authority: "Mumbai Fire Brigade (CFO)",
+      regNumber: "MH-FB-NOC-55109",
+      issueDate: "15-Oct-2025",
+      expiry: "14-Oct-2026",
+      expiryDateObj: "2026-10-14",
+      daysRemaining: 29,
+      status: "Expiring Soon",
+      inspectingOfficer: "Divisional Fire Officer, Zone 3",
+      inspectionCycle: "Annual Mandatory",
+      penaltyClause: "Show cause notice under Sec 6 Maharashtra Fire Act",
+      documentUrl: "FIRE_NOC_MAKER_MAXITY_2025.pdf"
+    },
+    {
+      id: "CERT-009",
+      name: "High Voltage HT Substation Clearance (33kV)",
+      category: "structural",
+      categoryLabel: "Electrical & Substation",
+      property: "Godrej BKC Horizon",
+      authority: "Chief Electrical Inspector to Govt (CEIG)",
+      regNumber: "CEIG-MH-SUB-2024-881",
+      issueDate: "12-Nov-2024",
+      expiry: "11-Nov-2026",
+      expiryDateObj: "2026-11-11",
+      daysRemaining: 57,
+      status: "Expiring Soon",
+      inspectingOfficer: "Electrical Inspector, Mumbai Division",
+      inspectionCycle: "Biennial (2-Year)",
+      penaltyClause: "Disconnection of 33kV dedicated feeder from BEST",
+      documentUrl: "HT_SUBSTATION_GODREJ_2024.pdf"
+    },
+    {
+      id: "CERT-010",
+      name: "GPCB Consolidated Consent to Operate (CC&A)",
+      category: "pcb",
+      categoryLabel: "Pollution Control (GPCB)",
+      property: "Shivalik Shilp, Ahmedabad",
+      authority: "Gujarat Pollution Control Board (GPCB)",
+      regNumber: "GPCB-CCA-AHD-9941",
+      issueDate: "05-Jan-2025",
+      expiry: "04-Jan-2028",
+      expiryDateObj: "2028-01-04",
+      daysRemaining: 476,
+      status: "Valid",
+      inspectingOfficer: "Regional Officer, GPCB Ahmedabad-East",
+      inspectionCycle: "3-Year Renewal",
+      penaltyClause: "Notice under Sec 33A Water Prevention Act",
+      documentUrl: "GPCB_CCA_SHIVALIK_2025.pdf"
+    },
+    {
+      id: "CERT-011",
+      name: "Fire Safety Certificate (Form 15 & Sprinkler System)",
+      category: "fire",
+      categoryLabel: "Fire & Life Safety",
+      property: "Shivalik Shilp, Ahmedabad",
+      authority: "Ahmedabad Fire & Emergency Services (AFES)",
+      regNumber: "AFES-FSC-2025-1102",
+      issueDate: "20-Sep-2025",
+      expiry: "19-Sep-2026",
+      expiryDateObj: "2026-09-19",
+      daysRemaining: 4,
+      status: "In Renewal",
+      inspectingOfficer: "TÜV SÜD South Asia (Auditing Partner)",
+      inspectionCycle: "Annual Mandatory",
+      penaltyClause: "Commercial building sealing notice under GPMC Act",
+      documentUrl: "FIRE_SAFETY_SHIVALIK_2025.pdf"
+    },
+    {
+      id: "CERT-012",
+      name: "Passenger Lift Fitness & Speed Governor Certificate",
+      category: "lift",
+      categoryLabel: "Lifts & Escalators",
+      property: "Shivalik Shilp, Ahmedabad",
+      authority: "Office of the Chief Electrical Inspector, Gandhinagar",
+      regNumber: "GUJ-LFT-AHD-4019",
+      issueDate: "10-Feb-2026",
+      expiry: "09-Feb-2027",
+      expiryDateObj: "2027-02-09",
+      daysRemaining: 147,
+      status: "Valid",
+      inspectingOfficer: "Inspector of Lifts, Ahmedabad District",
+      inspectionCycle: "Annual Mandatory",
+      penaltyClause: "De-energisation of passenger lifts",
+      documentUrl: "LIFT_FITNESS_SHIVALIK_2026.pdf"
+    },
+    {
+      id: "CERT-013",
+      name: "MPCB Consent to Operate (STP & DG Stack Monitoring)",
+      category: "pcb",
+      categoryLabel: "Pollution Control (MPCB)",
+      property: "Business Hub, Pune",
+      authority: "Maharashtra Pollution Control Board (MPCB)",
+      regNumber: "MPCB-RO-PUN-CTO-8832",
+      issueDate: "15-Aug-2024",
+      expiry: "14-Aug-2027",
+      expiryDateObj: "2027-08-14",
+      daysRemaining: 333,
+      status: "Valid",
+      inspectingOfficer: "Field Officer, Pune Division 2",
+      inspectionCycle: "3-Year Renewal",
+      penaltyClause: "Bank guarantee forfeiture under Air Act 1981",
+      documentUrl: "MPCB_CTO_PUNE_2024.pdf"
+    },
+    {
+      id: "CERT-014",
+      name: "Fire Safety NOC (Final Occupancy & Riser System)",
+      category: "fire",
+      categoryLabel: "Fire & Life Safety",
+      property: "Business Hub, Pune",
+      authority: "Pune Municipal Corporation Fire Brigade (PMC)",
+      regNumber: "PMC-FB-NOC-2025-449",
+      issueDate: "05-Sep-2025",
+      expiry: "04-Sep-2026",
+      expiryDateObj: "2026-09-04",
+      daysRemaining: -11,
+      status: "Expired",
+      inspectingOfficer: "Station Officer, Kothrud Fire Substation",
+      inspectionCycle: "Annual Mandatory",
+      penaltyClause: "Notice under Sec 240 Maharashtra Municipal Corp Act",
+      documentUrl: "FIRE_NOC_PUNE_2025.pdf"
+    },
+    {
+      id: "CERT-015",
+      name: "High-Speed Traction Lift Fitness Test (Otis SkyRise)",
+      category: "lift",
+      categoryLabel: "Lifts & Escalators",
+      property: "Business Hub, Pune",
+      authority: "PWD Electrical Inspectorate, Pune Region",
+      regNumber: "PWD-LFT-PUN-9921",
+      issueDate: "20-Apr-2026",
+      expiry: "19-Apr-2027",
+      expiryDateObj: "2027-04-19",
+      daysRemaining: 216,
+      status: "Valid",
+      inspectingOfficer: "Assistant Electrical Inspector, Haveli",
+      inspectionCycle: "Annual Mandatory",
+      penaltyClause: "Immediate seizure of lift operation key",
+      documentUrl: "LIFT_FITNESS_PUNE_2026.pdf"
+    },
+    {
+      id: "CERT-016",
+      name: "Public Liability & Comprehensive Asset Insurance",
+      category: "insurance",
+      categoryLabel: "Comprehensive Insurance",
+      property: "Godrej BKC Horizon",
+      authority: "ICICI Lombard General Insurance Co.",
+      regNumber: "POL-PL-ICICI-2026-88",
+      issueDate: "01-Nov-2025",
+      expiry: "31-Oct-2026",
+      expiryDateObj: "2026-10-31",
+      daysRemaining: 46,
+      status: "Expiring Soon",
+      inspectingOfficer: "Commercial Underwriting Group",
+      inspectionCycle: "Annual Policy",
+      penaltyClause: "Breach of institutional lender covenants",
+      documentUrl: "ICICI_INSURANCE_GODREJ_2025.pdf"
     }
   ]);
 
@@ -241,12 +403,22 @@ export default function ComplianceTrackerDashboard() {
     showToast("Reset calendar view to September 2026 (Audit Period)");
   };
 
-  // Find certificates for a specific day in the active calendar month
+  // Find certificates for a specific day in the active calendar month (respecting active filters)
   const getCertsForDay = (day: number) => {
     const formattedDay = day < 10 ? `0${day}` : `${day}`;
     const formattedMonth = calendarMonth + 1 < 10 ? `0${calendarMonth + 1}` : `${calendarMonth + 1}`;
     const targetDateStr = `${calendarYear}-${formattedMonth}-${formattedDay}`;
-    return certificates.filter(c => c.expiryDateObj === targetDateStr);
+    return certificates.filter(c => {
+      const matchesDate = c.expiryDateObj === targetDateStr;
+      const matchesCategory = selectedCategory === "all" || c.category === selectedCategory;
+      const matchesProperty = selectedProperty === "all" || c.property.toLowerCase().includes(selectedProperty.toLowerCase());
+      const matchesSearch = !searchQuery.trim() || 
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.authority.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.regNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.property.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesDate && matchesCategory && matchesProperty && matchesSearch;
+    });
   };
 
   // Renewal Handler
@@ -377,7 +549,7 @@ export default function ComplianceTrackerDashboard() {
         <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL LICENSES</span>
           <p className="text-2xl font-black text-gray-900 mt-0.5">{totalCount}</p>
-          <span className="text-[10px] text-gray-500 font-medium">Across 3 Commercial Campuses</span>
+          <span className="text-[10px] text-gray-500 font-medium">Across 5 Commercial Campuses</span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs">
@@ -468,10 +640,12 @@ export default function ComplianceTrackerDashboard() {
             onChange={(e) => setSelectedProperty(e.target.value)}
             className="px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-bold text-gray-700 text-xs focus:outline-none focus:border-[#0F8B7D]"
           >
-            <option value="all">All Properties</option>
-            <option value="One BKC">One BKC (Apex)</option>
-            <option value="Maker Maxity">Maker Maxity</option>
-            <option value="Godrej BKC">Godrej BKC Horizon</option>
+            <option value="all">All Properties (5 Campuses)</option>
+            <option value="One BKC">One BKC (Apex Tower) — Mumbai</option>
+            <option value="Maker Maxity">Maker Maxity — Mumbai</option>
+            <option value="Godrej BKC">Godrej BKC Horizon — Mumbai</option>
+            <option value="Shivalik Shilp">Shivalik Shilp — Ahmedabad</option>
+            <option value="Business Hub">Business Hub — Pune</option>
           </select>
         </div>
       </div>
@@ -1308,9 +1482,11 @@ export default function ComplianceTrackerDashboard() {
                     onChange={(e) => setNewCert({ ...newCert, property: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
                   >
-                    <option value="One BKC (Apex Tower)">One BKC (Apex Tower)</option>
-                    <option value="Maker Maxity Mumbai">Maker Maxity Mumbai</option>
-                    <option value="Godrej BKC Horizon">Godrej BKC Horizon</option>
+                    <option value="One BKC (Apex Tower)">One BKC (Apex Tower) — Mumbai</option>
+                    <option value="Maker Maxity Mumbai">Maker Maxity — Mumbai</option>
+                    <option value="Godrej BKC Horizon">Godrej BKC Horizon — Mumbai</option>
+                    <option value="Shivalik Shilp, Ahmedabad">Shivalik Shilp — Ahmedabad</option>
+                    <option value="Business Hub, Pune">Business Hub — Pune</option>
                   </select>
                 </div>
               </div>

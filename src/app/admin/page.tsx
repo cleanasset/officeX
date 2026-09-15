@@ -285,7 +285,7 @@ export default function SuperAdminDashboard() {
                             className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[11px] font-bold cursor-pointer transition-all inline-flex items-center gap-1 shadow-2xs"
                           >
                             <Eye size={12} />
-                            <span>Review KYC</span>
+                            <span>{a.type === "Refund Request" ? "Process Refund" : a.type === "Vendor KYC" ? "Review KYC" : "Review User"}</span>
                           </button>
                         </td>
                       </tr>
@@ -316,83 +316,94 @@ export default function SuperAdminDashboard() {
       ) : (
         /* Commission Ledger View */
         <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-black text-gray-900">OfficeX Platform Commission &amp; Escrow Ledger</h2>
-              <p className="text-xs text-gray-500">Auto-calculated 10% platform take-rate on all completed vendor contracts.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-gray-900">OfficeX Platform Commission &amp; Escrow Ledger</h2>
+                <p className="text-xs text-gray-500">Auto-calculated 5–15% platform take-rate on all completed vendor contracts.</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Total Net Commission (Q3 YTD)</span>
+                <p className="text-2xl font-black text-[#0F8B7D]">₹3,61,100</p>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="text-[10px] font-bold text-gray-400 uppercase">Total Net Commission (Q3 YTD)</span>
-              <p className="text-2xl font-black text-[#0F8B7D]">₹2,42,830</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <p className="text-[10px] font-bold text-gray-400 uppercase">Gross Merchandise Value (GTV)</p>
+                <p className="text-xl font-black text-gray-900 mt-1">₹41,70,000</p>
+                <span className="text-[10px] text-gray-500">5 Contracts executed</span>
+              </div>
+              <div className="p-4 rounded-xl bg-teal-50/50 border border-teal-200">
+                <p className="text-[10px] font-bold text-teal-800 uppercase">Platform Take-Rate (Avg 8.65%)</p>
+                <p className="text-xl font-black text-[#0F8B7D] mt-1">₹3,61,100</p>
+                <span className="text-[10px] text-teal-600">Retained via Escrow</span>
+              </div>
+              <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
+                <p className="text-[10px] font-bold text-emerald-800 uppercase">Disbursed to Vendors</p>
+                <p className="text-xl font-black text-emerald-700 mt-1">₹38,08,900</p>
+                <span className="text-[10px] text-emerald-600">On Milestone Sign-off</span>
+              </div>
+              <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200">
+                <p className="text-[10px] font-bold text-amber-800 uppercase">Escrow Defect Holdback</p>
+                <p className="text-xl font-black text-amber-700 mt-1">₹2,46,400</p>
+                <span className="text-[10px] text-amber-600">14-Day Warranty Buffer</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase">
+                    <th className="py-3 px-3">Transaction</th>
+                    <th className="py-3 px-3">Vendor</th>
+                    <th className="py-3 px-3">Property / Client</th>
+                    <th className="py-3 px-3 text-right">Contract Value</th>
+                    <th className="py-3 px-3 text-right">OfficeX Fee</th>
+                    <th className="py-3 px-3 text-right">Vendor Payout</th>
+                    <th className="py-3 px-3 text-right">Escrow Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  <tr>
+                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8801</td>
+                    <td className="py-3 px-3 font-bold text-gray-900">Johnson Controls India</td>
+                    <td className="py-3 px-3 text-gray-600">Maker Maxity (BKC)</td>
+                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹4,20,000</td>
+                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹42,000 (10%)</td>
+                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹3,78,000</td>
+                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Released ✓</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8794</td>
+                    <td className="py-3 px-3 font-bold text-gray-900">Urban Cleaners Enterprise</td>
+                    <td className="py-3 px-3 text-gray-600">GIFT Tower 1 (IFSC)</td>
+                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹2,80,000</td>
+                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹33,600 (12%)</td>
+                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹2,46,400</td>
+                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">14d Holdback</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8750</td>
+                    <td className="py-3 px-3 font-bold text-gray-900">SIS Group Security</td>
+                    <td className="py-3 px-3 text-gray-600">World Trade Center (Pune)</td>
+                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹18,50,000</td>
+                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹1,48,000 (8%)</td>
+                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹17,02,000</td>
+                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Released ✓</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8723</td>
+                    <td className="py-3 px-3 font-bold text-gray-900">Voltas Electro-Mech</td>
+                    <td className="py-3 px-3 text-gray-600">One BKC (Mumbai)</td>
+                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹6,40,000</td>
+                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹64,000 (10%)</td>
+                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹5,76,000</td>
+                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">In Escrow</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <p className="text-[10px] font-bold text-gray-400 uppercase">Gross Merchandise Value (GTV)</p>
-              <p className="text-xl font-black text-gray-900 mt-1">₹24,28,300</p>
-              <span className="text-[10px] text-gray-500">8 Contracts executed</span>
-            </div>
-            <div className="p-4 rounded-xl bg-teal-50/50 border border-teal-200">
-              <p className="text-[10px] font-bold text-teal-800 uppercase">Platform Take-Rate (10%)</p>
-              <p className="text-xl font-black text-[#0F8B7D] mt-1">₹2,42,830</p>
-              <span className="text-[10px] text-teal-600">Retained via Escrow</span>
-            </div>
-            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
-              <p className="text-[10px] font-bold text-emerald-800 uppercase">Disbursed to Vendors (90%)</p>
-              <p className="text-xl font-black text-emerald-700 mt-1">₹21,85,470</p>
-              <span className="text-[10px] text-emerald-600">On Milestone Sign-off</span>
-            </div>
-            <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200">
-              <p className="text-[10px] font-bold text-amber-800 uppercase">Escrow Buffer Held</p>
-              <p className="text-xl font-black text-amber-700 mt-1">₹6,50,000</p>
-              <span className="text-[10px] text-amber-600">Pending final punchlist</span>
-            </div>
-          </div>
-
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase">
-                <th className="py-3 px-3">Transaction</th>
-                <th className="py-3 px-3">Vendor</th>
-                <th className="py-3 px-3">Property / Client</th>
-                <th className="py-3 px-3">Contract Value</th>
-                <th className="py-3 px-3">OfficeX Fee (10%)</th>
-                <th className="py-3 px-3">Vendor Payout (90%)</th>
-                <th className="py-3 px-3 text-right">Escrow Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr>
-                <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8801</td>
-                <td className="py-3 px-3 font-bold text-gray-900">TechServe Solutions</td>
-                <td className="py-3 px-3 text-gray-600">Apex Tower (BKC)</td>
-                <td className="py-3 px-3 font-bold text-gray-900">₹2,18,300</td>
-                <td className="py-3 px-3 font-bold text-[#0F8B7D]">₹21,830</td>
-                <td className="py-3 px-3 text-gray-700">₹1,96,470</td>
-                <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">Escrow Held</span></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8794</td>
-                <td className="py-3 px-3 font-bold text-gray-900">CleanPro Services</td>
-                <td className="py-3 px-3 text-gray-600">Meridian Tech Park</td>
-                <td className="py-3 px-3 font-bold text-gray-900">₹1,50,000</td>
-                <td className="py-3 px-3 font-bold text-[#0F8B7D]">₹15,000</td>
-                <td className="py-3 px-3 text-gray-700">₹1,35,000</td>
-                <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Disbursed</span></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8750</td>
-                <td className="py-3 px-3 font-bold text-gray-900">Guardian Security Ltd</td>
-                <td className="py-3 px-3 text-gray-600">Nexus Innovation Hub</td>
-                <td className="py-3 px-3 font-bold text-gray-900">₹2,50,000</td>
-                <td className="py-3 px-3 font-bold text-[#0F8B7D]">₹25,000</td>
-                <td className="py-3 px-3 text-gray-700">₹2,25,000</td>
-                <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Disbursed</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       )}
 
       {/* ═══ VENDOR KYC DETAIL DRAWER (P0 CRITICAL FIX) ═══ */}
@@ -420,100 +431,219 @@ export default function SuperAdminDashboard() {
                 </button>
               </div>
 
-              {/* Real-time Verification Radar */}
-              <div>
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
-                  1. Real-time Government Database Match
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                    <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                      <span>GSTIN Verification</span>
-                      <CheckCircle size={14} className="text-emerald-600" />
+              {showKycDrawer.type === "Refund Request" ? (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
+                      1. Security Deposit Refund Ledger
+                    </h3>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+                      <div className="flex justify-between text-slate-600">
+                        <span>Tenant / Entity</span>
+                        <strong className="text-slate-900">Tata Consultancy Services (TCS)</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Leased Asset</span>
+                        <strong className="text-slate-900">One BKC — Floor 4 (42,000 sq.ft.)</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Original Deposit in Escrow</span>
+                        <strong className="text-slate-900">₹24,00,000</strong>
+                      </div>
+                      <div className="flex justify-between text-amber-700">
+                        <span>Utility / Final CAM Reconciliation</span>
+                        <strong className="font-mono">- ₹1,25,000</strong>
+                      </div>
+                      <div className="flex justify-between text-amber-700">
+                        <span>Handover Minor Touchup Deductions</span>
+                        <strong className="font-mono">- ₹75,000</strong>
+                      </div>
+                      <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-900 text-sm">
+                        <span>Net Refund Payable</span>
+                        <span className="text-emerald-700 font-mono">₹22,00,000</span>
+                      </div>
                     </div>
-                    <p className="font-mono text-xs font-bold text-gray-800 mt-1">{showKycDrawer.gstin || "27AABCS1420M1Z3"}</p>
-                    <p className="text-[10px] text-emerald-700 mt-0.5">Active Match on GSTN Portal</p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                    <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                      <span>Income Tax PAN</span>
-                      <CheckCircle size={14} className="text-emerald-600" />
-                    </div>
-                    <p className="font-mono text-xs font-bold text-gray-800 mt-1">{showKycDrawer.pan || "AABCS1420M"}</p>
-                    <p className="text-[10px] text-emerald-700 mt-0.5">Valid Corporate PAN Match</p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                    <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                      <span>PSARA License</span>
-                      <CheckCircle size={14} className="text-emerald-600" />
-                    </div>
-                    <p className="font-mono text-xs font-bold text-gray-800 mt-1">{showKycDrawer.psara || "PSARA/MH/2023/8892"}</p>
-                    <p className="text-[10px] text-emerald-700 mt-0.5">Valid Till Dec 2027</p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                    <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                      <span>Razorpay Escrow Node</span>
-                      <CheckCircle size={14} className="text-emerald-600" />
-                    </div>
-                    <p className="font-mono text-xs font-bold text-gray-800 mt-1">HDFC Bank ···8921</p>
-                    <p className="text-[10px] text-emerald-700 mt-0.5">Penny Drop Verified</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Uploaded Documents List */}
-              <div>
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
-                  2. Uploaded Compliance Files ({showKycDrawer.documents?.length || 3} Files)
-                </h3>
-                <div className="space-y-2">
-                  {(showKycDrawer.documents || [
-                    { name: "Trade_License_2026.pdf", type: "Municipal Trade License", size: "1.4 MB", status: "Valid" },
-                    { name: "Workmen_Compensation_Policy.pdf", type: "Insurance", size: "2.1 MB", status: "Valid" },
-                    { name: "EPFO_Labor_Return.pdf", type: "Labor License", size: "890 KB", status: "Valid" }
-                  ]).map((doc, idx) => (
-                    <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileText size={18} className="text-[#0F8B7D]" />
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
+                      2. Statutory Clearances &amp; NOCs
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
                         <div>
-                          <p className="text-xs font-bold text-gray-900">{doc.name}</p>
-                          <p className="text-[10px] text-gray-400">{doc.type} · {doc.size}</p>
+                          <span className="font-bold text-emerald-900 block">Facility Handover NOC</span>
+                          <span className="text-[10px] text-emerald-700">Signed by Lead FM (Vikram Malhotra)</span>
                         </div>
+                        <CheckCircle size={16} className="text-emerald-600" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                          {doc.status}
-                        </span>
-                        <button 
-                          onClick={() => {
-                            setToast(`Opening preview for ${doc.name}`);
-                            setTimeout(() => setToast(null), 2500);
-                          }}
-                          className="text-xs text-[#0F8B7D] hover:underline font-bold"
-                        >
-                          View
-                        </button>
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-emerald-900 block">Finance &amp; Audit Clearance</span>
+                          <span className="text-[10px] text-emerald-700">Approved by Corporate Treasury</span>
+                        </div>
+                        <CheckCircle size={16} className="text-emerald-600" />
+                      </div>
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-emerald-900 block">HDFC Nodal Escrow Node</span>
+                          <span className="text-[10px] text-emerald-700">Account: 50200088921820</span>
+                        </div>
+                        <CheckCircle size={16} className="text-emerald-600" />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Auditor Notes Input */}
-              <div>
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                  3. SuperAdmin Audit Log Note
-                </h3>
-                <textarea
-                  value={auditNote}
-                  onChange={(e) => setAuditNote(e.target.value)}
-                  placeholder="Enter verification notes, risk assessment remarks, or special conditions..."
-                  className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D] h-20 resize-none"
-                />
-              </div>
+                  {/* Auditor Notes Input */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      3. SuperAdmin Audit Log Note
+                    </h3>
+                    <textarea
+                      value={auditNote}
+                      onChange={(e) => setAuditNote(e.target.value)}
+                      placeholder="Enter verification notes or wire dispatch reference..."
+                      className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D] h-20 resize-none"
+                    />
+                  </div>
+                </div>
+              ) : showKycDrawer.type === "Admin Onboarding" ? (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
+                      1. User Role &amp; Hierarchy
+                    </h3>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2">
+                      <div className="flex justify-between text-slate-600">
+                        <span>Full Name</span>
+                        <strong className="text-slate-900">Rajesh Kumar</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Assigned Designation</span>
+                        <strong className="text-slate-900">Regional Operations Lead (Pune Hub)</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Corporate Email</span>
+                        <strong className="text-[#0F8B7D]">rajesh.k@officex.in</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Access Roles</span>
+                        <span className="font-bold text-slate-800">CAFM Dispatch, Work Order Sign-off</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Auditor Notes Input */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      2. SuperAdmin Audit Log Note
+                    </h3>
+                    <textarea
+                      value={auditNote}
+                      onChange={(e) => setAuditNote(e.target.value)}
+                      placeholder="Enter provisioning notes or security clearance remarks..."
+                      className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D] h-20 resize-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Real-time Verification Radar */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
+                      1. Real-time Government Database Match
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                          <span>GSTIN Verification</span>
+                          <CheckCircle size={14} className="text-emerald-600" />
+                        </div>
+                        <p className="font-mono text-xs font-bold text-gray-800 mt-1">{showKycDrawer.gstin || "27AABCS1420M1Z3"}</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5">Active Match on GSTN Portal</p>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                          <span>Income Tax PAN</span>
+                          <CheckCircle size={14} className="text-emerald-600" />
+                        </div>
+                        <p className="font-mono text-xs font-bold text-gray-800 mt-1">{showKycDrawer.pan || "AABCS1420M"}</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5">Valid Corporate PAN Match</p>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                          <span>PSARA License</span>
+                          <CheckCircle size={14} className="text-emerald-600" />
+                        </div>
+                        <p className="font-mono text-xs font-bold text-gray-800 mt-1">{showKycDrawer.psara || "PSARA/MH/2023/8892"}</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5">Valid Till Dec 2027</p>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                          <span>Razorpay Escrow Node</span>
+                          <CheckCircle size={14} className="text-emerald-600" />
+                        </div>
+                        <p className="font-mono text-xs font-bold text-gray-800 mt-1">HDFC Bank ···8921</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5">Penny Drop Verified</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Uploaded Documents List */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">
+                      2. Uploaded Compliance Files ({showKycDrawer.documents?.length || 3} Files)
+                    </h3>
+                    <div className="space-y-2">
+                      {(showKycDrawer.documents || [
+                        { name: "Trade_License_2026.pdf", type: "Municipal Trade License", size: "1.4 MB", status: "Valid" },
+                        { name: "Workmen_Compensation_Policy.pdf", type: "Insurance", size: "2.1 MB", status: "Valid" },
+                        { name: "EPFO_Labor_Return.pdf", type: "Labor License", size: "890 KB", status: "Valid" }
+                      ]).map((doc, idx) => (
+                        <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText size={18} className="text-[#0F8B7D]" />
+                            <div>
+                              <p className="text-xs font-bold text-gray-900">{doc.name}</p>
+                              <p className="text-[10px] text-gray-400">{doc.type} · {doc.size}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                              {doc.status}
+                            </span>
+                            <button 
+                              onClick={() => {
+                                setToast(`Opening preview for ${doc.name}`);
+                                setTimeout(() => setToast(null), 2500);
+                              }}
+                              className="text-xs text-[#0F8B7D] hover:underline font-bold"
+                            >
+                              View
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Auditor Notes Input */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      3. SuperAdmin Audit Log Note
+                    </h3>
+                    <textarea
+                      value={auditNote}
+                      onChange={(e) => setAuditNote(e.target.value)}
+                      placeholder="Enter verification notes, risk assessment remarks, or special conditions..."
+                      className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D] h-20 resize-none"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Action Bar */}
@@ -522,14 +652,20 @@ export default function SuperAdminDashboard() {
                 onClick={() => handleRejectKyc(showKycDrawer)}
                 className="px-5 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold transition-all cursor-pointer"
               >
-                Reject Application
+                {showKycDrawer.type === "Refund Request" ? "Reject Refund" : "Reject Application"}
               </button>
               <button
                 onClick={() => handleApproveKyc(showKycDrawer)}
                 className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <CheckCircle size={14} />
-                <span>Approve &amp; Issue Live Badge</span>
+                <span>
+                  {showKycDrawer.type === "Refund Request"
+                    ? "Process Escrow Refund Wire (₹22,00,000)"
+                    : showKycDrawer.type === "Admin Onboarding"
+                    ? "Approve Admin Privileges"
+                    : "Approve & Issue Live Badge"}
+                </span>
               </button>
             </div>
           </div>

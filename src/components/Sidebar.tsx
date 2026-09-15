@@ -139,6 +139,18 @@ const roleHomes: Record<string, { label: string; roleName: string; route: string
   public: { label: "Public Discovery (Portal)", roleName: "Public Discovery", route: "/public/search", email: "guest@officex.in" }
 };
 
+// Mapping alias paths to corresponding portal keys
+const pathPortalAliases: Record<string, string> = {
+  "fm-marketplace": "marketplace",
+  "portfolio": "properties",
+  "property": "properties",
+  "compliance": "properties",
+  "operations": "ops",
+  "reports": "reporting",
+  "discover": "public",
+  "calq": "leasing"
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -146,10 +158,17 @@ export default function Sidebar() {
   const [selectedRole, setSelectedRole] = useState<string>("properties");
   const [userEmail, setUserEmail] = useState<string>("");
 
-  // Synchronously compute active portal from URL first, ensuring immediate role rendering
-  const matchedFromPath = Object.keys(roleHomes).find(key => 
-    pathname === `/${key}` || pathname.startsWith(`/${key}/`)
-  );
+  // Synchronously compute active portal from URL first, handling both direct keys and aliases
+  const findPortalKey = (path: string): string | undefined => {
+    const cleanPath = path.replace(/^\//, "").split("/")[0];
+    if (roleHomes[cleanPath]) return cleanPath;
+    if (pathPortalAliases[cleanPath]) return pathPortalAliases[cleanPath];
+    return Object.keys(roleHomes).find(key => 
+      path === `/${key}` || path.startsWith(`/${key}/`)
+    );
+  };
+
+  const matchedFromPath = findPortalKey(pathname);
   const currentPortalKey = matchedFromPath || selectedRole || "properties";
 
   useEffect(() => {

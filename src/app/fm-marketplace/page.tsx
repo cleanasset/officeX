@@ -37,7 +37,15 @@ import {
   Calendar,
   Send,
   Building,
-  CheckCheck
+  CheckCheck,
+  Landmark,
+  DollarSign,
+  Calculator,
+  Lock,
+  Percent,
+  ArrowDownRight,
+  RefreshCw,
+  Receipt
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -81,6 +89,9 @@ interface ServiceCategory {
 export default function FMMarketplacePage() {
   const router = useRouter();
   const [slideInOpen, setSlideInOpen] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState<"directory" | "commission">("directory");
+  const [calcCategory, setCalcCategory] = useState("hvac");
+  const [calcAmount, setCalcAmount] = useState(500000);
   const [searchService, setSearchService] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
   const [contractTypeFilter, setContractTypeFilter] = useState<"all" | "amc" | "ondemand">("all");
@@ -91,7 +102,107 @@ export default function FMMarketplacePage() {
   const [rfqModalOpen, setRfqModalOpen] = useState(false);
   const [selectedVendorForRfq, setSelectedVendorForRfq] = useState<Vendor | null>(null);
   const [rfqSubmitted, setRfqSubmitted] = useState(false);
+  const [rfqBudget, setRfqBudget] = useState("₹5,00,000 - ₹10,00,000");
+  const [rfqTimeline, setRfqTimeline] = useState("Immediate (< 7 days)");
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
+  // Commission rates by category
+  const commissionRatesByCategory: Record<string, { pct: number; label: string }> = {
+    hvac: { pct: 10, label: "HVAC & Chillers" },
+    mep: { pct: 10, label: "MEP & Electrical" },
+    security: { pct: 8, label: "Security & Guarding" },
+    housekeeping: { pct: 12, label: "Commercial Hygiene" },
+    elevators: { pct: 7.5, label: "Elevators & Mobility" },
+    fire: { pct: 10, label: "Fire Safety & Life Support" },
+    landscaping: { pct: 12, label: "Landscaping & Horticulture" },
+    pest: { pct: 15, label: "Pest & Vector Defense" },
+  };
+
+  const sampleLedgerTransactions = [
+    {
+      id: "tx-101",
+      orderNumber: "WO-HVAC-2026-881",
+      vendorName: "Johnson Controls India",
+      category: "HVAC & Chillers",
+      property: "Maker Maxity, BKC",
+      city: "Mumbai",
+      grossAmount: 420000,
+      commissionPct: 10,
+      platformFee: 42000,
+      netVendorPayout: 378000,
+      escrowStatus: "Released",
+      utrNumber: "HDFC00029108442",
+      completedDate: "12 Sep 2026"
+    },
+    {
+      id: "tx-102",
+      orderNumber: "WO-SEC-2026-440",
+      vendorName: "SIS Group Security",
+      category: "Security & Guarding",
+      property: "World Trade Center, Kharadi",
+      city: "Pune",
+      grossAmount: 1850000,
+      commissionPct: 8,
+      platformFee: 148000,
+      netVendorPayout: 1702000,
+      escrowStatus: "Released",
+      utrNumber: "ICIC00088190331",
+      completedDate: "10 Sep 2026"
+    },
+    {
+      id: "tx-103",
+      orderNumber: "WO-CLN-2026-912",
+      vendorName: "Urban Cleaners Enterprise",
+      category: "Commercial Hygiene",
+      property: "GIFT Tower 1, IFSC",
+      city: "Gandhinagar",
+      grossAmount: 280000,
+      commissionPct: 12,
+      platformFee: 33600,
+      netVendorPayout: 246400,
+      escrowStatus: "Defect Holdback",
+      utrNumber: "Pending 14d sign-off",
+      completedDate: "14 Sep 2026"
+    },
+    {
+      id: "tx-104",
+      orderNumber: "WO-MEP-2026-723",
+      vendorName: "Voltas Electro-Mech Services",
+      category: "MEP & Electrical",
+      property: "One BKC, Bandra Kurla",
+      city: "Mumbai",
+      grossAmount: 640000,
+      commissionPct: 10,
+      platformFee: 64000,
+      netVendorPayout: 576000,
+      escrowStatus: "In Escrow",
+      utrNumber: "Escrow Held: AXIS9921",
+      completedDate: "In Progress"
+    },
+    {
+      id: "tx-105",
+      orderNumber: "WO-ELV-2026-309",
+      vendorName: "Schindler Elevator India",
+      category: "Elevators & Mobility",
+      property: "Godrej BKC, Bandra",
+      city: "Mumbai",
+      grossAmount: 980000,
+      commissionPct: 7.5,
+      platformFee: 73500,
+      netVendorPayout: 906500,
+      escrowStatus: "Under Audit",
+      utrNumber: "Audit Q3 Cycle",
+      completedDate: "13 Sep 2026"
+    },
+  ];
+
+  const liveActivityTicker = [
+    { id: "act-1", time: "11:32 AM", text: "Johnson Controls completed Chiller Overhaul at Maker Maxity (₹4,20,000) • OfficeX 10% fee (₹42,000) auto-deducted • Escrow Released ✓", type: "success" },
+    { id: "act-2", time: "11:15 AM", text: "Schindler OEM received Lift Modernisation RFQ from Godrej BKC (Est. ₹12.50L) • 3 vendor bids active", type: "info" },
+    { id: "act-3", time: "10:48 AM", text: "SIS Group Security deployed 24 vetted security personnel to WTC Pune • PSARA Guard Verified ✓", type: "success" },
+    { id: "act-4", time: "10:20 AM", text: "Urban Cleaners completed Facade Cradle Wash at GIFT Tower 1 (₹2,80,000) • 14-day defect holdback active", type: "warning" },
+    { id: "act-5", time: "09:55 AM", text: "Voltas Electro-Mech: DG Synchronization milestone approved at One BKC • Payout ₹5,76,000 released via HDFC Escrow", type: "success" },
+  ];
 
   // 8 Core Commercial FM Service Categories with Snabbit-inspired Photography
   const serviceCategories: ServiceCategory[] = [
@@ -739,8 +850,401 @@ export default function FMMarketplacePage() {
       </section>
 
       {/* ========================================================================= */}
+      {/* 1B. LIVE FM ACTIVITY TICKER & TRUST GUARANTEES                           */}
+      {/* ========================================================================= */}
+      <div className="bg-slate-900 text-white py-3 border-y border-slate-800 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0 bg-[#0F8B7D] px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span>Live Marketplace Activity</span>
+          </div>
+          <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-6 text-xs text-slate-300">
+            {liveActivityTicker.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-slate-400 font-mono text-[10px]">{item.time}</span>
+                <span className="text-slate-200">{item.text}</span>
+                <span className="text-slate-600">•</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Trust Badges Bar */}
+      <div className="bg-white border-b border-slate-200 py-4 px-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center sm:text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
+              <ShieldCheck size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">Zero Brokerage Guarantee</p>
+              <p className="text-[11px] text-slate-500">Direct vetted vendor contracts</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
+              <Lock size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">100% Escrow Protection</p>
+              <p className="text-[11px] text-slate-500">Funds released on SLA sign-off</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
+              <Award size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">PSARA &amp; ISO Audited</p>
+              <p className="text-[11px] text-slate-500">100% police &amp; statutory vetted</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
+              <Percent size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">5–15% Auto-Commission</p>
+              <p className="text-[11px] text-slate-500">Transparent platform ledger</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main View Mode Tabs (Directory vs Commission Ledger) */}
+      <div className="max-w-6xl mx-auto px-4 pt-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setActiveMainTab("directory")}
+              className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+                activeMainTab === "directory"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Building size={15} className="text-[#0F8B7D]" />
+              <span>FM Service Categories &amp; Vendors</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMainTab("commission")}
+              className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+                activeMainTab === "commission"
+                  ? "bg-[#0F8B7D] text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Receipt size={15} />
+              <span>OfficeX Commission &amp; Escrow Ledger</span>
+              <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">5–15% Engine</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleRequestRfq()}
+              className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-black shadow-sm hover:bg-[#0D7A6E] transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileText size={14} />
+              <span>Post New RFQ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* COMMISSION LEDGER TAB CONTENT                                             */}
+      {/* ========================================================================= */}
+      {activeMainTab === "commission" && (
+        <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto animate-in fade-in duration-300">
+          {/* Header */}
+          <div className="mb-8">
+            <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
+              Platform Financial Mechanics
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              OfficeX Commission &amp; Escrow Payout Engine
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 max-w-2xl">
+              Real-time ledger tracking gross merchandise value, automated 5–15% category platform fees, and SLA-verified net vendor disbursements held in HDFC Nodal Escrow.
+            </p>
+          </div>
+
+          {/* Top 4 KPI Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Total GTV Processed
+              </span>
+              <p className="text-2xl font-black text-slate-900">₹41,70,000</p>
+              <p className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                <span>▲ +18.4%</span>
+                <span className="text-slate-400 font-normal">vs last month</span>
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-teal-200 bg-gradient-to-br from-white to-teal-50/40 shadow-sm">
+              <span className="text-[11px] font-bold text-[#0F8B7D] uppercase tracking-wider block mb-1">
+                OfficeX Fees Retained
+              </span>
+              <p className="text-2xl font-black text-[#0F8B7D]">₹3,61,100</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Weighted avg rate: <strong className="text-slate-800 font-black">8.65%</strong>
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Net Vendor Disbursed
+              </span>
+              <p className="text-2xl font-black text-slate-900">₹38,08,900</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Instant NEFT/RTGS via Escrow
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Escrow Defect Holdback
+              </span>
+              <p className="text-2xl font-black text-amber-600">₹2,46,400</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                14-day warranty retention
+              </p>
+            </div>
+          </div>
+
+          {/* Interactive Commission Simulator */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-8 mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+                <Calculator size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Interactive Category Commission Calculator</h3>
+                <p className="text-xs text-slate-500">Calculate platform retention fee and net contractor payout dynamically</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              {/* Controls */}
+              <div className="lg:col-span-7 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Select Service Trade &amp; Category:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {Object.entries(commissionRatesByCategory).map(([key, item]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCalcCategory(key)}
+                        className={`p-2 rounded-xl text-left border text-xs font-bold transition-all cursor-pointer ${
+                          calcCategory === key
+                            ? "border-[#0F8B7D] bg-teal-50 text-[#0F8B7D] shadow-xs"
+                            : "border-slate-200 hover:border-slate-300 text-slate-700 bg-slate-50"
+                        }`}
+                      >
+                        <span className="block truncate">{item.label}</span>
+                        <span className="text-[10px] text-slate-500 font-medium">{item.pct}% Fee</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                    <span>Gross Contract Value:</span>
+                    <span className="text-slate-900 font-black">₹{calcAmount.toLocaleString("en-IN")}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="50000"
+                    max="3000000"
+                    step="25000"
+                    value={calcAmount}
+                    onChange={(e) => setCalcAmount(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0F8B7D]"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                    <span>₹50,000 (Small Work Order)</span>
+                    <span>₹15,00,000 (Quarterly AMC)</span>
+                    <span>₹30,00,000 (Annual Enterprise AMC)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Calculation Output Card */}
+              <div className="lg:col-span-5 bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-xl">
+                <span className="text-[10px] font-mono text-teal-400 uppercase tracking-wider block mb-1">
+                  Automated Settlement Breakdown
+                </span>
+                <h4 className="text-lg font-bold text-white mb-4">
+                  {commissionRatesByCategory[calcCategory].label}
+                </h4>
+
+                <div className="space-y-2.5 text-xs pb-4 border-b border-slate-800">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Gross Contract Value</span>
+                    <span className="font-mono font-bold text-white">₹{calcAmount.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-teal-300">
+                    <span className="flex items-center gap-1">
+                      <span>OfficeX Platform Fee</span>
+                      <span className="bg-teal-900/60 text-teal-300 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                        {commissionRatesByCategory[calcCategory].pct}%
+                      </span>
+                    </span>
+                    <span className="font-mono font-bold">
+                      - ₹{Math.round((calcAmount * commissionRatesByCategory[calcCategory].pct) / 100).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-400 text-[11px]">
+                    <span>GST on Platform Fee (18%)</span>
+                    <span className="font-mono">
+                      ₹{Math.round((calcAmount * commissionRatesByCategory[calcCategory].pct * 0.18) / 100).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-between items-end">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+                      Net Vendor Payout
+                    </span>
+                    <span className="text-2xl font-black text-emerald-400 font-mono">
+                      ₹{Math.round(calcAmount - (calcAmount * commissionRatesByCategory[calcCategory].pct) / 100).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <span className="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2.5 py-1 rounded-lg font-bold">
+                    Escrow Protected
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Transactions Table */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-10">
+            <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Commercial Work Order Ledger</h3>
+                <p className="text-xs text-slate-500">Live feed of completed vendor milestones with commission deductions</p>
+              </div>
+              <span className="text-xs font-bold text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-lg border border-teal-100">
+                5 Audited Records
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-wider text-slate-400 border-b border-slate-200">
+                  <tr>
+                    <th className="py-3.5 px-4">Order ID &amp; Date</th>
+                    <th className="py-3.5 px-4">Vendor &amp; Asset</th>
+                    <th className="py-3.5 px-4">Trade</th>
+                    <th className="py-3.5 px-4 text-right">Gross Value</th>
+                    <th className="py-3.5 px-4 text-right">OfficeX Fee</th>
+                    <th className="py-3.5 px-4 text-right">Net Payout</th>
+                    <th className="py-3.5 px-4">Escrow Status</th>
+                    <th className="py-3.5 px-4">Settlement Ref</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {sampleLedgerTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono font-bold text-slate-900 block">{tx.orderNumber}</span>
+                        <span className="text-[10px] text-slate-400">{tx.completedDate}</span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="font-bold text-slate-900 block">{tx.vendorName}</span>
+                        <span className="text-[11px] text-slate-500">{tx.property}, {tx.city}</span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                          {tx.category}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                        ₹{tx.grossAmount.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <span className="font-mono font-bold text-[#0F8B7D]">
+                          ₹{tx.platformFee.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">({tx.commissionPct}%)</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-700">
+                        ₹{tx.netVendorPayout.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            tx.escrowStatus === "Released"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : tx.escrowStatus === "Defect Holdback"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : tx.escrowStatus === "In Escrow"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-purple-50 text-purple-700 border border-purple-200"
+                          }`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          <span>{tx.escrowStatus}</span>
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500">
+                        {tx.utrNumber}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 4-Step Escrow Guarantee Protocol */}
+          <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-8">
+            <h3 className="text-xl font-black mb-1">OfficeX 4-Stage Escrow &amp; Compliance Protocol</h3>
+            <p className="text-xs text-teal-200 mb-6 max-w-2xl">
+              Zero dispute facility management procurement backed by institutional escrow accounts and CAFM IoT telemetry.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-xs">
+                <span className="text-teal-400 font-mono text-xs font-black block mb-1">01. SCOPE &amp; ESCROW</span>
+                <h4 className="text-sm font-bold text-white mb-1">Advance Deposited</h4>
+                <p className="text-[11px] text-slate-300">Property manager locks requirement; funds held in HDFC Escrow.</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-xs">
+                <span className="text-teal-400 font-mono text-xs font-black block mb-1">02. EXECUTION</span>
+                <h4 className="text-sm font-bold text-white mb-1">Vetted Execution</h4>
+                <p className="text-[11px] text-slate-300">Police-verified crew performs maintenance with live GPS check-in.</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-xs">
+                <span className="text-teal-400 font-mono text-xs font-black block mb-1">03. CAFM AUDIT</span>
+                <h4 className="text-sm font-bold text-white mb-1">Digital Sign-Off</h4>
+                <p className="text-[11px] text-slate-300">IoT sensor verification and facility head digital signature.</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-xs">
+                <span className="text-teal-400 font-mono text-xs font-black block mb-1">04. SETTLEMENT</span>
+                <h4 className="text-sm font-bold text-white mb-1">Auto-Settlement</h4>
+                <p className="text-[11px] text-slate-300">OfficeX retains 5–15%; net vendor payout dispatched with bank UTR.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ========================================================================= */}
       {/* 2. CORE FM CATEGORIES (Clean, Bright, Snabbit & Veendoor Hybrid Standard) */}
       {/* ========================================================================= */}
+      {activeMainTab === "directory" && (
+        <>
       <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
           <div>
@@ -1401,6 +1905,8 @@ export default function FMMarketplacePage() {
           })}
         </div>
       </section>
+        </>
+      )}
 
       {/* ========================================================================= */}
       {/* 10. INTERACTIVE MODAL: CLAIM BUSINESS LISTING                             */}
@@ -1639,6 +2145,46 @@ export default function FMMarketplacePage() {
                         className="w-full text-xs font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                        Estimated Budget
+                      </label>
+                      <select
+                        value={rfqBudget}
+                        onChange={(e) => setRfqBudget(e.target.value)}
+                        className="w-full text-xs font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      >
+                        <option value="< ₹2,00,000">&lt; ₹2,00,000 (Small Work Order)</option>
+                        <option value="₹2,00,000 - ₹5,00,000">₹2,00,000 - ₹5,00,000</option>
+                        <option value="₹5,00,000 - ₹10,00,000">₹5,00,000 - ₹10,00,000</option>
+                        <option value="₹10,00,000+">₹10,00,000+ (Enterprise Tender)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                        Required Timeline
+                      </label>
+                      <select
+                        value={rfqTimeline}
+                        onChange={(e) => setRfqTimeline(e.target.value)}
+                        className="w-full text-xs font-bold text-slate-900 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      >
+                        <option value="Immediate (< 7 days)">Immediate (&lt; 7 days)</option>
+                        <option value="Within 30 days">Within 30 days</option>
+                        <option value="Upcoming Quarter AMC renewal">Upcoming Quarter AMC renewal</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200/80 text-[11px] text-teal-900 flex items-start gap-2">
+                    <ShieldCheck size={16} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Escrow Protected:</strong> Advance is held safely in HDFC Nodal Escrow. Standard 5–15% category commission auto-deducted upon verified milestone sign-off.
+                    </span>
                   </div>
 
                   <button

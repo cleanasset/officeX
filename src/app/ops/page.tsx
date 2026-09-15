@@ -10,6 +10,26 @@ import {
 export default function OperationsDashboard() {
   const [toast, setToast] = useState<string | null>(null);
   const [dispatchModal, setDispatchModal] = useState<any | null>(null);
+  const [selectedTech, setSelectedTech] = useState("Rajesh Kumar (Senior HVAC Specialist)");
+  const [etaMinutes, setEtaMinutes] = useState("15");
+  const [dispatchNotes, setDispatchNotes] = useState("Carry replacement condenser sensor & refrigerant kit.");
+  const [sendWhatsApp, setSendWhatsApp] = useState(true);
+
+  // Live ticking SLA countdown timer for AC leak (Client Page 6 Priority)
+  const [acTimerSeconds, setAcTimerSeconds] = useState(38 * 60 + 14);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setAcTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}m ${secs < 10 ? `0${secs}` : secs}s remaining`;
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -68,20 +88,32 @@ export default function OperationsDashboard() {
 
   const handleConfirmDispatch = (techName: string) => {
     if (!dispatchModal) return;
-    setDispatches(prev => prev.map(d => {
-      if (d.id === dispatchModal.id) {
-        return { ...d, assignedTo: techName, remaining: `Assigned to ${techName}` };
-      }
-      return d;
-    }));
-    showToast(`Dispatched ${techName} to ${dispatchModal.title}! SLA Timer active.`);
+
+    if (dispatchModal.action === "Dispatch Schindler OEM") {
+      setDispatches(prev => prev.map(d => {
+        if (d.id === dispatchModal.id) {
+          return { ...d, assignedTo: "Schindler OEM Response (WO-SCH-2026-9921)", remaining: "OEM Dispatch Confirmed" };
+        }
+        return d;
+      }));
+      showToast("FM Marketplace Work Order #WO-SCH-2026-9921 created! Schindler OEM dispatched.");
+    } else {
+      setDispatches(prev => prev.map(d => {
+        if (d.id === dispatchModal.id) {
+          return { ...d, assignedTo: `${techName} (${etaMinutes}m ETA)`, remaining: `Dispatched • En Route` };
+        }
+        return d;
+      }));
+      showToast(`Dispatched ${techName} to ${dispatchModal.title}! WhatsApp notification sent.`);
+    }
+
     setDispatchModal(null);
   };
 
   const healthData = [
-    { name: "One BKC (Apex Tower)", health: "94/100 (Optimal)", hvac: "✅ 99.8%", electrical: "✅ 100%", elevators: "⚠️ Lift 3 Service", fire: "✅ Valid Fire NOC", staff: "18/20 Deployed" },
-    { name: "Maker Maxity Mumbai", health: "89/100 (Good)", hvac: "⚠️ Chiller 1 Filter", electrical: "✅ 100%", elevators: "✅ 100%", fire: "✅ Valid Fire NOC", staff: "12/12 Deployed" },
-    { name: "Godrej BKC Horizon", health: "96/100 (Optimal)", hvac: "✅ 100%", electrical: "✅ 100%", elevators: "✅ 100%", fire: "✅ Valid Fire NOC", staff: "15/16 Deployed" }
+    { name: "One BKC (Apex Tower)", health: "94/100 (Optimal)", trend: "▲ +2.4%", trendColor: "text-emerald-600", hvac: "✅ 99.8%", electrical: "✅ 100%", elevators: "⚠️ Lift 3 Service", fire: "✅ Valid Fire NOC", staff: "18/20 Deployed" },
+    { name: "Maker Maxity Mumbai", health: "89/100 (Good)", trend: "▼ -1.2%", trendColor: "text-amber-600", hvac: "⚠️ Chiller 1 Filter", electrical: "✅ 100%", elevators: "✅ 100%", fire: "✅ Valid Fire NOC", staff: "12/12 Deployed" },
+    { name: "Godrej BKC Horizon", health: "96/100 (Optimal)", trend: "▲ +3.1%", trendColor: "text-emerald-600", hvac: "✅ 100%", electrical: "✅ 100%", elevators: "✅ 100%", fire: "✅ Valid Fire NOC", staff: "15/16 Deployed" }
   ];
 
   return (
@@ -191,6 +223,35 @@ export default function OperationsDashboard() {
         </div>
       </div>
 
+      {/* AI Predictive Maintenance Alert (Client Page 6 Feature) */}
+      <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white rounded-3xl p-5 sm:p-6 shadow-sm border border-teal-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300 shrink-0">
+            <Sparkles size={22} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-teal-500/20 border border-teal-400/30 text-[10px] font-black text-teal-300 uppercase tracking-wider">
+                AI Predictive Telemetry
+              </span>
+              <span className="text-[11px] text-teal-200/80">Anomaly Detected (Chiller Bank 1)</span>
+            </div>
+            <p className="text-sm font-bold text-white mt-1">
+              Maker Maxity Chiller 1 — Filter replacement &amp; refrigerant check due in <strong className="text-teal-300 font-black">3 days</strong>
+            </p>
+            <p className="text-xs text-gray-300 mt-0.5">
+              Based on 2,450 cumulative runtime hours &amp; 4.2% differential pressure deviation. Preventative dispatch avoids ₹2.8L emergency overhaul.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => showToast("Auto-generated Preventive Task #WO-PPM-4491 for Chiller 1 dispatched to FM Calendar!")}
+          className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shrink-0 transition-colors shadow-xs cursor-pointer text-center"
+        >
+          Create Preventive Work Order
+        </button>
+      </div>
+
       {/* 100% Clickable Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {kpis.map((k) => (
@@ -236,8 +297,8 @@ export default function OperationsDashboard() {
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black text-white ${d.color}`}>
                     {d.severity}
                   </span>
-                  <span className="text-[10px] font-bold text-red-600 flex items-center gap-1">
-                    <Clock size={11} /> {d.remaining}
+                  <span className="text-[10px] font-bold text-red-600 flex items-center gap-1 font-mono">
+                    <Clock size={11} /> {d.id === "D-101" && !d.assignedTo ? formatTimer(acTimerSeconds) : d.remaining}
                   </span>
                 </div>
                 <h4 className="font-bold text-gray-900 text-sm mt-2">{d.title}</h4>
@@ -247,7 +308,7 @@ export default function OperationsDashboard() {
               <div className="pt-2 border-t border-gray-200/80 flex items-center justify-between">
                 {d.assignedTo ? (
                   <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                    <CheckCircle size={14} /> Assigned to {d.assignedTo}
+                    <CheckCircle size={14} /> Assigned: {d.assignedTo}
                   </span>
                 ) : (
                   <button
@@ -281,6 +342,7 @@ export default function OperationsDashboard() {
               <tr className="border-b border-gray-200 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 <th className="py-3 px-4">CAMPUS</th>
                 <th className="py-3 px-4">HEALTH SCORE</th>
+                <th className="py-3 px-4">TREND (VS LW)</th>
                 <th className="py-3 px-4">HVAC UPTIME</th>
                 <th className="py-3 px-4">ELECTRICAL</th>
                 <th className="py-3 px-4">ELEVATORS</th>
@@ -295,6 +357,11 @@ export default function OperationsDashboard() {
                     <Building size={13} className="text-[#0F8B7D]" /> {h.name}
                   </td>
                   <td className="py-3.5 px-4 font-bold text-emerald-700">{h.health}</td>
+                  <td className="py-3.5 px-4 font-black">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] ${h.trendColor} bg-gray-50 border border-gray-200`}>
+                      {h.trend}
+                    </span>
+                  </td>
                   <td className="py-3.5 px-4">{h.hvac}</td>
                   <td className="py-3.5 px-4">{h.electrical}</td>
                   <td className="py-3.5 px-4 font-semibold text-amber-700">{h.elevators}</td>
@@ -314,50 +381,117 @@ export default function OperationsDashboard() {
         </div>
       </div>
 
-      {/* Dispatch Modal */}
+      {/* Dispatch Modal with Technician Assignment & OEM Workflow */}
       {dispatchModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-gray-200 max-w-md w-full p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 text-xs">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+          <div className="bg-white rounded-3xl border border-gray-200 max-w-lg w-full p-7 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-xs">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
-                <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider">EMERGENCY DISPATCH</span>
+                <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider">
+                  {dispatchModal.action === "Dispatch Schindler OEM" ? "FM MARKETPLACE OEM WORK ORDER" : "EMERGENCY TECHNICIAN DISPATCH"}
+                </span>
                 <h3 className="text-base font-black text-gray-900 mt-0.5">{dispatchModal.title}</h3>
                 <p className="text-xs text-gray-500">{dispatchModal.location}</p>
               </div>
-              <button onClick={() => setDispatchModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
+              <button onClick={() => setDispatchModal(null)} className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3">
-              <p className="font-bold text-gray-700 text-xs">Select Lead Technician to Dispatch:</p>
-              {[
-                { name: "Rajesh Kumar", role: "Senior HVAC MEP Specialist (On-Site)", speed: "5 mins away" },
-                { name: "Schindler OEM Response Team", role: "Destination Dispatch Certified Team", speed: "15 mins away" },
-                { name: "Suresh Patil", role: "Chief Electrical Engineer", speed: "On Campus" }
-              ].map((tech) => (
-                <div 
-                  key={tech.name}
-                  onClick={() => handleConfirmDispatch(tech.name)}
-                  className="p-3 rounded-xl border border-gray-200 hover:border-[#0F8B7D] hover:bg-teal-50/40 transition-all cursor-pointer flex items-center justify-between group"
-                >
-                  <div>
-                    <p className="font-bold text-gray-900 group-hover:text-[#0F8B7D]">{tech.name}</p>
-                    <p className="text-[10px] text-gray-400">{tech.role}</p>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md bg-gray-100 text-[10px] font-bold text-gray-600 group-hover:bg-[#0F8B7D] group-hover:text-white transition-colors">
-                    {tech.speed}
-                  </span>
+            {dispatchModal.action === "Dispatch Schindler OEM" ? (
+              <div className="space-y-3">
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
+                  <span className="font-bold block text-xs">Schindler India Lift OEM Integration</span>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    This action dispatches an SLA-governed OEM emergency work order through the FM Procurement Marketplace under Master Service Agreement #MSA-SCH-2024.
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">OEM CONTRACTOR</label>
+                    <input disabled value="Schindler India Pvt Ltd (Tier-1 OEM)" className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-xs font-bold text-gray-800" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">GUARANTEED SLA RESPONSE</label>
+                    <input disabled value="2 Hours (Gold Tier)" className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-xs font-bold text-gray-800" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">OEM DISPATCH INSTRUCTION</label>
+                  <textarea defaultValue="Controller communication fault error on Lift #3. Require elevator technician with field diagnostic tool." className="w-full p-2.5 rounded-xl border border-gray-200 text-xs text-gray-800 h-16 resize-none" />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">SELECT LEAD TECHNICIAN</label>
+                  <select
+                    value={selectedTech}
+                    onChange={(e) => setSelectedTech(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 font-bold text-xs text-gray-800 bg-white"
+                  >
+                    <option value="Rajesh Kumar (Senior HVAC Specialist)">Rajesh Kumar — Senior HVAC Specialist (On-Site • 5m away)</option>
+                    <option value="Suresh Patil (Lead MEP Engineer)">Suresh Patil — Lead MEP Engineer (One BKC Campus • 10m away)</option>
+                    <option value="Vikram Verma (Emergency Response)">Vikram Verma — Tier-1 Emergency Team Lead (15m away)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">ESTIMATED ARRIVAL (ETA)</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={etaMinutes}
+                        onChange={(e) => setEtaMinutes(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 font-bold text-xs text-gray-800"
+                      />
+                      <span className="text-gray-400 font-bold">mins</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">SLA ESCALATION WINDOW</label>
+                    <input disabled value="45 Mins (Critical)" className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-xs font-bold text-gray-800" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">DISPATCH INSTRUCTION</label>
+                  <input
+                    value={dispatchNotes}
+                    onChange={(e) => setDispatchNotes(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-800"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/80 border border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
+                    <span className="font-bold text-emerald-950 text-xs">Send WhatsApp Dispatch via n8n Automation</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={sendWhatsApp}
+                    onChange={(e) => setSendWhatsApp(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F8B7D]"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <button
                 onClick={() => setDispatchModal(null)}
-                className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50"
+                className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
               >
                 Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmDispatch(selectedTech)}
+                className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold shadow-xs cursor-pointer transition-all flex items-center gap-1.5"
+              >
+                <Check size={14} />
+                <span>Confirm &amp; Dispatch Now</span>
               </button>
             </div>
           </div>

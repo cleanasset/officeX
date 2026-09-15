@@ -16,7 +16,8 @@ import {
   DollarSign,
   ArrowRight,
   Send,
-  Trash2
+  Trash2,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 
@@ -118,35 +119,19 @@ export default function PropertyDashboardClient({
     setIsDeleting(true);
     try {
       if (deleteTarget.id) {
-        const res = await fetch(`/api/properties?id=${deleteTarget.id}`, {
-          method: "DELETE"
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          console.warn("Delete API warning:", errData);
+        // Remove from custom local properties
+        const updated = customProperties.filter(p => p.id !== deleteTarget.id);
+        setCustomProperties(updated);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_user_properties", JSON.stringify(updated));
         }
       }
-
-      // Remove from local customProperties state & localStorage
-      const updatedCustom = customProperties.filter(
-        p => p.id !== deleteTarget.id && p.name?.toLowerCase().trim() !== deleteTarget.name?.toLowerCase().trim()
-      );
-      setCustomProperties(updatedCustom);
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("officex_user_properties", JSON.stringify(updatedCustom));
-      }
-
-      showToast(`Property "${deleteTarget.name}" deleted successfully.`);
-      setTimeout(() => {
-        window.location.reload();
-      }, 800);
-    } catch (err) {
-      console.error("Delete property error:", err);
-      showToast("Failed to delete property listing.");
+      showToast(`Property "${deleteTarget.name}" deleted from your portfolio.`);
+      setDeleteTarget(null);
+    } catch (e) {
+      showToast("Error deleting property.");
     } finally {
       setIsDeleting(false);
-      setDeleteTarget(null);
     }
   };
 
@@ -195,7 +180,7 @@ export default function PropertyDashboardClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-            Commercial Portfolio & Assets
+            Commercial Portfolio &amp; Assets
           </h1>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
             Manage your commercial real estate portfolio, vacant spaces, and leasing partnerships.
@@ -215,6 +200,25 @@ export default function PropertyDashboardClient({
             <Plus size={14} /> Add Property
           </Link>
         </div>
+      </div>
+
+      {/* Broker Partnership Alert Banner (Client Page 5 Recommended) */}
+      <div className="bg-purple-50/80 border border-purple-200/90 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-purple-900 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+            <Handshake size={16} />
+          </div>
+          <div>
+            <span className="font-black text-purple-950 block">BP-502 Meridian Tech Park — Broker contract awaiting acceptance</span>
+            <span className="text-[11px] text-purple-700">Commercial Partner: Amit Kumar (5.0% Annual Value Brokerage) · Invitation sent Aug 25, 2026</span>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowAssignModal(true)}
+          className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shrink-0 transition-colors shadow-2xs cursor-pointer text-center"
+        >
+          Manage Contract
+        </button>
       </div>
 
       {/* Time-Sensitive Statutory Renewal Alert Strip (per UI/UX Review) */}
@@ -241,23 +245,38 @@ export default function PropertyDashboardClient({
         </Link>
       </div>
 
-      {/* BLOCK 1: KPI BENTO GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* BLOCK 1: KPI BENTO GRID (5 Columns with Portfolio Health Score from /ops) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         
         {/* Total Properties */}
         <Link 
           href="/properties/add" 
-          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
+          className="premium-card p-4 sm:p-5 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Properties</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-[#8B5CF6]">{propertiesCount}</div>
+            <div className="text-2xl font-extrabold text-gray-900 mt-1.5 group-hover:text-[#8B5CF6]">{propertiesCount}</div>
             <span className="text-[10px] text-green-600 font-bold mt-1 block">
               {propertiesCount === 0 ? "⚪ 0 Listed (Empty)" : "🟢 Active Portfolio"}
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-110 transition-transform">
             <Building size={22} />
+          </div>
+        </Link>
+
+        {/* Portfolio Health Score (Client Page 5 Recommended) */}
+        <Link 
+          href="/ops" 
+          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#0F8B7D]/50 hover:shadow-md transition-all cursor-pointer group"
+        >
+          <div>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Portfolio Health</span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#0F8B7D] mt-2 group-hover:text-teal-800">91/100</div>
+            <span className="text-[10px] text-teal-700 font-bold mt-1 block">● Optimal (FM Ops Live)</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] group-hover:scale-110 transition-transform">
+            <Activity size={22} />
           </div>
         </Link>
 

@@ -116,222 +116,148 @@ export default function RentRollMaster() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Master Rent Roll Data (Realistic varied rates across Grade-A Campuses)
+  // Master Rent Roll Data — 10 Tenants across 5 Grade-A Properties (Market-Realistic Rates Sep 2026)
   const [rentRollData, setRentRollData] = useState<RentRollEntry[]>([
+    // ──── One BKC (Apex Tower), Mumbai — BKC Premium ₹240–₹285 PSF ────
     {
-      propertyId: "PROP-001",
-      propertyName: "One BKC (Apex Tower)",
-      floor: "Floor 4",
-      unit: "Suite 401 (North Wing)",
-      tenantId: "TEN-101",
-      tenantName: "Tata Digital Ltd",
-      leaseId: "LEASE-001",
-      areaSqFt: 25000,
-      leaseStart: "01-Sep-2024",
-      leaseEnd: "31-Aug-2029",
-      lockInEnd: "31-Aug-2027",
-      noticePeriodDays: 90,
-      baseMonthlyRent: "₹46,25,000",
-      baseRentPsf: 185,
-      escalationPct: 5,
-      nextEscalationDate: "01-Sep-2026",
-      currentMonthlyRent: "₹46,25,000",
-      camPsf: 22,
-      camMonthly: "₹5,50,000",
-      utilityMonthly: "₹1,85,000",
-      gstAmount: "₹9,64,800",
-      totalMonthlyBilling: "₹63,24,800",
-      depositRequired: "₹2,77,50,000",
-      depositReceived: "₹2,77,50,000",
-      outstanding: "₹0",
-      overdueDays: 0,
-      expiryAlert: "Normal (3y+)",
-      escalationAlert: "Due in 365d",
-      leaseStatus: "Active"
+      propertyId: "PROP-001", propertyName: "One BKC (Apex Tower)", floor: "Floor 4", unit: "Suite 401 (North Wing)",
+      tenantId: "TEN-101", tenantName: "Tata Digital Ltd", leaseId: "LEASE-001",
+      areaSqFt: 25000, leaseStart: "01-Sep-2024", leaseEnd: "31-Aug-2029", lockInEnd: "31-Aug-2027",
+      noticePeriodDays: 90, baseMonthlyRent: "₹60,00,000", baseRentPsf: 240, escalationPct: 5,
+      nextEscalationDate: "01-Sep-2026", currentMonthlyRent: "₹60,00,000",
+      camPsf: 24, camMonthly: "₹6,00,000", utilityMonthly: "₹2,10,000",
+      gstAmount: "₹12,25,800", totalMonthlyBilling: "₹80,35,800",
+      depositRequired: "₹3,60,00,000", depositReceived: "₹3,60,00,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Normal (3y+)", escalationAlert: "Due in 365d", leaseStatus: "Active"
     },
     {
-      propertyId: "PROP-001",
-      propertyName: "One BKC (Apex Tower)",
-      floor: "Floor 8",
-      unit: "Entire Horizon Plate",
-      tenantId: "TEN-102",
-      tenantName: "Google Enterprise Services",
-      leaseId: "LEASE-002",
-      areaSqFt: 32000,
-      leaseStart: "15-Oct-2024",
-      leaseEnd: "14-Oct-2030",
-      lockInEnd: "14-Oct-2028",
-      noticePeriodDays: 120,
-      baseMonthlyRent: "₹62,40,000",
-      baseRentPsf: 195,
-      escalationPct: 5,
-      nextEscalationDate: "15-Oct-2026",
-      currentMonthlyRent: "₹62,40,000",
-      camPsf: 22,
-      camMonthly: "₹7,04,000",
-      utilityMonthly: "₹2,40,000",
-      gstAmount: "₹12,93,120",
-      totalMonthlyBilling: "₹84,77,120",
-      depositRequired: "₹3,74,40,000",
-      depositReceived: "₹3,74,40,000",
-      outstanding: "₹0",
-      overdueDays: 0,
-      expiryAlert: "Normal (4y+)",
-      escalationAlert: "Due in 14 mos",
-      leaseStatus: "Active"
+      propertyId: "PROP-001", propertyName: "One BKC (Apex Tower)", floor: "Floor 8", unit: "Entire Horizon Plate",
+      tenantId: "TEN-102", tenantName: "Google Enterprise Services", leaseId: "LEASE-002",
+      areaSqFt: 32000, leaseStart: "15-Oct-2024", leaseEnd: "14-Oct-2030", lockInEnd: "14-Oct-2028",
+      noticePeriodDays: 120, baseMonthlyRent: "₹91,20,000", baseRentPsf: 285, escalationPct: 5,
+      nextEscalationDate: "15-Oct-2026", currentMonthlyRent: "₹91,20,000",
+      camPsf: 24, camMonthly: "₹7,68,000", utilityMonthly: "₹2,85,000",
+      gstAmount: "₹18,31,140", totalMonthlyBilling: "₹1,20,04,140",
+      depositRequired: "₹5,47,20,000", depositReceived: "₹5,47,20,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Normal (4y+)", escalationAlert: "Due in 14 mos", leaseStatus: "Active"
+    },
+    // ──── Maker Maxity, BKC Mumbai — ₹210–₹250 PSF ────
+    {
+      propertyId: "PROP-002", propertyName: "Maker Maxity Mumbai", floor: "Floor 5", unit: "Suite 501",
+      tenantId: "TEN-103", tenantName: "Deloitte Digital", leaseId: "LEASE-003",
+      areaSqFt: 18500, leaseStart: "01-Jan-2024", leaseEnd: "31-Dec-2028", lockInEnd: "31-Dec-2026",
+      noticePeriodDays: 90, baseMonthlyRent: "₹46,25,000", baseRentPsf: 250, escalationPct: 5,
+      nextEscalationDate: "01-Jan-2027", currentMonthlyRent: "₹46,25,000",
+      camPsf: 22, camMonthly: "₹4,07,000", utilityMonthly: "₹1,55,000",
+      gstAmount: "₹9,33,660", totalMonthlyBilling: "₹61,20,660",
+      depositRequired: "₹2,77,50,000", depositReceived: "₹2,77,50,000",
+      outstanding: "₹61,20,660", overdueDays: 38, expiryAlert: "Normal (2y+)", escalationAlert: "Scheduled", leaseStatus: "Active"
     },
     {
-      propertyId: "PROP-002",
-      propertyName: "Maker Maxity Mumbai",
-      floor: "Floor 5",
-      unit: "Suite 501",
-      tenantId: "TEN-103",
-      tenantName: "Deloitte Digital",
-      leaseId: "LEASE-003",
-      areaSqFt: 18500,
-      leaseStart: "01-Jan-2024",
-      leaseEnd: "31-Dec-2028",
-      lockInEnd: "31-Dec-2026",
-      noticePeriodDays: 90,
-      baseMonthlyRent: "₹38,85,000",
-      baseRentPsf: 210,
-      escalationPct: 5,
-      nextEscalationDate: "01-Jan-2027",
-      currentMonthlyRent: "₹38,85,000",
-      camPsf: 25,
-      camMonthly: "₹4,62,500",
-      utilityMonthly: "₹1,50,000",
-      gstAmount: "₹8,09,550",
-      totalMonthlyBilling: "₹53,07,050",
-      depositRequired: "₹2,33,10,000",
-      depositReceived: "₹2,33,10,000",
-      outstanding: "₹53,07,050",
-      overdueDays: 14,
-      expiryAlert: "Normal (2y+)",
-      escalationAlert: "Scheduled",
-      leaseStatus: "Active"
+      propertyId: "PROP-002", propertyName: "Maker Maxity Mumbai", floor: "Floor 11", unit: "Suite 1101 (West Wing)",
+      tenantId: "TEN-106", tenantName: "McKinsey & Company", leaseId: "LEASE-006",
+      areaSqFt: 14000, leaseStart: "01-Apr-2025", leaseEnd: "31-Mar-2030", lockInEnd: "31-Mar-2028",
+      noticePeriodDays: 120, baseMonthlyRent: "₹29,40,000", baseRentPsf: 210, escalationPct: 7,
+      nextEscalationDate: "01-Apr-2027", currentMonthlyRent: "₹29,40,000",
+      camPsf: 22, camMonthly: "₹3,08,000", utilityMonthly: "₹1,10,000",
+      gstAmount: "₹6,04,440", totalMonthlyBilling: "₹39,62,440",
+      depositRequired: "₹1,76,40,000", depositReceived: "₹1,76,40,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Normal (4y+)", escalationAlert: "Due in 19 mos", leaseStatus: "Active"
+    },
+    // ──── Godrej BKC Horizon, Mumbai — ₹195–₹220 PSF ────
+    {
+      propertyId: "PROP-003", propertyName: "Godrej BKC Horizon", floor: "Floor 6", unit: "Suite 602",
+      tenantId: "TEN-104", tenantName: "Wipro Cloud Infra", leaseId: "LEASE-004",
+      areaSqFt: 14000, leaseStart: "15-Feb-2023", leaseEnd: "14-Feb-2027", lockInEnd: "14-Feb-2025",
+      noticePeriodDays: 90, baseMonthlyRent: "₹27,30,000", baseRentPsf: 195, escalationPct: 7,
+      nextEscalationDate: "15-Feb-2026", currentMonthlyRent: "₹27,30,000",
+      camPsf: 20, camMonthly: "₹2,80,000", utilityMonthly: "₹95,000",
+      gstAmount: "₹5,58,900", totalMonthlyBilling: "₹36,63,900",
+      depositRequired: "₹1,63,80,000", depositReceived: "₹1,63,80,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Expiring in 6 mos", escalationAlert: "Due Soon", leaseStatus: "Expiring Soon"
     },
     {
-      propertyId: "PROP-003",
-      propertyName: "Godrej BKC Horizon",
-      floor: "Floor 6",
-      unit: "Suite 602",
-      tenantId: "TEN-104",
-      tenantName: "Wipro Cloud Infra",
-      leaseId: "LEASE-004",
-      areaSqFt: 14000,
-      leaseStart: "15-Feb-2023",
-      leaseEnd: "14-Feb-2027",
-      lockInEnd: "14-Feb-2025",
-      noticePeriodDays: 90,
-      baseMonthlyRent: "₹23,80,000",
-      baseRentPsf: 170,
-      escalationPct: 7,
-      nextEscalationDate: "15-Feb-2026",
-      currentMonthlyRent: "₹23,80,000",
-      camPsf: 18,
-      camMonthly: "₹2,52,000",
-      utilityMonthly: "₹95,000",
-      gstAmount: "₹4,90,860",
-      totalMonthlyBilling: "₹32,17,860",
-      depositRequired: "₹1,42,80,000",
-      depositReceived: "₹1,42,80,000",
-      outstanding: "₹0",
-      overdueDays: 0,
-      expiryAlert: "Expiring in 6 mos",
-      escalationAlert: "Due Soon",
-      leaseStatus: "Expiring Soon"
+      propertyId: "PROP-003", propertyName: "Godrej BKC Horizon", floor: "Floor 3", unit: "Suite 301 (South Wing)",
+      tenantId: "TEN-107", tenantName: "HSBC Global Services", leaseId: "LEASE-007",
+      areaSqFt: 22000, leaseStart: "01-Jun-2024", leaseEnd: "31-May-2029", lockInEnd: "31-May-2027",
+      noticePeriodDays: 90, baseMonthlyRent: "₹48,40,000", baseRentPsf: 220, escalationPct: 5,
+      nextEscalationDate: "01-Jun-2027", currentMonthlyRent: "₹48,40,000",
+      camPsf: 20, camMonthly: "₹4,40,000", utilityMonthly: "₹1,75,000",
+      gstAmount: "₹9,81,900", totalMonthlyBilling: "₹64,36,900",
+      depositRequired: "₹2,90,40,000", depositReceived: "₹2,90,40,000",
+      outstanding: "₹64,36,900", overdueDays: 12, expiryAlert: "Normal (3y+)", escalationAlert: "Due in 21 mos", leaseStatus: "Active"
+    },
+    // ──── Shivalik Shilp, Ahmedabad (GIFT City Corridor) — ₹65–₹85 PSF ────
+    {
+      propertyId: "PROP-004", propertyName: "Shivalik Shilp, Ahmedabad", floor: "Floor 7", unit: "Suite 701",
+      tenantId: "TEN-108", tenantName: "Infosys BPM Ltd", leaseId: "LEASE-008",
+      areaSqFt: 28000, leaseStart: "01-Mar-2025", leaseEnd: "28-Feb-2030", lockInEnd: "28-Feb-2028",
+      noticePeriodDays: 90, baseMonthlyRent: "₹23,80,000", baseRentPsf: 85, escalationPct: 5,
+      nextEscalationDate: "01-Mar-2027", currentMonthlyRent: "₹23,80,000",
+      camPsf: 15, camMonthly: "₹4,20,000", utilityMonthly: "₹1,40,000",
+      gstAmount: "₹5,29,200", totalMonthlyBilling: "₹34,69,200",
+      depositRequired: "₹1,42,80,000", depositReceived: "₹1,42,80,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Normal (4y+)", escalationAlert: "Due in 18 mos", leaseStatus: "Active"
+    },
+    {
+      propertyId: "PROP-004", propertyName: "Shivalik Shilp, Ahmedabad", floor: "Floor 4", unit: "Suite 401",
+      tenantId: "TEN-109", tenantName: "Adani Digital Labs", leaseId: "LEASE-009",
+      areaSqFt: 12000, leaseStart: "15-Nov-2024", leaseEnd: "14-Nov-2028", lockInEnd: "14-Nov-2026",
+      noticePeriodDays: 60, baseMonthlyRent: "₹7,80,000", baseRentPsf: 65, escalationPct: 7,
+      nextEscalationDate: "15-Nov-2026", currentMonthlyRent: "₹7,80,000",
+      camPsf: 15, camMonthly: "₹1,80,000", utilityMonthly: "₹65,000",
+      gstAmount: "₹1,84,500", totalMonthlyBilling: "₹12,09,500",
+      depositRequired: "₹46,80,000", depositReceived: "₹46,80,000",
+      outstanding: "₹12,09,500", overdueDays: 45, expiryAlert: "Normal (2y+)", escalationAlert: "Due in 14 mos", leaseStatus: "Notice Served"
+    },
+    // ──── Business Hub, Pune (Hinjewadi IT Park) — ₹55–₹75 PSF ────
+    {
+      propertyId: "PROP-005", propertyName: "Business Hub, Pune", floor: "Floor 2", unit: "Suite 201 (Full Floor)",
+      tenantId: "TEN-105", tenantName: "Persistent Systems", leaseId: "LEASE-005",
+      areaSqFt: 35000, leaseStart: "01-Jul-2024", leaseEnd: "30-Jun-2029", lockInEnd: "30-Jun-2027",
+      noticePeriodDays: 90, baseMonthlyRent: "₹26,25,000", baseRentPsf: 75, escalationPct: 5,
+      nextEscalationDate: "01-Jul-2027", currentMonthlyRent: "₹26,25,000",
+      camPsf: 16, camMonthly: "₹5,60,000", utilityMonthly: "₹1,80,000",
+      gstAmount: "₹6,05,700", totalMonthlyBilling: "₹39,70,700",
+      depositRequired: "₹1,57,50,000", depositReceived: "₹1,57,50,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Normal (3y+)", escalationAlert: "Due in 22 mos", leaseStatus: "Active"
+    },
+    {
+      propertyId: "PROP-005", propertyName: "Business Hub, Pune", floor: "Floor 5", unit: "Suite 502",
+      tenantId: "TEN-110", tenantName: "Tech Mahindra Ltd", leaseId: "LEASE-010",
+      areaSqFt: 8500, leaseStart: "01-Aug-2025", leaseEnd: "31-Jul-2028", lockInEnd: "31-Jul-2027",
+      noticePeriodDays: 60, baseMonthlyRent: "₹4,67,500", baseRentPsf: 55, escalationPct: 5,
+      nextEscalationDate: "01-Aug-2027", currentMonthlyRent: "₹4,67,500",
+      camPsf: 16, camMonthly: "₹1,36,000", utilityMonthly: "₹48,000",
+      gstAmount: "₹1,17,270", totalMonthlyBilling: "₹7,68,770",
+      depositRequired: "₹28,05,000", depositReceived: "₹28,05,000",
+      outstanding: "₹0", overdueDays: 0, expiryAlert: "Normal (2y+)", escalationAlert: "Due in 23 mos", leaseStatus: "Active"
     }
   ]);
 
-  // Master Invoices State
+  // Master Invoices State — 10 Invoices matching 10 Tenants (Sep 2026 billing cycle)
   const [invoices, setInvoices] = useState<InvoiceItem[]>([
-    {
-      id: "INV-101",
-      invoiceNo: "INV-2026-081",
-      leaseId: "LEASE-001",
-      tenantId: "TEN-101",
-      tenantName: "Tata Digital Ltd",
-      property: "One BKC (Apex Tower)",
-      billingMonth: "August 2026",
-      dueDate: "05-Aug-2026",
-      baseRent: "₹46,25,000",
-      camRecovery: "₹5,50,000",
-      utilityRecovery: "₹1,85,000",
-      gstAmount: "₹9,64,800",
-      totalAmount: "₹63,24,800",
-      status: "Paid",
-      paidDate: "02-Aug-2026",
-      paymentMode: "RTGS / HDFC Bank",
-      utr: "HDFCR520260802008912",
-      tdsDeducted: "₹4,62,500"
-    },
-    {
-      id: "INV-102",
-      invoiceNo: "INV-2026-082",
-      leaseId: "LEASE-002",
-      tenantId: "TEN-102",
-      tenantName: "Google Enterprise Services",
-      property: "One BKC (Apex Tower)",
-      billingMonth: "August 2026",
-      dueDate: "05-Aug-2026",
-      baseRent: "₹62,40,000",
-      camRecovery: "₹7,04,000",
-      utilityRecovery: "₹2,40,000",
-      gstAmount: "₹12,93,120",
-      totalAmount: "₹84,77,120",
-      status: "Paid",
-      paidDate: "03-Aug-2026",
-      paymentMode: "Corporate Wire / Citibank",
-      utr: "CITIN20260803991204",
-      tdsDeducted: "₹6,24,000"
-    },
-    {
-      id: "INV-103",
-      invoiceNo: "INV-2026-083",
-      leaseId: "LEASE-003",
-      tenantId: "TEN-103",
-      tenantName: "Deloitte Digital",
-      property: "Maker Maxity Mumbai",
-      billingMonth: "August 2026",
-      dueDate: "05-Aug-2026",
-      baseRent: "₹38,85,000",
-      camRecovery: "₹4,62,500",
-      utilityRecovery: "₹1,50,000",
-      gstAmount: "₹8,09,550",
-      totalAmount: "₹53,07,050",
-      status: "Overdue",
-      paidDate: undefined,
-      paymentMode: undefined,
-      utr: undefined
-    },
-    {
-      id: "INV-104",
-      invoiceNo: "INV-2026-084",
-      leaseId: "LEASE-004",
-      tenantId: "TEN-104",
-      tenantName: "Wipro Cloud Infra",
-      property: "Godrej BKC Horizon",
-      billingMonth: "August 2026",
-      dueDate: "05-Aug-2026",
-      baseRent: "₹23,80,000",
-      camRecovery: "₹2,52,000",
-      utilityRecovery: "₹95,000",
-      gstAmount: "₹4,90,860",
-      totalAmount: "₹32,17,860",
-      status: "Paid",
-      paidDate: "05-Aug-2026",
-      paymentMode: "NEFT / ICICI Bank",
-      utr: "ICICN20260805128790",
-      tdsDeducted: "₹2,38,000"
-    }
+    { id: "INV-101", invoiceNo: "INV-2026-091", leaseId: "LEASE-001", tenantId: "TEN-101", tenantName: "Tata Digital Ltd", property: "One BKC (Apex Tower)", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹60,00,000", camRecovery: "₹6,00,000", utilityRecovery: "₹2,10,000", gstAmount: "₹12,25,800", totalAmount: "₹80,35,800", status: "Paid", paidDate: "03-Sep-2026", paymentMode: "RTGS / HDFC Bank", utr: "HDFCR520260903008912", tdsDeducted: "₹6,00,000" },
+    { id: "INV-102", invoiceNo: "INV-2026-092", leaseId: "LEASE-002", tenantId: "TEN-102", tenantName: "Google Enterprise Services", property: "One BKC (Apex Tower)", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹91,20,000", camRecovery: "₹7,68,000", utilityRecovery: "₹2,85,000", gstAmount: "₹18,31,140", totalAmount: "₹1,20,04,140", status: "Paid", paidDate: "02-Sep-2026", paymentMode: "Corporate Wire / Citibank", utr: "CITIN20260902991204", tdsDeducted: "₹9,12,000" },
+    { id: "INV-103", invoiceNo: "INV-2026-093", leaseId: "LEASE-003", tenantId: "TEN-103", tenantName: "Deloitte Digital", property: "Maker Maxity Mumbai", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹46,25,000", camRecovery: "₹4,07,000", utilityRecovery: "₹1,55,000", gstAmount: "₹9,33,660", totalAmount: "₹61,20,660", status: "Overdue", paidDate: undefined, paymentMode: undefined, utr: undefined },
+    { id: "INV-104", invoiceNo: "INV-2026-094", leaseId: "LEASE-004", tenantId: "TEN-104", tenantName: "Wipro Cloud Infra", property: "Godrej BKC Horizon", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹27,30,000", camRecovery: "₹2,80,000", utilityRecovery: "₹95,000", gstAmount: "₹5,58,900", totalAmount: "₹36,63,900", status: "Paid", paidDate: "05-Sep-2026", paymentMode: "NEFT / ICICI Bank", utr: "ICICN20260905128790", tdsDeducted: "₹2,73,000" },
+    { id: "INV-105", invoiceNo: "INV-2026-095", leaseId: "LEASE-005", tenantId: "TEN-105", tenantName: "Persistent Systems", property: "Business Hub, Pune", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹26,25,000", camRecovery: "₹5,60,000", utilityRecovery: "₹1,80,000", gstAmount: "₹6,05,700", totalAmount: "₹39,70,700", status: "Paid", paidDate: "04-Sep-2026", paymentMode: "RTGS / Kotak Bank", utr: "KOTKR20260904556789", tdsDeducted: "₹2,62,500" },
+    { id: "INV-106", invoiceNo: "INV-2026-096", leaseId: "LEASE-006", tenantId: "TEN-106", tenantName: "McKinsey & Company", property: "Maker Maxity Mumbai", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹29,40,000", camRecovery: "₹3,08,000", utilityRecovery: "₹1,10,000", gstAmount: "₹6,04,440", totalAmount: "₹39,62,440", status: "Paid", paidDate: "01-Sep-2026", paymentMode: "Corporate Wire / HSBC", utr: "HSBC520260901440210", tdsDeducted: "₹2,94,000" },
+    { id: "INV-107", invoiceNo: "INV-2026-097", leaseId: "LEASE-007", tenantId: "TEN-107", tenantName: "HSBC Global Services", property: "Godrej BKC Horizon", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹48,40,000", camRecovery: "₹4,40,000", utilityRecovery: "₹1,75,000", gstAmount: "₹9,81,900", totalAmount: "₹64,36,900", status: "Pending", paidDate: undefined, paymentMode: undefined, utr: undefined },
+    { id: "INV-108", invoiceNo: "INV-2026-098", leaseId: "LEASE-008", tenantId: "TEN-108", tenantName: "Infosys BPM Ltd", property: "Shivalik Shilp, Ahmedabad", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹23,80,000", camRecovery: "₹4,20,000", utilityRecovery: "₹1,40,000", gstAmount: "₹5,29,200", totalAmount: "₹34,69,200", status: "Paid", paidDate: "04-Sep-2026", paymentMode: "NEFT / SBI Corporate", utr: "SBIN520260904887621", tdsDeducted: "₹2,38,000" },
+    { id: "INV-109", invoiceNo: "INV-2026-099", leaseId: "LEASE-009", tenantId: "TEN-109", tenantName: "Adani Digital Labs", property: "Shivalik Shilp, Ahmedabad", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹7,80,000", camRecovery: "₹1,80,000", utilityRecovery: "₹65,000", gstAmount: "₹1,84,500", totalAmount: "₹12,09,500", status: "Overdue", paidDate: undefined, paymentMode: undefined, utr: undefined },
+    { id: "INV-110", invoiceNo: "INV-2026-100", leaseId: "LEASE-010", tenantId: "TEN-110", tenantName: "Tech Mahindra Ltd", property: "Business Hub, Pune", billingMonth: "September 2026", dueDate: "05-Sep-2026", baseRent: "₹4,67,500", camRecovery: "₹1,36,000", utilityRecovery: "₹48,000", gstAmount: "₹1,17,270", totalAmount: "₹7,68,770", status: "Paid", paidDate: "05-Sep-2026", paymentMode: "NEFT / Axis Bank", utr: "AXISR20260905334521", tdsDeducted: "₹46,750" }
   ]);
 
   // Master Collections Receipts State
   const [collections, setCollections] = useState<CollectionReceipt[]>([
-    { receiptNo: "REC-2026-881", invoiceNo: "INV-2026-081", tenant: "Tata Digital Ltd", paymentDate: "02-Aug-2026", amountReceived: "₹63,24,800", paymentMode: "RTGS / HDFC Bank", utr: "HDFCR520260802008912", reconciliationStatus: "100% Cleared" },
-    { receiptNo: "REC-2026-882", invoiceNo: "INV-2026-082", tenant: "Google Enterprise Services", paymentDate: "03-Aug-2026", amountReceived: "₹84,77,120", paymentMode: "Corporate Wire", utr: "CITIN20260803991204", reconciliationStatus: "100% Cleared" },
-    { receiptNo: "REC-2026-883", invoiceNo: "INV-2026-084", tenant: "Wipro Cloud Infra", paymentDate: "05-Aug-2026", amountReceived: "₹32,17,860", paymentMode: "NEFT / ICICI", utr: "ICICN20260805128790", reconciliationStatus: "100% Cleared" }
+    { receiptNo: "REC-2026-901", invoiceNo: "INV-2026-091", tenant: "Tata Digital Ltd", paymentDate: "03-Sep-2026", amountReceived: "₹80,35,800", paymentMode: "RTGS / HDFC Bank", utr: "HDFCR520260903008912", reconciliationStatus: "100% Cleared" },
+    { receiptNo: "REC-2026-902", invoiceNo: "INV-2026-092", tenant: "Google Enterprise Services", paymentDate: "02-Sep-2026", amountReceived: "₹1,20,04,140", paymentMode: "Corporate Wire / Citibank", utr: "CITIN20260902991204", reconciliationStatus: "100% Cleared" },
+    { receiptNo: "REC-2026-903", invoiceNo: "INV-2026-094", tenant: "Wipro Cloud Infra", paymentDate: "05-Sep-2026", amountReceived: "₹36,63,900", paymentMode: "NEFT / ICICI Bank", utr: "ICICN20260905128790", reconciliationStatus: "100% Cleared" },
+    { receiptNo: "REC-2026-904", invoiceNo: "INV-2026-095", tenant: "Persistent Systems", paymentDate: "04-Sep-2026", amountReceived: "₹39,70,700", paymentMode: "RTGS / Kotak Bank", utr: "KOTKR20260904556789", reconciliationStatus: "100% Cleared" },
+    { receiptNo: "REC-2026-905", invoiceNo: "INV-2026-096", tenant: "McKinsey & Company", paymentDate: "01-Sep-2026", amountReceived: "₹39,62,440", paymentMode: "Corporate Wire / HSBC", utr: "HSBC520260901440210", reconciliationStatus: "100% Cleared" },
+    { receiptNo: "REC-2026-906", invoiceNo: "INV-2026-098", tenant: "Infosys BPM Ltd", paymentDate: "04-Sep-2026", amountReceived: "₹34,69,200", paymentMode: "NEFT / SBI Corporate", utr: "SBIN520260904887621", reconciliationStatus: "100% Cleared" },
+    { receiptNo: "REC-2026-907", invoiceNo: "INV-2026-100", tenant: "Tech Mahindra Ltd", paymentDate: "05-Sep-2026", amountReceived: "₹7,68,770", paymentMode: "NEFT / Axis Bank", utr: "AXISR20260905334521", reconciliationStatus: "100% Cleared" }
   ]);
 
   // Handle Payment Settlement (Marks Paid, clears outstanding, creates collection receipt)
@@ -485,6 +411,13 @@ export default function RentRollMaster() {
     const num = parseInt(curr.outstanding.replace(/[^\d]/g, "")) || 0;
     return acc + num;
   }, 0);
+  const totalMonthlyBillingNum = rentRollData.reduce((acc, curr) => {
+    return acc + (parseInt(curr.totalMonthlyBilling.replace(/[^\d]/g, "")) || 0);
+  }, 0);
+  const totalCamNum = rentRollData.reduce((acc, curr) => {
+    return acc + (parseInt(curr.camMonthly.replace(/[^\d]/g, "")) || 0);
+  }, 0);
+  const pendingInvoicesCount = invoices.filter(i => i.status !== "Paid").length;
 
   return (
     <div className="flex flex-col gap-6 font-sans w-full max-w-full pb-16">
@@ -531,18 +464,18 @@ export default function RentRollMaster() {
         <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL LEASED AREA</span>
           <p className="text-2xl font-black text-gray-900 mt-1">{totalArea.toLocaleString()} sq.ft.</p>
-          <span className="text-[10px] text-emerald-600 font-bold">● 94.6% Occupancy across BKC</span>
+          <span className="text-[10px] text-emerald-600 font-bold">● 96.2% Portfolio Occupancy</span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">MONTHLY INVOICED GTV</span>
-          <p className="text-2xl font-black text-gray-900 mt-1">₹2.33 Crores</p>
+          <p className="text-2xl font-black text-gray-900 mt-1">₹{(totalMonthlyBillingNum / 10000000).toFixed(2)} Crores</p>
           <span className="text-[10px] text-gray-400">Rent + CAM + Utility + GST</span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">MONTHLY CAM RECOVERY</span>
-          <p className="text-2xl font-black text-teal-700 mt-1">₹19.68 Lakhs</p>
+          <p className="text-2xl font-black text-teal-700 mt-1">₹{(totalCamNum / 100000).toFixed(2)} Lakhs</p>
           <span className="text-[10px] text-emerald-600 font-bold">100% Cost Recovery</span>
         </div>
 
@@ -552,7 +485,7 @@ export default function RentRollMaster() {
             {totalOutstanding === 0 ? "₹0 (Zero Dues)" : `₹${totalOutstanding.toLocaleString("en-IN")}`}
           </p>
           <span className="text-[10px] font-bold text-teal-700">
-            {totalOutstanding === 0 ? "100% Collected" : "1 Invoice Pending Collection"}
+            {pendingInvoicesCount === 0 ? "100% Collected" : `${pendingInvoicesCount} Invoice${pendingInvoicesCount > 1 ? "s" : ""} Pending Collection`}
           </span>
         </div>
       </div>
@@ -612,10 +545,12 @@ export default function RentRollMaster() {
                 onChange={(e) => setSelectedProperty(e.target.value)}
                 className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white font-bold text-gray-700 text-xs focus:outline-none focus:border-[#0F8B7D]"
               >
-                <option value="All">All Properties (3 Campuses)</option>
-                <option value="One BKC">One BKC (Apex Tower)</option>
-                <option value="Maker Maxity">Maker Maxity Mumbai</option>
-                <option value="Godrej BKC">Godrej BKC Horizon</option>
+                <option value="All">All Properties (5 Campuses)</option>
+                <option value="One BKC">One BKC (Apex Tower) — Mumbai</option>
+                <option value="Maker Maxity">Maker Maxity — Mumbai</option>
+                <option value="Godrej BKC">Godrej BKC Horizon — Mumbai</option>
+                <option value="Shivalik Shilp">Shivalik Shilp — Ahmedabad</option>
+                <option value="Business Hub">Business Hub — Pune</option>
               </select>
             </div>
           </div>
@@ -921,53 +856,148 @@ export default function RentRollMaster() {
       {/* ========================================================================= */}
       {/* TAB 4: RECEIVABLES AGING */}
       {/* ========================================================================= */}
-      {activeTab === "aging" && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
-          <div>
-            <h3 className="text-base font-black text-gray-900">Receivables Aging &amp; Overdue Risk Matrix</h3>
-            <p className="text-xs text-gray-400 mt-0.5">30-day, 60-day, 90-day overdue buckets with live reconciliation link</p>
+      {activeTab === "aging" && (() => {
+        const overdueEntries = rentRollData.filter(d => d.outstanding !== "₹0");
+        const bucket030 = overdueEntries.filter(d => d.overdueDays <= 30);
+        const bucket3160 = overdueEntries.filter(d => d.overdueDays > 30 && d.overdueDays <= 60);
+        const bucket6190 = overdueEntries.filter(d => d.overdueDays > 60 && d.overdueDays <= 90);
+        const bucket90plus = overdueEntries.filter(d => d.overdueDays > 90);
+
+        const parseAmount = (s: string) => parseInt(s.replace(/[^\d]/g, "")) || 0;
+        const total030 = bucket030.reduce((a, d) => a + parseAmount(d.outstanding), 0);
+        const total3160 = bucket3160.reduce((a, d) => a + parseAmount(d.outstanding), 0);
+        const total6190 = bucket6190.reduce((a, d) => a + parseAmount(d.outstanding), 0);
+        const total90plus = bucket90plus.reduce((a, d) => a + parseAmount(d.outstanding), 0);
+        const grandTotal = total030 + total3160 + total6190 + total90plus;
+        const maxBucket = Math.max(total030, total3160, total6190, total90plus, 1);
+
+        return (
+        <div className="space-y-5">
+          {/* Visual Ageing Bar Chart */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-2xs space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-black text-gray-900">Receivables Ageing — Visual Breakdown</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Overdue buckets: 0–30 / 31–60 / 61–90 / 90+ days with proportional bar visualization</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-black border ${grandTotal === 0 ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-amber-50 text-amber-800 border-amber-200"}`}>
+                Total Overdue: {grandTotal === 0 ? "₹0 (Zero Dues)" : `₹${grandTotal.toLocaleString("en-IN")}`}
+              </span>
+            </div>
+
+            {/* Summary KPI Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="bg-emerald-50/70 rounded-xl border border-emerald-200/60 p-3.5">
+                <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider block">0 – 30 Days</span>
+                <p className="text-lg font-black text-emerald-800 mt-0.5">₹{total030.toLocaleString("en-IN")}</p>
+                <span className="text-[10px] text-emerald-600 font-semibold">{bucket030.length} tenant{bucket030.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="bg-amber-50/70 rounded-xl border border-amber-200/60 p-3.5">
+                <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider block">31 – 60 Days</span>
+                <p className="text-lg font-black text-amber-800 mt-0.5">₹{total3160.toLocaleString("en-IN")}</p>
+                <span className="text-[10px] text-amber-600 font-semibold">{bucket3160.length} tenant{bucket3160.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="bg-orange-50/70 rounded-xl border border-orange-200/60 p-3.5">
+                <span className="text-[9px] font-bold text-orange-600 uppercase tracking-wider block">61 – 90 Days</span>
+                <p className="text-lg font-black text-orange-800 mt-0.5">₹{total6190.toLocaleString("en-IN")}</p>
+                <span className="text-[10px] text-orange-600 font-semibold">{bucket6190.length} tenant{bucket6190.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="bg-red-50/70 rounded-xl border border-red-200/60 p-3.5">
+                <span className="text-[9px] font-bold text-red-600 uppercase tracking-wider block">90+ Days</span>
+                <p className="text-lg font-black text-red-800 mt-0.5">₹{total90plus.toLocaleString("en-IN")}</p>
+                <span className="text-[10px] text-red-600 font-semibold">{bucket90plus.length} tenant{bucket90plus.length !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+
+            {/* Horizontal Bar Chart */}
+            <div className="space-y-3">
+              {[
+                { label: "0 – 30 Days", total: total030, color: "bg-emerald-500", textColor: "text-emerald-700", entries: bucket030 },
+                { label: "31 – 60 Days", total: total3160, color: "bg-amber-500", textColor: "text-amber-700", entries: bucket3160 },
+                { label: "61 – 90 Days", total: total6190, color: "bg-orange-500", textColor: "text-orange-700", entries: bucket6190 },
+                { label: "90+ Days", total: total90plus, color: "bg-red-500", textColor: "text-red-700", entries: bucket90plus }
+              ].map((bucket) => (
+                <div key={bucket.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={`font-bold ${bucket.textColor}`}>{bucket.label}</span>
+                    <span className="font-black text-gray-900">₹{bucket.total.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="w-full h-7 bg-gray-100 rounded-lg overflow-hidden relative">
+                    <div
+                      className={`h-full ${bucket.color} rounded-lg transition-all duration-700 ease-out flex items-center`}
+                      style={{ width: `${maxBucket > 0 ? Math.max((bucket.total / maxBucket) * 100, bucket.total > 0 ? 4 : 0) : 0}%` }}
+                    >
+                      {bucket.total > 0 && (
+                        <span className="text-white text-[9px] font-bold px-2 truncate">
+                          {bucket.entries.map(e => e.tenantName).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                    {bucket.total === 0 && (
+                      <span className="absolute inset-0 flex items-center px-3 text-[10px] text-gray-400 font-semibold">No overdue receivables</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left min-w-[700px]">
-              <thead>
-                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
-                  <th className="p-3">TENANT</th>
-                  <th className="p-3">CURRENT (0-30D)</th>
-                  <th className="p-3">31 - 60 DAYS</th>
-                  <th className="p-3">61 - 90 DAYS</th>
-                  <th className="p-3">90+ DAYS</th>
-                  <th className="p-3">TOTAL OVERDUE</th>
-                  <th className="p-3 text-right">CREDIT RISK</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {rentRollData.map((d, i) => {
-                  const hasOverdue = d.outstanding !== "₹0";
+          {/* Detailed Aging Table */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-2xs space-y-4 text-xs">
+            <div>
+              <h3 className="text-base font-black text-gray-900">Tenant-wise Aging Detail</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Per-tenant overdue bucketing with credit risk classification</p>
+            </div>
 
-                  return (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="p-3 font-bold text-gray-900">{d.tenantName}</td>
-                      <td className="p-3">{hasOverdue ? d.outstanding : "₹0"}</td>
-                      <td className="p-3 text-gray-400">₹0</td>
-                      <td className="p-3 text-gray-400">₹0</td>
-                      <td className="p-3 text-gray-400">₹0</td>
-                      <td className={`p-3 font-black ${hasOverdue ? "text-amber-600" : "text-gray-900"}`}>{d.outstanding}</td>
-                      <td className="p-3 text-right">
-                        <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${
-                          hasOverdue ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                        }`}>
-                          {hasOverdue ? `${d.overdueDays}d Due (Moderate)` : "Low Risk (Nil Dues)"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase bg-gray-50/70">
+                    <th className="p-3">TENANT</th>
+                    <th className="p-3">PROPERTY</th>
+                    <th className="p-3">CURRENT (0-30D)</th>
+                    <th className="p-3">31 - 60 DAYS</th>
+                    <th className="p-3">61 - 90 DAYS</th>
+                    <th className="p-3">90+ DAYS</th>
+                    <th className="p-3">TOTAL OVERDUE</th>
+                    <th className="p-3 text-right">CREDIT RISK</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {rentRollData.map((d, i) => {
+                    const hasOverdue = d.outstanding !== "₹0";
+                    const amt = parseAmount(d.outstanding);
+                    const in030 = hasOverdue && d.overdueDays <= 30;
+                    const in3160 = hasOverdue && d.overdueDays > 30 && d.overdueDays <= 60;
+                    const in6190 = hasOverdue && d.overdueDays > 60 && d.overdueDays <= 90;
+                    const in90p = hasOverdue && d.overdueDays > 90;
+                    const riskLabel = !hasOverdue ? "Low Risk" : d.overdueDays <= 30 ? "Moderate" : d.overdueDays <= 60 ? "Elevated" : d.overdueDays <= 90 ? "High" : "Critical";
+                    const riskColor = !hasOverdue ? "bg-emerald-50 text-emerald-800 border-emerald-200" : d.overdueDays <= 30 ? "bg-amber-50 text-amber-800 border-amber-200" : d.overdueDays <= 60 ? "bg-amber-50 text-amber-800 border-amber-200" : d.overdueDays <= 90 ? "bg-orange-50 text-orange-800 border-orange-200" : "bg-red-50 text-red-800 border-red-200";
+
+                    return (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="p-3 font-bold text-gray-900">{d.tenantName}</td>
+                        <td className="p-3 text-gray-500">{d.propertyName}</td>
+                        <td className={`p-3 ${in030 ? "font-bold text-emerald-700" : "text-gray-400"}`}>{in030 ? `₹${amt.toLocaleString("en-IN")}` : "₹0"}</td>
+                        <td className={`p-3 ${in3160 ? "font-bold text-amber-700" : "text-gray-400"}`}>{in3160 ? `₹${amt.toLocaleString("en-IN")}` : "₹0"}</td>
+                        <td className={`p-3 ${in6190 ? "font-bold text-orange-700" : "text-gray-400"}`}>{in6190 ? `₹${amt.toLocaleString("en-IN")}` : "₹0"}</td>
+                        <td className={`p-3 ${in90p ? "font-bold text-red-700" : "text-gray-400"}`}>{in90p ? `₹${amt.toLocaleString("en-IN")}` : "₹0"}</td>
+                        <td className={`p-3 font-black ${hasOverdue ? "text-amber-600" : "text-gray-900"}`}>{d.outstanding}</td>
+                        <td className="p-3 text-right">
+                          <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${riskColor}`}>
+                            {hasOverdue ? `${d.overdueDays}d — ${riskLabel}` : "Nil Dues"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* TAB 5: ESCALATIONS INDEX */}
@@ -1047,9 +1077,11 @@ export default function RentRollMaster() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {[
-                  { p: "One BKC (Apex Tower)", r: "₹1,08,65,000", c: "₹12,54,000", t: "₹1,21,19,000", o: "₹18,50,000", noi: "₹1,02,69,000", m: "84.7%" },
-                  { p: "Maker Maxity Mumbai", r: "₹38,85,000", c: "₹4,62,500", t: "₹43,47,500", o: "₹7,20,000", noi: "₹36,27,500", m: "83.4%" },
-                  { p: "Godrej BKC Horizon", r: "₹23,80,000", c: "₹2,52,000", t: "₹26,32,000", o: "₹5,10,000", noi: "₹21,22,000", m: "80.6%" }
+                  { p: "One BKC (Apex Tower) — Mumbai", r: "₹1,51,20,000", c: "₹13,68,000", t: "₹1,64,88,000", o: "₹24,50,000", noi: "₹1,40,38,000", m: "85.1%" },
+                  { p: "Maker Maxity — Mumbai", r: "₹75,65,000", c: "₹7,15,000", t: "₹82,80,000", o: "₹13,80,000", noi: "₹69,00,000", m: "83.3%" },
+                  { p: "Godrej BKC Horizon — Mumbai", r: "₹75,70,000", c: "₹7,20,000", t: "₹82,90,000", o: "₹14,20,000", noi: "₹68,70,000", m: "82.9%" },
+                  { p: "Shivalik Shilp — Ahmedabad", r: "₹31,60,000", c: "₹6,00,000", t: "₹37,60,000", o: "₹5,80,000", noi: "₹31,80,000", m: "84.6%" },
+                  { p: "Business Hub — Pune", r: "₹30,92,500", c: "₹6,96,000", t: "₹37,88,500", o: "₹6,40,000", noi: "₹31,48,500", m: "83.1%" }
                 ].map((p, i) => (
                   <tr key={i} className="hover:bg-gray-50">
                     <td className="p-3 font-bold text-gray-900 flex items-center gap-1.5">
@@ -1096,7 +1128,13 @@ export default function RentRollMaster() {
                   { id: "TEN-101", n: "Tata Digital Limited", g: "27AAACT2727Q1ZB", pan: "AAACT2727Q", c: "Aditya Verma (Head RE)", e: "aditya.verma@tatadigital.com", m: "+91 98201 44821" },
                   { id: "TEN-102", n: "Google Enterprise Solutions Ltd", g: "27AAACG9014M1Z2", pan: "AAACG9014M", c: "Priya Nair (Director Workplace)", e: "pnair@google.com", m: "+91 98190 22391" },
                   { id: "TEN-103", n: "Deloitte Digital Enterprise LLP", g: "27AABBD3910F1Z4", pan: "AABBD3910F", c: "Rahul Mehta (Partner RE)", e: "rmehta@deloitte.com", m: "+91 98210 55102" },
-                  { id: "TEN-104", n: "Wipro Limited", g: "27AAACW1209K1ZY", pan: "AAACW1209K", c: "Sneha Rao (Admin VP)", e: "sneha.rao@wipro.com", m: "+91 98330 11984" }
+                  { id: "TEN-104", n: "Wipro Limited", g: "27AAACW1209K1ZY", pan: "AAACW1209K", c: "Sneha Rao (Admin VP)", e: "sneha.rao@wipro.com", m: "+91 98330 11984" },
+                  { id: "TEN-105", n: "Persistent Systems Ltd", g: "27AAACP0129L1Z8", pan: "AAACP0129L", c: "Amit Deshmukh (Facilities Head)", e: "amit.deshmukh@persistent.com", m: "+91 98902 44190" },
+                  { id: "TEN-106", n: "McKinsey & Company India LLP", g: "27AAAAM1124H1Z3", pan: "AAAAM1124H", c: "Vikram Singhania (Ops Lead)", e: "vikram_singhania@mckinsey.com", m: "+91 98205 77123" },
+                  { id: "TEN-107", n: "HSBC Global Services India", g: "27AAACH8890K1ZX", pan: "AAACH8890K", c: "Farhan Merchant (VP Infra)", e: "farhan.merchant@hsbc.co.in", m: "+91 98214 33091" },
+                  { id: "TEN-108", n: "Infosys BPM Limited", g: "24AAACI4419M1ZR", pan: "AACI4419M", c: "Meera Patel (Regional Admin)", e: "meera.patel@infosys.com", m: "+91 98795 66012" },
+                  { id: "TEN-109", n: "Adani Digital Labs Pvt Ltd", g: "24AAACA9923N1ZY", pan: "AACA9923N", c: "Rajesh Joshi (Head CRE)", e: "rajesh.joshi@adani.com", m: "+91 98250 88234" },
+                  { id: "TEN-110", n: "Tech Mahindra Limited", g: "27AAACT1190P1ZQ", pan: "AAACT1190P", c: "Neha Kulkarni (CRE Manager)", e: "neha.kulkarni@techmahindra.com", m: "+91 98901 33456" }
                 ].map((t, idx) => (
                   <tr 
                     key={idx} 

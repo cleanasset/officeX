@@ -4,12 +4,18 @@ import Link from "next/link";
 import { 
   TrendingUp, TrendingDown, MoreVertical, ChevronRight, 
   Building, Users, Calendar, DollarSign, AlertCircle, ArrowUpRight, 
-  FileText, CheckCircle, Clock, Sparkles 
+  FileText, CheckCircle, Clock, Sparkles, X, Download, Send, 
+  ShieldCheck, CheckCheck, Wallet, Check, Layers
 } from "lucide-react";
 import { getPublicEnquiries, PublicEnquiry } from "@/lib/leasingStore";
 
 export default function LeasingDashboard() {
   const [liveLeads, setLiveLeads] = useState<any[]>([]);
+  const [isLoiModalOpen, setIsLoiModalOpen] = useState(false);
+  const [loiSent, setLoiSent] = useState(false);
+  const [selectedLeadForMatch, setSelectedLeadForMatch] = useState<any | null>(null);
+  const [isSpaceMatchOpen, setIsSpaceMatchOpen] = useState(false);
+  const [proposalAttached, setProposalAttached] = useState<string | null>(null);
 
   useEffect(() => {
     const load = () => {
@@ -22,7 +28,9 @@ export default function LeasingDashboard() {
         stage: "NEW (WEB)",
         stageColor: "bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold",
         assigned: "Unassigned",
-        assignedColor: "text-emerald-700 font-bold"
+        assignedColor: "text-emerald-700 font-bold",
+        commission: "Est. ₹6.50L",
+        commissionStatus: "In Review"
       }));
       setLiveLeads(formatted);
     };
@@ -41,7 +49,14 @@ export default function LeasingDashboard() {
     { stage: "Closed & Onboarding", count: 8, width: "16%", href: "/leasing/pipeline", color: "bg-emerald-600" }
   ];
 
-  const actionItems = [
+  const actionItems: Array<{
+    color: string;
+    title: string;
+    desc: string;
+    action: string;
+    href?: string;
+    onClick?: () => void;
+  }> = [
     ...(liveLeads.length > 0 ? [{
       color: "bg-emerald-500",
       title: `⚡ Live Public Enquiry: ${liveLeads[0].company}`,
@@ -66,9 +81,9 @@ export default function LeasingDashboard() {
     { 
       color: "bg-blue-500", 
       title: "LOI Draft pending for Global Logistics", 
-      desc: "Negotiation complete · 50,000 sqft", 
-      action: "Open Pipeline",
-      href: "/leasing/pipeline" 
+      desc: "Negotiation complete · 50,000 sqft (Apex Business Tower)", 
+      action: "Generate LOI",
+      onClick: () => { setLoiSent(false); setIsLoiModalOpen(true); }
     }
   ];
 
@@ -97,10 +112,10 @@ export default function LeasingDashboard() {
   ];
 
   const defaultLeads = [
-    { id: "#L-8042", company: "HCL Tech", req: "IT Office Space", area: "15,000 sqft", stage: "NEW", stageColor: "bg-blue-100 text-blue-700", assigned: "Unassigned", assignedColor: "text-red-500" },
-    { id: "#L-8041", company: "Innovate Corp", req: "Coworking Desks", area: "50 Seats", stage: "SITE VISIT", stageColor: "bg-emerald-100 text-emerald-700", assigned: "Ravi M.", assignedColor: "text-gray-700" },
-    { id: "#L-8040", company: "Global Logistics", req: "Commercial Floor", area: "50,000 sqft", stage: "NEGOTIATION", stageColor: "bg-amber-100 text-amber-700", assigned: "Anita S.", assignedColor: "text-gray-700" },
-    { id: "#L-8039", company: "FreshMart Retail", req: "Ground Floor Retail", area: "2,500 sqft", stage: "CLOSED-WON", stageColor: "bg-emerald-100 text-emerald-700", assigned: "Vikram K.", assignedColor: "text-gray-700" }
+    { id: "#L-8042", company: "HCL Tech", req: "IT Office Space", area: "15,000 sqft", stage: "NEW", stageColor: "bg-blue-100 text-blue-700", assigned: "Unassigned", assignedColor: "text-red-500", commission: "Est. ₹19.50L", commissionStatus: "Pending Deal" },
+    { id: "#L-8041", company: "Innovate Corp", req: "Coworking Desks", area: "50 Seats", stage: "SITE VISIT", stageColor: "bg-emerald-100 text-emerald-700", assigned: "Ravi M.", assignedColor: "text-gray-700", commission: "Est. ₹4.20L", commissionStatus: "Pending Visit" },
+    { id: "#L-8040", company: "Global Logistics", req: "Commercial Floor", area: "50,000 sqft", stage: "NEGOTIATION", stageColor: "bg-amber-100 text-amber-700", assigned: "Anita S.", assignedColor: "text-gray-700", commission: "Est. ₹97.50L (1.5x rent)", commissionStatus: "LOI Drafting" },
+    { id: "#L-8039", company: "FreshMart Retail", req: "Ground Floor Retail", area: "2,500 sqft", stage: "CLOSED-WON", stageColor: "bg-emerald-100 text-emerald-700 font-bold", assigned: "Vikram K.", assignedColor: "text-gray-700", commission: "₹18,12,500 (45 days' rent)", commissionStatus: "Payout Released ✓" }
   ];
 
   const leads = [...liveLeads, ...defaultLeads];
@@ -296,12 +311,22 @@ export default function LeasingDashboard() {
                     <p className="text-[10px] text-gray-500 mt-0.5">{a.desc}</p>
                   </div>
                 </div>
-                <Link
-                  href={a.href}
-                  className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
-                >
-                  {a.action}
-                </Link>
+                {a.onClick ? (
+                  <button
+                    type="button"
+                    onClick={a.onClick}
+                    className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
+                  >
+                    {a.action}
+                  </button>
+                ) : (
+                  <Link
+                    href={a.href || "/leasing/leads"}
+                    className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
+                  >
+                    {a.action}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
@@ -341,12 +366,12 @@ export default function LeasingDashboard() {
         </div>
       </div>
 
-      {/* Recent Leads Table */}
+      {/* Recent Leads Table with Commission Tracking */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-black text-gray-900">Recent Leads &amp; Inquiries</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Click on any row to open lead conversation and match spaces</p>
+            <h2 className="text-base font-black text-gray-900">Recent Leads &amp; Commission Pipeline</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Click Space Match to find matching Grade-A floors or generate formal LOI term sheets</p>
           </div>
           <Link href="/leasing/leads" className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1">
             Open Leads CRM <ChevronRight size={13} />
@@ -354,7 +379,7 @@ export default function LeasingDashboard() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[650px]">
+          <table className="w-full text-left border-collapse min-w-[720px]">
             <thead>
               <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 <th className="py-3 pr-3">Lead ID</th>
@@ -362,6 +387,7 @@ export default function LeasingDashboard() {
                 <th className="py-3 pr-3">Requirement</th>
                 <th className="py-3 pr-3">Area</th>
                 <th className="py-3 pr-3">Stage</th>
+                <th className="py-3 pr-3">Brokerage Fee</th>
                 <th className="py-3 pr-3">Assigned To</th>
                 <th className="py-3 text-right">Actions</th>
               </tr>
@@ -370,7 +396,7 @@ export default function LeasingDashboard() {
               {leads.map((l) => (
                 <tr 
                   key={l.id} 
-                  className="border-b border-gray-100 text-xs hover:bg-teal-50/30 transition-colors cursor-pointer group"
+                  className="border-b border-gray-100 text-xs hover:bg-teal-50/30 transition-colors group"
                 >
                   <td className="py-3.5 pr-3 font-bold text-[#0F8B7D]">
                     <Link href="/leasing/leads" className="hover:underline">{l.id}</Link>
@@ -385,13 +411,36 @@ export default function LeasingDashboard() {
                       {l.stage}
                     </span>
                   </td>
+                  <td className="py-3.5 pr-3">
+                    <span className="font-bold text-slate-900 block">{l.commission || "Est. ₹5.00L"}</span>
+                    <span className={`text-[9px] font-bold ${l.stage === "CLOSED-WON" ? "text-emerald-600" : "text-slate-400"}`}>
+                      {l.commissionStatus || "In Pipeline"}
+                    </span>
+                  </td>
                   <td className={`py-3.5 pr-3 text-xs font-semibold ${l.assignedColor}`}>{l.assigned}</td>
-                  <td className="py-3.5 text-right">
+                  <td className="py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                    {l.company.includes("Global Logistics") ? (
+                      <button
+                        type="button"
+                        onClick={() => { setLoiSent(false); setIsLoiModalOpen(true); }}
+                        className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        Generate LOI
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedLeadForMatch(l); setProposalAttached(null); setIsSpaceMatchOpen(true); }}
+                        className="px-2.5 py-1 rounded-lg bg-teal-50 text-[#0F8B7D] hover:bg-teal-100 border border-teal-200 text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        Space Match
+                      </button>
+                    )}
                     <Link
                       href="/leasing/leads"
-                      className="px-3 py-1 rounded-lg border border-gray-200 text-[10px] font-bold text-gray-700 group-hover:bg-[#0F8B7D] group-hover:text-white group-hover:border-[#0F8B7D] transition-colors"
+                      className="px-2.5 py-1 rounded-lg border border-gray-200 text-[10px] font-bold text-gray-700 hover:bg-gray-100 transition-colors"
                     >
-                      Open Lead
+                      Open
                     </Link>
                   </td>
                 </tr>
@@ -400,6 +449,257 @@ export default function LeasingDashboard() {
           </table>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* LEGAL LOI GENERATION ENGINE MODAL                                        */}
+      {/* ========================================================================= */}
+      {isLoiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setIsLoiModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            {loiSent ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 border border-emerald-200">
+                  <CheckCheck size={36} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-1">LOI Dispatched for e-Sign!</h3>
+                <p className="text-xs text-slate-600 max-w-md mx-auto mb-6">
+                  Official Letter of Intent (Ref: <strong className="font-mono text-slate-900">LOI-APX-2026-042</strong>) has been transmitted to <strong>Global Logistics India Pvt Ltd</strong> legal department via Aadhaar OTP / DocuSign gateway.
+                </p>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 max-w-md mx-auto text-left text-xs space-y-2 mb-6">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Brokerage Commission:</span>
+                    <strong className="text-emerald-700">₹97,50,000 (1.5 Months Rent)</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Lessor Signatory:</span>
+                    <strong className="text-slate-800">Apex Towers RE Fund</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Lessee Contact:</span>
+                    <strong className="text-slate-800">legal@globallogistics.in</strong>
+                  </div>
+                </div>
+
+                <div className="flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => alert("Downloading Legal LOI Term Sheet PDF...")}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7368] cursor-pointer flex items-center gap-2"
+                  >
+                    <Download size={14} /> Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsLoiModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText size={20} className="text-[#0F8B7D]" />
+                  <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-wider">
+                    Commercial Term Sheet Engine
+                  </span>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900">Letter of Intent (LOI) Generation</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Deal: Global Logistics India · Apex Business Tower Floors 3 &amp; 4 (50,000 sq.ft.)
+                </p>
+
+                {/* Term Sheet Specs */}
+                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 my-5 text-xs space-y-3">
+                  <div className="grid grid-cols-2 gap-4 pb-3 border-b border-slate-200">
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Lessor (Landlord)</span>
+                      <strong className="text-slate-900">Apex Towers Institutional RE Fund</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Lessee (Tenant)</span>
+                      <strong className="text-slate-900">Global Logistics India Pvt Ltd</strong>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-3 border-b border-slate-200">
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Super Built-Up Area</span>
+                      <strong className="text-slate-900">50,000 sq.ft.</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Monthly Base Rent</span>
+                      <strong className="text-slate-900">₹65,00,000 (₹130/sqft)</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Security Deposit</span>
+                      <strong className="text-slate-900">6 Months (₹3.90 Cr)</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Lock-In Period</span>
+                      <strong className="text-slate-900">36 Months</strong>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Annual Rent Escalation</span>
+                      <strong className="text-slate-900">5% p.a. compounding</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Handover Condition</span>
+                      <strong className="text-slate-900">Warm Shell + 100% DG</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[10px] uppercase">Brokerage Fee</span>
+                      <strong className="text-emerald-700 font-black">₹97.50L (45 Days Rent)</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-900 flex items-start gap-2 mb-6">
+                  <ShieldCheck size={16} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Statutory Compliance:</strong> Term sheet includes standard RERA commercial arbitration clause, 120-day fit-out rent-free period, and escrow security deposit terms.
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => alert("Downloading Legal LOI Term Sheet Draft PDF...")}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Download size={14} /> Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoiSent(true)}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+                  >
+                    <Send size={14} /> Send for Aadhaar / DocuSign e-Sign
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SPACE MATCH SIDE DRAWER                                                  */}
+      {/* ========================================================================= */}
+      {isSpaceMatchOpen && selectedLeadForMatch && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs">
+          <div className="bg-white max-w-md w-full h-full p-6 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
+                <div>
+                  <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles size={12} /> AI Space Match Engine
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900">
+                    Matches for {selectedLeadForMatch.company}
+                  </h3>
+                  <p className="text-xs text-slate-500">Requirement: {selectedLeadForMatch.area} · {selectedLeadForMatch.req}</p>
+                </div>
+                <button
+                  onClick={() => setIsSpaceMatchOpen(false)}
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer p-1"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Top 3 Matched Inventory */}
+              <div className="space-y-3">
+                {[
+                  {
+                    id: "prop-1",
+                    title: "Apex Business Tower",
+                    floor: "Floors 3 & 4 (Warm Shell)",
+                    area: "50,000 sq.ft.",
+                    rent: "₹130 / sq.ft.",
+                    score: "96% Match",
+                    badge: "Best Fit",
+                    highlight: "Full floor plate · 100% DG backup · 45 car parks"
+                  },
+                  {
+                    id: "prop-2",
+                    title: "One BKC — North Wing",
+                    floor: "Floor 6 Executive Suite",
+                    area: "16,500 sq.ft.",
+                    rent: "₹265 / sq.ft.",
+                    score: "91% Match",
+                    badge: "Grade A+",
+                    highlight: "Turnkey fit-out · Metro connectivity · IGBC Platinum"
+                  },
+                  {
+                    id: "prop-3",
+                    title: "Godrej BKC Horizon",
+                    floor: "Floor 9 Commercial Suite",
+                    area: "14,000 sq.ft.",
+                    rent: "₹280 / sq.ft.",
+                    score: "87% Match",
+                    badge: "Prime Location",
+                    highlight: "Furnished acoustic cabins · 120 dedicated desks"
+                  }
+                ].map((prop) => (
+                  <div key={prop.id} className="p-4 rounded-2xl border border-slate-200 hover:border-[#0F8B7D] transition-all bg-slate-50/60">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
+                        {prop.score}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500">{prop.badge}</span>
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">{prop.title}</h4>
+                    <p className="text-xs text-slate-600 font-medium">{prop.floor} · {prop.area}</p>
+                    <p className="text-xs font-bold text-[#0F8B7D] mt-1">{prop.rent}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">{prop.highlight}</p>
+
+                    <button
+                      type="button"
+                      onClick={() => setProposalAttached(prop.id)}
+                      className={`w-full mt-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        proposalAttached === prop.id
+                          ? "bg-emerald-600 text-white"
+                          : "bg-white border border-slate-200 hover:border-[#0F8B7D] text-slate-800"
+                      }`}
+                    >
+                      {proposalAttached === prop.id ? (
+                        <>
+                          <Check size={13} /> Attached to Proposal ✓
+                        </>
+                      ) : (
+                        "Attach to Proposal"
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsSpaceMatchOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer text-center"
+              >
+                Close Space Matcher
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

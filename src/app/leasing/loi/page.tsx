@@ -44,6 +44,20 @@ export default function LOIAndLeaseWorkflow() {
 
   const [deals, setDeals] = useState<DealItem[]>([
     {
+      id: "DX-2026-042",
+      client: "Global Logistics India",
+      property: "Apex Business Tower — Floors 3 & 4",
+      rent: "₹65.00L",
+      stage: "LOI Prep",
+      stageColor: "bg-blue-50 text-blue-700 border border-blue-200",
+      agreedRent: "₹65,00,000/mo",
+      deposit: "6 Months (₹3.90 Cr)",
+      lockIn: "3 Years",
+      escalation: "5% p.a.",
+      area: "50,000 sq.ft.",
+      seats: "550 Seats"
+    },
+    {
       id: "DX-2024-089",
       client: "Tata Digital Ltd",
       property: "One BKC — North Wing Executive (Fl 4)",

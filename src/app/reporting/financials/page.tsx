@@ -1,28 +1,66 @@
 "use client";
 import React, { useState } from "react";
-import { DollarSign, BarChart } from "lucide-react";
+import { DollarSign, BarChart3, TrendingUp, ShieldCheck, ArrowUpRight } from "lucide-react";
 
 export default function FinancialAnalytics() {
   const [stats] = useState([
-    { id: 1, label: "Gross Marketplace Volume (GMV)", value: "₹45,82,000", change: "+12.5% vs last month" },
-    { id: 2, label: "OfficeX Commission Revenue (10%)", value: "₹4,58,200", change: "+12.5% vs last month" }
+    {
+      id: 1,
+      label: "Gross Transaction Volume (GTV)",
+      value: "₹41,70,000",
+      change: "+14.2% vs last month",
+      subtext: "Across 5 settled vendor contracts"
+    },
+    {
+      id: 2,
+      label: "OfficeX Platform Take-Rate",
+      value: "₹3,61,100",
+      change: "8.65% weighted average",
+      subtext: "5–15% category auto-engine"
+    },
+    {
+      id: 3,
+      label: "Vendor Net Disbursed",
+      value: "₹38,08,900",
+      change: "100% On-Time Wire",
+      subtext: "Settled directly via Razorpay Escrow"
+    },
+    {
+      id: 4,
+      label: "Defect Liability Retention",
+      value: "₹2,46,400",
+      change: "Protected in Escrow",
+      subtext: "30-day post-completion warranty"
+    }
   ]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Financial Analytics</h1>
-        <p className="text-sm text-gray-600 font-bold mt-1">Audit platform commission revenues, transaction rollups, and payouts ledgers.</p>
+    <div className="flex flex-col gap-8 font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">FM Marketplace Financial Analytics</h1>
+          <p className="text-xs text-gray-600 font-bold mt-1">
+            Audit platform commission revenues, escrow turnover, and vendor settlement ledgers.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1.5">
+            <ShieldCheck size={14} /> Razorpay Escrow Reconciled
+          </span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((st) => (
-          <div key={st.id} className="premium-card p-6 border border-gray-200 bg-white flex flex-col justify-between min-h-[140px]">
+          <div key={st.id} className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs flex flex-col justify-between">
             <div>
-              <span className="text-xs text-gray-500 font-bold uppercase tracking-wider block">{st.label}</span>
-              <span className="text-3xl font-extrabold text-gray-900 block mt-3">{st.value}</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{st.label}</span>
+              <span className="text-2xl font-black text-gray-900 block mt-2">{st.value}</span>
             </div>
-            <span className="text-[10px] text-emerald-600 font-bold mt-2">{st.change}</span>
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-[10px] text-emerald-600 font-bold">{st.change}</span>
+              <span className="text-[9px] text-gray-400 font-medium">{st.subtext}</span>
+            </div>
           </div>
         ))}
       </div>

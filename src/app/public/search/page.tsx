@@ -837,7 +837,7 @@ function PropertySearchContent() {
                 setTimeout(() => {
                   setIsSubmitting(false);
                   setEnquiryProperty(null);
-                  setToast(`Enquiry sent for ${enquiryProperty.title}! Added to Leasing CRM.`);
+                  setToast(`Site visit request sent for ${enquiryProperty.title}! Our Space Advisor will coordinate.`);
                   setEnquiryForm({ company: "", email: "", phone: "", seats: "60" });
                   setTimeout(() => setToast(null), 4000);
                 }, 600);
@@ -845,11 +845,11 @@ function PropertySearchContent() {
               className="space-y-3.5 text-xs"
             >
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">COMPANY NAME</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">COMPANY NAME *</label>
                 <input
                   value={enquiryForm.company}
                   onChange={(e) => setEnquiryForm({ ...enquiryForm, company: e.target.value })}
-                  placeholder="e.g. Acme Innovations"
+                  placeholder="e.g. Acme Innovations Pvt Ltd"
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
                   required
                 />
@@ -857,7 +857,7 @@ function PropertySearchContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">OFFICIAL EMAIL</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">OFFICIAL EMAIL *</label>
                   <input
                     type="email"
                     value={enquiryForm.email}
@@ -868,31 +868,42 @@ function PropertySearchContent() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PHONE</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">MOBILE NUMBER *</label>
                   <input
                     value={enquiryForm.phone}
                     onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value })}
-                    placeholder="+91 98000 00000"
+                    placeholder="+91 98201 44821"
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                    required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">REQUIRED SEATS</label>
-                <input
-                  type="number"
-                  value={enquiryForm.seats}
-                  onChange={(e) => setEnquiryForm({ ...enquiryForm, seats: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">SEATS NEEDED</label>
+                  <input
+                    type="number"
+                    value={enquiryForm.seats}
+                    onChange={(e) => setEnquiryForm({ ...enquiryForm, seats: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">PREFERRED VISIT DATE</label>
+                  <input
+                    type="date"
+                    defaultValue="2026-09-18"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setEnquiryProperty(null)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50"
+                  className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -901,13 +912,41 @@ function PropertySearchContent() {
                   disabled={isSubmitting}
                   className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold shadow-md cursor-pointer flex items-center gap-1.5"
                 >
-                  <Send size={12} /> {isSubmitting ? "Sending..." : "Submit Enquiry"}
+                  <Send size={12} /> {isSubmitting ? "Confirming..." : "Confirm Site Visit"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Sticky Floating Space Advisor Bar (Client Requested) */}
+      <div className="fixed bottom-3 left-4 right-4 md:left-[280px] md:right-8 z-40 bg-gray-900/95 backdrop-blur-md text-white rounded-2xl px-4 py-3 shadow-2xl border border-gray-800 flex flex-wrap items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+          <div>
+            <span className="text-xs font-black">Talk to a Space Advisor — Free, No Brokerage</span>
+            <span className="text-[11px] text-gray-400 hidden sm:inline ml-2">Dedicated commercial transaction advisory for Grade-A towers</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="tel:+919820144821"
+            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Phone size={13} className="text-teal-400" />
+            <span>+91 98201 44821</span>
+          </a>
+          <a
+            href="https://wa.me/919820144821?text=Hi%20OfficeX%2C%20I%20am%20looking%20for%20a%20commercial%20workspace"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-xs transition-colors"
+          >
+            <span>WhatsApp Advisor</span>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -916,9 +955,23 @@ export default function PropertySearchAndDiscovery() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 gap-3">
-          <div className="w-10 h-10 border-4 border-[#0F8B7D] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold text-gray-500">Loading Commercial Properties...</p>
+        <div className="min-h-screen bg-white p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+            <div>
+              <div className="h-6 w-48 bg-gray-200 rounded-md animate-pulse mb-1" />
+              <div className="h-3 w-72 bg-gray-100 rounded-md animate-pulse" />
+            </div>
+            <div className="h-8 w-24 bg-teal-50 rounded-xl" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="border border-gray-200 rounded-2xl p-4 space-y-3 bg-white shadow-2xs">
+                <div className="h-36 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-1/2 bg-gray-100 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
         </div>
       }
     >
