@@ -22,6 +22,13 @@ export default function MarketingHeader({
   const isFmMarketplace = pathname === "/fm-marketplace" || activePath === "/fm-marketplace";
   const isOfficeMarketplace = pathname === "/marketplace" || activePath === "/marketplace";
 
+  // Derive login context for contextual portal filtering
+  const loginContext: "marketplace" | "fm" | "operate" | "properties" | "" =
+    isFmMarketplace ? "fm" :
+    isOfficeMarketplace ? "marketplace" :
+    pathname?.startsWith("/operate") ? "operate" :
+    pathname?.startsWith("/properties") ? "properties" : "";
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
@@ -227,7 +234,7 @@ export default function MarketingHeader({
                 </div>
               )}
 
-              {/* 3. List Your Space (Landlords & Brokers) */}
+              {/* 3. List Your Space (Landlords & Owners) */}
               <Link
                 href="/properties/add"
                 className={`hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap ${
@@ -235,6 +242,19 @@ export default function MarketingHeader({
                 }`}
               >
                 List Your Space
+              </Link>
+
+              {/* 4. Join as Broker (Commercial Leasing Agents) */}
+              <Link
+                href="/leasing"
+                className={`hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap flex items-center gap-1.5 ${
+                  activePath === "/leasing" ? "text-[#0F8B7D] font-extrabold" : ""
+                }`}
+              >
+                <span>Join as Broker</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                  45d Comm
+                </span>
               </Link>
 
               {/* 4. Company Dropdown */}
@@ -267,13 +287,13 @@ export default function MarketingHeader({
 
         {/* Right: Actions — per client doc Section 6.1 */}
         <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
-          <HeaderAuthButton />
+          <HeaderAuthButton loginContext={loginContext} />
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
             className="px-4 py-2 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >
-            Talk to Sales
+            Inquire
           </button>
         </div>
 
@@ -338,6 +358,10 @@ export default function MarketingHeader({
               <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">
                 List Your Space
               </Link>
+              <Link href="/leasing" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-amber-700 flex items-center justify-between">
+                <span>Join as Broker</span>
+                <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">45d Payout</span>
+              </Link>
               <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
                 About OfficeX
               </Link>
@@ -346,7 +370,7 @@ export default function MarketingHeader({
 
           <hr className="border-slate-200 my-2" />
           <div className="py-1">
-            <HeaderAuthButton />
+            <HeaderAuthButton loginContext={loginContext} />
           </div>
           <button
             type="button"
@@ -356,7 +380,7 @@ export default function MarketingHeader({
             }}
             className="w-full py-3 rounded-xl bg-[#0F8B7D] text-white font-bold text-center shadow-md cursor-pointer text-sm"
           >
-            Talk to Sales
+            Inquire
           </button>
         </div>
       )}

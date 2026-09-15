@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   Building, 
   Handshake, 
@@ -20,8 +20,11 @@ import {
   CheckCircle 
 } from "lucide-react";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paramRole = searchParams.get("role");
+  const paramIntent = searchParams.get("intent");
   
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,41 +35,58 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (paramRole) {
+      setSelectedRole(paramRole);
+    } else if (paramIntent === "broker") {
+      setSelectedRole("leasing_broker");
+    } else if (paramIntent === "list") {
+      setSelectedRole("property_owner");
+    } else if (paramIntent === "find") {
+      setSelectedRole("tenant_admin");
+    }
+  }, [paramRole, paramIntent]);
+
   const roles = [
+    {
+      id: "leasing_broker",
+      title: "Leasing Broker (Channel Partner)",
+      desc: "Commercial real estate agent, find office spaces, close leasing deals & earn 45-day commissions.",
+      icon: Handshake,
+      redirect: "/leasing",
+      badge: "1.5x Commission"
+    },
     {
       id: "property_owner",
       title: "Property Owner (Landlord)",
-      desc: "Own or manage commercial buildings, list vacant floors, track rent roll.",
+      desc: "Own or manage commercial buildings, list vacant floors, track rent roll & tenant yields.",
       icon: Building,
-      redirect: "/properties"
-    },
-    {
-      id: "leasing_broker",
-      title: "Leasing Broker",
-      desc: "Commercial real estate agent, find office spaces, close leasing deals.",
-      icon: Handshake,
-      redirect: "/leasing"
-    },
-    {
-      id: "facility_manager",
-      title: "Facility Manager (Ops)",
-      desc: "Manage building operations, maintenance PPMs, statutory compliance.",
-      icon: Settings,
-      redirect: "/ops"
+      redirect: "/properties",
+      badge: "Zero Listing Fee"
     },
     {
       id: "tenant_admin",
       title: "Corporate Tenant (Occupier)",
       desc: "Rent office space, book meeting rooms, issue employee & visitor QR passes.",
       icon: Users,
-      redirect: "/tenant"
+      redirect: "/tenant",
+      badge: "100% Free Search"
+    },
+    {
+      id: "facility_manager",
+      title: "Facility Manager (Ops)",
+      desc: "Manage building operations, maintenance PPMs, statutory compliance.",
+      icon: Settings,
+      redirect: "/ops",
+      badge: "Ops Desk"
     },
     {
       id: "service_vendor",
       title: "Service Vendor (FM Partner)",
       desc: "Provide HVAC, MEP, cleaning, or security services; bid on RFQs & receive escrow.",
       icon: Truck,
-      redirect: "/vendor"
+      redirect: "/vendor",
+      badge: "FM Vendor"
     }
   ];
 
@@ -157,7 +177,7 @@ export default function SignupPage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Create Your Account</h1>
             <p className="text-xs text-gray-500 font-medium mt-1">
-              Join the unified operating platform for commercial real estate & workplace management.
+              Join the unified operating platform for commercial real estate &amp; workplace management.
             </p>
           </div>
         </div>
@@ -196,9 +216,11 @@ export default function SignupPage() {
                       <Icon size={16} />
                     </div>
                     <div className="flex flex-col overflow-hidden">
-                      <span className={`text-xs font-bold ${isSelected ? "text-[#0F8B7D]" : "text-gray-900"}`}>
-                        {r.title}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-xs font-bold ${isSelected ? "text-[#0F8B7D]" : "text-gray-900"}`}>
+                          {r.title}
+                        </span>
+                      </div>
                       <span className="text-[10px] text-gray-500 font-medium leading-tight mt-0.5 line-clamp-2">
                         {r.desc}
                       </span>
@@ -212,7 +234,7 @@ export default function SignupPage() {
           {/* 2. Personal & Company Credentials */}
           <div className="flex flex-col gap-4">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              2. Your Details & Company Info *
+              2. Your Details &amp; Company Info *
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -232,13 +254,13 @@ export default function SignupPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Company / Entity Name</label>
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Company / Agency Name</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Godrej Properties / Acme Corp"
+                    placeholder="e.g. Knight Frank / Godrej / Acme Corp"
                     className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
                     required
                   />
@@ -253,7 +275,7 @@ export default function SignupPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. rajesh@godrejproperties.com"
+                    placeholder="e.g. rajesh@agency.com"
                     className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
                     required
                   />
@@ -312,5 +334,17 @@ export default function SignupPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-sm font-bold text-gray-400">
+        Loading...
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }

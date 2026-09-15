@@ -42,13 +42,14 @@ export default function PropertyDashboardClient({
   const [userId, setUserId] = useState("");
   const [customProperties, setCustomProperties] = useState<any[]>([]);
 
-  // Detect Clean Test Mode on mount
+  // Detect Clean Mode on mount
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const mode = localStorage.getItem("officex_mode");
-      const email = localStorage.getItem("officex_user_email") || "owner@officex.in";
+      const email = localStorage.getItem("officex_user_email") || "";
       const uid = localStorage.getItem("officex_user_id") || "";
-      const isTest = mode === "clean_test" || email.startsWith("test.");
+      // Any authenticated user who is not explicitly a demo seed account gets clean mode
+      const isTest = Boolean(mode === "clean_test" || (email && !email.includes("demo.seed")));
       setIsCleanMode(isTest);
       setUserEmail(email);
       setUserId(uid);
@@ -79,10 +80,7 @@ export default function PropertyDashboardClient({
   ];
 
   // Active & Pending partnerships
-  const [partnerships, setPartnerships] = useState([
-    { id: "BP-501", propertyName: "Apex Business Tower - Floor 4", brokerName: "Ravi Menon", commission: "1 Month Rent", status: "Active Partner", date: "Aug 20, 2026" },
-    { id: "BP-502", propertyName: "Meridian Tech Park - Block B", brokerName: "Amit Kumar", commission: "5.0% Annual Value", status: "Awaiting Acceptance", date: "Aug 25, 2026" }
-  ]);
+  const [partnerships, setPartnerships] = useState<any[]>([]);
 
   const handleCreateAssignment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,18 +150,19 @@ export default function PropertyDashboardClient({
       return Array.from(mergedMap.values());
     }
 
-    // 3. Fallback: If not in clean mode, show initial properties
-    if (!isCleanMode) {
-      return initialProperties;
+    // 3. For new users / clean state, return empty array
+    if (isCleanMode) {
+      return [];
     }
 
-    return [];
+    return initialProperties;
   }, [initialProperties, customProperties, userId, userEmail, isCleanMode]);
 
   const propertiesCount = displayedProperties.length;
-  const openTicketsCount = isCleanMode && propertiesCount === 0 ? 0 : initialTickets.filter(t => t.status === "open").length;
-  const expiredCertsCount = isCleanMode && propertiesCount === 0 ? 0 : initialCerts.filter(c => c.status === "expired").length;
+  const openTicketsCount = propertiesCount === 0 ? 0 : initialTickets.filter(t => t.status === "open").length;
+  const expiredCertsCount = propertiesCount === 0 ? 0 : initialCerts.filter(c => c.status === "expired").length;
   const occupancyDisplay = propertiesCount > 0 ? "100%" : "0.0%";
+
 
   return (
     <div className="flex flex-col gap-8 font-sans relative">
@@ -409,7 +408,7 @@ export default function PropertyDashboardClient({
             <div>
               <h4 className="text-sm font-bold text-gray-900">No Properties in Portfolio Yet</h4>
               <p className="text-xs text-gray-500 max-w-sm mt-1">
-                You are currently in Clean Test Mode with 0 properties. Click below to create your first commercial building and start the lifecycle!
+                You haven&apos;t added any commercial properties yet. Click below to create your first commercial building and start managing your portfolio!
               </p>
             </div>
             <Link
@@ -487,40 +486,57 @@ export default function PropertyDashboardClient({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[650px]">
-            <thead>
-              <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-4">Contract ID</th>
-                <th className="py-4">Property Address</th>
-                <th className="py-4">Assigned Broker</th>
-                <th className="py-4">Brokerage Commission Terms</th>
-                <th className="py-4">Status</th>
-                <th className="py-4">Agreement Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {partnerships.map((p) => (
-                <tr key={p.id} className="border-b border-gray-100 text-xs hover:bg-purple-50/20 transition-colors">
-                  <td className="py-4 font-mono font-bold text-purple-600">{p.id}</td>
-                  <td className="py-4 font-bold text-gray-900">{p.propertyName}</td>
-                  <td className="py-4 font-bold text-gray-800">{p.brokerName}</td>
-                  <td className="py-4 text-emerald-600 font-extrabold">{p.commission}</td>
-                  <td className="py-4">
-                    <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                      p.status.includes("Active")
-                        ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                        : "bg-amber-50 border border-amber-200 text-amber-700"
-                    }`}>
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-gray-400 font-semibold">{p.date}</td>
+        {partnerships.length === 0 ? (
+          <div className="p-6 rounded-xl border border-dashed border-gray-200 bg-gray-50/40 text-center flex flex-col items-center justify-center gap-2">
+            <Handshake size={20} className="text-purple-400" />
+            <p className="text-xs font-semibold text-gray-600">No Broker Partnerships Yet</p>
+            <p className="text-[11px] text-gray-400 max-w-sm">
+              Assign a licensed commercial broker to market your vacant floors and earn standardized leasing commissions.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowAssignModal(true)}
+              className="mt-1 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors cursor-pointer"
+            >
+              + Assign Broker Now
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[650px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                  <th className="py-4">Contract ID</th>
+                  <th className="py-4">Property Address</th>
+                  <th className="py-4">Assigned Broker</th>
+                  <th className="py-4">Brokerage Commission Terms</th>
+                  <th className="py-4">Status</th>
+                  <th className="py-4">Agreement Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {partnerships.map((p) => (
+                  <tr key={p.id} className="border-b border-gray-100 text-xs hover:bg-purple-50/20 transition-colors">
+                    <td className="py-4 font-mono font-bold text-purple-600">{p.id}</td>
+                    <td className="py-4 font-bold text-gray-900">{p.propertyName}</td>
+                    <td className="py-4 font-bold text-gray-800">{p.brokerName}</td>
+                    <td className="py-4 text-emerald-600 font-extrabold">{p.commission}</td>
+                    <td className="py-4">
+                      <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                        p.status.includes("Active")
+                          ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                          : "bg-amber-50 border border-amber-200 text-amber-700"
+                      }`}>
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-gray-400 font-semibold">{p.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* BLOCK 2: TWO-COLUMN ALERTS & RECENT ACTIVITY */}

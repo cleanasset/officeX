@@ -196,13 +196,6 @@ export default function FMMarketplacePage() {
     },
   ];
 
-  const liveActivityTicker = [
-    { id: "act-1", time: "11:32 AM", text: "Johnson Controls completed Chiller Overhaul at Maker Maxity (₹4,20,000) • OfficeX 10% fee (₹42,000) auto-deducted • Escrow Released ✓", type: "success" },
-    { id: "act-2", time: "11:15 AM", text: "Schindler OEM received Lift Modernisation RFQ from Godrej BKC (Est. ₹12.50L) • 3 vendor bids active", type: "info" },
-    { id: "act-3", time: "10:48 AM", text: "SIS Group Security deployed 24 vetted security personnel to WTC Pune • PSARA Guard Verified ✓", type: "success" },
-    { id: "act-4", time: "10:20 AM", text: "Urban Cleaners completed Facade Cradle Wash at GIFT Tower 1 (₹2,80,000) • 14-day defect holdback active", type: "warning" },
-    { id: "act-5", time: "09:55 AM", text: "Voltas Electro-Mech: DG Synchronization milestone approved at One BKC • Payout ₹5,76,000 released via HDFC Escrow", type: "success" },
-  ];
 
   // 8 Core Commercial FM Service Categories with Snabbit-inspired Photography
   const serviceCategories: ServiceCategory[] = [
@@ -778,6 +771,12 @@ export default function FMMarketplacePage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <span className="backdrop-blur-md bg-slate-950/85 text-teal-300 font-black text-[9px] px-2 py-0.5 rounded-md border border-teal-400/40 shadow-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                      OfficeX Uniformed
+                    </span>
+                  </div>
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
                     <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
                       HVAC &amp; Chillers
@@ -795,6 +794,12 @@ export default function FMMarketplacePage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <span className="backdrop-blur-md bg-slate-950/85 text-teal-300 font-black text-[9px] px-2 py-0.5 rounded-md border border-teal-400/40 shadow-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                      OfficeX Uniformed
+                    </span>
+                  </div>
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
                     <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
                       Electrical &amp; DG
@@ -812,6 +817,12 @@ export default function FMMarketplacePage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <span className="backdrop-blur-md bg-slate-950/85 text-teal-300 font-black text-[9px] px-2 py-0.5 rounded-md border border-teal-400/40 shadow-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                      OfficeX Uniformed
+                    </span>
+                  </div>
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
                     <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
                       Hygiene &amp; Facade
@@ -829,6 +840,12 @@ export default function FMMarketplacePage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <span className="backdrop-blur-md bg-slate-950/85 text-teal-300 font-black text-[9px] px-2 py-0.5 rounded-md border border-teal-400/40 shadow-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                      OfficeX Uniformed
+                    </span>
+                  </div>
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
                     <span className="bg-white/95 backdrop-blur-xs text-[#0F8B7D] font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
                       Guarding &amp; CCTV
@@ -849,26 +866,6 @@ export default function FMMarketplacePage() {
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* 1B. LIVE FM ACTIVITY TICKER & TRUST GUARANTEES                           */}
-      {/* ========================================================================= */}
-      <div className="bg-slate-900 text-white py-3 border-y border-slate-800 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex items-center gap-2 shrink-0 bg-[#0F8B7D] px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-            <span>Live Marketplace Activity</span>
-          </div>
-          <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-6 text-xs text-slate-300">
-            {liveActivityTicker.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 whitespace-nowrap">
-                <span className="text-slate-400 font-mono text-[10px]">{item.time}</span>
-                <span className="text-slate-200">{item.text}</span>
-                <span className="text-slate-600">•</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* Trust Badges Bar */}
       <div className="bg-white border-b border-slate-200 py-4 px-4">
@@ -1252,7 +1249,7 @@ export default function FMMarketplacePage() {
               Service Directory
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-              Commercial FM Service Categories
+              Find by Categories
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
               Explore vetted vendors by specialized engineering trade, statutory discipline, and equipment scale
@@ -1299,6 +1296,14 @@ export default function FMMarketplacePage() {
                     <span className="backdrop-blur-md bg-white/95 text-slate-800 font-bold text-xs px-3 py-1.5 rounded-full border border-white/80 shadow-xs flex items-center gap-1.5">
                       <Icon size={13} className="text-[#0F8B7D]" />
                       {cat.shortName}
+                    </span>
+                  </div>
+
+                  {/* OfficeX Uniformed Crew Overlay Badge */}
+                  <div className="absolute bottom-2.5 left-2.5 z-10">
+                    <span className="backdrop-blur-md bg-slate-950/80 text-white font-extrabold text-[9.5px] px-2.5 py-1 rounded-md border border-teal-400/40 shadow-xs flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0F8B7D] animate-pulse" />
+                      <span>OFFICEX UNIFORMED CREW</span>
                     </span>
                   </div>
                 </div>
@@ -1857,46 +1862,46 @@ export default function FMMarketplacePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 9. FREQUENTLY ASKED QUESTIONS                                             */}
+      {/* 9. FREQUENTLY ASKED QUESTIONS (Compact & Shrunk)                           */}
       {/* ========================================================================= */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-        <div className="text-center mb-10">
-          <span className="text-xs font-black uppercase tracking-widest text-[#0F8B7D] block mb-1">
+      <section className="py-8 md:py-12 px-4 sm:px-6 max-w-3xl mx-auto">
+        <div className="text-center mb-6">
+          <span className="text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] block mb-0.5">
             Support &amp; Governance
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             Frequently Asked Questions
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            Everything you need to know about contractor verification, SLAs, and milestone payments
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Quick answers on contractor audits, statutory compliance, and milestone escrow
           </p>
         </div>
 
-        <div className="space-y-3.5">
+        <div className="space-y-2">
           {faqs.map((faq, index) => {
             const isOpen = activeFaq === index;
             return (
               <div
                 key={index}
-                className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all shadow-2xs"
+                className="bg-white border border-slate-200/90 rounded-xl overflow-hidden transition-all shadow-2xs"
               >
                 <button
                   type="button"
                   onClick={() => setActiveFaq(isOpen ? null : index)}
-                  className="w-full text-left p-5 flex items-center justify-between gap-4 cursor-pointer"
+                  className="w-full text-left py-3 px-4 flex items-center justify-between gap-3 cursor-pointer"
                 >
-                  <span className="text-sm sm:text-base font-black text-slate-800">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">
                     {faq.q}
                   </span>
                   <ChevronDown
-                    size={18}
+                    size={16}
                     className={`text-slate-400 shrink-0 transition-transform duration-200 ${
                       isOpen ? "rotate-180 text-[#0F8B7D]" : ""
                     }`}
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                  <div className="px-4 pb-3.5 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100">
                     {faq.a}
                   </div>
                 )}

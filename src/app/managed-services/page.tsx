@@ -813,30 +813,30 @@ export default function ManagedServicesPage() {
         </div>
       </section>
 
-      {/* ═══ NATIVE SUTRA + CBRE INSPIRED: COMPREHENSIVE FAQ SECTION ═══ */}
-      <section className="py-20 px-4 sm:px-8 bg-white border-b border-slate-200">
+      {/* ═══ NATIVE SUTRA + CBRE INSPIRED: COMPACT FAQ SECTION ═══ */}
+      <section className="py-10 md:py-12 px-4 sm:px-6 bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-6">
             <span className="text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-100">
               Everything You Need to Know
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-4 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-2 tracking-tight">
               Frequently Asked Questions
             </h2>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {faqs.map((faq, i) => (
-              <div key={i} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div key={i} className="border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
                 <button
                   onClick={() => setActiveFaq(activeFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between p-5 text-left cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between py-3 px-4 text-left cursor-pointer hover:bg-slate-50 transition-colors"
                 >
-                  <span className="font-bold text-sm text-slate-900 pr-4">{faq.q}</span>
-                  <ChevronDown size={18} className={`text-slate-400 shrink-0 transition-transform ${activeFaq === i ? "rotate-180 text-teal-600" : ""}`} />
+                  <span className="font-bold text-xs sm:text-sm text-slate-900 pr-3">{faq.q}</span>
+                  <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform duration-200 ${activeFaq === i ? "rotate-180 text-teal-600" : ""}`} />
                 </button>
                 {activeFaq === i && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4 bg-slate-50/50">
+                  <div className="px-4 pb-3.5 text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-2 bg-slate-50/50">
                     {faq.a}
                   </div>
                 )}

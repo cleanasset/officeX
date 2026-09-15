@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { 
   Search, CheckCircle, TrendingUp, DollarSign, Calendar, AlertTriangle, 
   FileText, Download, Building, ShieldCheck, Filter, ArrowUpRight, 
@@ -73,14 +74,45 @@ interface CollectionReceipt {
   reconciliationStatus: string;
 }
 
-export default function RentRollMaster() {
+function RentRollMasterContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+
   const [activeTab, setActiveTab] = useState<
     "rentroll" | "invoices" | "collections" | "aging" | "escalations" | "pnl" | "tenants" | "dictionary"
   >("rentroll");
+
+  useEffect(() => {
+    if (
+      tabParam &&
+      ["rentroll", "invoices", "collections", "aging", "escalations", "pnl", "tenants", "dictionary"].includes(tabParam)
+    ) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam]);
+
+  // Sync user leases & clean mode for new accounts
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const mode = localStorage.getItem("officex_mode");
+      const email = localStorage.getItem("officex_user_email") || "";
+      const savedLeases = localStorage.getItem("officex_user_leases");
+
+      if (savedLeases) {
+        try {
+          setRentRollData(JSON.parse(savedLeases));
+        } catch {
+          setRentRollData([]);
+        }
+      } else if (mode === "clean_test" || (email && !email.includes("demo.seed"))) {
+        setRentRollData([]);
+      }
+    }
+  }, []);
   
   const [selectedProperty, setSelectedProperty] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedLeaseId, setExpandedLeaseId] = useState<string | null>("LEASE-001");
+  const [expandedLeaseId, setExpandedLeaseId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Modals & Drawers
@@ -116,7 +148,7 @@ export default function RentRollMaster() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Master Rent Roll Data — 10 Tenants across 5 Grade-A Properties (Market-Realistic Rates Sep 2026)
+  // Master Rent Roll Data
   const [rentRollData, setRentRollData] = useState<RentRollEntry[]>([
     // ──── One BKC (Apex Tower), Mumbai — BKC Premium ₹240–₹285 PSF ────
     {
@@ -364,7 +396,11 @@ export default function RentRollMaster() {
       leaseStatus: "Active"
     };
 
-    setRentRollData([...rentRollData, newEntry]);
+    const updatedRentRoll = [...rentRollData, newEntry];
+    setRentRollData(updatedRentRoll);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_leases", JSON.stringify(updatedRentRoll));
+    }
     setShowAddLeaseModal(false);
     showToast(`Registered new commercial lease ${leaseIdGen} for ${newLease.tenantName}!`);
   };
@@ -423,75 +459,105 @@ export default function RentRollMaster() {
     <div className="flex flex-col gap-6 font-sans w-full max-w-full pb-16">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-in fade-in duration-200">
-          <CheckCircle size={16} className="text-teal-400" />
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-bold px-4.5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 border border-slate-800 animate-in fade-in duration-200">
+          <CheckCircle size={16} className="text-emerald-400" />
           <span>{toast}</span>
         </div>
       )}
 
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Top Header — Clean & Uncluttered */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Institutional Rent Roll Master</h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200 text-[10px] font-black uppercase tracking-wider">
-              Grade-A Landlord Ledger
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Rent Roll Master</h1>
+            <span className="px-3 py-1 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200/80 text-[10.5px] font-black uppercase tracking-wider">
+              Landlord Portfolio Suite
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Real-time lease contracts, CAM reconciliation, automated escalation index, and live payment settlements.
+          <p className="text-xs font-medium text-slate-500 mt-1">
+            Institutional commercial lease registry, CAM recoveries, indexation escalations, and automated tenant billing.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleExportWorkbook}
-            className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2 shadow-2xs cursor-pointer transition-all"
           >
-            <Download size={14} /> Export Rent Roll (.csv)
+            <Download size={14} className="text-[#0F8B7D]" />
+            <span>Export CSV</span>
           </button>
           <button
             onClick={() => setShowAddLeaseModal(true)}
-            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black shadow-sm flex items-center gap-2 cursor-pointer transition-all"
           >
-            <Plus size={14} /> Add Commercial Lease
+            <Plus size={15} />
+            <span>Add Commercial Lease</span>
           </button>
         </div>
       </div>
 
-      {/* Financial KPIs Banner */}
+      {/* Financial KPIs — Spacious 4-Card Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-        <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL LEASED AREA</span>
-          <p className="text-2xl font-black text-gray-900 mt-1">{totalArea.toLocaleString()} sq.ft.</p>
-          <span className="text-[10px] text-emerald-600 font-bold">● 96.2% Portfolio Occupancy</span>
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-extrabold text-slate-400 uppercase tracking-wider">TOTAL LEASED AREA</span>
+            <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+              <Building size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-black text-slate-900 tracking-tight">{totalArea.toLocaleString()} <span className="text-xs font-bold text-slate-500">sq.ft.</span></p>
+            <span className="text-[11px] text-emerald-600 font-extrabold mt-1 inline-block">● 96.2% Portfolio Occupancy</span>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">MONTHLY INVOICED GTV</span>
-          <p className="text-2xl font-black text-gray-900 mt-1">₹{(totalMonthlyBillingNum / 10000000).toFixed(2)} Crores</p>
-          <span className="text-[10px] text-gray-400">Rent + CAM + Utility + GST</span>
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-extrabold text-slate-400 uppercase tracking-wider">MONTHLY INVOICED GTV</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <DollarSign size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-black text-slate-900 tracking-tight">₹{(totalMonthlyBillingNum / 10000000).toFixed(2)} Cr</p>
+            <span className="text-[11px] text-slate-400 font-medium mt-1 inline-block">Rent + CAM + Utility + GST</span>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">MONTHLY CAM RECOVERY</span>
-          <p className="text-2xl font-black text-teal-700 mt-1">₹{(totalCamNum / 100000).toFixed(2)} Lakhs</p>
-          <span className="text-[10px] text-emerald-600 font-bold">100% Cost Recovery</span>
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-extrabold text-slate-400 uppercase tracking-wider">CAM RECOVERY</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <ShieldCheck size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-black text-[#0F8B7D] tracking-tight">₹{(totalCamNum / 100000).toFixed(2)} L</p>
+            <span className="text-[11px] text-emerald-600 font-bold mt-1 inline-block">100% Cost Recovery</span>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4.5 shadow-2xs">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL OUTSTANDING DUES</span>
-          <p className={`text-2xl font-black mt-1 ${totalOutstanding === 0 ? "text-emerald-600" : "text-amber-600"}`}>
-            {totalOutstanding === 0 ? "₹0 (Zero Dues)" : `₹${totalOutstanding.toLocaleString("en-IN")}`}
-          </p>
-          <span className="text-[10px] font-bold text-teal-700">
-            {pendingInvoicesCount === 0 ? "100% Collected" : `${pendingInvoicesCount} Invoice${pendingInvoicesCount > 1 ? "s" : ""} Pending Collection`}
-          </span>
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-extrabold text-slate-400 uppercase tracking-wider">OUTSTANDING DUES</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle size={16} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className={`text-2xl font-black tracking-tight ${totalOutstanding === 0 ? "text-emerald-600" : "text-amber-600"}`}>
+              {totalOutstanding === 0 ? "₹0 Dues" : `₹${(totalOutstanding / 100000).toFixed(2)} L`}
+            </p>
+            <span className="text-[11px] font-bold text-[#0F8B7D] mt-1 inline-block">
+              {pendingInvoicesCount === 0 ? "100% Collected" : `${pendingInvoicesCount} Pending Invoice${pendingInvoicesCount > 1 ? "s" : ""}`}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Tabs Navigation Bar */}
-      <div className="flex flex-wrap items-center gap-1.5 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200 text-xs font-bold">
+      {/* Clean Tabs Navigation Bar */}
+      <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         {[
           { key: "rentroll" as const, label: "Rent Roll Master", icon: FileText },
           { key: "invoices" as const, label: "Monthly Invoices", icon: DollarSign },
@@ -508,13 +574,13 @@ export default function RentRollMaster() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                 isActive
-                  ? "bg-white text-[#0F8B7D] shadow-xs font-black"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-white/60"
+                  ? "bg-[#0F8B7D] text-white font-extrabold shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold"
               }`}
             >
-              <Icon size={13} className={isActive ? "text-[#0F8B7D]" : "text-gray-400"} />
+              <Icon size={14} className={isActive ? "text-white" : "text-slate-400"} />
               <span>{tab.label}</span>
             </button>
           );
@@ -527,23 +593,23 @@ export default function RentRollMaster() {
       {activeTab === "rentroll" && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-gray-200 shadow-2xs">
-            <div className="flex items-center gap-2 flex-1 max-w-md bg-gray-50 px-3.5 py-2 rounded-xl border border-gray-200">
-              <Search size={14} className="text-gray-400 shrink-0" />
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+            <div className="flex items-center gap-2.5 flex-1 max-w-md bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200/80">
+              <Search size={15} className="text-slate-400 shrink-0" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tenant name, building, or Lease ID..."
-                className="w-full text-xs bg-transparent border-none outline-none text-gray-800"
+                placeholder="Search tenant, building, or Lease ID..."
+                className="w-full text-xs font-medium bg-transparent border-none outline-none text-slate-900 placeholder:text-slate-400"
               />
             </div>
 
-            <div className="flex items-center gap-2.5 text-xs">
-              <span className="font-bold text-gray-400 text-[10px] uppercase">CAMPUS:</span>
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <span className="text-[10px] uppercase font-extrabold text-slate-400">Campus:</span>
               <select
                 value={selectedProperty}
                 onChange={(e) => setSelectedProperty(e.target.value)}
-                className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white font-bold text-gray-700 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                className="px-3.5 py-2 rounded-xl border border-slate-200/90 bg-white font-bold text-slate-800 text-xs focus:outline-none focus:border-[#0F8B7D]"
               >
                 <option value="All">All Properties (5 Campuses)</option>
                 <option value="One BKC">One BKC (Apex Tower) — Mumbai</option>
@@ -555,162 +621,234 @@ export default function RentRollMaster() {
             </div>
           </div>
 
-          {/* Desktop Table View */}
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-2xs">
+          {/* Clean Desktop Table */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs">
             <div className="hidden md:block overflow-x-auto">
-              <div className="min-w-[1020px]">
-                <div className="grid grid-cols-12 bg-gray-50/80 p-3 px-4 border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-left items-center">
-                  <div className="col-span-1">LEASE ID</div>
-                  <div className="col-span-2">TENANT &amp; UNIT</div>
-                  <div className="col-span-2">BUILDING</div>
-                  <div className="col-span-1">AREA</div>
-                  <div className="col-span-1">BASE RENT</div>
-                  <div className="col-span-1">CAM / MO</div>
-                  <div className="col-span-2">GROSS BILLING</div>
-                  <div className="col-span-1">ESCALATION</div>
-                  <div className="col-span-1 text-right">STATUS</div>
-                </div>
-
-                <div className="divide-y divide-gray-100">
-                  {filteredData.map((d) => {
-                    const isExpanded = expandedLeaseId === d.leaseId;
-
-                    return (
-                      <div key={d.leaseId} className="transition-colors">
-                        {/* Primary Row */}
-                        <div 
-                          onClick={() => setExpandedLeaseId(isExpanded ? null : d.leaseId)}
-                          className="grid grid-cols-12 p-3.5 px-4 items-center text-xs hover:bg-teal-50/20 transition-colors cursor-pointer group"
-                        >
-                          <div className="col-span-1 font-mono font-bold text-[#0F8B7D]">{d.leaseId}</div>
-                          <div className="col-span-2">
-                            <span className="font-bold text-gray-900 block group-hover:text-[#0F8B7D]">{d.tenantName}</span>
-                            <span className="text-[10px] text-gray-400">{d.unit}</span>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">
+                    <th className="py-3.5 px-5">TENANT &amp; LEASE</th>
+                    <th className="py-3.5 px-4">BUILDING &amp; UNIT</th>
+                    <th className="py-3.5 px-4">AREA (SQ.FT)</th>
+                    <th className="py-3.5 px-4">BASE RENT</th>
+                    <th className="py-3.5 px-4">GROSS BILLING</th>
+                    <th className="py-3.5 px-4">NEXT ESCALATION</th>
+                    <th className="py-3.5 px-4">STATUS</th>
+                    <th className="py-3.5 px-5 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 px-6 text-center">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+                            <FileText size={24} />
                           </div>
-                          <div className="col-span-2">
-                            <span className="font-semibold text-gray-700 block truncate">{d.propertyName}</span>
-                            <span className="text-[10px] text-gray-400">{d.floor}</span>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">No Leases in Rent Roll Yet</h4>
+                            <p className="text-xs text-slate-500 max-w-sm mt-1">
+                              You haven&apos;t recorded any tenant lease agreements yet. Click below to add your first commercial lease agreement.
+                            </p>
                           </div>
-                          <div className="col-span-1 font-semibold text-gray-800">{d.areaSqFt.toLocaleString()} sf</div>
-                          <div className="col-span-1 font-bold text-gray-900">{d.baseMonthlyRent}</div>
-                          <div className="col-span-1 text-gray-600">{d.camMonthly}</div>
-                          <div className="col-span-2">
-                            <span className="font-black text-gray-900 block">{d.totalMonthlyBilling}</span>
-                            <span className="text-[10px] text-teal-700 font-semibold">Incl. 18% GST</span>
-                          </div>
-                          <div className="col-span-1">
-                            <span className="font-semibold text-amber-700 block text-[11px]">{d.nextEscalationDate}</span>
-                            <span className="text-[9px] text-gray-400 font-bold">+{d.escalationPct}% Escalation</span>
-                          </div>
-                          <div className="col-span-1 flex items-center justify-end gap-1.5">
-                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black ${
-                              d.leaseStatus === "Active" 
-                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200" 
-                                : "bg-amber-50 text-amber-800 border border-amber-200"
-                            }`}>
-                              {d.leaseStatus}
-                            </span>
-                            {isExpanded ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddLeaseModal(true)}
+                            className="mt-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-teal-800 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Plus size={14} /> Add First Lease Agreement
+                          </button>
                         </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredData.map((d) => {
+                      const isExpanded = expandedLeaseId === d.leaseId;
 
-                        {/* Structured Drilldown Card */}
-                        {isExpanded && (
-                          <div className="p-5 px-6 bg-gray-50/70 border-t border-gray-100 space-y-4 animate-in fade-in duration-150">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-1.5">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">LEASE PERIOD &amp; LOCK-IN</span>
-                                <p className="font-bold text-gray-900">Lease: {d.leaseStart} → {d.leaseEnd}</p>
-                                <p className="font-bold text-teal-700">Lock-in: {d.lockInEnd}</p>
-                                <p className="text-[10px] text-gray-400">Notice Period: {d.noticePeriodDays} Days</p>
+                      return (
+                        <React.Fragment key={d.leaseId}>
+                          <tr 
+                            onClick={() => setExpandedLeaseId(isExpanded ? null : d.leaseId)}
+                            className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${
+                              isExpanded ? "bg-teal-50/20" : ""
+                            }`}
+                          >
+                            <td className="py-4 px-5">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="font-mono text-[11px] font-extrabold text-[#0F8B7D] bg-teal-50 px-2 py-0.5 rounded border border-teal-200/70">
+                                  {d.leaseId}
+                                </span>
                               </div>
+                              <span className="font-extrabold text-slate-900 text-sm block">{d.tenantName}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="font-bold text-slate-800 block truncate max-w-[200px]">{d.propertyName}</span>
+                              <span className="text-[11px] text-slate-500 font-medium">{d.unit}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="font-extrabold text-slate-900 block">{d.areaSqFt.toLocaleString()} sq.ft.</span>
+                              <span className="text-[11px] text-slate-400 font-medium">₹{d.baseRentPsf}/psf</span>
+                            </td>
+                            <td className="py-4 px-4 font-extrabold text-slate-900">
+                              {d.baseMonthlyRent}
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="font-black text-slate-900 block">{d.totalMonthlyBilling}</span>
+                              <span className="text-[10px] text-teal-700 font-bold">Incl. GST &amp; CAM</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="font-bold text-amber-700 block">{d.nextEscalationDate}</span>
+                              <span className="text-[10px] text-slate-400 font-bold">+{d.escalationPct}% Indexation</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                d.leaseStatus === "Active" 
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                              }`}>
+                                {d.leaseStatus}
+                              </span>
+                            </td>
+                            <td className="py-4 px-5 text-right">
+                              <button
+                                type="button"
+                                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                              >
+                                {isExpanded ? "Hide" : "Details"}
+                              </button>
+                            </td>
+                          </tr>
 
-                              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-1.5">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">SECURITY DEPOSITS HELD</span>
-                                <p className="font-bold text-gray-900">Required: {d.depositRequired}</p>
-                                <p className="font-black text-emerald-700">Received: {d.depositReceived}</p>
-                                <p className="text-[10px] text-gray-400">6 Months Interest-Free Escrow</p>
-                              </div>
+                          {/* Spacious Lease Detail Drawer Row */}
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={8} className="p-0 bg-slate-50/80 border-b border-slate-200">
+                                <div className="p-5 sm:p-6 space-y-4">
+                                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-black text-slate-900">Lease Specification &amp; Audit Trail</h4>
+                                      <span className="text-xs text-slate-500">({d.leaseId})</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-500">Tenant: {d.tenantName}</span>
+                                  </div>
 
-                              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-1.5">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">TAX &amp; RECONCILIATION</span>
-                                <p className="font-bold text-gray-900">Base GST (18%): {d.gstAmount}</p>
-                                <p className="font-bold text-gray-900">CAM Rate: ₹{d.camPsf}/sq.ft.</p>
-                                <p className="text-[10px] text-gray-400">Monthly Utility: {d.utilityMonthly}</p>
-                              </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                                    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+                                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">LEASE &amp; LOCK-IN DATES</span>
+                                      <p className="font-bold text-slate-900">Lease: {d.leaseStart} → {d.leaseEnd}</p>
+                                      <p className="font-bold text-[#0F8B7D]">Lock-in Until: {d.lockInEnd}</p>
+                                      <p className="text-[11px] text-slate-500">Notice Period: {d.noticePeriodDays} Days</p>
+                                    </div>
 
-                              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-2 flex flex-col justify-between">
-                                <div>
-                                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">PAYMENT AUDIT STATUS</span>
-                                  <p className={`font-black text-xs mt-0.5 ${d.outstanding === "₹0" ? "text-emerald-700" : "text-amber-700"}`}>
-                                    {d.outstanding === "₹0" ? "✅ Fully Paid · Zero Dues" : `⚠ Outstanding: ${d.outstanding}`}
-                                  </p>
+                                    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+                                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">SECURITY DEPOSITS</span>
+                                      <p className="font-bold text-slate-900">Required: {d.depositRequired}</p>
+                                      <p className="font-black text-emerald-700">Received: {d.depositReceived}</p>
+                                      <p className="text-[11px] text-slate-500">6-Month Nodal Escrow Vault</p>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+                                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">RECOVERIES &amp; TAX</span>
+                                      <p className="font-bold text-slate-900">CAM Rate: ₹{d.camPsf}/psf ({d.camMonthly})</p>
+                                      <p className="font-bold text-slate-900">GST (18%): {d.gstAmount}</p>
+                                      <p className="text-[11px] text-slate-500">Utility: {d.utilityMonthly}</p>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-2 flex flex-col justify-between">
+                                      <div>
+                                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">PAYMENT AUDIT</span>
+                                        <p className={`font-black text-xs mt-0.5 ${d.outstanding === "₹0" ? "text-emerald-700" : "text-amber-700"}`}>
+                                          {d.outstanding === "₹0" ? "✅ Fully Settled (Zero Dues)" : `⚠ Outstanding: ${d.outstanding}`}
+                                        </p>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const inv = invoices.find(i => i.leaseId === d.leaseId);
+                                            if (inv) setActiveInvoiceForView(inv);
+                                            else showToast(`Invoice available for ${d.tenantName}`);
+                                          }}
+                                          className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] transition-colors text-center cursor-pointer"
+                                        >
+                                          View Invoice
+                                        </button>
+                                        {d.outstanding !== "₹0" && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const pendingInv = invoices.find(i => i.leaseId === d.leaseId && i.status !== "Paid");
+                                              if (pendingInv) setActiveInvoiceForPayment(pendingInv);
+                                            }}
+                                            className="w-full py-2 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-[11px] transition-colors text-center cursor-pointer"
+                                          >
+                                            Settle Dues
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const inv = invoices.find(i => i.leaseId === d.leaseId);
-                                      if (inv) {
-                                        setActiveInvoiceForView(inv);
-                                      } else {
-                                        showToast(`Invoice generated for ${d.tenantName}`);
-                                      }
-                                    }}
-                                    className="w-full py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-[10px] shadow-2xs transition-all cursor-pointer text-center"
-                                  >
-                                    View Invoice
-                                  </button>
-                                  {d.outstanding !== "₹0" && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const pendingInv = invoices.find(i => i.leaseId === d.leaseId && i.status !== "Paid");
-                                        if (pendingInv) setActiveInvoiceForPayment(pendingInv);
-                                      }}
-                                      className="w-full py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-[10px] shadow-2xs transition-all cursor-pointer text-center"
-                                    >
-                                      Settle Dues
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
 
             {/* Mobile Cards */}
             <div className="md:hidden divide-y divide-gray-100">
-              {filteredData.map((d) => (
-                <div key={d.leaseId} className="p-4 space-y-2.5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="text-[10px] font-mono font-bold text-[#0F8B7D]">{d.leaseId}</span>
-                      <h3 className="font-bold text-gray-900 text-sm">{d.tenantName}</h3>
-                      <p className="text-xs text-gray-500">{d.propertyName} · {d.unit}</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800">
-                      {d.leaseStatus}
-                    </span>
+              {filteredData.length === 0 ? (
+                <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+                    <FileText size={24} />
                   </div>
-                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2.5 rounded-xl text-xs">
-                    <div>
-                      <span className="text-[9px] text-gray-400 block font-bold">AREA</span>
-                      <span className="font-bold text-gray-800">{d.areaSqFt.toLocaleString()} sq.ft.</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-gray-400 block font-bold">TOTAL BILLING</span>
-                      <span className="font-black text-gray-900">{d.totalMonthlyBilling}</span>
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">No Leases in Rent Roll Yet</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mt-1">
+                      You haven&apos;t recorded any tenant lease agreements yet.
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddLeaseModal(true)}
+                    className="mt-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-teal-800 transition-all shadow-md flex items-center gap-1.5"
+                  >
+                    <Plus size={14} /> Add First Lease Agreement
+                  </button>
                 </div>
-              ))}
+              ) : (
+                filteredData.map((d) => (
+                  <div key={d.leaseId} className="p-4 space-y-2.5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono font-bold text-[#0F8B7D]">{d.leaseId}</span>
+                        <h3 className="font-bold text-gray-900 text-sm">{d.tenantName}</h3>
+                        <p className="text-xs text-gray-500">{d.propertyName} · {d.unit}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800">
+                        {d.leaseStatus}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2.5 rounded-xl text-xs">
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-bold">AREA</span>
+                        <span className="font-bold text-gray-800">{d.areaSqFt.toLocaleString()} sq.ft.</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 block font-bold">TOTAL BILLING</span>
+                        <span className="font-black text-gray-900">{d.totalMonthlyBilling}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1669,5 +1807,13 @@ export default function RentRollMaster() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function RentRollMaster() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs font-bold text-gray-400">Loading Rent Roll Master...</div>}>
+      <RentRollMasterContent />
+    </Suspense>
   );
 }

@@ -68,6 +68,112 @@ export default function RentPaymentGateway() {
     }, 1800);
   };
 
+  const triggerFileDownload = (filename: string, content: string) => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadTaxCertificate = () => {
+    const content = `================================================================================
+                       OFFICEX COMMERCIAL REAL ESTATE
+                      ANNUAL TAX & TDS CERTIFICATE (FY 2025-26)
+================================================================================
+
+Certificate ID    : CERT-TAX-2025-9982
+Generated Date    : ${new Date().toLocaleDateString("en-IN")}
+Tenant Entity     : TCS Corporate Workspace Division
+Property          : Apex Commercial Tower, BKC, Mumbai
+TAN               : MUMT12345F
+
+--------------------------------------------------------------------------------
+SUMMARY OF LEASE DUES & GST LEVIED (FY 2025-26):
+--------------------------------------------------------------------------------
+Total Gross Commercial Rent Paid   : ₹ 20,40,000.00
+Total CAM & Utilities Paid         : ₹  1,80,000.00
+Total GST (18%) Collected          : ₹    72,000.00
+TDS Deducted u/s 194I (10% Rent)   : ₹  2,04,000.00
+Total Net Amount Disbursed         : ₹ 20,88,000.00
+--------------------------------------------------------------------------------
+
+MONTHLY DISBURSEMENT BREAKDOWN:
+  - Apr 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox440192
+  - May 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox551982
+  - Jun 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox662914
+  - Jul 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox774102
+  - Aug 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox889123
+  - Sep 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox991204
+
+================================================================================
+VERIFIED BY OFFICEX FINANCIAL AUDIT ENGINE (SOC 2 TYPE II CERTIFIED)
+================================================================================`;
+
+    triggerFileDownload("OfficeX_Tax_Certificate_2025-26.txt", content);
+    setToast("Consolidated tax certificate downloaded to your device!");
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleDownloadInvoiceReceipt = (p: typeof paymentHistory[0]) => {
+    const content = `================================================================================
+                       OFFICEX COMMERCIAL REAL ESTATE
+                        OFFICIAL GST TAX INVOICE RECEIPT
+================================================================================
+
+Invoice Number     : ${p.invoice}
+Billing Month      : ${p.month}
+Payment Date       : ${p.paid}
+Razorpay Ref ID    : ${p.ref}
+Payment Mode       : ${p.mode}
+Payment Status     : COMPLETED (Verified via Razorpay Nodal Escrow)
+
+--------------------------------------------------------------------------------
+ISSUED BY (LANDLORD):
+  Entity           : OfficeX Institutional Commercial Real Estate Pvt. Ltd.
+  Address          : Cyber City Tower B, DLF Phase 2, Gurugram, Haryana 122002
+  GSTIN            : 06AAACO1234F1Z8
+  PAN              : AAACO1234F
+
+ISSUED TO (CORPORATE OCCUPIER):
+  Entity           : TCS Corporate Workspace Division
+  Property Unit    : Unit 402, Apex Commercial Tower, BKC, Mumbai
+  Lease Agreement  : LX-2024-88912
+  GSTIN            : 27AABCT9821P1ZM
+--------------------------------------------------------------------------------
+
+ITEMIZED BREAKDOWN OF COMMERCIAL CHARGES:
+--------------------------------------------------------------------------------
+1. Base Commercial Rent (4,500 sq.ft @ ₹37.7/sqft)    : ₹ 1,70,000.00
+2. Common Area Maintenance (CAM @ ₹3.3/sqft)          : ₹   15,000.00
+3. Reserved Basement Parking Bays (4 Bays)            : ₹   34,380.00
+--------------------------------------------------------------------------------
+SUBTOTAL                                              : ₹ 2,19,380.00
+CGST @ 9%                                             : ₹    3,000.00
+SGST @ 9%                                             : ₹    3,000.00
+TOTAL GST (18% on CAM & Parking)                      : ₹    6,000.00
+--------------------------------------------------------------------------------
+TOTAL AMOUNT PAID                                     : ${p.amount}
+================================================================================
+
+AUDIT TRAIL & COMPLIANCE:
+  - Bank Reference : HDFC-UPI-${p.ref}
+  - Digital Stamp  : VERIFIED BY OFFICEX NODAL ESCROW ENGINE
+  - E-Way Bill / QR Code Hash : 9f8a2b3c4d5e6f7a8b9c0d1e2f3a4b5c
+
+This is a computer-generated tax invoice receipt authorized under Rule 46 of 
+CGST Rules 2017. No physical signature is required.
+================================================================================`;
+
+    triggerFileDownload(`${p.invoice}_GST_Invoice_Receipt.txt`, content);
+    setToast(`Official GST invoice receipt ${p.invoice} downloaded!`);
+    setTimeout(() => setToast(null), 3500);
+  };
+
   return (
     <div className="flex flex-col gap-6 font-sans relative">
       {/* Toast Notification */}
@@ -85,11 +191,8 @@ export default function RentPaymentGateway() {
           <p className="text-xs text-gray-500 mt-0.5">Pay monthly lease dues, CAM charges, and download GST receipts.</p>
         </div>
         <button 
-          onClick={() => {
-            setToast("Downloading consolidated tax statement (.pdf)...");
-            setTimeout(() => setToast(null), 3000);
-          }}
-          className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 flex items-center gap-1.5 shadow-2xs self-start"
+          onClick={handleDownloadTaxCertificate}
+          className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 flex items-center gap-1.5 shadow-2xs self-start cursor-pointer"
         >
           <Download size={13} />
           <span>Download Tax Certificate</span>
@@ -195,10 +298,7 @@ export default function RentPaymentGateway() {
                   </td>
                   <td className="py-3.5 text-right">
                     <button 
-                      onClick={() => {
-                        setToast(`Downloaded official GST receipt for ${p.invoice}`);
-                        setTimeout(() => setToast(null), 3000);
-                      }}
+                      onClick={() => handleDownloadInvoiceReceipt(p)}
                       className="text-[#0F8B7D] font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Download size={12} /> Receipt

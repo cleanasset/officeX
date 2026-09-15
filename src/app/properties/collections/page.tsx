@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { Search, Filter, Calendar, Send, FileText, CheckCircle } from "lucide-react";
+import { Search, Filter, Calendar, Send, FileText, CheckCircle, Download } from "lucide-react";
 
 export default function RentCollectionTracker() {
   const [selectedMonth, setSelectedMonth] = useState("August 2025");
@@ -26,6 +26,25 @@ export default function RentCollectionTracker() {
 
   const handleReminder = () => {
     setToast("Automated payment reminder dispatched to Deloitte finance team!");
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleExportCollectionsCSV = () => {
+    const headers = ["Invoice ID", "Tenant", "Property", "Amount Billed", "Due Date", "Payment Date", "Payment Mode", "Status"];
+    const rows = invoices.map(i => [i.id, i.tenant, i.property, `"${i.amount}"`, i.due, i.paid, i.mode, i.status]);
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `OfficeX_Rent_Collections_${selectedMonth.replace(/\s+/g, "_")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setToast(`Rent collection ledger for ${selectedMonth} downloaded!`);
     setTimeout(() => setToast(null), 3500);
   };
 
@@ -88,9 +107,17 @@ export default function RentCollectionTracker() {
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-gray-900">August Collections</h2>
-          <button className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-50">
-            <Filter size={13} /> Filter
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-50">
+              <Filter size={13} /> Filter
+            </button>
+            <button 
+              onClick={handleExportCollectionsCSV}
+              className="px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-50 cursor-pointer"
+            >
+              <Download size={13} /> Export Invoices
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto w-full">

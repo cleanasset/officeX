@@ -27,21 +27,12 @@ export default function OperatePage() {
   const [enquiryPrefill, setEnquiryPrefill] = useState<
     { modules?: string[] } | undefined
   >(undefined);
-  const [activeTab, setActiveTab] = useState<number>(0);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   const openEnquiry = (mod: string) => {
     setEnquiryPrefill({ modules: [mod] });
     setSlideInOpen(true);
   };
-
-  // Continuous auto-advance every 3.6s (resets timer smoothly on every tab switch)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveTab((prev) => (prev + 1) % 6);
-    }, 3600);
-    return () => clearInterval(timer);
-  }, [activeTab]);
 
   /* ──────── 6 SAAS PRODUCTS DATA (Clean, Minimal & Uncluttered) ──────── */
   const productTabs = [
@@ -131,8 +122,6 @@ export default function OperatePage() {
     },
   ];
 
-  const current = productTabs[activeTab];
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] antialiased selection:bg-[#0D7B6C] selection:text-white flex flex-col font-sans">
       <MarketingHeader />
@@ -143,12 +132,25 @@ export default function OperatePage() {
       {/* ═══════════════════════════════════════════════════════════
           1. HERO SECTION — Clean, Authoritative, Enterprise CRE
           ═══════════════════════════════════════════════════════════ */}
-      <section className="relative pt-14 pb-12 sm:pt-20 sm:pb-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
-        <div className="max-w-5xl mx-auto text-center">
+      <section className="relative pt-14 pb-12 sm:pt-20 sm:pb-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80 overflow-hidden">
+        {/* Background Banner Image */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+          <Image
+            src="/images/officex_ultra_bright_daylight_cre.jpg"
+            alt="OfficeX Operate CAFM & Smart Commercial Management"
+            fill
+            priority
+            unoptimized
+            className="object-cover object-center opacity-25"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white" />
+        </div>
+
+        <div className="relative z-10 max-w-5xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 mb-5 tracking-wide shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-[#0D7B6C]" />
-            ENTERPRISE FACILITY MANAGEMENT & CMMS
+            ENTERPRISE FACILITY MANAGEMENT &amp; CMMS
           </div>
 
           {/* Main Headline */}
@@ -167,14 +169,14 @@ export default function OperatePage() {
           <div className="flex flex-wrap items-center justify-center gap-3.5 mb-12">
             <a
               href="#saas-modules"
-              className="px-6 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-semibold rounded-xl text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 inline-flex items-center gap-2 group"
+              className="px-6 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-semibold rounded-xl text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 inline-flex items-center gap-2 group cursor-pointer"
             >
-              Explore 6 SaaS Modules
+              Explore SaaS Modules
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
             </a>
             <button
               onClick={() => openEnquiry("General Platform")}
-              className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm border border-slate-200 shadow-2xs transition-all"
+              className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm border border-slate-200 shadow-2xs transition-all cursor-pointer"
             >
               Request Walkthrough
             </button>
@@ -183,7 +185,7 @@ export default function OperatePage() {
           {/* Enterprise Client Trust Strip */}
           <div className="pt-8 border-t border-slate-100 text-center">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
-              TRUSTED BY ASSET MANAGERS & OPERATORS ACROSS 15M+ SQ.FT
+              TRUSTED BY ASSET MANAGERS &amp; OPERATORS ACROSS 15M+ SQ.FT
             </p>
             <div className="flex flex-wrap items-center justify-center gap-7 sm:gap-10 text-xs sm:text-sm font-black tracking-wider text-slate-400">
               <span className="hover:text-slate-700 transition-colors">PRESTIGE GROUP</span>
@@ -197,121 +199,125 @@ export default function OperatePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          2. SAAS PRODUCT SHOWCASE — 6 Core Built-In Commercial Modules
+          2. SAAS PRODUCT SHOWCASE — Core Built-In Commercial Modules
           ═══════════════════════════════════════════════════════════ */}
-      <section id="saas-modules" className="relative py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 bg-[#F8FAFC]">
+      <section id="saas-modules" className="relative py-14 sm:py-18 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
-          <div className="max-w-3xl mx-auto text-center mb-7">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 mb-2.5 tracking-wide shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0D7B6C]" />
+          <div className="max-w-3xl mx-auto text-center mb-10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-slate-700 mb-3 tracking-wide shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0D7B6C] animate-pulse" />
               INTERACTIVE SAAS PLATFORM
             </div>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#0F172A] tracking-tight leading-tight mb-2.5">
-              Six Built-In Commercial Modules
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#0F172A] tracking-tight leading-tight mb-3">
+              Built-In Commercial SaaS Modules
             </h2>
 
             <p className="max-w-xl mx-auto text-sm sm:text-base text-slate-600 leading-relaxed">
-              Select any module below to preview the live interface and core commercial workflows.
+              Explore each dedicated operations module separately with direct access to live interfaces and core commercial workflows.
             </p>
           </div>
 
-          {/* Facilio-Style Clean Segmented Tab Bar — One size smaller, crisp & balanced */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex flex-wrap items-center justify-center p-1 bg-slate-100 border border-slate-200/90 rounded-xl gap-1 shadow-2xs">
-              {productTabs.map((tab, idx) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === idx;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(idx)}
-                    className={`inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                      isActive
-                        ? "bg-white text-[#0D7B6C] shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-[#0D7B6C]" : "text-slate-400"}`} />
-                    <span>{tab.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Selected Product Stage — Clean & Proportionate */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 lg:p-8 border border-slate-200/90 shadow-sm transition-all mb-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-              {/* Left Column (5 cols): One size smaller typography */}
-              <div className="lg:col-span-5 pr-0 lg:pr-3">
-                <h3 className="text-xl sm:text-2xl lg:text-[1.65rem] font-extrabold text-[#0F172A] tracking-tight leading-snug mb-2.5">
-                  {current.title}
-                </h3>
-                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4">
-                  {current.tagline}
-                </p>
-
-                {/* Clean, short highlights */}
-                <div className="space-y-2.5 mb-5">
-                  {current.highlights.map((item) => (
-                    <div key={item} className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700">
-                      <div className="w-4.5 h-4.5 rounded-full bg-teal-50 border border-teal-200/90 flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 text-[#0D7B6C] stroke-[2.5]" />
+          {/* All Modules in Separate Dedicated Sections */}
+          <div className="space-y-8 mb-10">
+            {productTabs.map((product, idx) => {
+              const Icon = product.icon;
+              const isEven = idx % 2 === 0;
+              return (
+                <div
+                  key={product.id}
+                  id={product.id}
+                  className="bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    {/* Content Column (5 cols) */}
+                    <div className={`lg:col-span-5 ${isEven ? "lg:order-1" : "lg:order-2"}`}>
+                      {/* Module Badge */}
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-xs font-black text-[#0D7B6C] mb-3">
+                        <Icon size={14} className="text-[#0D7B6C]" />
+                        <span>{product.name} Module</span>
                       </div>
-                      <span className="font-semibold text-slate-800">{item}</span>
-                    </div>
-                  ))}
-                </div>
 
-                {/* Single clean CTA button */}
-                <div className="pt-0.5">
-                  <Link
-                    href={current.route}
-                    className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-semibold rounded-lg text-xs sm:text-sm transition-all shadow-sm group"
-                  >
-                    Open Live Interface
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </div>
-              </div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-3">
+                        {product.title}
+                      </h3>
 
-              {/* Right Column (7 cols): Sleek Mac / SaaS Browser Window Frame */}
-              <div className="lg:col-span-7">
-                <div className="rounded-xl overflow-hidden border border-slate-200/90 shadow-md bg-white">
-                  {/* Browser Title Bar */}
-                  <div className="px-3.5 py-1.5 bg-slate-50/90 border-b border-slate-200/80 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                      <p className="text-sm text-slate-600 leading-relaxed mb-5">
+                        {product.tagline}
+                      </p>
+
+                      {/* Feature Highlights */}
+                      <div className="space-y-2.5 mb-6">
+                        {product.highlights.map((h, i) => (
+                          <div key={i} className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700">
+                            <div className="w-5 h-5 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
+                              <Check className="w-3 h-3 text-[#0D7B6C] stroke-[2.5]" />
+                            </div>
+                            <span className="font-semibold text-slate-800">{h}</span>
+                          </div>
+                        ))}
                       </div>
-                      <span className="font-mono text-[11px] text-slate-500 ml-1">
-                        app.officex.in{current.route}
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold tracking-wider text-[#0D7B6C] bg-teal-50 border border-teal-200">
-                      LIVE SYSTEM
-                    </span>
-                  </div>
 
-                  {/* Clean Product Mockup */}
-                  <div className="relative bg-white p-2 sm:p-2.5 flex items-center justify-center">
-                    <Image
-                      key={current.id}
-                      src={current.image}
-                      alt={`${current.title} Mockup`}
-                      width={960}
-                      height={540}
-                      className="w-full max-h-[240px] sm:max-h-[255px] object-contain rounded-lg transition-all duration-300"
-                      priority
-                    />
+                      {/* Direct Buttons */}
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <Link
+                          href={product.route}
+                          className="px-5 py-2.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
+                        >
+                          <span>Launch {product.name} Module</span>
+                          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => openEnquiry(product.name)}
+                          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer"
+                        >
+                          Request Walkthrough
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mockup Preview Column (7 cols) */}
+                    <div className={`lg:col-span-7 ${isEven ? "lg:order-2" : "lg:order-1"}`}>
+                      <div className="rounded-2xl overflow-hidden border border-slate-200/90 shadow-md bg-white">
+                        {/* Browser Window Frame */}
+                        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                            </div>
+                            <span className="font-mono text-[11px] text-slate-500 ml-1">
+                              app.officex.in{product.route}
+                            </span>
+                          </div>
+                          <Link
+                            href={product.route}
+                            className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider text-[#0D7B6C] bg-teal-50 border border-teal-200 hover:bg-teal-100 transition-colors flex items-center gap-1"
+                          >
+                            <span>OPEN LIVE</span>
+                            <ArrowUpRight size={11} />
+                          </Link>
+                        </div>
+
+                        {/* Product Mockup Image */}
+                        <div className="relative bg-white p-3 sm:p-5 flex items-center justify-center">
+                          <Image
+                            src={product.image}
+                            alt={`${product.title} Mockup`}
+                            width={960}
+                            height={540}
+                            className="w-full max-h-[300px] object-contain rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
           {/* Minimal Key Metrics Row */}

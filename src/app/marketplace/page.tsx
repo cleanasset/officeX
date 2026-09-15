@@ -10,7 +10,7 @@ import {
   MapPin, Users, Sparkles, ArrowRight, ArrowUpRight,
   Filter, Check, Star, Phone, Clock, ChevronRight,
   SlidersHorizontal, BadgePercent, Award, Shield, Eye,
-  Ticket, Briefcase
+  Ticket, Briefcase, Presentation
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
@@ -26,7 +26,7 @@ export default function PropertyMarketplacePage() {
   const [activeSolution, setActiveSolution] = useState<SolutionType>("longterm");
   const [activeSubPills, setActiveSubPills] = useState<Record<SolutionType, string>>({
     longterm: "office",
-    daypass: "single",
+    daypass: "meeting",
     events: "coworking",
     virtual: "company",
   });
@@ -62,29 +62,33 @@ export default function PropertyMarketplacePage() {
     },
     daypass: {
       pills: [
-        { id: "single", label: "Single Day Pass", icon: Ticket },
-        { id: "flexi", label: "Flexi 5-Day Pass", icon: Ticket },
-        { id: "team", label: "Team Day Pass", icon: Users },
+        { id: "meeting", label: "Meeting Rooms", icon: Users },
+        { id: "training", label: "Training Rooms", icon: Presentation },
+        { id: "event", label: "Event Spaces", icon: Calendar },
+        { id: "single", label: "Day Pass", icon: Ticket },
       ],
       descriptions: {
-        single: "Instant access to open hot desks, high-speed Wi-Fi, and executive lounges for a day",
-        flexi: "Prepaid multi-day passes with 90-day validity across 500+ Grade-A hubs",
-        team: "On-demand hot desking bundle for remote and distributed teams",
+        meeting: "Fully equipped conference and meeting rooms with video conferencing, whiteboard, and high-speed Wi-Fi",
+        training: "Tech-enabled training halls and workshop suites with modular seating layouts",
+        event: "Townhall venues, corporate offsite spaces, and networking event arenas",
+        single: "On-demand flexible day passes with access to open hot desks and executive business lounges",
       },
-      buttonText: "View Day Passes",
-      placeholder: "Search coworking hubs or areas for day passes...",
+      buttonText: "Find Rooms & Venues",
+      placeholder: "Search meeting rooms, training halls, or event spaces...",
     },
     events: {
       pills: [
         { id: "coworking", label: "Coworking Space", icon: Building2 },
+        { id: "managed", label: "Managed Office", icon: Building },
         { id: "cabins", label: "Private Team Cabins", icon: Users },
       ],
       descriptions: {
         coworking: "Dedicated desks, flexible hot desks, and private seats in Grade-A coworking hubs",
+        managed: "Bespoke enterprise managed office floors and private corporate suites with zero capex",
         cabins: "Sound-insulated lockable acoustic cabins with meeting room credits and high-speed Wi-Fi",
       },
       buttonText: "Find Workspaces",
-      placeholder: "Search coworking hubs or locations...",
+      placeholder: "Search coworking hubs or managed offices...",
     },
     virtual: {
       pills: [
@@ -232,17 +236,45 @@ export default function PropertyMarketplacePage() {
     },
     {
       id: "cyber-city",
-      name: "Cyber City, Gurugram (NCR)",
+      name: "Cyber City & Golf Course, Gurgaon",
       shortName: "DLF Cyber City",
-      city: "Gurugram, Delhi NCR",
-      searchCity: "Gurugram",
+      city: "Gurgaon, Haryana",
+      searchCity: "Gurgaon",
       searchQuery: "Cyber City",
-      region: "ncr",
+      region: "gurgaon",
       tag: "Fortune 500 Hub",
       spaces: "58+ Verified Spaces",
       desc: "Futuristic integrated business district featuring direct Rapid Metro connectivity and world-class CyberHub.",
       image: "/images/district_cybercity.jpg",
       highlights: ["Fortune 500 Campuses", "Integrated Rapid Metro", "CyberHub Social Hub"],
+    },
+    {
+      id: "noida-expressway",
+      name: "Sector 62 & Expressway, Noida",
+      shortName: "Noida Tech Corridor",
+      city: "Noida, Uttar Pradesh",
+      searchCity: "Noida",
+      searchQuery: "Noida Expressway",
+      region: "noida",
+      tag: "Tech & Media Hub",
+      spaces: "42+ Verified Spaces",
+      desc: "Prime IT and electronics manufacturing corridor with direct expressway links and modern commercial towers.",
+      image: "/images/showcase_office_techhorizon_hd.jpg",
+      highlights: ["IT/ITES Campuses", "Metro Blue Line", "Planned Commercial Zones"],
+    },
+    {
+      id: "delhi-cbd",
+      name: "Connaught Place & Aerocity, Delhi",
+      shortName: "Delhi Central CBD",
+      city: "New Delhi, Delhi",
+      searchCity: "Delhi",
+      searchQuery: "Aerocity",
+      region: "delhi",
+      tag: "Capital CBD",
+      spaces: "36+ Verified Spaces",
+      desc: "High-prestige corporate headquarters corridor with direct Airport Express metro links and luxury hospitality.",
+      image: "/images/workspace_managed_suite.jpg",
+      highlights: ["Diplomatic Hub", "Airport Express Metro", "Global Hospitality"],
     }
   ];
 
@@ -310,7 +342,9 @@ export default function PropertyMarketplacePage() {
     { id: "ahmedabad", label: "Ahmedabad & GIFT", count: commercialDistricts.filter(d => d.region === "ahmedabad").length },
     { id: "mumbai", label: "Mumbai", count: commercialDistricts.filter(d => d.region === "mumbai").length },
     { id: "bengaluru", label: "Bengaluru", count: commercialDistricts.filter(d => d.region === "bengaluru").length },
-    { id: "ncr", label: "Delhi NCR", count: commercialDistricts.filter(d => d.region === "ncr").length },
+    { id: "delhi", label: "Delhi", count: commercialDistricts.filter(d => d.region === "delhi").length },
+    { id: "gurgaon", label: "Gurgaon", count: commercialDistricts.filter(d => d.region === "gurgaon").length },
+    { id: "noida", label: "Noida", count: commercialDistricts.filter(d => d.region === "noida").length },
   ];
 
   const filteredDistricts = districtFilter === "all"
@@ -322,10 +356,10 @@ export default function PropertyMarketplacePage() {
       {/* Universal Sticky Marketing Header */}
       <MarketingHeader activePath="/marketplace" />
 
-      {/* 1. HERO SECTION (myHQ Ahmedabad Theme — Modern Coworking & Managed Office Visuals) */}
-      <section className="relative pt-12 md:pt-16 pb-14 md:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-slate-900 text-white">
+      {/* 1. HERO SECTION (High-Contrast, Readable Marketplace Banner) */}
+      <section className="relative pt-10 md:pt-14 pb-12 md:pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden bg-slate-950 text-white min-h-[460px] flex flex-col justify-center">
         
-        {/* Background Canvas — Warm, Stylish Modern Commercial Workspace Banner */}
+        {/* Background Canvas — Crisp Marketplace Banner with Enhanced Readability Scrim */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
           <Image
             src="/images/marketplace_myhq_hero.jpg"
@@ -333,103 +367,103 @@ export default function PropertyMarketplacePage() {
             fill
             priority
             unoptimized
-            className="object-cover object-center"
+            className="object-cover object-center brightness-[0.55] contrast-[1.10]"
           />
-          {/* myHQ Style Dark Readability Scrim */}
-          <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[1px] pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/50 pointer-events-none" />
+          {/* Multi-tier gradient overlay ensuring 100% crystal-clear text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/65 to-slate-950/80" />
         </div>
 
-        <div className="max-w-5xl mx-auto relative z-10 text-center">
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
           
           {/* Eyebrow Chip */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-teal-400/30 bg-teal-500/10 text-teal-300 text-xs font-bold uppercase tracking-wider mb-3.5 backdrop-blur-xs">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-teal-400/40 bg-teal-950/60 text-teal-300 text-[11px] font-bold uppercase tracking-wider mb-3 backdrop-blur-md shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
             <span>Office / CRE Discovery Marketplace</span>
           </div>
 
-          {/* Main Headline — Specific Tagline */}
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight mb-3 max-w-4xl mx-auto drop-shadow-md">
+          {/* Main Headline */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight mb-2 max-w-3xl mx-auto drop-shadow-[0_2px_14px_rgba(0,0,0,0.8)]">
             Discover. Compare. <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-400">Lease.</span>
           </h1>
 
           {/* Subhead */}
-          <p className="text-xs sm:text-base md:text-lg text-slate-200 font-medium max-w-2xl mx-auto mb-4 drop-shadow-sm">
+          <p className="text-sm sm:text-base text-slate-100 font-semibold max-w-xl mx-auto mb-3.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
             Flexible Commercial &amp; Office Spaces for Teams of Every Size
           </p>
 
           {/* Quick CalQ Calculator Link */}
-          <div className="mb-8">
+          <div className="mb-6">
             <a
               href="#calq"
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-400/15 hover:bg-teal-400/25 border border-teal-400/40 text-teal-300 text-xs font-bold transition-all shadow-sm backdrop-blur-xs cursor-pointer group"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 border border-teal-400/40 text-teal-300 text-xs font-bold transition-all shadow-md backdrop-blur-md cursor-pointer group"
             >
-              <span className="text-sm">🧮</span>
-              <span>Need to estimate your space? <b>Try CalQ Space &amp; Rent Calculator</b></span>
-              <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+              <span>🧮</span>
+              <span>Need to estimate your space? <b className="text-white">Try CalQ Space &amp; Rent Calculator</b></span>
+              <ArrowRight size={12} className="transition-transform group-hover:translate-x-1" />
             </a>
           </div>
 
           {/* myHQ-Style Multi-Tier Search Widget */}
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full max-w-3xl mx-auto">
             {/* Row 1: 4 Main Solution Tab Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-0">
               <button
                 type="button"
                 onClick={() => setActiveSolution("longterm")}
-                className={`py-3.5 px-3 rounded-t-2xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2.5 px-3 rounded-t-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeSolution === "longterm"
-                    ? "bg-white text-[#0F8B7D] font-black shadow-lg"
-                    : "bg-black/55 hover:bg-black/75 text-white font-bold backdrop-blur-md border-t border-x border-white/15"
+                    ? "bg-white text-[#0F8B7D] font-extrabold shadow-md"
+                    : "bg-slate-950/70 hover:bg-slate-950/90 text-white font-bold backdrop-blur-md border-t border-x border-white/20"
                 }`}
               >
-                <Building2 size={22} className={activeSolution === "longterm" ? "text-[#0F8B7D]" : "text-white/80"} />
-                <span className="text-xs sm:text-sm">Long-term Leasing</span>
+                <Building2 size={18} className={activeSolution === "longterm" ? "text-[#0F8B7D]" : "text-white/80"} />
+                <span className="text-xs sm:text-xs">Search Space</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveSolution("daypass")}
-                className={`py-3.5 px-3 rounded-t-2xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2 px-2.5 rounded-t-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeSolution === "daypass"
-                    ? "bg-white text-[#0F8B7D] font-black shadow-lg"
+                    ? "bg-white text-[#0F8B7D] font-extrabold shadow-md"
                     : "bg-black/55 hover:bg-black/75 text-white font-bold backdrop-blur-md border-t border-x border-white/15"
                 }`}
               >
-                <Ticket size={22} className={activeSolution === "daypass" ? "text-[#0F8B7D]" : "text-white/80"} />
-                <span className="text-xs sm:text-sm">Day Pass</span>
+                <Calendar size={17} className={activeSolution === "daypass" ? "text-[#0F8B7D]" : "text-white/80"} />
+                <span className="text-[11.5px] sm:text-xs">Meetings &amp; Events</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveSolution("events")}
-                className={`py-3.5 px-3 rounded-t-2xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2 px-2.5 rounded-t-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeSolution === "events"
-                    ? "bg-white text-[#0F8B7D] font-black shadow-lg"
+                    ? "bg-white text-[#0F8B7D] font-extrabold shadow-md"
                     : "bg-black/55 hover:bg-black/75 text-white font-bold backdrop-blur-md border-t border-x border-white/15"
                 }`}
               >
-                <LayoutGrid size={22} className={activeSolution === "events" ? "text-[#0F8B7D]" : "text-white/80"} />
-                <span className="text-xs sm:text-sm text-center leading-tight">Coworking Space</span>
+                <LayoutGrid size={17} className={activeSolution === "events" ? "text-[#0F8B7D]" : "text-white/80"} />
+                <span className="text-[11.5px] sm:text-xs text-center leading-tight">Coworking / Managed Office</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveSolution("virtual")}
-                className={`py-3.5 px-3 rounded-t-2xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2 px-2.5 rounded-t-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeSolution === "virtual"
-                    ? "bg-white text-[#0F8B7D] font-black shadow-lg"
+                    ? "bg-white text-[#0F8B7D] font-extrabold shadow-md"
                     : "bg-black/55 hover:bg-black/75 text-white font-bold backdrop-blur-md border-t border-x border-white/15"
                 }`}
               >
-                <Briefcase size={22} className={activeSolution === "virtual" ? "text-[#0F8B7D]" : "text-white/80"} />
-                <span className="text-xs sm:text-sm">Virtual Office</span>
+                <Briefcase size={17} className={activeSolution === "virtual" ? "text-[#0F8B7D]" : "text-white/80"} />
+                <span className="text-[11.5px] sm:text-xs">Virtual Office</span>
               </button>
             </div>
 
-            {/* Row 2: Active White Search Container — 100% EQUAL HEIGHT & DIMENSIONS ACROSS ALL TABS */}
-            <div className="bg-white rounded-b-2xl shadow-2xl p-4 sm:p-5 border border-slate-200 text-left">
+            {/* Row 2: Active White Search Container — Compact & Shorter */}
+            <div className="bg-white rounded-b-xl shadow-xl p-3 sm:p-4 border border-slate-200 text-left">
               {/* Row 1: Sub-category pills */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3 min-h-[38px]">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mb-2.5 min-h-[32px]">
                 {currentConfig.pills.map((pill) => {
                   const PillIcon = pill.icon;
                   const isSelected = selectedPillId === pill.id;
@@ -443,64 +477,66 @@ export default function PropertyMarketplacePage() {
                           [activeSolution]: pill.id,
                         }))
                       }
-                      className={`px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-3 py-1 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                         isSelected
-                          ? "border-2 border-[#0F8B7D] bg-teal-50/80 text-[#0F8B7D] font-black shadow-2xs"
+                          ? "border-2 border-[#0F8B7D] bg-teal-50/80 text-[#0F8B7D] font-extrabold shadow-2xs"
                           : "border border-slate-300 hover:border-slate-400 bg-white text-slate-700 font-bold"
                       }`}
                     >
-                      <PillIcon size={15} />
+                      <PillIcon size={13} />
                       <span>{pill.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Row 2: Contextual Description Bar (Locked to exact 1 line, identical height) */}
-              <div className="bg-slate-50 border border-slate-100 h-9 px-4 rounded-xl text-xs sm:text-sm text-slate-600 font-medium flex items-center justify-center text-center mb-3">
+              {/* Row 2: Contextual Description Bar (Compact 1 line) */}
+              <div className="bg-slate-50 border border-slate-100 h-7 px-3 rounded-lg text-xs text-slate-600 font-medium flex items-center justify-center text-center mb-2.5">
                 <span className="truncate">{currentDesc}</span>
               </div>
 
               {/* Row 3: Search Row */}
-              <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 {/* City Selector */}
-                <div className="sm:w-52 shrink-0 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] transition-all">
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight">
+                <div className="sm:w-48 shrink-0 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] transition-all">
+                  <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight">
                     City
                   </label>
                   <select
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full text-xs sm:text-sm font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
+                    className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
                   >
                     <option value="Ahmedabad">Ahmedabad</option>
                     <option value="Mumbai">Mumbai</option>
                     <option value="Bengaluru">Bengaluru</option>
-                    <option value="Gurugram">Delhi NCR</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Gurgaon">Gurgaon (Gurugram)</option>
+                    <option value="Noida">Noida</option>
                     <option value="Pune">Pune</option>
                     <option value="Hyderabad">Hyderabad</option>
                   </select>
                 </div>
 
                 {/* Location input */}
-                <div className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2.5 transition-all">
-                  <Search size={18} className="text-slate-400 shrink-0" />
+                <div className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2 transition-all">
+                  <Search size={15} className="text-slate-400 shrink-0" />
                   <input
                     type="text"
                     value={searchLocationQuery}
                     onChange={(e) => setSearchLocationQuery(e.target.value)}
                     placeholder={`${currentConfig.placeholder} in ${selectedCity}`}
-                    className="w-full text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
+                    className="w-full text-xs font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
                   />
                 </div>
 
                 {/* Action Button */}
                 <button
                   type="submit"
-                  className="px-6 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                  className="px-5 py-2.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <span>{currentConfig.buttonText}</span>
-                  <ArrowRight size={15} />
+                  <ArrowRight size={13} />
                 </button>
               </form>
             </div>
@@ -871,6 +907,115 @@ export default function PropertyMarketplacePage() {
               <p className="text-xs text-slate-500 leading-relaxed">
                 Draft Letters of Intent, execute Aadhaar-backed digital lease agreements, and transition straight into OfficeX Operate for fit-out.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5.5 MARKETPLACE PARTICIPANT PATHWAYS: BROKER & LANDLORD */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: Join as Broker */}
+          <div className="p-8 rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 shadow-md flex flex-col justify-between relative overflow-hidden">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-full border border-amber-300">
+                  Channel Partners &amp; IPCs
+                </span>
+                <span className="text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
+                  1.5x / 45-Day Payout
+                </span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Are You a Commercial Leasing Broker?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Partner with OfficeX to close enterprise mandates faster. Access 500+ verified commercial towers, instant legally binding LOI generation, and guaranteed 45-day commission escrow release.
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-2 text-xs font-semibold text-slate-700">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-amber-600 shrink-0" />
+                  <span>AI Client Space Match</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-amber-600 shrink-0" />
+                  <span>Digital LOI with E-Sign</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-amber-600 shrink-0" />
+                  <span>Zero Dispute Escrow</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-amber-600 shrink-0" />
+                  <span>Fortune 500 Mandates</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pt-6 mt-4 border-t border-amber-200/60">
+              <Link
+                href="/signup?role=leasing_broker"
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all"
+              >
+                Join as Broker Partner
+              </Link>
+              <Link
+                href="/leasing"
+                className="px-4 py-2.5 rounded-xl border border-amber-300 hover:bg-amber-100/50 text-amber-900 font-bold text-xs transition-all"
+              >
+                Open Broker CRM →
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 2: List Your Space */}
+          <div className="p-8 rounded-3xl border-2 border-teal-200 bg-gradient-to-br from-teal-50/60 via-white to-emerald-50/30 shadow-md flex flex-col justify-between relative overflow-hidden">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-100/80 px-2.5 py-1 rounded-full border border-teal-300">
+                  Landlords &amp; Asset Owners
+                </span>
+                <span className="text-xs font-bold text-teal-900 bg-teal-100 px-2 py-0.5 rounded-md">
+                  100% Free Listing
+                </span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Own a Commercial Building or Floor Plate?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Publish your vacant spaces directly to pre-vetted corporate occupiers. Zero brokerage fees, built-in digital deal room, automated rent roll tracking, and institutional tenant verification.
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-2 text-xs font-semibold text-slate-700">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-[#0F8B7D] shrink-0" />
+                  <span>Pre-Vetted MNC Tenants</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-[#0F8B7D] shrink-0" />
+                  <span>Direct Landlord Deal Room</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-[#0F8B7D] shrink-0" />
+                  <span>Automated Rent Roll</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-[#0F8B7D] shrink-0" />
+                  <span>Zero Listing Charges</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pt-6 mt-4 border-t border-teal-200/60">
+              <Link
+                href="/properties/add"
+                className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs shadow-xs transition-all"
+              >
+                List Your Space (Free)
+              </Link>
+              <Link
+                href="/properties"
+                className="px-4 py-2.5 rounded-xl border border-teal-300 hover:bg-teal-100/50 text-teal-900 font-bold text-xs transition-all"
+              >
+                Explore Landlord SaaS →
+              </Link>
             </div>
           </div>
         </div>

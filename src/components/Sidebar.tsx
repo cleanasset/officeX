@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Building,
   TrendingUp,
@@ -26,17 +26,26 @@ import {
   BarChart3,
   Award,
   ChevronRight,
+  ChevronDown,
   Shield,
   Activity,
   CheckCircle,
   Truck
 } from "lucide-react";
 
+interface SubMenuItem {
+  name: string;
+  href: string;
+  tabKey: string;
+  icon?: React.ComponentType<{ size: number; className?: string }>;
+}
+
 interface MenuItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ size: number; className?: string }>;
   badge?: string;
+  subItems?: SubMenuItem[];
 }
 
 // 1. Role-Specific Menus (Strict namespace isolation per portal)
@@ -45,7 +54,21 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   properties: [
     { name: "Portfolio Overview", href: "/properties", icon: Layers },
     { name: "Property Registry", href: "/properties/registry", icon: Building },
-    { name: "Rent Roll Master", href: "/properties/rent-roll", icon: DollarSign },
+    { 
+      name: "Rent Roll Master", 
+      href: "/properties/rent-roll", 
+      icon: DollarSign,
+      subItems: [
+        { name: "Active Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
+        { name: "Monthly Billing & Invoices", href: "/properties/rent-roll?tab=invoices", tabKey: "invoices", icon: DollarSign },
+        { name: "Collections & Receipts", href: "/properties/rent-roll?tab=collections", tabKey: "collections", icon: CheckCircle },
+        { name: "Arrears & Aging Ledger", href: "/properties/rent-roll?tab=aging", tabKey: "aging", icon: AlertTriangle },
+        { name: "Escalation & Expiries", href: "/properties/rent-roll?tab=escalations", tabKey: "escalations", icon: TrendingUp },
+        { name: "NOI & Property P&L", href: "/properties/rent-roll?tab=pnl", tabKey: "pnl", icon: BarChart3 },
+        { name: "Tenant Directory & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
+        { name: "Financial Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles }
+      ]
+    },
     { name: "Collections & Invoices", href: "/properties/collections", icon: FileText },
     { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck },
     { name: "Tenant Directory", href: "/properties/tenants", icon: Users }
@@ -154,9 +177,15 @@ const pathPortalAliases: Record<string, string> = {
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTabParam = searchParams.get("tab") || "rentroll";
+
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("properties");
   const [userEmail, setUserEmail] = useState<string>("");
+  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({
+    "Rent Roll Master": true
+  });
 
   // Synchronously compute active portal from URL first, handling both direct keys and aliases
   const findPortalKey = (path: string): string | undefined => {
@@ -281,6 +310,63 @@ export default function Sidebar() {
           {activeMenu.map((item) => {
             const isActive = pathname === item.href || (item.href !== `/${currentPortalKey}` && pathname.startsWith(item.href));
             const Icon = item.icon;
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const isExpanded = expandedSubMenus[item.name] ?? (isActive || pathname.includes("/properties/rent-roll"));
+
+            if (hasSubItems) {
+              return (
+                <div key={item.name} className="flex flex-col gap-1 my-0.5">
+                  {/* Green Pill Button matching exact client specification image */}
+                  <div
+                    onClick={() => {
+                      setExpandedSubMenus(prev => ({
+                        ...prev,
+                        [item.name]: !isExpanded
+                      }));
+                    }}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer shadow-md select-none border border-teal-600/30 ${
+                      isActive || pathname.startsWith(item.href)
+                        ? "bg-[#0F8B7D] text-white hover:bg-[#0c7368]"
+                        : "bg-[#0F8B7D]/90 text-white hover:bg-[#0F8B7D]"
+                    }`}
+                  >
+                    <Icon size={16} className="text-white shrink-0" />
+                    <span className="truncate flex-1 font-black text-xs tracking-wide">{item.name}</span>
+                    {isExpanded ? (
+                      <ChevronDown size={14} className="text-white shrink-0" />
+                    ) : (
+                      <ChevronRight size={14} className="text-white shrink-0" />
+                    )}
+                  </div>
+
+                  {/* Dropdown Sub-Items List */}
+                  {isExpanded && item.subItems && (
+                    <div className="ml-3 pl-2.5 border-l-2 border-[#0F8B7D]/30 flex flex-col gap-1 py-1 my-0.5 animate-in fade-in duration-150">
+                      {item.subItems.map((sub) => {
+                        const SubIcon = sub.icon || ChevronRight;
+                        const isSubActive =
+                          pathname === "/properties/rent-roll" && activeTabParam === sub.tabKey;
+
+                        return (
+                          <Link
+                            key={sub.name}
+                            href={sub.href}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
+                              isSubActive
+                                ? "bg-teal-50 text-[#0F8B7D] font-extrabold shadow-2xs border border-teal-200/90"
+                                : "text-gray-600 font-bold hover:bg-gray-100 hover:text-gray-900"
+                            }`}
+                          >
+                            <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D]" : "text-gray-400"} />
+                            <span className="truncate">{sub.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link
