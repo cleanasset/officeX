@@ -2286,7 +2286,7 @@
   ],
   "collections": [
     {
-      "id": "REC-2026-901",
+      "id": "REC-2026-991",
       "orgId": "org-officex-001",
       "invoiceId": "INV-1789536679748-777",
       "invoiceNumber": "INV-2026-923",
@@ -2295,7 +2295,7 @@
       "tenantId": "TEN-107",
       "tenantName": "HSBC Global Services",
       "propertyName": "Godrej BKC Horizon",
-      "receiptNumber": "REC-2026-901",
+      "receiptNumber": "REC-2026-991",
       "paymentDate": "2026-09-16",
       "paymentMode": "neft_rtgs",
       "referenceNumber": "HDFCR59536690395",

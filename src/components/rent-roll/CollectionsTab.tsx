@@ -124,8 +124,8 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
-              {filteredCollections.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
+              {filteredCollections.map((c, idx) => (
+                <tr key={`${c.id || c.receiptNumber}-${idx}`} className="hover:bg-gray-50/80 transition-colors">
                   <td className="p-3.5 font-mono font-bold text-teal-700 flex items-center gap-1.5">
                     <FileCheck2 className="w-3.5 h-3.5 text-[#0F8B7D]" />
                     <span>{c.receiptNumber}</span>

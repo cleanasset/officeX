@@ -89,9 +89,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const receiptNum = `REC-2026-${Math.floor(900 + Math.random() * 100)}`;
+    const uniqueSuffix = `${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
+    const receiptNum = `REC-2026-${uniqueSuffix}`;
     const newReceipt: CollectionEntity = {
-      id: receiptNum,
+      id: `REC-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       orgId: db.organization.id,
       invoiceId: invoice?.id,
       invoiceNumber: invoice?.invoiceNumber,
