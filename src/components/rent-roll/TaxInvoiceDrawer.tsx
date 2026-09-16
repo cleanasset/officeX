@@ -86,10 +86,25 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
             </div>
 
             <div className="text-left sm:text-right">
-              <h2 className="text-xl font-black text-amber-800 tracking-wider">TAX INVOICE</h2>
-              <p className="font-mono text-gray-900 text-sm font-bold mt-1">{invoice.invoiceNumber}</p>
+              <div className="flex items-center sm:justify-end gap-2 mb-1">
+                <h2 className="text-xl font-black text-gray-900 tracking-wider">TAX INVOICE</h2>
+                {invoice.status === "paid" || invoice.balanceDue === 0 ? (
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                    <FileCheck2 className="w-3 h-3" /> PAID
+                  </span>
+                ) : invoice.status === "overdue" ? (
+                  <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 rounded-md text-[10px] font-black uppercase tracking-wider">
+                    OVERDUE
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-md text-[10px] font-black uppercase tracking-wider">
+                    PAYMENT DUE
+                  </span>
+                )}
+              </div>
+              <p className="font-mono text-gray-900 text-sm font-bold mt-0.5">{invoice.invoiceNumber}</p>
               <p className="text-gray-500 text-[11px]">Date: <span className="text-gray-900 font-mono font-semibold">{invoice.invoiceDate}</span></p>
-              <p className="text-gray-500 text-[11px]">Due Date: <span className="text-amber-800 font-mono font-bold">{invoice.dueDate}</span></p>
+              <p className="text-gray-500 text-[11px]">Due Date: <span className="text-gray-900 font-mono font-bold">{invoice.dueDate}</span></p>
             </div>
           </div>
 
@@ -187,6 +202,13 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
                 <p>Account Number: <span className="text-gray-900 font-bold">50200088991204</span></p>
                 <p>IFSC Code: <span className="text-teal-700 font-bold">HDFC0000128</span> (BKC Branch)</p>
               </div>
+
+              {invoice.status === "paid" && (
+                <div className="mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 font-semibold text-xs">
+                  <FileCheck2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Settled via {invoice.paymentMode || "NEFT / RTGS"} · Ref #{invoice.referenceNumber || "OX-SETTLE-9821"}</span>
+                </div>
+              )}
             </div>
 
             {/* Financial Totals */}
@@ -204,17 +226,45 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
                 <span className="font-mono text-gray-700">{formatINR(sgstAmount)}</span>
               </div>
               <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-200">
-                <span>Total Invoice Value:</span>
-                <span className="font-mono text-amber-900 font-black">{formatINR(invoice.grossTotal)}</span>
+                <span>Total Gross Invoice Value:</span>
+                <span className="font-mono text-gray-950 font-black">{formatINR(invoice.grossTotal)}</span>
               </div>
               <div className="flex justify-between text-gray-500 pt-1">
-                <span>Less: TDS u/s 194I (10% on Rent):</span>
+                <span>Less: TDS u/s 194-I (10% on Rent):</span>
                 <span className="font-mono text-rose-600 font-semibold">-{formatINR(invoice.tdsDeducted)}</span>
               </div>
-              <div className="flex justify-between text-base font-black text-[#0F8B7D] pt-2 border-t border-gray-200 bg-teal-50/60 p-2.5 rounded-xl">
-                <span>Net Payable:</span>
-                <span className="font-mono">{formatINR(invoice.netPayable)}</span>
+              
+              <div className="flex justify-between text-xs font-bold text-gray-700 pt-2 border-t border-gray-200">
+                <span>Net Invoice Value (Billed):</span>
+                <span className="font-mono text-gray-900">{formatINR(invoice.netPayable)}</span>
               </div>
+
+              {/* Amount Paid Ledger Line */}
+              {invoice.amountPaid > 0 && (
+                <div className="flex justify-between text-xs font-bold text-emerald-700">
+                  <span>Less: Payment Received:</span>
+                  <span className="font-mono">-{formatINR(invoice.amountPaid)}</span>
+                </div>
+              )}
+
+              {/* Final Balance Due Box */}
+              {invoice.balanceDue === 0 || invoice.status === "paid" ? (
+                <div className="flex justify-between items-center text-sm font-black text-emerald-800 pt-2 border-t border-emerald-200 bg-emerald-50 p-2.5 rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <FileCheck2 className="w-4 h-4 text-emerald-600" />
+                    <span>Balance Due:</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono text-emerald-700">₹0.00</span>
+                    <span className="ml-2 text-[10px] uppercase font-extrabold bg-emerald-200/80 text-emerald-900 px-1.5 py-0.5 rounded">PAID</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between text-base font-black text-[#0F8B7D] pt-2 border-t border-gray-200 bg-teal-50/80 p-2.5 rounded-xl">
+                  <span>Current Balance Due:</span>
+                  <span className="font-mono">{formatINR(invoice.balanceDue)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
