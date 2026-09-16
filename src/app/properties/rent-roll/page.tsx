@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Building2,
   TrendingUp,
@@ -18,7 +19,8 @@ import {
   RefreshCw,
   Bell,
   CheckCircle2,
-  Plus
+  Plus,
+  BookOpen
 } from "lucide-react";
 
 import { RentRollHeader } from "@/components/rent-roll/RentRollHeader";
@@ -33,6 +35,7 @@ import { ForecastTab } from "@/components/rent-roll/ForecastTab";
 import { PnlTab } from "@/components/rent-roll/PnlTab";
 import { TenantsTab, TenantSummary } from "@/components/rent-roll/TenantsTab";
 import { AuditTab, AuditLogItem } from "@/components/rent-roll/AuditTab";
+import { DictionaryTab } from "@/components/rent-roll/DictionaryTab";
 
 import { LeaseDetailDrawer } from "@/components/rent-roll/LeaseDetailDrawer";
 import { TaxInvoiceDrawer } from "@/components/rent-roll/TaxInvoiceDrawer";
@@ -43,9 +46,25 @@ import { AddExpenseModal } from "@/components/rent-roll/AddExpenseModal";
 import { AlertsModal, AlertNotification } from "@/components/rent-roll/AlertsModal";
 import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
 
-export default function RentRollPage() {
+function RentRollPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get("tab") || "dashboard";
+
   // Navigation State
-  const [activeTab, setActiveTab] = useState<string>("dashboard");
+  const [activeTab, setActiveTab] = useState<string>(tabFromUrl);
+
+  // Sync activeTab whenever URL search parameter ?tab=... changes (e.g. sidebar navigation)
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    router.replace(`/properties/rent-roll?tab=${tabId}`, { scroll: false });
+  };
 
   // Global Filters State
   const [selectedProperty, setSelectedProperty] = useState<string>("ALL");
@@ -157,7 +176,7 @@ export default function RentRollPage() {
       });
       if (res.ok) {
         fetchAllData();
-        setActiveTab("invoices");
+        handleTabChange("invoices");
       }
     } catch (e) {
       console.error("Failed to generate invoices:", e);
@@ -213,16 +232,17 @@ export default function RentRollPage() {
   const unreadAlerts = alerts.filter(a => !a.isRead);
 
   const tabs = [
-    { id: "dashboard", label: "Dashboard", icon: Building2 },
-    { id: "rentroll", label: "Rent Roll Master", icon: TrendingUp },
-    { id: "invoices", label: "Invoices & Billing", icon: Receipt },
-    { id: "collections", label: "Collections Ledger", icon: FileCheck2 },
-    { id: "aging", label: "AR Aging Analysis", icon: Clock },
-    { id: "escalations", label: "Escalations", icon: ArrowUpRight },
+    { id: "dashboard", label: "Executive Dashboard", icon: Building2 },
+    { id: "rentroll", label: "Active Rent Roll Master", icon: TrendingUp },
+    { id: "invoices", label: "Monthly Billing & Invoices", icon: Receipt },
+    { id: "collections", label: "Collections & Receipts", icon: FileCheck2 },
+    { id: "aging", label: "Arrears & Aging Ledger", icon: Clock },
+    { id: "escalations", label: "Escalation & Expiries", icon: ArrowUpRight },
     { id: "occupancy", label: "Stacking & Occupancy", icon: PieChart },
     { id: "forecast", label: "12-Mo Forecast", icon: Calendar },
-    { id: "pnl", label: "Property P&L / NOI", icon: DollarSign },
-    { id: "tenants", label: "Tenants Master", icon: Users },
+    { id: "pnl", label: "NOI & Property P&L", icon: DollarSign },
+    { id: "tenants", label: "Tenant Directory & Leases", icon: Users },
+    { id: "dictionary", label: "Financial Terms Dictionary", icon: BookOpen },
     { id: "audit", label: "Audit & Config", icon: ShieldCheck },
   ];
 
@@ -258,7 +278,7 @@ export default function RentRollPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 isActive
                   ? "bg-[#0F8B7D] text-white shadow-xs font-bold"
@@ -277,7 +297,7 @@ export default function RentRollPage() {
         {activeTab === "dashboard" && (
           <DashboardTab
             data={dashboardData}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={handleTabChange}
             onOpenRecordPayment={() => {
               setPreSelectedInvoiceForPayment(null);
               setIsRecordPaymentOpen(true);
@@ -369,6 +389,10 @@ export default function RentRollPage() {
           />
         )}
 
+        {activeTab === "dictionary" && (
+          <DictionaryTab />
+        )}
+
         {activeTab === "audit" && (
           <AuditTab logs={auditLogs} />
         )}
@@ -446,7 +470,7 @@ export default function RentRollPage() {
         onMarkAllRead={handleMarkAllAlertsRead}
         onNavigateTab={(tab) => {
           setIsAlertsModalOpen(false);
-          setActiveTab(tab);
+          handleTabChange(tab);
         }}
       />
 
@@ -458,3 +482,12 @@ export default function RentRollPage() {
     </div>
   );
 }
+
+export default function RentRollPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-gray-500 font-medium">Loading Rent Roll Engine...</div>}>
+      <RentRollPageInner />
+    </Suspense>
+  );
+}
+
