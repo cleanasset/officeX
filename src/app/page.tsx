@@ -854,8 +854,8 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO — COMPLETE OFFICEX CRE & FM ECOSYSTEM (CENTERED) */}
-      <section className="relative min-h-[580px] md:min-h-[620px] lg:min-h-[660px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 md:pt-14 lg:pt-16 pb-12 md:pb-16 lg:pb-18 bg-slate-950 border-b border-slate-800 text-white">
+      {/* SECTION 2: HERO — COMPLETE OFFICEX CRE & FM ECOSYSTEM (CENTERED & SLEEK) */}
+      <section className="relative min-h-[560px] md:min-h-[590px] lg:min-h-[620px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-8 md:pt-12 lg:pt-14 pb-10 md:pb-14 lg:pb-16 bg-slate-950 border-b border-slate-800 text-white">
         
         {/* Background Image: Clean Architectural Commercial Real Estate Skyline */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
@@ -865,26 +865,26 @@ export default function LandingPage() {
             fill
             priority
             unoptimized
-            className="object-cover object-center opacity-95 brightness-[0.88] contrast-[1.05]"
+            className="object-cover object-center brightness-[0.98] contrast-[1.05]"
           />
 
-          {/* Balanced Natural Contrast Scrim: Clear readability for centered text */}
-          <div className="absolute inset-0 bg-slate-950/70 pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/50 to-slate-950/85 pointer-events-none" />
+          {/* Balanced Natural Contrast Scrim: Clear readability for centered text while keeping skyline crisp & vivid */}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/65 via-slate-950/25 to-slate-950/65 pointer-events-none" />
+          <div className="absolute inset-0 bg-slate-950/20 pointer-events-none" />
         </div>
 
-        {/* Centered Hero Container */}
+        {/* Centered Hero Container — Sleek & Compact Width */}
         <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-          <div className="max-w-4xl text-center flex flex-col items-center w-full">
+          <div className="max-w-[720px] text-center flex flex-col items-center w-full">
             
             {/* Eyebrow Badge — Vibrant Teal Pill */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/80 border border-teal-400/50 text-teal-300 text-xs sm:text-sm font-bold tracking-wide mb-4 sm:mb-5 backdrop-blur-md shadow-lg mx-auto">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-teal-400/40 text-teal-300 text-xs sm:text-sm font-bold tracking-wide mb-3 sm:mb-4 backdrop-blur-md shadow-md mx-auto">
               <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0" />
               <span>Intelligent Commercial Workplace Platform</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-[50px] font-black tracking-tight text-white leading-[1.14] mb-3.5 sm:mb-4 text-center">
+            <h1 className="text-2xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-white leading-tight mb-2.5 sm:mb-3 text-center">
               One Platform.{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-400">
                 Smarter Workplaces.
@@ -892,65 +892,65 @@ export default function LandingPage() {
             </h1>
 
             {/* Subhead */}
-            <p className="text-sm sm:text-base md:text-lg font-medium text-slate-100 leading-relaxed max-w-2xl mb-6 sm:mb-7 text-center mx-auto">
+            <p className="text-xs sm:text-sm md:text-base font-medium text-slate-200 leading-relaxed max-w-xl mb-5 sm:mb-6 text-center mx-auto">
               Find verified commercial spaces, hire top facility management vendors, and automate building operations — all in one unified ecosystem.
             </p>
 
-            {/* 3-Tab Search Bar Component */}
-            <div className="w-full max-w-4xl mb-4 sm:mb-5">
+            {/* 3-Tab Search Bar Component — Sleek & Proportional */}
+            <div className="w-full max-w-[720px] mb-3 sm:mb-4">
               {/* Unified Segmented Tabs */}
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-0 overflow-x-auto no-scrollbar max-w-full">
+              <div className="flex items-center justify-center gap-1 sm:gap-1.5 mb-0 overflow-x-auto no-scrollbar max-w-full">
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("space")}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "space"
-                      ? "bg-[#0F8B7D] text-white shadow-xl"
+                      ? "bg-[#0F8B7D] text-white shadow-lg"
                       : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
                   }`}
                 >
-                  <Building2 size={16} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
+                  <Building2 size={14} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
                   <span>Find Spaces</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("vendor")}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "vendor"
-                      ? "bg-[#0F8B7D] text-white shadow-xl"
+                      ? "bg-[#0F8B7D] text-white shadow-lg"
                       : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
                   }`}
                 >
-                  <Wrench size={16} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
+                  <Wrench size={14} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
                   <span>Hire Vendors</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSearchTab("managed")}
-                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                  className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "managed"
-                      ? "bg-[#0F8B7D] text-white shadow-xl"
+                      ? "bg-[#0F8B7D] text-white shadow-lg"
                       : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
                   }`}
                 >
-                  <ShieldCheck size={16} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
+                  <ShieldCheck size={14} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
                   <span>Operate &amp; Manage</span>
                 </button>
               </div>
 
               {/* Main Search Bar Card */}
-              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.35)] p-4 sm:p-6 lg:p-7 border border-slate-200/90 w-full text-left text-slate-900">
+              <div className="bg-white rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.3)] p-3 sm:p-4 border border-slate-200/90 w-full text-left text-slate-900">
                 {activeSearchTab === "space" && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
                     {/* Field 1: Location */}
-                    <div className="flex-[1.1] md:pr-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Commercial Hub / City
+                    <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        City / Hub
                       </label>
                       <select
                         value={spaceCity}
                         onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="Mumbai">Mumbai (BKC, Lower Parel)</option>
                         <option value="Bengaluru">Bengaluru (ORR, Whitefield)</option>
@@ -962,14 +962,14 @@ export default function LandingPage() {
                     </div>
 
                     {/* Field 2: Size */}
-                    <div className="flex-1 md:px-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Floor Area
                       </label>
                       <select
                         value={spaceBudget}
                         onChange={(e) => setSpaceBudget(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="All Ranges">Any Area</option>
                         <option value="2,000 - 5,000 sq.ft.">2k - 5k sq.ft.</option>
@@ -980,14 +980,14 @@ export default function LandingPage() {
                     </div>
 
                     {/* Field 3: Format */}
-                    <div className="flex-[1.15] md:px-5">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Workspace Format
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Format
                       </label>
                       <select
                         value={spaceGrade}
                         onChange={(e) => setSpaceGrade(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="All Grades">Commercial Office</option>
                         <option value="Grade-A Managed">Managed Suite</option>
@@ -997,47 +997,47 @@ export default function LandingPage() {
                     </div>
 
                     {/* Search Button */}
-                    <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
+                    <div className="sm:col-span-2">
                       <button
                         onClick={handleLandingSearch}
-                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <Search size={16} />
-                        <span>Search Spaces</span>
+                        <Search size={14} />
+                        <span>Search</span>
                       </button>
                     </div>
                   </div>
                 )}
 
                 {activeSearchTab === "vendor" && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
                     {/* Field 1: FM Service */}
-                    <div className="flex-1 md:pr-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Facility Service Needed
+                    <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        FM Service Needed
                       </label>
                       <select
                         value={vendorCategory}
                         onChange={(e) => setVendorCategory(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="HVAC Maintenance">HVAC &amp; Central Chillers AMC</option>
-                        <option value="Deep Cleaning">Commercial Sanitization &amp; Hygiene</option>
-                        <option value="Electrical Auditing">MEP, DG Sets &amp; Electrical Audit</option>
-                        <option value="Pest Control">PSARA Manned Security Patrol</option>
+                        <option value="Deep Cleaning">Commercial Cleaning &amp; Hygiene</option>
+                        <option value="Electrical Auditing">MEP &amp; DG Sets Audit</option>
+                        <option value="Pest Control">PSARA Manned Security</option>
                         <option value="Fire & Safety NOC">Statutory Fire Safety NOC</option>
                       </select>
                     </div>
 
                     {/* Field 2: City */}
-                    <div className="flex-1 md:px-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Property Location
+                    <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Location
                       </label>
                       <select
                         value={vendorCity}
                         onChange={(e) => setVendorCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="Mumbai">Mumbai</option>
                         <option value="Bengaluru">Bengaluru</option>
@@ -1049,71 +1049,71 @@ export default function LandingPage() {
                     </div>
 
                     {/* Field 3: Scope */}
-                    <div className="flex-1 md:px-5">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Contract Term
                       </label>
                       <select
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <option value="Annual AMC">Annual Maintenance Contract (AMC)</option>
-                        <option value="One-Time Service">One-Time Project / Overhaul</option>
-                        <option value="Multi-Year IFM">Multi-Year Integrated FM</option>
+                        <option value="Annual AMC">Annual AMC Contract</option>
+                        <option value="One-Time Service">One-Time Service / Audit</option>
+                        <option value="Multi-Year IFM">Multi-Year IFM Scope</option>
                       </select>
                     </div>
 
                     {/* Search Button */}
-                    <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
+                    <div className="sm:col-span-2">
                       <button
                         onClick={handleLandingSearch}
-                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <Wrench size={16} />
-                        <span>Find Vendors</span>
+                        <Wrench size={14} />
+                        <span>Find</span>
                       </button>
                     </div>
                   </div>
                 )}
 
                 {activeSearchTab === "managed" && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
                     {/* Field 1: Managed Solution */}
-                    <div className="flex-1 md:pr-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Stewardship Scope
+                    <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        Scope
                       </label>
                       <select
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="Integrated FM">Integrated IFM Stewardship</option>
                         <option value="Rent Roll & CAM">Rent Roll &amp; CAM Audit</option>
-                        <option value="Statutory Vault">100% Statutory Compliance</option>
+                        <option value="Statutory Vault">100% Statutory Vault</option>
                       </select>
                     </div>
 
                     {/* Field 2: Portfolio Size */}
-                    <div className="flex-1 md:px-5 md:border-r border-slate-200">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                         Portfolio Size
                       </label>
                       <select
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
-                        <option value="10k-50k">10,000 - 50,000 Sq.Ft.</option>
-                        <option value="50k-200k">50,000 - 200,000 Sq.Ft.</option>
-                        <option value="200k+">200,000+ Sq.Ft. Campus</option>
+                        <option value="10k-50k">10k - 50k Sq.Ft.</option>
+                        <option value="50k-200k">50k - 200k Sq.Ft.</option>
+                        <option value="200k+">200k+ Sq.Ft. Campus</option>
                       </select>
                     </div>
 
                     {/* Field 3: City */}
-                    <div className="flex-1 md:px-5">
-                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Location
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                        City
                       </label>
                       <select
                         value={spaceCity}
                         onChange={(e) => setSpaceCity(e.target.value)}
-                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
                       >
                         <option value="Mumbai">Mumbai</option>
                         <option value="Bengaluru">Bengaluru</option>
@@ -1125,13 +1125,13 @@ export default function LandingPage() {
                     </div>
 
                     {/* Search Button */}
-                    <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
+                    <div className="sm:col-span-2">
                       <button
                         onClick={() => router.push('/managed-services')}
-                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <ShieldCheck size={16} />
-                        <span>Explore Solutions</span>
+                        <ShieldCheck size={14} />
+                        <span>Explore</span>
                       </button>
                     </div>
                   </div>
@@ -1140,21 +1140,21 @@ export default function LandingPage() {
             </div>
 
             {/* Value Highlight Badges */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-white font-bold mt-3">
-              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
-                <CheckCircle2 size={14} className="text-teal-400 shrink-0" />
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-[11px] sm:text-xs text-white font-bold mt-2 sm:mt-2.5">
+              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+                <CheckCircle2 size={13} className="text-teal-400 shrink-0" />
                 <span>0% Broker Fee</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
-                <ShieldCheck size={14} className="text-teal-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+                <ShieldCheck size={13} className="text-teal-400 shrink-0" />
                 <span>100% Escrow Protected</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
-                <Lock size={14} className="text-teal-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+                <Lock size={13} className="text-teal-400 shrink-0" />
                 <span>SOC 2 Type II Certified</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
-                <Award size={14} className="text-teal-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+                <Award size={13} className="text-teal-400 shrink-0" />
                 <span>100% RBI Escrow Audited</span>
               </span>
             </div>
@@ -1186,18 +1186,14 @@ export default function LandingPage() {
           </div>
 
           {/* 5 Vertical Colored Cards matching OfficeX signature logo brand color */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
             {[
               {
                 id: "property",
-                title: "Discover. Compare. Lease.",
-                desc: "Office / CRE Discovery Marketplace",
-                benefits: [
-                  "Verified Grade-A listings across top metros",
-                  "Side-by-side space comparison tools",
-                  "Direct owner & property manager connect"
-                ],
-                audience: "Occupiers, Brokers, Owners",
+                title: "Office / CRE Discovery Marketplace",
+                desc: "Discover. Compare. Lease.",
+                benefits: ["Verified Grade-A listings across metros", "Side-by-side space comparison tools", "Direct owner/manager connection"],
+                audience: "For: Occupiers, Brokers, Owners",
                 image: "/images/card_office_marketplace.jpg",
                 bgColor: "bg-[#0F8B7D]", // Logo Shade 1: Signature Vibrant Teal
                 arrowColor: "text-[#0F8B7D]",
@@ -1206,14 +1202,10 @@ export default function LandingPage() {
               },
               {
                 id: "fm",
-                title: "Connect with Trusted Professionals",
-                desc: "Facility Management Marketplace",
-                benefits: [
-                  "250+ pre-vetted FM service vendors",
-                  "Structured RFQ & automated BOQ creation",
-                  "Escrow-protected milestone payments"
-                ],
-                audience: "Building Owners, FM Heads",
+                title: "Facility Management Marketplace",
+                desc: "Connect with Trusted Professionals",
+                benefits: ["250+ pre-vetted FM vendors", "Structured RFQ with BOQ generation", "Escrow-protected milestone payments"],
+                audience: "For: Building Owners, FM Heads",
                 image: "/images/card_fm_hd.jpg",
                 bgColor: "bg-[#0A6357]", // Logo Shade 2: Deep Pine Forest Teal
                 arrowColor: "text-[#0A6357]",
@@ -1223,13 +1215,9 @@ export default function LandingPage() {
               {
                 id: "saas",
                 title: "Operate & Manage",
-                desc: "CAFM, Rent roll & Visitor Management",
-                benefits: [
-                  "CAFM & 52-week automated PPM schedule",
-                  "Rent roll, CAM billing & compliance vault",
-                  "Visitor management & touchless access"
-                ],
-                audience: "Facility & Property Managers",
+                desc: "CAFM, Rent roll & Visitor Management.",
+                benefits: ["CAFM & 52-week automated PPM", "Rent roll, CAM billing & compliance", "Visitor management & touchless access"],
+                audience: "For: Facility & Property Managers",
                 image: "/images/card_saas_hd.jpg",
                 bgColor: "bg-[#0B5C70]", // Logo Shade 3: Deep Petrol Marine
                 arrowColor: "text-[#0B5C70]",
@@ -1238,14 +1226,10 @@ export default function LandingPage() {
               },
               {
                 id: "managed",
-                title: "Service Management",
-                desc: "End-to-End Property Management & IFM",
-                benefits: [
-                  "On-ground certified engineering teams",
-                  "Monthly auto-generated MIS reporting",
-                  "100% open-book transparent billing"
-                ],
-                audience: "Owners without in-house FM",
+                title: "Property Management",
+                desc: "End-to-end PM & IFM with SLA guarantees.",
+                benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
+                audience: "For: Owners without in-house FM",
                 image: "/images/card_managed_hd.jpg",
                 bgColor: "bg-[#056AA0]", // Logo Shade 4: Oceanic Sapphire Blue
                 arrowColor: "text-[#056AA0]",
@@ -1254,130 +1238,136 @@ export default function LandingPage() {
               },
               {
                 id: "intelligence",
-                title: "Analytics & Insights",
-                desc: "Actionable Insights & Portfolio Analytics",
-                benefits: [
-                  "Portfolio NOI & WALE executive dashboards",
-                  "Energy benchmarking & ESG tracking",
-                  "Predictive asset maintenance forecasting"
-                ],
-                audience: "Asset Managers, REITs, CFOs",
+                title: "OFFICEX Intelligence",
+                desc: "Actionable insights & portfolio analytics.",
+                benefits: ["Portfolio NOI & WALE dashboards", "Energy benchmarking & ESG reports", "Predictive maintenance forecasting"],
+                audience: "For: Asset Managers, REITs, CFOs",
                 image: "/images/card_ai_hd.jpg",
                 bgColor: "bg-[#3D4F5F]", // Logo Shade 5: Titanium Slate Steel
                 arrowColor: "text-[#3D4F5F]",
                 href: "/intelligence",
                 iconType: "sparkle",
               },
-            ].map((card) => {
-              return (
-                <div key={card.id} className="relative w-full">
-                  {/* Main Card (Self-Contained, Zero External Overlap) */}
-                  <Link
-                    href={card.href}
-                    className="relative w-full h-[255px] sm:h-[265px] rounded-2xl overflow-hidden cursor-pointer border border-slate-200/80 bg-white shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 hover:ring-2 hover:ring-teal-500/40 flex flex-col group"
-                  >
-                    {/* Top Image Container — natural landscape ratio */}
-                    <div className="relative w-full h-[180px] sm:h-[190px] overflow-hidden bg-slate-900 shrink-0">
-                      <Image
-                        src={card.image}
-                        alt={card.title}
-                        fill
-                        className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, 20vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
-
-                      {/* Live Module Badge at top */}
-                      <div className="absolute top-2.5 right-2.5 z-10">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md text-[9.5px] font-bold text-teal-300 border border-teal-400/30 shadow-xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                          Live Module
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Color Panel (Resting state: Heading + Arrow) */}
-                    <div
-                      className={`relative w-full flex-1 ${card.bgColor} px-3.5 py-2.5 text-left flex items-center justify-between gap-2 shrink-0`}
-                    >
-                      <h3 className="text-sm font-extrabold text-white leading-snug line-clamp-2">
-                        {card.title}
-                      </h3>
-                      
-                      {/* Circle Arrow Button */}
-                      <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-xs shrink-0 transition-transform duration-300 group-hover:scale-110">
-                        {card.iconType === "sparkle" ? (
-                          <Sparkles size={13} className={card.arrowColor} />
-                        ) : (
-                          <ArrowRight size={13} className={`${card.arrowColor} transition-transform group-hover:translate-x-0.5`} />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Hover Overlay — 100% Inside the Card, Zero Outside Overlap */}
-                    <div className="absolute inset-0 bg-slate-950/92 backdrop-blur-md p-3.5 sm:p-4 text-white flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 text-left">
-                      {/* Top Section: Title + Tagline + Highlights */}
-                      <div>
-                        <div className="flex items-start justify-between gap-2 pb-1.5 border-b border-white/15">
-                          <div>
-                            <span className="text-[9px] font-black uppercase tracking-wider text-teal-400 block leading-none mb-0.5">
-                              Live Module
-                            </span>
-                            <h4 className="text-xs sm:text-sm font-black text-white leading-snug">
-                              {card.title}
-                            </h4>
-                          </div>
-                          <div className="w-6 h-6 rounded-full bg-teal-500/20 border border-teal-400/40 flex items-center justify-center shrink-0">
-                            <ArrowRight size={12} className="text-teal-300" />
-                          </div>
-                        </div>
-
-                        {/* Tagline */}
-                        <p className="text-[11px] text-white/90 font-semibold mt-1.5 mb-1.5 leading-tight">
-                          {card.desc}
-                        </p>
-
-                        {/* Key Benefits */}
-                        <ul className="space-y-1">
-                          {card.benefits.map((b, i) => (
-                            <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/85 font-medium leading-tight">
-                              <Check size={11} className="text-teal-400 shrink-0 mt-0.5" />
-                              <span className="line-clamp-1">{b}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Bottom Section: Full Uncut Audience & Explore Action */}
-                      <div className="pt-2 border-t border-white/15 flex flex-col gap-1">
-                        <div className="text-[10px] text-slate-300 font-medium leading-tight">
-                          <span className="text-teal-400 font-bold uppercase text-[9px] mr-1">For:</span>
-                          <span className="text-white font-semibold">{card.audience}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] font-extrabold text-teal-300 group-hover:text-teal-200 transition-colors pt-0.5">
-                          <span>Explore Module</span>
-                          <span className="transition-transform group-hover:translate-x-1">→</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+            ].map((card) => (
+              <Link
+                key={card.id}
+                href={card.href}
+                className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100"
+              >
+                {/* Top Half: Photo */}
+                <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
+                  <Image
+                    src={card.image}
+                    alt={card.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, 20vw"
+                  />
                 </div>
-              );
-            })}
+
+                {/* Bottom Half: Solid Vibrant Color Box */}
+                <div className={`${card.bgColor} p-5 flex flex-col justify-between flex-1 min-h-[210px]`}>
+                  <div>
+                    <h3 className="text-base font-extrabold text-white leading-snug mb-1.5">
+                      {card.title}
+                    </h3>
+                    <p className="text-[11px] text-white/80 font-medium mb-3">
+                      {card.desc}
+                    </p>
+                    {/* 3 Bullet Benefits */}
+                    <ul className="space-y-1.5">
+                      {card.benefits.map((b, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/90 font-semibold leading-tight">
+                          <Check size={10} className="text-white/70 shrink-0 mt-0.5" />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Audience Tag + Explore */}
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-white/60 uppercase tracking-wider">
+                      {card.audience}
+                    </span>
+                    <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
+                      {card.iconType === "sparkle" ? (
+                        <Sparkles size={14} className={card.arrowColor} />
+                      ) : (
+                        <ArrowRight size={14} className={card.arrowColor} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
 
-          {/* DIVIDER: Clean "Powered by OFFICEX CORE" Section Connection with Generous Spacing */}
-          <div className="w-full mt-12 mb-4 sm:mt-14 sm:mb-6 flex flex-col items-center justify-center relative">
-            {/* Elegant horizontal gradient rule */}
-            <div className="w-full max-w-5xl mx-auto h-px bg-gradient-to-r from-transparent via-teal-500/30 to-transparent" />
-
-            {/* Centered Pill Connector */}
-            <div className="-mt-3.5 z-10 px-4 py-1.5 rounded-full bg-white border border-teal-500/25 shadow-xs flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#0F8B7D] animate-pulse" />
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 tracking-wider uppercase">
-                Powered by <span className="text-[#0F8B7D] font-extrabold">OFFICEX CORE</span>
+          {/* DIVIDER: "Powered by OFFICEX CORE" with Downward Chevron seamlessly touching lines */}
+          <div className="w-full mt-5 mb-0 sm:mt-6 sm:mb-0 flex flex-col items-center justify-center">
+            {/* Centered Box with "Powered by OFFICEX CORE" */}
+            <div className="flex flex-col items-center mb-0.5 text-center">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 tracking-wider">
+                Powered by
               </span>
-              <ChevronDown size={14} className="text-[#0F8B7D] animate-bounce" />
+              <span className="text-sm sm:text-base font-black text-[#0F8B7D] tracking-widest uppercase">
+                OFFICEX CORE
+              </span>
+            </div>
+
+            {/* Animated converging lines forming the downward arrow pointing directly to the diagram */}
+            <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center">
+              <svg 
+                className="w-full h-7 overflow-visible" 
+                viewBox="0 0 1000 28" 
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="coreBeamLeftGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.2" />
+                    <stop offset="70%" stopColor="#14B8A6" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#2DD4BF" stopOpacity="1" />
+                  </linearGradient>
+                  <linearGradient id="coreBeamRightGrad" x1="100%" y1="0%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#0F8B7D" stopOpacity="0.2" />
+                    <stop offset="70%" stopColor="#14B8A6" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#2DD4BF" stopOpacity="1" />
+                  </linearGradient>
+                </defs>
+
+                {/* 1. Left animated beam: connects from left edge to center arrow tip */}
+                <path 
+                  d="M0,3 L440,3 L500,20" 
+                  stroke="url(#coreBeamLeftGrad)" 
+                  strokeWidth="3" 
+                  fill="none" 
+                  vectorEffect="non-scaling-stroke" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="animate-core-beam-left"
+                  strokeDasharray="520"
+                />
+
+                {/* 2. Right animated beam: connects from right edge to center arrow tip */}
+                <path 
+                  d="M1000,3 L560,3 L500,20" 
+                  stroke="url(#coreBeamRightGrad)" 
+                  strokeWidth="3" 
+                  fill="none" 
+                  vectorEffect="non-scaling-stroke" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="animate-core-beam-right"
+                  strokeDasharray="520"
+                />
+
+                {/* 3. Downward Arrow Head Indicator pointing directly to diagram below */}
+                <polygon 
+                  points="492,15 500,27 508,15" 
+                  fill="#0F8B7D" 
+                  className="animate-core-arrow-pulse"
+                />
+              </svg>
             </div>
           </div>
 
