@@ -883,18 +883,18 @@ export default function LandingPage() {
               <span>Intelligent Commercial Workplace Platform</span>
             </div>
 
-            {/* Main Headline with High-Contrast Two-Line Layout & Solid Glowing Colors */}
+            {/* Main Headline with Clean, Soft Ambient Contrast (No Harsh Outline) */}
             <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.08] mb-3 sm:mb-4 text-center">
-              <span className="block text-white [text-shadow:_0_2px_14px_rgba(0,0,0,0.9),_0_4px_28px_rgba(0,0,0,0.8)]">
+              <span className="block text-white [text-shadow:_0_4px_20px_rgba(0,0,0,0.35)]">
                 One Platform.
               </span>
-              <span className="block text-[#00D09C] [text-shadow:_0_2px_14px_rgba(0,0,0,0.9),_0_4px_28px_rgba(0,0,0,0.8)]">
+              <span className="block text-[#00D09C] [text-shadow:_0_4px_20px_rgba(0,0,0,0.35)]">
                 Smarter Workplaces.
               </span>
             </h1>
 
-            {/* Subhead with High Contrast */}
-            <p className="text-xs sm:text-sm md:text-base font-medium text-slate-100 leading-relaxed max-w-xl mb-5 sm:mb-6 text-center mx-auto [text-shadow:_0_1px_8px_rgba(0,0,0,0.95)]">
+            {/* Subhead with Clean Contrast */}
+            <p className="text-xs sm:text-sm md:text-base font-medium text-slate-100 leading-relaxed max-w-xl mb-5 sm:mb-6 text-center mx-auto [text-shadow:_0_2px_8px_rgba(0,0,0,0.35)]">
               Find verified commercial spaces, hire top facility management vendors, and automate building operations — all in one unified ecosystem.
             </p>
 
