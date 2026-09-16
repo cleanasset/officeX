@@ -227,7 +227,7 @@ export default function RentRollPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+    <div className="min-h-screen bg-gray-50/50 text-gray-900 font-sans pb-16">
       {/* ──── TOP GLOBAL HEADER ──── */}
       <RentRollHeader
         properties={properties}
@@ -251,8 +251,8 @@ export default function RentRollPage() {
       />
 
       {/* ──── TAB NAVIGATION BAR ──── */}
-      <div className="px-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-[138px] lg:top-[118px] z-20 overflow-x-auto">
-        <div className="flex items-center gap-1 min-w-max py-2">
+      <div className="px-6 border-b border-gray-200 bg-white/95 backdrop-blur sticky top-0 z-20 overflow-x-auto shadow-2xs">
+        <div className="flex items-center gap-1.5 min-w-max py-2.5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -262,11 +262,11 @@ export default function RentRollPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20 font-bold scale-[1.02]"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    ? "bg-[#0F8B7D] text-white shadow-xs font-bold"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-slate-950" : "text-slate-400"}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-gray-500"}`} />
                 <span>{tab.label}</span>
               </button>
             );

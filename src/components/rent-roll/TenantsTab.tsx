@@ -72,21 +72,21 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
   return (
     <div className="space-y-4">
       {/* ──── TOP BAR ──── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
         <div className="relative w-full sm:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
             placeholder="Search tenant name, GSTIN, PAN..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-amber-500"
+            className="w-full bg-white border border-gray-200 text-gray-900 text-xs rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] shadow-2xs"
           />
         </div>
 
         <button
           onClick={onOpenAddTenant}
-          className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all whitespace-nowrap"
+          className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors whitespace-nowrap cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Tenant Entity</span>
@@ -99,66 +99,66 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
           <div
             key={t.id}
             onClick={() => onSelectTenant(t)}
-            className="bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-5 rounded-xl shadow-lg transition-all cursor-pointer group flex flex-col justify-between space-y-4"
+            className="bg-white border border-gray-200 hover:border-[#0F8B7D]/50 p-5 rounded-2xl shadow-xs transition-all cursor-pointer group flex flex-col justify-between space-y-4 hover:shadow-sm"
           >
             {/* Header */}
             <div>
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h4 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
+                  <h4 className="text-sm font-black text-gray-950 group-hover:text-[#0F8B7D] transition-colors">
                     {t.tradeName}
                   </h4>
-                  <p className="text-[11px] text-slate-400">{t.legalName}</p>
+                  <p className="text-[11px] text-gray-500 font-medium">{t.legalName}</p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-amber-300 border border-slate-700">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                   {t.tenantCode}
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px] font-semibold">
+                <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-md text-[10px] font-bold">
                   {t.industry}
                 </span>
-                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-[10px] font-semibold">
+                <span className="px-2.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-md text-[10px] font-bold">
                   {t.activeLeasesCount} Active Leases
                 </span>
               </div>
             </div>
 
             {/* Financial Quick Metrics */}
-            <div className="grid grid-cols-2 gap-2 p-3 bg-slate-950/60 rounded-lg border border-slate-800/80 text-xs">
+            <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-100 text-xs">
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-semibold">Leased Area</span>
-                <p className="font-mono font-bold text-slate-200">{t.totalArea.toLocaleString()} sqft</p>
+                <span className="text-[10px] text-gray-500 uppercase font-bold">Leased Area</span>
+                <p className="font-mono font-black text-gray-900 mt-0.5">{t.totalArea.toLocaleString()} sqft</p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-semibold">Monthly Rent</span>
-                <p className="font-mono font-bold text-emerald-400">{formatINR(t.totalMonthlyRent)}</p>
+                <span className="text-[10px] text-gray-500 uppercase font-bold">Monthly Rent</span>
+                <p className="font-mono font-black text-teal-700 mt-0.5">{formatINR(t.totalMonthlyRent)}</p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-semibold">Gross Monthly Bill</span>
-                <p className="font-mono font-bold text-amber-300">{formatINR(t.totalMonthlyBilling)}</p>
+                <span className="text-[10px] text-gray-500 uppercase font-bold">Gross Monthly Bill</span>
+                <p className="font-mono font-black text-amber-900 mt-0.5">{formatINR(t.totalMonthlyBilling)}</p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-semibold">Outstanding</span>
-                <p className={`font-mono font-bold ${t.outstanding > 0 ? "text-red-400" : "text-emerald-400"}`}>
+                <span className="text-[10px] text-gray-500 uppercase font-bold">Outstanding</span>
+                <p className={`font-mono font-black mt-0.5 ${t.outstanding > 0 ? "text-rose-600" : "text-teal-700"}`}>
                   {t.outstanding > 0 ? formatINR(t.outstanding) : "₹0"}
                 </p>
               </div>
             </div>
 
             {/* Statutory & Contact Details */}
-            <div className="space-y-1.5 text-xs text-slate-400 pt-2 border-t border-slate-800">
-              <div className="flex items-center justify-between text-[11px]">
-                <span>GSTIN: <span className="font-mono text-slate-300">{t.gstin || "—"}</span></span>
-                <span>PAN: <span className="font-mono text-slate-300">{t.pan || "—"}</span></span>
+            <div className="space-y-1.5 text-xs text-gray-600 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between text-[11px] font-medium">
+                <span>GSTIN: <span className="font-mono text-gray-900 font-bold">{t.gstin || "—"}</span></span>
+                <span>PAN: <span className="font-mono text-gray-900 font-bold">{t.pan || "—"}</span></span>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-300 truncate">
-                <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-700 font-medium truncate">
+                <Users className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <span className="truncate">{t.contactPerson}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
-                <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-500 truncate">
+                <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <span className="truncate">{t.contactEmail}</span>
               </div>
             </div>

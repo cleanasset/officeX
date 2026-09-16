@@ -62,41 +62,41 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({
     <div className="space-y-4">
       {/* ──── TOP COLLECTIONS KPI SUMMARY ──── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Gross Collections</span>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">{formatINR(totalCollected)}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">{collections.length} Receipts Processed</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Gross Collections</span>
+          <div className="text-2xl font-black text-[#0F8B7D] mt-1">{formatINR(totalCollected)}</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">{collections.length} Receipts Processed</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">TDS Recorded (Sec 194I)</span>
-          <div className="text-2xl font-bold text-white mt-1">{formatINR(totalTds)}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Certificates to be collected</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">TDS Recorded (Sec 194I)</span>
+          <div className="text-2xl font-black text-gray-900 mt-1">{formatINR(totalTds)}</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">Certificates to be collected</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Net Bank Inflow</span>
-          <div className="text-2xl font-bold text-amber-300 mt-1">{formatINR(totalCredited)}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">100% Bank Reconciled</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Net Bank Inflow</span>
+          <div className="text-2xl font-black text-amber-900 mt-1">{formatINR(totalCredited)}</div>
+          <p className="text-[11px] text-teal-700 font-bold mt-0.5">100% Bank Reconciled</p>
         </div>
       </div>
 
       {/* ──── SEARCH & RECORD PAYMENT BAR ──── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
         <div className="relative w-full sm:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
             placeholder="Search receipt #, UTR, or tenant..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-amber-500"
+            className="w-full bg-white border border-gray-200 text-gray-900 text-xs rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] shadow-2xs"
           />
         </div>
 
         <button
           onClick={onOpenRecordPayment}
-          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all whitespace-nowrap"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors whitespace-nowrap cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Record New Payment Receipt</span>
@@ -104,78 +104,78 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({
       </div>
 
       {/* ──── COLLECTIONS LEDGER TABLE ──── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
-            <thead className="bg-slate-950 text-slate-400 font-semibold tracking-wider border-b border-slate-800 uppercase text-[10px]">
+            <thead className="bg-gray-50/95 text-gray-600 font-bold tracking-wider border-b border-gray-200 uppercase text-[10px]">
               <tr>
-                <th className="p-3">Receipt Number</th>
-                <th className="p-3">Invoice & Lease</th>
-                <th className="p-3">Tenant Name</th>
-                <th className="p-3">Property</th>
-                <th className="p-3">Payment Date</th>
-                <th className="p-3">Payment Mode</th>
-                <th className="p-3">Reference / UTR</th>
-                <th className="p-3 text-right text-emerald-400 font-bold">Amount Received</th>
-                <th className="p-3 text-right">TDS Deducted</th>
-                <th className="p-3 text-right text-white font-bold">Net Credited</th>
-                <th className="p-3">Escrow Bank Account</th>
-                <th className="p-3 text-center">Status</th>
+                <th className="p-3.5">Receipt Number</th>
+                <th className="p-3.5">Invoice &amp; Lease</th>
+                <th className="p-3.5">Tenant Name</th>
+                <th className="p-3.5">Property</th>
+                <th className="p-3.5">Payment Date</th>
+                <th className="p-3.5">Payment Mode</th>
+                <th className="p-3.5">Reference / UTR</th>
+                <th className="p-3.5 text-right text-teal-700 font-black">Amount Received</th>
+                <th className="p-3.5 text-right">TDS Deducted</th>
+                <th className="p-3.5 text-right text-gray-900 font-bold">Net Credited</th>
+                <th className="p-3.5">Escrow Bank Account</th>
+                <th className="p-3.5 text-center">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-gray-100 font-medium">
               {filteredCollections.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-800/50 transition-colors">
-                  <td className="p-3 font-mono font-bold text-emerald-400 flex items-center gap-1.5">
-                    <FileCheck2 className="w-3.5 h-3.5" />
+                <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="p-3.5 font-mono font-bold text-teal-700 flex items-center gap-1.5">
+                    <FileCheck2 className="w-3.5 h-3.5 text-[#0F8B7D]" />
                     <span>{c.receiptNumber}</span>
                   </td>
 
-                  <td className="p-3">
-                    <span className="font-mono text-amber-400 font-semibold">{c.invoiceNumber || "Direct Settlement"}</span>
-                    <span className="text-[10px] text-slate-500 block">{c.leaseCode}</span>
+                  <td className="p-3.5">
+                    <span className="font-mono text-indigo-700 font-bold">{c.invoiceNumber || "Direct Settlement"}</span>
+                    <span className="text-[10px] text-gray-400 block">{c.leaseCode}</span>
                   </td>
 
-                  <td className="p-3 font-bold text-white">
+                  <td className="p-3.5 font-bold text-gray-900">
                     {c.tenantName}
                   </td>
 
-                  <td className="p-3 text-slate-300">
+                  <td className="p-3.5 text-gray-600">
                     {c.propertyName}
                   </td>
 
-                  <td className="p-3 font-mono text-slate-300">
+                  <td className="p-3.5 font-mono text-gray-700">
                     {c.paymentDate}
                   </td>
 
-                  <td className="p-3 uppercase text-[11px] text-slate-300 font-semibold">
-                    <span className="px-2 py-0.5 bg-slate-800 rounded border border-slate-700">
+                  <td className="p-3.5 uppercase text-[11px] text-gray-700 font-bold">
+                    <span className="px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200">
                       {c.paymentMode.replace("_", " / ")}
                     </span>
                   </td>
 
-                  <td className="p-3 font-mono text-[11px] text-cyan-300">
+                  <td className="p-3.5 font-mono text-[11px] text-indigo-600 font-semibold">
                     {c.referenceNumber}
                   </td>
 
-                  <td className="p-3 text-right font-mono font-bold text-emerald-400 bg-emerald-950/10">
+                  <td className="p-3.5 text-right font-mono font-bold text-[#0F8B7D] bg-teal-50/40">
                     {formatINR(c.amountReceived)}
                   </td>
 
-                  <td className="p-3 text-right font-mono text-slate-400">
+                  <td className="p-3.5 text-right font-mono text-gray-500">
                     {c.tdsDeducted > 0 ? formatINR(c.tdsDeducted) : "₹0"}
                   </td>
 
-                  <td className="p-3 text-right font-mono font-bold text-white">
+                  <td className="p-3.5 text-right font-mono font-black text-gray-900">
                     {formatINR(c.netCredited)}
                   </td>
 
-                  <td className="p-3 text-slate-400 text-[11px] truncate max-w-xs">
+                  <td className="p-3.5 text-gray-500 text-[11px] truncate max-w-xs">
                     {c.bankAccount}
                   </td>
 
-                  <td className="p-3 text-center">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center gap-1">
+                  <td className="p-3.5 text-center">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200 flex items-center justify-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Reconciled
                     </span>
                   </td>

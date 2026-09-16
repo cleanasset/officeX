@@ -59,36 +59,36 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
     <div className="space-y-4">
       {/* ──── TOP ESCALATION KPI CARDS ──── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-cyan-400 uppercase tracking-wider">Pending Escalations</span>
-          <div className="text-2xl font-bold text-cyan-300 mt-1">{pendingCount} Leases</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Ready for review & 1-click execution</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Pending Escalations</span>
+          <div className="text-2xl font-black text-blue-900 mt-1">{pendingCount} Leases</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">Ready for review &amp; 1-click execution</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Applied Escalations</span>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">{appliedCount} Executed</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Reflected in active monthly billing</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Applied Escalations</span>
+          <div className="text-2xl font-black text-[#0F8B7D] mt-1">{appliedCount} Executed</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">Reflected in active monthly billing</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Annualized Revenue Lift</span>
-          <div className="text-2xl font-bold text-amber-300 mt-1">{formatINR(totalAnnualIncrease)}/yr</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Net contractual growth from compounding escalations</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Annualized Revenue Lift</span>
+          <div className="text-2xl font-black text-amber-900 mt-1">{formatINR(totalAnnualIncrease)}/yr</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">Net contractual growth from compounding escalations</p>
         </div>
       </div>
 
       {/* ──── FILTER CONTROLS ──── */}
-      <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
+        <div className="flex items-center gap-1.5">
           {["ALL", "pending", "applied", "waived"].map((st) => (
             <button
               key={st}
               onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-colors cursor-pointer ${
                 filter === st
-                  ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
-                  : "bg-slate-800 text-slate-400 hover:text-white"
+                  ? "bg-[#0F8B7D] text-white shadow-xs"
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
               }`}
             >
               {st === "ALL" ? "All Escalations" : st}
@@ -96,99 +96,99 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
           ))}
         </div>
 
-        <div className="text-xs text-slate-400">
-          Compounding formula: <span className="text-amber-400 font-mono">New Rent = Prev Rent × (1 + Escalation%)</span>
+        <div className="text-xs text-gray-500 font-medium">
+          Compounding formula: <span className="text-[#0F8B7D] font-mono font-bold">New Rent = Prev Rent × (1 + Escalation%)</span>
         </div>
       </div>
 
       {/* ──── ESCALATIONS TABLE ──── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
-            <thead className="bg-slate-950 text-slate-400 font-semibold tracking-wider border-b border-slate-800 uppercase text-[10px]">
+            <thead className="bg-gray-50/95 text-gray-600 font-bold tracking-wider border-b border-gray-200 uppercase text-[10px]">
               <tr>
-                <th className="p-3">Lease & Tenant</th>
-                <th className="p-3">Property</th>
-                <th className="p-3 text-center">Escalation Date</th>
-                <th className="p-3 text-right">Previous Rent / Mo</th>
-                <th className="p-3 text-center">Escalation %</th>
-                <th className="p-3 text-right text-emerald-400 font-bold">Monthly Increase</th>
-                <th className="p-3 text-right text-white font-bold">New Base Rent</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-center">Action</th>
+                <th className="p-3.5">Lease &amp; Tenant</th>
+                <th className="p-3.5">Property</th>
+                <th className="p-3.5 text-center">Escalation Date</th>
+                <th className="p-3.5 text-right">Previous Rent / Mo</th>
+                <th className="p-3.5 text-center">Escalation %</th>
+                <th className="p-3.5 text-right text-teal-700 font-bold">Monthly Increase</th>
+                <th className="p-3.5 text-right font-bold text-gray-900">New Base Rent</th>
+                <th className="p-3.5 text-center">Status</th>
+                <th className="p-3.5 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-gray-100 font-medium">
               {filteredEscalations.map((esc) => (
-                <tr key={esc.id} className="hover:bg-slate-800/50 transition-colors">
-                  <td className="p-3">
-                    <div className="font-bold text-white">{esc.tenantName}</div>
-                    <span className="font-mono text-amber-400 text-[11px]">{esc.leaseCode}</span>
+                <tr key={esc.id} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="p-3.5">
+                    <div className="font-bold text-gray-900">{esc.tenantName}</div>
+                    <span className="font-mono text-indigo-700 text-[11px] font-bold">{esc.leaseCode}</span>
                   </td>
 
-                  <td className="p-3 text-slate-300">
+                  <td className="p-3.5 text-gray-600">
                     {esc.propertyName}
                   </td>
 
-                  <td className="p-3 text-center font-mono text-slate-300">
+                  <td className="p-3.5 text-center font-mono text-gray-700">
                     <span className="flex items-center justify-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                      <Calendar className="w-3.5 h-3.5 text-blue-600" />
                       <span>{esc.escalationDate}</span>
                     </span>
                   </td>
 
-                  <td className="p-3 text-right font-mono text-slate-400">
+                  <td className="p-3.5 text-right font-mono text-gray-500">
                     {formatINR(esc.previousRent)}
                   </td>
 
-                  <td className="p-3 text-center">
-                    <span className="px-2 py-0.5 bg-cyan-500/10 text-cyan-300 rounded font-semibold text-xs border border-cyan-500/20">
+                  <td className="p-3.5 text-center">
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-bold text-xs border border-blue-200">
                       +{esc.escalationPct}%
                     </span>
                   </td>
 
-                  <td className="p-3 text-right font-mono text-emerald-400 font-bold bg-emerald-950/10">
+                  <td className="p-3.5 text-right font-mono text-teal-700 font-bold bg-teal-50/40">
                     +{formatINR(esc.calculatedIncrease)}/mo
                   </td>
 
-                  <td className="p-3 text-right font-mono font-bold text-white">
+                  <td className="p-3.5 text-right font-mono font-black text-gray-900">
                     {formatINR(esc.newRent)}
                   </td>
 
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     {esc.status === "applied" ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200 flex items-center justify-center gap-1">
                         <CheckCircle2 className="w-3 h-3" /> Applied
                       </span>
                     ) : esc.status === "waived" ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/30">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
                         Waived
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center gap-1 animate-pulse">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center gap-1 animate-pulse">
                         <Clock className="w-3 h-3" /> Pending
                       </span>
                     )}
                   </td>
 
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     {esc.status === "pending" ? (
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => onApplyEscalation(esc)}
-                          className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-slate-950 font-bold rounded text-[11px] shadow-sm transition-all"
+                          className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-[11px] shadow-xs transition-colors cursor-pointer"
                         >
                           Apply
                         </button>
                         <button
                           onClick={() => onWaiveEscalation(esc)}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded text-[11px] font-medium transition-all"
+                          className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer"
                         >
                           Waive
                         </button>
                       </div>
                     ) : (
-                      <span className="text-slate-500 text-[11px]">{esc.appliedAt ? new Date(esc.appliedAt).toLocaleDateString() : "—"}</span>
+                      <span className="text-gray-400 text-[11px]">{esc.appliedAt ? new Date(esc.appliedAt).toLocaleDateString() : "—"}</span>
                     )}
                   </td>
                 </tr>

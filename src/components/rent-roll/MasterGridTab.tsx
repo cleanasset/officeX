@@ -90,7 +90,6 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
 }) => {
   const [sortField, setSortField] = useState<keyof EnrichedLease>("monthlyRent");
   const [sortAsc, setSortAsc] = useState(false);
-  const [activeMenuLeaseId, setActiveMenuLeaseId] = useState<string | null>(null);
 
   const handleSort = (field: keyof EnrichedLease) => {
     if (sortField === field) {
@@ -117,13 +116,13 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Active</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200">Active</span>;
       case "under_notice":
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse">Under Notice</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">Under Notice</span>;
       case "expired":
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30">Expired</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">Expired</span>;
       default:
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/30">{status}</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">{status}</span>;
     }
   };
 
@@ -132,276 +131,276 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
     const days = lease.computed?.daysToExpiry || 0;
 
     if (bucket === "expired") {
-      return <span className="text-[11px] font-bold text-red-400">Expired</span>;
+      return <span className="text-[11px] font-bold text-rose-600">Expired</span>;
     }
     if (bucket === "critical_30") {
-      return <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-semibold text-[11px] border border-red-500/40">Critical ({days}d)</span>;
+      return <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700 font-bold text-[11px] border border-rose-200">Critical ({days}d)</span>;
     }
     if (bucket === "warning_60" || bucket === "approaching_90") {
-      return <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold text-[11px] border border-amber-500/40">Expires in {days}d</span>;
+      return <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 font-bold text-[11px] border border-amber-200">Expires in {days}d</span>;
     }
-    return <span className="text-[11px] text-slate-400 font-medium">Normal ({Math.round(days / 365)}y)</span>;
+    return <span className="text-[11px] text-gray-500 font-medium">Normal ({Math.round(days / 365)}y)</span>;
   };
 
   return (
     <div className="space-y-4">
       {/* Table Action & Information Header */}
-      <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="font-semibold text-white">{sortedLeases.length}</span> Master Leases Loaded
-          <span className="text-slate-600">|</span>
-          <span>Click any row to open full 360° Commercial Drawer</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
+        <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+          <span className="font-black text-gray-900">{sortedLeases.length}</span> Master Leases Loaded
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-500">Click any row to open full 360° Commercial Drawer</span>
         </div>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Active (
+        <div className="flex items-center gap-3 text-xs font-bold">
+          <span className="flex items-center gap-1.5 text-teal-700 bg-teal-50 px-2 py-1 rounded-lg border border-teal-200">
+            <span className="w-2 h-2 rounded-full bg-teal-600"></span> Active (
             {leases.filter((l) => l.status === "active").length})
           </span>
-          <span className="flex items-center gap-1.5 text-amber-400">
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span> Notice (
+          <span className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span> Notice (
             {leases.filter((l) => l.status === "under_notice").length})
           </span>
-          <span className="flex items-center gap-1.5 text-red-400">
-            <span className="w-2 h-2 rounded-full bg-red-400"></span> Overdue Arrears (
+          <span className="flex items-center gap-1.5 text-rose-700 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
+            <span className="w-2 h-2 rounded-full bg-rose-500"></span> Overdue Arrears (
             {leases.filter((l) => l.totalOutstanding > 0).length})
           </span>
         </div>
       </div>
 
       {/* ──── MASTER 39-COLUMN TABLE ──── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto max-h-[680px]">
           <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
             {/* Table Header */}
-            <thead className="bg-slate-950/90 text-slate-400 font-semibold tracking-wider sticky top-0 z-20 border-b border-slate-800 uppercase text-[10px]">
+            <thead className="bg-gray-50/95 text-gray-600 font-bold tracking-wider sticky top-0 z-20 border-b border-gray-200 uppercase text-[10px]">
               <tr>
-                <th className="p-3 sticky left-0 z-30 bg-slate-950 border-r border-slate-800">
-                  Tenant & Trade Name
+                <th className="p-3.5 sticky left-0 z-30 bg-gray-50 border-r border-gray-200 text-gray-900">
+                  Tenant &amp; Trade Name
                 </th>
                 <th
                   onClick={() => handleSort("leaseCode")}
-                  className="p-3 hover:text-white cursor-pointer"
+                  className="p-3.5 hover:text-gray-900 cursor-pointer"
                 >
                   <div className="flex items-center gap-1">
                     <span>Lease ID</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort("propertyName")}
-                  className="p-3 hover:text-white cursor-pointer"
+                  className="p-3.5 hover:text-gray-900 cursor-pointer"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Property & Unit</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                    <span>Property &amp; Unit</span>
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort("chargeableArea")}
-                  className="p-3 text-right hover:text-white cursor-pointer"
+                  className="p-3.5 text-right hover:text-gray-900 cursor-pointer"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>Area (Sq Ft)</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort("monthlyRent")}
-                  className="p-3 text-right hover:text-white cursor-pointer"
+                  className="p-3.5 text-right hover:text-gray-900 cursor-pointer"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>Base Rent / Mo</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort("baseRentPsf")}
-                  className="p-3 text-right hover:text-white cursor-pointer"
+                  className="p-3.5 text-right hover:text-gray-900 cursor-pointer"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>Rent PSF</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
-                <th className="p-3 text-right">CAM / Mo</th>
-                <th className="p-3 text-right">Util / Mo</th>
+                <th className="p-3.5 text-right">CAM / Mo</th>
+                <th className="p-3.5 text-right">Util / Mo</th>
                 <th
                   onClick={() => handleSort("totalMonthlyGross")}
-                  className="p-3 text-right text-amber-300 font-bold hover:text-amber-200 cursor-pointer"
+                  className="p-3.5 text-right text-amber-900 font-black hover:text-amber-700 cursor-pointer bg-amber-50/50"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>Total Billing / Mo</span>
-                    <ArrowUpDown className="w-3 h-3" />
+                    <ArrowUpDown className="w-3 h-3 text-amber-700" />
                   </div>
                 </th>
-                <th className="p-3 text-right">Deposit (Paid/Req)</th>
-                <th className="p-3 text-center">Escalation</th>
-                <th className="p-3 text-center">Next Escalation</th>
-                <th className="p-3 text-center">Tenure (Start – End)</th>
-                <th className="p-3 text-center">Lock-In</th>
-                <th className="p-3 text-right">Outstanding</th>
-                <th className="p-3 text-center">Expiry Alert</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-center sticky right-0 z-30 bg-slate-950 border-l border-slate-800">
+                <th className="p-3.5 text-right">Deposit (Paid/Req)</th>
+                <th className="p-3.5 text-center">Escalation</th>
+                <th className="p-3.5 text-center">Next Escalation</th>
+                <th className="p-3.5 text-center">Tenure (Start – End)</th>
+                <th className="p-3.5 text-center">Lock-In</th>
+                <th className="p-3.5 text-right">Outstanding</th>
+                <th className="p-3.5 text-center">Expiry Alert</th>
+                <th className="p-3.5 text-center">Status</th>
+                <th className="p-3.5 text-center sticky right-0 z-30 bg-gray-50 border-l border-gray-200 text-gray-900">
                   Actions
                 </th>
               </tr>
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-gray-100 font-medium">
               {sortedLeases.map((lease) => (
                 <tr
                   key={lease.id}
                   onClick={() => onSelectLease(lease)}
-                  className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  className="hover:bg-gray-50/80 transition-colors cursor-pointer group"
                 >
                   {/* Sticky Tenant Name */}
-                  <td className="p-3 sticky left-0 z-10 bg-slate-900 group-hover:bg-slate-850 border-r border-slate-800 font-bold text-white flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                  <td className="p-3.5 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-200 font-bold text-gray-900 flex items-center gap-2.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D] shrink-0"></div>
                     <div>
-                      <div>{lease.tenantName}</div>
-                      <div className="text-[10px] text-slate-500 font-normal">{lease.tenantId}</div>
+                      <div className="font-black text-gray-950">{lease.tenantName}</div>
+                      <div className="text-[10px] text-gray-400 font-normal">{lease.tenantId}</div>
                     </div>
                   </td>
 
                   {/* Lease ID */}
-                  <td className="p-3 font-mono text-xs text-amber-400 font-semibold">
+                  <td className="p-3.5 font-mono text-xs text-indigo-700 font-bold">
                     {lease.leaseCode}
                   </td>
 
                   {/* Property & Space */}
-                  <td className="p-3">
-                    <div className="font-semibold text-slate-200">{lease.propertyName}</div>
-                    <div className="text-[11px] text-slate-500">{lease.unitNumber} (Flr {lease.floorNumber})</div>
+                  <td className="p-3.5">
+                    <div className="font-bold text-gray-900">{lease.propertyName}</div>
+                    <div className="text-[11px] text-gray-500">{lease.unitNumber} (Flr {lease.floorNumber})</div>
                   </td>
 
                   {/* Area */}
-                  <td className="p-3 text-right font-mono text-slate-300">
+                  <td className="p-3.5 text-right font-mono text-gray-700 font-semibold">
                     {lease.chargeableArea.toLocaleString()}
-                    <span className="text-[10px] text-slate-500 block">Carpet: {lease.carpetArea.toLocaleString()}</span>
+                    <span className="text-[10px] text-gray-400 block font-normal">Carpet: {lease.carpetArea.toLocaleString()}</span>
                   </td>
 
                   {/* Base Rent */}
-                  <td className="p-3 text-right font-mono font-bold text-emerald-400">
+                  <td className="p-3.5 text-right font-mono font-bold text-[#0F8B7D]">
                     {formatINR(lease.monthlyRent)}
                   </td>
 
                   {/* Base Rent PSF */}
-                  <td className="p-3 text-right font-mono text-slate-300">
+                  <td className="p-3.5 text-right font-mono text-gray-700">
                     ₹{lease.baseRentPsf}
                   </td>
 
                   {/* CAM Monthly */}
-                  <td className="p-3 text-right font-mono text-slate-300">
+                  <td className="p-3.5 text-right font-mono text-gray-700">
                     {formatINR(lease.camMonthly)}
-                    <span className="text-[10px] text-slate-500 block">(₹{lease.camRatePsf} PSF)</span>
+                    <span className="text-[10px] text-gray-400 block font-normal">(₹{lease.camRatePsf} PSF)</span>
                   </td>
 
                   {/* Utility Monthly */}
-                  <td className="p-3 text-right font-mono text-slate-400">
+                  <td className="p-3.5 text-right font-mono text-gray-500">
                     {formatINR(lease.utilityFixedMonthly)}
                   </td>
 
                   {/* Total Monthly Gross Billing */}
-                  <td className="p-3 text-right font-mono font-bold text-amber-300 bg-amber-950/10">
+                  <td className="p-3.5 text-right font-mono font-black text-amber-900 bg-amber-50/40">
                     {formatINR(lease.totalMonthlyGross)}
-                    <span className="text-[10px] text-slate-500 block">incl. 18% GST</span>
+                    <span className="text-[10px] text-amber-700 block font-normal">incl. 18% GST</span>
                   </td>
 
                   {/* Security Deposit */}
-                  <td className="p-3 text-right font-mono text-slate-300">
-                    <div>{formatINR(lease.securityDepositPaid)}</div>
-                    <div className="text-[10px] text-slate-500">
+                  <td className="p-3.5 text-right font-mono text-gray-700">
+                    <div className="font-bold text-gray-900">{formatINR(lease.securityDepositPaid)}</div>
+                    <div className="text-[10px] text-gray-400 font-normal">
                       Req: {formatINR(lease.securityDepositAmount)} ({lease.securityDepositMonths}m)
                     </div>
                   </td>
 
                   {/* Escalation % */}
-                  <td className="p-3 text-center">
-                    <span className="px-2 py-0.5 bg-cyan-500/10 text-cyan-300 rounded font-semibold text-[11px] border border-cyan-500/20">
+                  <td className="p-3.5 text-center">
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-bold text-[11px] border border-blue-200">
                       +{lease.escalationPct}% / {lease.escalationFrequencyMonths}m
                     </span>
                   </td>
 
                   {/* Next Escalation Date */}
-                  <td className="p-3 text-center font-mono text-slate-300 text-[11px]">
-                    <div>{lease.nextEscalationDate}</div>
+                  <td className="p-3.5 text-center font-mono text-gray-700 text-[11px]">
+                    <div className="font-semibold">{lease.nextEscalationDate}</div>
                     {lease.computed && (
-                      <div className="text-[10px] text-emerald-400">→ {formatINR(lease.computed.nextEscalatedRent)}</div>
+                      <div className="text-[10px] text-teal-700 font-bold">→ {formatINR(lease.computed.nextEscalatedRent)}</div>
                     )}
                   </td>
 
                   {/* Lease Start - End */}
-                  <td className="p-3 text-center font-mono text-slate-300 text-[11px]">
-                    <div>{lease.startDate}</div>
-                    <div className="text-slate-500">to {lease.endDate}</div>
+                  <td className="p-3.5 text-center font-mono text-gray-600 text-[11px]">
+                    <div className="font-medium text-gray-900">{lease.startDate}</div>
+                    <div className="text-gray-400">to {lease.endDate}</div>
                   </td>
 
                   {/* Lock-In End Date */}
-                  <td className="p-3 text-center font-mono text-slate-400 text-[11px]">
+                  <td className="p-3.5 text-center font-mono text-gray-500 text-[11px]">
                     <div>{lease.lockInEndDate}</div>
-                    <div className="text-[10px] text-slate-500">({lease.lockInMonths}m lock-in)</div>
+                    <div className="text-[10px] text-gray-400 font-normal">({lease.lockInMonths}m lock-in)</div>
                   </td>
 
                   {/* Outstanding Balance */}
-                  <td className="p-3 text-right font-mono">
+                  <td className="p-3.5 text-right font-mono">
                     {lease.totalOutstanding > 0 ? (
                       <div>
-                        <span className="text-red-400 font-bold">{formatINR(lease.totalOutstanding)}</span>
-                        <span className="text-[10px] text-red-500 block">Overdue Arrears</span>
+                        <span className="text-rose-600 font-black">{formatINR(lease.totalOutstanding)}</span>
+                        <span className="text-[10px] text-rose-500 block font-normal">Overdue Arrears</span>
                       </div>
                     ) : (
-                      <span className="text-emerald-400 font-semibold">₹0 Cleared</span>
+                      <span className="text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded">₹0 Cleared</span>
                     )}
                   </td>
 
                   {/* Expiry Alert */}
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     {getExpiryBadge(lease)}
                   </td>
 
                   {/* Status */}
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     {getStatusBadge(lease.status)}
                   </td>
 
                   {/* Sticky Right Action Buttons */}
                   <td
-                    className="p-3 text-center sticky right-0 z-10 bg-slate-900 group-hover:bg-slate-850 border-l border-slate-800"
+                    className="p-3.5 text-center sticky right-0 z-10 bg-white group-hover:bg-gray-50 border-l border-gray-200"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => onSelectLease(lease)}
-                        className="p-1.5 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-all"
+                        className="p-1.5 hover:bg-gray-100 text-gray-600 hover:text-gray-900 rounded-lg transition-colors cursor-pointer"
                         title="View 360° Lease Details"
                       >
-                        <Eye className="w-3.5 h-3.5 text-amber-400" />
+                        <Eye className="w-3.5 h-3.5 text-teal-600" />
                       </button>
 
                       <button
                         onClick={() => onOpenApplyEscalation(lease)}
-                        className="p-1.5 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-all"
+                        className="p-1.5 hover:bg-gray-100 text-gray-600 hover:text-gray-900 rounded-lg transition-colors cursor-pointer"
                         title="Apply Escalation"
                       >
-                        <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                        <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
                       </button>
 
                       <button
                         onClick={() => onOpenRecordPayment(lease)}
-                        className="p-1.5 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-all"
+                        className="p-1.5 hover:bg-gray-100 text-gray-600 hover:text-gray-900 rounded-lg transition-colors cursor-pointer"
                         title="Record Payment"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                       </button>
 
                       <button
                         onClick={() => onOpenServeNotice(lease)}
-                        className="p-1.5 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-all"
+                        className="p-1.5 hover:bg-gray-100 text-gray-600 hover:text-gray-900 rounded-lg transition-colors cursor-pointer"
                         title="Serve Vacation Notice"
                       >
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                       </button>
                     </div>
                   </td>

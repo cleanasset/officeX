@@ -85,25 +85,25 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
     switch (status) {
       case "paid":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200 flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> Paid
           </span>
         );
       case "overdue":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30 flex items-center gap-1 animate-pulse">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 animate-pulse">
             <AlertTriangle className="w-3 h-3" /> Overdue
           </span>
         );
       case "partially_paid":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
             <Clock className="w-3 h-3" /> Partial
           </span>
         );
       default:
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
             <Clock className="w-3 h-3" /> Issued
           </span>
         );
@@ -114,40 +114,40 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
     <div className="space-y-4">
       {/* ──── TOP BILLING KPI SUMMARY CARDS ──── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Invoiced (Gross)</span>
-          <div className="text-2xl font-bold text-white mt-1">{formatINR(totalBilled)}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">{invoices.length} Invoices Issued</p>
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Invoiced (Gross)</span>
+          <div className="text-2xl font-black text-gray-900 mt-1">{formatINR(totalBilled)}</div>
+          <p className="text-[11px] text-gray-400 font-medium mt-0.5">{invoices.length} Invoices Issued</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Collected / Cleared</span>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">{formatINR(totalCollected)}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Collected / Cleared</span>
+          <div className="text-2xl font-black text-[#0F8B7D] mt-1">{formatINR(totalCollected)}</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">
             {totalBilled > 0 ? ((totalCollected / totalBilled) * 100).toFixed(1) : 0}% Collection Rate
           </p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
-          <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Total Receivables Due</span>
-          <div className="text-2xl font-bold text-red-400 mt-1">{formatINR(totalOutstanding)}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+        <div className="bg-white border border-gray-200 p-4.5 rounded-2xl shadow-xs">
+          <span className="text-xs font-bold text-rose-600 uppercase tracking-wider">Total Receivables Due</span>
+          <div className="text-2xl font-black text-rose-600 mt-1">{formatINR(totalOutstanding)}</div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">
             {invoices.filter((i) => i.status === "overdue").length} Invoices Overdue
           </p>
         </div>
       </div>
 
       {/* ──── CONTROLS & FILTER BAR ──── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
           {["ALL", "paid", "overdue", "issued", "partially_paid"].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-colors cursor-pointer ${
                 statusFilter === st
-                  ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
-                  : "bg-slate-800 text-slate-400 hover:text-white"
+                  ? "bg-[#0F8B7D] text-white shadow-xs"
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
               }`}
             >
               {st === "ALL" ? "All Invoices" : st.replace("_", " ")}
@@ -157,19 +157,19 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
             <input
               type="text"
               placeholder="Search invoice # or tenant..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-amber-500"
+              className="w-full bg-white border border-gray-200 text-gray-900 text-xs rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] shadow-2xs"
             />
           </div>
 
           <button
             onClick={onOpenGenerateInvoices}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all"
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Generate Invoices</span>
@@ -178,121 +178,121 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
       </div>
 
       {/* ──── INVOICES DATA TABLE ──── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
-            <thead className="bg-slate-950 text-slate-400 font-semibold tracking-wider border-b border-slate-800 uppercase text-[10px]">
+            <thead className="bg-gray-50/95 text-gray-600 font-bold tracking-wider border-b border-gray-200 uppercase text-[10px]">
               <tr>
-                <th className="p-3">Invoice Number</th>
-                <th className="p-3">Tenant & Property</th>
-                <th className="p-3">Due Date</th>
-                <th className="p-3 text-right">Base Rent</th>
-                <th className="p-3 text-right">CAM</th>
-                <th className="p-3 text-right">GST (18%)</th>
-                <th className="p-3 text-right font-bold text-amber-300">Gross Total</th>
-                <th className="p-3 text-right">TDS (10%)</th>
-                <th className="p-3 text-right font-bold text-white">Net Payable</th>
-                <th className="p-3 text-right text-emerald-400">Paid</th>
-                <th className="p-3 text-right text-red-400">Balance Due</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-center">Actions</th>
+                <th className="p-3.5">Invoice Number</th>
+                <th className="p-3.5">Tenant &amp; Property</th>
+                <th className="p-3.5">Due Date</th>
+                <th className="p-3.5 text-right">Base Rent</th>
+                <th className="p-3.5 text-right">CAM</th>
+                <th className="p-3.5 text-right">GST (18%)</th>
+                <th className="p-3.5 text-right font-black text-amber-900 bg-amber-50/40">Gross Total</th>
+                <th className="p-3.5 text-right">TDS (10%)</th>
+                <th className="p-3.5 text-right font-bold text-gray-900">Net Payable</th>
+                <th className="p-3.5 text-right text-teal-700 font-bold">Paid</th>
+                <th className="p-3.5 text-right text-rose-600 font-bold">Balance Due</th>
+                <th className="p-3.5 text-center">Status</th>
+                <th className="p-3.5 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-gray-100 font-medium">
               {filteredInvoices.map((inv) => (
                 <tr
                   key={inv.id}
-                  className="hover:bg-slate-800/50 transition-colors"
+                  className="hover:bg-gray-50/80 transition-colors"
                 >
                   {/* Invoice # */}
-                  <td className="p-3 font-mono font-bold text-amber-400">
+                  <td className="p-3.5 font-mono font-bold text-indigo-700">
                     <button
                       onClick={() => onOpenTaxInvoice(inv)}
-                      className="hover:underline flex items-center gap-1"
+                      className="hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <FileText className="w-3.5 h-3.5" />
+                      <FileText className="w-3.5 h-3.5 text-indigo-600" />
                       <span>{inv.invoiceNumber}</span>
                     </button>
-                    <span className="text-[10px] text-slate-500 block">{inv.leaseCode}</span>
+                    <span className="text-[10px] text-gray-400 font-normal block">{inv.leaseCode}</span>
                   </td>
 
                   {/* Tenant & Property */}
-                  <td className="p-3">
-                    <div className="font-bold text-white">{inv.tenantName}</div>
-                    <div className="text-[11px] text-slate-400">{inv.propertyName}</div>
+                  <td className="p-3.5">
+                    <div className="font-bold text-gray-900">{inv.tenantName}</div>
+                    <div className="text-[11px] text-gray-500">{inv.propertyName}</div>
                   </td>
 
                   {/* Due Date */}
-                  <td className="p-3 font-mono text-slate-300">
-                    <div>{inv.dueDate}</div>
-                    <div className="text-[10px] text-slate-500">Issued: {inv.invoiceDate}</div>
+                  <td className="p-3.5 font-mono text-gray-700">
+                    <div className="font-semibold">{inv.dueDate}</div>
+                    <div className="text-[10px] text-gray-400">Issued: {inv.invoiceDate}</div>
                   </td>
 
                   {/* Base Rent */}
-                  <td className="p-3 text-right font-mono text-slate-300">
+                  <td className="p-3.5 text-right font-mono text-gray-700">
                     {formatINR(inv.baseRent)}
                   </td>
 
                   {/* CAM */}
-                  <td className="p-3 text-right font-mono text-slate-300">
+                  <td className="p-3.5 text-right font-mono text-gray-700">
                     {formatINR(inv.camCharges)}
                   </td>
 
                   {/* GST */}
-                  <td className="p-3 text-right font-mono text-slate-400">
+                  <td className="p-3.5 text-right font-mono text-gray-500">
                     {formatINR(inv.gstAmount)}
                   </td>
 
                   {/* Gross Total */}
-                  <td className="p-3 text-right font-mono font-bold text-amber-300 bg-amber-950/10">
+                  <td className="p-3.5 text-right font-mono font-black text-amber-900 bg-amber-50/40">
                     {formatINR(inv.grossTotal)}
                   </td>
 
                   {/* TDS */}
-                  <td className="p-3 text-right font-mono text-slate-400">
+                  <td className="p-3.5 text-right font-mono text-gray-500">
                     -{formatINR(inv.tdsDeducted)}
                   </td>
 
                   {/* Net Payable */}
-                  <td className="p-3 text-right font-mono font-bold text-white">
+                  <td className="p-3.5 text-right font-mono font-black text-gray-900">
                     {formatINR(inv.netPayable)}
                   </td>
 
                   {/* Amount Paid */}
-                  <td className="p-3 text-right font-mono text-emerald-400">
+                  <td className="p-3.5 text-right font-mono text-teal-700 font-bold">
                     {inv.amountPaid > 0 ? formatINR(inv.amountPaid) : "₹0"}
                   </td>
 
                   {/* Balance Due */}
-                  <td className="p-3 text-right font-mono">
+                  <td className="p-3.5 text-right font-mono">
                     {inv.balanceDue > 0 ? (
-                      <span className="text-red-400 font-bold">{formatINR(inv.balanceDue)}</span>
+                      <span className="text-rose-600 font-black">{formatINR(inv.balanceDue)}</span>
                     ) : (
-                      <span className="text-emerald-400 font-semibold">₹0</span>
+                      <span className="text-teal-700 font-bold">₹0</span>
                     )}
                   </td>
 
                   {/* Status */}
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     {getStatusBadge(inv.status)}
                   </td>
 
                   {/* Actions */}
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => onOpenTaxInvoice(inv)}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded text-[11px] font-semibold flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                         title="View Tax Invoice Drawer"
                       >
-                        <Eye className="w-3 h-3 text-amber-400" />
+                        <Eye className="w-3 h-3 text-[#0F8B7D]" />
                         <span>View</span>
                       </button>
 
                       {inv.balanceDue > 0 && (
                         <button
                           onClick={() => onOpenRecordPayment(inv)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded text-[11px] font-bold flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
                           title="Record Payment Receipt"
                         >
                           <DollarSign className="w-3 h-3" />
