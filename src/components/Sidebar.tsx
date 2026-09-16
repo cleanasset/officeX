@@ -56,17 +56,21 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Property Registry", href: "/properties/registry", icon: Building },
     { 
       name: "Rent Roll Master", 
-      href: "/properties/rent-roll", 
+      href: "/properties/rent-roll?tab=dashboard", 
       icon: DollarSign,
       subItems: [
+        { name: "Executive Dashboard", href: "/properties/rent-roll?tab=dashboard", tabKey: "dashboard", icon: Building },
         { name: "Active Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
         { name: "Monthly Billing & Invoices", href: "/properties/rent-roll?tab=invoices", tabKey: "invoices", icon: DollarSign },
         { name: "Collections & Receipts", href: "/properties/rent-roll?tab=collections", tabKey: "collections", icon: CheckCircle },
         { name: "Arrears & Aging Ledger", href: "/properties/rent-roll?tab=aging", tabKey: "aging", icon: AlertTriangle },
         { name: "Escalation & Expiries", href: "/properties/rent-roll?tab=escalations", tabKey: "escalations", icon: TrendingUp },
+        { name: "Stacking & Occupancy", href: "/properties/rent-roll?tab=occupancy", tabKey: "occupancy", icon: Layers },
+        { name: "12-Mo Financial Forecast", href: "/properties/rent-roll?tab=forecast", tabKey: "forecast", icon: Calendar },
         { name: "NOI & Property P&L", href: "/properties/rent-roll?tab=pnl", tabKey: "pnl", icon: BarChart3 },
         { name: "Tenant Directory & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
-        { name: "Financial Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles }
+        { name: "Financial Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
+        { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
     { name: "Collections & Invoices", href: "/properties/collections", icon: FileText },
