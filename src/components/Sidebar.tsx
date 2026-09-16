@@ -316,15 +316,16 @@ export default function Sidebar() {
           </div>
 
           {activeMenu.map((item) => {
-            const isActive = pathname === item.href || (item.href !== `/${currentPortalKey}` && pathname.startsWith(item.href));
-            const Icon = item.icon;
             const hasSubItems = item.subItems && item.subItems.length > 0;
-            const isExpanded = expandedSubMenus[item.name] ?? (isActive || pathname.includes("/properties/rent-roll"));
+            const isItemActive = hasSubItems
+              ? pathname.startsWith("/properties/rent-roll")
+              : pathname === item.href || (item.href !== `/${currentPortalKey}` && item.href !== "/properties" && pathname.startsWith(item.href));
+            const Icon = item.icon;
+            const isExpanded = expandedSubMenus[item.name] ?? (isItemActive || pathname.includes("/properties/rent-roll"));
 
             if (hasSubItems) {
               return (
                 <div key={item.name} className="flex flex-col gap-1 my-0.5">
-                  {/* Green Pill Button matching exact client specification image */}
                   <div
                     onClick={() => {
                       setExpandedSubMenus(prev => ({
@@ -332,24 +333,24 @@ export default function Sidebar() {
                         [item.name]: !isExpanded
                       }));
                     }}
-                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer shadow-md select-none border border-teal-600/30 ${
-                      isActive || pathname.startsWith(item.href)
-                        ? "bg-[#0F8B7D] text-white hover:bg-[#0c7368]"
-                        : "bg-[#0F8B7D]/90 text-white hover:bg-[#0F8B7D]"
+                    className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+                      isItemActive
+                        ? "bg-[#0F8B7D] text-white font-black shadow-sm"
+                        : "text-gray-700 hover:bg-gray-100/80 hover:text-gray-900 bg-transparent"
                     }`}
                   >
-                    <Icon size={16} className="text-white shrink-0" />
-                    <span className="truncate flex-1 font-black text-xs tracking-wide">{item.name}</span>
+                    <Icon size={16} className={isItemActive ? "text-white" : "text-gray-500"} />
+                    <span className="truncate flex-1 font-bold tracking-wide">{item.name}</span>
                     {isExpanded ? (
-                      <ChevronDown size={14} className="text-white shrink-0" />
+                      <ChevronDown size={14} className={isItemActive ? "text-white" : "text-gray-400"} />
                     ) : (
-                      <ChevronRight size={14} className="text-white shrink-0" />
+                      <ChevronRight size={14} className={isItemActive ? "text-white" : "text-gray-400"} />
                     )}
                   </div>
 
                   {/* Dropdown Sub-Items List */}
                   {isExpanded && item.subItems && (
-                    <div className="ml-3 pl-2.5 border-l-2 border-[#0F8B7D]/30 flex flex-col gap-1 py-1 my-0.5 animate-in fade-in duration-150">
+                    <div className="ml-3 pl-2.5 border-l-2 border-gray-200 flex flex-col gap-1 py-1 my-0.5 animate-in fade-in duration-150">
                       {item.subItems.map((sub) => {
                         const SubIcon = sub.icon || ChevronRight;
                         const isSubActive =
@@ -362,7 +363,7 @@ export default function Sidebar() {
                             className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
                               isSubActive
                                 ? "bg-teal-50 text-[#0F8B7D] font-extrabold shadow-2xs border border-teal-200/90"
-                                : "text-gray-600 font-bold hover:bg-gray-100 hover:text-gray-900"
+                                : "text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900"
                             }`}
                           >
                             <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D]" : "text-gray-400"} />
@@ -381,21 +382,21 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all relative ${
-                  isActive
-                    ? "bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] text-white font-black shadow-md"
-                    : "text-gray-600 font-bold hover:bg-gray-100/70 hover:text-gray-900"
+                  isItemActive
+                    ? "bg-[#0F8B7D] text-white font-black shadow-sm"
+                    : "text-gray-700 font-bold hover:bg-gray-100/70 hover:text-gray-900"
                 }`}
               >
-                <Icon size={16} className={isActive ? "text-white" : "text-gray-400"} />
+                <Icon size={16} className={isItemActive ? "text-white" : "text-gray-500"} />
                 <span className="truncate">{item.name}</span>
                 {item.badge && (
                   <span className={`ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
-                    isActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"
+                    isItemActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"
                   }`}>
                     {item.badge}
                   </span>
                 )}
-                {isActive && !item.badge && <ChevronRight size={13} className="ml-auto text-white shrink-0" />}
+                {isItemActive && !item.badge && <ChevronRight size={13} className="ml-auto text-white shrink-0" />}
               </Link>
             );
           })}

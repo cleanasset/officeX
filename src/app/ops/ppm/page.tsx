@@ -21,6 +21,8 @@ import {
   Plus
 } from "lucide-react";
 
+import Link from "next/link";
+
 interface PPMAsset {
   assetId: string;
   assetName: string;
@@ -210,31 +212,31 @@ export default function PPMCalendarDashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-5 font-sans w-full max-w-full pb-16">
+    <div className="flex flex-col gap-6 font-sans w-full max-w-full pb-20">
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-in fade-in duration-200">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700/60 animate-in fade-in duration-200">
           <CheckCircle size={16} className="text-teal-400" />
           <span>{toast}</span>
         </div>
       )}
 
       {/* Sibling Calendar Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-gray-200/80 pb-2">
-        <a
+      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+        <Link
           href="/properties/compliance"
-          className="px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-gray-200"
+          className="px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-slate-200"
         >
-          <ShieldCheck size={14} />
+          <ShieldCheck size={15} />
           <span>Statutory Compliance &amp; NOC Calendar</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/ops/ppm"
-          className="px-4 py-2 text-xs font-black rounded-xl border transition-all flex items-center gap-2 bg-teal-50 text-[#0F8B7D] border-teal-200 shadow-2xs"
+          className="px-4 py-2.5 text-xs font-black rounded-xl border transition-all flex items-center gap-2 bg-gradient-to-r from-teal-50 to-emerald-50 text-[#0F8B7D] border-teal-200/90 shadow-xs"
         >
-          <CalendarIcon size={14} />
+          <CalendarIcon size={15} className="text-[#0F8B7D]" />
           <span>52-Week Equipment PPM Schedule</span>
-        </a>
+        </Link>
       </div>
 
       {/* Top Header */}
