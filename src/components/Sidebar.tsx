@@ -73,7 +73,8 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
-    { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
+    { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck },
+    { name: "52-Week PPM Calendar", href: "/ops/ppm", icon: Calendar }
   ],
 
   // FACILITY MANAGER (FM OPS)

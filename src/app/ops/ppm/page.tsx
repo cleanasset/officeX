@@ -219,6 +219,24 @@ export default function PPMCalendarDashboard() {
         </div>
       )}
 
+      {/* Sibling Calendar Tabs Navigation */}
+      <div className="flex items-center gap-2 border-b border-gray-200/80 pb-2">
+        <a
+          href="/properties/compliance"
+          className="px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-gray-200"
+        >
+          <ShieldCheck size={14} />
+          <span>Statutory Compliance &amp; NOC Calendar</span>
+        </a>
+        <a
+          href="/ops/ppm"
+          className="px-4 py-2 text-xs font-black rounded-xl border transition-all flex items-center gap-2 bg-teal-50 text-[#0F8B7D] border-teal-200 shadow-2xs"
+        >
+          <CalendarIcon size={14} />
+          <span>52-Week Equipment PPM Schedule</span>
+        </a>
+      </div>
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
         <div className="flex items-start sm:items-center gap-3.5">
