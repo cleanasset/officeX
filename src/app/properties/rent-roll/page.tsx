@@ -253,6 +253,7 @@ function RentRollPageInner() {
     <div className="flex flex-col gap-5 font-sans relative w-full">
       {/* ──── TOP GLOBAL HEADER & CONTROLS ──── */}
       <RentRollHeader
+        activeTab={activeTab}
         properties={properties}
         selectedProperty={selectedProperty}
         onSelectProperty={setSelectedProperty}
@@ -265,7 +266,8 @@ function RentRollPageInner() {
           setPreSelectedInvoiceForPayment(null);
           setIsRecordPaymentOpen(true);
         }}
-        onOpenGenerateInvoices={handleGenerateInvoicesBatch}
+        onOpenAddExpense={() => setIsAddExpenseOpen(true)}
+        onOpenAddTenant={() => setIsAddTenantOpen(true)}
         onExportCsv={handleExportCsv}
         onRefresh={fetchAllData}
         isLoading={isLoading}

@@ -3,20 +3,27 @@
 import React from "react";
 import {
   Building2,
-  Filter,
-  Plus,
+  TrendingUp,
   Receipt,
-  Download,
+  FileCheck2,
+  Clock,
+  ArrowUpRight,
+  PieChart,
+  Calendar,
+  DollarSign,
+  Users,
+  ShieldCheck,
+  BookOpen,
+  Plus,
   Search,
   RefreshCw,
   Bell,
   Sparkles,
-  FileSpreadsheet,
-  CheckCircle2,
-  Calendar
+  FileSpreadsheet
 } from "lucide-react";
 
 interface RentRollHeaderProps {
+  activeTab?: string;
   properties: Array<{ id: string; name: string; city: string }>;
   selectedProperty: string;
   onSelectProperty: (id: string) => void;
@@ -24,9 +31,10 @@ interface RentRollHeaderProps {
   onSelectStatus: (status: string) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  onOpenAddLease: () => void;
-  onOpenRecordPayment: () => void;
-  onOpenGenerateInvoices: () => void;
+  onOpenAddLease?: () => void;
+  onOpenRecordPayment?: () => void;
+  onOpenAddExpense?: () => void;
+  onOpenAddTenant?: () => void;
   onExportCsv: (type: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -34,7 +42,71 @@ interface RentRollHeaderProps {
   onOpenAlerts: () => void;
 }
 
+const TAB_CONFIGS: Record<string, { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }> }> = {
+  dashboard: {
+    title: "Portfolio Executive Dashboard",
+    subtitle: "Real-time NOI, occupancy velocity, collections health & cash flow trajectory.",
+    icon: Building2,
+  },
+  rentroll: {
+    title: "Rent Roll Master Registry",
+    subtitle: "Institutional 39-column lease registry, CAM recoveries & lease term lifecycle.",
+    icon: TrendingUp,
+  },
+  invoices: {
+    title: "Monthly Billing & Tax Invoices",
+    subtitle: "Automated GST-compliant tax invoices, line items, TDS reconciliation & billing runs.",
+    icon: Receipt,
+  },
+  collections: {
+    title: "Collections & Bank Receipts",
+    subtitle: "Settled transaction ledger, bank escrow reconciliation & payment receipts.",
+    icon: FileCheck2,
+  },
+  aging: {
+    title: "Arrears & AR Aging Ledger",
+    subtitle: "Overdue debt aging buckets (0-30d, 31-60d, 61-90d, 90d+) & default recovery.",
+    icon: Clock,
+  },
+  escalations: {
+    title: "Rent Escalations & Expiry Pipeline",
+    subtitle: "Contractual step-up escalations, lock-in expiry & lease renewals.",
+    icon: ArrowUpRight,
+  },
+  occupancy: {
+    title: "Stacking Plan & Floor Occupancy",
+    subtitle: "Visual floor plate utilization, occupied vs vacant square footage.",
+    icon: PieChart,
+  },
+  forecast: {
+    title: "12-Month Forward Cash Flow Forecast",
+    subtitle: "Contractual base rent, CAM run-rate & step-up escalation simulation.",
+    icon: Calendar,
+  },
+  pnl: {
+    title: "Property P&L & Net Operating Income (NOI)",
+    subtitle: "Gross commercial revenues, operating expenses (OpEx) & net yields.",
+    icon: DollarSign,
+  },
+  tenants: {
+    title: "Tenant Directory & Statutory KYC",
+    subtitle: "Verified tenant corporate entities, PAN/GSTIN records & demised units.",
+    icon: Users,
+  },
+  dictionary: {
+    title: "Commercial Real Estate (CRE) Glossary",
+    subtitle: "Institutional definitions for Rent Roll, WALE, CAM, Escrow & NOI.",
+    icon: BookOpen,
+  },
+  audit: {
+    title: "System Audit Trail & Compliance",
+    subtitle: "Immutable operational logs, transaction timestamps & regulatory governance.",
+    icon: ShieldCheck,
+  },
+};
+
 export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
+  activeTab = "dashboard",
   properties,
   selectedProperty,
   onSelectProperty,
@@ -44,26 +116,44 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   onSearchChange,
   onOpenAddLease,
   onOpenRecordPayment,
-  onOpenGenerateInvoices,
+  onOpenAddExpense,
+  onOpenAddTenant,
   onExportCsv,
   onRefresh,
   isLoading,
   unreadAlertsCount,
   onOpenAlerts,
 }) => {
+  const currentTabConfig = TAB_CONFIGS[activeTab] || TAB_CONFIGS.dashboard;
+  const IconComponent = currentTabConfig.icon;
+
+  // Visibility logic based on active tab
+  const showAddLease = activeTab === "dashboard" || activeTab === "rentroll";
+  const showRecordPayment = activeTab === "dashboard" || activeTab === "rentroll" || activeTab === "collections" || activeTab === "aging";
+  const showExportExcel = activeTab === "rentroll";
+  const showExportAudit = activeTab === "audit";
+  const showAddExpense = activeTab === "pnl";
+  const showAddTenant = activeTab === "tenants";
+  const showAlerts = activeTab === "dashboard" || activeTab === "rentroll" || activeTab === "invoices" || activeTab === "aging" || activeTab === "escalations";
+
+  // Filter bar logic
+  const showSecondaryFilterBar = activeTab !== "dictionary";
+  const showStatusFilter = activeTab === "rentroll";
+  const showLeaseSearch = activeTab === "rentroll";
+
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* ──── TOP ROW: PAGE TITLE & GLOBAL ACTIONS ──── */}
+      {/* ──── TOP ROW: PAGE TITLE & CONTEXTUAL ACTIONS ──── */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
         {/* Title & Subtitle */}
         <div className="flex items-start sm:items-center gap-3.5">
           <div className="p-3 bg-teal-50 border border-teal-200 rounded-2xl text-[#0F8B7D] shadow-2xs shrink-0">
-            <Building2 className="w-6 h-6" />
+            <IconComponent className="w-6 h-6" />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-                Rent Roll Master &amp; Commercial Financials
+                {currentTabConfig.title}
               </h1>
               <span className="px-2.5 py-0.5 text-[11px] font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200 rounded-full inline-flex items-center gap-1.5 shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#0F8B7D] animate-pulse"></span>
@@ -71,59 +161,90 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
               </span>
             </div>
             <p className="text-xs text-gray-500 font-medium mt-1">
-              Institutional 39-column lease registry, CAM recoveries, automated GST invoicing &amp; NOI analytics.
+              {currentTabConfig.subtitle}
             </p>
           </div>
         </div>
 
-        {/* Global Action Cluster */}
+        {/* Tab-Contextual Action Buttons */}
         <div className="flex items-center flex-wrap gap-2 shrink-0">
-          <button
-            onClick={onOpenAlerts}
-            className="relative px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Management Alerts"
-          >
-            <Bell className="w-3.5 h-3.5 text-amber-600" />
-            <span>Alerts</span>
-            {unreadAlertsCount > 0 && (
-              <span className="px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-bold">
-                {unreadAlertsCount}
-              </span>
-            )}
-          </button>
+          {showAlerts && (
+            <button
+              onClick={onOpenAlerts}
+              className="relative px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Management Alerts"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-600" />
+              <span>Alerts</span>
+              {unreadAlertsCount > 0 && (
+                <span className="px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-bold">
+                  {unreadAlertsCount}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => onExportCsv("rentroll")}
-            className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Export 39-column Excel"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Export Excel</span>
-          </button>
+          {showExportExcel && (
+            <button
+              onClick={() => onExportCsv("rentroll")}
+              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Export 39-column Excel"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Export Excel</span>
+            </button>
+          )}
 
-          <button
-            onClick={onOpenGenerateInvoices}
-            className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Receipt className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Invoices</span>
-          </button>
+          {showExportAudit && (
+            <button
+              onClick={() => onExportCsv("audit")}
+              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Export Audit Logs"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Export Audit</span>
+            </button>
+          )}
 
-          <button
-            onClick={onOpenRecordPayment}
-            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Record Payment</span>
-          </button>
+          {showRecordPayment && onOpenRecordPayment && (
+            <button
+              onClick={onOpenRecordPayment}
+              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Record Payment</span>
+            </button>
+          )}
 
-          <button
-            onClick={onOpenAddLease}
-            className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New Lease</span>
-          </button>
+          {showAddExpense && onOpenAddExpense && (
+            <button
+              onClick={onOpenAddExpense}
+              className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Expense Entry</span>
+            </button>
+          )}
+
+          {showAddTenant && onOpenAddTenant && (
+            <button
+              onClick={onOpenAddTenant}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Tenant</span>
+            </button>
+          )}
+
+          {showAddLease && onOpenAddLease && (
+            <button
+              onClick={onOpenAddLease}
+              className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Lease</span>
+            </button>
+          )}
 
           <button
             onClick={onRefresh}
@@ -136,57 +257,65 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
         </div>
       </div>
 
-      {/* ──── SECONDARY ROW: FILTER & SEARCH CONTROL BAR ──── */}
-      <div className="bg-white border border-gray-200/80 rounded-2xl p-3 px-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Property Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Property:</span>
-            <select
-              value={selectedProperty}
-              onChange={(e) => onSelectProperty(e.target.value)}
-              className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] font-semibold transition-colors cursor-pointer"
-            >
-              <option value="ALL">All Portfolio Properties (5)</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.city})
-                </option>
-              ))}
-            </select>
+      {/* ──── SECONDARY ROW: FILTER & SEARCH CONTROL BAR (ONLY WHERE RELEVANT) ──── */}
+      {showSecondaryFilterBar && (
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-3 px-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Property Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Property:</span>
+              <select
+                value={selectedProperty}
+                onChange={(e) => onSelectProperty(e.target.value)}
+                className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] font-semibold transition-colors cursor-pointer"
+              >
+                <option value="ALL">All Portfolio Properties ({properties.length})</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter (Only on Master Grid) */}
+            {showStatusFilter && (
+              <>
+                <div className="h-4 w-[1px] bg-gray-200 hidden sm:block"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status:</span>
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => onSelectStatus(e.target.value)}
+                    className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] font-semibold transition-colors cursor-pointer"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="active">Active Leases</option>
+                    <option value="under_notice">Under Notice</option>
+                    <option value="expired">Expired</option>
+                    <option value="draft">Drafts</option>
+                  </select>
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="h-4 w-[1px] bg-gray-200 hidden sm:block"></div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status:</span>
-            <select
-              value={selectedStatus}
-              onChange={(e) => onSelectStatus(e.target.value)}
-              className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] font-semibold transition-colors cursor-pointer"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="active">Active Leases</option>
-              <option value="under_notice">Under Notice</option>
-              <option value="expired">Expired</option>
-              <option value="draft">Drafts</option>
-            </select>
-          </div>
+          {/* Search Input (Only on Master Grid) */}
+          {showLeaseSearch && (
+            <div className="relative w-full md:w-80">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search tenant, lease #, unit..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 text-gray-900 text-xs rounded-xl pl-8 pr-3 py-1.5 placeholder-gray-400 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] transition-colors"
+              />
+            </div>
+          )}
         </div>
-
-        {/* Search Input */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search tenant, lease #, unit..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 text-gray-900 text-xs rounded-xl pl-8 pr-3 py-1.5 placeholder-gray-400 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] transition-colors"
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 };
+

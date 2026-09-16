@@ -28,18 +28,86 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
 }) => {
   if (!invoice) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const cgstAmount = Math.round(invoice.gstAmount / 2);
   const sgstAmount = invoice.gstAmount - cgstAmount;
+
+  const handlePrint = () => {
+    const printContent = document.getElementById("printable-tax-invoice");
+    if (!printContent) return;
+
+    // Create an invisible iframe for seamless print preview without browser headers/footers
+    let iframe = document.getElementById("print-invoice-iframe") as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "print-invoice-iframe";
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.style.visibility = "hidden";
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>&nbsp;</title>
+          <meta charset="utf-8">
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 0mm !important;
+            }
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 0mm !important;
+              }
+              html, body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                margin: 0 !important;
+                padding: 12mm 15mm !important;
+                background: #ffffff !important;
+              }
+            }
+            body {
+              background-color: #ffffff;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: #111827;
+              padding: 12mm 15mm;
+              margin: 0;
+            }
+          </style>
+        </head>
+        <body class="bg-white text-gray-900">
+          <div class="max-w-4xl mx-auto">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 450);
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-gray-950/40 backdrop-blur-xs flex justify-center items-center p-4 sm:p-6 animate-fadeIn">
       <div className="w-full max-w-3xl bg-white border border-gray-200 rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col justify-between animate-slideUp">
         {/* Top Header Bar with Print Button */}
-        <div className="p-4 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-4 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between no-print">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-teal-50 text-[#0F8B7D] rounded-lg">
               <Receipt className="w-4 h-4" />
@@ -69,7 +137,7 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
         </div>
 
         {/* Printable Tax Invoice Document */}
-        <div className="p-8 bg-white text-gray-900 space-y-6 font-sans text-xs">
+        <div id="printable-tax-invoice" className="p-8 bg-white text-gray-900 space-y-6 font-sans text-xs">
           {/* Document Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-gray-200">
             <div>
@@ -277,7 +345,7 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
               <DollarSign className="w-4 h-4" />
-              <span>Record Payment Receipt for this Invoice</span>
+              <span>Record Payment Received for this Invoice</span>
             </button>
           </div>
         )}

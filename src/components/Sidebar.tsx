@@ -73,9 +73,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
-    { name: "Collections & Invoices", href: "/properties/collections", icon: FileText },
-    { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck },
-    { name: "Tenant Directory", href: "/properties/tenants", icon: Users }
+    { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
   ],
 
   // FACILITY MANAGER (FM OPS)
@@ -281,27 +279,32 @@ export default function Sidebar() {
             />
           </Link>
           
-          {/* Workspace Context Role Switcher */}
-          <div className="flex flex-col gap-1 mt-1">
-            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-between">
+          {/* Active Workspace Identity Card (Locked to Authenticated Role) */}
+          <div className="flex flex-col gap-1.5 mt-1">
+            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-between">
               <span>Active Workspace</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            </label>
-            <select 
-              value={currentPortalKey}
-              onChange={(e) => handleRoleChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-extrabold bg-white hover:border-[#0F8B7D] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]/20 cursor-pointer transition-all shadow-2xs"
-            >
-              <option value="properties">Property Owner (SaaS)</option>
-              <option value="ops">Facility Manager (Ops)</option>
-              <option value="tenant">Tenant Admin (Portal)</option>
-              <option value="vendor">Service Vendor (Hub)</option>
-              <option value="leasing">Leasing Broker (CRM)</option>
-              <option value="marketplace">FM Procurement (Marketplace)</option>
-              <option value="admin">Super Admin (Console)</option>
-              <option value="reporting">Auditor / Analyst (BI)</option>
-              <option value="public">Public Discovery (Portal)</option>
-            </select>
+              <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Verified
+              </span>
+            </div>
+            
+            <div className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-6 h-6 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[10px] shadow-2xs shrink-0">
+                  {activeRole.roleName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-black text-gray-900 truncate leading-tight">
+                    {activeRole.label}
+                  </span>
+                  <span className="text-[10px] text-teal-700 font-bold truncate font-mono">
+                    Devasya Gold · Ahmedabad
+                  </span>
+                </div>
+              </div>
+              <ShieldCheck className="w-4 h-4 text-[#0F8B7D] shrink-0" />
+            </div>
           </div>
         </div>
 

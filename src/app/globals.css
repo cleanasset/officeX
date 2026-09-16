@@ -347,6 +347,33 @@ html, body {
   will-change: transform, filter;
 }
 
+/* ──── PRINT / PDF STYLING FOR INVOICES ──── */
+@page {
+  size: A4 portrait;
+  margin: 0mm !important;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0mm !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Suppress browser chrome and UI elements during print */
+  nav, aside, header, footer, .no-print {
+    display: none !important;
+  }
+}
+
 
 
 
