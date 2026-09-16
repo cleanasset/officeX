@@ -1192,7 +1192,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* 5 Vertical Colored Cards matching OfficeX signature logo brand color */}
+          {/* 5 Vertical Colored Cards matching OfficeX signature logo brand color (1 Shade Lighter) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
             {[
               {
@@ -1202,8 +1202,8 @@ export default function LandingPage() {
                 benefits: ["Verified Grade-A listings across metros", "Side-by-side space comparison tools", "Direct owner/manager connection"],
                 audience: "For: Occupiers, Brokers, Owners",
                 image: "/images/card_office_marketplace.jpg",
-                bgColor: "bg-[#0F8B7D]", // Logo Shade 1: Signature Vibrant Teal
-                arrowColor: "text-[#0F8B7D]",
+                bgColor: "bg-[#139B8B]", // Logo Shade 1: Lighter Signature Vibrant Teal
+                arrowColor: "text-[#139B8B]",
                 href: "/marketplace",
                 iconType: "arrow",
               },
@@ -1214,8 +1214,8 @@ export default function LandingPage() {
                 benefits: ["250+ pre-vetted FM vendors", "Structured RFQ with BOQ generation", "Escrow-protected milestone payments"],
                 audience: "For: Building Owners, FM Heads",
                 image: "/images/card_fm_hd.jpg",
-                bgColor: "bg-[#0A6357]", // Logo Shade 2: Deep Pine Forest Teal
-                arrowColor: "text-[#0A6357]",
+                bgColor: "bg-[#0E7A6B]", // Logo Shade 2: Lighter Forest Teal
+                arrowColor: "text-[#0E7A6B]",
                 href: "/fm-marketplace",
                 iconType: "arrow",
               },
@@ -1226,8 +1226,8 @@ export default function LandingPage() {
                 benefits: ["CAFM & 52-week automated PPM", "Rent roll, CAM billing & compliance", "Visitor management & touchless access"],
                 audience: "For: Facility & Property Managers",
                 image: "/images/card_saas_hd.jpg",
-                bgColor: "bg-[#0B5C70]", // Logo Shade 3: Deep Petrol Marine
-                arrowColor: "text-[#0B5C70]",
+                bgColor: "bg-[#0F758D]", // Logo Shade 3: Lighter Petrol Marine
+                arrowColor: "text-[#0F758D]",
                 href: "/operate",
                 iconType: "arrow",
               },
@@ -1238,8 +1238,8 @@ export default function LandingPage() {
                 benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
                 audience: "For: Owners without in-house FM",
                 image: "/images/card_managed_hd.jpg",
-                bgColor: "bg-[#056AA0]", // Logo Shade 4: Oceanic Sapphire Blue
-                arrowColor: "text-[#056AA0]",
+                bgColor: "bg-[#0A80C2]", // Logo Shade 4: Lighter Oceanic Blue
+                arrowColor: "text-[#0A80C2]",
                 href: "/managed-services",
                 iconType: "arrow",
               },
@@ -1250,8 +1250,8 @@ export default function LandingPage() {
                 benefits: ["Portfolio NOI & WALE dashboards", "Energy benchmarking & ESG reports", "Predictive maintenance forecasting"],
                 audience: "For: Asset Managers, REITs, CFOs",
                 image: "/images/card_ai_hd.jpg",
-                bgColor: "bg-[#3D4F5F]", // Logo Shade 5: Titanium Slate Steel
-                arrowColor: "text-[#3D4F5F]",
+                bgColor: "bg-[#4D6377]", // Logo Shade 5: Lighter Titanium Slate
+                arrowColor: "text-[#4D6377]",
                 href: "/intelligence",
                 iconType: "sparkle",
               },
