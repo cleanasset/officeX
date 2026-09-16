@@ -854,8 +854,8 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* SECTION 2: HERO — COMPLETE OFFICEX CRE & FM ECOSYSTEM */}
-      <section className="relative min-h-[520px] md:min-h-[580px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-8 md:pt-12 pb-10 md:pb-14 bg-slate-950 border-b border-slate-800 text-white">
+      {/* SECTION 2: HERO — COMPLETE OFFICEX CRE & FM ECOSYSTEM (CENTERED) */}
+      <section className="relative min-h-[580px] md:min-h-[620px] lg:min-h-[660px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 md:pt-14 lg:pt-16 pb-12 md:pb-16 lg:pb-18 bg-slate-950 border-b border-slate-800 text-white">
         
         {/* Background Image: Clean Architectural Commercial Real Estate Skyline */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
@@ -865,268 +865,298 @@ export default function LandingPage() {
             fill
             priority
             unoptimized
-            className="object-cover object-center sm:object-right opacity-95 brightness-[0.88] contrast-[1.05]"
+            className="object-cover object-center opacity-95 brightness-[0.88] contrast-[1.05]"
           />
 
-          {/* Balanced Natural Contrast Scrim: Clear readability for left text, luminous right skyline */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/82 via-slate-950/55 to-slate-950/15 pointer-events-none" />
+          {/* Balanced Natural Contrast Scrim: Clear readability for centered text */}
+          <div className="absolute inset-0 bg-slate-950/70 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/50 to-slate-950/85 pointer-events-none" />
         </div>
 
-        {/* 2-Column Responsive Grid Container */}
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        {/* Centered Hero Container */}
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+          <div className="max-w-4xl text-center flex flex-col items-center w-full">
             
-            {/* LEFT COLUMN (Cols 1-7): Clean Direct Typography on Hero Canvas */}
-            <div className="lg:col-span-7 flex flex-col items-start text-left">
-              
-              {/* Eyebrow Badge — Vibrant Teal Pill */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-950/80 border border-teal-400/50 text-teal-300 text-xs font-bold tracking-wide mb-4 shadow-sm backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0" />
-                <span>Intelligent Commercial Workplace Platform</span>
+            {/* Eyebrow Badge — Vibrant Teal Pill */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/80 border border-teal-400/50 text-teal-300 text-xs sm:text-sm font-bold tracking-wide mb-4 sm:mb-5 backdrop-blur-md shadow-lg mx-auto">
+              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0" />
+              <span>Intelligent Commercial Workplace Platform</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-5xl lg:text-[50px] font-black tracking-tight text-white leading-[1.14] mb-3.5 sm:mb-4 text-center">
+              One Platform.{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-400">
+                Smarter Workplaces.
+              </span>
+            </h1>
+
+            {/* Subhead */}
+            <p className="text-sm sm:text-base md:text-lg font-medium text-slate-100 leading-relaxed max-w-2xl mb-6 sm:mb-7 text-center mx-auto">
+              Find verified commercial spaces, hire top facility management vendors, and automate building operations — all in one unified ecosystem.
+            </p>
+
+            {/* 3-Tab Search Bar Component */}
+            <div className="w-full max-w-4xl mb-4 sm:mb-5">
+              {/* Unified Segmented Tabs */}
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-0 overflow-x-auto no-scrollbar max-w-full">
+                <button
+                  type="button"
+                  onClick={() => setActiveSearchTab("space")}
+                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                    activeSearchTab === "space"
+                      ? "bg-[#0F8B7D] text-white shadow-xl"
+                      : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
+                  }`}
+                >
+                  <Building2 size={16} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
+                  <span>Find Spaces</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSearchTab("vendor")}
+                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                    activeSearchTab === "vendor"
+                      ? "bg-[#0F8B7D] text-white shadow-xl"
+                      : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
+                  }`}
+                >
+                  <Wrench size={16} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
+                  <span>Hire Vendors</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSearchTab("managed")}
+                  className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-2xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
+                    activeSearchTab === "managed"
+                      ? "bg-[#0F8B7D] text-white shadow-xl"
+                      : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
+                  }`}
+                >
+                  <ShieldCheck size={16} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
+                  <span>Operate &amp; Manage</span>
+                </button>
               </div>
 
-              {/* Main Headline: Bold White & Glowing Emerald */}
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[48px] font-black text-white tracking-tight leading-[1.12] drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
-                <span>One Platform.</span>
-                <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-400 font-black">
-                  Smarter Workplaces.
-                </span>
-              </h1>
+              {/* Main Search Bar Card */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.35)] p-4 sm:p-6 lg:p-7 border border-slate-200/90 w-full text-left text-slate-900">
+                {activeSearchTab === "space" && (
+                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
+                    {/* Field 1: Location */}
+                    <div className="flex-[1.1] md:pr-5 md:border-r border-slate-200">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Commercial Hub / City
+                      </label>
+                      <select
+                        value={spaceCity}
+                        onChange={(e) => setSpaceCity(e.target.value)}
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="Mumbai">Mumbai (BKC, Lower Parel)</option>
+                        <option value="Bengaluru">Bengaluru (ORR, Whitefield)</option>
+                        <option value="Gurugram">Delhi NCR (Cyber City)</option>
+                        <option value="Pune">Pune (Hinjewadi, Kharadi)</option>
+                        <option value="Hyderabad">Hyderabad (HITEC City)</option>
+                        <option value="Ahmedabad">Ahmedabad (GIFT City)</option>
+                      </select>
+                    </div>
 
-              {/* Subhead — Pure White with Crisp Drop Shadow */}
-              <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed max-w-xl mt-3.5 mb-6 drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]">
-                Find verified commercial spaces, hire top facility management vendors, and automate building operations — all in one unified ecosystem.
-              </p>
+                    {/* Field 2: Size */}
+                    <div className="flex-1 md:px-5 md:border-r border-slate-200">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Floor Area
+                      </label>
+                      <select
+                        value={spaceBudget}
+                        onChange={(e) => setSpaceBudget(e.target.value)}
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="All Ranges">Any Area</option>
+                        <option value="2,000 - 5,000 sq.ft.">2k - 5k sq.ft.</option>
+                        <option value="5,000 - 15,000 sq.ft.">5k - 15k sq.ft.</option>
+                        <option value="15,000 - 50,000 sq.ft.">15k - 50k sq.ft.</option>
+                        <option value="50,000+ sq.ft.">50k+ sq.ft. Campus</option>
+                      </select>
+                    </div>
 
-              {/* Value Highlight Pills — Glass Cards with Teal Icons */}
-              <div className="flex flex-wrap items-center gap-2.5 mb-6 text-xs font-bold text-white">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-white shadow-sm backdrop-blur-md">
-                  <CheckCircle2 size={14} className="text-teal-400 shrink-0" />
-                  <span>0% Broker Fee</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-white shadow-sm backdrop-blur-md">
-                  <ShieldCheck size={14} className="text-teal-400 shrink-0" />
-                  <span>100% Escrow Protected</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-white shadow-sm backdrop-blur-md">
-                  <Lock size={14} className="text-teal-400 shrink-0" />
-                  <span>SOC 2 Type II Certified</span>
-                </span>
-              </div>
+                    {/* Field 3: Format */}
+                    <div className="flex-[1.15] md:px-5">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Workspace Format
+                      </label>
+                      <select
+                        value={spaceGrade}
+                        onChange={(e) => setSpaceGrade(e.target.value)}
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="All Grades">Commercial Office</option>
+                        <option value="Grade-A Managed">Managed Suite</option>
+                        <option value="Coworking Flex">Coworking Desk</option>
+                        <option value="Bare Shell Plate">Bare Shell Plate</option>
+                      </select>
+                    </div>
 
-              {/* Institutional Badges — Clean Crisp Footer */}
-              <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/15 text-[11px] font-semibold text-slate-300">
-                <span>AES-256 Vaulted</span>
-                <span className="text-slate-500">•</span>
-                <span>DPDP Act 2023 Compliant</span>
-                <span className="text-slate-500">•</span>
-                <span>100% RBI Escrow Audited</span>
+                    {/* Search Button */}
+                    <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
+                      <button
+                        onClick={handleLandingSearch}
+                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Search size={16} />
+                        <span>Search Spaces</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeSearchTab === "vendor" && (
+                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
+                    {/* Field 1: FM Service */}
+                    <div className="flex-1 md:pr-5 md:border-r border-slate-200">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Facility Service Needed
+                      </label>
+                      <select
+                        value={vendorCategory}
+                        onChange={(e) => setVendorCategory(e.target.value)}
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="HVAC Maintenance">HVAC &amp; Central Chillers AMC</option>
+                        <option value="Deep Cleaning">Commercial Sanitization &amp; Hygiene</option>
+                        <option value="Electrical Auditing">MEP, DG Sets &amp; Electrical Audit</option>
+                        <option value="Pest Control">PSARA Manned Security Patrol</option>
+                        <option value="Fire & Safety NOC">Statutory Fire Safety NOC</option>
+                      </select>
+                    </div>
+
+                    {/* Field 2: City */}
+                    <div className="flex-1 md:px-5 md:border-r border-slate-200">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Property Location
+                      </label>
+                      <select
+                        value={vendorCity}
+                        onChange={(e) => setVendorCity(e.target.value)}
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Bengaluru">Bengaluru</option>
+                        <option value="Gurugram">Delhi NCR</option>
+                        <option value="Pune">Pune</option>
+                        <option value="Hyderabad">Hyderabad</option>
+                        <option value="Ahmedabad">Ahmedabad</option>
+                      </select>
+                    </div>
+
+                    {/* Field 3: Scope */}
+                    <div className="flex-1 md:px-5">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Contract Term
+                      </label>
+                      <select
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="Annual AMC">Annual Maintenance Contract (AMC)</option>
+                        <option value="One-Time Service">One-Time Project / Overhaul</option>
+                        <option value="Multi-Year IFM">Multi-Year Integrated FM</option>
+                      </select>
+                    </div>
+
+                    {/* Search Button */}
+                    <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
+                      <button
+                        onClick={handleLandingSearch}
+                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Wrench size={16} />
+                        <span>Find Vendors</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeSearchTab === "managed" && (
+                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-0">
+                    {/* Field 1: Managed Solution */}
+                    <div className="flex-1 md:pr-5 md:border-r border-slate-200">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Stewardship Scope
+                      </label>
+                      <select
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="Integrated FM">Integrated IFM Stewardship</option>
+                        <option value="Rent Roll & CAM">Rent Roll &amp; CAM Audit</option>
+                        <option value="Statutory Vault">100% Statutory Compliance</option>
+                      </select>
+                    </div>
+
+                    {/* Field 2: Portfolio Size */}
+                    <div className="flex-1 md:px-5 md:border-r border-slate-200">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Portfolio Size
+                      </label>
+                      <select
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="10k-50k">10,000 - 50,000 Sq.Ft.</option>
+                        <option value="50k-200k">50,000 - 200,000 Sq.Ft.</option>
+                        <option value="200k+">200,000+ Sq.Ft. Campus</option>
+                      </select>
+                    </div>
+
+                    {/* Field 3: City */}
+                    <div className="flex-1 md:px-5">
+                      <label className="block text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Location
+                      </label>
+                      <select
+                        value={spaceCity}
+                        onChange={(e) => setSpaceCity(e.target.value)}
+                        className="w-full text-xs sm:text-sm md:text-[14px] font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-1"
+                      >
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Bengaluru">Bengaluru</option>
+                        <option value="Gurugram">Delhi NCR</option>
+                        <option value="Pune">Pune</option>
+                        <option value="Hyderabad">Hyderabad</option>
+                        <option value="Ahmedabad">Ahmedabad</option>
+                      </select>
+                    </div>
+
+                    {/* Search Button */}
+                    <div className="md:pl-4 shrink-0 pt-1 md:pt-0">
+                      <button
+                        onClick={() => router.push('/managed-services')}
+                        className="w-full md:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs sm:text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ShieldCheck size={16} />
+                        <span>Explore Solutions</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* RIGHT COLUMN (Cols 8-12): Elevated Glass Search Card */}
-            <div className="lg:col-span-5 w-full">
-              <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-2xl space-y-5">
-                
-                {/* Header & Segmented Tabs */}
-                <div>
-                  <div className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5">
-                    What are you looking for?
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 text-xs font-extrabold">
-                    <button
-                      type="button"
-                      onClick={() => setActiveSearchTab("space")}
-                      className={`py-2 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeSearchTab === "space"
-                          ? "bg-[#0F8B7D] text-white shadow-sm font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Building2 size={13} />
-                      <span className="truncate">Find Spaces</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSearchTab("vendor")}
-                      className={`py-2 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeSearchTab === "vendor"
-                          ? "bg-[#0F8B7D] text-white shadow-sm font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Wrench size={13} />
-                      <span className="truncate">Hire Vendors</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSearchTab("managed")}
-                      className={`py-2 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeSearchTab === "managed"
-                          ? "bg-[#0F8B7D] text-white shadow-sm font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <ShieldCheck size={13} />
-                      <span className="truncate">Operate</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Form Inputs based on active tab */}
-                <div className="space-y-3 pt-1">
-                  {activeSearchTab === "space" && (
-                    <>
-                      <div>
-                        <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                          Target City / Region
-                        </label>
-                        <select
-                          value={spaceCity}
-                          onChange={(e) => setSpaceCity(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          <option value="Mumbai">Mumbai (BKC, Lower Parel, Powai)</option>
-                          <option value="Bengaluru">Bengaluru (ORR, Whitefield, E-City)</option>
-                          <option value="Gurugram">Gurugram (Cyber City, Golf Course Rd)</option>
-                          <option value="Noida">Noida (Sector 62, Expressway)</option>
-                          <option value="Delhi">Delhi NCR</option>
-                          <option value="Pune">Pune (Hinjewadi, Kharadi)</option>
-                          <option value="Hyderabad">Hyderabad (HITEC City, Gachibowli)</option>
-                          <option value="Ahmedabad">Ahmedabad (GIFT City)</option>
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                            Floor Area
-                          </label>
-                          <select
-                            value={spaceBudget}
-                            onChange={(e) => setSpaceBudget(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
-                          >
-                            <option value="All Ranges">Any Area</option>
-                            <option value="2,000 - 5,000 sq.ft.">2k - 5k sq.ft.</option>
-                            <option value="5,000 - 15,000 sq.ft.">5k - 15k sq.ft.</option>
-                            <option value="15,000 - 50,000 sq.ft.">15k - 50k sq.ft.</option>
-                            <option value="50,000+ sq.ft.">50k+ sq.ft.</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                            Format
-                          </label>
-                          <select
-                            value={spaceGrade}
-                            onChange={(e) => setSpaceGrade(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
-                          >
-                            <option value="All Grades">Commercial Office</option>
-                            <option value="Grade-A Managed">Managed Suite</option>
-                            <option value="Coworking Flex">Coworking Desk</option>
-                            <option value="Bare Shell Plate">Bare Shell Plate</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleLandingSearch}
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-emerald-600 hover:from-[#0c7368] hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-                      >
-                        <Search size={15} />
-                        <span>Search Verified Spaces</span>
-                      </button>
-                    </>
-                  )}
-
-                  {activeSearchTab === "vendor" && (
-                    <>
-                      <div>
-                        <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                          Facility Trade / Service
-                        </label>
-                        <select
-                          value={vendorCategory}
-                          onChange={(e) => setVendorCategory(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          <option value="HVAC Maintenance">HVAC &amp; Central Chillers AMC</option>
-                          <option value="Deep Cleaning">Deep Sanitization &amp; Hygiene</option>
-                          <option value="Electrical Auditing">MEP, DG Sets &amp; Electrical Audit</option>
-                          <option value="Pest Control">PSARA Manned Security Patrol</option>
-                          <option value="Fire & Safety NOC">Statutory Fire Safety NOC</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                          Property City
-                        </label>
-                        <select
-                          value={vendorCity}
-                          onChange={(e) => setVendorCity(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
-                        >
-                          <option value="Mumbai">Mumbai</option>
-                          <option value="Bengaluru">Bengaluru</option>
-                          <option value="Gurugram">Gurugram</option>
-                          <option value="Noida">Noida</option>
-                          <option value="Delhi">Delhi NCR</option>
-                          <option value="Pune">Pune</option>
-                          <option value="Hyderabad">Hyderabad</option>
-                          <option value="Ahmedabad">Ahmedabad</option>
-                        </select>
-                      </div>
-
-                      <button
-                        onClick={handleLandingSearch}
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#0F8B7D] via-teal-600 to-emerald-600 hover:from-[#0c7368] hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-                      >
-                        <Wrench size={15} />
-                        <span>Find Verified FM Vendors</span>
-                      </button>
-                    </>
-                  )}
-
-                  {activeSearchTab === "managed" && (
-                    <>
-                      <div>
-                        <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                          Operations Solution
-                        </label>
-                        <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]">
-                          <option value="Integrated FM">Integrated IFM Stewardship</option>
-                          <option value="Rent Roll & CAM">Rent Roll &amp; CAM Audit</option>
-                          <option value="Statutory Vault">100% Statutory Compliance</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-                          Portfolio Size
-                        </label>
-                        <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D]">
-                          <option value="10k-50k">10,000 - 50,000 Sq.Ft.</option>
-                          <option value="50k-200k">50,000 - 200,000 Sq.Ft.</option>
-                          <option value="200k+">200,000+ Sq.Ft. Campus</option>
-                        </select>
-                      </div>
-
-                      <button
-                        onClick={() => router.push('/managed-services')}
-                        className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-                      >
-                        <ShieldCheck size={15} />
-                        <span>Explore Managed Operations</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-
-              </div>
+            {/* Value Highlight Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-white font-bold mt-3">
+              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
+                <CheckCircle2 size={14} className="text-teal-400 shrink-0" />
+                <span>0% Broker Fee</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
+                <ShieldCheck size={14} className="text-teal-400 shrink-0" />
+                <span>100% Escrow Protected</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
+                <Lock size={14} className="text-teal-400 shrink-0" />
+                <span>SOC 2 Type II Certified</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-sm backdrop-blur-md">
+                <Award size={14} className="text-teal-400 shrink-0" />
+                <span>100% RBI Escrow Audited</span>
+              </span>
             </div>
 
           </div>
