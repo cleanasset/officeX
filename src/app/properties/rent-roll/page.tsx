@@ -45,6 +45,7 @@ import { ServeNoticeModal } from "@/components/rent-roll/ServeNoticeModal";
 import { AddExpenseModal } from "@/components/rent-roll/AddExpenseModal";
 import { AlertsModal, AlertNotification } from "@/components/rent-roll/AlertsModal";
 import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
+import { ApplyEscalationModal } from "@/components/rent-roll/ApplyEscalationModal";
 
 function RentRollPageInner() {
   const searchParams = useSearchParams();
@@ -95,6 +96,8 @@ function RentRollPageInner() {
   const [preSelectedInvoiceForPayment, setPreSelectedInvoiceForPayment] = useState<any>(null);
   const [isServeNoticeOpen, setIsServeNoticeOpen] = useState<boolean>(false);
   const [leaseForNotice, setLeaseForNotice] = useState<EnrichedLease | null>(null);
+  const [isApplyEscalationOpen, setIsApplyEscalationOpen] = useState<boolean>(false);
+  const [leaseForEscalation, setLeaseForEscalation] = useState<EnrichedLease | null>(null);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState<boolean>(false);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
   const [isAddTenantOpen, setIsAddTenantOpen] = useState<boolean>(false);
@@ -288,7 +291,10 @@ function RentRollPageInner() {
           <MasterGridTab
             leases={leases}
             onSelectLease={setSelectedLeaseForDrawer}
-            onOpenApplyEscalation={handleApplyEscalation as any}
+            onOpenApplyEscalation={(l) => {
+              setLeaseForEscalation(l);
+              setIsApplyEscalationOpen(true);
+            }}
             onOpenServeNotice={(l) => {
               setLeaseForNotice(l);
               setIsServeNoticeOpen(true);
@@ -381,7 +387,10 @@ function RentRollPageInner() {
         <LeaseDetailDrawer
           lease={selectedLeaseForDrawer}
           onClose={() => setSelectedLeaseForDrawer(null)}
-          onOpenApplyEscalation={handleApplyEscalation as any}
+          onOpenApplyEscalation={(l) => {
+            setLeaseForEscalation(l);
+            setIsApplyEscalationOpen(true);
+          }}
           onOpenServeNotice={(l) => {
             setLeaseForNotice(l);
             setIsServeNoticeOpen(true);
@@ -410,6 +419,16 @@ function RentRollPageInner() {
         properties={properties}
         isOpen={isAddLeaseOpen}
         onClose={() => setIsAddLeaseOpen(false)}
+        onSuccess={fetchAllData}
+      />
+
+      <ApplyEscalationModal
+        lease={leaseForEscalation}
+        isOpen={isApplyEscalationOpen}
+        onClose={() => {
+          setIsApplyEscalationOpen(false);
+          setLeaseForEscalation(null);
+        }}
         onSuccess={fetchAllData}
       />
 
@@ -468,4 +487,3 @@ export default function RentRollPage() {
     </Suspense>
   );
 }
-

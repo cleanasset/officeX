@@ -30,25 +30,40 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { escalationId, action, notes, customNewRent } = body; // action = "apply" | "waive" | "dispute"
+    const { escalationId, leaseId, action, notes, customNewRent } = body; // action = "apply" | "waive" | "dispute"
 
-    if (!escalationId || !action) {
-      return NextResponse.json({ error: "Missing escalationId or action" }, { status: 400 });
+    if ((!escalationId && !leaseId) || !action) {
+      return NextResponse.json({ error: "Missing escalationId/leaseId or action" }, { status: 400 });
     }
 
     const db = getRentRollDb();
-    const escIndex = db.escalations.findIndex(e => e.id === escalationId);
-    if (escIndex === -1) {
-      return NextResponse.json({ error: "Escalation record not found" }, { status: 404 });
-    }
-
-    const esc = db.escalations[escIndex];
-    const leaseIndex = db.leases.findIndex(l => l.id === esc.leaseId);
-    if (leaseIndex === -1) {
+    let esc = db.escalations.find(e => (escalationId && e.id === escalationId) || (leaseId && e.leaseId === leaseId && e.status === "pending"));
+    
+    let lease = db.leases.find(l => (esc && l.id === esc.leaseId) || (leaseId && l.id === leaseId));
+    if (!lease) {
       return NextResponse.json({ error: "Associated lease not found" }, { status: 404 });
     }
 
-    const lease = db.leases[leaseIndex];
+    if (!esc) {
+      // Create on-the-fly escalation record for this lease
+      const escalationMultiplier = 1 + (lease.escalationPct || 15) / 100;
+      const targetNewRent = customNewRent ? Number(customNewRent) : Math.round(lease.monthlyRent * escalationMultiplier);
+      esc = {
+        id: `ESC-${Date.now()}`,
+        leaseId: lease.id,
+        leaseCode: lease.leaseCode,
+        tenantName: lease.tenantName,
+        propertyName: lease.propertyName,
+        escalationDate: lease.nextEscalationDate || new Date().toISOString().split('T')[0],
+        previousRent: lease.monthlyRent,
+        newRent: targetNewRent,
+        escalationPct: lease.escalationPct || 15,
+        calculatedIncrease: targetNewRent - lease.monthlyRent,
+        status: "pending",
+        notes: "On-demand compounding escalation"
+      };
+      db.escalations.push(esc);
+    }
 
     if (action === "apply") {
       const newRentValue = customNewRent ? Number(customNewRent) : esc.newRent;
