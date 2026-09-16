@@ -865,12 +865,12 @@ export default function LandingPage() {
             fill
             priority
             unoptimized
-            className="object-cover object-center brightness-[0.98] contrast-[1.05]"
+            className="object-cover object-center brightness-[1.02] contrast-[1.08]"
           />
 
-          {/* Balanced Natural Contrast Scrim: Clear readability for centered text while keeping skyline crisp & vivid */}
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/65 via-slate-950/25 to-slate-950/65 pointer-events-none" />
-          <div className="absolute inset-0 bg-slate-950/20 pointer-events-none" />
+          {/* Localized Radial Contrast Scrim: Delivers crystal-clear readability for centered text while keeping the surrounding architecture, dusk sky, and lights 100% vivid */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_75%_at_50%_42%,rgba(2,6,23,0.78)_0%,rgba(2,6,23,0.48)_50%,rgba(2,6,23,0.12)_85%,transparent_100%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-transparent to-slate-950/60 pointer-events-none" />
         </div>
 
         {/* Centered Hero Container — Sleek & Compact Width */}
@@ -878,21 +878,23 @@ export default function LandingPage() {
           <div className="max-w-[720px] text-center flex flex-col items-center w-full">
             
             {/* Eyebrow Badge — Vibrant Teal Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-teal-400/40 text-teal-300 text-xs sm:text-sm font-bold tracking-wide mb-3 sm:mb-4 backdrop-blur-md shadow-md mx-auto">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/85 border border-teal-400/50 text-teal-300 text-xs sm:text-sm font-bold tracking-wide mb-3 sm:mb-4 backdrop-blur-md shadow-[0_4px_16px_rgba(0,0,0,0.6)] mx-auto">
               <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0" />
               <span>Intelligent Commercial Workplace Platform</span>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-2xl sm:text-4xl lg:text-[44px] font-black tracking-tight text-white leading-tight mb-2.5 sm:mb-3 text-center">
-              One Platform.{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-200 to-emerald-400">
+            {/* Main Headline with High-Contrast Two-Line Layout & Solid Glowing Colors */}
+            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black tracking-tight leading-[1.08] mb-3 sm:mb-4 text-center">
+              <span className="block text-white [text-shadow:_0_2px_14px_rgba(0,0,0,0.9),_0_4px_28px_rgba(0,0,0,0.8)]">
+                One Platform.
+              </span>
+              <span className="block text-[#00D09C] [text-shadow:_0_2px_14px_rgba(0,0,0,0.9),_0_4px_28px_rgba(0,0,0,0.8)]">
                 Smarter Workplaces.
               </span>
             </h1>
 
-            {/* Subhead */}
-            <p className="text-xs sm:text-sm md:text-base font-medium text-slate-200 leading-relaxed max-w-xl mb-5 sm:mb-6 text-center mx-auto">
+            {/* Subhead with High Contrast */}
+            <p className="text-xs sm:text-sm md:text-base font-medium text-slate-100 leading-relaxed max-w-xl mb-5 sm:mb-6 text-center mx-auto [text-shadow:_0_1px_8px_rgba(0,0,0,0.95)]">
               Find verified commercial spaces, hire top facility management vendors, and automate building operations — all in one unified ecosystem.
             </p>
 
@@ -906,7 +908,7 @@ export default function LandingPage() {
                   className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "space"
                       ? "bg-[#0F8B7D] text-white shadow-lg"
-                      : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
+                      : "bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-850 border-t border-x border-white/20"
                   }`}
                 >
                   <Building2 size={14} className={activeSearchTab === "space" ? "text-white" : "text-teal-300"} />
@@ -918,7 +920,7 @@ export default function LandingPage() {
                   className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "vendor"
                       ? "bg-[#0F8B7D] text-white shadow-lg"
-                      : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
+                      : "bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-850 border-t border-x border-white/20"
                   }`}
                 >
                   <Wrench size={14} className={activeSearchTab === "vendor" ? "text-white" : "text-teal-300"} />
@@ -930,7 +932,7 @@ export default function LandingPage() {
                   className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     activeSearchTab === "managed"
                       ? "bg-[#0F8B7D] text-white shadow-lg"
-                      : "bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-800 border-t border-x border-white/20"
+                      : "bg-slate-950/80 backdrop-blur-md text-slate-300 hover:text-white hover:bg-slate-850 border-t border-x border-white/20"
                   }`}
                 >
                   <ShieldCheck size={14} className={activeSearchTab === "managed" ? "text-white" : "text-teal-300"} />
@@ -1141,22 +1143,27 @@ export default function LandingPage() {
 
             {/* Value Highlight Badges */}
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-[11px] sm:text-xs text-white font-bold mt-2 sm:mt-2.5">
-              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+              <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
                 <CheckCircle2 size={13} className="text-teal-400 shrink-0" />
                 <span>0% Broker Fee</span>
               </span>
-              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+              <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
                 <ShieldCheck size={13} className="text-teal-400 shrink-0" />
                 <span>100% Escrow Protected</span>
               </span>
-              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
+              <span className="inline-flex items-center gap-1.5 bg-slate-950/85 px-3.5 py-1.5 rounded-xl border border-white/20 text-white shadow-lg backdrop-blur-md">
                 <Lock size={13} className="text-teal-400 shrink-0" />
                 <span>SOC 2 Type II Certified</span>
               </span>
-              <span className="inline-flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-xl border border-white/20 text-white shadow-xs backdrop-blur-md">
-                <Award size={13} className="text-teal-400 shrink-0" />
-                <span>100% RBI Escrow Audited</span>
-              </span>
+            </div>
+
+            {/* Micro Trust Strip */}
+            <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-200/90 mt-2.5 [text-shadow:_0_1px_4px_rgba(0,0,0,0.95)]">
+              <span>AES-256 Vaulted</span>
+              <span className="text-teal-400/80">•</span>
+              <span>DPDP Act 2023 Compliant</span>
+              <span className="text-teal-400/80">•</span>
+              <span>100% RBI Escrow Audited</span>
             </div>
 
           </div>
