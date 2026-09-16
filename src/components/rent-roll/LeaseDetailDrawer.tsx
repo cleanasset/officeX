@@ -131,11 +131,11 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                     <div>
                       <span className="text-gray-500 text-[10px] uppercase font-semibold">Chargeable Area:</span>
-                      <p className="font-bold text-gray-900 font-mono">{lease.chargeableArea.toLocaleString()} sqft</p>
+                      <p className="font-bold text-gray-900 font-mono">{lease.chargeableArea?.toLocaleString() || "0"} sqft</p>
                     </div>
                     <div>
                       <span className="text-gray-500 text-[10px] uppercase font-semibold">Carpet Area:</span>
-                      <p className="font-bold text-gray-900 font-mono">{lease.carpetArea.toLocaleString()} sqft</p>
+                      <p className="font-bold text-gray-900 font-mono">{lease.carpetArea?.toLocaleString() || "0"} sqft</p>
                     </div>
                     <div>
                       <span className="text-gray-500 text-[10px] uppercase font-semibold">Annual Gross Rent:</span>

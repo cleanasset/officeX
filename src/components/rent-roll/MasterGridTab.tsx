@@ -277,8 +277,8 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
 
                   {/* Area */}
                   <td className="p-3.5 text-right font-mono text-gray-700 font-semibold">
-                    {lease.chargeableArea.toLocaleString()}
-                    <span className="text-[10px] text-gray-400 block font-normal">Carpet: {lease.carpetArea.toLocaleString()}</span>
+                    {lease.chargeableArea?.toLocaleString() || "0"}
+                    <span className="text-[10px] text-gray-400 block font-normal">Carpet: {lease.carpetArea?.toLocaleString() || "0"}</span>
                   </td>
 
                   {/* Base Rent */}
@@ -288,13 +288,13 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
 
                   {/* Base Rent PSF */}
                   <td className="p-3.5 text-right font-mono text-gray-700">
-                    ₹{lease.baseRentPsf}
+                    ₹{lease.baseRentPsf || 0}
                   </td>
 
                   {/* CAM Monthly */}
                   <td className="p-3.5 text-right font-mono text-gray-700">
                     {formatINR(lease.camMonthly)}
-                    <span className="text-[10px] text-gray-400 block font-normal">(₹{lease.camRatePsf} PSF)</span>
+                    <span className="text-[10px] text-gray-400 block font-normal">(₹{lease.camRatePsf || 0} PSF)</span>
                   </td>
 
                   {/* Utility Monthly */}
@@ -312,7 +312,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                   <td className="p-3.5 text-right font-mono text-gray-700">
                     <div className="font-bold text-gray-900">{formatINR(lease.securityDepositPaid)}</div>
                     <div className="text-[10px] text-gray-400 font-normal">
-                      Req: {formatINR(lease.securityDepositAmount)} ({lease.securityDepositMonths}m)
+                      Req: {formatINR(lease.securityDepositAmount || 0)} ({lease.securityDepositMonths || 6}m)
                     </div>
                   </td>
 

@@ -87,14 +87,18 @@ interface DashboardTabProps {
   onOpenGenerateInvoices: () => void;
 }
 
-export const formatINR = (val: number): string => {
-  if (val >= 10000000) {
-    return `₹${(val / 10000000).toFixed(2)} Cr`;
+export const formatINR = (val: number | undefined | null): string => {
+  if (val === undefined || val === null || isNaN(Number(val))) {
+    return "₹0";
   }
-  if (val >= 100000) {
-    return `₹${(val / 100000).toFixed(2)} L`;
+  const num = Number(val);
+  if (num >= 10000000) {
+    return `₹${(num / 10000000).toFixed(2)} Cr`;
   }
-  return `₹${val.toLocaleString("en-IN")}`;
+  if (num >= 100000) {
+    return `₹${(num / 100000).toFixed(2)} L`;
+  }
+  return `₹${num.toLocaleString("en-IN")}`;
 };
 
 export const DashboardTab: React.FC<DashboardTabProps> = ({
