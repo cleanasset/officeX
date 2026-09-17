@@ -615,7 +615,7 @@ export default function PropertyMarketplacePage() {
                     onClick={() => setSlideInOpen(true)}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white font-bold text-xs transition-all cursor-pointer"
                   >
-                    <span>Inquire</span>
+                    <span>Enquire</span>
                     <ArrowRight size={12} />
                   </button>
                 </div>

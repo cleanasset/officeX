@@ -96,40 +96,50 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* 2. Solutions Column (Direct labels without brackets) */}
+        {/* 2. Solutions Column (SaaS Modules & Marketplaces) */}
         <div>
           <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Building size={14} className="text-[#0F8B7D]" /> Solutions
+            <Building size={14} className="text-[#0F8B7D]" /> SaaS &amp; Marketplaces
           </h4>
           <ul className="mt-4 flex flex-col gap-2.5 text-xs text-slate-400 font-semibold">
             <li>
-              <Link href="/marketplace" className="hover:text-white transition-colors">
-                Discovery &amp; RFQs
+              <Link href="/operate/rent-roll" className="hover:text-white transition-colors">
+                Rent Roll &amp; CAM Billing
               </Link>
             </li>
             <li>
-              <Link href="/operate" className="hover:text-white transition-colors">
-                CAFM &amp; 52-Week PPM
+              <Link href="/operate/compliance" className="hover:text-white transition-colors">
+                Statutory Compliance Calendar
               </Link>
             </li>
             <li>
-              <Link href="/manage" className="hover:text-white transition-colors">
-                Rent Roll &amp; Statutory Compliance
+              <Link href="/operate/ppm" className="hover:text-white transition-colors">
+                52-Week PPM &amp; CAFM
               </Link>
             </li>
             <li>
-              <Link href="/intelligence" className="hover:text-white transition-colors">
-                NOI &amp; ESG Portfolio Intelligence
+              <Link href="/operate/visitors" className="hover:text-white transition-colors">
+                Visitor Flow &amp; Turnstiles
               </Link>
             </li>
             <li>
-              <Link href="/managed-services" className="hover:text-white transition-colors">
-                On-Ground Property &amp; Facility Management
+              <Link href="/operate/lease-crm" className="hover:text-white transition-colors">
+                Commercial Lease CRM
               </Link>
             </li>
             <li>
-              <Link href="/platform" className="hover:text-white transition-colors text-slate-400">
-                Platform Core &amp; Security Architecture
+              <Link href="/operate/helpdesk" className="hover:text-white transition-colors">
+                Tenant Helpdesk &amp; Experience
+              </Link>
+            </li>
+            <li>
+              <Link href="/marketplace" className="hover:text-white transition-colors text-teal-400">
+                Space Marketplace (CRE)
+              </Link>
+            </li>
+            <li>
+              <Link href="/fm-marketplace" className="hover:text-white transition-colors text-teal-400">
+                FM Vendor Marketplace
               </Link>
             </li>
           </ul>

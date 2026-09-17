@@ -232,13 +232,22 @@ export default function MarketplaceDualShowcase({
               </h2>
             </div>
 
-            <Link
-              href="/fm-marketplace"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap shrink-0 group"
-            >
-              <span>Explore all services</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-[#0F8B7D]" />
-            </Link>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Link
+                href="/vendor"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200/90 text-[#0F8B7D] hover:bg-[#0F8B7D] hover:text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              >
+                <span>Register as Vendor</span>
+                <ArrowRight size={12} />
+              </Link>
+              <Link
+                href="/fm-marketplace"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-[#0F8B7D] transition-colors whitespace-nowrap group"
+              >
+                <span>Explore all services</span>
+                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-[#0F8B7D]" />
+              </Link>
+            </div>
           </div>
 
           {/* 4 CARDS DISPLAY (COMPACT PROPORTIONS WITH PROMINENT IMAGE) */}

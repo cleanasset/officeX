@@ -48,6 +48,7 @@ export default function OperatePage() {
         "Automated bank nodal escrow settlement",
       ],
       image: "/mockup-rentroll-clean.png",
+      landingRoute: "/operate/rent-roll",
       route: "/properties/rent-roll",
     },
     {
@@ -62,6 +63,7 @@ export default function OperatePage() {
         "Real-time overstay & lobby occupancy alerts",
       ],
       image: "/mockup-visitors-clean.png",
+      landingRoute: "/operate/visitors",
       route: "/tenant/visitors",
     },
     {
@@ -76,6 +78,7 @@ export default function OperatePage() {
         "Tamper-proof REIT auditor repository",
       ],
       image: "/mockup-compliance-clean.png",
+      landingRoute: "/operate/compliance",
       route: "/compliance",
     },
     {
@@ -90,6 +93,7 @@ export default function OperatePage() {
         "Guaranteed 99.8% MEP uptime SLA clocks",
       ],
       image: "/mockup-ppm-clean.png",
+      landingRoute: "/operate/ppm",
       route: "/ops/ppm",
     },
     {
@@ -104,6 +108,7 @@ export default function OperatePage() {
         "Automated commercial LOI generator",
       ],
       image: "/mockup-crm-clean.png",
+      landingRoute: "/operate/lease-crm",
       route: "/leasing/pipeline",
     },
     {
@@ -118,6 +123,7 @@ export default function OperatePage() {
         "Integrated conference calendar with tenant billing",
       ],
       image: "/mockup-helpdesk-clean.png",
+      landingRoute: "/operate/helpdesk",
       route: "/tenant/tickets",
     },
   ];
@@ -127,72 +133,72 @@ export default function OperatePage() {
       <MarketingHeader />
 
       {/* ═══════════════════════════════════════════════════════════
-          HERO — Clean, punchy, product-first (No "Book a Demo" barrier)
+          1. HERO SECTION — Sunlit High-Tech SaaS Operations Command Center
           ═══════════════════════════════════════════════════════════ */}
-      {/* ═══════════════════════════════════════════════════════════
-          1. HERO SECTION — Clean, Authoritative, Enterprise CRE
-          ═══════════════════════════════════════════════════════════ */}
-      <section className="relative pt-14 pb-12 sm:pt-20 sm:pb-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80 overflow-hidden">
-        {/* Background Banner Image */}
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+      <section className="relative min-h-[560px] sm:min-h-[600px] lg:min-h-[640px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-12 sm:pt-16 pb-12 sm:pb-16 bg-[#F8FAFC] border-b border-slate-200/80">
+        {/* Background Banner Image — Displays All 6 SaaS Modules on Holographic Glass Displays */}
+        <div className="absolute inset-0 z-0 pointer-events-none select-none">
           <Image
-            src="/images/officex_ultra_bright_daylight_cre.jpg"
-            alt="OfficeX Operate CAFM & Smart Commercial Management"
+            src="/images/officex_all_saas_modules_banner.jpg"
+            alt="OfficeX Operate CAFM, Rent Roll, PPM & Smart Commercial SaaS Suite"
             fill
             priority
             unoptimized
-            className="object-cover object-center opacity-25"
+            className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white" />
+
+          {/* Clean Optical Clarity Scrim: Enhances text readability across the center frosted partition while keeping all 6 SaaS screens 100% sharp and readable */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_65%_at_50%_44%,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.50)_50%,transparent_100%)] pointer-events-none" />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 mb-5 tracking-wide shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-[#0D7B6C]" />
-            ENTERPRISE FACILITY MANAGEMENT &amp; CMMS
+        {/* Hero Content — Centered Perfectly Between the 6 SaaS Displays */}
+        <div className="relative z-10 max-w-2xl lg:max-w-[680px] mx-auto w-full px-4 sm:px-6 text-center flex flex-col items-center">
+          {/* Eyebrow Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-teal-200/90 text-[#0D7B6C] text-xs sm:text-sm font-extrabold tracking-wide mb-4 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-[#0D7B6C] animate-pulse shrink-0" />
+            <span>ENTERPRISE FACILITY MANAGEMENT &amp; CMMS</span>
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-[#0F172A] tracking-tight leading-[1.12] mb-5">
+          <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-black text-slate-950 tracking-tight leading-[1.12] mb-4 text-center">
             The Modern Operating System for{" "}
             <span className="text-[#0D7B6C] block sm:inline">Commercial Workspaces</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 leading-relaxed mb-8">
+          <p className="max-w-xl mx-auto text-xs sm:text-sm md:text-base text-slate-700 font-semibold leading-relaxed mb-7">
             One unified institutional platform for 52-week automated PPM, tenant rent roll,
             turnstile speed-gates, lease dealflow, and statutory compliance.
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-12">
+          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-8">
             <a
               href="#saas-modules"
-              className="px-6 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-semibold rounded-xl text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 inline-flex items-center gap-2 group cursor-pointer"
+              className="px-6 py-3 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg inline-flex items-center gap-2 group cursor-pointer"
             >
-              Explore SaaS Modules
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+              <span>Explore 6 SaaS Modules</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </a>
             <button
               onClick={() => openEnquiry("General Platform")}
-              className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm border border-slate-200 shadow-2xs transition-all cursor-pointer"
+              className="px-6 py-3 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl text-xs sm:text-sm border border-slate-300 shadow-xs transition-all cursor-pointer"
             >
               Request Walkthrough
             </button>
           </div>
 
           {/* Enterprise Client Trust Strip */}
-          <div className="pt-8 border-t border-slate-100 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
+          <div className="pt-4 text-center">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2.5">
               TRUSTED BY ASSET MANAGERS &amp; OPERATORS ACROSS 15M+ SQ.FT
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-7 sm:gap-10 text-xs sm:text-sm font-black tracking-wider text-slate-400">
-              <span className="hover:text-slate-700 transition-colors">PRESTIGE GROUP</span>
-              <span className="hover:text-slate-700 transition-colors">BRIGADE TECH</span>
-              <span className="hover:text-slate-700 transition-colors">EMBASSY PARKS</span>
-              <span className="hover:text-slate-700 transition-colors">BROOKFIELD</span>
-              <span className="hover:text-slate-700 transition-colors">MINDSPACE REIT</span>
+            <div className="flex flex-wrap items-center justify-center gap-5 sm:gap-8 text-xs sm:text-sm font-black tracking-wider text-slate-800">
+              <span className="hover:text-[#0D7B6C] transition-colors">PRESTIGE GROUP</span>
+              <span className="hover:text-[#0D7B6C] transition-colors">BRIGADE TECH</span>
+              <span className="hover:text-[#0D7B6C] transition-colors">EMBASSY PARKS</span>
+              <span className="hover:text-[#0D7B6C] transition-colors">BROOKFIELD</span>
+              <span className="hover:text-[#0D7B6C] transition-colors">MINDSPACE REIT</span>
             </div>
           </div>
         </div>
@@ -262,18 +268,25 @@ export default function OperatePage() {
                       {/* Direct Buttons */}
                       <div className="flex flex-wrap items-center gap-3 pt-2">
                         <Link
-                          href={product.route}
+                          href={product.landingRoute}
                           className="px-5 py-2.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
                         >
-                          <span>Launch {product.name} Module</span>
+                          <span>Explore {product.name} Service</span>
                           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                        </Link>
+                        <Link
+                          href={product.route}
+                          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <span>Live Portal Demo</span>
+                          <ArrowUpRight size={13} />
                         </Link>
                         <button
                           type="button"
                           onClick={() => openEnquiry(product.name)}
-                          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer"
+                          className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded-xl text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all cursor-pointer"
                         >
-                          Request Walkthrough
+                          Enquire
                         </button>
                       </div>
                     </div>
@@ -290,16 +303,24 @@ export default function OperatePage() {
                               <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
                             </div>
                             <span className="font-mono text-[11px] text-slate-500 ml-1">
-                              app.officex.in{product.route}
+                              officex.in{product.landingRoute}
                             </span>
                           </div>
-                          <Link
-                            href={product.route}
-                            className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider text-[#0D7B6C] bg-teal-50 border border-teal-200 hover:bg-teal-100 transition-colors flex items-center gap-1"
-                          >
-                            <span>OPEN LIVE</span>
-                            <ArrowUpRight size={11} />
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={product.landingRoute}
+                              className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 transition-colors"
+                            >
+                              SERVICE PAGE
+                            </Link>
+                            <Link
+                              href={product.route}
+                              className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider text-[#0D7B6C] bg-teal-50 border border-teal-200 hover:bg-teal-100 transition-colors flex items-center gap-1"
+                            >
+                              <span>LIVE DEMO</span>
+                              <ArrowUpRight size={11} />
+                            </Link>
+                          </div>
                         </div>
 
                         {/* Product Mockup Image */}

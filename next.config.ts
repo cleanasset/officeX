@@ -33,6 +33,45 @@ const nextConfig: NextConfig = {
         ]
       }
     ];
+  },
+  async redirects() {
+    return [
+      {
+        source: "/rent-roll",
+        destination: "/operate/rent-roll",
+        permanent: false,
+      },
+      {
+        source: "/compliance-calendar",
+        destination: "/operate/compliance",
+        permanent: false,
+      },
+      {
+        source: "/cafm",
+        destination: "/operate/ppm",
+        permanent: false,
+      },
+      {
+        source: "/ppm",
+        destination: "/operate/ppm",
+        permanent: false,
+      },
+      {
+        source: "/speed-gates",
+        destination: "/operate/visitors",
+        permanent: false,
+      },
+      {
+        source: "/lease-crm",
+        destination: "/operate/lease-crm",
+        permanent: false,
+      },
+      {
+        source: "/tenant-helpdesk",
+        destination: "/operate/helpdesk",
+        permanent: false,
+      },
+    ];
   }
 };
 

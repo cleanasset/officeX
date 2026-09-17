@@ -758,6 +758,11 @@ export default function LandingPage() {
                   <div className="text-xs font-bold text-slate-900">MEP, Electrical &amp; DG Sets</div>
                   <div className="text-[11px] text-slate-500 font-normal">Power backup &amp; electrical audits</div>
                 </Link>
+                <hr className="border-slate-100 my-1.5" />
+                <Link href="/vendor" className="block p-2 rounded-xl hover:bg-teal-50 transition-colors text-xs font-bold text-[#0F8B7D] flex items-center justify-between">
+                  <span>+ Register as Vendor</span>
+                  <span className="text-[9.5px] bg-teal-100 text-[#0F8B7D] px-1.5 py-0.5 rounded font-black">Escrow</span>
+                </Link>
               </div>
             </div>
           </div>
@@ -770,7 +775,15 @@ export default function LandingPage() {
             List Your Space
           </Link>
 
-          {/* 4. Company Dropdown */}
+          {/* 4. Register as Vendor */}
+          <Link
+            href="/vendor"
+            className="hover:text-[#0F8B7D] text-[#0F8B7D] font-bold transition-colors py-2 whitespace-nowrap"
+          >
+            Register as Vendor
+          </Link>
+
+          {/* 5. Company Dropdown */}
           <div className="relative group py-2">
             <button className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
               <span>Company</span>
@@ -804,7 +817,7 @@ export default function LandingPage() {
             onClick={() => openEnquiry()}
             className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
           >
-            <span>Inquire</span>
+            <span>Enquire</span>
           </button>
         </div>
 
@@ -836,6 +849,10 @@ export default function LandingPage() {
           <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Office Spaces</Link>
           <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services Marketplace</Link>
           <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">List Your Space</Link>
+          <Link href="/vendor" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D] flex items-center justify-between">
+            <span>Register as Vendor</span>
+            <span className="text-xs bg-teal-100 px-2 py-0.5 rounded text-[#0F8B7D] font-bold">Escrow Hub</span>
+          </Link>
           <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">About OfficeX</Link>
           <Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Resources &amp; Insights</Link>
           <Link href="/faq" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FAQs</Link>
@@ -849,7 +866,7 @@ export default function LandingPage() {
             onClick={() => { setMobileMenuOpen(false); openEnquiry(); }}
             className="w-full py-3 rounded-xl bg-[#0F8B7D] text-white font-bold text-center shadow-md cursor-pointer text-sm"
           >
-            Inquire
+            Enquire
           </button>
         </div>
       )}
@@ -1012,69 +1029,77 @@ export default function LandingPage() {
                 )}
 
                 {activeSearchTab === "vendor" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                    {/* Field 1: FM Service */}
-                    <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                        FM Service Needed
-                      </label>
-                      <select
-                        value={vendorCategory}
-                        onChange={(e) => setVendorCategory(e.target.value)}
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
-                      >
-                        <option value="HVAC Maintenance">HVAC &amp; Central Chillers AMC</option>
-                        <option value="Deep Cleaning">Commercial Cleaning &amp; Hygiene</option>
-                        <option value="Electrical Auditing">MEP &amp; DG Sets Audit</option>
-                        <option value="Pest Control">PSARA Manned Security</option>
-                        <option value="Fire & Safety NOC">Statutory Fire Safety NOC</option>
-                      </select>
-                    </div>
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                      {/* Field 1: FM Service */}
+                      <div className="sm:col-span-4 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                          FM Service Needed
+                        </label>
+                        <select
+                          value={vendorCategory}
+                          onChange={(e) => setVendorCategory(e.target.value)}
+                          className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        >
+                          <option value="HVAC Maintenance">HVAC &amp; Central Chillers AMC</option>
+                          <option value="Deep Cleaning">Commercial Cleaning &amp; Hygiene</option>
+                          <option value="Electrical Auditing">MEP &amp; DG Sets Audit</option>
+                          <option value="Pest Control">PSARA Manned Security</option>
+                          <option value="Fire & Safety NOC">Statutory Fire Safety NOC</option>
+                        </select>
+                      </div>
 
-                    {/* Field 2: City */}
-                    <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                        Location
-                      </label>
-                      <select
-                        value={vendorCity}
-                        onChange={(e) => setVendorCity(e.target.value)}
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
-                      >
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="Bengaluru">Bengaluru</option>
-                        <option value="Gurugram">Delhi NCR</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Hyderabad">Hyderabad</option>
-                        <option value="Ahmedabad">Ahmedabad</option>
-                      </select>
-                    </div>
+                      {/* Field 2: City */}
+                      <div className="sm:col-span-3 pr-0 sm:pr-3 sm:border-r border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                          Location
+                        </label>
+                        <select
+                          value={vendorCity}
+                          onChange={(e) => setVendorCity(e.target.value)}
+                          className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        >
+                          <option value="Mumbai">Mumbai</option>
+                          <option value="Bengaluru">Bengaluru</option>
+                          <option value="Gurugram">Delhi NCR</option>
+                          <option value="Pune">Pune</option>
+                          <option value="Hyderabad">Hyderabad</option>
+                          <option value="Ahmedabad">Ahmedabad</option>
+                        </select>
+                      </div>
 
-                    {/* Field 3: Scope */}
-                    <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                        Contract Term
-                      </label>
-                      <select
-                        className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
-                      >
-                        <option value="Annual AMC">Annual AMC Contract</option>
-                        <option value="One-Time Service">One-Time Service / Audit</option>
-                        <option value="Multi-Year IFM">Multi-Year IFM Scope</option>
-                      </select>
-                    </div>
+                      {/* Field 3: Scope */}
+                      <div className="sm:col-span-3">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                          Contract Term
+                        </label>
+                        <select
+                          className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate py-0.5"
+                        >
+                          <option value="Annual AMC">Annual AMC Contract</option>
+                          <option value="One-Time Service">One-Time Service / Audit</option>
+                          <option value="Multi-Year IFM">Multi-Year IFM Scope</option>
+                        </select>
+                      </div>
 
-                    {/* Search Button */}
-                    <div className="sm:col-span-2">
-                      <button
-                        onClick={handleLandingSearch}
-                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Wrench size={14} />
-                        <span>Find</span>
-                      </button>
+                      {/* Search Button */}
+                      <div className="sm:col-span-2">
+                        <button
+                          onClick={handleLandingSearch}
+                          className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0F8B7D] to-[#0D7A6E] hover:opacity-95 text-white font-black text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Wrench size={14} />
+                          <span>Find</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
+                      <span>Are you an engineering, MEP, security, or facility service provider?</span>
+                      <Link href="/vendor" className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-1">
+                        <span>Register as Vendor &rarr;</span>
+                      </Link>
+                    </div>
+                  </>
                 )}
 
                 {activeSearchTab === "managed" && (
@@ -1233,7 +1258,7 @@ export default function LandingPage() {
               },
               {
                 id: "managed",
-                title: "Property Management",
+                title: "Managed Services",
                 desc: "End-to-end PM & IFM with SLA guarantees.",
                 benefits: ["On-ground certified engineering teams", "Monthly auto-generated MIS reports", "100% open-book transparent billing"],
                 audience: "For: Owners without in-house FM",

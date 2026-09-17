@@ -71,18 +71,18 @@ const allPortals: PortalConfig[] = [
     accentBg: "bg-indigo-600",
     icon: Search
   },
-  // 3. Commercial Leasing Broker
+  // 3. Broker / Partner
   {
     id: "broker",
-    title: "Commercial Leasing Broker",
+    title: "Broker / Partner",
     subtitle: "Broker CRM & Deal Room",
     desc: "Manage corporate tenant mandates, match Grade-A spaces, generate LOIs, and track commissions.",
-    role: "Leasing Broker",
+    role: "Broker / Partner",
     category: "cre",
     defaultEmail: "broker@officex.in",
     dashboard: "/leasing",
     registerUrl: "/signup?role=leasing_broker",
-    registerText: "Register as Broker Partner",
+    registerText: "Register as Broker / Partner",
     badge: "1.5x Commissions",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     accentBg: "bg-amber-500",
