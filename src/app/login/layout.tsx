@@ -19,7 +19,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#0B1F3A', // Official OfficeX Brand Deep Navy
+  themeColor: '#2563EB',
 };
 
 export default function LoginLayout({
@@ -27,5 +27,9 @@ export default function LoginLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen bg-[#081325] text-slate-100 antialiased selection:bg-blue-600 selection:text-white">{children}</div>;
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+      {children}
+    </div>
+  );
 }

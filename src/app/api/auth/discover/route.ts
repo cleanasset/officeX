@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
-import { detectIdentifierType, normalizeIdentifier, maskIdentifier } from '@/lib/auth-utils';
+import {
+  detectIdentifierType,
+  normalizeIdentifier,
+  maskIdentifier,
+  ENTERPRISE_SSO_CONFIG,
+  findMockUser
+} from '@/lib/auth-utils';
 
 export const revalidate = 0;
 
-// In-memory rate limiting map for brute-force enumeration protection: IP -> { count, resetAt }
+// Rate limiting map: IP -> { count, resetAt }
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(ip: string): boolean {
@@ -15,29 +21,13 @@ function checkRateLimit(ip: string): boolean {
     return true;
   }
 
-  if (entry.count >= 20) {
-    return false; // Exceeded 20 requests/minute
+  if (entry.count >= 25) {
+    return false; // Exceeded 25 requests/minute
   }
 
   entry.count += 1;
   return true;
 }
-
-// Known enterprise domains configured for SSO demonstration
-const ENTERPRISE_SSO_DOMAINS = [
-  'tcs.com',
-  'infosys.com',
-  'wipro.com',
-  'hcl.com',
-  'jll.com',
-  'cbre.com',
-  'cushmanwakefield.com',
-  'colliers.com',
-  'knightfrank.com',
-  'dlf.in',
-  'prestigeconstructions.com',
-  'brookfieldproperties.com'
-];
 
 export async function POST(request: Request) {
   try {
@@ -69,37 +59,46 @@ export async function POST(request: Request) {
 
     const normalized = normalizeIdentifier(rawIdentifier);
     const masked = maskIdentifier(normalized);
+    const matchedUser = findMockUser(rawIdentifier);
 
-    // If email: check if domain has enterprise SSO enabled
+    // 1. If Email: check if domain has enterprise SSO enabled
     if (type === 'email') {
-      const domain = normalized.split('@')[1] || '';
-      const hasSSO = ENTERPRISE_SSO_DOMAINS.includes(domain.toLowerCase());
+      const domain = normalized.split('@')[1]?.toLowerCase() || '';
+      const ssoConfig = ENTERPRISE_SSO_CONFIG[domain];
 
-      if (hasSSO) {
+      if (ssoConfig) {
         return NextResponse.json({
           success: true,
           type: 'email',
           next: 'sso',
           domain: domain,
+          org_name: ssoConfig.orgName,
+          sso_provider: ssoConfig.provider,
+          sso_url: ssoConfig.ssoUrl,
           masked: masked,
-          sso_provider: 'Enterprise SAML / OIDC',
           message: `Single Sign-On (SSO) required for @${domain}`
         });
       }
 
-      // Default email flow: Password primary with OTP code option
+      // Check if user has password configured
+      const hasPassword = matchedUser ? matchedUser.hasPassword : true;
+      const requiresMfa = matchedUser ? matchedUser.requiresMfa : false;
+
       return NextResponse.json({
         success: true,
         type: 'email',
-        next: 'password',
+        next: hasPassword ? 'password' : 'code',
         channel: 'email',
         masked: masked,
-        has_password: true,
+        has_password: hasPassword,
+        mfa_required: requiresMfa,
         allow_code_fallback: true
       });
     }
 
-    // If phone: Mobile OTP flow (WhatsApp / SMS)
+    // 2. If Phone: Mobile OTP flow (WhatsApp first, SMS fallback)
+    const requiresMfa = matchedUser ? matchedUser.requiresMfa : false;
+
     return NextResponse.json({
       success: true,
       type: 'phone',
@@ -107,9 +106,9 @@ export async function POST(request: Request) {
       channel: 'whatsapp',
       fallback_channel: 'sms',
       masked: masked,
+      mfa_required: requiresMfa,
       cooldown_seconds: 30
     });
-
   } catch (error) {
     console.error('Error in /api/auth/discover:', error);
     return NextResponse.json(

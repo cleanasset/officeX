@@ -190,6 +190,46 @@ export async function POST(req: Request, { params }: { params: Promise<{ role: s
       });
     }
 
+    if (normalizedRole === "tenant" || normalizedRole === "corporate-tenant") {
+      const {
+        tenantCategory = "CORPORATE_ENTERPRISE",
+        employeeHeadcount = 250,
+        threeYearHeadcountProjection = 450,
+        targetAreaSqft = 35000,
+        fitoutPreference = "PLUG_AND_PLAY",
+        seatRatioPreference = "1:0.8_HYBRID",
+        targetCities = ["Mumbai", "Bengaluru"],
+        preferredMicroMarkets = ["BKC", "Lower Parel", "ORR"],
+        moveInTimeline = "30_TO_60_DAYS",
+        leaseTenureYears = 5,
+        billingNodalName = "Central Finance & Real Estate",
+        billingNodalEmail = "billing@enterprise.com",
+        tanNumber = "MUMB12345E"
+      } = profileData;
+
+      return NextResponse.json({
+        success: true,
+        role: "TENANT",
+        message: "Corporate Occupier / Enterprise Tenant profile saved.",
+        profile: {
+          organizationId,
+          tenantCategory,
+          employeeHeadcount,
+          threeYearHeadcountProjection,
+          targetAreaSqft,
+          fitoutPreference,
+          seatRatioPreference,
+          targetCities,
+          preferredMicroMarkets,
+          moveInTimeline,
+          leaseTenureYears,
+          billingNodalName,
+          billingNodalEmail,
+          tanNumber
+        }
+      });
+    }
+
     return NextResponse.json(
       { error: `Profile saving for role '${role}' is not supported yet.` },
       { status: 400 }
