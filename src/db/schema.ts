@@ -613,3 +613,338 @@ export const officexScores = pgTable("officex_scores", {
   recordedMonth: date("recorded_month").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
+
+// =========================================================================
+// REGISTRATION & ONBOARDING SUITE (V1.0 SPECIFICATION TABLES)
+// =========================================================================
+
+// Organization Memberships (User <-> Org <-> Role)
+export const organizationMemberships = pgTable("organization_memberships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  role: varchar("role", { length: 50 }).default("org_admin").notNull(), // org_admin, manager, member, authorized_signatory
+  designation: varchar("designation", { length: 100 }),
+  isAuthorizedSignatory: boolean("is_authorized_signatory").default(false).notNull(),
+  status: varchar("status", { length: 50 }).default("active").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Property Owner Profiles
+export const ownerProfiles = pgTable("owner_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  ownershipType: varchar("ownership_type", { length: 50 }).notNull(), // OWNER, CO_OWNER, DEVELOPER, INVESTOR, ASSET_MANAGER, AUTHORIZED_REPRESENTATIVE
+  assetTypes: jsonb("asset_types").notNull(), // ["OFFICE", "IT_PARK", "RETAIL", ...]
+  portfolioPropertyCount: integer("portfolio_property_count").default(0),
+  portfolioAreaSqft: decimal("portfolio_area_sqft", { precision: 14, scale: 2 }).default("0.00"),
+  operatingCities: jsonb("operating_cities").notNull(),
+  approxLeasableAreaSqft: decimal("approx_leasable_area_sqft", { precision: 14, scale: 2 }).default("0.00"),
+  approxOccupancyPct: decimal("approx_occupancy_pct", { precision: 5, scale: 2 }).default("0.00"),
+  servicesRequired: jsonb("services_required"),
+  ownershipProofRequired: boolean("ownership_proof_required").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Broker / Channel Partner Profiles
+export const brokerProfiles = pgTable("broker_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  brokerType: varchar("broker_type", { length: 50 }).notNull(), // INDIVIDUAL, FIRM, CHANNEL_PARTNER
+  services: jsonb("services").notNull(), // ["COMMERCIAL_LEASING", "OFFICE", "RETAIL", ...]
+  operatingCities: jsonb("operating_cities").notNull(),
+  operatingMicroMarkets: jsonb("operating_micro_markets"),
+  reraApplicable: boolean("rera_applicable").default(false).notNull(),
+  reraRegistrationNo: varchar("rera_registration_no", { length: 50 }),
+  yearsInBusiness: integer("years_in_business").default(0),
+  teamSizeBand: varchar("team_size_band", { length: 50 }),
+  clientTypes: jsonb("client_types"),
+  typicalDealSizeBand: varchar("typical_deal_size_band", { length: 50 }),
+  transactionsPerYearBand: varchar("transactions_per_year_band", { length: 50 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Facility & Service Vendor Profiles
+export const vendorProfiles = pgTable("vendor_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  vendorCategory: jsonb("vendor_category").notNull(), // ["HOUSEKEEPING", "SECURITY", "MEP", "HVAC", ...]
+  serviceSubcategories: jsonb("service_subcategories"),
+  citiesServed: jsonb("cities_served").notNull(),
+  buildingSegments: jsonb("building_segments").notNull(), // ["OFFICE", "IT_PARK", "RETAIL", ...]
+  yearsInBusiness: integer("years_in_business").default(0).notNull(),
+  employeeCount: integer("employee_count").default(0),
+  technicalStaffCount: integer("technical_staff_count").default(0),
+  activeClientCount: integer("active_client_count").default(0),
+  managedAreaSqft: decimal("managed_area_sqft", { precision: 14, scale: 2 }).default("0.00"),
+  insuranceAvailable: boolean("insurance_available").default(false).notNull(),
+  pfRegistration: boolean("pf_registration").default(false),
+  esicRegistration: boolean("esic_registration").default(false),
+  isoCertifications: jsonb("iso_certifications"),
+  licensesCertifications: jsonb("licenses_certifications"),
+  rfpResponseEnabled: boolean("rfp_response_enabled").default(true).notNull(),
+  bankDetailsStatus: varchar("bank_details_status", { length: 50 }).default("pending").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Document Master (PAN, GSTIN, CIN, RERA, Ownership Proof, etc.)
+export const documents = pgTable("documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  documentType: varchar("document_type", { length: 50 }).notNull(), // PAN, GST_CERTIFICATE, CIN_CERTIFICATE, RERA, OWNERSHIP_PROOF, AUTHORIZATION, etc.
+  documentNumber: varchar("document_number", { length: 100 }),
+  issueDate: date("issue_date"),
+  expiryDate: date("expiry_date"),
+  fileUri: text("file_uri").notNull(),
+  mimeType: varchar("mime_type", { length: 50 }).default("application/pdf").notNull(),
+  fileSizeBytes: integer("file_size_bytes").default(0).notNull(),
+  verificationStatus: varchar("verification_status", { length: 50 }).default("pending").notNull(), // pending, verified, rejected, expired
+  reviewerId: uuid("reviewer_id").references(() => users.id),
+  reviewComment: text("review_comment"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// KYC Cases (K0 to K5 State Machine)
+export const kycCases = pgTable("kyc_cases", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  stage: varchar("stage", { length: 50 }).default("K0_CONTACT").notNull(), // K0_CONTACT, K1_BUSINESS, K2_IDENTITY, K3_PROPERTY, K4_VENDOR, K5_PAYMENT
+  status: varchar("status", { length: 50 }).default("submitted").notNull(), // not_started, in_progress, submitted, verified, rejected, resubmitted
+  submissionNotes: text("submission_notes"),
+  reviewerId: uuid("reviewer_id").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewerNotes: text("reviewer_notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VISITOR MANAGEMENT DOMAIN (Specification Section 6)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const visitors = pgTable("visitors", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+  visitorType: varchar("visitor_type", { length: 50 }).default("guest").notNull(), // guest, client, candidate, contractor, vendor, delivery, service_provider, recurring, vip, emergency
+  name: varchar("name", { length: 150 }).notNull(),
+  company: varchar("company", { length: 150 }),
+  mobile: varchar("mobile", { length: 30 }).notNull(),
+  email: varchar("email", { length: 150 }),
+  photoRef: text("photo_ref"),
+  identityType: varchar("identity_type", { length: 50 }),
+  identityRefToken: varchar("identity_ref_token", { length: 100 }),
+  consentFlag: boolean("consent_flag").default(true).notNull(),
+  status: varchar("status", { length: 50 }).default("active").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+export const visits = pgTable("visits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  visitorId: uuid("visitor_id").references(() => visitors.id, { onDelete: "cascade" }).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  buildingId: uuid("building_id"),
+  zoneId: varchar("zone_id", { length: 100 }),
+  hostUserId: uuid("host_user_id").references(() => users.id),
+  tenantId: uuid("tenant_id").references(() => tenants.id),
+  purpose: varchar("purpose", { length: 255 }).notNull(),
+  visitStart: timestamp("visit_start", { withTimezone: true }).notNull(),
+  visitEnd: timestamp("visit_end", { withTimezone: true }).notNull(),
+  approvalStatus: varchar("approval_status", { length: 50 }).default("approved").notNull(), // pending, approved, rejected, delegated
+  checkinAt: timestamp("checkin_at", { withTimezone: true }),
+  checkoutAt: timestamp("checkout_at", { withTimezone: true }),
+  status: varchar("status", { length: 50 }).default("pre_registered").notNull(), // pre_registered, approved, checked_in, checked_out, overstay, cancelled, denied
+  riskLevel: varchar("risk_level", { length: 20 }).default("low").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+export const vehicles = pgTable("vehicles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  visitId: uuid("visit_id").references(() => visits.id, { onDelete: "cascade" }).notNull(),
+  registrationNo: varchar("registration_no", { length: 50 }).notNull(),
+  type: varchar("type", { length: 50 }).default("FOUR_WHEELER").notNull(),
+  parkingSlot: varchar("parking_slot", { length: 50 }),
+  inAt: timestamp("in_at", { withTimezone: true }),
+  outAt: timestamp("out_at", { withTimezone: true })
+});
+
+export const visitorApprovals = pgTable("visitor_approvals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  visitId: uuid("visit_id").references(() => visits.id, { onDelete: "cascade" }).notNull(),
+  approverId: uuid("approver_id").references(() => users.id).notNull(),
+  decision: varchar("decision", { length: 50 }).notNull(), // approved, rejected, modified, delegated
+  reason: text("reason"),
+  timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow().notNull()
+});
+
+export const accessPasses = pgTable("access_passes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  visitId: uuid("visit_id").references(() => visits.id, { onDelete: "cascade" }).notNull(),
+  passType: varchar("pass_type", { length: 50 }).default("DIGITAL_QR").notNull(),
+  qrToken: varchar("qr_token", { length: 255 }).unique().notNull(),
+  validFrom: timestamp("valid_from", { withTimezone: true }).notNull(),
+  validTo: timestamp("valid_to", { withTimezone: true }).notNull(),
+  accessZones: text("access_zones").default("LOBBY").notNull(),
+  issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
+  returnedAt: timestamp("returned_at", { withTimezone: true }),
+  status: varchar("status", { length: 50 }).default("active").notNull()
+});
+
+export const accessEvents = pgTable("access_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  passId: uuid("pass_id").references(() => accessPasses.id),
+  visitorId: uuid("visitor_id").references(() => visitors.id),
+  accessPoint: varchar("access_point", { length: 100 }).notNull(),
+  direction: varchar("direction", { length: 20 }).default("IN").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow().notNull(),
+  sourceSystem: varchar("source_system", { length: 100 }).default("GUNNEBO_OPTICAL").notNull(),
+  result: varchar("result", { length: 50 }).default("GRANTED").notNull()
+});
+
+export const watchlist = pgTable("watchlist", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+  identityReference: varchar("identity_reference", { length: 150 }).notNull(),
+  reason: text("reason").notNull(),
+  activeFrom: timestamp("active_from", { withTimezone: true }).defaultNow().notNull(),
+  activeTo: timestamp("active_to", { withTimezone: true }),
+  approvalStatus: varchar("approval_status", { length: 50 }).default("active").notNull()
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPLIANCE MANAGEMENT DOMAIN (Specification Section 6)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const complianceObligations = pgTable("compliance_obligations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  subcategory: varchar("subcategory", { length: 100 }),
+  authority: varchar("authority", { length: 150 }).notNull(),
+  requirement: text("requirement").notNull(),
+  frequency: varchar("frequency", { length: 50 }).default("ANNUAL").notNull(),
+  ownerId: uuid("owner_id").references(() => users.id),
+  criticality: varchar("criticality", { length: 20 }).default("HIGH").notNull(),
+  evidenceRequired: boolean("evidence_required").default(true).notNull(),
+  status: varchar("status", { length: 50 }).default("active").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+export const complianceSchedules = pgTable("compliance_schedules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  obligationId: uuid("obligation_id").references(() => complianceObligations.id, { onDelete: "cascade" }).notNull(),
+  dueDate: date("due_date").notNull(),
+  reminderDays: integer("reminder_days").default(30).notNull(),
+  recurrenceRule: varchar("recurrence_rule", { length: 100 }),
+  status: varchar("status", { length: 50 }).default("upcoming").notNull()
+});
+
+export const complianceEvidence = pgTable("compliance_evidence", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  obligationId: uuid("obligation_id").references(() => complianceObligations.id, { onDelete: "cascade" }).notNull(),
+  documentId: uuid("document_id").references(() => documents.id),
+  documentTitle: varchar("document_title", { length: 255 }).notNull(),
+  fileUri: text("file_uri"),
+  issueDate: date("issue_date"),
+  expiryDate: date("expiry_date"),
+  verificationStatus: varchar("verification_status", { length: 50 }).default("pending").notNull(),
+  verifiedBy: uuid("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at", { withTimezone: true })
+});
+
+export const inspections = pgTable("inspections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  assetId: uuid("asset_id"),
+  vendorId: uuid("vendor_id"),
+  type: varchar("type", { length: 100 }).notNull(),
+  scheduledDate: date("scheduled_date").notNull(),
+  inspectorId: uuid("inspector_id").references(() => users.id),
+  status: varchar("status", { length: 50 }).default("scheduled").notNull(),
+  score: decimal("score", { precision: 5, scale: 2 }),
+  completedAt: timestamp("completed_at", { withTimezone: true })
+});
+
+export const inspectionFindings = pgTable("inspection_findings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  inspectionId: uuid("inspection_id").references(() => inspections.id, { onDelete: "cascade" }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  severity: varchar("severity", { length: 50 }).default("medium").notNull(),
+  observation: text("observation").notNull(),
+  evidenceUri: text("evidence_uri"),
+  capaId: uuid("capa_id")
+});
+
+export const incidents = pgTable("incidents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  location: varchar("location", { length: 255 }).notNull(),
+  incidentType: varchar("incident_type", { length: 100 }).notNull(),
+  severity: varchar("severity", { length: 50 }).default("medium").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  reportedAt: timestamp("reported_at", { withTimezone: true }).defaultNow().notNull(),
+  personsInvolved: text("persons_involved"),
+  description: text("description").notNull(),
+  immediateAction: text("immediate_action").notNull(),
+  status: varchar("status", { length: 50 }).default("open").notNull()
+});
+
+export const capa = pgTable("capa", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceType: varchar("source_type", { length: 50 }).notNull(),
+  sourceId: varchar("source_id", { length: 100 }),
+  actionType: varchar("action_type", { length: 50 }).default("CORRECTIVE").notNull(),
+  action: text("action").notNull(),
+  ownerId: uuid("owner_id").references(() => users.id),
+  dueDate: date("due_date").notNull(),
+  priority: varchar("priority", { length: 20 }).default("high").notNull(),
+  evidenceUri: text("evidence_uri"),
+  verificationStatus: varchar("verification_status", { length: 50 }).default("pending").notNull(),
+  closedAt: timestamp("closed_at", { withTimezone: true })
+});
+
+export const permits = pgTable("permits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  vendorId: uuid("vendor_id"),
+  contractor: varchar("contractor", { length: 150 }).notNull(),
+  permitType: varchar("permit_type", { length: 100 }).notNull(),
+  riskControls: text("risk_controls").notNull(),
+  validFrom: timestamp("valid_from", { withTimezone: true }).notNull(),
+  validTo: timestamp("valid_to", { withTimezone: true }).notNull(),
+  approverId: uuid("approver_id").references(() => users.id),
+  status: varchar("status", { length: 50 }).default("pending_approval").notNull()
+});
+
+export const risks = pgTable("risks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  statement: text("statement").notNull(),
+  likelihood: integer("likelihood").default(3).notNull(),
+  impact: integer("impact").default(3).notNull(),
+  inherentScore: integer("inherent_score").default(9).notNull(),
+  mitigation: text("mitigation").notNull(),
+  residualScore: integer("residual_score").default(4).notNull(),
+  ownerId: uuid("owner_id").references(() => users.id),
+  status: varchar("status", { length: 50 }).default("active").notNull()
+});
+
+export const auditFindings = pgTable("audit_findings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  auditId: varchar("audit_id", { length: 100 }).notNull(),
+  severity: varchar("severity", { length: 50 }).default("medium").notNull(),
+  finding: text("finding").notNull(),
+  ownerId: uuid("owner_id").references(() => users.id),
+  dueDate: date("due_date").notNull(),
+  capaId: uuid("capa_id"),
+  closureStatus: varchar("closure_status", { length: 50 }).default("open").notNull()
+});
+
+

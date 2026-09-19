@@ -8,6 +8,7 @@ import {
   ShieldCheck, CheckCheck, Wallet, Check, Layers
 } from "lucide-react";
 import { getPublicEnquiries, PublicEnquiry } from "@/lib/leasingStore";
+import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
 
 export default function LeasingDashboard() {
   const [liveLeads, setLiveLeads] = useState<any[]>([]);
@@ -143,6 +144,9 @@ export default function LeasingDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* S12 Profile Completion & Progressive KYC Meter (v1.0 Spec Section 15) */}
+      <ProfileCompletionMeter role="broker" />
 
       {/* 100% Clickable KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { StatutoryCertificate } from "@/lib/compliance-engine";
+import ComplianceOperationsCenter from "@/components/compliance/ComplianceOperationsCenter";
 
 export default function ComplianceTrackerDashboard() {
+  const [suiteMode, setSuiteMode] = useState<"operations_center" | "statutory_ledger">("operations_center");
   const [viewMode, setViewMode] = useState<"calendar" | "table" | "category">("calendar");
   const [calendarSubView, setCalendarSubView] = useState<"split" | "full" | "roadmap">("split");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -342,27 +344,48 @@ export default function ComplianceTrackerDashboard() {
         </div>
       )}
 
-      {/* Sibling Calendar Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
-        <Link
-          href="/properties/compliance"
-          className="px-4 py-2.5 text-xs font-black rounded-xl border transition-all flex items-center gap-2 bg-gradient-to-r from-teal-50 to-emerald-50 text-[#0F8B7D] border-teal-200/90 shadow-xs"
-        >
-          <ShieldCheck size={15} className="text-[#0F8B7D]" />
-          <span>Statutory Compliance &amp; NOC Calendar</span>
-          <span className="px-2 py-0.5 rounded-full bg-teal-100/80 text-[10px] text-teal-900 font-black ml-1">
-            {certificates.length} Registers
-          </span>
-        </Link>
+      {/* Sibling Calendar Tabs Navigation & Operations Suite Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setSuiteMode("operations_center")}
+            className={`px-4 py-2.5 text-xs font-black rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
+              suiteMode === "operations_center"
+                ? "bg-gradient-to-r from-teal-50 to-emerald-50 text-[#0F8B7D] border-teal-200/90 shadow-xs"
+                : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200"
+            }`}
+          >
+            <ShieldCheck size={15} className="text-[#0F8B7D]" />
+            <span>Compliance Operations Center (CM-01 to CM-16)</span>
+          </button>
+          <button
+            onClick={() => setSuiteMode("statutory_ledger")}
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
+              suiteMode === "statutory_ledger"
+                ? "bg-gradient-to-r from-teal-50 to-emerald-50 text-[#0F8B7D] border-teal-200/90 shadow-xs"
+                : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200"
+            }`}
+          >
+            <FileText size={15} />
+            <span>Statutory Certificate Ledger</span>
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-700 font-bold ml-1">
+              {certificates.length}
+            </span>
+          </button>
+        </div>
         <Link
           href="/ops/ppm"
-          className="px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-slate-200"
+          className="px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-slate-200 self-start sm:self-auto"
         >
           <CalendarIcon size={15} />
           <span>52-Week Equipment PPM Schedule</span>
         </Link>
       </div>
 
+      {suiteMode === "operations_center" ? (
+        <ComplianceOperationsCenter portalRole="owner" defaultProperty={propertyName} />
+      ) : (
+        <>
       {/* Hero Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-br from-white via-slate-50/50 to-teal-50/20 border border-slate-200/80 rounded-3xl p-6 shadow-xs">
         <div className="flex items-start sm:items-center gap-4">
@@ -1773,6 +1796,8 @@ export default function ComplianceTrackerDashboard() {
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

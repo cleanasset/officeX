@@ -20,6 +20,7 @@ import {
   Activity
 } from "lucide-react";
 import Link from "next/link";
+import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
 
 interface PropertyDashboardClientProps {
   initialProperties: any[];
@@ -200,6 +201,9 @@ export default function PropertyDashboardClient({
           </Link>
         </div>
       </div>
+
+      {/* S12 Profile Completion & Progressive KYC Meter (v1.0 Spec Section 15) */}
+      <ProfileCompletionMeter role="owner" />
 
       {/* Broker Partnership Alert Banner (Client Page 5 Recommended) */}
       <div className="bg-purple-50/80 border border-purple-200/90 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-purple-900 shadow-2xs">

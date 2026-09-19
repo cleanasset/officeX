@@ -17,321 +17,423 @@ import {
   Lock, 
   Phone, 
   Briefcase,
-  CheckCircle 
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  KeyRound,
+  ArrowLeft
 } from "lucide-react";
 
-function SignupForm() {
+function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const paramRole = searchParams.get("role");
-  const paramIntent = searchParams.get("intent");
-  
+  const initialRole = searchParams.get("role") || searchParams.get("intent") || "owner";
+
+  // Step state: 1 = Create Account (S02), 2 = OTP Verification (S03)
+  const [step, setStep] = useState<1 | 2>(1);
+
+  // Form Fields (S02)
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState("property_owner");
-  const [error, setError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(true);
+
+  // OTP Fields (S03)
+  const [otp, setOtp] = useState("");
+  const [otpHint, setOtpHint] = useState<string | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(30);
+
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Countdown timer for OTP resend
   useEffect(() => {
-    if (paramRole) {
-      setSelectedRole(paramRole);
-    } else if (paramIntent === "broker") {
-      setSelectedRole("leasing_broker");
-    } else if (paramIntent === "list") {
-      setSelectedRole("property_owner");
-    } else if (paramIntent === "find") {
-      setSelectedRole("tenant_admin");
+    let timer: NodeJS.Timeout;
+    if (step === 2 && resendCountdown > 0) {
+      timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
     }
-  }, [paramRole, paramIntent]);
+    return () => clearTimeout(timer);
+  }, [step, resendCountdown]);
 
-  const roles = [
-    {
-      id: "leasing_broker",
-      title: "Leasing Broker (Channel Partner)",
-      desc: "Commercial real estate agent, find office spaces, close leasing deals & earn 45-day commissions.",
-      icon: Handshake,
-      redirect: "/leasing",
-      badge: "1.5x Commission"
-    },
-    {
-      id: "property_owner",
-      title: "Property Owner (Landlord)",
-      desc: "Own or manage commercial buildings, list vacant floors, track rent roll & tenant yields.",
-      icon: Building,
-      redirect: "/properties",
-      badge: "Zero Listing Fee"
-    },
-    {
-      id: "tenant_admin",
-      title: "Corporate Tenant (Occupier)",
-      desc: "Rent office space, book meeting rooms, issue employee & visitor QR passes.",
-      icon: Users,
-      redirect: "/tenant",
-      badge: "100% Free Search"
-    },
-    {
-      id: "facility_manager",
-      title: "Facility Manager (Ops)",
-      desc: "Manage building operations, maintenance PPMs, statutory compliance.",
-      icon: Settings,
-      redirect: "/ops",
-      badge: "Ops Desk"
-    },
-    {
-      id: "service_vendor",
-      title: "Service Vendor (FM Partner)",
-      desc: "Provide HVAC, MEP, cleaning, or security services; bid on RFQs & receive escrow.",
-      icon: Truck,
-      redirect: "/vendor",
-      badge: "FM Vendor"
-    }
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !companyName || !password) {
-      setError("Please fill in all required fields.");
+    setError(null);
+
+    if (!fullName.trim() || !email.trim() || !mobileNumber.trim() || !password) {
+      setError("Please fill in all mandatory fields (Name, Work Email, Mobile, Password).");
+      return;
+    }
+
+    const cleanMobile = mobileNumber.replace(/\D/g, "");
+    if (cleanMobile.length !== 10) {
+      setError("Please enter a valid 10-digit Indian mobile number.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please re-enter.");
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError("You must accept the Terms of Service and Privacy Policy.");
       return;
     }
 
     setIsLoading(true);
-    setError("");
-
-    const chosenRole = roles.find(r => r.id === selectedRole) || roles[0];
-
-    // Map signup roles to database enum roles
-    const dbRoleMap: Record<string, string> = {
-      property_owner: "property_manager",
-      leasing_broker: "broker",
-      facility_manager: "facility_manager",
-      tenant_admin: "tenant_admin",
-      service_vendor: "vendor_admin"
-    };
 
     try {
-      // Create user in real Supabase PostgreSQL database
-      const res = await fetch("/api/users", {
+      const res = await fetch("/api/v1/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
-          fullName: fullName,
-          role: dbRoleMap[selectedRole] || "tenant_admin",
-          password: password
+          mobileNumber: cleanMobile,
+          password
         })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create account. Please try again.");
+        setError(data.error || "Account creation failed.");
         setIsLoading(false);
         return;
       }
 
-      // Store session in sessionStorage and localStorage for client-side use
+      // Store initial session
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("officex_session_active", "1");
-        sessionStorage.setItem("officex_user_id", data.user?.id || "");
-        sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
-        sessionStorage.setItem("officex_user_name", fullName);
-        sessionStorage.setItem("officex_user_role", selectedRole);
-
-        localStorage.setItem("officex_user_id", data.user?.id || "");
+        localStorage.setItem("officex_user_name", fullName.trim());
         localStorage.setItem("officex_user_email", email.trim().toLowerCase());
-        localStorage.setItem("officex_user_name", fullName);
-        localStorage.setItem("officex_user_company", companyName);
-        localStorage.setItem("officex_user_role", selectedRole);
-        localStorage.setItem("officex_mode", "clean_test");
-
-        // Initialize empty arrays for the brand-new account
-        localStorage.setItem("officex_user_properties", JSON.stringify([]));
-        localStorage.setItem("officex_user_partnerships", JSON.stringify([]));
-        document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+        localStorage.setItem("officex_user_mobile", cleanMobile);
+        localStorage.setItem("officex_user_id", data.userId || `usr_${Date.now()}`);
+        if (initialRole) {
+          localStorage.setItem("officex_intended_role", initialRole);
+        }
       }
 
-      // Redirect to the chosen portal
+      setOtpHint(data.otpHint || "482910");
+      setStep(2);
+      setResendCountdown(30);
+      setSuccessMsg("Verification code sent to your email and mobile.");
+    } catch (err: any) {
+      console.error("Register error:", err);
+      setError("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!otp || otp.trim().length !== 6) {
+      setError("Please enter the complete 6-digit verification OTP.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/v1/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          mobileNumber: mobileNumber.replace(/\D/g, ""),
+          otp: otp.trim()
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "OTP verification failed.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("officex_session_active", "1");
+        sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+        localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+      }
+
+      setSuccessMsg("Contact verified! Redirecting to business onboarding...");
       setTimeout(() => {
-        router.push(chosenRole.redirect);
-      }, 600);
-    } catch (err) {
-      console.error("Signup error:", err);
-      setError("Network error. Please check your connection and try again.");
+        router.push(`/onboarding?role=${encodeURIComponent(initialRole)}`);
+      }, 1000);
+    } catch (err: any) {
+      console.error("OTP error:", err);
+      setError("Verification failed. Please retry.");
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans p-4 sm:p-6 py-12">
-      <div className="w-full max-w-2xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
-        
-        {/* Top Header Panel */}
-        <div className="p-6 sm:p-8 border-b border-gray-100 flex flex-col items-center gap-3 bg-gray-50/60 text-center">
-          <div className="flex items-center gap-3">
-            <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={36} height={36} className="object-contain" priority />
-            <Image src="/name-removebg-preview.png" alt="OfficeX" width={115} height={23} className="object-contain" priority />
+    <div className="min-h-screen bg-[#071322] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans text-slate-100 relative overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#0F8B7D]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        {/* Brand Lockup */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0F8B7D] to-teal-400 flex items-center justify-center font-black text-slate-900 shadow-lg">
+            OX
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Create Your Account</h1>
-            <p className="text-xs text-gray-500 font-medium mt-1">
-              Join the unified operating platform for commercial real estate &amp; workplace management.
-            </p>
-          </div>
+          <span className="text-2xl font-black tracking-tight text-white">OfficeX</span>
         </div>
 
-        {/* Signup Form */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 flex flex-col gap-6">
+        <div className="text-center">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-950/60 px-3 py-1 rounded-full border border-teal-800/60">
+            {step === 1 ? "Step 02: Account Registration" : "Step 03: Contact Verification"}
+          </span>
+          <h2 className="text-2xl font-black text-white tracking-tight mt-2">
+            {step === 1 ? "Create Your OfficeX Account" : "Verify Email & Mobile"}
+          </h2>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            {step === 1
+              ? "Join India's unified commercial real estate & facility management platform."
+              : `Enter the 6-digit verification code sent to ${email || "your email"}.`}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="bg-[#0B1A2C] py-8 px-6 sm:px-8 rounded-3xl border border-slate-800/80 shadow-2xl space-y-6">
           {error && (
-            <div role="alert" className="p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-500 font-semibold text-xs leading-normal">
-              ⚠ {error}
+            <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/80 text-rose-300 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle size={16} className="shrink-0 text-rose-400" />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* 1. Account Role Selection */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              1. Choose Your Role / Workspace Type *
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {roles.map((r) => {
-                const Icon = r.icon;
-                const isSelected = selectedRole === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setSelectedRole(r.id)}
-                    className={`p-3.5 rounded-2xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
-                      isSelected
-                        ? "bg-teal-50/70 border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-xs"
-                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? "bg-[#0F8B7D] text-white" : "bg-gray-100 text-gray-600"
-                    }`}>
-                      <Icon size={16} />
-                    </div>
-                    <div className="flex flex-col overflow-hidden">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-xs font-bold ${isSelected ? "text-[#0F8B7D]" : "text-gray-900"}`}>
-                          {r.title}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-gray-500 font-medium leading-tight mt-0.5 line-clamp-2">
-                        {r.desc}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+          {successMsg && (
+            <div className="p-3.5 rounded-xl bg-teal-950/50 border border-teal-700/80 text-teal-300 text-xs font-semibold flex items-center gap-2">
+              <CheckCircle size={16} className="shrink-0 text-teal-400" />
+              <span>{successMsg}</span>
             </div>
-          </div>
+          )}
 
-          {/* 2. Personal & Company Credentials */}
-          <div className="flex flex-col gap-4">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              2. Your Details &amp; Company Info *
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Full Name</label>
+          {/* S02: CREATE ACCOUNT FORM */}
+          {step === 1 ? (
+            <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                  FULL LEGAL NAME *
+                </label>
                 <div className="relative">
+                  <User size={15} className="absolute left-3.5 top-3 text-slate-500" />
                   <input
                     type="text"
+                    required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Rajesh Mehta"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
-                    required
+                    placeholder="e.g. Vikramaditya Singhal"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-medium focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]"
                   />
-                  <User size={14} className="absolute left-3 top-3 text-gray-400" />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Company / Agency Name</label>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                  WORK EMAIL ADDRESS *
+                </label>
                 <div className="relative">
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Knight Frank / Godrej / Acme Corp"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
-                    required
-                  />
-                  <Briefcase size={14} className="absolute left-3 top-3 text-gray-400" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Work Email Address</label>
-                <div className="relative">
+                  <Mail size={15} className="absolute left-3.5 top-3 text-slate-500" />
                   <input
                     type="email"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. rajesh@agency.com"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
-                    required
+                    placeholder="e.g. vikram@apexcapital.in"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-medium focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]"
                   />
-                  <Mail size={14} className="absolute left-3 top-3 text-gray-400" />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Contact Phone</label>
-                <div className="relative">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                  MOBILE NUMBER * (INDIA +91)
+                </label>
+                <div className="relative flex">
+                  <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-700 bg-slate-800 text-slate-400 text-xs font-bold">
+                    +91
+                  </span>
                   <input
                     type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. +91 98201 12345"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
-                  />
-                  <Phone size={14} className="absolute left-3 top-3 text-gray-400" />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Create Password</label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Set a secure password"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#0F8B7D] text-xs bg-white"
                     required
+                    value={mobileNumber}
+                    onChange={(e) => setMobileNumber(e.target.value)}
+                    placeholder="9820012345"
+                    maxLength={10}
+                    className="w-full px-3.5 py-2.5 rounded-r-xl border border-slate-700 bg-slate-900/80 text-white font-medium focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]"
                   />
-                  <Lock size={14} className="absolute left-3 top-3 text-gray-400" />
                 </div>
               </div>
-            </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                    PASSWORD *
+                  </label>
+                  <div className="relative">
+                    <Lock size={15} className="absolute left-3.5 top-3 text-slate-500" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-medium focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                    CONFIRM PASSWORD *
+                  </label>
+                  <div className="relative">
+                    <Lock size={15} className="absolute left-3.5 top-3 text-slate-500" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 text-white font-medium focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#0F8B7D] mt-0.5 cursor-pointer"
+                />
+                <label htmlFor="terms" className="text-[11px] text-slate-400 leading-tight cursor-pointer">
+                  I agree to the <Link href="/terms" className="text-[#0F8B7D] hover:underline font-bold">Terms of Service</Link> and <Link href="/privacy" className="text-[#0F8B7D] hover:underline font-bold">Privacy Policy</Link>.
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-teal-900/40 transition-all cursor-pointer mt-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Creating Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Create Account & Verify</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* S03: OTP VERIFICATION FORM */
+            <form onSubmit={handleVerifyOtp} className="space-y-5 text-xs">
+              <div className="p-4 rounded-2xl bg-teal-950/40 border border-teal-800/60 text-center space-y-1.5">
+                <KeyRound size={24} className="mx-auto text-[#0F8B7D]" />
+                <span className="text-xs font-black text-white block">Enter 6-Digit OTP</span>
+                <p className="text-[11px] text-slate-400">
+                  Demo Test Code: <span className="font-mono text-teal-300 font-bold">{otpHint || "482910"}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1 text-center">
+                  6-DIGIT VERIFICATION CODE
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="482910"
+                  className="w-full text-center tracking-[0.4em] text-lg font-mono font-black py-3 rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:border-[#0F8B7D]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="hover:text-white flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeft size={12} /> Edit Details
+                </button>
+
+                {resendCountdown > 0 ? (
+                  <span>Resend OTP in {resendCountdown}s</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResendCountdown(30);
+                      setSuccessMsg("New code dispatched.");
+                    }}
+                    className="text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                  >
+                    Resend Code
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-teal-900/40 transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={16} />
+                    <span>Confirm & Continue to Onboarding</span>
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="pt-4 border-t border-slate-800 text-center text-xs text-slate-400">
+            Already have an account?{" "}
+            <Link href="/login" className="text-[#0F8B7D] font-bold hover:underline">
+              Sign In
+            </Link>
           </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3.5 rounded-2xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
-          >
-            <span>{isLoading ? "Creating Account..." : "Create Account & Enter Workspace"}</span>
-            <ArrowRight size={15} />
-          </button>
-        </form>
-
-        {/* Footer: Link to Login */}
-        <div className="p-6 bg-gray-50/70 border-t border-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium">
-          <span>Already have an account?</span>
-          <Link href="/login" className="ml-1.5 font-bold text-[#0F8B7D] hover:underline">
-            Sign in here →
-          </Link>
         </div>
 
+        <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-slate-500 font-semibold">
+          <span className="flex items-center gap-1">
+            <ShieldCheck size={13} className="text-[#0F8B7D]" /> SOC 2 Type II
+          </span>
+          <span>•</span>
+          <span>Indian Data Center</span>
+          <span>•</span>
+          <span>RERA & GST Compliant</span>
+        </div>
       </div>
     </div>
   );
@@ -339,12 +441,8 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-sm font-bold text-gray-400">
-        Loading...
-      </div>
-    }>
-      <SignupForm />
+    <Suspense fallback={<div className="min-h-screen bg-[#071322] flex items-center justify-center text-xs text-slate-500">Loading...</div>}>
+      <SignupContent />
     </Suspense>
   );
 }

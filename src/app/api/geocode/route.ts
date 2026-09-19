@@ -33,6 +33,56 @@ function cleanAreaName(rawArea: string, rawCity: string, rawDisplayName: string)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
+  const lat = searchParams.get("lat");
+  const lon = searchParams.get("lon");
+
+  // Handle reverse geocoding if GPS coordinates are provided
+  if (lat && lon) {
+    try {
+      const revUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&addressdetails=1`;
+      const revRes = await fetch(revUrl, {
+        headers: {
+          "User-Agent": "OfficeX-Commercial-Property-System/1.0",
+          "Accept-Language": "en"
+        },
+        next: { revalidate: 3600 }
+      });
+      if (revRes.ok) {
+        const item = await revRes.json();
+        const addr = item.address || {};
+        const rawCity = addr.city || addr.town || addr.municipality || addr.district || addr.county || "";
+        const city = cleanCityName(rawCity, addr.state || "");
+        const state = addr.state || "";
+        const pincode = addr.postcode || "";
+        const rawArea = addr.suburb || addr.neighbourhood || addr.residential || addr.quarter || addr.commercial || "";
+        const area = cleanAreaName(rawArea, city, item.display_name || "");
+        const name = item.name || addr.road || area || "Current Location";
+
+        const cleanDisplay = [name, area, city, state, pincode]
+          .filter(Boolean)
+          .filter((val, idx, arr) => arr.indexOf(val) === idx)
+          .join(", ");
+
+        return NextResponse.json({
+          results: [{
+            id: `rev-${item.place_id || Date.now()}`,
+            buildingName: name,
+            displayName: cleanDisplay,
+            area: area,
+            city: city,
+            state: state,
+            pincode: pincode,
+            fullAddress: item.display_name || cleanDisplay,
+            metroDistance: "",
+            latitude: parseFloat(lat),
+            longitude: parseFloat(lon)
+          }]
+        });
+      }
+    } catch (err) {
+      console.warn("Reverse geocode failed:", err);
+    }
+  }
 
   if (!query || query.trim().length < 2) {
     return NextResponse.json({ results: [] });

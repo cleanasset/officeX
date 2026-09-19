@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
+import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
 import { 
   Star, CheckCircle, Clock, DollarSign, ArrowRight, Zap, 
   CheckCircle2, Wallet, ShieldCheck, MapPin, Upload, FileText, 
@@ -117,6 +118,9 @@ export default function VendorPortalDashboard() {
           </button>
         </div>
       </div>
+
+      {/* S12 Profile Completion & Progressive KYC Meter (v1.0 Spec Section 15) */}
+      <ProfileCompletionMeter role="vendor" />
 
       {/* VENDOR WALLET & ESCROW PAYOUT SECTION (per UI/UX Review Finding 7.3) */}
       <div className="bg-gradient-to-br from-[#071324] to-[#0A1829] rounded-2xl border border-slate-800 p-6 text-white shadow-xl">

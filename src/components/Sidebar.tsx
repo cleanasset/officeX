@@ -54,6 +54,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   properties: [
     { name: "Portfolio Overview", href: "/properties", icon: Layers },
     { name: "Property Registry", href: "/properties/registry", icon: Building },
+    { name: "List New Property", href: "/properties/add", icon: Sparkles },
     { 
       name: "Rent Roll Master", 
       href: "/properties/rent-roll?tab=dashboard", 
@@ -84,6 +85,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "52-Week PPM Calendar", href: "/ops/ppm", icon: Calendar },
     { name: "Asset Register & Health", href: "/ops/assets", icon: Settings },
     { name: "Outcome-Based FM", href: "/ops/outcomes", icon: Activity },
+    { name: "Visitor & Speed-Gates", href: "/ops/visitors", icon: Users },
     { name: "Compliance Centre", href: "/ops/compliance", icon: ShieldCheck }
   ],
 
@@ -110,6 +112,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   leasing: [
     { name: "Broker Dashboard", href: "/leasing", icon: TrendingUp },
     { name: "Leasing Pipeline", href: "/leasing/pipeline", icon: Layers },
+    { name: "Space Listings Builder", href: "/leasing/listings", icon: Sparkles },
     { name: "Leads & Enquiries", href: "/leasing/leads", icon: Users },
     { name: "Site Visits Schedule", href: "/leasing/visits", icon: Calendar },
     { name: "LOI & Leases", href: "/leasing/loi", icon: FileText },
