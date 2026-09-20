@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const collections = db.collections.filter((c) => leaseIds.has(c.leaseId) || c.tenantId === tenantId);
 
     // Calculate dues summary
-    const pendingInvoices = invoices.filter((i) => i.status === "pending" || i.status === "overdue" || i.status === "partially_paid");
+    const pendingInvoices = invoices.filter((i) => i.status === "issued" || i.status === "overdue" || i.status === "partially_paid");
     const totalOutstanding = pendingInvoices.reduce((acc, curr) => acc + (curr.balanceDue || 0), 0);
     const nextDueInvoice = pendingInvoices.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0] || null;
 

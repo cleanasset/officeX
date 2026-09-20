@@ -29,6 +29,7 @@ export default function LOIAndLeaseWorkflow() {
   const [showNewLoiModal, setShowNewLoiModal] = useState(false);
   const [expandedDeal, setExpandedDeal] = useState<string | null>("DX-2024-089");
   const [toast, setToast] = useState<string | null>(null);
+  const [previewLoiDeal, setPreviewLoiDeal] = useState<DealItem | null>(null);
 
   // New LOI Form State
   const [newDealForm, setNewDealForm] = useState({
@@ -156,7 +157,6 @@ export default function LOIAndLeaseWorkflow() {
     setDeals([createdDeal, ...deals]);
     setExpandedDeal(newId);
     setShowNewLoiModal(false);
-    showToast(`Drafted LOI & Proposal for ${newDealForm.client} (${newId})!`);
     setNewDealForm({
       client: "",
       property: "One BKC — North Wing Executive",
@@ -169,7 +169,8 @@ export default function LOIAndLeaseWorkflow() {
     });
   };
 
-  const advanceStage = (dealId: string, targetStage: DealItem["stage"]) => {
+  const advanceStage = async (dealId: string, targetStage: DealItem["stage"]) => {
+    const deal = deals.find(d => d.id === dealId);
     setDeals(prev => prev.map(d => {
       if (d.id === dealId) {
         return {
@@ -180,54 +181,34 @@ export default function LOIAndLeaseWorkflow() {
       }
       return d;
     }));
-    showToast(`Updated deal status to "${targetStage}"!`);
+
+    if (targetStage === "Lease Executed" && deal) {
+      showToast(`Deal executed! Auto-calculating 45-day brokerage commission...`);
+      try {
+        const res = await fetch("/api/commissions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "brokerage",
+            clientOrEntity: deal.client,
+            property: deal.property,
+            monthlyRent: deal.agreedRent
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Lease Executed! ${data.message}`);
+        }
+      } catch (err) {
+        console.error("Error posting commission:", err);
+      }
+    } else {
+      showToast(`Updated deal status to "${targetStage}"!`);
+    }
   };
 
   const handleDownloadLoi = (deal: DealItem) => {
-    const text = `===============================================================
-OFFICEX FORMAL LETTER OF INTENT (LOI) & TERM SHEET
-===============================================================
-
-DEAL ID: ${deal.id}
-DATE: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-
-PARTIES:
---------
-Landlord / Licensor: Brookfield Institutional Properties Ltd
-Tenant / Licensee: ${deal.client}
-
-PREMISES & SPACE ALLOCATION:
-----------------------------
-Property: ${deal.property}
-Chargeable Area: ${deal.area}
-Seat Capacity: ${deal.seats}
-Condition: Grade A+ Fit-out with Full MEP Redundancy
-
-COMMERCIAL SUMMARY:
--------------------
-Agreed Base Rent: ${deal.agreedRent}
-Interest-Free Security Deposit: ${deal.deposit}
-Lease Term / Lock-in: ${deal.lockIn}
-Rent Escalation: ${deal.escalation}
-
-STATUS: ${deal.stage.toUpperCase()}
-Digitally verified via OFFICEX Smart Leasing Engine.
-
-===============================================================
-OFFICEX Operating Platform · https://officex.in
-===============================================================`;
-
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `LOI_${deal.id}_${deal.client.replace(/\s+/g, "_")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showToast(`Downloaded LOI Term Sheet for ${deal.client}!`);
+    setPreviewLoiDeal(deal);
   };
 
   const filteredDeals = deals.filter(d => 
@@ -553,6 +534,136 @@ OFFICEX Operating Platform · https://officex.in
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ FORMAL LOI & TERM SHEET PREVIEW MODAL ═══ */}
+      {previewLoiDeal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            {/* Action Toolbar */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-6 print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
+                  Official Legal Document
+                </span>
+                <span className="text-xs font-mono font-bold text-gray-500">{previewLoiDeal.id}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download size={13} /> Print / Save PDF
+                </button>
+                <button
+                  onClick={() => setPreviewLoiDeal(null)}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Body (Print-optimized) */}
+            <div className="space-y-6 text-slate-900 font-sans p-2">
+              {/* Corporate Letterhead */}
+              <div className="flex items-start justify-between border-b-2 border-slate-900 pb-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Building size={22} className="text-[#0F8B7D]" />
+                    <span className="text-lg font-black tracking-tight text-slate-900">OFFICEX ASSET MANAGEMENT</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">Commercial Leasing &amp; Real Estate Advisory Division</p>
+                  <p className="text-[10px] text-slate-400">CIN: U70109MH2024PTC392810 • GSTIN: 27AAFCO8821M1ZN</p>
+                  <p className="text-[10px] text-slate-400">Level 8, Platina, Bandra Kurla Complex, Mumbai, Maharashtra 400051</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">DOCUMENT REF</span>
+                  <span className="text-xs font-mono font-black text-slate-900 block">{previewLoiDeal.id}</span>
+                  <span className="text-[10px] text-slate-500 mt-1 block">Date: {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                  <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded mt-1 inline-block">Valid 15 Days</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="text-center py-2">
+                <h1 className="text-base font-black uppercase tracking-wider text-slate-900">
+                  Commercial Letter of Intent (LOI) &amp; Term Sheet
+                </h1>
+                <p className="text-[11px] text-slate-500 mt-0.5">Subject to Contract &amp; Definitive Lease Deed Execution</p>
+              </div>
+
+              {/* Parties */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">LICENSOR / LANDLORD</span>
+                  <p className="font-bold text-slate-900">Brookfield Institutional Asset Fund Ltd</p>
+                  <p className="text-[11px] text-slate-600">Represented by OfficeX Commercial Leasing Desk</p>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">LICENSEE / PROSPECTIVE TENANT</span>
+                  <p className="font-bold text-slate-900">{previewLoiDeal.client}</p>
+                  <p className="text-[11px] text-slate-600">Corporate Registered Occupier Entity</p>
+                </div>
+              </div>
+
+              {/* Leased Premises */}
+              <div className="border border-slate-200 rounded-2xl p-4 text-xs space-y-2">
+                <span className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-wider block">1. Demised Commercial Premises</span>
+                <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
+                  <div><span className="text-slate-400 block">Property</span><strong className="text-slate-800">{previewLoiDeal.property}</strong></div>
+                  <div><span className="text-slate-400 block">Chargeable Area</span><strong className="text-slate-800">{previewLoiDeal.area}</strong></div>
+                  <div><span className="text-slate-400 block">Workstation Capacity</span><strong className="text-slate-800">{previewLoiDeal.seats}</strong></div>
+                </div>
+              </div>
+
+              {/* Commercial Schedule Table */}
+              <div>
+                <span className="text-[10px] font-black text-[#0F8B7D] uppercase tracking-wider block mb-2">2. Agreed Commercial Terms</span>
+                <table className="w-full text-left text-xs border-collapse border border-slate-200 rounded-xl overflow-hidden">
+                  <tbody className="divide-y divide-slate-200 text-[11px]">
+                    <tr className="bg-slate-50/70"><td className="py-2.5 px-3 font-semibold text-slate-600 w-1/2">Agreed Monthly Base Rent</td><td className="py-2.5 px-3 font-bold text-slate-900">{previewLoiDeal.agreedRent}</td></tr>
+                    <tr><td className="py-2.5 px-3 font-semibold text-slate-600">Common Area Maintenance (CAM)</td><td className="py-2.5 px-3 font-semibold text-slate-800">₹24.00 / sq.ft. monthly</td></tr>
+                    <tr className="bg-slate-50/70"><td className="py-2.5 px-3 font-semibold text-slate-600">Interest-Free Refundable Deposit</td><td className="py-2.5 px-3 font-bold text-slate-900">{previewLoiDeal.deposit}</td></tr>
+                    <tr><td className="py-2.5 px-3 font-semibold text-slate-600">Lease Term &amp; Mandatory Lock-In</td><td className="py-2.5 px-3 font-semibold text-slate-800">{previewLoiDeal.lockIn}</td></tr>
+                    <tr className="bg-slate-50/70"><td className="py-2.5 px-3 font-semibold text-slate-600">Contractual Escalation Frequency</td><td className="py-2.5 px-3 font-semibold text-slate-800">{previewLoiDeal.escalation}</td></tr>
+                    <tr><td className="py-2.5 px-3 font-semibold text-slate-600">Rent-Free Fit-Out Grace Period</td><td className="py-2.5 px-3 font-semibold text-slate-800">60 Calendar Days from Handover</td></tr>
+                    <tr className="bg-slate-50/70"><td className="py-2.5 px-3 font-semibold text-slate-600">Statutory Tax &amp; Withholding</td><td className="py-2.5 px-3 font-semibold text-slate-800">18% GST applicable; 10% TDS u/s 194I</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Signatures & Seal */}
+              <div className="pt-6 border-t border-slate-200 flex items-end justify-between text-xs">
+                <div>
+                  <div className="h-10 flex items-center">
+                    <span className="font-serif italic font-bold text-slate-800">Ravi Malhotra</span>
+                  </div>
+                  <div className="w-40 border-t border-slate-400 pt-1">
+                    <p className="font-bold text-slate-900 text-[11px]">Authorized Signatory</p>
+                    <p className="text-[10px] text-slate-500">OfficeX Commercial Leasing</p>
+                  </div>
+                </div>
+
+                <div className="text-center p-3 bg-teal-50/60 rounded-2xl border border-teal-200 w-44">
+                  <ShieldCheck size={24} className="text-[#0F8B7D] mx-auto mb-1" />
+                  <span className="text-[9px] font-black uppercase text-teal-900 block">Digitally Certified</span>
+                  <span className="text-[8px] font-mono text-teal-700 block">SHA-256: 8a9f...41e0</span>
+                </div>
+
+                <div className="text-right">
+                  <div className="h-10 flex items-center justify-end">
+                    <span className="font-serif italic font-bold text-slate-400">[Pending Digital Counter-Sign]</span>
+                  </div>
+                  <div className="w-40 border-t border-slate-400 pt-1">
+                    <p className="font-bold text-slate-900 text-[11px]">{previewLoiDeal.client}</p>
+                    <p className="text-[10px] text-slate-500">Corporate Authorised Officer</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -30,6 +30,24 @@ export default function SuperAdminDashboard() {
   const [showMrrModal, setShowMrrModal] = useState(false);
   const [auditNote, setAuditNote] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [commissionTransactions, setCommissionTransactions] = useState<any[]>([]);
+  const [commissionSummary, setCommissionSummary] = useState<any>(null);
+
+  React.useEffect(() => {
+    async function loadAdminCommissions() {
+      try {
+        const res = await fetch("/api/commissions");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.transactions)) {
+          setCommissionTransactions(data.transactions);
+          setCommissionSummary(data.summary);
+        }
+      } catch (err) {
+        console.error("Failed to load admin commissions:", err);
+      }
+    }
+    loadAdminCommissions();
+  }, []);
 
   const [approvalsList, setApprovalsList] = useState<ApprovalItem[]>([
     { 
@@ -323,29 +341,41 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Total Net Commission (Q3 YTD)</span>
-                <p className="text-2xl font-black text-[#0F8B7D]">₹3,61,100</p>
+                <p className="text-2xl font-black text-[#0F8B7D]">
+                  {commissionSummary ? `₹${commissionSummary.totalOfficeXFee.toLocaleString()}` : "₹3,61,100"}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <p className="text-[10px] font-bold text-gray-400 uppercase">Gross Merchandise Value (GTV)</p>
-                <p className="text-xl font-black text-gray-900 mt-1">₹41,70,000</p>
-                <span className="text-[10px] text-gray-500">5 Contracts executed</span>
+                <p className="text-xl font-black text-gray-900 mt-1">
+                  {commissionSummary ? `₹${commissionSummary.totalGTV.toLocaleString()}` : "₹41,70,000"}
+                </p>
+                <span className="text-[10px] text-gray-500">
+                  {commissionSummary ? `${commissionSummary.transactionsCount} Transactions executed` : "5 Contracts executed"}
+                </span>
               </div>
               <div className="p-4 rounded-xl bg-teal-50/50 border border-teal-200">
                 <p className="text-[10px] font-bold text-teal-800 uppercase">Platform Take-Rate (Avg 8.65%)</p>
-                <p className="text-xl font-black text-[#0F8B7D] mt-1">₹3,61,100</p>
+                <p className="text-xl font-black text-[#0F8B7D] mt-1">
+                  {commissionSummary ? `₹${commissionSummary.totalOfficeXFee.toLocaleString()}` : "₹3,61,100"}
+                </p>
                 <span className="text-[10px] text-teal-600">Retained via Escrow</span>
               </div>
               <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
                 <p className="text-[10px] font-bold text-emerald-800 uppercase">Disbursed to Vendors</p>
-                <p className="text-xl font-black text-emerald-700 mt-1">₹38,08,900</p>
+                <p className="text-xl font-black text-emerald-700 mt-1">
+                  {commissionSummary ? `₹${commissionSummary.totalDisbursed.toLocaleString()}` : "₹38,08,900"}
+                </p>
                 <span className="text-[10px] text-emerald-600">On Milestone Sign-off</span>
               </div>
               <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200">
                 <p className="text-[10px] font-bold text-amber-800 uppercase">Escrow Defect Holdback</p>
-                <p className="text-xl font-black text-amber-700 mt-1">₹2,46,400</p>
+                <p className="text-xl font-black text-amber-700 mt-1">
+                  {commissionSummary ? `₹${commissionSummary.totalHoldback.toLocaleString()}` : "₹2,46,400"}
+                </p>
                 <span className="text-[10px] text-amber-600">14-Day Warranty Buffer</span>
               </div>
             </div>
@@ -355,51 +385,39 @@ export default function SuperAdminDashboard() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase">
                     <th className="py-3 px-3">Transaction</th>
-                    <th className="py-3 px-3">Vendor</th>
+                    <th className="py-3 px-3">Vendor / Entity</th>
                     <th className="py-3 px-3">Property / Client</th>
                     <th className="py-3 px-3 text-right">Contract Value</th>
                     <th className="py-3 px-3 text-right">OfficeX Fee</th>
-                    <th className="py-3 px-3 text-right">Vendor Payout</th>
+                    <th className="py-3 px-3 text-right">Vendor / Broker Payout</th>
                     <th className="py-3 px-3 text-right">Escrow Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  <tr>
-                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8801</td>
-                    <td className="py-3 px-3 font-bold text-gray-900">Johnson Controls India</td>
-                    <td className="py-3 px-3 text-gray-600">Maker Maxity (BKC)</td>
-                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹4,20,000</td>
-                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹42,000 (10%)</td>
-                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹3,78,000</td>
-                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Released ✓</span></td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8794</td>
-                    <td className="py-3 px-3 font-bold text-gray-900">Urban Cleaners Enterprise</td>
-                    <td className="py-3 px-3 text-gray-600">GIFT Tower 1 (IFSC)</td>
-                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹2,80,000</td>
-                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹33,600 (12%)</td>
-                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹2,46,400</td>
-                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">14d Holdback</span></td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8750</td>
-                    <td className="py-3 px-3 font-bold text-gray-900">SIS Group Security</td>
-                    <td className="py-3 px-3 text-gray-600">World Trade Center (Pune)</td>
-                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹18,50,000</td>
-                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹1,48,000 (8%)</td>
-                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹17,02,000</td>
-                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Released ✓</span></td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-3 font-mono font-bold text-gray-800">TXN-8723</td>
-                    <td className="py-3 px-3 font-bold text-gray-900">Voltas Electro-Mech</td>
-                    <td className="py-3 px-3 text-gray-600">One BKC (Mumbai)</td>
-                    <td className="py-3 px-3 font-bold text-gray-900 text-right">₹6,40,000</td>
-                    <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹64,000 (10%)</td>
-                    <td className="py-3 px-3 text-gray-700 text-right font-mono">₹5,76,000</td>
-                    <td className="py-3 px-3 text-right"><span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">In Escrow</span></td>
-                  </tr>
+                  {(commissionTransactions && commissionTransactions.length > 0 ? commissionTransactions : [
+                    { id: "TXN-8801", clientOrEntity: "Johnson Controls India", property: "Maker Maxity (BKC)", dealValue: 420000, officeXFee: 42000, commissionRate: 10, payoutToVendorOrBroker: 378000, status: "PAID" },
+                    { id: "TXN-8794", clientOrEntity: "Urban Cleaners Enterprise", property: "GIFT Tower 1 (IFSC)", dealValue: 280000, officeXFee: 33600, commissionRate: 12, payoutToVendorOrBroker: 246400, status: "ESCROW_HOLD" },
+                    { id: "TXN-8750", clientOrEntity: "SIS Group Security", property: "World Trade Center (Pune)", dealValue: 1850000, officeXFee: 148000, commissionRate: 8, payoutToVendorOrBroker: 1702000, status: "PAID" },
+                    { id: "TXN-8723", clientOrEntity: "Voltas Electro-Mech", property: "One BKC (Mumbai)", dealValue: 640000, officeXFee: 64000, commissionRate: 10, payoutToVendorOrBroker: 576000, status: "ESCROW_HOLD" }
+                  ]).map((txn) => (
+                    <tr key={txn.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold text-gray-800">{txn.id}</td>
+                      <td className="py-3 px-3 font-bold text-gray-900">{txn.clientOrEntity}</td>
+                      <td className="py-3 px-3 text-gray-600">{txn.property}</td>
+                      <td className="py-3 px-3 font-bold text-gray-900 text-right">₹{txn.dealValue?.toLocaleString()}</td>
+                      <td className="py-3 px-3 font-bold text-[#0F8B7D] text-right">₹{txn.officeXFee?.toLocaleString()} ({txn.commissionRate}%)</td>
+                      <td className="py-3 px-3 text-gray-700 text-right font-mono">₹{txn.payoutToVendorOrBroker?.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right">
+                        <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                          txn.status === "PAID" ? "bg-emerald-100 text-emerald-800" :
+                          txn.status === "ESCROW_HOLD" ? "bg-amber-100 text-amber-800" :
+                          "bg-blue-100 text-blue-800"
+                        }`}>
+                          {txn.status === "PAID" ? "Released ✓" : txn.status === "ESCROW_HOLD" ? "14d Holdback" : "In Escrow"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

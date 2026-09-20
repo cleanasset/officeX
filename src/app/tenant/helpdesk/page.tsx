@@ -1,12 +1,12 @@
 "use client";
-import React, { useState } from "react";
-import { Filter, X, Send, FileText, CheckCircle, Clock, AlertTriangle, MessageCircle, Paperclip } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { Filter, X, Send, FileText, CheckCircle, Clock, AlertTriangle, MessageCircle, Paperclip, Plus } from "lucide-react";
 
 export default function HelpdeskTicketsTracker() {
   const [selectedTicket, setSelectedTicket] = useState<string | null>("TK-245");
   const [message, setMessage] = useState("");
-
-  const tickets = [
+  const [tickets, setTickets] = useState([
     {
       id: "TK-245", status: "IN PROGRESS", statusColor: "bg-blue-500", priority: "CRITICAL", priorityColor: "bg-red-100 text-red-600",
       title: "Server Room AC Failure", category: "HVAC", raised: "Oct 24, 09:30 AM",
@@ -25,7 +25,35 @@ export default function HelpdeskTicketsTracker() {
       responseSla: { label: "Met in 5 mins", color: "text-emerald-600", progress: 100 },
       resolutionSla: { label: "Met in 4 hours", color: "text-emerald-600", progress: 100 }
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    async function loadTickets() {
+      try {
+        const res = await fetch("/api/tickets");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
+          const mapped = data.tickets.map((t: any) => ({
+            id: t.id,
+            status: t.status.toUpperCase(),
+            statusColor: t.status === "open" ? "bg-emerald-500" : t.status === "in-progress" ? "bg-blue-500" : "bg-gray-400",
+            priority: t.priority.toUpperCase(),
+            priorityColor: t.priority === "Critical" ? "bg-red-100 text-red-600" : t.priority === "High" ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600",
+            title: t.title,
+            category: t.category,
+            raised: t.created,
+            responseSla: { label: t.slaDeadline ? `Deadline ${t.slaDeadline}` : "Under Review", color: "text-emerald-600", progress: 80 },
+            resolutionSla: { label: t.slaRemaining || "Pending", color: "text-amber-600", progress: 50 }
+          }));
+          setTickets(mapped);
+          if (mapped.length > 0) setSelectedTicket(mapped[0].id);
+        }
+      } catch (e) {
+        console.error("Failed to load tickets", e);
+      }
+    }
+    loadTickets();
+  }, []);
 
   const chatMessages = [
     { sender: "John Doe (Tenant)", time: "09:30 AM", message: "The primary AC unit in Server Room B has failed. Temperature is rising steadily above 78F. This is critical for the server racks. Need immediate assistance.", attachment: "error_panel.jpg", isUser: true },
@@ -75,9 +103,17 @@ export default function HelpdeskTicketsTracker() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-gray-900">Active Tickets</h2>
-            <button className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer">
-              <Filter size={13} /> Filter
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/tenant/tickets/new"
+                className="flex items-center gap-1 text-xs font-bold text-white bg-[#0F8B7D] hover:bg-[#0D7A6E] px-3 py-1.5 rounded-lg shadow-sm transition-all"
+              >
+                <Plus size={13} /> Raise Ticket
+              </Link>
+              <button className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer">
+                <Filter size={13} /> Filter
+              </button>
+            </div>
           </div>
           <div className="flex flex-col gap-3">
             {tickets.map((t) => (

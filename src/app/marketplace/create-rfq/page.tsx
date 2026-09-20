@@ -1,19 +1,50 @@
 "use client";
 import React, { useState } from "react";
-import { Calendar, Upload, Sliders, CheckCircle, Send } from "lucide-react";
+import { Calendar, Upload, Sliders, CheckCircle, Send, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function CreateRFQ() {
+  const router = useRouter();
   const [form, setForm] = useState({
-    title: "", property: "", category: "", subCategory: "", scope: "",
-    frequency: "Daily", area: "", manpower: "", materialProvisioning: "Vendor Provides Materials & Consumables",
-    contractDuration: "1 Year", startDate: "", deadline: "",
+    title: "", property: "Apex Business Tower", category: "HVAC", subCategory: "Chiller & Duct Maintenance", scope: "",
+    frequency: "Monthly", area: "45,000 sq.ft.", manpower: "4", materialProvisioning: "Vendor Provides Materials & Consumables",
+    contractDuration: "1 Year", startDate: "2026-11-01", deadline: "2026-10-30",
     autoMatch: true, minRating: 4.0
   });
   const [toast, setToast] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (action: "draft" | "publish") => {
-    setToast(action === "draft" ? "RFQ saved as draft!" : "RFQ published successfully! Vendors notified.");
-    setTimeout(() => setToast(null), 4000);
+  const handleSubmit = async (action: "draft" | "publish") => {
+    if (!form.title.trim()) {
+      setToast("Please enter an RFQ title.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/rfqs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (data.success && data.rfq) {
+        setToast(`RFQ ${data.rfq.id} published! Dispatched to matching vendors in Vendor Hub.`);
+        setTimeout(() => {
+          router.push("/vendor/rfqs");
+        }, 1800);
+      } else {
+        setToast(data.error || "Failed to publish RFQ.");
+        setTimeout(() => setToast(null), 3500);
+      }
+    } catch (e) {
+      console.error(e);
+      setToast("Error publishing RFQ.");
+      setTimeout(() => setToast(null), 3500);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -255,9 +286,12 @@ export default function CreateRFQ() {
           </button>
           <button
             onClick={() => handleSubmit("publish")}
-            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md flex items-center gap-2 cursor-pointer"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            Publish RFQ <Send size={13} />
+            {isSubmitting && <Loader2 size={13} className="animate-spin" />}
+            <span>{isSubmitting ? "Publishing..." : "Publish RFQ"}</span>
+            {!isSubmitting && <Send size={13} />}
           </button>
         </div>
       </div>

@@ -1,8 +1,10 @@
 "use client";
 import React, { useState } from "react";
-import { Upload, CheckCircle, ArrowRight } from "lucide-react";
+import { Upload, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function HelpdeskTicketCreator() {
+  const router = useRouter();
   const [unit, setUnit] = useState("Unit 5A");
   const [area, setArea] = useState("");
   const [category, setCategory] = useState("Electrical");
@@ -11,6 +13,7 @@ export default function HelpdeskTicketCreator() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const priorities = [
     { label: "Low", sla: "24h / 72h", activeBg: "bg-gray-100 text-gray-800 border-gray-400" },
@@ -19,9 +22,46 @@ export default function HelpdeskTicketCreator() {
     { label: "Critical", sla: "1h / 4h", activeBg: "bg-red-50 text-red-700 border-red-500" }
   ];
 
-  const handleSubmit = () => {
-    setToast("Helpdesk ticket raised! Assigned to facility engineering team.");
-    setTimeout(() => setToast(null), 3500);
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      setToast("Please enter an issue summary title.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          category,
+          priority,
+          unit,
+          area: area || "Main Floor",
+          description: desc,
+          requester: "Tenant Admin (Unit 5A - Apex Tower)"
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.ticket) {
+        setToast(`Ticket ${data.ticket.id} raised successfully! Dispatched to FM Command Centre.`);
+        setTimeout(() => {
+          router.push("/tenant/helpdesk");
+        }, 1800);
+      } else {
+        setToast(data.error || "Failed to raise ticket.");
+        setTimeout(() => setToast(null), 3500);
+      }
+    } catch (e) {
+      console.error(e);
+      setToast("Network error submitting ticket.");
+      setTimeout(() => setToast(null), 3500);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -173,9 +213,11 @@ export default function HelpdeskTicketCreator() {
             </button>
             <button
               onClick={handleSubmit}
-              className="px-8 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+              disabled={isSubmitting}
+              className="px-8 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
-              Submit Helpdesk Ticket
+              {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+              <span>{isSubmitting ? "Submitting..." : "Submit Helpdesk Ticket"}</span>
             </button>
           </div>
         </div>

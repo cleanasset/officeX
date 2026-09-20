@@ -1,12 +1,11 @@
 "use client";
-import React, { useState } from "react";
-import { Search, Filter, Download, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, Download, ChevronLeft, ChevronRight, Calendar, Sparkles } from "lucide-react";
 
 export default function CommissionAndBrokerageTracker() {
   const [timeRange, setTimeRange] = useState("Last 6 Months");
   const [search, setSearch] = useState("");
-
-  const deals = [
+  const [deals, setDeals] = useState<any[]>([
     {
       id: "#DL-4921",
       client: "KPMG",
@@ -67,7 +66,40 @@ export default function CommissionAndBrokerageTracker() {
       status: "PENDING",
       statusColor: "bg-amber-50 text-amber-700 border border-amber-200"
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    async function loadCommissions() {
+      try {
+        const res = await fetch("/api/commissions?type=brokerage");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.transactions) && data.transactions.length > 0) {
+          const apiDeals = data.transactions.map((t: any) => ({
+            id: t.id,
+            client: t.clientOrEntity,
+            property: t.property,
+            tcv: `₹${(t.dealValue / 100000).toFixed(1)}L`,
+            rate: `${t.commissionRate}%`,
+            fee: `₹${(t.payoutToVendorOrBroker / 100000).toFixed(2)}L`,
+            invoice: t.invoiceRef || "-",
+            date: t.date,
+            status: t.status,
+            statusColor: t.status === "PAID" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+          }));
+
+          // Prepend new transactions that aren't already in list
+          setDeals((prev) => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newOnes = apiDeals.filter((d: any) => !existingIds.has(d.id));
+            return [...newOnes, ...prev];
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load commissions:", err);
+      }
+    }
+    loadCommissions();
+  }, []);
 
   return (
     <div className="flex flex-col gap-6 font-sans">

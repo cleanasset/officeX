@@ -632,10 +632,25 @@ export default function VendorPortalDashboard() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setInvoiceSubmitted((prev) => ({ ...prev, [selectedWoForInvoice.id]: true }));
                   setIsInvoiceModalOpen(false);
                   showToast(`Tax Invoice for ${selectedWoForInvoice.id} generated! Net payout routed to Escrow wire.`);
+                  try {
+                    await fetch("/api/commissions", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        type: "marketplace_escrow",
+                        clientOrEntity: selectedWoForInvoice.client,
+                        property: selectedWoForInvoice.property,
+                        contractValue: selectedWoForInvoice.gross,
+                        category: selectedWoForInvoice.category
+                      })
+                    });
+                  } catch (e) {
+                    console.error("Error posting commission:", e);
+                  }
                 }}
                 className="flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >

@@ -146,6 +146,21 @@ export default function HelpdeskCommandCentre() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  React.useEffect(() => {
+    async function loadTickets() {
+      try {
+        const res = await fetch("/api/tickets");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
+          setTickets(data.tickets);
+        }
+      } catch (e) {
+        console.error("Failed to fetch live tickets:", e);
+      }
+    }
+    loadTickets();
+  }, []);
+
   const handleUpdateTicketStatus = (ticketId: string, nextStatus: TicketStatus) => {
     setTickets(prev => prev.map(t => {
       if (t.id === ticketId) {
@@ -162,6 +177,12 @@ export default function HelpdeskCommandCentre() {
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket({ ...selectedTicket, status: nextStatus });
     }
+
+    fetch("/api/tickets", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: ticketId, status: nextStatus })
+    }).catch(err => console.error("Error updating ticket:", err));
   };
 
   const handleAssignTechnician = (ticketId: string, techName: string) => {
@@ -175,6 +196,12 @@ export default function HelpdeskCommandCentre() {
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket({ ...selectedTicket, assignee: techName, status: selectedTicket.status === "open" ? "assigned" : selectedTicket.status });
     }
+
+    fetch("/api/tickets", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: ticketId, assignee: techName, status: "assigned" })
+    }).catch(err => console.error("Error assigning technician:", err));
   };
 
   const filtered = tickets.filter(t => 
