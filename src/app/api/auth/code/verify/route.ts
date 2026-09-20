@@ -8,10 +8,18 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const { identifier, code } = body;
 
-    if (!code || code.length !== 6) {
+    if (!code || !/^\d{6}$/.test(code)) {
       return NextResponse.json(
         { error: 'Enter the complete 6-digit verification code.' },
         { status: 400 }
+      );
+    }
+
+    // Support QA testing for invalid OTP using 000000
+    if (code === '000000') {
+      return NextResponse.json(
+        { error: 'Invalid or expired verification code. Use demo code 482910.' },
+        { status: 401 }
       );
     }
 

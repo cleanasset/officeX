@@ -25,7 +25,36 @@ export async function POST(request: Request) {
     const norm = normalizeIdentifier(identifier);
     const user = findMockUser(norm);
 
-    // If privileged user requiring MFA
+    // Enforce demo password validation for mock directory users
+    const VALID_PASSWORDS = [
+      'OfficeX@2026',
+      'password',
+      'password123',
+      'OfficeX@123',
+      'Demo@2026',
+      'Admin@123'
+    ];
+
+    if (user) {
+      if (!VALID_PASSWORDS.includes(password)) {
+        return NextResponse.json(
+          {
+            error: 'Incorrect password. Use demo password OfficeX@2026 or click "Email me a one-time code instead".'
+          },
+          { status: 401 }
+        );
+      }
+    } else {
+      // For any dynamic/unregistered test credentials
+      if (password.length < 6) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // If privileged user requiring MFA, validate credentials first, then prompt MFA
     if (user?.requiresMfa) {
       return NextResponse.json({
         success: true,

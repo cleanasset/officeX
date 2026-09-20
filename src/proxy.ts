@@ -3,25 +3,30 @@ import type { NextRequest } from 'next/server';
 import { validateRedirect } from '@/lib/auth-utils';
 
 const protectedPaths = [
-  '/discover',
-  '/operations',
-  '/ops',
   '/properties',
   '/property',
   '/portfolio',
-  '/reporting',
-  '/reports',
+  '/ops',
+  '/operations',
   '/tenant',
   '/vendor',
   '/admin',
   '/leasing',
+  '/reporting',
+  '/reports',
   '/dashboard',
-  '/app'
+  '/discover',
+  '/app',
+  '/compliance'
 ];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const host = request.headers.get('host') || '';
+  const host =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    request.nextUrl.hostname ||
+    '';
 
   // Canonical domain enforcement: Redirect staging Vercel domain to production canonical domain
   if (host.includes('office-x-black.vercel.app')) {
@@ -31,6 +36,7 @@ export function proxy(request: NextRequest) {
 
   // Explicitly allow all public marketing, audience, auth, and discovery routes
   if (
+    pathname === '/' ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/onboarding') ||
@@ -48,7 +54,14 @@ export function proxy(request: NextRequest) {
     pathname.startsWith('/resources') ||
     pathname.startsWith('/support') ||
     pathname.startsWith('/terms') ||
-    pathname.startsWith('/privacy')
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/about') ||
+    pathname.startsWith('/contact') ||
+    pathname.startsWith('/careers') ||
+    pathname.startsWith('/faq') ||
+    pathname.startsWith('/demo') ||
+    pathname.startsWith('/thank-you') ||
+    pathname.startsWith('/calq')
   ) {
     return NextResponse.next();
   }
@@ -72,8 +85,9 @@ export function proxy(request: NextRequest) {
 
   if (!hasAuth) {
     const loginUrl = new URL('/login', request.url);
-    // Sanitize redirect target to ensure it is internal relative path
-    const safeRedirect = validateRedirect(pathname, '/properties');
+    // Sanitize redirect target including query params to ensure it is an internal relative path
+    const fullTarget = search ? `${pathname}${search}` : pathname;
+    const safeRedirect = validateRedirect(fullTarget, '/properties');
     loginUrl.searchParams.set('redirect', safeRedirect);
     return NextResponse.redirect(loginUrl);
   }
@@ -83,21 +97,16 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/discover/:path*',
-    '/operations/:path*',
-    '/ops/:path*',
-    '/properties/:path*',
-    '/property/:path*',
-    '/portfolio/:path*',
-    '/reporting/:path*',
-    '/reports/:path*',
-    '/tenant/:path*',
-    '/vendor/:path*',
-    '/admin/:path*',
-    '/leasing/:path*',
-    '/dashboard/:path*',
-    '/app/:path*',
+    /*
+     * Match all request paths except for:
+     * - api (API routes handle their own auth)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
 
 export default proxy;
+

@@ -236,18 +236,45 @@ export default function SignInForm({
     }
   };
 
-  // Switch to Email OTP code
-  const handleSwitchToEmailCode = () => {
+  // Reusable verification code dispatcher calling /api/auth/code/send
+  const sendVerificationCode = async (targetChannel: "whatsapp" | "sms" | "email") => {
+    setIsLoading(true);
     setError("");
-    setChannel("email");
-    setCooldown(30);
-    setDemoCodeHint("482910");
-    setStep("code");
-    setInfoMessage(
-      lang === "hi"
-        ? `हमने ${maskedId} पर एक 6-अंकीय सत्यापन कोड भेजा है।`
-        : `We've sent a 6-digit verification code to ${maskedId}`
-    );
+    try {
+      const res = await fetch("/api/auth/code/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, channel: targetChannel }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to dispatch verification code.");
+        return false;
+      }
+      setChannel(targetChannel);
+      setCooldown(data.cooldown || 30);
+      if (data.demo_code) setDemoCodeHint(data.demo_code);
+      if (data.masked) setMaskedId(data.masked);
+      setInfoMessage(
+        lang === "hi"
+          ? `हमने ${data.masked || maskedId} पर ${targetChannel === "email" ? "ईमेल" : targetChannel === "whatsapp" ? "WhatsApp" : "SMS"} द्वारा सत्यापन कोड भेजा है।`
+          : `Verification code dispatched via ${targetChannel.toUpperCase()} to ${data.masked || maskedId}.`
+      );
+      return true;
+    } catch {
+      setError("Network connection issue while sending verification code.");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Switch to Email OTP code
+  const handleSwitchToEmailCode = async () => {
+    const ok = await sendVerificationCode("email");
+    if (ok) {
+      setStep("code");
+    }
   };
 
   // --------------------------------------------------------------------------
@@ -993,11 +1020,9 @@ export default function SignInForm({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => {
-                            setCooldown(30);
-                            setInfoMessage(`Code resent via ${channel}.`);
-                          }}
-                          className="text-blue-600 hover:underline font-bold cursor-pointer"
+                          disabled={isLoading}
+                          onClick={() => sendVerificationCode(channel)}
+                          className="text-blue-600 hover:underline font-bold cursor-pointer disabled:opacity-50"
                         >
                           Resend Code
                         </button>
@@ -1006,13 +1031,12 @@ export default function SignInForm({
 
                     <button
                       type="button"
+                      disabled={isLoading}
                       onClick={() => {
                         const nextChan = channel === "whatsapp" ? "sms" : "whatsapp";
-                        setChannel(nextChan);
-                        setCooldown(30);
-                        setInfoMessage(`Switched delivery to ${nextChan}.`);
+                        sendVerificationCode(nextChan);
                       }}
-                      className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                      className="text-blue-600 hover:underline font-semibold cursor-pointer disabled:opacity-50"
                     >
                       {channel === "whatsapp" ? t.sendBySms : t.sendByWhatsApp}
                     </button>

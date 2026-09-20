@@ -1,12 +1,60 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   CreditCard, Download, ShieldCheck, CheckCircle, X, 
-  QrCode, Smartphone, Building, Lock, Check, Loader2, ArrowRight
+  QrCode, Smartphone, Building, Lock, Check, Loader2, ArrowRight,
+  AlertCircle, RefreshCw, FileText
 } from "lucide-react";
 
+interface TenantInvoice {
+  id: string;
+  invoiceNumber: string;
+  leaseId: string;
+  tenantId: string;
+  tenantName: string;
+  propertyName: string;
+  billingMonth: string;
+  invoiceDate: string;
+  dueDate: string;
+  baseRent: number;
+  camCharges: number;
+  utilityCharges: number;
+  parkingCharges: number;
+  subtotal: number;
+  gstAmount: number;
+  grossTotal: number;
+  tdsDeducted: number;
+  netPayable: number;
+  amountPaid: number;
+  balanceDue: number;
+  status: "paid" | "partially_paid" | "pending" | "overdue" | "cancelled";
+  paidDate?: string;
+  paymentMode?: string;
+  referenceNumber?: string;
+}
+
+interface TenantCollection {
+  id: string;
+  receiptNumber: string;
+  invoiceNumber?: string;
+  paymentDate: string;
+  paymentMode: string;
+  referenceNumber: string;
+  amountReceived: number;
+  tdsDeducted: number;
+  status?: string;
+}
+
 export default function RentPaymentGateway() {
+  const [invoices, setInvoices] = useState<TenantInvoice[]>([]);
+  const [collections, setCollections] = useState<TenantCollection[]>([]);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [summary, setSummary] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Active invoice selected for payment
+  const [selectedInvoice, setSelectedInvoice] = useState<TenantInvoice | null>(null);
   const [showPayModal, setShowPayModal] = useState(false);
   const [payMethod, setPayMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [upiId, setUpiId] = useState("");
@@ -18,54 +66,87 @@ export default function RentPaymentGateway() {
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const [invoice, setInvoice] = useState({
-    id: "INV-2025-0089",
-    month: "September 2025",
-    dueDate: "05-Sep-2025",
-    baseRent: "₹1,70,000",
-    maintenance: "₹15,000",
-    gst: "₹6,000",
-    parking: "₹34,380",
-    total: "₹2,25,380",
-    status: "Unpaid"
-  });
+  const fetchTenantData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/tenant/invoices");
+      if (res.ok) {
+        const data = await res.json();
+        setInvoices(data.invoices || []);
+        setCollections(data.collections || []);
+        setTenantInfo(data.tenant || null);
+        setSummary(data.summary || null);
 
-  const [paymentHistory, setPaymentHistory] = useState([
-    { month: "August 2025", invoice: "INV-2025-0078", amount: "₹2,25,380", paid: "04-Aug-2025", mode: "Razorpay UPI", ref: "pay_Ox889123", status: "Completed" },
-    { month: "July 2025", invoice: "INV-2025-0065", amount: "₹2,25,380", paid: "05-Jul-2025", mode: "Razorpay NetBanking", ref: "pay_Ox774102", status: "Completed" },
-    { month: "June 2025", invoice: "INV-2025-0052", amount: "₹2,25,380", paid: "03-Jun-2025", mode: "Razorpay Corporate Card", ref: "pay_Ox662914", status: "Completed" },
-    { month: "May 2025", invoice: "INV-2025-0041", amount: "₹2,25,380", paid: "04-May-2025", mode: "Razorpay UPI", ref: "pay_Ox551982", status: "Completed" },
-    { month: "April 2025", invoice: "INV-2025-0030", amount: "₹2,25,380", paid: "05-Apr-2025", mode: "Razorpay NetBanking", ref: "pay_Ox440192", status: "Completed" }
-  ]);
+        // Select the first pending/overdue invoice by default
+        const pending = (data.invoices || []).find((i: TenantInvoice) => i.status !== "paid");
+        if (pending) {
+          setSelectedInvoice(pending);
+        } else if (data.invoices && data.invoices.length > 0) {
+          setSelectedInvoice(data.invoices[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching tenant billing:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const handleSimulatePayment = () => {
+  useEffect(() => {
+    fetchTenantData();
+  }, [fetchTenantData]);
+
+  const handleOpenPayModal = (inv: TenantInvoice) => {
+    setSelectedInvoice(inv);
+    setShowPayModal(true);
+  };
+
+  const handleSimulatePayment = async () => {
+    if (!selectedInvoice) return;
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsPaidSuccess(true);
-      const newRef = `pay_Ox${Math.floor(100000 + Math.random() * 900000)}`;
-      
-      setInvoice(prev => ({ ...prev, status: "Paid" }));
-      setPaymentHistory(prev => [
-        {
-          month: invoice.month,
-          invoice: invoice.id,
-          amount: invoice.total,
-          paid: "Today, Just now",
-          mode: payMethod === "upi" ? "Razorpay UPI" : payMethod === "card" ? "Razorpay Card" : `Razorpay (${selectedBank})`,
-          ref: newRef,
-          status: "Completed"
-        },
-        ...prev
-      ]);
 
-      setTimeout(() => {
-        setShowPayModal(false);
-        setIsPaidSuccess(false);
-        setToast(`Payment of ${invoice.total} successfully processed via Razorpay! Ref: ${newRef}`);
-        setTimeout(() => setToast(null), 4500);
-      }, 1500);
-    }, 1800);
+    try {
+      const generatedRef = `pay_Ox${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
+      const amountToPay = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
+
+      const payload = {
+        invoiceId: selectedInvoice.id,
+        leaseId: selectedInvoice.leaseId,
+        amountReceived: amountToPay,
+        tdsDeducted: selectedInvoice.tdsDeducted || 0,
+        paymentMode: payMethod === "upi" ? "upi" : payMethod === "card" ? "credit_card" : "neft_rtgs",
+        referenceNumber: generatedRef,
+        paymentDate: new Date().toISOString().split("T")[0],
+        bankAccount: "OfficeX Nodal Escrow Account - HDFC",
+        notes: `Paid by ${tenantInfo?.tenantName || "Tenant"} via Razorpay Gateway (${payMethod.toUpperCase()})`
+      };
+
+      const res = await fetch("/api/rent-roll/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const resData = await res.json();
+        setIsPaidSuccess(true);
+        setTimeout(() => {
+          setShowPayModal(false);
+          setIsPaidSuccess(false);
+          setToast(`Payment of ₹${amountToPay.toLocaleString("en-IN")} successfully processed! Receipt: ${resData.receipt?.receiptNumber || generatedRef}`);
+          fetchTenantData();
+          setTimeout(() => setToast(null), 5000);
+        }, 1200);
+      } else {
+        const err = await res.json();
+        alert(`Payment error: ${err.error || "Unable to settle payment"}`);
+      }
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      alert("Network error processing payment. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const triggerFileDownload = (filename: string, content: string) => {
@@ -81,98 +162,100 @@ export default function RentPaymentGateway() {
   };
 
   const handleDownloadTaxCertificate = () => {
+    const totalPaid = collections.reduce((sum, c) => sum + (c.amountReceived || 0), 0);
+    const totalTds = collections.reduce((sum, c) => sum + (c.tdsDeducted || 0), 0);
+    const tenantName = tenantInfo?.tenantName || "Tata Consultancy Services Ltd";
+
     const content = `================================================================================
                        OFFICEX COMMERCIAL REAL ESTATE
                       ANNUAL TAX & TDS CERTIFICATE (FY 2025-26)
 ================================================================================
 
-Certificate ID    : CERT-TAX-2025-9982
+Certificate ID    : CERT-TAX-${Date.now().toString().slice(-6)}
 Generated Date    : ${new Date().toLocaleDateString("en-IN")}
-Tenant Entity     : TCS Corporate Workspace Division
-Property          : Apex Commercial Tower, BKC, Mumbai
+Tenant Entity     : ${tenantName}
+GSTIN             : ${tenantInfo?.gstin || "27AABCT9821P1ZM"}
+PAN               : ${tenantInfo?.pan || "AABCT9821P"}
 TAN               : MUMT12345F
 
 --------------------------------------------------------------------------------
 SUMMARY OF LEASE DUES & GST LEVIED (FY 2025-26):
 --------------------------------------------------------------------------------
-Total Gross Commercial Rent Paid   : ₹ 20,40,000.00
-Total CAM & Utilities Paid         : ₹  1,80,000.00
-Total GST (18%) Collected          : ₹    72,000.00
-TDS Deducted u/s 194I (10% Rent)   : ₹  2,04,000.00
-Total Net Amount Disbursed         : ₹ 20,88,000.00
---------------------------------------------------------------------------------
+Total Net Lease Rent Disbursed      : ₹ ${totalPaid.toLocaleString("en-IN")}.00
+Total TDS Deducted u/s 194I (10%)   : ₹ ${totalTds.toLocaleString("en-IN")}.00
+Applicable GST Compliance Status    : 100% Reconciled with GSTR-1
 
-MONTHLY DISBURSEMENT BREAKDOWN:
-  - Apr 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox440192
-  - May 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox551982
-  - Jun 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox662914
-  - Jul 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox774102
-  - Aug 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox889123
-  - Sep 2025 : ₹ 2,25,380 | Status: COMPLETED | Ref: pay_Ox991204
+--------------------------------------------------------------------------------
+RECENT PAYMENT RECEIPTS RECONCILED:
+--------------------------------------------------------------------------------
+${collections.map(c => `  - Date: ${c.paymentDate} | Receipt: ${c.receiptNumber} | Amount: ₹ ${c.amountReceived.toLocaleString("en-IN")} | Mode: ${c.paymentMode} | UTR: ${c.referenceNumber}`).join("\n")}
 
 ================================================================================
 VERIFIED BY OFFICEX FINANCIAL AUDIT ENGINE (SOC 2 TYPE II CERTIFIED)
 ================================================================================`;
 
-    triggerFileDownload("OfficeX_Tax_Certificate_2025-26.txt", content);
+    triggerFileDownload(`OfficeX_Tax_Certificate_${tenantInfo?.tenantCode || "TNT"}.txt`, content);
     setToast("Consolidated tax certificate downloaded to your device!");
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleDownloadInvoiceReceipt = (p: typeof paymentHistory[0]) => {
+  const handleDownloadInvoiceReceipt = (inv: TenantInvoice) => {
     const content = `================================================================================
                        OFFICEX COMMERCIAL REAL ESTATE
                         OFFICIAL GST TAX INVOICE RECEIPT
 ================================================================================
 
-Invoice Number     : ${p.invoice}
-Billing Month      : ${p.month}
-Payment Date       : ${p.paid}
-Razorpay Ref ID    : ${p.ref}
-Payment Mode       : ${p.mode}
-Payment Status     : COMPLETED (Verified via Razorpay Nodal Escrow)
+Invoice Number     : ${inv.invoiceNumber}
+Billing Month      : ${inv.billingMonth}
+Invoice Date       : ${inv.invoiceDate}
+Due Date           : ${inv.dueDate}
+Payment Status     : ${inv.status.toUpperCase()}
+Receipt Ref / UTR  : ${inv.referenceNumber || "HDFC-NEFT-AUTO"}
+Payment Mode       : ${inv.paymentMode || "Razorpay Escrow Gateway"}
 
 --------------------------------------------------------------------------------
 ISSUED BY (LANDLORD):
-  Entity           : OfficeX Institutional Commercial Real Estate Pvt. Ltd.
-  Address          : Cyber City Tower B, DLF Phase 2, Gurugram, Haryana 122002
-  GSTIN            : 06AAACO1234F1Z8
-  PAN              : AAACO1234F
+  Entity           : OfficeX Asset Management India Pvt Ltd
+  Address          : Level 14, Tower 2, One International Center, Prabhadevi, Mumbai
+  GSTIN            : 27AAFCO1234F1Z5
+  PAN              : AAFCO1234F
 
 ISSUED TO (CORPORATE OCCUPIER):
-  Entity           : TCS Corporate Workspace Division
-  Property Unit    : Unit 402, Apex Commercial Tower, BKC, Mumbai
-  Lease Agreement  : LX-2024-88912
-  GSTIN            : 27AABCT9821P1ZM
+  Entity           : ${inv.tenantName}
+  Property         : ${inv.propertyName}
+  Lease Reference  : ${inv.leaseId}
 --------------------------------------------------------------------------------
 
 ITEMIZED BREAKDOWN OF COMMERCIAL CHARGES:
 --------------------------------------------------------------------------------
-1. Base Commercial Rent (4,500 sq.ft @ ₹37.7/sqft)    : ₹ 1,70,000.00
-2. Common Area Maintenance (CAM @ ₹3.3/sqft)          : ₹   15,000.00
-3. Reserved Basement Parking Bays (4 Bays)            : ₹   34,380.00
+1. Base Commercial Rent                               : ₹ ${inv.baseRent.toLocaleString("en-IN")}.00
+2. Common Area Maintenance (CAM Charges)              : ₹ ${inv.camCharges.toLocaleString("en-IN")}.00
+3. Utility & Electricity Recoveries                   : ₹ ${inv.utilityCharges.toLocaleString("en-IN")}.00
+4. Parking Bays Allocation                            : ₹ ${(inv.parkingCharges || 0).toLocaleString("en-IN")}.00
 --------------------------------------------------------------------------------
-SUBTOTAL                                              : ₹ 2,19,380.00
-CGST @ 9%                                             : ₹    3,000.00
-SGST @ 9%                                             : ₹    3,000.00
-TOTAL GST (18% on CAM & Parking)                      : ₹    6,000.00
+SUBTOTAL                                              : ₹ ${inv.subtotal.toLocaleString("en-IN")}.00
+GST (18% Applicable on Commercial Lease)              : ₹ ${inv.gstAmount.toLocaleString("en-IN")}.00
+GROSS INVOICE TOTAL                                   : ₹ ${inv.grossTotal.toLocaleString("en-IN")}.00
+LESS: TDS Deducted u/s 194I (10% on Base Rent)        : -₹ ${inv.tdsDeducted.toLocaleString("en-IN")}.00
 --------------------------------------------------------------------------------
-TOTAL AMOUNT PAID                                     : ${p.amount}
+NET PAYABLE DUES                                      : ₹ ${inv.netPayable.toLocaleString("en-IN")}.00
+TOTAL AMOUNT PAID TO DATE                             : ₹ ${(inv.amountPaid || 0).toLocaleString("en-IN")}.00
+REMAINING BALANCE DUE                                 : ₹ ${(inv.balanceDue || 0).toLocaleString("en-IN")}.00
 ================================================================================
 
-AUDIT TRAIL & COMPLIANCE:
-  - Bank Reference : HDFC-UPI-${p.ref}
+AUDIT TRAIL & STATUTORY COMPLIANCE:
   - Digital Stamp  : VERIFIED BY OFFICEX NODAL ESCROW ENGINE
-  - E-Way Bill / QR Code Hash : 9f8a2b3c4d5e6f7a8b9c0d1e2f3a4b5c
+  - Rules Citation : Issued in accordance with Rule 46 of CGST Rules 2017.
 
-This is a computer-generated tax invoice receipt authorized under Rule 46 of 
-CGST Rules 2017. No physical signature is required.
+This is a computer-generated tax invoice receipt. No physical signature required.
 ================================================================================`;
 
-    triggerFileDownload(`${p.invoice}_GST_Invoice_Receipt.txt`, content);
-    setToast(`Official GST invoice receipt ${p.invoice} downloaded!`);
+    triggerFileDownload(`${inv.invoiceNumber}_Official_Receipt.txt`, content);
+    setToast(`Official GST invoice receipt ${inv.invoiceNumber} downloaded!`);
     setTimeout(() => setToast(null), 3500);
   };
+
+  const primaryInvoice = selectedInvoice || invoices[0];
 
   return (
     <div className="flex flex-col gap-6 font-sans relative">
@@ -187,122 +270,208 @@ CGST Rules 2017. No physical signature is required.
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-gray-900">Rent &amp; Utility Billing</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Pay monthly lease dues, CAM charges, and download GST receipts.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-black text-gray-900">Rent &amp; Utility Billing</h1>
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+              Live Rent Roll Connected
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Pay monthly lease dues, CAM charges, and download GST receipts for {tenantInfo?.tradeName || "Your Organization"}.
+          </p>
         </div>
-        <button 
-          onClick={handleDownloadTaxCertificate}
-          className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 flex items-center gap-1.5 shadow-2xs self-start cursor-pointer"
-        >
-          <Download size={13} />
-          <span>Download Tax Certificate</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchTenantData}
+            title="Refresh billing data"
+            className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs cursor-pointer"
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+          </button>
+          <button 
+            onClick={handleDownloadTaxCertificate}
+            className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <Download size={13} />
+            <span>Download Tax Certificate</span>
+          </button>
+        </div>
       </div>
 
-      {/* Current Invoice Card */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
-          <div>
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-              invoice.status === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
-            }`}>
-              {invoice.status === "Paid" ? "Payment Received" : "Due for Payment"}
-            </span>
-            <h2 className="text-lg sm:text-xl font-black text-gray-900 mt-2">
-              Monthly Lease &amp; CAM Invoice
-            </h2>
-            <p className="text-xs text-gray-500">Billing Cycle: {invoice.month} · {invoice.id}</p>
-          </div>
-
-          <div className="text-left sm:text-right">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Payment Due Date</span>
-            <p className="text-sm font-black text-red-600">{invoice.dueDate}</p>
-            <p className="text-[10px] text-gray-400">Late fee penalty applies after 5th</p>
-          </div>
-        </div>
-
-        {/* Itemized Breakdown */}
-        <div className="py-5 space-y-3 border-b border-gray-100 text-xs">
-          <div className="flex justify-between text-gray-600">
-            <span>Base Commercial Space Rent (4,500 sq.ft. @ ₹37.7/sqft)</span>
-            <span className="font-bold text-gray-900">{invoice.baseRent}</span>
-          </div>
-          <div className="flex justify-between text-gray-600">
-            <span>Common Area Maintenance (CAM @ ₹3.3/sqft)</span>
-            <span className="font-bold text-gray-900">{invoice.maintenance}</span>
-          </div>
-          <div className="flex justify-between text-gray-600">
-            <span>Allocated Reserved Basement Parking (4 Bays)</span>
-            <span className="font-bold text-gray-900">{invoice.parking}</span>
-          </div>
-          <div className="flex justify-between text-gray-600">
-            <span>Goods &amp; Services Tax (GST 18% on CAM &amp; Parking)</span>
-            <span className="font-bold text-gray-900">{invoice.gst}</span>
-          </div>
-        </div>
-
-        {/* Total & Pay Action */}
-        <div className="pt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold text-gray-500">Total Net Payable</span>
-            <p className="text-2xl sm:text-3xl font-black text-purple-700">{invoice.total}</p>
-          </div>
-
-          {invoice.status === "Paid" ? (
-            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-sm">
-              <CheckCircle size={18} />
-              <span>Paid on {invoice.month}</span>
+      {/* Primary Invoice Card */}
+      {primaryInvoice ? (
+        <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+            <div>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                primaryInvoice.status === "paid" 
+                  ? "bg-emerald-100 text-emerald-800" 
+                  : primaryInvoice.status === "overdue"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-amber-100 text-amber-800"
+              }`}>
+                {primaryInvoice.status === "paid" ? "Payment Received" : primaryInvoice.status === "overdue" ? "Overdue for Payment" : "Due for Payment"}
+              </span>
+              <h2 className="text-lg sm:text-xl font-black text-gray-900 mt-2">
+                Monthly Lease &amp; CAM Invoice
+              </h2>
+              <p className="text-xs text-gray-500">
+                Billing Cycle: {primaryInvoice.billingMonth} · {primaryInvoice.invoiceNumber} · {primaryInvoice.propertyName}
+              </p>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowPayModal(true)}
-              className="px-8 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-black shadow-lg shadow-purple-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>Pay Now with Razorpay</span>
-              <ArrowRight size={15} />
-            </button>
+
+            <div className="text-left sm:text-right">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Payment Due Date</span>
+              <p className={`text-sm font-black ${primaryInvoice.status === "overdue" ? "text-red-600" : "text-gray-900"}`}>
+                {primaryInvoice.dueDate}
+              </p>
+              <p className="text-[10px] text-gray-400">TDS u/s 194I auto-computed</p>
+            </div>
+          </div>
+
+          {/* Itemized Breakdown */}
+          <div className="py-5 space-y-3 border-b border-gray-100 text-xs">
+            <div className="flex justify-between text-gray-600">
+              <span>Base Commercial Space Rent</span>
+              <span className="font-bold text-gray-900">₹{primaryInvoice.baseRent.toLocaleString("en-IN")}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>Common Area Maintenance (CAM Charges)</span>
+              <span className="font-bold text-gray-900">₹{primaryInvoice.camCharges.toLocaleString("en-IN")}</span>
+            </div>
+            {primaryInvoice.utilityCharges > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>Utility &amp; Electricity Recoveries</span>
+                <span className="font-bold text-gray-900">₹{primaryInvoice.utilityCharges.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+            {primaryInvoice.parkingCharges > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>Allocated Reserved Basement Parking</span>
+                <span className="font-bold text-gray-900">₹{primaryInvoice.parkingCharges.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-gray-600">
+              <span>Goods &amp; Services Tax (GST 18%)</span>
+              <span className="font-bold text-gray-900">₹{primaryInvoice.gstAmount.toLocaleString("en-IN")}</span>
+            </div>
+            <div className="flex justify-between text-emerald-700 bg-emerald-50/70 p-2.5 rounded-xl font-medium">
+              <span>Less: TDS Deducted (10% on Base Rent)</span>
+              <span className="font-bold">-₹{primaryInvoice.tdsDeducted.toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+
+          {/* Total & Pay Action */}
+          <div className="pt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold text-gray-500">
+                {primaryInvoice.status === "paid" ? "Total Net Paid" : "Total Net Payable (after TDS)"}
+              </span>
+              <p className="text-2xl sm:text-3xl font-black text-purple-700">
+                ₹{(primaryInvoice.status === "paid" ? primaryInvoice.netPayable : primaryInvoice.balanceDue).toLocaleString("en-IN")}
+              </p>
+            </div>
+
+            {primaryInvoice.status === "paid" ? (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleDownloadInvoiceReceipt(primaryInvoice)}
+                  className="px-5 py-3 rounded-2xl border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-2 hover:bg-emerald-100 cursor-pointer"
+                >
+                  <Download size={14} />
+                  <span>Download GST Receipt</span>
+                </button>
+                <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-sm">
+                  <CheckCircle size={18} />
+                  <span>Payment Settled</span>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleOpenPayModal(primaryInvoice)}
+                className="px-8 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-black shadow-lg shadow-purple-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Pay Now with Razorpay</span>
+                <ArrowRight size={15} />
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-gray-200 p-8 text-center">
+          <CheckCircle size={36} className="text-emerald-500 mx-auto mb-2" />
+          <h3 className="text-base font-bold text-gray-900">All Lease Dues Cleared</h3>
+          <p className="text-xs text-gray-500 mt-1">There are no outstanding invoices for your account at this time.</p>
+        </div>
+      )}
+
+      {/* Invoices & Payment History Table */}
+      <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-black text-gray-900">All Invoices &amp; Receipts</h2>
+            <p className="text-xs text-gray-500">Live feed from Landlord Rent Roll Ledger</p>
+          </div>
+          {summary && (
+            <div className="text-xs text-gray-600">
+              <span>Total Outstanding: </span>
+              <span className="font-bold text-red-600">₹{summary.totalOutstanding.toLocaleString("en-IN")}</span>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Payment History Table */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-base font-black text-gray-900 mb-4">Payment History &amp; Receipts</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <th className="py-3 pr-3">Month</th>
+                <th className="py-3 pr-3">Billing Month</th>
                 <th className="py-3 pr-3">Invoice No</th>
-                <th className="py-3 pr-3">Amount</th>
-                <th className="py-3 pr-3">Paid Date</th>
-                <th className="py-3 pr-3">Payment Channel</th>
-                <th className="py-3 pr-3">Razorpay Ref</th>
+                <th className="py-3 pr-3">Property</th>
+                <th className="py-3 pr-3">Gross Total</th>
+                <th className="py-3 pr-3">TDS (10%)</th>
+                <th className="py-3 pr-3">Net Payable</th>
+                <th className="py-3 pr-3">Balance Due</th>
                 <th className="py-3 pr-3">Status</th>
-                <th className="py-3 text-right">Receipt</th>
+                <th className="py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
-              {paymentHistory.map((p) => (
-                <tr key={p.ref} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
-                  <td className="py-3.5 pr-3 font-semibold text-gray-900">{p.month}</td>
-                  <td className="py-3.5 pr-3 text-gray-600">{p.invoice}</td>
-                  <td className="py-3.5 pr-3 font-bold text-gray-900">{p.amount}</td>
-                  <td className="py-3.5 pr-3 text-gray-600">{p.paid}</td>
-                  <td className="py-3.5 pr-3 text-gray-600">{p.mode}</td>
-                  <td className="py-3.5 pr-3 font-mono text-gray-500">{p.ref}</td>
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
+                  <td className="py-3.5 pr-3 font-semibold text-gray-900">{inv.billingMonth}</td>
+                  <td className="py-3.5 pr-3 font-mono text-gray-600">{inv.invoiceNumber}</td>
+                  <td className="py-3.5 pr-3 text-gray-700">{inv.propertyName}</td>
+                  <td className="py-3.5 pr-3 font-medium text-gray-700">₹{inv.grossTotal.toLocaleString("en-IN")}</td>
+                  <td className="py-3.5 pr-3 text-emerald-700 font-medium">₹{inv.tdsDeducted.toLocaleString("en-IN")}</td>
+                  <td className="py-3.5 pr-3 font-bold text-gray-900">₹{inv.netPayable.toLocaleString("en-IN")}</td>
+                  <td className="py-3.5 pr-3 font-bold text-purple-700">₹{inv.balanceDue.toLocaleString("en-IN")}</td>
                   <td className="py-3.5 pr-3">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
-                      {p.status}
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                      inv.status === "paid"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : inv.status === "overdue"
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
+                      {inv.status.toUpperCase()}
                     </span>
                   </td>
                   <td className="py-3.5 text-right">
-                    <button 
-                      onClick={() => handleDownloadInvoiceReceipt(p)}
-                      className="text-[#0F8B7D] font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <Download size={12} /> Receipt
-                    </button>
+                    {inv.status === "paid" ? (
+                      <button 
+                        onClick={() => handleDownloadInvoiceReceipt(inv)}
+                        className="text-[#0F8B7D] font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Download size={12} /> Receipt
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenPayModal(inv)}
+                        className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-[11px] cursor-pointer"
+                      >
+                        Pay Now
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -311,8 +480,8 @@ CGST Rules 2017. No physical signature is required.
         </div>
       </div>
 
-      {/* ═══ END-TO-END RAZORPAY PAYMENT MODAL (P1 CRITICAL FIX) ═══ */}
-      {showPayModal && (
+      {/* ═══ END-TO-END RAZORPAY PAYMENT MODAL (LIVE SETTLEMENT) ═══ */}
+      {showPayModal && selectedInvoice && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Razorpay Brand Header */}
@@ -324,9 +493,9 @@ CGST Rules 2017. No physical signature is required.
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-black uppercase tracking-wider text-blue-400">Razorpay</span>
-                    <span className="text-[10px] bg-blue-900/60 text-blue-200 px-1.5 py-0.2 rounded font-mono">SECURE</span>
+                    <span className="text-[10px] bg-blue-900/60 text-blue-200 px-1.5 py-0.2 rounded font-mono">SECURE ESCROW</span>
                   </div>
-                  <p className="text-sm font-bold text-white">OfficeX Escrow Nodal Account</p>
+                  <p className="text-sm font-bold text-white">OfficeX Nodal Rent Collection Account</p>
                 </div>
               </div>
               <button 
@@ -341,10 +510,13 @@ CGST Rules 2017. No physical signature is required.
             <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase">Commercial Rent Dues</p>
-                <p className="text-xs font-bold text-gray-700">{invoice.id} · {invoice.month}</p>
+                <p className="text-xs font-bold text-gray-700">{selectedInvoice.invoiceNumber} · {selectedInvoice.billingMonth}</p>
+                <p className="text-[10px] text-gray-500">{selectedInvoice.propertyName}</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-black text-gray-900">{invoice.total}</p>
+                <p className="text-2xl font-black text-gray-900">
+                  ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")}
+                </p>
                 <span className="text-[10px] text-emerald-600 font-bold">Zero Transaction Fee</span>
               </div>
             </div>
@@ -402,7 +574,7 @@ CGST Rules 2017. No physical signature is required.
 
                   <div className="relative flex py-1 items-center">
                     <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="flex-shrink mx-3 text-[10px] text-gray-400 font-bold uppercase">Or enter UPI ID</span>
+                    <span className="flex-shrink mx-3 text-[10px] text-gray-400 font-bold uppercase">Or enter Corporate UPI ID</span>
                     <div className="flex-grow border-t border-gray-200"></div>
                   </div>
 
@@ -410,8 +582,8 @@ CGST Rules 2017. No physical signature is required.
                     <input
                       value={upiId}
                       onChange={(e) => setUpiId(e.target.value)}
-                      placeholder="e.g. yourname@okhdfcbank"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                      placeholder="e.g. finance@tcs.icici"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-600"
                     />
                   </div>
                 </div>
@@ -421,12 +593,12 @@ CGST Rules 2017. No physical signature is required.
               {payMethod === "card" && (
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Card Number</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Corporate Card Number</label>
                     <input
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
                       placeholder="4532 ···· ···· 8920"
-                      className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#0F8B7D]"
+                      className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -436,7 +608,7 @@ CGST Rules 2017. No physical signature is required.
                         value={cardExpiry}
                         onChange={(e) => setCardExpiry(e.target.value)}
                         placeholder="12/28"
-                        className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#0F8B7D]"
+                        className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
                       />
                     </div>
                     <div>
@@ -447,7 +619,7 @@ CGST Rules 2017. No physical signature is required.
                         placeholder="•••"
                         type="password"
                         maxLength={4}
-                        className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#0F8B7D]"
+                        className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
                       />
                     </div>
                   </div>
@@ -457,16 +629,16 @@ CGST Rules 2017. No physical signature is required.
               {/* Method 3: Netbanking */}
               {payMethod === "netbanking" && (
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Select Institutional Bank</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Select Corporate Bank</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {["HDFC Bank", "ICICI Bank", "SBI Bank", "Axis Bank", "Kotak Mahindra", "IndusInd Bank"].map((b) => (
+                    {["HDFC Bank Corporate", "ICICI Bank Corporate", "SBI Corporate", "Axis Bank Corporate", "Kotak Mahindra", "IndusInd Bank"].map((b) => (
                       <button
                         key={b}
                         type="button"
                         onClick={() => setSelectedBank(b)}
                         className={`p-3 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
                           selectedBank === b 
-                            ? "border-[#0F8B7D] bg-teal-50/50 text-[#0F8B7D]" 
+                            ? "border-blue-600 bg-blue-50/50 text-blue-700" 
                             : "border-gray-200 text-gray-700 hover:bg-gray-50"
                         }`}
                       >
@@ -491,12 +663,12 @@ CGST Rules 2017. No physical signature is required.
                 ) : isPaidSuccess ? (
                   <>
                     <CheckCircle size={16} className="text-emerald-300" />
-                    <span>Payment Verified &amp; Escrow Released!</span>
+                    <span>Payment Verified &amp; Rent Roll Settled!</span>
                   </>
                 ) : (
                   <>
                     <Lock size={14} />
-                    <span>Authorize Payment of {invoice.total}</span>
+                    <span>Authorize Payment of ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")}</span>
                   </>
                 )}
               </button>

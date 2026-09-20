@@ -86,6 +86,59 @@ export async function GET(req: Request) {
       });
     }
 
+    if (type === "escalations") {
+      const headers = [
+        "Escalation ID", "Lease Code", "Tenant Name", "Property",
+        "Escalation Due Date", "Previous Base Rent (INR)", "Escalation %", "Monthly Increase (INR)", "New Base Rent (INR)", "Status", "Applied At", "Applied By"
+      ];
+
+      const rows = db.escalations.map(e => [
+        `"${e.id}"`, `"${e.leaseCode}"`, `"${e.tenantName}"`, `"${e.propertyName}"`,
+        `"${e.escalationDate}"`, e.previousRent, e.escalationPct, e.calculatedIncrease, e.newRent, `"${e.status}"`, `"${e.appliedAt || ''}"`, `"${e.appliedBy || ''}"`
+      ]);
+
+      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      return new NextResponse(csvContent, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="officex_escalations_${new Date().toISOString().split('T')[0]}.csv"`
+        }
+      });
+    }
+
+    if (type === "aging") {
+      const asOf = new Date();
+      const headers = [
+        "Invoice No", "Tenant Name", "Property", "Due Date",
+        "Gross Total (INR)", "TDS Deducted (INR)", "Amount Paid (INR)", "Balance Due (INR)",
+        "Days Overdue", "Aging Bucket", "Status"
+      ];
+
+      const rows = db.invoices.map(i => {
+        const dueDate = new Date(i.dueDate);
+        const diffDays = Math.floor((asOf.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        let bucket = "Current";
+        if (diffDays > 90) bucket = "90+ Days";
+        else if (diffDays > 60) bucket = "61-90 Days";
+        else if (diffDays > 30) bucket = "31-60 Days";
+        else if (diffDays > 0) bucket = "0-30 Days";
+
+        return [
+          `"${i.invoiceNumber}"`, `"${i.tenantName}"`, `"${i.propertyName}"`, `"${i.dueDate}"`,
+          i.grossTotal, i.tdsDeducted, i.amountPaid, i.balanceDue,
+          Math.max(0, diffDays), `"${bucket}"`, `"${i.status}"`
+        ];
+      });
+
+      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      return new NextResponse(csvContent, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="officex_aging_report_${new Date().toISOString().split('T')[0]}.csv"`
+        }
+      });
+    }
+
     return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
   } catch (error: any) {
     console.error("GET /api/rent-roll/export error:", error);

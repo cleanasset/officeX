@@ -12,6 +12,7 @@ import {
   Maximize2
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
+import { SpaceStackingModal } from "./SpaceStackingModal";
 
 interface OccupancyData {
   portfolio: {
@@ -56,6 +57,7 @@ interface OccupancyTabProps {
 
 export const OccupancyTab: React.FC<OccupancyTabProps> = ({ occupancyData }) => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("ALL");
+  const [stackingModalProp, setStackingModalProp] = useState<any>(null);
 
   if (!occupancyData) {
     return (
@@ -163,6 +165,13 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({ occupancyData }) => 
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStackingModalProp(prop)}
+                  className="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50/50 hover:bg-teal-100/50 text-[#0F8B7D] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Floor Stacking Matrix</span>
+                </button>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                   prop.occupancyPct >= prop.targetOccupancyPct
                     ? "bg-teal-50 text-teal-700 border border-teal-200"
@@ -224,6 +233,16 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({ occupancyData }) => 
           </div>
         ))}
       </div>
+
+      {/* Space Stacking Modal (RR-04) */}
+      {stackingModalProp && (
+        <SpaceStackingModal
+          isOpen={Boolean(stackingModalProp)}
+          onClose={() => setStackingModalProp(null)}
+          propertyName={stackingModalProp.propertyName}
+          spaces={stackingModalProp.spaces}
+        />
+      )}
     </div>
   );
 };

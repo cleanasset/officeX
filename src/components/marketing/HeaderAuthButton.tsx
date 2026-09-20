@@ -33,26 +33,21 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
     setMounted(true);
     const checkAuth = () => {
       if (typeof window === "undefined") return;
+      const hasAuthCookie = document.cookie.includes("officex_auth=1");
       const sessionActive = sessionStorage.getItem("officex_session_active") === "1";
+      const localEmail = localStorage.getItem("officex_user_email");
 
-      if (!sessionActive) {
-        if (localStorage.getItem("officex_user_email") || document.cookie.includes("officex_auth=1")) {
-          localStorage.removeItem("officex_user_email");
-          localStorage.removeItem("officex_user_name");
-          localStorage.removeItem("officex_user_role");
-          localStorage.removeItem("officex_user");
-          localStorage.removeItem("officex_subscription");
-          localStorage.removeItem("officex_dashboard");
-          localStorage.removeItem("officex_active_portal");
-          document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-          document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-          document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-        }
+      if (!hasAuthCookie && !sessionActive && !localEmail) {
         setIsLoggedIn(false);
         setUserName("");
         setUserRole("");
         setIsSubscribed(false);
         return;
+      }
+
+      // If auth cookie or local email exists, ensure sessionStorage is active
+      if (!sessionActive && (hasAuthCookie || localEmail)) {
+        sessionStorage.setItem("officex_session_active", "1");
       }
 
       const email = sessionStorage.getItem("officex_user_email") || localStorage.getItem("officex_user_email");

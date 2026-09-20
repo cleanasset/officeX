@@ -126,6 +126,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
 }) => {
   const currentTabConfig = TAB_CONFIGS[activeTab] || TAB_CONFIGS.dashboard;
   const IconComponent = currentTabConfig.icon;
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Visibility logic based on active tab
   const showAddLease = activeTab === "dashboard" || activeTab === "rentroll";
@@ -184,27 +185,64 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
             </button>
           )}
 
-          {showExportExcel && (
+          {/* Export Centre Dropdown (RR-20) */}
+          <div className="relative">
             <button
-              onClick={() => onExportCsv("rentroll")}
+              onClick={() => setIsExportOpen(!isExportOpen)}
               className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Export 39-column Excel"
+              title="Export Institutional Reports"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Export Excel</span>
+              <span>Export</span>
+              <span className="text-[10px] text-gray-400">▼</span>
             </button>
-          )}
 
-          {showExportAudit && (
-            <button
-              onClick={() => onExportCsv("audit")}
-              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Export Audit Logs"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Export Audit</span>
-            </button>
-          )}
+            {isExportOpen && (
+              <div 
+                className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-xl border border-gray-200 p-1.5 z-50 text-xs animate-in zoom-in-95 duration-100"
+                onClick={() => setIsExportOpen(false)}
+              >
+                <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Select Institutional Report
+                </div>
+                <button
+                  onClick={() => onExportCsv("rentroll")}
+                  className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-gray-800 hover:text-teal-900 rounded-xl font-medium flex items-center justify-between cursor-pointer"
+                >
+                  <span>Rent Roll Master (39-Col)</span>
+                  <span className="text-[10px] bg-teal-100/70 text-teal-800 font-mono px-1.5 py-0.5 rounded">CSV</span>
+                </button>
+                <button
+                  onClick={() => onExportCsv("aging")}
+                  className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-gray-800 hover:text-teal-900 rounded-xl font-medium flex items-center justify-between cursor-pointer"
+                >
+                  <span>AR Aging Analysis</span>
+                  <span className="text-[10px] bg-teal-100/70 text-teal-800 font-mono px-1.5 py-0.5 rounded">CSV</span>
+                </button>
+                <button
+                  onClick={() => onExportCsv("invoices")}
+                  className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-gray-800 hover:text-teal-900 rounded-xl font-medium flex items-center justify-between cursor-pointer"
+                >
+                  <span>Billing &amp; Tax Invoices</span>
+                  <span className="text-[10px] bg-teal-100/70 text-teal-800 font-mono px-1.5 py-0.5 rounded">CSV</span>
+                </button>
+                <button
+                  onClick={() => onExportCsv("collections")}
+                  className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-gray-800 hover:text-teal-900 rounded-xl font-medium flex items-center justify-between cursor-pointer"
+                >
+                  <span>Collections &amp; Receipts</span>
+                  <span className="text-[10px] bg-teal-100/70 text-teal-800 font-mono px-1.5 py-0.5 rounded">CSV</span>
+                </button>
+                <button
+                  onClick={() => onExportCsv("escalations")}
+                  className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-gray-800 hover:text-teal-900 rounded-xl font-medium flex items-center justify-between cursor-pointer"
+                >
+                  <span>Escalation Schedule</span>
+                  <span className="text-[10px] bg-teal-100/70 text-teal-800 font-mono px-1.5 py-0.5 rounded">CSV</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {showRecordPayment && onOpenRecordPayment && (
             <button

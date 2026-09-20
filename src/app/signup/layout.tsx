@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: 'Sign in · OfficeX',
-  description: 'Secure, single-sign-on access to the OfficeX enterprise commercial real estate and facilities management platform.',
+  title: 'Create Account · OfficeX',
+  description: 'Register for your verified OfficeX enterprise account to access commercial real estate operations, property management, and workplace services.',
   robots: {
     index: false,
     follow: false,
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://officex.pro/login',
+    canonical: 'https://officex.pro/signup',
   },
 };
 
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
   themeColor: '#2563EB',
 };
 
-export default function LoginLayout({
+export default function SignupLayout({
   children,
 }: {
   children: React.ReactNode;

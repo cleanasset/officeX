@@ -10,9 +10,11 @@ import {
   ShieldCheck,
   AlertCircle,
   Plus,
-  Building
+  Building,
+  FileText
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
+import { EscalationNoticeModal } from "./EscalationNoticeModal";
 
 export interface EscalationRecord {
   id: string;
@@ -43,6 +45,7 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
   onWaiveEscalation,
 }) => {
   const [filter, setFilter] = useState<string>("ALL");
+  const [selectedEscalationForNotice, setSelectedEscalationForNotice] = useState<EscalationRecord | null>(null);
 
   const filteredEscalations = escalations.filter((e) => {
     if (filter !== "ALL" && e.status !== filter) return false;
@@ -172,24 +175,33 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
                   </td>
 
                   <td className="p-3.5 text-center">
-                    {esc.status === "pending" ? (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => onApplyEscalation(esc)}
-                          className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-[11px] shadow-xs transition-colors cursor-pointer"
-                        >
-                          Apply
-                        </button>
-                        <button
-                          onClick={() => onWaiveEscalation(esc)}
-                          className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer"
-                        >
-                          Waive
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 text-[11px]">{esc.appliedAt ? new Date(esc.appliedAt).toLocaleDateString() : "—"}</span>
-                    )}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => setSelectedEscalationForNotice(esc)}
+                        title="Generate Official Escalation Notice"
+                        className="p-1 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-blue-700 cursor-pointer transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                      {esc.status === "pending" ? (
+                        <>
+                          <button
+                            onClick={() => onApplyEscalation(esc)}
+                            className="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-[11px] shadow-xs transition-colors cursor-pointer"
+                          >
+                            Apply
+                          </button>
+                          <button
+                            onClick={() => onWaiveEscalation(esc)}
+                            className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer"
+                          >
+                            Waive
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-[11px]">{esc.appliedAt ? new Date(esc.appliedAt).toLocaleDateString() : "—"}</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -197,6 +209,13 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Official Escalation Notice Modal (RR-10) */}
+      <EscalationNoticeModal
+        isOpen={Boolean(selectedEscalationForNotice)}
+        onClose={() => setSelectedEscalationForNotice(null)}
+        escalation={selectedEscalationForNotice}
+      />
     </div>
   );
 };
