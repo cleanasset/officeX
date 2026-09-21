@@ -23,10 +23,8 @@ import {
   KeyRound,
   ArrowLeft,
   Check,
-  Sparkles,
   Eye,
-  EyeOff,
-  Building2
+  EyeOff
 } from "lucide-react";
 
 // Primary roles defined in Section 1.2 of Registration Specification
@@ -288,45 +286,40 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-gradient-to-b from-blue-100/50 via-slate-100/30 to-transparent pointer-events-none" />
       <div className="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-200/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-6xl mx-auto relative z-10">
-        {/* 2-Column Responsive Grid - Pure Enterprise Light Theme */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
-          {/* =================================================================
-              LEFT COLUMN: INTERACTIVE SIGN UP CARD
-              ================================================================= */}
-          <div className="lg:col-span-6 xl:col-span-6 w-full max-w-[480px] mx-auto">
-            {/* Header Branding & Verified Anchor */}
-            <div className="flex items-center justify-between mb-4">
-              <Link href="/" className="inline-flex items-center gap-2.5 group">
-                <Image
-                  src="/logo-removebg-preview.png"
-                  alt="OfficeX Logo"
-                  width={50}
-                  height={50}
-                  className="object-contain group-hover:scale-105 transition-transform"
-                  style={{ width: "auto", height: "38px" }}
-                  priority
-                />
-                <Image
-                  src="/name-removebg-preview.png"
-                  alt="OfficeX"
-                  width={150}
-                  height={38}
-                  className="object-contain"
-                  style={{ width: "auto", height: "38px" }}
-                  priority
-                />
-              </Link>
-            </div>
+      <div className="w-full max-w-[480px] mx-auto relative z-10">
+        {/* Header Branding (Centered) */}
+        <div className="flex items-center justify-center mb-4">
+          <Link href="/" className="inline-flex items-center gap-2.5 group">
+            <Image
+              src="/logo-removebg-preview.png"
+              alt="OfficeX Logo"
+              width={50}
+              height={50}
+              className="object-contain group-hover:scale-105 transition-transform"
+              style={{ width: "auto", height: "38px" }}
+              priority
+            />
+            <Image
+              src="/name-removebg-preview.png"
+              alt="OfficeX"
+              width={150}
+              height={38}
+              className="object-contain"
+              style={{ width: "auto", height: "38px" }}
+              priority
+            />
+          </Link>
+        </div>
 
-            {/* Canonical Domain Trust Anchor */}
-            <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold tracking-wide">OfficeX</span>
-              <span className="text-blue-300">·</span>
-              <span className="text-blue-800">Verified Registration Gateway</span>
-            </div>
+        {/* Canonical Domain Trust Anchor (Centered) */}
+        <div className="mb-4 flex justify-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold tracking-wide">OfficeX</span>
+            <span className="text-blue-300">·</span>
+            <span className="text-blue-800">Verified Registration Gateway</span>
+          </div>
+        </div>
 
             {/* Main Card Container (Pure Light Theme) */}
             <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 relative overflow-hidden">
@@ -691,139 +684,6 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               <span>•</span>
               <span>RERA & GST Compliant</span>
             </div>
-          </div>
-
-          {/* =================================================================
-              RIGHT COLUMN: ELEGANT ONBOARDING ROADMAP & BENEFIT PANEL
-              Desktop Only (lg:block) - Matches Specification v1.0
-              ================================================================= */}
-          <div className="hidden lg:block lg:col-span-6 xl:col-span-6 w-full">
-            <div className="bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-100/90 border border-blue-100/90 rounded-3xl p-8 xl:p-10 shadow-xl relative overflow-hidden text-slate-900 flex flex-col justify-between min-h-[620px]">
-              {/* Ambient Background Accents */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="relative z-10">
-                {/* Brand Tagline Badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 border border-blue-200 text-[11px] font-bold text-blue-800 mb-6 shadow-2xs">
-                  <Sparkles size={13} className="text-blue-600" />
-                  <span>Enterprise Registration & Onboarding</span>
-                </div>
-
-                <h2 className="text-3xl xl:text-4xl font-black text-slate-950 tracking-tight leading-tight">
-                  Workspaces, simplified from day one.
-                </h2>
-                <p className="text-sm xl:text-base text-slate-600 mt-2 font-normal leading-relaxed max-w-lg">
-                  Join India’s commercial real estate ecosystem to connect portfolios, operational teams, and enterprise occupiers.
-                </p>
-
-                {/* 4-Step Onboarding Journey (Spec Section 2) */}
-                <div className="space-y-3.5 mt-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                      1
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">
-                        Account Registration & Contact Verification
-                      </span>
-                      <span className="text-xs text-slate-600 font-normal">
-                        Create user credentials with immediate 6-digit OTP verification for email and mobile.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                      2
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">
-                        Organization Master & Legal Entity
-                      </span>
-                      <span className="text-xs text-slate-600 font-normal">
-                        Lookup or register your organization via GSTIN / CIN to avoid duplicate masters.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                      3
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">
-                        Role Profile & Operational Scope
-                      </span>
-                      <span className="text-xs text-slate-600 font-normal">
-                        Configure assets, properties, service categories, or tenant corporate leases.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                      4
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">
-                        Digital KYC & Verified Dashboard Access
-                      </span>
-                      <span className="text-xs text-slate-600 font-normal">
-                        Submit authorized documents, verify bank escrows, and unlock modular entitlements.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Persona Spotlight Preview (Light Theme) */}
-              <div className="mt-8 pt-6 border-t border-slate-200/80 relative z-10">
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Building2 size={15} className="text-blue-600" />
-                      <span className="text-xs font-bold text-slate-900">
-                        Tailored for Every CRE Stakeholder
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                      Unified Portal
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
-                      <span className="font-bold text-slate-900 block">Asset Owners</span>
-                      <span className="text-[10px] text-slate-500">Rent roll, PPM & cash flow</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
-                      <span className="font-bold text-slate-900 block">Leasing Brokers</span>
-                      <span className="text-[10px] text-slate-500">Pipelines, LOIs & commissions</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
-                      <span className="font-bold text-slate-900 block">FM Teams & Vendors</span>
-                      <span className="text-[10px] text-slate-500">Work orders, SLA & bidding</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
-                      <span className="font-bold text-slate-900 block">Corporate Tenants</span>
-                      <span className="text-[10px] text-slate-500">Desk booking & speed-gates</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
-                  <span className="flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-blue-600" />
-                    SOC 2 Type II · AES-256 Vaulted
-                  </span>
-                  <span>Data Sovereignty · India DC</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
       </div>
     </main>
   );

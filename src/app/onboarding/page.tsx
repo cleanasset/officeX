@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -817,13 +818,20 @@ function OnboardingWizardContent() {
       {/* Header Bar - Clean Light Mode */}
       <header className="border-b border-slate-200/90 bg-white/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0F8B7D] to-teal-500 flex items-center justify-center font-black text-white text-sm shadow-md shadow-teal-700/20">
-            OX
-          </div>
-          <div>
+          <Link href="/" className="inline-flex items-center group">
+            <Image
+              src="/officex-logo-full.png"
+              alt="OfficeX - Workspaces, Simplified"
+              width={160}
+              height={42}
+              className="h-9 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              priority
+            />
+          </Link>
+          <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1" />
+          <div className="hidden sm:block">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-slate-900 tracking-tight">OfficeX</span>
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                 GST Architectural Model
               </span>
             </div>
@@ -833,7 +841,7 @@ function OnboardingWizardContent() {
 
         <div className="flex items-center gap-4 text-xs">
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium">
-            <Lock size={12} className="text-[#0F8B7D]" />
+            <Lock size={12} className="text-blue-600" />
             <span>256-Bit Encrypted Statutory Vault</span>
           </div>
           <Link href="/login" className="text-slate-500 hover:text-slate-900 font-bold transition-colors">
