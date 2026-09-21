@@ -79,12 +79,8 @@ export default function SignInForm({
   const [cooldown, setCooldown] = useState(0);
 
   // Memberships for Context Chooser
-  const [memberships, setMemberships] = useState<WorkspaceMembership[]>(
-    MOCK_USERS["owner@officex.in"].memberships
-  );
-  const [selectedMembershipId, setSelectedMembershipId] = useState<string>(
-    MOCK_USERS["owner@officex.in"].memberships[0].id
-  );
+  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
+  const [selectedMembershipId, setSelectedMembershipId] = useState<string>("");
 
   // Recovery Modal state (3 distinct steps: 1=Request, 2=Verify, 3=Set Password)
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
@@ -502,12 +498,22 @@ export default function SignInForm({
     }
 
     const memList = availableMemberships && availableMemberships.length > 0 ? availableMemberships : memberships;
+
+    // Only prompt for workspace if the user genuinely has multiple distinct corporate memberships
+    if (memList.length > 1) {
+      setMemberships(memList);
+      setSelectedMembershipId(memList[0].id);
+      setStep("workspace_chooser");
+      return;
+    }
+
     if (memList.length === 1) {
       handleSelectWorkspace(memList[0]);
       return;
     }
 
-    setStep("workspace_chooser");
+    // Direct routing to Commercial Rent Roll desk for individual users
+    window.location.href = safeRedirect !== "/properties" ? safeRedirect : "/properties/rent-roll";
   };
 
   // --------------------------------------------------------------------------

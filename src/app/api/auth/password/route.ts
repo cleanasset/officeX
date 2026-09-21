@@ -49,13 +49,13 @@ export async function POST(request: Request) {
             {
               id: 'mem_user_portal',
               orgId: 'org_officex',
-              orgName: 'OfficeX Partner',
+              orgName: 'Commercial Asset Management',
               role: userRole,
-              roleCode: 'MEMBER',
-              workspaceTitle: 'Commercial Desk',
-              workspaceUrl: '/properties',
+              roleCode: 'OWNER',
+              workspaceTitle: 'Commercial Rent Roll Desk',
+              workspaceUrl: '/properties/rent-roll',
               propertyScope: 'Active Commercial Portfolio',
-              badge: 'Member',
+              badge: 'Owner',
               badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
               isLastUsed: true
             }
