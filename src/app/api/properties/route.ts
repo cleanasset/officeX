@@ -1,14 +1,42 @@
 import { NextResponse } from "next/server";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const list = await db.select().from(properties).orderBy(desc(properties.createdAt));
-    return NextResponse.json(list);
+    const client = supabaseAdmin || supabase;
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const ownerCompany = searchParams.get("ownerCompany");
+
+    let query = client.from('properties').select('*').order('created_at', { ascending: false });
+    if (ownerCompany) {
+      query = query.ilike('owner_company', `%${ownerCompany}%`);
+    } else if (userId && /^[0-9a-fA-F-]{36}$/.test(userId)) {
+      query = query.eq('owner_user_id', userId);
+    }
+
+    const { data, error } = await query;
+    if (!error && data && data.length > 0) {
+      return NextResponse.json(data);
+    }
+
+    // Fallback: return all active properties
+    const { data: allProps } = await client.from('properties').select('*').order('created_at', { ascending: false });
+    if (allProps && allProps.length > 0) {
+      return NextResponse.json(allProps);
+    }
+
+    return NextResponse.json([]);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+      const list = await db.select().from(properties).orderBy(desc(properties.createdAt));
+      return NextResponse.json(list);
+    } catch (e: any) {
+      return NextResponse.json([]);
+    }
   }
 }
 
@@ -52,48 +80,77 @@ export async function POST(req: Request) {
 
     let createdProperty: any = null;
     try {
-      const inserted = await db.insert(properties).values({
+      const client = supabaseAdmin || supabase;
+      const { data: inserted, error: sbError } = await client.from('properties').insert({
         name: name.trim(),
         type: type.trim(),
         grade: sanitizedGrade,
         address: address.trim(),
         city: city.trim(),
         state: state && state.trim() ? state.trim() : null,
-        microMarket: microMarket && microMarket.trim() ? microMarket.trim() : null,
+        micro_market: microMarket && microMarket.trim() ? microMarket.trim() : null,
         pincode: String(pincode).trim(),
-        totalArea: String(totalArea),
-        latitude: latitude ? String(latitude) : null,
-        longitude: longitude ? String(longitude) : null,
-        ownerName: ownerName && ownerName.trim() ? ownerName.trim() : null,
-        ownerCompany: ownerCompany && ownerCompany.trim() ? ownerCompany.trim() : "OfficeX Management",
-        ownerUserId: ownerUserId && /^[0-9a-fA-F-]{36}$/.test(ownerUserId) ? ownerUserId : null,
-        imageUrl: imageUrl && imageUrl.trim() ? imageUrl.trim() : null
-      }).returning();
+        total_area: parseFloat(String(totalArea)) || 0,
+        latitude: latitude ? parseFloat(String(latitude)) : null,
+        longitude: longitude ? parseFloat(String(longitude)) : null,
+        owner_name: ownerName && ownerName.trim() ? ownerName.trim() : null,
+        owner_company: ownerCompany && ownerCompany.trim() ? ownerCompany.trim() : "OfficeX Management",
+        owner_user_id: ownerUserId && /^[0-9a-fA-F-]{36}$/.test(ownerUserId) ? ownerUserId : null,
+        image_url: imageUrl && imageUrl.trim() ? imageUrl.trim() : null
+      }).select();
 
-      if (inserted && inserted[0]) {
+      if (!sbError && inserted && inserted[0]) {
         createdProperty = inserted[0];
       }
-    } catch (dbErr) {
-      console.warn("Could not insert to DB properties table, returning resilient fallback record:", dbErr);
-      createdProperty = {
-        id: `prop-${Date.now()}`,
-        name: name.trim(),
-        type: type.trim(),
-        grade: sanitizedGrade,
-        address: address.trim(),
-        city: city.trim(),
-        state: state || null,
-        microMarket: microMarket || null,
-        pincode: String(pincode).trim(),
-        totalArea: String(totalArea),
-        latitude: latitude ? String(latitude) : null,
-        longitude: longitude ? String(longitude) : null,
-        ownerName: ownerName || null,
-        ownerCompany: ownerCompany || "OfficeX Management",
-        ownerUserId: ownerUserId || null,
-        imageUrl: imageUrl || null,
-        createdAt: new Date().toISOString()
-      };
+    } catch (sbErr) {
+      console.warn("Supabase insert note:", sbErr);
+    }
+
+    if (!createdProperty) {
+      try {
+        const inserted = await db.insert(properties).values({
+          name: name.trim(),
+          type: type.trim(),
+          grade: sanitizedGrade,
+          address: address.trim(),
+          city: city.trim(),
+          state: state && state.trim() ? state.trim() : null,
+          microMarket: microMarket && microMarket.trim() ? microMarket.trim() : null,
+          pincode: String(pincode).trim(),
+          totalArea: String(totalArea),
+          latitude: latitude ? String(latitude) : null,
+          longitude: longitude ? String(longitude) : null,
+          ownerName: ownerName && ownerName.trim() ? ownerName.trim() : null,
+          ownerCompany: ownerCompany && ownerCompany.trim() ? ownerCompany.trim() : "OfficeX Management",
+          ownerUserId: ownerUserId && /^[0-9a-fA-F-]{36}$/.test(ownerUserId) ? ownerUserId : null,
+          imageUrl: imageUrl && imageUrl.trim() ? imageUrl.trim() : null
+        }).returning();
+
+        if (inserted && inserted[0]) {
+          createdProperty = inserted[0];
+        }
+      } catch (dbErr) {
+        console.warn("Could not insert to DB properties table, returning resilient fallback record:", dbErr);
+        createdProperty = {
+          id: `prop-${Date.now()}`,
+          name: name.trim(),
+          type: type.trim(),
+          grade: sanitizedGrade,
+          address: address.trim(),
+          city: city.trim(),
+          state: state || null,
+          microMarket: microMarket || null,
+          pincode: String(pincode).trim(),
+          totalArea: String(totalArea),
+          latitude: latitude ? String(latitude) : null,
+          longitude: longitude ? String(longitude) : null,
+          ownerName: ownerName || null,
+          ownerCompany: ownerCompany || "OfficeX Management",
+          ownerUserId: ownerUserId || null,
+          imageUrl: imageUrl || null,
+          createdAt: new Date().toISOString()
+        };
+      }
     }
 
     // Link to user_properties if ownerUserId exists

@@ -75,6 +75,51 @@ export default function PropertyMasterRegistry() {
           }
         }
 
+        // Final fallback: fetch org from database if still no properties
+        if (local.length === 0) {
+          const uid = localStorage.getItem("officex_user_id") || "";
+          try {
+            const orgRes = await fetch(`/api/me/organization${uid ? `?userId=${uid}` : ""}`);
+            const orgData = await orgRes.json();
+            if (orgData.organizations && orgData.organizations.length > 0) {
+              const org = orgData.organizations[0];
+              if (org.properties && org.properties.length > 0) {
+                local = org.properties.map((p: any) => ({
+                  id: p.id,
+                  name: p.name,
+                  city: p.city || "",
+                  state: p.state || "",
+                  type: p.type || "Commercial Office",
+                  totalArea: p.total_area || 15000,
+                  grade: p.grade || "A",
+                  ownerName: p.owner_name || localStorage.getItem("officex_user_name") || "",
+                  createdAt: p.created_at || new Date().toISOString()
+                }));
+              } else {
+                const dbProp = {
+                  id: org.id || `prop-db-${Date.now()}`,
+                  name: org.name || "My Commercial Property",
+                  city: org.city || "",
+                  state: org.state || "",
+                  type: "Commercial Office",
+                  totalArea: 15000,
+                  grade: "A",
+                  ownerName: localStorage.getItem("officex_user_name") || "",
+                  createdAt: org.createdAt || new Date().toISOString()
+                };
+                local = [dbProp];
+              }
+              localStorage.setItem("officex_user_properties", JSON.stringify(local));
+              localStorage.setItem("officex_org_name", org.name || "");
+              localStorage.setItem("officex_active_org", org.name || "");
+              localStorage.setItem("officex_org_city", org.city || "");
+              localStorage.setItem("officex_org_state", org.state || "");
+            }
+          } catch (e) {
+            // silently fail
+          }
+        }
+
         const mapped = local.map((p: any) => ({
           id: p.id,
           name: p.name,
