@@ -189,6 +189,8 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("properties");
   const [userEmail, setUserEmail] = useState<string>("");
+  const [orgDisplayName, setOrgDisplayName] = useState<string>("");
+  const [orgCity, setOrgCity] = useState<string>("");
   const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({
     "Rent Roll Master": true
   });
@@ -215,6 +217,12 @@ export default function Sidebar() {
       if (saved && roleHomes[saved]) {
         setSelectedRole(saved);
       }
+
+      // Load dynamic org identity from onboarding
+      const storedOrgName = localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || "";
+      const storedOrgCity = localStorage.getItem("officex_org_city") || "";
+      if (storedOrgName) setOrgDisplayName(storedOrgName);
+      if (storedOrgCity) setOrgCity(storedOrgCity);
     }
   }, []);
 
@@ -305,7 +313,7 @@ export default function Sidebar() {
                     {activeRole.label}
                   </span>
                   <span className="text-[10px] text-teal-700 font-bold truncate font-mono">
-                    Devasya Gold · Ahmedabad
+                    {orgDisplayName ? `${orgDisplayName}${orgCity ? ` · ${orgCity}` : ""}` : "Your Workspace"}
                   </span>
                 </div>
               </div>

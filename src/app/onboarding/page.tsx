@@ -265,6 +265,7 @@ function OnboardingWizardContent() {
     fileSize: string;
     status: "verified" | "uploaded" | "pending";
     extractedData?: string;
+    fileUrl?: string;
   }>>([]);
 
   // Load real authenticated user info from query params, localStorage, sessionStorage, or Supabase
@@ -534,15 +535,21 @@ function OnboardingWizardContent() {
       ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
       : `${Math.round(file.size / 1024)} KB`;
 
+    // Create a blob URL so the user can view the actual file
+    const blobUrl = URL.createObjectURL(file);
+
     setDocumentsVault((prev) =>
       prev.map((d) => {
         if (d.id === docId) {
+          // Revoke previous blob URL to prevent memory leaks
+          if (d.fileUrl) URL.revokeObjectURL(d.fileUrl);
           return {
             ...d,
             fileName: file.name,
             fileSize: sizeStr,
             status: "verified",
-            extractedData: `Automated OCR: ${file.name.replace(/\.[^/.]+$/, "")} verified with registry`
+            extractedData: `Automated OCR: ${file.name.replace(/\.[^/.]+$/, "")} verified with registry`,
+            fileUrl: blobUrl
           };
         }
         return d;
@@ -565,66 +572,162 @@ function OnboardingWizardContent() {
     showToast(`"${file.name}" uploaded successfully. AES-256 encrypted & OCR verified!`, "success");
   };
 
+  // Save Organization Master to Database / API
+  const saveOrganizationMaster = async () => {
+    if (!orgData.legalName.trim()) {
+      showToast("Legal Name of Business is mandatory.", "error");
+      setOrgMasterTab("business");
+      return false;
+    }
+    if (!principalPlace.addressLine1.trim()) {
+      showToast("Principal Place of Business address is mandatory.", "error");
+      setOrgMasterTab("principal");
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/v1/organizations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          legalName: orgData.legalName,
+          tradeName: orgData.tradeName,
+          organizationType: orgData.organizationType,
+          pan: orgData.pan,
+          gstin: orgData.gstin,
+          cin: orgData.cin,
+          llpin: orgData.llpin,
+          registeredAddressLine1: principalPlace.addressLine1,
+          city: principalPlace.city,
+          state: principalPlace.state,
+          pincode: principalPlace.pincode,
+          yearEstablished: orgData.yearEstablished,
+          employeeCountBand: orgData.employeeCountBand,
+          // GST Model nested records
+          promoters,
+          authorizedSignatory,
+          authorizedRepresentative: hasAuthRep ? authorizedRepresentative : null,
+          principalPlaceOfBusiness: principalPlace,
+          additionalPlacesOfBusiness: additionalPlaces
+        })
+      });
+
+      const data = await res.json();
+      if (data.organizationCode) {
+        setOrgData((prev) => ({
+          ...prev,
+          id: data.organization?.id || prev.id,
+          organizationCode: data.organizationCode
+        }));
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_org_id", data.organization?.id || "");
+          localStorage.setItem("officex_org_code", data.organizationCode);
+          localStorage.setItem("officex_org_name", orgData.legalName);
+        }
+      }
+      return true;
+    } catch (err) {
+      console.warn("Organization master sync note:", err);
+      return true; // allow proceeding even if network offline
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Back Navigation Handler supporting Step 2 sub-tabs
+  const handleBackStep = () => {
+    if (currentStep === 2) {
+      if (orgMasterTab === "additional") {
+        setOrgMasterTab("principal");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (orgMasterTab === "principal") {
+        setOrgMasterTab("representative");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (orgMasterTab === "representative") {
+        setOrgMasterTab("signatory");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (orgMasterTab === "signatory") {
+        setOrgMasterTab("promoters");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (orgMasterTab === "promoters") {
+        setOrgMasterTab("business");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
+    setCurrentStep(Math.max(1, currentStep - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Navigation and State Persistence
   const handleNextStep = async () => {
     setToast(null);
 
-    // Step 2 Validation
+    // Step 2 Sub-Tabs Sequential Progression
     if (currentStep === 2) {
-      if (!orgData.legalName.trim()) {
-        showToast("Legal Entity Name is mandatory.", "error");
-        return;
-      }
-      if (!principalPlace.addressLine1.trim()) {
-        showToast("Principal Place of Business address is mandatory.", "error");
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/v1/organizations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            legalName: orgData.legalName,
-            tradeName: orgData.tradeName,
-            organizationType: orgData.organizationType,
-            pan: orgData.pan,
-            gstin: orgData.gstin,
-            cin: orgData.cin,
-            llpin: orgData.llpin,
-            registeredAddressLine1: principalPlace.addressLine1,
-            city: principalPlace.city,
-            state: principalPlace.state,
-            pincode: principalPlace.pincode,
-            yearEstablished: orgData.yearEstablished,
-            employeeCountBand: orgData.employeeCountBand,
-            // GST Model nested records
-            promoters,
-            authorizedSignatory,
-            authorizedRepresentative: hasAuthRep ? authorizedRepresentative : null,
-            principalPlaceOfBusiness: principalPlace,
-            additionalPlacesOfBusiness: additionalPlaces
-          })
-        });
-
-        const data = await res.json();
-        if (data.organizationCode) {
-          setOrgData((prev) => ({
-            ...prev,
-            id: data.organization?.id || prev.id,
-            organizationCode: data.organizationCode
-          }));
-          if (typeof window !== "undefined") {
-            localStorage.setItem("officex_org_id", data.organization?.id || "");
-            localStorage.setItem("officex_org_code", data.organizationCode);
-            localStorage.setItem("officex_org_name", orgData.legalName);
-          }
+      if (orgMasterTab === "business") {
+        if (!orgData.legalName.trim()) {
+          showToast("Legal Name of Business is mandatory.", "error");
+          return;
         }
-      } catch (err) {
-        console.warn("Organization master sync note:", err);
-      } finally {
-        setIsLoading(false);
+        setOrgMasterTab("promoters");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (orgMasterTab === "promoters") {
+        setOrgMasterTab("signatory");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (orgMasterTab === "signatory") {
+        setOrgMasterTab("representative");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (orgMasterTab === "representative") {
+        setOrgMasterTab("principal");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (orgMasterTab === "principal") {
+        if (!principalPlace.addressLine1.trim()) {
+          showToast("Principal Place of Business address is mandatory.", "error");
+          return;
+        }
+        // If user already entered additional places, show them; otherwise all required details are filled
+        if (additionalPlaces.length > 0) {
+          setOrgMasterTab("additional");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+        const success = await saveOrganizationMaster();
+        if (success) {
+          setCurrentStep(3);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        return;
+      }
+
+      if (orgMasterTab === "additional") {
+        const success = await saveOrganizationMaster();
+        if (success) {
+          setCurrentStep(3);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        return;
       }
     }
 
@@ -975,24 +1078,27 @@ function OnboardingWizardContent() {
               {/* GST-Style Sub-Navigation Tabs */}
               <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 overflow-x-auto text-xs">
                 {[
-                  { id: "business", label: "1. Business Details" },
-                  { id: "promoters", label: `2. Promoters / Partners (${promoters.length})` },
-                  { id: "signatory", label: "3. Authorized Signatory" },
-                  { id: "representative", label: "4. Representative" },
-                  { id: "principal", label: "5. Principal Place" },
-                  { id: "additional", label: `6. Additional Places (${additionalPlaces.length})` }
+                  { id: "business", label: "1. Business Details", isComplete: Boolean(orgData.legalName.trim()) },
+                  { id: "promoters", label: `2. Promoters / Partners (${promoters.length})`, isComplete: promoters.length > 0 },
+                  { id: "signatory", label: "3. Authorized Signatory", isComplete: Boolean(authorizedSignatory.name.trim()) },
+                  { id: "representative", label: "4. Representative", isComplete: hasAuthRep ? Boolean(authorizedRepresentative.name.trim()) : true },
+                  { id: "principal", label: "5. Principal Place", isComplete: Boolean(principalPlace.addressLine1.trim()) },
+                  { id: "additional", label: `6. Additional Places (${additionalPlaces.length})`, isComplete: true }
                 ].map((t) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setOrgMasterTab(t.id as any)}
-                    className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
                       orgMasterTab === t.id
                         ? "bg-[#0F8B7D] text-white shadow-xs"
                         : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
                     }`}
                   >
-                    {t.label}
+                    <span>{t.label}</span>
+                    {t.isComplete && orgMasterTab !== t.id && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 inline-block" title="Completed"></span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -2588,24 +2694,17 @@ function OnboardingWizardContent() {
                   ) : (
                     <div className="space-y-2 pt-1">
                       <p className="text-slate-600 text-[11px] leading-relaxed">
-                        Entity PAN from Step 2: <span className="font-mono text-slate-800 font-bold">{orgData.pan || "Not provided in Step 2"}</span>. Match with CBDT database or upload PAN card in Step 6.
+                        Entity PAN from Step 2: <span className="font-mono text-slate-800 font-bold">{orgData.pan || "Not provided in Step 2"}</span>. Instant statutory validation against Central Board of Direct Taxes (CBDT) database.
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="pt-1">
                         <button
                           type="button"
                           disabled={isVerifyingPan}
                           onClick={handleVerifyPan}
-                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                         >
                           {isVerifyingPan ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
-                          {isVerifyingPan ? "Verifying with CBDT..." : "Verify via CBDT"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(6)}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Upload size={12} /> Upload PAN in Vault
+                          {isVerifyingPan ? "Verifying with CBDT..." : "Verify via CBDT Registry"}
                         </button>
                       </div>
                     </div>
@@ -2640,24 +2739,17 @@ function OnboardingWizardContent() {
                   ) : (
                     <div className="space-y-2 pt-1">
                       <p className="text-slate-600 text-[11px] leading-relaxed">
-                        GSTIN from Step 2: <span className="font-mono text-slate-800 font-bold">{orgData.gstin || "Not provided in Step 2"}</span>. Validate against GST portal or upload Certificate Form REG-06.
+                        GSTIN from Step 2: <span className="font-mono text-slate-800 font-bold">{orgData.gstin || "Not provided in Step 2"}</span>. Real-time active status check against GST common portal.
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="pt-1">
                         <button
                           type="button"
                           disabled={isVerifyingGstin}
                           onClick={handleVerifyGstin}
-                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                         >
                           {isVerifyingGstin ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
-                          {isVerifyingGstin ? "Validating GST Portal..." : "Validate GSTIN"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(6)}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Upload size={12} /> Upload REG-06 Certificate
+                          {isVerifyingGstin ? "Validating GST Portal..." : "Validate GSTIN via Portal"}
                         </button>
                       </div>
                     </div>
@@ -2692,24 +2784,17 @@ function OnboardingWizardContent() {
                   ) : (
                     <div className="space-y-2 pt-1">
                       <p className="text-slate-600 text-[11px] leading-relaxed">
-                        Corporate CIN / LLPIN: <span className="font-mono text-slate-800 font-bold">{orgData.cin || orgData.llpin || "Not provided in Step 2"}</span>. Verify incorporation details or upload Certificate of Incorporation.
+                        Corporate CIN / LLPIN: <span className="font-mono text-slate-800 font-bold">{orgData.cin || orgData.llpin || "Not provided in Step 2"}</span>. Corporate identity verification with Ministry of Corporate Affairs (MCA21).
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="pt-1">
                         <button
                           type="button"
                           disabled={isVerifyingMca}
                           onClick={handleVerifyMca}
-                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                         >
                           {isVerifyingMca ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
-                          {isVerifyingMca ? "Querying MCA21..." : "Verify MCA RoC"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(6)}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Upload size={12} /> Upload Certificate of Inc.
+                          {isVerifyingMca ? "Querying MCA21..." : "Query MCA21 Corporate Registry"}
                         </button>
                       </div>
                     </div>
@@ -2738,7 +2823,7 @@ function OnboardingWizardContent() {
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-black text-[10px] border border-amber-200">
-                        DOCUMENTS REQUIRED
+                        REGISTRY CHECK PENDING
                       </span>
                     )}
                   </div>
@@ -2752,27 +2837,20 @@ function OnboardingWizardContent() {
                   ) : (
                     <div className="space-y-2 pt-1">
                       <p className="text-slate-600 text-[11px] leading-relaxed">
-                        {role === "owner" && "Property Tax Assessment Receipt and CFO Fire NOC must be submitted in the compliance vault."}
-                        {role === "broker" && `MahaRERA Agent License (${brokerProfile.reraRegistrationNo || "pending"}) validation or certificate upload required.`}
-                        {role === "vendor" && `PSARA Security License (${vendorProfile.psaraLicenseNo || "pending"}) and Labour Contractor credentials required.`}
-                        {role === "tenant" && "Board Resolution or Letter of Authority for commercial lease execution must be uploaded."}
+                        {role === "owner" && "Automated check against municipal property tax rolls and Fire Department NOC records."}
+                        {role === "broker" && `MahaRERA Agent License (${brokerProfile.reraRegistrationNo || "pending"}) validation on state real estate authority portal.`}
+                        {role === "vendor" && `PSARA Security License (${vendorProfile.psaraLicenseNo || "pending"}) and Labour Contractor database clearance.`}
+                        {role === "tenant" && "Authorized Signatory clearance check for enterprise commercial leasing mandates."}
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="pt-1">
                         <button
                           type="button"
                           disabled={isVerifyingRoleCred}
                           onClick={handleVerifyRoleCred}
-                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                         >
                           {isVerifyingRoleCred ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
-                          {isVerifyingRoleCred ? "Validating..." : "Validate Credentials"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(6)}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Upload size={12} /> Upload in Vault
+                          {isVerifyingRoleCred ? "Validating..." : "Validate Statutory Clearance"}
                         </button>
                       </div>
                     </div>
@@ -2807,24 +2885,17 @@ function OnboardingWizardContent() {
                   ) : (
                     <div className="space-y-2 pt-1">
                       <p className="text-slate-600 text-[11px] leading-relaxed">
-                        Execute real-time ₹1 NPCI penny-drop transfer to verify settlement bank account against entity legal name <span className="text-slate-900 font-bold">"{orgData.legalName || "Your Legal Entity"}"</span>, or upload cancelled cheque in Step 6.
+                        Execute real-time ₹1 NPCI penny-drop transfer to verify settlement bank account against entity legal name <span className="text-slate-900 font-bold">"{orgData.legalName || "Your Legal Entity"}"</span>.
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="pt-1">
                         <button
                           type="button"
                           disabled={isVerifyingBank}
                           onClick={handleExecutePennyDrop}
-                          className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                         >
                           {isVerifyingBank ? <Loader2 size={14} className="animate-spin" /> : <DollarSign size={14} />}
                           {isVerifyingBank ? "Executing ₹1 Penny Drop via NPCI..." : "Execute Real-time ₹1 Penny Drop"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(6)}
-                          className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Upload size={13} /> Upload Cancelled Cheque
                         </button>
                       </div>
                     </div>
@@ -2912,7 +2983,13 @@ function OnboardingWizardContent() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => showToast(`Opening inspection preview for ${doc.fileName}...`, "info")}
+                            onClick={() => {
+                              if (doc.fileUrl) {
+                                window.open(doc.fileUrl, '_blank');
+                              } else {
+                                showToast(`No preview available for ${doc.fileName}. Please re-upload to enable viewing.`, "info");
+                              }
+                            }}
                             className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
                           >
                             <Eye size={13} /> View
@@ -3089,6 +3166,44 @@ function OnboardingWizardContent() {
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href={getDashboardDestination()}
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      // Persist the onboarded organization as the active org
+                      const orgName = orgData.legalName || orgData.tradeName || "My Organization";
+                      const orgCity = principalPlace.city || "";
+                      const orgState = principalPlace.state || "";
+                      localStorage.setItem("officex_active_org", orgName);
+                      localStorage.setItem("officex_org_name", orgName);
+                      localStorage.setItem("officex_org_city", orgCity);
+                      localStorage.setItem("officex_org_state", orgState);
+                      localStorage.setItem("officex_user_role", role === "owner" ? "Property Owner (SaaS)" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant");
+
+                      // Save the onboarded org as a property entry for the dashboard
+                      if (role === "owner") {
+                        const existingProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+                        const newProp = {
+                          id: orgData.id || `prop-${Date.now()}`,
+                          name: orgData.tradeName || orgData.legalName || "My Commercial Property",
+                          city: orgCity,
+                          state: orgState,
+                          address: principalPlace.addressLine1 || "",
+                          microMarket: principalPlace.city || "",
+                          grade: "Grade A",
+                          totalArea: ownerProfile.totalCommercialGLASqft || "0",
+                          baseRent: "",
+                          ownerName: userData.fullName,
+                          ownerEmail: userData.email,
+                          createdAt: new Date().toISOString()
+                        };
+                        // Avoid duplicates by name
+                        const alreadyExists = existingProps.some((p: any) => p.name?.toLowerCase() === newProp.name.toLowerCase());
+                        if (!alreadyExists) {
+                          existingProps.push(newProp);
+                          localStorage.setItem("officex_user_properties", JSON.stringify(existingProps));
+                        }
+                      }
+                    }
+                  }}
                   className="w-full sm:w-auto px-10 py-3.5 rounded-2xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-teal-900/20 transition-all cursor-pointer"
                 >
                   {role === "owner" && (
@@ -3127,7 +3242,7 @@ function OnboardingWizardContent() {
               <button
                 type="button"
                 disabled={currentStep === 1}
-                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                onClick={handleBackStep}
                 className={`px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer ${
                   currentStep === 1 ? "opacity-30 pointer-events-none text-slate-400 bg-slate-50" : "hover:bg-slate-100 text-slate-700 bg-white"
                 }`}
@@ -3135,31 +3250,60 @@ function OnboardingWizardContent() {
                 <ArrowLeft size={14} /> Back
               </button>
 
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={handleNextStep}
-                className="px-7 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-teal-900/20 transition-all cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin" />
-                    <span>Synchronizing Master...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>
-                      {currentStep === 1 && "Proceed to Organization Profile"}
-                      {currentStep === 2 && "Proceed to Role Profile"}
-                      {currentStep === 3 && "Proceed to Operational SLAs"}
-                      {currentStep === 4 && "Run Statutory Verification"}
-                      {currentStep === 5 && "Review Compliance Documents"}
-                      {currentStep === 6 && "Complete & Activate"}
-                    </span>
-                    <ArrowRight size={14} />
-                  </>
+              <div className="flex items-center gap-2.5">
+                {currentStep === 2 && orgMasterTab === "principal" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!principalPlace.addressLine1.trim()) {
+                        showToast("Principal Place of Business address is mandatory.", "error");
+                        return;
+                      }
+                      setOrgMasterTab("additional");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>Add Branch Places ({additionalPlaces.length})</span>
+                    <ArrowRight size={13} />
+                  </button>
                 )}
-              </button>
+
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={handleNextStep}
+                  className="px-7 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-teal-900/20 transition-all cursor-pointer"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      <span>Synchronizing Master...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {currentStep === 1 && "Proceed to Organization Profile"}
+                        {currentStep === 2 && (
+                          orgMasterTab === "business" ? "Next: Promoters / Partners" :
+                          orgMasterTab === "promoters" ? "Next: Authorized Signatory" :
+                          orgMasterTab === "signatory" ? "Next: Representative" :
+                          orgMasterTab === "representative" ? "Next: Principal Place of Business" :
+                          orgMasterTab === "principal" ? (
+                            additionalPlaces.length > 0 ? "Next: Additional Places" : "Proceed to Role Profile"
+                          ) :
+                          "Proceed to Role Profile"
+                        )}
+                        {currentStep === 3 && "Proceed to Operational SLAs"}
+                        {currentStep === 4 && "Run Statutory Verification"}
+                        {currentStep === 5 && "Review Compliance Documents"}
+                        {currentStep === 6 && "Complete & Activate"}
+                      </span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>

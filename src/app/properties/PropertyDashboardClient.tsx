@@ -152,14 +152,13 @@ export default function PropertyDashboardClient({
 
   // Calculate displayed properties: Merge real DB properties for this user + any local additions
   const displayedProperties = React.useMemo(() => {
-    // 1. Properties from live Supabase DB that match the user or newly added properties
+    // 1. Properties from live Supabase DB that match the authenticated user
     const userDbProps = initialProperties.filter(p => 
       (userId && p.ownerUserId === userId) ||
-      (userEmail && userEmail !== "owner@officex.in" && p.ownerName?.toLowerCase().includes("jiya")) ||
-      (p.name && p.name.toLowerCase().includes("devasya"))
+      (userEmail && userEmail !== "owner@officex.in" && p.ownerEmail === userEmail)
     );
 
-    // 2. If we found user DB properties or custom properties, merge them seamlessly
+    // 2. Merge DB properties + localStorage custom properties (from onboarding)
     if (userDbProps.length > 0 || customProperties.length > 0) {
       const mergedMap = new Map();
       userDbProps.forEach(p => mergedMap.set(p.name?.toLowerCase().trim(), p));
@@ -199,6 +198,12 @@ export default function PropertyDashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href="/properties/rent-roll?tab=tenants"
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
+          >
+            <Users size={14} /> Manage Tenants
+          </Link>
           <button 
             onClick={() => setShowAssignModal(true)}
             className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -217,24 +222,26 @@ export default function PropertyDashboardClient({
       {/* S12 Profile Completion & Progressive KYC Meter (v1.0 Spec Section 15) */}
       <ProfileCompletionMeter role="owner" />
 
-      {/* Broker Partnership Alert Banner (Client Page 5 Recommended) */}
-      <div className="bg-purple-50/80 border border-purple-200/90 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-purple-900 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
-            <Handshake size={16} />
+      {/* Broker Partnership Alert Banner — only show when user has real partnerships */}
+      {partnerships.length > 0 && (
+        <div className="bg-purple-50/80 border border-purple-200/90 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-purple-900 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+              <Handshake size={16} />
+            </div>
+            <div>
+              <span className="font-black text-purple-950 block">{partnerships[0].id} {partnerships[0].propertyName} — Broker contract {partnerships[0].status?.toLowerCase()}</span>
+              <span className="text-[11px] text-purple-700">Commercial Partner: {partnerships[0].brokerName} ({partnerships[0].commission}) · {partnerships[0].date}</span>
+            </div>
           </div>
-          <div>
-            <span className="font-black text-purple-950 block">BP-502 Meridian Tech Park — Broker contract awaiting acceptance</span>
-            <span className="text-[11px] text-purple-700">Commercial Partner: Amit Kumar (5.0% Annual Value Brokerage) · Invitation sent Aug 25, 2026</span>
-          </div>
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shrink-0 transition-colors shadow-2xs cursor-pointer text-center"
+          >
+            Manage Contract
+          </button>
         </div>
-        <button
-          onClick={() => setShowAssignModal(true)}
-          className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shrink-0 transition-colors shadow-2xs cursor-pointer text-center"
-        >
-          Manage Contract
-        </button>
-      </div>
+      )}
 
       {/* Time-Sensitive Statutory Renewal Alert Strip (Only when real expired certs exist) */}
       {expiredCertsCount > 0 && propertiesCount > 0 && (

@@ -34,7 +34,7 @@ export default function Topbar() {
   // Workspace Switcher State
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [activeOrg, setActiveOrg] = useState("Acme Commercial Realty");
+  const [activeOrg, setActiveOrg] = useState("");
   const [activeRole, setActiveRole] = useState("Property Owner");
   const [userEmail, setUserEmail] = useState("owner@officex.in");
   const [memberships, setMemberships] = useState<WorkspaceMembership[]>(
@@ -56,7 +56,6 @@ export default function Topbar() {
     { name: "Apex Business Tower", type: "Building", location: "BKC, Mumbai" },
     { name: "Meridian Tech Park", type: "Building", location: "Whitefield, Bengaluru" },
     { name: "Nexus Hub", type: "Building", location: "Hinjewadi, Pune" },
-    { name: "Devasya Gold Plus", type: "Building", location: "Nikol, Ahmedabad" },
     { name: "AHU-04 (Air Handling Unit)", type: "Asset", location: "Apex Floor 4", count: "Health: 94%" },
     { name: "DG-02 (Diesel Generator)", type: "Asset", location: "Meridian Tech Park", count: "Health: 97%" },
     { name: "TKT-4890 (Water Leakage)", type: "Ticket", location: "Nexus Hub", count: "Status: Open" },
@@ -72,7 +71,13 @@ export default function Topbar() {
 
       if (storedEmail) setUserEmail(storedEmail);
       if (storedRole) setActiveRole(storedRole);
-      if (storedOrg) setActiveOrg(storedOrg);
+      if (storedOrg) {
+        setActiveOrg(storedOrg);
+      } else {
+        // Fallback: try org_name from onboarding
+        const orgName = localStorage.getItem("officex_org_name");
+        if (orgName) setActiveOrg(orgName);
+      }
 
       // Load matching memberships if available
       if (storedEmail && MOCK_USERS[storedEmail]) {
@@ -211,7 +216,7 @@ export default function Topbar() {
             <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-900 group-hover:text-blue-700 leading-tight truncate max-w-[160px] sm:max-w-[220px]">
-                {activeOrg}
+                {activeOrg || "My Organization"}
               </span>
               <span className="text-[10px] text-slate-500 font-medium leading-none">
                 {activeRole}
