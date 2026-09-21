@@ -36,6 +36,7 @@ import {
   MOCK_USERS,
   AUTH_LOCALES
 } from "@/lib/auth-utils";
+import { supabase } from "@/lib/supabase";
 
 interface SignInFormProps {
   initialRedirect?: string;
@@ -85,14 +86,15 @@ export default function SignInForm({
     MOCK_USERS["owner@officex.in"].memberships[0].id
   );
 
-  // Recovery Modal state
+  // Recovery Modal state (3 distinct steps: 1=Request, 2=Verify, 3=Set Password)
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
-  const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1);
   const [recoveryIdentifier, setRecoveryIdentifier] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [revokeOtherSessions, setRevokeOtherSessions] = useState(true);
+  const [recoveryCooldown, setRecoveryCooldown] = useState(0);
 
   // Feedback states
   const [isLoading, setIsLoading] = useState(false);
@@ -111,6 +113,15 @@ export default function SignInForm({
     return () => clearInterval(interval);
   }, [cooldown]);
 
+  // Timer countdown for Recovery Code resend
+  useEffect(() => {
+    if (recoveryCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setRecoveryCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [recoveryCooldown]);
+
   // Sync initial identifier if prefilled in query or localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -119,6 +130,44 @@ export default function SignInForm({
         setIdentifier(savedEmail);
       }
     }
+  }, []);
+
+  // Listen for Supabase active session (Google OAuth redirect & recovery link)
+  useEffect(() => {
+    const checkSupabaseAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          handleAuthSuccess(
+            session.user.email,
+            session.user.user_metadata?.role || "Commercial Member"
+          );
+        }
+      } catch (e) {
+        console.error("Supabase session check error:", e);
+      }
+    };
+
+    checkSupabaseAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user?.email) {
+        handleAuthSuccess(
+          session.user.email,
+          session.user.user_metadata?.role || "Commercial Member"
+        );
+      } else if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryOpen(true);
+        setRecoveryStep(3);
+        if (session?.user?.email) {
+          setRecoveryIdentifier(session.user.email);
+        }
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   // --------------------------------------------------------------------------
@@ -504,43 +553,78 @@ export default function SignInForm({
   };
 
   // --------------------------------------------------------------------------
-  // Social OAuth Simulators (Microsoft & Google)
+  // Social OAuth (Google via Supabase)
   // --------------------------------------------------------------------------
-  const handleOAuthSignIn = (provider: "microsoft" | "google") => {
+  const handleOAuthSignIn = async (provider: "google" = "google") => {
     setIsLoading(true);
-    setInfoMessage(
-      provider === "microsoft"
-        ? "Connecting to Microsoft Entra ID..."
-        : "Connecting to Google Workspace..."
-    );
+    setError("");
+    setInfoMessage(lang === "hi" ? "Google से जुड़ रहा है..." : "Connecting to Google...");
 
-    setTimeout(() => {
-      const email = provider === "microsoft" ? "cfo@acme.com" : "broker@officex.in";
-      setIdentifier(email);
-      handleAuthSuccess(email, "Commercial Asset Manager");
-    }, 900);
+    try {
+      const redirectUrl = typeof window !== "undefined"
+        ? `${window.location.origin}/login`
+        : "http://localhost:3000/login";
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+
+      if (oauthError) {
+        if (oauthError.message?.toLowerCase().includes("not enabled") || oauthError.message?.toLowerCase().includes("unsupported")) {
+          setError(
+            lang === "hi"
+              ? "कृपया Supabase डैशबोर्ड में Google प्रदाता सक्षम करें।"
+              : "Google provider is not yet enabled in your Supabase Dashboard. Please paste your Client ID and Secret in Supabase -> Authentication -> Providers -> Google."
+          );
+        } else {
+          setError(oauthError.message || "Failed to initiate Google sign in.");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to connect to Google authentication.");
+      setIsLoading(false);
+    }
   };
 
   // --------------------------------------------------------------------------
-  // Self-Serve Account Recovery Hub Handlers
+  // Self-Serve Account Recovery Hub Handlers (3-Step Verified Flow)
   // --------------------------------------------------------------------------
   const handleStartRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryIdentifier) {
-      setError("Enter your work email or mobile number.");
+    const clean = recoveryIdentifier.trim();
+    if (!clean) {
+      setError(lang === "hi" ? "कार्य ईमेल या मोबाइल नंबर दर्ज करें।" : "Enter your work email or mobile number.");
       return;
     }
 
     setIsLoading(true);
+    setError("");
+    setInfoMessage("");
+
     try {
       const res = await fetch("/api/auth/recover/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: recoveryIdentifier })
+        body: JSON.stringify({ identifier: clean })
       });
       const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Unable to send recovery code. Please retry.");
+        setIsLoading(false);
+        return;
+      }
       setRecoveryStep(2);
-      setInfoMessage(data.message || "A 6-digit recovery code has been dispatched.");
+      setRecoveryCooldown(60);
+      setInfoMessage(data.message || (lang === "hi" ? "6-अंकीय सत्यापन कोड भेजा गया है।" : "A 6-digit recovery code has been dispatched."));
     } catch (err) {
       setError("Recovery service unavailable. Please retry.");
     } finally {
@@ -548,29 +632,90 @@ export default function SignInForm({
     }
   };
 
-  const handleConfirmRecovery = async (e: React.FormEvent) => {
+  const handleVerifyRecoveryCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryCode || recoveryCode.length !== 6) {
-      setError("Enter the 6-digit recovery code.");
-      return;
-    }
-    if (newPassword.length < 10) {
-      setError("New password must contain at least 10 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+    const cleanCode = recoveryCode.trim();
+    if (!cleanCode || cleanCode.length !== 6) {
+      setError(lang === "hi" ? "कृपया 6-अंकीय सत्यापन कोड दर्ज करें।" : "Enter the complete 6-digit recovery code.");
       return;
     }
 
     setIsLoading(true);
+    setError("");
+    setInfoMessage("");
+
+    try {
+      const res = await fetch("/api/auth/recover/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: recoveryIdentifier.trim(),
+          code: cleanCode
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Invalid or expired recovery code. Please check your email or resend.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Code verified successfully! Now show the password update screen
+      setRecoveryStep(3);
+      setInfoMessage(lang === "hi" ? "कोड सत्यापित! कृपया नया पासवर्ड सेट करें।" : "Code verified successfully. Please set your new password.");
+    } catch (err) {
+      setError("Verification service error. Please retry.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendRecoveryCode = async () => {
+    if (recoveryCooldown > 0 || !recoveryIdentifier) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/recover/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: recoveryIdentifier.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to resend code.");
+        return;
+      }
+      setRecoveryCooldown(60);
+      setInfoMessage(data.message || (lang === "hi" ? "सत्यापन कोड पुनः भेजा गया।" : "A new recovery code has been sent."));
+    } catch {
+      setError("Failed to resend code. Please retry.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 10) {
+      setError(lang === "hi" ? "नया पासवर्ड कम से कम 10 अक्षरों का होना चाहिए।" : "New password must contain at least 10 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError(lang === "hi" ? "पासवर्ड मेल नहीं खाते।" : "Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setInfoMessage("");
+
     try {
       const res = await fetch("/api/auth/recover/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          identifier: recoveryIdentifier,
-          code: recoveryCode,
+          identifier: recoveryIdentifier.trim(),
+          code: recoveryCode.trim(),
           new_password: newPassword,
           revoke_others: revokeOtherSessions
         })
@@ -581,29 +726,34 @@ export default function SignInForm({
         setIsLoading(false);
         return;
       }
+
+      try {
+        await supabase.auth.updateUser({ password: newPassword });
+      } catch (e) {
+        // Non-blocking
+      }
+
       setIsRecoveryOpen(false);
       setRecoveryStep(1);
-      setInfoMessage("Password reset successfully! You can now sign in.");
-      setIdentifier(recoveryIdentifier);
+      setRecoveryCode("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setInfoMessage(lang === "hi" ? "पासवर्ड सफलतापूर्वक अपडेट हो गया! अब आप साइन इन कर सकते हैं।" : "Password reset successfully! You can now sign in.");
+      setIdentifier(recoveryIdentifier.trim());
       setStep("password");
     } catch (err) {
-      setError("Error confirming password reset.");
+      setError("Error updating password.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      {/* 2-Column Responsive Grid - Pure Enterprise Light Theme */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-        
-        {/* ===================================================================
-            LEFT COLUMN: INTERACTIVE SIGN-IN CARD (Max 440px)
-            =================================================================== */}
-        <div className="lg:col-span-6 xl:col-span-6 w-full max-w-[440px] mx-auto">
-          {/* Header Branding & Domain Anchor */}
-          <div className="flex items-center justify-between mb-6">
+    <div className="w-full max-w-[440px] mx-auto">
+      {/* Centered Sign-In Container */}
+      <div>
+          {/* Header Branding (Logo Centered, Language Toggle on Right) */}
+          <div className="relative flex items-center justify-center mb-6">
             <Link href="/" className="inline-flex items-center gap-2.5 group">
               <Image
                 src="/logo-removebg-preview.png"
@@ -626,7 +776,7 @@ export default function SignInForm({
             </Link>
 
             {/* Language Toggle */}
-            <div className="flex items-center gap-2">
+            <div className="absolute right-0 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setLang(lang === "en" ? "hi" : "en")}
@@ -637,14 +787,6 @@ export default function SignInForm({
                 <span>{lang === "en" ? "हिन्दी" : "English"}</span>
               </button>
             </div>
-          </div>
-
-          {/* Canonical Domain Trust Anchor */}
-          <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold tracking-wide">OfficeX</span>
-            <span className="text-blue-300">·</span>
-            <span className="text-blue-800">{t.verifiedGateway}</span>
           </div>
 
           {/* Main Card Container (Pure Light Theme) */}
@@ -689,12 +831,9 @@ export default function SignInForm({
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="identifier-input"
-                      className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between"
+                      className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block"
                     >
-                      <span>{t.identifierLabel}</span>
-                      <span className="text-[10px] text-blue-600 font-semibold lowercase">
-                        {t.ssoEnabled}
-                      </span>
+                      {t.identifierLabel}
                     </label>
                     <div className="relative">
                       <input
@@ -733,25 +872,8 @@ export default function SignInForm({
                     </div>
                   </div>
 
-                  {/* Social & Enterprise SSO buttons */}
-                  <div className="space-y-2.5">
-                    {/* Microsoft SSO */}
-                    <button
-                      type="button"
-                      onClick={() => handleOAuthSignIn("microsoft")}
-                      disabled={isLoading}
-                      className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-800 font-semibold text-xs transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 shadow-2xs"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-                        <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-                        <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-                        <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-                      </svg>
-                      <span>{t.continueWithMs}</span>
-                    </button>
-
-                    {/* Google SSO */}
+                  {/* Social OAuth (Google) */}
+                  <div>
                     <button
                       type="button"
                       onClick={() => handleOAuthSignIn("google")}
@@ -780,22 +902,7 @@ export default function SignInForm({
                     </button>
                   </div>
 
-                  {/* Company SSO direct trigger */}
-                  <div className="text-center pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIdentifier("enterprise@dlf.in");
-                        setSsoDomain("dlf.in");
-                        setSsoOrgName("DLF Cybercity Developers");
-                        setSsoProvider("Azure AD / Microsoft Entra");
-                        setStep("sso");
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline cursor-pointer"
-                    >
-                      {t.useCompanySso}
-                    </button>
-                  </div>
+
 
                   {/* Recovery & Sign-up Links */}
                   <div className="pt-4 border-t border-slate-200 space-y-2 text-center text-xs">
@@ -1272,141 +1379,11 @@ export default function SignInForm({
             <Link href="/security" className="hover:text-slate-900 transition-colors">
               {t.security}
             </Link>
-            <span>·</span>
-            <span className="text-slate-400">v1.0 Specification</span>
           </div>
         </div>
-
-        {/* ===================================================================
-            RIGHT COLUMN: ELEGANT LIGHT BRAND PANEL (Desktop Only: lg:block)
-            Matches Section 15 Text Wireframes & Pure Light Theme
-            =================================================================== */}
-        <div className="hidden lg:block lg:col-span-6 xl:col-span-6 w-full">
-          <div className="bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-100/90 border border-blue-100/90 rounded-3xl p-8 xl:p-10 shadow-xl relative overflow-hidden text-slate-900 flex flex-col justify-between min-h-[580px]">
-            {/* Ambient Background Accents */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10">
-              {/* Brand Tagline Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 border border-blue-200 text-[11px] font-bold text-blue-800 mb-6 shadow-2xs">
-                <Sparkles size={13} className="text-blue-600" />
-                <span>The Modern CRE & FM Platform</span>
-              </div>
-
-              {/* Main Headline */}
-              <h2 className="text-3xl xl:text-4xl font-black text-slate-950 tracking-tight leading-tight">
-                Workspaces, simplified.
-              </h2>
-              <p className="text-sm xl:text-base text-slate-600 mt-2 font-normal leading-relaxed max-w-lg">
-                One unified account for your commercial portfolio, building operations, leasing, and tenant services.
-              </p>
-
-              {/* Core Ecosystem Capabilities */}
-              <div className="space-y-3.5 mt-6">
-                <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                    <Check size={12} strokeWidth={3} />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Portfolio, Rent Roll & MIS
-                    </span>
-                    <span className="text-xs text-slate-600 font-normal">
-                      Automated arrears ledgers, escalations, GST e-invoices, and executive cash-flow forecasts.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                    <Check size={12} strokeWidth={3} />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Helpdesk, PPM, Assets & Vendors
-                    </span>
-                    <span className="text-xs text-slate-600 font-normal">
-                      52-week maintenance schedules, asset QR codes, SLA tracking, and RFQ milestone escrows.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                    <Check size={12} strokeWidth={3} />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Leasing Pipeline & Tenant Services
-                    </span>
-                    <span className="text-xs text-slate-600 font-normal">
-                      Space marketing, LOI generation, visitor pre-registration speed-gates, and desk allocations.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quiet Product Visual Preview Widget (Light Theme) */}
-            <div className="mt-8 pt-6 border-t border-slate-200/80 relative z-10">
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Building size={14} className="text-blue-600" />
-                    <span className="text-xs font-bold text-slate-900">
-                      Acme Commercial Portfolio · Live Snapshot
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    Live
-                  </span>
-                </div>
-
-                {/* 4 Metric Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80">
-                    <div className="text-[10px] text-slate-500 font-medium">Occupancy</div>
-                    <div className="text-sm font-black text-slate-900 mt-0.5">94.2%</div>
-                    <div className="text-[9px] text-emerald-600 font-bold">+2.4% MoM</div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80">
-                    <div className="text-[10px] text-slate-500 font-medium">MTD Rent</div>
-                    <div className="text-sm font-black text-slate-900 mt-0.5">₹1.42 Cr</div>
-                    <div className="text-[9px] text-blue-600 font-bold">96.8% In</div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80">
-                    <div className="text-[10px] text-slate-500 font-medium">PPM Rate</div>
-                    <div className="text-sm font-black text-slate-900 mt-0.5">98.4%</div>
-                    <div className="text-[9px] text-emerald-600 font-bold">On Track</div>
-                  </div>
-
-                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80">
-                    <div className="text-[10px] text-slate-500 font-medium">Work Orders</div>
-                    <div className="text-sm font-black text-slate-900 mt-0.5">4 Active</div>
-                    <div className="text-[9px] text-amber-600 font-bold">In SLA</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Trust Lockup */}
-              <div className="mt-4 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
-                <span className="flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-blue-600" />
-                  SOC 2 Type II · AES-256 Vaulted
-                </span>
-                <span>Data Sovereignty · India DC</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
 
       {/* =====================================================================
-          SELF-SERVE RECOVERY HUB MODAL ("Can't sign in?") - Light Theme
+          SELF-SERVE RECOVERY HUB MODAL (3-Step Verified Flow) - Light Theme
           ===================================================================== */}
       {isRecoveryOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
@@ -1427,16 +1404,39 @@ export default function SignInForm({
                 <KeyRound size={20} />
               </div>
               <h3 className="text-xl font-black text-slate-950 tracking-tight">
-                {t.recoveryTitle}
+                {recoveryStep === 1 && t.recoveryTitle}
+                {recoveryStep === 2 && (lang === "hi" ? "सत्यापन कोड दर्ज करें" : "Verify Recovery Code")}
+                {recoveryStep === 3 && (lang === "hi" ? "नया पासवर्ड सेट करें" : "Set New Password")}
               </h3>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                {recoveryStep === 1
-                  ? t.recoverySubtitle
-                  : `Enter the 6-digit recovery code and choose a new secure password.`}
+                {recoveryStep === 1 && t.recoverySubtitle}
+                {recoveryStep === 2 && (lang === "hi"
+                  ? `${maskIdentifier(recoveryIdentifier)} पर भेजा गया 6-अंकीय सत्यापन कोड दर्ज करें।`
+                  : `Enter the 6-digit recovery code sent to ${maskIdentifier(recoveryIdentifier)}.`
+                )}
+                {recoveryStep === 3 && (lang === "hi"
+                  ? "कोड सत्यापित हो गया है! कृपया अपना नया सुरक्षित पासवर्ड सेट करें।"
+                  : "Code verified! Please create a new secure password to continue."
+                )}
               </p>
             </div>
 
-            {recoveryStep === 1 ? (
+            {/* Error & Info in Modal */}
+            {error && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+                <AlertCircle size={15} className="shrink-0 text-rose-600" />
+                <span>{error}</span>
+              </div>
+            )}
+            {infoMessage && (
+              <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 size={15} className="shrink-0 text-blue-600" />
+                <span>{infoMessage}</span>
+              </div>
+            )}
+
+            {/* STEP 1: Enter email / phone */}
+            {recoveryStep === 1 && (
               <form onSubmit={handleStartRecovery} className="space-y-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
@@ -1448,20 +1448,24 @@ export default function SignInForm({
                     value={recoveryIdentifier}
                     onChange={(e) => setRecoveryIdentifier(e.target.value)}
                     placeholder="name@company.com or 9876543210"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isLoading ? "Sending..." : t.sendRecoveryCode}
+                  <span>{isLoading ? "Sending..." : t.sendRecoveryCode}</span>
+                  <ArrowRight size={14} />
                 </button>
               </form>
-            ) : (
-              <form onSubmit={handleConfirmRecovery} className="space-y-3.5 text-xs">
+            )}
+
+            {/* STEP 2: Verify 6-digit Code (Must verify before password update is unlocked) */}
+            {recoveryStep === 2 && (
+              <form onSubmit={handleVerifyRecoveryCode} className="space-y-4 text-xs">
                 <div>
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
                     6-Digit Recovery Code
@@ -1470,13 +1474,56 @@ export default function SignInForm({
                     type="text"
                     required
                     maxLength={6}
+                    autoFocus
                     value={recoveryCode}
                     onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ""))}
                     placeholder="000000"
-                    className="w-full text-center tracking-[0.3em] font-mono font-bold py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-base focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full text-center tracking-[0.35em] font-mono font-bold py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
 
+                <button
+                  type="submit"
+                  disabled={isLoading || recoveryCode.trim().length !== 6}
+                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  <span>{isLoading ? "Verifying code..." : "Verify Code →"}</span>
+                  <ArrowRight size={14} />
+                </button>
+
+                <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                  {recoveryCooldown > 0 ? (
+                    <span className="text-slate-400 font-mono text-[11px]">
+                      {t.resendIn} {recoveryCooldown}s
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isLoading}
+                      onClick={handleResendRecoveryCode}
+                      className="text-blue-600 hover:text-blue-800 font-semibold hover:underline cursor-pointer"
+                    >
+                      Resend Code
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      setRecoveryStep(1);
+                    }}
+                    className="text-slate-500 hover:text-slate-800 transition-colors cursor-pointer text-[11px]"
+                  >
+                    Change email / mobile
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 3: Create & Confirm New Password (Only after verification) */}
+            {recoveryStep === 3 && (
+              <form onSubmit={handleConfirmRecovery} className="space-y-3.5 text-xs">
                 <div>
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
                     {t.newPasswordLabel} (≥ 10 characters)
@@ -1484,10 +1531,11 @@ export default function SignInForm({
                   <input
                     type="password"
                     required
+                    autoFocus
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
 
@@ -1501,7 +1549,7 @@ export default function SignInForm({
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
 
@@ -1521,7 +1569,7 @@ export default function SignInForm({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer mt-2"
+                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer mt-2 disabled:opacity-50"
                 >
                   {isLoading ? "Updating..." : t.resetPasswordBtn}
                 </button>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export const revalidate = 0;
 
@@ -32,13 +33,53 @@ export async function POST(request: Request) {
 
     const norm = normalizeIdentifier(identifier);
 
-    // Verify cryptographic OTP
+    // Verify cryptographic OTP via local store or Supabase
+    let isValid = false;
     const verification = verifyStoredOtp(norm, code);
-    if (!verification.valid) {
+    if (verification.valid) {
+      isValid = true;
+    } else {
+      try {
+        if (norm.includes('@')) {
+          const { data: supaData, error: supaErr } = await supabase.auth.verifyOtp({
+            email: norm,
+            token: code,
+            type: 'recovery',
+          });
+          if (!supaErr && supaData?.session) {
+            isValid = true;
+            // Update password in Supabase Auth
+            await supabase.auth.updateUser({ password: new_password });
+          }
+        }
+      } catch (e) {
+        console.warn('[RECOVER CONFIRM] Supabase verify fallback:', e);
+      }
+    }
+
+    if (!isValid) {
       return NextResponse.json(
         { error: verification.error || 'Invalid or expired recovery code.' },
         { status: 400 }
       );
+    }
+
+    // Persist new password directly in Supabase Auth
+    if (supabaseAdmin && norm.includes('@')) {
+      try {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const targetUser = usersData?.users?.find(
+          (u) => u.email?.toLowerCase() === norm.toLowerCase()
+        );
+        if (targetUser) {
+          await supabaseAdmin.auth.admin.updateUserById(targetUser.id, {
+            password: new_password,
+          });
+          console.log(`[RECOVER CONFIRM] Supabase Auth password successfully updated for ${norm}`);
+        }
+      } catch (adminErr) {
+        console.warn('[RECOVER CONFIRM] Supabase admin update error:', adminErr);
+      }
     }
 
     const response = NextResponse.json({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { detectIdentifierType, maskIdentifier, normalizeIdentifier } from '@/lib/auth-utils';
 import { generateAndStoreOtp } from '@/lib/otp-store';
 import { sendOtpEmail } from '@/lib/email-service';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export const revalidate = 0;
 
@@ -34,8 +35,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: otpError }, { status: 429 });
     }
 
-    // If identifier is email, dispatch via SMTP
+    // If identifier is email, dispatch via Supabase Auth and SMTP
     if (type === 'email') {
+      // 1. Ensure user is registered & confirmed in Supabase so Supabase sends recovery email
+      if (supabaseAdmin) {
+        try {
+          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+          const existingUser = usersData?.users?.find(
+            (u) => u.email?.toLowerCase() === normalized.toLowerCase()
+          );
+          if (!existingUser) {
+            await supabaseAdmin.auth.admin.createUser({
+              email: normalized,
+              email_confirm: true,
+            });
+            console.log(`[RECOVER] Created confirmed user in Supabase Auth for ${normalized}`);
+          } else if (!existingUser.email_confirmed_at) {
+            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+              email_confirm: true,
+            });
+          }
+        } catch (adminErr) {
+          console.warn('[RECOVER] Supabase admin user check error:', adminErr);
+        }
+      }
+
+      // 2. Trigger real Supabase Auth reset password email
+      try {
+        const { error: supaErr } = await supabase.auth.resetPasswordForEmail(normalized, {
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login?reset=true`,
+        });
+        if (supaErr) {
+          console.warn(`[RECOVER] Supabase resetPasswordForEmail notice for ${normalized}:`, supaErr.message);
+        } else {
+          console.log(`[RECOVER] Real Supabase resetPasswordForEmail dispatched to ${normalized}`);
+        }
+      } catch (e) {
+        console.warn(`[RECOVER] Supabase reset exception:`, e);
+      }
+
+      // 2. Dispatch real 6-digit cryptographic OTP email
       const emailRes = await sendOtpEmail({
         to: normalized,
         otp,

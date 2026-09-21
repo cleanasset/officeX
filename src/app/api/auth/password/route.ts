@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findMockUser, normalizeIdentifier } from '@/lib/auth-utils';
+import { supabase } from '@/lib/supabase';
 
 export const revalidate = 0;
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     const norm = normalizeIdentifier(identifier);
     const user = findMockUser(norm);
 
-    // Enforce demo password validation for mock directory users
+    // Fallback demo passwords for mock directory accounts
     const VALID_PASSWORDS = [
       'OfficeX@2026',
       'password',
@@ -34,6 +35,65 @@ export async function POST(request: Request) {
       'Demo@2026',
       'Admin@123'
     ];
+
+    // 1. Authenticate with real Supabase Auth
+    if (norm.includes('@')) {
+      try {
+        const { data: supaAuth, error: supaErr } = await supabase.auth.signInWithPassword({
+          email: norm,
+          password
+        });
+        if (!supaErr && supaAuth?.user) {
+          const userRole = supaAuth.user.user_metadata?.role || user?.memberships?.[0]?.role || 'Commercial Member';
+          const memberships = user?.memberships || [
+            {
+              id: 'mem_user_portal',
+              orgId: 'org_officex',
+              orgName: 'OfficeX Partner',
+              role: userRole,
+              roleCode: 'MEMBER',
+              workspaceTitle: 'Commercial Desk',
+              workspaceUrl: '/properties',
+              propertyScope: 'Active Commercial Portfolio',
+              badge: 'Member',
+              badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
+              isLastUsed: true
+            }
+          ];
+
+          const response = NextResponse.json({
+            success: true,
+            user: {
+              identifier: norm,
+              role: userRole
+            },
+            memberships
+          });
+
+          response.cookies.set('officex_auth', '1', {
+            path: '/',
+            httpOnly: false,
+            sameSite: 'lax',
+            maxAge: 86400 * 7
+          });
+
+          return response;
+        }
+
+        // If Supabase specifically rejected invalid credentials, reject immediately
+        if (supaErr && (supaErr.status === 400 || supaErr.message?.toLowerCase().includes('invalid login'))) {
+          // If not in mock users, or if mock password also doesn't match
+          if (!user || !VALID_PASSWORDS.includes(password)) {
+            return NextResponse.json(
+              { error: 'Incorrect password. Please verify your password and try again.' },
+              { status: 401 }
+            );
+          }
+        }
+      } catch (e) {
+        console.warn('[PASSWORD] Supabase auth check error:', e);
+      }
+    }
 
     if (user) {
       if (!VALID_PASSWORDS.includes(password)) {

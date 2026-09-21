@@ -57,7 +57,8 @@ export function generateAndStoreOtp(identifier: string): {
 
 export function verifyStoredOtp(
   identifier: string,
-  userCode: string
+  userCode: string,
+  consume: boolean = true
 ): { valid: boolean; error?: string } {
   const cleanId = normalizeIdentifier(identifier);
   const cleanCode = userCode.trim();
@@ -96,9 +97,19 @@ export function verifyStoredOtp(
     };
   }
 
-  // Code is valid! Consume and delete to prevent replay attacks
-  otpStore.delete(cleanId);
+  // Code is valid!
+  if (consume) {
+    otpStore.delete(cleanId);
+  } else {
+    (existing as any).verified = true;
+  }
   return { valid: true };
+}
+
+export function isOtpVerified(identifier: string): boolean {
+  const cleanId = normalizeIdentifier(identifier);
+  const existing = otpStore.get(cleanId);
+  return Boolean(existing && (existing as any).verified);
 }
 
 export function peekOtpForTesting(identifier: string): string | null {
