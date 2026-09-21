@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   Building,
   Handshake,
@@ -58,16 +59,31 @@ function OnboardingWizardContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
+  // KYC Verification Engine State (Step 5)
+  const [kycChecks, setKycChecks] = useState({
+    panVerified: false,
+    gstinVerified: false,
+    mcaVerified: false,
+    roleCredVerified: false,
+    bankVerified: false
+  });
+  const [isVerifyingPan, setIsVerifyingPan] = useState(false);
+  const [isVerifyingGstin, setIsVerifyingGstin] = useState(false);
+  const [isVerifyingMca, setIsVerifyingMca] = useState(false);
+  const [isVerifyingRoleCred, setIsVerifyingRoleCred] = useState(false);
+  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
+  const verifiedChecksCount = Object.values(kycChecks).filter(Boolean).length;
+
   // Active Role Selection
   const [role, setRole] = useState<"owner" | "broker" | "vendor" | "tenant">("owner");
 
-  // Step 1: Common Registration User Info
+  // Step 1: Common Registration User Info (Loaded dynamically from user's active session)
   const [userData, setUserData] = useState({
-    fullName: "Aarav Singhania",
-    email: "aarav.singhania@apexcommercial.in",
-    mobile: "+91 98201 54321",
-    otpVerified: true,
-    designation: "Managing Director / Promoter"
+    fullName: "",
+    email: "",
+    mobile: "",
+    otpVerified: false,
+    designation: ""
   });
 
   // Step 2: GST-Modeled Organization Master Sub-tabs
@@ -76,17 +92,17 @@ function OnboardingWizardContent() {
   // Organization Business Details (GST Model Part A)
   const [orgData, setOrgData] = useState({
     id: "",
-    organizationCode: "OX-ORG-2026-MUM-8491",
-    legalName: "Apex Commercial Realty Private Limited",
-    tradeName: "Apex Commercial Spaces",
+    organizationCode: "",
+    legalName: "",
+    tradeName: "",
     organizationType: "PRIVATE_LIMITED",
-    pan: "AAACG5678K",
-    gstin: "27AAACG5678K1Z2",
-    cin: "U70109MH2018PTC309182",
+    pan: "",
+    gstin: "",
+    cin: "",
     llpin: "",
-    website: "https://apexcommercial.in",
-    yearEstablished: "2018",
-    employeeCountBand: "51–200"
+    website: "",
+    yearEstablished: "",
+    employeeCountBand: "1–10"
   });
 
   // Organization Promoters / Partners / Directors (GST Model Part B)
@@ -99,61 +115,40 @@ function OnboardingWizardContent() {
     email: string;
     equityPct: string;
     state: string;
-  }>>([
-    {
-      id: "prom-1",
-      name: "Aarav Singhania",
-      designation: "Managing Director",
-      dinPan: "DIN-08492019",
-      mobile: "+91 98201 54321",
-      email: "aarav@apexcommercial.in",
-      equityPct: "60%",
-      state: "Maharashtra"
-    },
-    {
-      id: "prom-2",
-      name: "Meera Singhania",
-      designation: "Director",
-      dinPan: "DIN-09182736",
-      mobile: "+91 98201 98765",
-      email: "meera@apexcommercial.in",
-      equityPct: "40%",
-      state: "Maharashtra"
-    }
-  ]);
+  }>>([]);
 
   // Organization Authorized Signatory (GST Model Part C)
   const [authorizedSignatory, setAuthorizedSignatory] = useState({
     isPrimary: true,
-    name: "Aarav Singhania",
-    designation: "Managing Director",
-    mobile: "+91 98201 54321",
-    email: "aarav@apexcommercial.in",
+    name: "",
+    designation: "Director / Authorized Signatory",
+    mobile: "",
+    email: "",
     authDocType: "BOARD_RESOLUTION",
-    authDocRef: "BR/2026/04/APEX",
-    authDate: "2026-04-10"
+    authDocRef: "",
+    authDate: ""
   });
 
   // Organization Authorized Representative (GST Model Part D)
   const [hasAuthRep, setHasAuthRep] = useState(false);
   const [authorizedRepresentative, setAuthorizedRepresentative] = useState({
     repType: "CHARTERED_ACCOUNTANT",
-    name: "Rajesh Joshi & Associates",
-    enrolmentNo: "ICAI/WRO/092819",
-    mobile: "+91 98199 43210",
-    email: "tax@joshica.com"
+    name: "",
+    enrolmentNo: "",
+    mobile: "",
+    email: ""
   });
 
   // Organization Principal Place of Business (GST Model Part E)
   const [principalPlace, setPrincipalPlace] = useState({
     natureOfPossession: "OWNED",
-    addressLine1: "Level 14, Tower 2, One World Center",
-    addressLine2: "Senapati Bapat Marg, Lower Parel",
-    landmark: "Opposite Jupiter Mills",
-    city: "Mumbai",
-    district: "Mumbai Suburban",
+    addressLine1: "",
+    addressLine2: "",
+    landmark: "",
+    city: "",
+    district: "",
     state: "Maharashtra",
-    pincode: "400013",
+    pincode: "",
     primaryActivity: "Commercial Real Estate & Asset Ownership"
   });
 
@@ -166,33 +161,23 @@ function OnboardingWizardContent() {
     state: string;
     pincode: string;
     activity: string;
-  }>>([
-    {
-      id: "branch-1",
-      branchName: "BKC Regional Asset Office",
-      address: "Unit 502, C-60 G Block, Bandra Kurla Complex",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400051",
-      activity: "Commercial Asset Management"
-    }
-  ]);
+  }>>([]);
 
   // Step 3: Role-Specific Business Profiles (Distinct Form per Role)
   // 1. OWNER
   const [ownerProfile, setOwnerProfile] = useState({
     ownershipStructure: "DIRECT_OWNER",
     titleType: "FREEHOLD",
-    portfolioAssetClasses: ["GRADE_A_OFFICE", "IT_PARK", "COWORKING_CAMPUS"] as string[],
-    totalCommercialGLASqft: "350000",
-    totalAssetCount: 3,
-    portfolioValuationBand: "₹250Cr – ₹500Cr",
-    currentOccupancyPct: "94",
-    askingRentSqftMonth: "185",
-    standardLeaseLockinYears: "5",
+    portfolioAssetClasses: ["GRADE_A_OFFICE"] as string[],
+    totalCommercialGLASqft: "",
+    totalAssetCount: 0,
+    portfolioValuationBand: "",
+    currentOccupancyPct: "0",
+    askingRentSqftMonth: "",
+    standardLeaseLockinYears: "3",
     fireNocStatus: "VALID_CURRENT",
     occupancyCertStatus: "FULL_OC_ISSUED",
-    reraProjectRegistrationNo: "P51900028471"
+    reraProjectRegistrationNo: ""
   });
 
   // 2. BROKER
@@ -200,50 +185,50 @@ function OnboardingWizardContent() {
     brokerageModel: "COMMERCIAL_ADVISORY_FIRM",
     reraStatus: "REGISTERED",
     reraStateAuthority: "MahaRERA",
-    reraRegistrationNo: "A51800018492",
-    reraExpiryDate: "2029-08-15",
-    specializations: ["ENTERPRISE_OFFICE_LEASING", "MANAGED_COWORKING", "INVESTMENT_SALES", "LANDLORD_REP"] as string[],
-    operatingMicroMarkets: ["BKC", "Lower Parel", "Andheri-Kurla Road", "Powai", "Navi Mumbai"] as string[],
-    typicalDealTicketBand: "₹50L – ₹2Cr",
-    annualTransactionsBand: "6–20",
-    commissionEscrowBankName: "HDFC Bank Ltd",
-    commissionEscrowAccountNo: "50200084920194",
-    commissionEscrowIFSC: "HDFC0000060",
+    reraRegistrationNo: "",
+    reraExpiryDate: "",
+    specializations: ["ENTERPRISE_OFFICE_LEASING"] as string[],
+    operatingMicroMarkets: [] as string[],
+    typicalDealTicketBand: "",
+    annualTransactionsBand: "",
+    commissionEscrowBankName: "",
+    commissionEscrowAccountNo: "",
+    commissionEscrowIFSC: "",
     agreed45DayPayoutModel: true
   });
 
   // 3. FM VENDOR
   const [vendorProfile, setVendorProfile] = useState({
-    tradeMatrixHardFM: ["HVAC_CHILLERS", "HT_LT_ELECTRICAL", "DG_SETS_SYNCHRONIZATION", "ELEVATORS_ESCALATORS", "FIRE_LIFE_SAFETY", "STP_WTP_PLUMBING", "BMS_AUTOMATION"] as string[],
-    tradeMatrixSoftFM: ["CORPORATE_HOUSEKEEPING", "MANNED_SECURITY_GUARDING", "FACADE_CLEANING_CRADLE", "PEST_MANAGEMENT", "WASTE_MANAGEMENT_ESG"] as string[],
-    psaraLicenseNo: "PSARA/MH/2022/8941",
-    psaraValidityDate: "2027-11-30",
-    electricalGradeALicenseNo: "ECL/MH/GRADE-A/49102",
-    contractLabourLicenseNo: "CLA/CENTRAL/2021/9842",
-    epfEstablishmentCode: "MH/BAN/0089214/000",
-    esicRegistrationCode: "31000984210001001",
-    cglInsurancePolicyNo: "BAJAJ/CGL/COMM/2026/910",
-    cglCoverageAmount: "₹5,00,00,000 (Five Crores)",
-    isoCertifications: ["ISO 9001:2015", "ISO 14001:2015", "ISO 45001:2018"] as string[],
-    activeTechnicianCount: 65,
+    tradeMatrixHardFM: ["HVAC_CHILLERS", "HT_LT_ELECTRICAL"] as string[],
+    tradeMatrixSoftFM: ["CORPORATE_HOUSEKEEPING"] as string[],
+    psaraLicenseNo: "",
+    psaraValidityDate: "",
+    electricalGradeALicenseNo: "",
+    contractLabourLicenseNo: "",
+    epfEstablishmentCode: "",
+    esicRegistrationCode: "",
+    cglInsurancePolicyNo: "",
+    cglCoverageAmount: "",
+    isoCertifications: [] as string[],
+    activeTechnicianCount: 0,
     criticalBreakdownSlaResponse: "LESS_THAN_30_MINS",
     controlRoom24x7Available: true
   });
 
   // 4. TENANT
   const [tenantProfile, setTenantProfile] = useState({
-    enterpriseClassification: "GLOBAL_MNC_FORTUNE_500",
-    employeeHeadcountIndia: 350,
-    threeYearExpansionForecastPct: "45",
-    targetSpaceFootprintSqft: "45000",
+    enterpriseClassification: "ENTERPRISE",
+    employeeHeadcountIndia: 0,
+    threeYearExpansionForecastPct: "",
+    targetSpaceFootprintSqft: "",
     seatRatioPreference: "HYBRID_1_TO_0_8",
     fitoutHandoverPreference: "FULLY_FURNISHED_PLUG_PLAY",
-    targetCommercialSubmarkets: ["BKC", "Lower Parel", "Outer Ring Road (ORR)"] as string[],
+    targetCommercialSubmarkets: [] as string[],
     targetMoveInWindow: "30_TO_60_DAYS",
-    preferredLeaseTenureYears: "5",
-    centralBillingNodalName: "Corporate Real Estate & Global Workplace Solutions",
-    centralBillingEmail: "invoicing.india@globalcorp.com",
-    tanNumber: "MUMB08912E"
+    preferredLeaseTenureYears: "3",
+    centralBillingNodalName: "",
+    centralBillingEmail: "",
+    tanNumber: ""
   });
 
   // Step 4: Operational Profile
@@ -282,38 +267,138 @@ function OnboardingWizardContent() {
     extractedData?: string;
   }>>([]);
 
-  // Initialize Documents Vault when role changes
+  // Load real authenticated user info from query params, localStorage, sessionStorage, or Supabase
+  useEffect(() => {
+    const loadSessionUser = async () => {
+      const queryName = searchParams.get("name") || "";
+      const queryEmail = searchParams.get("email") || "";
+      const queryMobile = searchParams.get("mobile") || searchParams.get("phone") || "";
+      const queryVerified = searchParams.get("verified") === "1";
+
+      let storedName = queryName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "") : "");
+      let storedEmail = queryEmail || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "") : "");
+      let storedPhone = queryMobile || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_mobile") || localStorage.getItem("officex_user_phone") || sessionStorage.getItem("officex_user_mobile") || "") : "");
+      let isPhoneVerified = queryVerified || (typeof window !== "undefined" ? Boolean(localStorage.getItem("officex_phone_verified") === "1" || localStorage.getItem("officex_kyc_stage") === "K0_CONTACT_VERIFIED") : false);
+
+      // Persist query params if present
+      if (typeof window !== "undefined") {
+        if (queryName) {
+          localStorage.setItem("officex_user_name", queryName);
+          sessionStorage.setItem("officex_user_name", queryName);
+        }
+        if (queryEmail) {
+          localStorage.setItem("officex_user_email", queryEmail);
+          sessionStorage.setItem("officex_user_email", queryEmail);
+        }
+        if (queryMobile) {
+          localStorage.setItem("officex_user_mobile", queryMobile);
+          sessionStorage.setItem("officex_user_mobile", queryMobile);
+        }
+        if (queryVerified) {
+          localStorage.setItem("officex_phone_verified", "1");
+        }
+      }
+
+      // If user entered phone number as identifier during sign-in
+      if (storedEmail && !storedEmail.includes("@") && /^\+?[0-9\s-]+$/.test(storedEmail)) {
+        if (!storedPhone) storedPhone = storedEmail;
+        storedEmail = "";
+        isPhoneVerified = true;
+      }
+
+      // Check live Supabase session
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          if (user.email && !storedEmail) storedEmail = user.email;
+          if (user.phone && !storedPhone) {
+            storedPhone = user.phone;
+            isPhoneVerified = true;
+          }
+          const metaName = user.user_metadata?.full_name || user.user_metadata?.name;
+          if (metaName && !storedName) storedName = metaName;
+          if (user.phone_confirmed_at) isPhoneVerified = true;
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      if (storedPhone) {
+        const digits = storedPhone.replace(/\D/g, "");
+        if (digits.length === 10) {
+          storedPhone = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+        }
+      }
+
+      setUserData(prev => ({
+        ...prev,
+        fullName: storedName || prev.fullName,
+        email: storedEmail || prev.email,
+        mobile: storedPhone || prev.mobile,
+        otpVerified: isPhoneVerified
+      }));
+
+      setAuthorizedSignatory(prev => ({
+        ...prev,
+        name: storedName || prev.name,
+        email: storedEmail || prev.email,
+        mobile: storedPhone || prev.mobile
+      }));
+
+      if (storedName) {
+        setPromoters(prev => {
+          if (prev.length === 0) {
+            return [{
+              id: `prom-${Date.now()}`,
+              name: storedName,
+              designation: "Director / Authorized Partner",
+              dinPan: "",
+              mobile: storedPhone,
+              email: storedEmail,
+              equityPct: "100%",
+              state: "Maharashtra"
+            }];
+          }
+          return prev;
+        });
+      }
+    };
+
+    loadSessionUser();
+  }, [searchParams]);
+
+  // Initialize Documents Vault with clean pending state when role changes
   useEffect(() => {
     if (role === "owner") {
       setDocumentsVault([
-        { id: "d-1", type: "TITLE_DEED", label: "Registered Title Deed / Conveyance Deed", mandatory: true, docNumber: "DEED/MUM/2018/9842", fileName: "Apex_OneWorld_TitleDeed_Executed.pdf", fileSize: "4.8 MB", status: "verified", extractedData: "Owner: Apex Commercial Realty Pvt Ltd • Freehold Title" },
-        { id: "d-2", type: "PROPERTY_TAX", label: "Latest Municipal Corporation Property Tax Receipt", mandatory: true, docNumber: "MCGM/TAX/2025-26/19428", fileName: "MCGM_PropertyTax_FY25_26_Paid.pdf", fileSize: "1.2 MB", status: "verified", extractedData: "Assessment Paid • Valid through Mar 2026" },
-        { id: "d-3", type: "FIRE_NOC", label: "CFO Fire Safety Final NOC Certificate", mandatory: true, docNumber: "CFO/MUM/NOC/2024/7821", fileName: "Fire_NOC_Tower2_OneWorld.pdf", fileSize: "2.1 MB", status: "verified", extractedData: "Compliant with NBC 2016 Part 4 • Valid till Nov 2026" },
-        { id: "d-4", type: "OCCUPANCY_CERT", label: "Full Occupancy Certificate (OC) from MCGM / SRA", mandatory: true, docNumber: "MCGM/BP/OC/2021/3091", fileName: "Full_Occupancy_Certificate_MCGM.pdf", fileSize: "3.4 MB", status: "verified", extractedData: "Floors 1-28 Certified for Commercial Occupancy" },
-        { id: "d-5", type: "GST_CERTIFICATE", label: "GSTIN Registration Certificate (Form REG-06)", mandatory: true, docNumber: "27AAACG5678K1Z2", fileName: "GST_REG06_ApexCommercial.pdf", fileSize: "1.1 MB", status: "verified", extractedData: "Principal Place: Senapati Bapat Marg, Lower Parel" }
+        { id: "d-1", type: "TITLE_DEED", label: "Registered Title Deed / Conveyance Deed", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "d-2", type: "PROPERTY_TAX", label: "Latest Municipal Corporation Property Tax Receipt", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "d-3", type: "FIRE_NOC", label: "CFO Fire Safety Final NOC Certificate", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "d-4", type: "OCCUPANCY_CERT", label: "Full Occupancy Certificate (OC) from MCGM / SRA", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "d-5", type: "GST_CERTIFICATE", label: "GSTIN Registration Certificate (Form REG-06)", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" }
       ]);
     } else if (role === "broker") {
       setDocumentsVault([
-        { id: "b-1", type: "RERA_CERTIFICATE", label: "MahaRERA Real Estate Agent License Certificate", mandatory: true, docNumber: "A51800018492", fileName: "MahaRERA_Agent_Registration_Cert.pdf", fileSize: "1.9 MB", status: "verified", extractedData: "Licensed Commercial Agent • Valid till Aug 2029" },
-        { id: "b-2", type: "PAN_FIRM", label: "Commercial Firm / Individual PAN Card", mandatory: true, docNumber: "AAACG5678K", fileName: "Apex_Brokerage_PAN_Card.pdf", fileSize: "850 KB", status: "verified", extractedData: "CBDT Registered Business Entity" },
-        { id: "b-3", type: "CANCELLED_CHEQUE", label: "Cancelled Cheque for Commission Escrow Payouts", mandatory: true, docNumber: "HDFC-CHQ-009182", fileName: "HDFC_Escrow_Cancelled_Cheque.pdf", fileSize: "1.4 MB", status: "verified", extractedData: "A/C: 50200084920194 • IFSC: HDFC0000060" },
-        { id: "b-4", type: "GST_CERTIFICATE", label: "GSTIN Registration Certificate (REG-06)", mandatory: true, docNumber: "27AAACG5678K1Z2", fileName: "GSTIN_Certificate_Brokerage.pdf", fileSize: "1.2 MB", status: "verified", extractedData: "Services Category: SAC 997222 Real Estate Brokerage" }
+        { id: "b-1", type: "RERA_CERTIFICATE", label: "MahaRERA Real Estate Agent License Certificate", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "b-2", type: "PAN_FIRM", label: "Commercial Firm / Individual PAN Card", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "b-3", type: "CANCELLED_CHEQUE", label: "Cancelled Cheque for Commission Escrow Payouts", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "b-4", type: "GST_CERTIFICATE", label: "GSTIN Registration Certificate (REG-06)", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" }
       ]);
     } else if (role === "vendor") {
       setDocumentsVault([
-        { id: "v-1", type: "ELECTRICAL_GRADE_A", label: "State Electrical Inspectorate Grade-A License", mandatory: true, docNumber: "ECL/MH/GRADE-A/49102", fileName: "Govt_GradeA_Electrical_Contractor_License.pdf", fileSize: "2.4 MB", status: "verified", extractedData: "Authorized for HT/LT Substation & Commercial Panels" },
-        { id: "v-2", type: "PSARA_LICENSE", label: "PSARA Private Security Agency License", mandatory: true, docNumber: "PSARA/MH/2022/8941", fileName: "PSARA_ControllingAuthority_License.pdf", fileSize: "3.1 MB", status: "verified", extractedData: "Licensed Security Operations • Maharashtra State" },
-        { id: "v-3", type: "LABOUR_CONTRACTOR", label: "Contract Labour (R&A) Act Registration", mandatory: true, docNumber: "CLA/CENTRAL/2021/9842", fileName: "Labour_Commissioner_Registration.pdf", fileSize: "1.8 MB", status: "verified", extractedData: "Licensed for 250+ Commercial Contract Personnel" },
-        { id: "v-4", type: "EPF_ESIC_PROOF", label: "Combined EPFO & ESIC Active Monthly Challan", mandatory: true, docNumber: "EPF/ESIC/TRRN/2026/089", fileName: "EPFO_ESIC_ECR_Receipt_Latest.pdf", fileSize: "2.0 MB", status: "verified", extractedData: "65 Field Technicians Verified & Active" },
-        { id: "v-5", type: "CGL_INSURANCE", label: "Comprehensive General Liability (CGL) Policy", mandatory: true, docNumber: "BAJAJ/CGL/COMM/2026/910", fileName: "CGL_WorkmenComp_Insurance_Policy.pdf", fileSize: "4.2 MB", status: "verified", extractedData: "Coverage: ₹5.00 Cr Third Party Property & Life" }
+        { id: "v-1", type: "ELECTRICAL_GRADE_A", label: "State Electrical Inspectorate Grade-A License", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "v-2", type: "PSARA_LICENSE", label: "PSARA Private Security Agency License", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "v-3", type: "LABOUR_CONTRACTOR", label: "Contract Labour (R&A) Act Registration", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "v-4", type: "EPF_ESIC_PROOF", label: "Combined EPFO & ESIC Active Monthly Challan", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "v-5", type: "CGL_INSURANCE", label: "Comprehensive General Liability (CGL) Policy", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" }
       ]);
     } else {
       // Tenant
       setDocumentsVault([
-        { id: "t-1", type: "COI_MCA", label: "Certificate of Incorporation (Ministry of Corporate Affairs)", mandatory: true, docNumber: "U70109MH2018PTC309182", fileName: "MCA_Certificate_of_Incorporation.pdf", fileSize: "1.6 MB", status: "verified", extractedData: "Registrar of Companies, Mumbai • Active Entity" },
-        { id: "t-2", type: "BOARD_RESOLUTION", label: "Board Resolution / Letter of Authority for Lease Execution", mandatory: true, docNumber: "BR/2026/CORP/04", fileName: "Board_Resolution_Authorised_Signatory.pdf", fileSize: "1.1 MB", status: "verified", extractedData: "Empowering Aarav Singhania for Commercial Leases" },
-        { id: "t-3", type: "GST_CERTIFICATE", label: "GSTIN Certificate for Input Tax Credit (ITC)", mandatory: true, docNumber: "27AAACG5678K1Z2", fileName: "GST_Registration_Certificate_Enterprise.pdf", fileSize: "1.3 MB", status: "verified", extractedData: "Eligible for 18% Commercial Rent ITC Credit" },
-        { id: "t-4", type: "TAN_ALLOTMENT", label: "Income Tax TAN Allotment Letter (Form 49B)", mandatory: true, docNumber: "MUMB08912E", fileName: "TAN_Allotment_IncomeTax_Dept.pdf", fileSize: "920 KB", status: "verified", extractedData: "TDS on Rent Deductor Code Active (Sec 194-I)" }
+        { id: "t-1", type: "COI_MCA", label: "Certificate of Incorporation (Ministry of Corporate Affairs)", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "t-2", type: "BOARD_RESOLUTION", label: "Board Resolution / Letter of Authority for Lease Execution", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "t-3", type: "GST_CERTIFICATE", label: "GSTIN Certificate for Input Tax Credit (ITC)", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" },
+        { id: "t-4", type: "TAN_ALLOTMENT", label: "Income Tax TAN Allotment Letter (Form 49B)", mandatory: true, docNumber: "", fileName: "", fileSize: "", status: "pending" }
       ]);
     }
   }, [role]);
@@ -380,6 +465,104 @@ function OnboardingWizardContent() {
 
   const removeAdditionalPlace = (id: string) => {
     setAdditionalPlaces((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  // Statutory Verification Handlers (Step 5)
+  const handleVerifyPan = () => {
+    if (!orgData.pan.trim()) {
+      showToast("Please enter an entity PAN in Step 2 or upload your PAN card.", "error");
+      return;
+    }
+    setIsVerifyingPan(true);
+    setTimeout(() => {
+      setIsVerifyingPan(false);
+      setKycChecks((prev) => ({ ...prev, panVerified: true }));
+      showToast(`PAN ${orgData.pan} verified against CBDT registry. Entity match confirmed.`, "success");
+    }, 800);
+  };
+
+  const handleVerifyGstin = () => {
+    if (!orgData.gstin.trim()) {
+      showToast("Please enter a valid GSTIN in Step 2 or upload Form REG-06.", "error");
+      return;
+    }
+    setIsVerifyingGstin(true);
+    setTimeout(() => {
+      setIsVerifyingGstin(false);
+      setKycChecks((prev) => ({ ...prev, gstinVerified: true }));
+      showToast(`GSTIN ${orgData.gstin} validated active on GST System.`, "success");
+    }, 800);
+  };
+
+  const handleVerifyMca = () => {
+    if (!orgData.cin.trim()) {
+      showToast("Please enter corporate CIN in Step 2 or upload Certificate of Incorporation.", "error");
+      return;
+    }
+    setIsVerifyingMca(true);
+    setTimeout(() => {
+      setIsVerifyingMca(false);
+      setKycChecks((prev) => ({ ...prev, mcaVerified: true }));
+      showToast(`CIN ${orgData.cin} verified with Ministry of Corporate Affairs (RoC).`, "success");
+    }, 800);
+  };
+
+  const handleVerifyRoleCred = () => {
+    setIsVerifyingRoleCred(true);
+    setTimeout(() => {
+      setIsVerifyingRoleCred(false);
+      setKycChecks((prev) => ({ ...prev, roleCredVerified: true }));
+      showToast("Role statutory clearances verified against state databases.", "success");
+    }, 800);
+  };
+
+  const handleExecutePennyDrop = () => {
+    setIsVerifyingBank(true);
+    setTimeout(() => {
+      setIsVerifyingBank(false);
+      setKycChecks((prev) => ({ ...prev, bankVerified: true }));
+      showToast("₹1 automated penny drop executed successfully! Beneficiary account matched.", "success");
+    }, 900);
+  };
+
+  // Step 6 Documents Vault File Upload & Instant OCR Handler
+  const handleFileUpload = (docId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeStr = file.size > 1024 * 1024 
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+      : `${Math.round(file.size / 1024)} KB`;
+
+    setDocumentsVault((prev) =>
+      prev.map((d) => {
+        if (d.id === docId) {
+          return {
+            ...d,
+            fileName: file.name,
+            fileSize: sizeStr,
+            status: "verified",
+            extractedData: `Automated OCR: ${file.name.replace(/\.[^/.]+$/, "")} verified with registry`
+          };
+        }
+        return d;
+      })
+    );
+
+    // Sync with KYC checks in Step 5
+    if (docId === "d-5" || docId === "b-4" || docId === "t-3") {
+      setKycChecks((prev) => ({ ...prev, gstinVerified: true }));
+    } else if (docId === "b-2" || docId === "d-1") {
+      setKycChecks((prev) => ({ ...prev, panVerified: true }));
+    } else if (docId === "t-1" || docId === "t-2") {
+      setKycChecks((prev) => ({ ...prev, mcaVerified: true }));
+    } else if (docId === "b-3") {
+      setKycChecks((prev) => ({ ...prev, bankVerified: true }));
+    } else {
+      setKycChecks((prev) => ({ ...prev, roleCredVerified: true }));
+    }
+
+    showToast(`"${file.name}" uploaded successfully. AES-256 encrypted & OCR verified!`, "success");
   };
 
   // Navigation and State Persistence
@@ -630,6 +813,7 @@ function OnboardingWizardContent() {
                     type="text"
                     value={userData.fullName}
                     onChange={(e) => setUserData({ ...userData, fullName: e.target.value })}
+                    placeholder="Enter full legal name"
                     className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
                   />
                 </div>
@@ -641,6 +825,7 @@ function OnboardingWizardContent() {
                     type="email"
                     value={userData.email}
                     onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                    placeholder="name@company.com"
                     className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
                   />
                 </div>
@@ -652,12 +837,19 @@ function OnboardingWizardContent() {
                     <input
                       type="text"
                       value={userData.mobile}
-                      onChange={(e) => setUserData({ ...userData, mobile: e.target.value })}
+                      onChange={(e) => setUserData({ ...userData, mobile: e.target.value, otpVerified: false })}
+                      placeholder="+91 98000 00000"
                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-bold focus:border-[#0F8B7D] focus:outline-none"
                     />
-                    <span className="px-2.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black shrink-0 flex items-center gap-1">
-                      <CheckCircle size={12} /> Verified
-                    </span>
+                    {userData.otpVerified && userData.mobile.trim().length >= 10 ? (
+                      <span className="px-2.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black shrink-0 flex items-center gap-1">
+                        <CheckCircle size={12} /> Verified
+                      </span>
+                    ) : userData.mobile.trim().length >= 10 ? (
+                      <span className="px-2.5 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold shrink-0 flex items-center gap-1">
+                        Pending OTP
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -957,7 +1149,7 @@ function OnboardingWizardContent() {
                                 const val = e.target.value;
                                 setPromoters((prev) => prev.map((item) => (item.id === p.id ? { ...item, name: val } : item)));
                               }}
-                              placeholder="e.g. Aarav Singhania"
+                              placeholder="e.g. Full Legal Name"
                               className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
                             />
                           </div>
@@ -2355,66 +2547,184 @@ function OnboardingWizardContent() {
                     Live simulation of official regulatory checks (CBDT PAN, GSTIN, MCA Corporate Registry, and role-specific statutory registers).
                   </p>
                 </div>
-                <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5 shrink-0">
-                  <BadgeCheck size={14} /> 5 of 5 Checks Passing
-                </span>
+                {verifiedChecksCount === 5 ? (
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5 shrink-0">
+                    <BadgeCheck size={14} /> 5 of 5 Checks Passing
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1.5 shrink-0">
+                    <Clock size={14} /> {verifiedChecksCount} of 5 Checks Passing (Action / Upload Required)
+                  </span>
+                )}
               </div>
 
               {/* 5 Regulatory Validation Tiles */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 {/* 1. PAN */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  kycChecks.panVerified 
+                    ? "bg-emerald-50/40 border-emerald-200" 
+                    : "bg-slate-50 border-slate-200"
+                } space-y-2`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Landmark size={18} className="text-[#0F8B7D]" />
+                      <Landmark size={18} className={kycChecks.panVerified ? "text-emerald-700" : "text-[#0F8B7D]"} />
                       <span className="font-black text-slate-900">1. CBDT Entity PAN Verification</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
-                      VERIFIED ✓
-                    </span>
+                    {kycChecks.panVerified ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] border border-emerald-300">
+                        VERIFIED ✓
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-black text-[10px] border border-amber-200">
+                        PENDING CBDT MATCH
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    PAN <span className="font-mono text-[#0F8B7D] font-bold">{orgData.pan}</span> matched against Central Board of Direct Taxes. Legal entity name and constitution confirmed.
-                  </p>
+                  {kycChecks.panVerified ? (
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      PAN <span className="font-mono text-[#0F8B7D] font-bold">{orgData.pan || "Entered PAN"}</span> matched against Central Board of Direct Taxes. Legal entity name and constitution confirmed.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Entity PAN from Step 2: <span className="font-mono text-slate-800 font-bold">{orgData.pan || "Not provided in Step 2"}</span>. Match with CBDT database or upload PAN card in Step 6.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isVerifyingPan}
+                          onClick={handleVerifyPan}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifyingPan ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                          {isVerifyingPan ? "Verifying with CBDT..." : "Verify via CBDT"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(6)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Upload size={12} /> Upload PAN in Vault
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. GSTIN */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  kycChecks.gstinVerified 
+                    ? "bg-emerald-50/40 border-emerald-200" 
+                    : "bg-slate-50 border-slate-200"
+                } space-y-2`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <FileSpreadsheet size={18} className="text-[#0F8B7D]" />
+                      <FileSpreadsheet size={18} className={kycChecks.gstinVerified ? "text-emerald-700" : "text-[#0F8B7D]"} />
                       <span className="font-black text-slate-900">2. GSTIN Active & Filing Track Record</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
-                      ACTIVE (REG-06) ✓
-                    </span>
+                    {kycChecks.gstinVerified ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] border border-emerald-300">
+                        ACTIVE (REG-06) ✓
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-black text-[10px] border border-amber-200">
+                        PENDING GST VALIDATION
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    GSTIN <span className="font-mono text-[#0F8B7D] font-bold">{orgData.gstin}</span> is Active. GSTR-3B and GSTR-1 filings are regular with 0 statutory defaults.
-                  </p>
+                  {kycChecks.gstinVerified ? (
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      GSTIN <span className="font-mono text-[#0F8B7D] font-bold">{orgData.gstin || "Entered GSTIN"}</span> is Active. GSTR-3B and GSTR-1 filings are regular with 0 statutory defaults.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        GSTIN from Step 2: <span className="font-mono text-slate-800 font-bold">{orgData.gstin || "Not provided in Step 2"}</span>. Validate against GST portal or upload Certificate Form REG-06.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isVerifyingGstin}
+                          onClick={handleVerifyGstin}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifyingGstin ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                          {isVerifyingGstin ? "Validating GST Portal..." : "Validate GSTIN"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(6)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Upload size={12} /> Upload REG-06 Certificate
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. MCA */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  kycChecks.mcaVerified 
+                    ? "bg-emerald-50/40 border-emerald-200" 
+                    : "bg-slate-50 border-slate-200"
+                } space-y-2`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Building2 size={18} className="text-[#0F8B7D]" />
+                      <Building2 size={18} className={kycChecks.mcaVerified ? "text-emerald-700" : "text-[#0F8B7D]"} />
                       <span className="font-black text-slate-900">3. MCA RoC Corporate Registration</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
-                      ACTIVE ROC ✓
-                    </span>
+                    {kycChecks.mcaVerified ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] border border-emerald-300">
+                        ACTIVE ROC ✓
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-black text-[10px] border border-amber-200">
+                        PENDING ROC VERIFICATION
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    CIN <span className="font-mono text-[#0F8B7D] font-bold">{orgData.cin}</span> validated with Registrar of Companies. Directors {promoters[0]?.name} and {promoters[1]?.name || "Authorized"} confirmed on MCA portal.
-                  </p>
+                  {kycChecks.mcaVerified ? (
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      CIN <span className="font-mono text-[#0F8B7D] font-bold">{orgData.cin || "Entered CIN"}</span> validated with Registrar of Companies. Directors {promoters[0]?.name || authorizedSignatory.name || "Authorized Directors"} confirmed on MCA portal.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Corporate CIN / LLPIN: <span className="font-mono text-slate-800 font-bold">{orgData.cin || orgData.llpin || "Not provided in Step 2"}</span>. Verify incorporation details or upload Certificate of Incorporation.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isVerifyingMca}
+                          onClick={handleVerifyMca}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifyingMca ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                          {isVerifyingMca ? "Querying MCA21..." : "Verify MCA RoC"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(6)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Upload size={12} /> Upload Certificate of Inc.
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 4. Role Statutory Credential */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  kycChecks.roleCredVerified 
+                    ? "bg-emerald-50/40 border-emerald-200" 
+                    : "bg-slate-50 border-slate-200"
+                } space-y-2`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Award size={18} className="text-[#0F8B7D]" />
+                      <Award size={18} className={kycChecks.roleCredVerified ? "text-emerald-700" : "text-[#0F8B7D]"} />
                       <span className="font-black text-slate-900">
                         {role === "owner" && "4. Property Tax & CFO Fire NOC"}
                         {role === "broker" && "4. MahaRERA Real Estate Agent Validation"}
@@ -2422,32 +2732,103 @@ function OnboardingWizardContent() {
                         {role === "tenant" && "4. MCA Authorized Signatory Board Resolution"}
                       </span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
-                      VALIDATED ✓
-                    </span>
+                    {kycChecks.roleCredVerified ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] border border-emerald-300">
+                        VALIDATED ✓
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-black text-[10px] border border-amber-200">
+                        DOCUMENTS REQUIRED
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    {role === "owner" && "Municipal tax receipt and Fire NOC matching property asset records."}
-                    {role === "broker" && `RERA Agent License ${brokerProfile.reraRegistrationNo} verified active on MahaRERA portal.`}
-                    {role === "vendor" && `PSARA ${vendorProfile.psaraLicenseNo} and Electrical Grade-A license validated.`}
-                    {role === "tenant" && "Board Resolution certified empowering signatory to execute enterprise commercial leases."}
-                  </p>
+                  {kycChecks.roleCredVerified ? (
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      {role === "owner" && "Municipal tax receipt and Fire NOC matching property asset records."}
+                      {role === "broker" && `RERA Agent License ${brokerProfile.reraRegistrationNo || "verified"} confirmed on MahaRERA portal.`}
+                      {role === "vendor" && `PSARA ${vendorProfile.psaraLicenseNo || "verified"} and Electrical Grade-A license validated.`}
+                      {role === "tenant" && "Board Resolution certified empowering signatory to execute enterprise commercial leases."}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        {role === "owner" && "Property Tax Assessment Receipt and CFO Fire NOC must be submitted in the compliance vault."}
+                        {role === "broker" && `MahaRERA Agent License (${brokerProfile.reraRegistrationNo || "pending"}) validation or certificate upload required.`}
+                        {role === "vendor" && `PSARA Security License (${vendorProfile.psaraLicenseNo || "pending"}) and Labour Contractor credentials required.`}
+                        {role === "tenant" && "Board Resolution or Letter of Authority for commercial lease execution must be uploaded."}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isVerifyingRoleCred}
+                          onClick={handleVerifyRoleCred}
+                          className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifyingRoleCred ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                          {isVerifyingRoleCred ? "Validating..." : "Validate Credentials"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(6)}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Upload size={12} /> Upload in Vault
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 5. Bank Account Escrow / Penny Drop */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 md:col-span-2">
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  kycChecks.bankVerified 
+                    ? "bg-emerald-50/40 border-emerald-200" 
+                    : "bg-slate-50 border-slate-200"
+                } space-y-2 md:col-span-2`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <DollarSign size={18} className="text-[#0F8B7D]" />
+                      <DollarSign size={18} className={kycChecks.bankVerified ? "text-emerald-700" : "text-[#0F8B7D]"} />
                       <span className="font-black text-slate-900">5. Automated Penny-Drop Bank Account & Escrow Match</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
-                      NAME MATCH 99.4% ✓
-                    </span>
+                    {kycChecks.bankVerified ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] border border-emerald-300">
+                        NAME MATCH 99.4% ✓
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-black text-[10px] border border-amber-200">
+                        PENDING PENNY DROP
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Real-time ₹1 penny drop executed. Bank Beneficiary Name matches Legal Name <span className="text-slate-900 font-bold">"{orgData.legalName}"</span> with IFSC verified. Direct escrow and automated payouts unlocked.
-                  </p>
+                  {kycChecks.bankVerified ? (
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Real-time ₹1 penny drop executed. Bank Beneficiary Name matches Legal Name <span className="text-slate-900 font-bold">"{orgData.legalName || "Registered Entity"}"</span> with IFSC verified. Direct escrow and automated payouts unlocked.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Execute real-time ₹1 NPCI penny-drop transfer to verify settlement bank account against entity legal name <span className="text-slate-900 font-bold">"{orgData.legalName || "Your Legal Entity"}"</span>, or upload cancelled cheque in Step 6.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isVerifyingBank}
+                          onClick={handleExecutePennyDrop}
+                          className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifyingBank ? <Loader2 size={14} className="animate-spin" /> : <DollarSign size={14} />}
+                          {isVerifyingBank ? "Executing ₹1 Penny Drop via NPCI..." : "Execute Real-time ₹1 Penny Drop"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(6)}
+                          className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Upload size={13} /> Upload Cancelled Cheque
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2483,22 +2864,38 @@ function OnboardingWizardContent() {
                 {documentsVault.map((doc) => (
                   <div
                     key={doc.id}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:border-slate-300 shadow-xs transition-colors"
+                    className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors shadow-xs ${
+                      doc.fileName
+                        ? "bg-white border-emerald-200 hover:border-emerald-300"
+                        : "bg-white border-slate-200 hover:border-slate-300"
+                    }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-2.5 rounded-xl bg-teal-50 text-[#0F8B7D] border border-teal-100 shrink-0 mt-0.5">
-                        <FileText size={20} />
+                      <div className={`p-2.5 rounded-xl border shrink-0 mt-0.5 ${
+                        doc.fileName 
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                          : "bg-teal-50 text-[#0F8B7D] border-teal-100"
+                      }`}>
+                        {doc.fileName ? <FileCheck size={20} /> : <FileText size={20} />}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-black text-slate-900 text-xs">{doc.label}</span>
                           {doc.mandatory && (
-                            <span className="text-[9px] font-bold text-rose-700 bg-rose-50 px-2 py-0.2 rounded border border-rose-200">
+                            <span className="text-[9px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                               Mandatory
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-[#0F8B7D] font-mono mt-0.5">{doc.fileName} ({doc.fileSize})</p>
+                        {doc.fileName ? (
+                          <p className="text-[11px] text-[#0F8B7D] font-mono mt-0.5">
+                            {doc.fileName} ({doc.fileSize})
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            PDF, PNG or JPG up to 10MB • Awaiting upload
+                          </p>
+                        )}
                         {doc.extractedData && (
                           <p className="text-[10px] text-slate-500 mt-1 font-medium">
                             <span className="text-[#0F8B7D] font-bold">OCR Match:</span> {doc.extractedData}
@@ -2507,17 +2904,45 @@ function OnboardingWizardContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black flex items-center gap-1">
-                        <CheckCircle size={12} /> Verified
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => showToast(`Opening inspection preview for ${doc.fileName}...`, "info")}
-                        className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <Eye size={13} /> View
-                      </button>
+                    <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                      {doc.fileName ? (
+                        <>
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black flex items-center gap-1">
+                            <CheckCircle size={12} /> Verified
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => showToast(`Opening inspection preview for ${doc.fileName}...`, "info")}
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Eye size={13} /> View
+                          </button>
+                          <label className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors" title="Replace / Re-upload file">
+                            <Upload size={12} /> Re-upload
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(doc.id, e)}
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold flex items-center gap-1">
+                            <Clock size={12} /> Upload Required
+                          </span>
+                          <label className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-sm shadow-teal-900/10">
+                            <Upload size={13} /> Upload Document
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(doc.id, e)}
+                            />
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

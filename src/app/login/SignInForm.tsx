@@ -133,10 +133,26 @@ export default function SignInForm({
     const checkSupabaseAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user?.email) {
+        if (session?.user) {
+          const u = session.user;
+          if (u.email) {
+            localStorage.setItem("officex_user_email", u.email);
+            sessionStorage.setItem("officex_user_email", u.email);
+            localStorage.setItem("officex_email_verified", "1");
+          }
+          if (u.phone) {
+            localStorage.setItem("officex_user_mobile", u.phone);
+            sessionStorage.setItem("officex_user_mobile", u.phone);
+            localStorage.setItem("officex_phone_verified", "1");
+          }
+          const fullName = u.user_metadata?.full_name || u.user_metadata?.name || "";
+          if (fullName) {
+            localStorage.setItem("officex_user_name", fullName);
+            sessionStorage.setItem("officex_user_name", fullName);
+          }
           handleAuthSuccess(
-            session.user.email,
-            session.user.user_metadata?.role || "Commercial Member"
+            u.email || u.phone || identifier,
+            u.user_metadata?.role || "Commercial Member"
           );
         }
       } catch (e) {
@@ -147,10 +163,26 @@ export default function SignInForm({
     checkSupabaseAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user?.email) {
+      if (event === "SIGNED_IN" && session?.user) {
+        const u = session.user;
+        if (u.email) {
+          localStorage.setItem("officex_user_email", u.email);
+          sessionStorage.setItem("officex_user_email", u.email);
+          localStorage.setItem("officex_email_verified", "1");
+        }
+        if (u.phone) {
+          localStorage.setItem("officex_user_mobile", u.phone);
+          sessionStorage.setItem("officex_user_mobile", u.phone);
+          localStorage.setItem("officex_phone_verified", "1");
+        }
+        const fullName = u.user_metadata?.full_name || u.user_metadata?.name || "";
+        if (fullName) {
+          localStorage.setItem("officex_user_name", fullName);
+          sessionStorage.setItem("officex_user_name", fullName);
+        }
         handleAuthSuccess(
-          session.user.email,
-          session.user.user_metadata?.role || "Commercial Member"
+          u.email || u.phone || identifier,
+          u.user_metadata?.role || "Commercial Member"
         );
       } else if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryOpen(true);
@@ -479,13 +511,28 @@ export default function SignInForm({
   ) => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("officex_session_active", "1");
-      sessionStorage.setItem("officex_user_email", userEmailOrPhone);
       sessionStorage.setItem("officex_user_role", roleName);
       sessionStorage.setItem("officex_subscription", "active");
 
-      localStorage.setItem("officex_user_email", userEmailOrPhone);
+      localStorage.setItem("officex_session_active", "1");
       localStorage.setItem("officex_user_role", roleName);
       localStorage.setItem("officex_subscription", "active");
+
+      const cleanVal = userEmailOrPhone.trim();
+      if (cleanVal.includes("@")) {
+        sessionStorage.setItem("officex_user_email", cleanVal);
+        localStorage.setItem("officex_user_email", cleanVal);
+        localStorage.setItem("officex_email_verified", "1");
+      } else if (/^\+?[0-9\s-]+$/.test(cleanVal)) {
+        sessionStorage.setItem("officex_user_mobile", cleanVal);
+        localStorage.setItem("officex_user_mobile", cleanVal);
+        sessionStorage.setItem("officex_user_phone", cleanVal);
+        localStorage.setItem("officex_user_phone", cleanVal);
+        localStorage.setItem("officex_phone_verified", "1");
+      } else {
+        sessionStorage.setItem("officex_user_email", cleanVal);
+        localStorage.setItem("officex_user_email", cleanVal);
+      }
 
       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";

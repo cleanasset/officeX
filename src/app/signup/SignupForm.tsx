@@ -240,12 +240,23 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
       }
 
       if (typeof window !== "undefined") {
+        const cleanMobile = mobileNumber.replace(/\D/g, "");
         sessionStorage.setItem("officex_session_active", "1");
         sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
         sessionStorage.setItem("officex_user_role", selectedRole);
+        sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
+        sessionStorage.setItem("officex_user_mobile", cleanMobile);
+        sessionStorage.setItem("officex_user_name", fullName.trim());
+
         localStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
         localStorage.setItem("officex_user_role", selectedRole);
+        localStorage.setItem("officex_user_email", email.trim().toLowerCase());
+        localStorage.setItem("officex_user_mobile", cleanMobile);
+        localStorage.setItem("officex_user_phone", cleanMobile);
+        localStorage.setItem("officex_user_name", fullName.trim());
+        localStorage.setItem("officex_phone_verified", "1");
+        localStorage.setItem("officex_email_verified", "1");
 
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
@@ -253,7 +264,15 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
 
       setSuccessMsg("Contact verified! Routing to business onboarding...");
       setTimeout(() => {
-        router.push(`/onboarding?role=${encodeURIComponent(selectedRole)}`);
+        const cleanMobile = mobileNumber.replace(/\D/g, "");
+        const queryParams = new URLSearchParams({
+          role: selectedRole,
+          name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          mobile: cleanMobile,
+          verified: "1"
+        });
+        router.push(`/onboarding?${queryParams.toString()}`);
       }, 700);
     } catch (err: any) {
       console.error("OTP error:", err);
