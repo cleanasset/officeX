@@ -6,6 +6,7 @@ import {
   QrCode, Smartphone, Building, Lock, Check, Loader2, ArrowRight,
   AlertCircle, RefreshCw, FileText
 } from "lucide-react";
+import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 interface TenantInvoice {
   id: string;
@@ -101,49 +102,71 @@ export default function RentPaymentGateway() {
     setShowPayModal(true);
   };
 
-  const handleSimulatePayment = async () => {
+  const handleRazorpayPayment = async () => {
     if (!selectedInvoice) return;
     setIsProcessing(true);
 
     try {
-      const generatedRef = `pay_Ox${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 900 + 100)}`;
       const amountToPay = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
 
-      const payload = {
-        invoiceId: selectedInvoice.id,
-        leaseId: selectedInvoice.leaseId,
-        amountReceived: amountToPay,
-        tdsDeducted: selectedInvoice.tdsDeducted || 0,
-        paymentMode: payMethod === "upi" ? "upi" : payMethod === "card" ? "credit_card" : "neft_rtgs",
-        referenceNumber: generatedRef,
-        paymentDate: new Date().toISOString().split("T")[0],
-        bankAccount: "OfficeX Nodal Escrow Account - HDFC",
-        notes: `Paid by ${tenantInfo?.tenantName || "Tenant"} via Razorpay Gateway (${payMethod.toUpperCase()})`
-      };
+      await initiateRazorpayPayment({
+        amount: 10000, // ₹100 flat for now
+        receipt: `INV-${selectedInvoice.invoiceNumber || Date.now()}`,
+        description: `Rent Payment — ${selectedInvoice.propertyName} (${selectedInvoice.billingMonth})`,
+        prefillName: tenantInfo?.tenantName || "",
+        prefillEmail: tenantInfo?.contactEmail || "",
+        notes: {
+          invoiceId: selectedInvoice.id,
+          leaseId: selectedInvoice.leaseId,
+          billingMonth: selectedInvoice.billingMonth,
+          type: "rent_payment",
+        },
+        onSuccess: async (response) => {
+          // Payment verified — record collection with real Razorpay payment ID
+          const payload = {
+            invoiceId: selectedInvoice.id,
+            leaseId: selectedInvoice.leaseId,
+            amountReceived: amountToPay,
+            tdsDeducted: selectedInvoice.tdsDeducted || 0,
+            paymentMode: "upi", // Razorpay handles actual method
+            referenceNumber: response.razorpay_payment_id,
+            paymentDate: new Date().toISOString().split("T")[0],
+            bankAccount: "Razorpay Escrow Settlement",
+            notes: `Verified Razorpay Payment | Order: ${response.razorpay_order_id} | Payment: ${response.razorpay_payment_id}`
+          };
 
-      const res = await fetch("/api/rent-roll/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+          const res = await fetch("/api/rent-roll/collections", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
 
-      if (res.ok) {
-        const resData = await res.json();
-        setIsPaidSuccess(true);
-        setTimeout(() => {
-          setShowPayModal(false);
-          setIsPaidSuccess(false);
-          setToast(`Payment of ₹${amountToPay.toLocaleString("en-IN")} successfully processed! Receipt: ${resData.receipt?.receiptNumber || generatedRef}`);
-          fetchTenantData();
+          if (res.ok) {
+            const resData = await res.json();
+            setIsPaidSuccess(true);
+            setTimeout(() => {
+              setShowPayModal(false);
+              setIsPaidSuccess(false);
+              setToast(`Payment verified! ₹${amountToPay.toLocaleString("en-IN")} settled. Razorpay ID: ${response.razorpay_payment_id}`);
+              fetchTenantData();
+              setTimeout(() => setToast(null), 6000);
+            }, 1200);
+          } else {
+            const err = await res.json();
+            setToast(`Payment received but recording failed: ${err.error}`);
+            setTimeout(() => setToast(null), 5000);
+          }
+        },
+        onFailure: (error) => {
+          console.error("Razorpay payment failed:", error);
+          setToast(`Payment failed: ${error?.description || error?.message || "Please try again"}`);
           setTimeout(() => setToast(null), 5000);
-        }, 1200);
-      } else {
-        const err = await res.json();
-        alert(`Payment error: ${err.error || "Unable to settle payment"}`);
-      }
+        },
+      });
     } catch (error: any) {
       console.error("Payment error:", error);
-      alert("Network error processing payment. Please try again.");
+      setToast(`Payment error: ${error.message || "Network error"}`);
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setIsProcessing(false);
     }
@@ -652,7 +675,7 @@ This is a computer-generated tax invoice receipt. No physical signature required
               {/* Submit CTA */}
               <button
                 disabled={isProcessing || isPaidSuccess}
-                onClick={handleSimulatePayment}
+                onClick={handleRazorpayPayment}
                 className="w-full mt-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isProcessing ? (

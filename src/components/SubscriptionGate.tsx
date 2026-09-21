@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2 } from "lucide-react";
+import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
@@ -26,6 +27,8 @@ export default function SubscriptionGate({
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [paymentToast, setPaymentToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -44,20 +47,52 @@ export default function SubscriptionGate({
         router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
       } else {
         setIsLoggedIn(true);
-        // Logged-in users have full operational dashboard access
-        localStorage.setItem("officex_subscription", "active");
-        document.cookie = "officex_subscription=active; path=/; max-age=2592000";
-        setIsSubscribed(true);
+        if (sub === "active") {
+          setIsSubscribed(true);
+        } else {
+          setIsSubscribed(false);
+        }
       }
       setIsChecking(false);
     }
   }, [pathname, router]);
 
-  const handleActivateInstantSubscription = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_subscription", "active");
-      document.cookie = "officex_subscription=active; path=/; max-age=2592000";
-      setIsSubscribed(true);
+  const handleRazorpaySubscription = async () => {
+    setIsPaymentProcessing(true);
+    try {
+      await initiateRazorpayPayment({
+        amount: 10000, // ₹100 in paise
+        receipt: `SUB-${Date.now()}`,
+        description: "OfficeX Platform Subscription — Operational Workspace Access",
+        prefillName: userName,
+        prefillEmail: userEmail,
+        notes: {
+          portal: portalName,
+          user_email: userEmail,
+          type: "subscription",
+        },
+        onSuccess: (response) => {
+          // Payment verified — activate subscription
+          localStorage.setItem("officex_subscription", "active");
+          localStorage.setItem("officex_payment_id", response.razorpay_payment_id);
+          localStorage.setItem("officex_order_id", response.razorpay_order_id);
+          document.cookie = "officex_subscription=active; path=/; max-age=2592000";
+          setIsSubscribed(true);
+          setPaymentToast(`Subscription activated! Payment ID: ${response.razorpay_payment_id}`);
+          setTimeout(() => setPaymentToast(null), 6000);
+        },
+        onFailure: (error) => {
+          console.error("Subscription payment failed:", error);
+          setPaymentToast(`Payment failed: ${error?.description || error?.message || "Please try again"}`);
+          setTimeout(() => setPaymentToast(null), 5000);
+        },
+      });
+    } catch (error: any) {
+      console.error("Subscription payment error:", error);
+      setPaymentToast(`Error: ${error.message || "Could not initiate payment"}`);
+      setTimeout(() => setPaymentToast(null), 5000);
+    } finally {
+      setIsPaymentProcessing(false);
     }
   };
 
@@ -70,6 +105,8 @@ export default function SubscriptionGate({
       localStorage.removeItem("officex_subscription");
       localStorage.removeItem("officex_dashboard");
       localStorage.removeItem("officex_active_portal");
+      localStorage.removeItem("officex_payment_id");
+      localStorage.removeItem("officex_order_id");
       document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
@@ -92,6 +129,13 @@ export default function SubscriptionGate({
   if (!isSubscribed) {
     return (
       <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4 sm:p-6 font-sans">
+        {/* Payment Toast */}
+        {paymentToast && (
+          <div className="fixed top-6 right-6 z-[9999] bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 max-w-sm animate-in slide-in-from-right">
+            <p className="text-xs font-bold text-slate-800">{paymentToast}</p>
+          </div>
+        )}
+
         <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-200 relative overflow-hidden">
           {/* Top Decorative Header */}
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#0F8B7D] via-teal-400 to-[#071324]" />
@@ -147,14 +191,31 @@ export default function SubscriptionGate({
             </div>
           </div>
 
+          {/* Pricing Banner */}
+          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 border border-teal-200 mb-6 text-center">
+            <div className="text-[10px] font-black uppercase tracking-widest text-teal-700 mb-1">SUBSCRIPTION FEE</div>
+            <div className="text-3xl font-black text-[#0F8B7D]">₹100<span className="text-sm font-bold text-slate-500">/mo</span></div>
+            <div className="text-[10px] text-slate-500 font-semibold mt-1">Secure payment via Razorpay • Instant activation</div>
+          </div>
+
           {/* Action CTAs */}
           <div className="flex flex-col gap-3">
             <button
-              onClick={handleActivateInstantSubscription}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+              onClick={handleRazorpaySubscription}
+              disabled={isPaymentProcessing}
+              className="w-full py-3.5 px-4 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Sparkles size={14} />
-              <span>Activate Subscription &amp; Unlock Dashboard Now</span>
+              {isPaymentProcessing ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Processing Payment...</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard size={14} />
+                  <span>Pay ₹100 &amp; Activate Subscription Now</span>
+                </>
+              )}
             </button>
 
             <Link
