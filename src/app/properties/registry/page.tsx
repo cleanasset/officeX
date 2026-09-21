@@ -50,7 +50,31 @@ export default function PropertyMasterRegistry() {
       }
 
       if (typeof window !== "undefined") {
-        const local = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        let local = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+
+        // Auto-detect: if no saved properties but onboarding org data exists, create from org data
+        if (local.length === 0) {
+          const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_active_org") || "";
+          const orgCity = localStorage.getItem("officex_org_city") || "";
+          const orgState = localStorage.getItem("officex_org_state") || "";
+          const userName = localStorage.getItem("officex_user_name") || "";
+
+          if (orgName) {
+            const autoProperty = {
+              id: `prop-auto-${Date.now()}`,
+              name: orgName,
+              city: orgCity,
+              state: orgState || orgCity,
+              type: "Commercial Office",
+              totalArea: "",
+              ownerName: userName,
+              createdAt: new Date().toISOString()
+            };
+            local = [autoProperty];
+            localStorage.setItem("officex_user_properties", JSON.stringify(local));
+          }
+        }
+
         const mapped = local.map((p: any) => ({
           id: p.id,
           name: p.name,

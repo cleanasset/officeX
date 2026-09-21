@@ -59,7 +59,35 @@ export default function PropertyDashboardClient({
       setUserEmail(email);
       setUserId(uid);
 
-      const savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+      let savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+
+      // Auto-detect: if no saved properties but onboarding org data exists, create property from org data
+      if (savedProps.length === 0) {
+        const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_active_org") || "";
+        const orgCity = localStorage.getItem("officex_org_city") || "";
+        const orgState = localStorage.getItem("officex_org_state") || "";
+        const userName = localStorage.getItem("officex_user_name") || "";
+
+        if (orgName) {
+          const autoProperty = {
+            id: `prop-auto-${Date.now()}`,
+            name: orgName,
+            city: orgCity,
+            state: orgState || orgCity,
+            address: "",
+            microMarket: orgCity,
+            grade: "Grade A",
+            totalArea: "",
+            baseRent: "",
+            ownerName: userName,
+            ownerEmail: email,
+            createdAt: new Date().toISOString()
+          };
+          savedProps = [autoProperty];
+          localStorage.setItem("officex_user_properties", JSON.stringify(savedProps));
+        }
+      }
+
       setCustomProperties(savedProps);
       const savedPartnerships = JSON.parse(localStorage.getItem("officex_user_partnerships") || "[]");
       setPartnerships(savedPartnerships);
