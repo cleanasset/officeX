@@ -33,54 +33,6 @@ export default function LeadsEnquiriesManager() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const defaultMockLeads: LeadItem[] = [
-    { 
-      id: "mock-1",
-      name: "Wipro Limited", 
-      contactName: "Rahul Sharma (VP Real Estate)",
-      email: "rahul.s@wipro.com",
-      phone: "+91 98765 43210",
-      property: "One BKC — North Wing",
-      details: "5K sqft BKC • ₹1.2L/mo", 
-      seats: "80 Seats",
-      stage: "QUALIFIED", 
-      stageColor: "bg-amber-100 text-amber-700", 
-      time: "2h ago",
-      budget: "₹1.2L - ₹1.5L/mo",
-      moveIn: "Within 30 days"
-    },
-    { 
-      id: "mock-2",
-      name: "TechNova Solutions", 
-      contactName: "Pooja Mehta (Operations)",
-      email: "pooja@technova.io",
-      phone: "+91 98112 34567",
-      property: "Maker Maxity — 5th Floor",
-      details: "12K sqft Powai • ₹3.5L/mo", 
-      seats: "150 Seats",
-      stage: "NEW", 
-      stageColor: "bg-blue-100 text-blue-700", 
-      time: "1d ago",
-      budget: "₹3.5L/mo",
-      moveIn: "Immediate"
-    },
-    { 
-      id: "mock-3",
-      name: "Global Logistics Ltd", 
-      contactName: "Aditya Verma (Director)",
-      email: "aditya@globallogistics.com",
-      phone: "+91 99887 65432",
-      property: "Godrej BKC — Floor 8",
-      details: "3K sqft BKC • ₹80K/mo", 
-      seats: "45 Seats",
-      stage: "VISIT", 
-      stageColor: "bg-emerald-100 text-emerald-700", 
-      time: "2d ago",
-      budget: "₹80K - ₹1.0L/mo",
-      moveIn: "Within 60 days"
-    }
-  ];
-
   const loadAllLeads = () => {
     const publicEnquiries = getPublicEnquiries();
     const formattedPublic: LeadItem[] = publicEnquiries.map((p: PublicEnquiry) => ({
@@ -89,21 +41,20 @@ export default function LeadsEnquiriesManager() {
       contactName: p.contactName || p.companyName,
       email: p.email || "inquiry@client.com",
       phone: p.phone || "+91 98000 00000",
-      property: p.propertyTitle || p.buildingName || "One BKC Complex",
-      details: `${p.seats || 60} Seats • ${p.propertyTitle || "BKC Space"}`,
+      property: p.propertyTitle || p.buildingName || "Commercial Space",
+      details: `${p.seats || 60} Seats • ${p.propertyTitle || "Commercial Asset"}`,
       seats: `${p.seats || 60} Seats`,
       stage: "NEW (WEB)",
       stageColor: "bg-emerald-100 text-emerald-800 border border-emerald-300",
       time: p.createdAt || "Just now",
-      budget: p.budget || "₹1.25L - ₹2.5L/mo",
+      budget: p.budget || "—",
       moveIn: p.moveInDate || "Immediate",
       isLive: true
     }));
 
-    const combined = [...formattedPublic, ...defaultMockLeads];
-    setLeads(combined);
-    if (combined.length > 0 && !selectedLeadId) {
-      setSelectedLeadId(combined[0].id);
+    setLeads(formattedPublic);
+    if (formattedPublic.length > 0 && !selectedLeadId) {
+      setSelectedLeadId(formattedPublic[0].id);
     }
   };
 
@@ -196,7 +147,9 @@ export default function LeadsEnquiriesManager() {
 
           <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
             {filteredLeads.length === 0 ? (
-              <div className="p-8 text-center text-xs text-gray-400">No leads match search.</div>
+              <div className="p-8 text-center text-xs text-gray-400">
+                {leads.length === 0 ? "No incoming enquiries yet. When prospects submit commercial space booking requests, they will appear here." : "No leads match current filter."}
+              </div>
             ) : (
               filteredLeads.map((l) => {
                 const isSelected = selectedLead?.id === l.id;

@@ -199,7 +199,18 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
-              {filteredInvoices.map((inv) => (
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="py-16 text-center text-gray-500">
+                    <Receipt className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-gray-800">No invoices generated yet</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                      Invoices will automatically generate when you have active leases, or click &quot;Generate Invoices Run&quot; above.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredInvoices.map((inv) => (
                 <tr
                   key={inv.id}
                   className="hover:bg-gray-50/80 transition-colors"
@@ -302,7 +313,7 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

@@ -31,81 +31,13 @@ export default function PipelineKanbanBoard() {
   const [toast, setToast] = useState<string | null>(null);
   const [mobileStage, setMobileStage] = useState<number>(0);
 
-  const [deals, setDeals] = useState<PipelineCard[]>([
-    {
-      id: "deal-1",
-      company: "TCS Innovation Lab",
-      contact: "Amit Patel (VP Real Estate)",
-      property: "One BKC — North Wing (Fl 4)",
-      area: "12,000 sqft (160 Seats)",
-      budget: "₹1.8L/mo",
-      dealHealth: 92,
-      stageIndex: 0,
-      time: "Enquiry 2 hrs ago",
-      badge: "New Hot Lead",
-      badgeColor: "bg-emerald-100 text-emerald-800"
-    },
-    {
-      id: "deal-2",
-      company: "Wipro Digital",
-      contact: "Sneha Rao (Procurement)",
-      property: "Maker Maxity — Suite 501",
-      area: "8,500 sqft (110 Seats)",
-      budget: "₹1.2L/mo",
-      dealHealth: 55,
-      stageIndex: 0,
-      warning: "Follow-up required (3d)"
-    },
-    {
-      id: "deal-3",
-      company: "Infosys Fintech Hub",
-      contact: "Rahul Desai (Admin Head)",
-      property: "One BKC — North Wing (Fl 5)",
-      area: "20,000 sqft (250 Seats)",
-      budget: "₹3.0L/mo",
-      dealHealth: 88,
-      stageIndex: 1,
-      time: "Visit Done Yesterday",
-      badge: "Shortlisted One BKC",
-      badgeColor: "bg-blue-100 text-blue-800"
-    },
-    {
-      id: "deal-4",
-      company: "Deloitte Digital",
-      contact: "Priya Sharma (Director)",
-      property: "Godrej BKC — Floor 8",
-      area: "15,000 sqft (180 Seats)",
-      budget: "₹2.2L/mo",
-      dealHealth: 95,
-      stageIndex: 2,
-      time: "LOI Draft Generated",
-      badge: "Negotiating Rent psf",
-      badgeColor: "bg-amber-100 text-amber-800"
-    },
-    {
-      id: "deal-5",
-      company: "Tata Digital Ltd",
-      contact: "Aditya Verma (Head RE)",
-      property: "One BKC — North Wing (Fl 4)",
-      area: "25,000 sqft (320 Seats)",
-      budget: "₹3.8L/mo",
-      dealHealth: 100,
-      stageIndex: 3,
-      time: "Executed Today",
-      badge: "Ready to Onboard",
-      badgeColor: "bg-teal-100 text-teal-800"
-    }
-  ]);
+  const [deals, setDeals] = useState<PipelineCard[]>([]);
 
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("officex_leasing_pipeline") || "[]");
-      if (stored.length > 0) {
-        setDeals(prev => {
-          const ids = new Set(prev.map(d => d.id));
-          const newItems = stored.filter((s: PipelineCard) => !ids.has(s.id));
-          return [...newItems, ...prev];
-        });
+      if (Array.isArray(stored) && stored.length > 0) {
+        setDeals(stored);
       }
     } catch (e) {
       // ignore

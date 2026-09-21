@@ -120,6 +120,38 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* ──── ONBOARDING EMPTY STATE BANNER (When 0 leases exist) ──── */}
+      {summary.totalLeasesCount === 0 && (
+        <div className="bg-gradient-to-r from-teal-900 via-[#0F8B7D] to-teal-800 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-teal-100">
+                Ready for Onboarding
+              </span>
+              <span className="text-xs text-teal-100 font-medium">Clean Portfolio Desk</span>
+            </div>
+            <h2 className="text-lg md:text-xl font-black">Welcome to your Commercial Rent Roll Desk</h2>
+            <p className="text-xs text-teal-100/90 mt-1 max-w-xl">
+              Your dashboard is active and ready. Click &quot;+ Add New Lease&quot; to record tenant contracts, configure annual rental escalations, and automate monthly GST invoicing.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => onNavigateTab("rentroll")}
+              className="px-4 py-2.5 rounded-xl bg-white text-[#0F8B7D] text-xs font-black hover:bg-teal-50 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>+ Add First Lease</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab("occupancy")}
+              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Stacking Plan</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ──── 8 PRIMARY KPI METRIC CARDS (Excel Dashboard Layout) ──── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Total Leases */}
@@ -137,7 +169,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             <div className="text-2xl font-black text-gray-900 tracking-tight">{summary.totalLeasesCount}</div>
             <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md">{summary.activeLeasesCount} Active</span>
           </div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Across 5 Prime Office Assets</p>
+          <p className="text-[11px] text-gray-500 font-medium mt-1.5">
+            {summary.totalLeasesCount > 0 ? `Across ${summary.totalLeasesCount} Active Leases` : "No registered leases"}
+          </p>
         </div>
 
         {/* 2. Monthly Base Rent */}
@@ -404,27 +438,34 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </div>
 
           <div className="space-y-3">
-            {topTenants.map((t, idx) => (
-              <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div>
-                    <span className="text-xs font-bold text-gray-900">{t.tenantName}</span>
-                    <span className="text-[11px] text-gray-500 font-medium ml-2">({t.propertyName})</span>
-                  </div>
-                  <span className="text-xs font-black text-teal-700">{formatINR(t.monthlyRent)}/mo</span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
-                  <span>{t.areaSqFt.toLocaleString()} sqft</span>
-                  <span>{t.sharePct}% of total rent</span>
-                </div>
-                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-teal-600 h-full rounded-full"
-                    style={{ width: `${Math.min(100, t.sharePct * 3)}%` }}
-                  ></div>
-                </div>
+            {topTenants.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-xs">
+                <Building2 className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                No corporate tenants registered yet. Add a lease to see tenant revenue distribution.
               </div>
-            ))}
+            ) : (
+              topTenants.map((t, idx) => (
+                <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <span className="text-xs font-bold text-gray-900">{t.tenantName}</span>
+                      <span className="text-[11px] text-gray-500 font-medium ml-2">({t.propertyName})</span>
+                    </div>
+                    <span className="text-xs font-black text-teal-700">{formatINR(t.monthlyRent)}/mo</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+                    <span>{t.areaSqFt.toLocaleString()} sqft</span>
+                    <span>{t.sharePct}% of total rent</span>
+                  </div>
+                  <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-teal-600 h-full rounded-full"
+                      style={{ width: `${Math.min(100, t.sharePct * 3)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

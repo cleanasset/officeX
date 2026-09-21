@@ -16,7 +16,8 @@ import {
   Sparkles,
   Calendar,
   Layers,
-  Percent
+  Percent,
+  Building2
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -249,7 +250,18 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
 
             {/* Table Body */}
             <tbody className="divide-y divide-gray-100 font-medium">
-              {sortedLeases.map((lease) => (
+              {sortedLeases.length === 0 ? (
+                <tr>
+                  <td colSpan={25} className="py-20 text-center text-gray-500">
+                    <Building2 className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-gray-800">No leases registered in rent roll</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                      Your rent roll is ready. Click &quot;+ Add New Lease&quot; above to register your first commercial lease agreement.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                sortedLeases.map((lease) => (
                 <tr
                   key={lease.id}
                   onClick={() => onSelectLease(lease)}
@@ -405,7 +417,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

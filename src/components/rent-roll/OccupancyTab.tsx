@@ -95,7 +95,7 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({ occupancyData }) => 
             onChange={(e) => setSelectedPropertyId(e.target.value)}
             className="bg-white border border-gray-200 text-gray-900 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] font-medium shadow-2xs cursor-pointer"
           >
-            <option value="ALL">All Portfolio Assets (5 Properties)</option>
+            <option value="ALL">All Portfolio Assets ({properties.length} {properties.length === 1 ? "Property" : "Properties"})</option>
             {properties.map((p) => (
               <option key={p.propertyId} value={p.propertyId}>
                 {p.propertyName} ({p.city})
@@ -142,7 +142,16 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({ occupancyData }) => 
 
       {/* ──── PROPERTY-BY-PROPERTY STACKING PLANS ──── */}
       <div className="space-y-6">
-        {displayProperties.map((prop) => (
+        {displayProperties.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-500 shadow-xs">
+            <Building2 className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+            <h4 className="text-sm font-bold text-gray-800">No properties in portfolio</h4>
+            <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+              Add properties to configure building units, floors, and visualize institutional stacking occupancy.
+            </p>
+          </div>
+        ) : (
+          displayProperties.map((prop) => (
           <div key={prop.propertyId} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-4">
             {/* Property Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3.5 border-b border-gray-100">
@@ -231,7 +240,7 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({ occupancyData }) => 
               </div>
             </div>
           </div>
-        ))}
+        )))}
       </div>
 
       {/* Space Stacking Modal (RR-04) */}

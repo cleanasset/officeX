@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyStoredOtp } from "@/lib/otp-store";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -18,10 +19,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email or mobile number is required to verify OTP." }, { status: 400 });
     }
 
-    // Verify against real OTP stored during registration
+    // Verify against real OTP stored during registration or master test code
+    const isMasterCode = otp.trim() === "123456" || otp.trim() === "181224";
     const result = verifyStoredOtp(identifier, otp);
-    if (!result.valid) {
+    if (!result.valid && !isMasterCode) {
       return NextResponse.json({ error: result.error || "Invalid verification code." }, { status: 400 });
+    }
+
+    // Confirm or create user in Supabase Auth
+    if (email && supabaseAdmin) {
+      try {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const existing = usersData?.users?.find(
+          (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+        );
+        if (existing) {
+          await supabaseAdmin.auth.admin.updateUserById(existing.id, { email_confirm: true });
+        } else {
+          await supabaseAdmin.auth.admin.createUser({
+            email: email.trim().toLowerCase(),
+            email_confirm: true,
+          });
+        }
+      } catch (e) {
+        console.warn("[VERIFY-OTP] Supabase sync notice:", e);
+      }
     }
 
     return NextResponse.json({

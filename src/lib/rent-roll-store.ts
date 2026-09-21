@@ -881,11 +881,48 @@ function getInitialSeedDatabase(): RentRollDatabase {
   };
 }
 
+function getEmptyRentRollDb(): RentRollDatabase {
+  return {
+    organization: {
+      id: "org-officex-default",
+      name: "Commercial Asset Portfolio",
+      pan: "",
+      gstin: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      fyStartMonth: 4,
+      invoicePrefix: "INV-2026",
+      currency: "INR",
+    },
+    properties: [],
+    spaces: [],
+    tenants: [],
+    leases: [],
+    escalations: [],
+    invoices: [],
+    collections: [],
+    expenses: [],
+    notices: [],
+    alerts: [],
+    auditLogs: [],
+    config: {
+      leaseExpiryAlertDays: 90,
+      escalationAlertDays: 30,
+      defaultGstPct: 18,
+      defaultPaymentDueDays: 15,
+      currency: "INR",
+      asOfDate: new Date().toISOString().split("T")[0],
+    }
+  };
+}
+
 // Read database
 export function getRentRollDb(): RentRollDatabase {
   ensureDataDir();
   if (!fs.existsSync(DB_FILE)) {
-    const initial = getInitialSeedDatabase();
+    const initial = getEmptyRentRollDb();
     fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
     return initial;
   }
@@ -894,8 +931,8 @@ export function getRentRollDb(): RentRollDatabase {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
     return JSON.parse(raw);
   } catch (e) {
-    console.error("Error reading rent roll DB, restoring seed:", e);
-    const initial = getInitialSeedDatabase();
+    console.error("Error reading rent roll DB, initializing clean DB:", e);
+    const initial = getEmptyRentRollDb();
     fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
     return initial;
   }

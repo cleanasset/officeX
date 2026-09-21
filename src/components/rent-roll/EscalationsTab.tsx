@@ -122,7 +122,18 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
-              {filteredEscalations.map((esc) => (
+              {filteredEscalations.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-16 text-center text-gray-500">
+                    <TrendingUp className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-gray-800">No scheduled rent escalations</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                      Step-up escalation dates and automated annual rent increment notices will appear here once you add leases with escalation terms.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredEscalations.map((esc) => (
                 <tr key={esc.id} className="hover:bg-gray-50/80 transition-colors">
                   <td className="p-3.5">
                     <div className="font-bold text-gray-900">{esc.tenantName}</div>
@@ -204,7 +215,7 @@ export const EscalationsTab: React.FC<EscalationsTabProps> = ({
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

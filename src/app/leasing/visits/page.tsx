@@ -244,68 +244,13 @@ export default function SiteVisitPlanner() {
                 </div>
               ))}
 
-              {/* Visit 1 */}
-              <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-teal-100 text-[#0F8B7D] flex items-center justify-center font-bold">
-                    <Clock size={16} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-900">10:00 AM</span>
-                      <span className="text-[10px] text-gray-400">• Rohan Sharma (Host)</span>
-                    </div>
-                    <p className="text-xs text-gray-700 font-semibold mt-0.5">
-                      HCL Tech — <span className="text-gray-500 font-normal">Apex Business Tower</span>
-                    </p>
-                  </div>
+              {publicVisits.length === 0 && (
+                <div className="p-8 text-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                  <CalendarIcon size={24} className="text-gray-300 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-gray-700">No site visits scheduled for today</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Use the form on the right or receive online bookings from prospective tenants.</p>
                 </div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Completed
-                </span>
-              </div>
-
-              {/* Visit 2 */}
-              <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                    <Clock size={16} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-900">02:00 PM</span>
-                      <span className="text-[10px] text-gray-400">• Ravi M.</span>
-                    </div>
-                    <p className="text-xs text-gray-700 font-semibold mt-0.5">
-                      Wipro Limited — <span className="text-gray-500 font-normal">Prestige Tech Park</span>
-                    </p>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                  In Progress
-                </span>
-              </div>
-
-              {/* Visit 3 */}
-              <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                    <CalendarIcon size={16} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-900">04:30 PM</span>
-                      <span className="text-[10px] text-gray-400">• Neha S.</span>
-                    </div>
-                    <p className="text-xs text-gray-700 font-semibold mt-0.5">
-                      Freshworks — <span className="text-gray-500 font-normal">Nexus Hub</span>
-                    </p>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  Scheduled
-                </span>
-              </div>
+              )}
             </div>
           </div>
 

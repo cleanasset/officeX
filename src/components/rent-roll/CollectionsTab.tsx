@@ -124,7 +124,18 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
-              {filteredCollections.map((c, idx) => (
+              {filteredCollections.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="py-16 text-center text-gray-500">
+                    <FileCheck2 className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-gray-800">No payment receipts recorded</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                      When tenant invoices are settled, reconciled bank payment vouchers and receipts will be logged here.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredCollections.map((c, idx) => (
                 <tr key={`${c.id || c.receiptNumber}-${idx}`} className="hover:bg-gray-50/80 transition-colors">
                   <td className="p-3.5 font-mono font-bold text-teal-700 flex items-center gap-1.5">
                     <FileCheck2 className="w-3.5 h-3.5 text-[#0F8B7D]" />
@@ -180,7 +191,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({
                     </span>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

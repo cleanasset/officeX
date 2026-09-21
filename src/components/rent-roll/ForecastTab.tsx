@@ -97,7 +97,7 @@ export const ForecastTab: React.FC<ForecastTabProps> = ({ forecastData }) => {
         {/* Visual Bar Chart */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2 pt-8 pb-4 items-end min-h-[220px]">
           {months.map((m, idx) => {
-            const heightPct = Math.round((m.projectedGross / maxMonthlyGross) * 100);
+            const heightPct = maxMonthlyGross > 0 ? Math.round((m.projectedGross / maxMonthlyGross) * 100) : 0;
             return (
               <div key={idx} className="flex flex-col items-center gap-2 group">
                 {/* Value on hover/regular */}

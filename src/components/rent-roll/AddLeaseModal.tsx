@@ -68,7 +68,8 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          propertyId,
+          propertyId: properties.find(p => p.id === propertyId)?.id || (propertyId.startsWith("PROP-") ? propertyId : `PROP-${Date.now()}`),
+          propertyName: properties.find(p => p.id === propertyId)?.name || propertyId,
           tenantName,
           unitNumber,
           floorNumber,
@@ -138,18 +139,29 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700 font-bold mb-1">Target Property *</label>
-              <select
-                value={propertyId}
-                onChange={(e) => setPropertyId(e.target.value)}
-                className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs cursor-pointer font-medium"
-                required
-              >
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.city})
-                  </option>
-                ))}
-              </select>
+              {properties.length > 0 ? (
+                <select
+                  value={propertyId}
+                  onChange={(e) => setPropertyId(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs cursor-pointer font-medium"
+                  required
+                >
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.city})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Enter property name (e.g. Apex Horizon Tower)"
+                  value={propertyId}
+                  onChange={(e) => setPropertyId(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs font-medium"
+                  required
+                />
+              )}
             </div>
 
             <div>

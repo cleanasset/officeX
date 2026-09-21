@@ -178,47 +178,59 @@ export const PnlTab: React.FC<PnlTabProps> = ({ pnlData, onOpenAddExpense }) => 
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
-              {propertyPnL.map((p) => (
-                <tr key={p.propertyId} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="p-3.5 font-bold text-gray-900 flex items-center gap-2">
-                    <Building className="w-3.5 h-3.5 text-[#0F8B7D]" />
-                    <div>
-                      <div className="font-bold text-gray-950">{p.propertyName}</div>
-                      <div className="text-[10px] text-gray-400 font-normal">Grade {p.grade} • {p.city}</div>
-                    </div>
-                  </td>
-
-                  <td className="p-3.5 text-right font-mono text-gray-700 font-semibold">
-                    {formatINR(p.grossMonthlyRevenue)}
-                  </td>
-
-                  <td className="p-3.5 text-right font-mono text-rose-600 font-bold">
-                    -{formatINR(p.monthlyExpenses)}
-                  </td>
-
-                  <td className="p-3.5 text-right font-mono font-black text-[#0F8B7D] bg-teal-50/40">
-                    {formatINR(p.monthlyNOI)}
-                  </td>
-
-                  <td className="p-3.5 text-right font-mono font-black text-gray-900">
-                    {formatINR(p.annualNOI)}
-                  </td>
-
-                  <td className="p-3.5 text-center font-bold text-gray-700">
-                    {p.oerPct}%
-                  </td>
-
-                  <td className="p-3.5 text-right font-mono text-gray-500 font-medium">
-                    {formatINR(p.assetValue)}
-                  </td>
-
-                  <td className="p-3.5 text-center">
-                    <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-xs border border-blue-200">
-                      {p.capRatePct}%
-                    </span>
+              {propertyPnL.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-14 text-center text-gray-500">
+                    <Building className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-gray-800">No properties in portfolio</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                      Add properties and record leases to track Net Operating Income (NOI) and cap rates.
+                    </p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                propertyPnL.map((p) => (
+                  <tr key={p.propertyId} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="p-3.5 font-bold text-gray-900 flex items-center gap-2">
+                      <Building className="w-3.5 h-3.5 text-[#0F8B7D]" />
+                      <div>
+                        <div className="font-bold text-gray-950">{p.propertyName}</div>
+                        <div className="text-[10px] text-gray-400 font-normal">Grade {p.grade} • {p.city}</div>
+                      </div>
+                    </td>
+
+                    <td className="p-3.5 text-right font-mono text-gray-700 font-semibold">
+                      {formatINR(p.grossMonthlyRevenue)}
+                    </td>
+
+                    <td className="p-3.5 text-right font-mono text-rose-600 font-bold">
+                      -{formatINR(p.monthlyExpenses)}
+                    </td>
+
+                    <td className="p-3.5 text-right font-mono font-black text-[#0F8B7D] bg-teal-50/40">
+                      {formatINR(p.monthlyNOI)}
+                    </td>
+
+                    <td className="p-3.5 text-right font-mono font-black text-gray-900">
+                      {formatINR(p.annualNOI)}
+                    </td>
+
+                    <td className="p-3.5 text-center font-bold text-gray-700">
+                      {p.oerPct}%
+                    </td>
+
+                    <td className="p-3.5 text-right font-mono text-gray-500 font-medium">
+                      {formatINR(p.assetValue)}
+                    </td>
+
+                    <td className="p-3.5 text-center">
+                      <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold text-xs border border-blue-200">
+                        {p.capRatePct}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

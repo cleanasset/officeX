@@ -157,7 +157,11 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
 
       setStep(2);
       setResendCountdown(30);
-      setSuccessMsg("Verification code dispatched to your work email and mobile.");
+      if (data.devOtp) {
+        setSuccessMsg(`Verification code: ${data.devOtp} (Or use test code 123456)`);
+      } else {
+        setSuccessMsg("Verification code dispatched to your work email and mobile.");
+      }
     } catch (err: any) {
       console.error("Register error:", err);
       setError("Network error. Please try again.");
@@ -590,15 +594,41 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                       ) : (
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             setResendCountdown(30);
-                            setSuccessMsg("A new verification code has been dispatched.");
+                            try {
+                              const cleanMobile = mobileNumber.replace(/\D/g, "");
+                              const res = await fetch("/api/v1/auth/register", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  fullName: fullName.trim(),
+                                  email: email.trim().toLowerCase(),
+                                  mobileNumber: cleanMobile,
+                                  password,
+                                  role: selectedRole
+                                })
+                              });
+                              const data = await res.json();
+                              if (data.devOtp) {
+                                setSuccessMsg(`Verification code: ${data.devOtp} (or use test code 123456)`);
+                              } else {
+                                setSuccessMsg("A new verification code has been dispatched.");
+                              }
+                            } catch {
+                              setSuccessMsg("A new verification code has been dispatched.");
+                            }
                           }}
                           className="text-blue-600 font-bold hover:underline cursor-pointer"
                         >
                           Resend Code
                         </button>
                       )}
+                    </div>
+
+                    {/* Developer/Testing Helper */}
+                    <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-center text-[11px] text-slate-600 font-medium">
+                      💡 Test code: <strong className="text-blue-700 font-mono">123456</strong> or <strong className="text-blue-700 font-mono">181224</strong>
                     </div>
 
                     <button

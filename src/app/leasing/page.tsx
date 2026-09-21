@@ -41,13 +41,34 @@ export default function LeasingDashboard() {
     return () => window.removeEventListener("officex-lead-added", load);
   }, []);
 
+  const [userName, setUserName] = useState("Commercial Partner");
+  const [catalogProperties, setCatalogProperties] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("officex_user_email") || "";
+      if (email) {
+        const namePart = email.split("@")[0];
+        setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1));
+      }
+
+      fetch("/api/rent-roll/properties")
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setCatalogProperties(data);
+          else if (data?.properties) setCatalogProperties(data.properties);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   const funnel = [
-    { stage: "Enquiry", count: 156 + liveLeads.length, width: "100%", href: "/leasing/leads", color: "bg-teal-700" },
-    { stage: "Qualified", count: 89, width: "72%", href: "/leasing/leads", color: "bg-teal-600" },
-    { stage: "Site Visit", count: 52, width: "52%", href: "/leasing/visits", color: "bg-teal-500" },
-    { stage: "Negotiation", count: 28, width: "36%", href: "/leasing/pipeline", color: "bg-teal-500/90" },
-    { stage: "LOI & Term Sheet", count: 15, width: "24%", href: "/leasing/loi", color: "bg-teal-600/90" },
-    { stage: "Closed & Onboarding", count: 8, width: "16%", href: "/leasing/pipeline", color: "bg-emerald-600" }
+    { stage: "Enquiry", count: liveLeads.length, width: liveLeads.length > 0 ? "100%" : "0%", href: "/leasing/leads", color: "bg-teal-700" },
+    { stage: "Qualified", count: 0, width: "0%", href: "/leasing/leads", color: "bg-teal-600" },
+    { stage: "Site Visit", count: 0, width: "0%", href: "/leasing/visits", color: "bg-teal-500" },
+    { stage: "Negotiation", count: 0, width: "0%", href: "/leasing/pipeline", color: "bg-teal-500/90" },
+    { stage: "LOI & Term Sheet", count: 0, width: "0%", href: "/leasing/loi", color: "bg-teal-600/90" },
+    { stage: "Closed & Onboarding", count: 0, width: "0%", href: "/leasing/pipeline", color: "bg-emerald-600" }
   ];
 
   const actionItems: Array<{
@@ -64,60 +85,18 @@ export default function LeasingDashboard() {
       desc: `Requested ${liveLeads[0].req}`,
       action: "Review Lead",
       href: "/leasing/leads"
-    }] : []),
-    { 
-      color: "bg-red-500", 
-      title: "HCL Tech Requirement - Unassigned", 
-      desc: "Hot lead (15,000 sqft), untouched for 24hrs", 
-      action: "Assign Now",
-      href: "/leasing/leads" 
-    },
-    { 
-      color: "bg-amber-500", 
-      title: "Lease Renewal: TechNova Solutions", 
-      desc: "Expires in 15 days at One BKC", 
-      action: "Review Leases",
-      href: "/leasing/loi" 
-    },
-    { 
-      color: "bg-blue-500", 
-      title: "LOI Draft pending for Global Logistics", 
-      desc: "Negotiation complete · 50,000 sqft (Apex Business Tower)", 
-      action: "Generate LOI",
-      onClick: () => { setLoiSent(false); setIsLoiModalOpen(true); }
-    }
+    }] : [])
   ];
 
-  const visits = [
-    { 
-      company: "Innovate Corp", 
-      location: "One BKC — North Wing, Fl 4", 
-      time: "10:00 AM", 
-      status: "✅ Completed",
-      statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200" 
-    },
-    { 
-      company: "NextGen Retail", 
-      location: "Maker Maxity — 5th Floor Suite", 
-      time: "02:30 PM (Live Now)", 
-      status: "🔵 In Progress",
-      statusColor: "bg-blue-50 text-blue-700 border-blue-200" 
-    },
-    { 
-      company: "Apex Financial", 
-      location: "Godrej BKC — Floor 8", 
-      time: "04:00 PM", 
-      status: "🟡 Upcoming",
-      statusColor: "bg-amber-50 text-amber-700 border-amber-200" 
-    }
-  ];
+  const visits: Array<{
+    company: string;
+    location: string;
+    time: string;
+    status: string;
+    statusColor: string;
+  }> = [];
 
-  const defaultLeads = [
-    { id: "#L-8042", company: "HCL Tech", req: "IT Office Space", area: "15,000 sqft", stage: "NEW", stageColor: "bg-blue-100 text-blue-700", assigned: "Unassigned", assignedColor: "text-red-500", commission: "Est. ₹19.50L", commissionStatus: "Pending Deal" },
-    { id: "#L-8041", company: "Innovate Corp", req: "Coworking Desks", area: "50 Seats", stage: "SITE VISIT", stageColor: "bg-emerald-100 text-emerald-700", assigned: "Ravi M.", assignedColor: "text-gray-700", commission: "Est. ₹4.20L", commissionStatus: "Pending Visit" },
-    { id: "#L-8040", company: "Global Logistics", req: "Commercial Floor", area: "50,000 sqft", stage: "NEGOTIATION", stageColor: "bg-amber-100 text-amber-700", assigned: "Anita S.", assignedColor: "text-gray-700", commission: "Est. ₹97.50L (1.5x rent)", commissionStatus: "LOI Drafting" },
-    { id: "#L-8039", company: "FreshMart Retail", req: "Ground Floor Retail", area: "2,500 sqft", stage: "CLOSED-WON", stageColor: "bg-emerald-100 text-emerald-700 font-bold", assigned: "Vikram K.", assignedColor: "text-gray-700", commission: "₹18,12,500 (45 days' rent)", commissionStatus: "Payout Released ✓" }
-  ];
+  const defaultLeads: any[] = [];
 
   const leads = [...liveLeads, ...defaultLeads];
 
@@ -126,8 +105,8 @@ export default function LeasingDashboard() {
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Good Morning, Ravi</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Commercial Leasing Desk · Mumbai Micromarkets</p>
+          <h1 className="text-2xl font-black text-gray-900">Good Morning, {userName}</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Commercial Leasing Desk · Active Micromarkets</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -156,9 +135,9 @@ export default function LeasingDashboard() {
         >
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">ACTIVE LISTINGS</p>
-            <p className="text-3xl font-black text-gray-900 mt-1">47</p>
-            <p className="text-[10px] font-bold text-emerald-600 mt-0.5 flex items-center gap-0.5">
-              <TrendingUp size={10} /> +3 new spaces added
+            <p className="text-3xl font-black text-gray-900 mt-1">0</p>
+            <p className="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-0.5">
+              <span>0 spaces listed</span>
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-teal-50 text-[#0F8B7D] group-hover:bg-[#0F8B7D] group-hover:text-white transition-colors flex items-center justify-center font-bold">
@@ -172,7 +151,7 @@ export default function LeasingDashboard() {
         >
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">OPEN LEADS</p>
-            <p className="text-3xl font-black text-gray-900 mt-1">23</p>
+            <p className="text-3xl font-black text-gray-900 mt-1">{liveLeads.length}</p>
             <p className="text-[10px] font-bold text-blue-600 mt-0.5 flex items-center gap-0.5">
               <span>View lead inbox</span> <ArrowUpRight size={10} />
             </p>
@@ -188,8 +167,8 @@ export default function LeasingDashboard() {
         >
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TODAY&apos;S SITE VISITS</p>
-            <p className="text-3xl font-black text-gray-900 mt-1">5</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">2 completed · 3 scheduled</p>
+            <p className="text-3xl font-black text-gray-900 mt-1">0</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">0 scheduled today</p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors flex items-center justify-center font-bold">
             <Calendar size={20} />
@@ -202,9 +181,9 @@ export default function LeasingDashboard() {
         >
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">COMMISSION PIPELINE</p>
-            <p className="text-2xl font-black text-gray-900 mt-1">₹8,40,000</p>
-            <p className="text-[10px] font-bold text-emerald-600 mt-0.5 flex items-center gap-0.5">
-              <TrendingUp size={10} /> +12% projected
+            <p className="text-2xl font-black text-gray-900 mt-1">₹0</p>
+            <p className="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-0.5">
+              <span>0 deals in pipeline</span>
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors flex items-center justify-center font-bold">
@@ -306,33 +285,40 @@ export default function LeasingDashboard() {
           </div>
 
           <div className="space-y-3">
-            {actionItems.map((a, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 border border-gray-100 hover:bg-gray-100/70 transition-all">
-                <div className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full ${a.color} shrink-0`} />
-                  <div>
-                    <p className="text-xs font-bold text-gray-900">{a.title}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{a.desc}</p>
-                  </div>
-                </div>
-                {a.onClick ? (
-                  <button
-                    type="button"
-                    onClick={a.onClick}
-                    className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
-                  >
-                    {a.action}
-                  </button>
-                ) : (
-                  <Link
-                    href={a.href || "/leasing/leads"}
-                    className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
-                  >
-                    {a.action}
-                  </Link>
-                )}
+            {actionItems.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-xs">
+                <CheckCircle size={20} className="text-emerald-500 mx-auto mb-1.5" />
+                No urgent action items. Pipeline is clear.
               </div>
-            ))}
+            ) : (
+              actionItems.map((a, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 border border-gray-100 hover:bg-gray-100/70 transition-all">
+                  <div className="flex items-center gap-3">
+                    <span className={`w-2.5 h-2.5 rounded-full ${a.color} shrink-0`} />
+                    <div>
+                      <p className="text-xs font-bold text-gray-900">{a.title}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{a.desc}</p>
+                    </div>
+                  </div>
+                  {a.onClick ? (
+                    <button
+                      type="button"
+                      onClick={a.onClick}
+                      className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
+                    >
+                      {a.action}
+                    </button>
+                  ) : (
+                    <Link
+                      href={a.href || "/leasing/leads"}
+                      className="px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-[10px] font-bold shadow-2xs whitespace-nowrap cursor-pointer"
+                    >
+                      {a.action}
+                    </Link>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -348,24 +334,27 @@ export default function LeasingDashboard() {
           </div>
 
           <div className="space-y-3">
-            {visits.map((v, i) => (
-              <Link 
-                key={i} 
-                href="/leasing/visits"
-                className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 border border-gray-100 hover:bg-teal-50/50 hover:border-teal-200 transition-all group"
-              >
-                <div>
-                  <p className="text-xs font-bold text-gray-900 group-hover:text-[#0F8B7D]">{v.company}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{v.location}</p>
+            {visits.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-xs">
+                <Calendar size={20} className="text-gray-400 mx-auto mb-1.5" />
+                No site visits scheduled for today.
+              </div>
+            ) : (
+              visits.map((v, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 border border-gray-100">
+                  <div>
+                    <p className="text-xs font-bold text-gray-900">{v.company}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{v.location}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-mono font-bold text-gray-700 block">{v.time}</span>
+                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold border ${v.statusColor}`}>
+                      {v.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right space-y-1">
-                  <span className={`px-2 py-0.5 rounded-md border text-[9px] font-bold block ${v.statusColor}`}>
-                    {v.status}
-                  </span>
-                  <span className="text-[10px] font-bold text-gray-600 block">{v.time}</span>
-                </div>
-              </Link>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -397,7 +386,15 @@ export default function LeasingDashboard() {
               </tr>
             </thead>
             <tbody>
-              {leads.map((l) => (
+              {leads.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-14 text-center text-gray-400 text-xs">
+                    <Users size={24} className="text-gray-300 mx-auto mb-2" />
+                    No leasing enquiries or leads received yet. Inbound enquiries from your public property listings will appear here.
+                  </td>
+                </tr>
+              ) : (
+                leads.map((l) => (
                 <tr 
                   key={l.id} 
                   className="border-b border-gray-100 text-xs hover:bg-teal-50/30 transition-colors group"
@@ -448,7 +445,8 @@ export default function LeasingDashboard() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>
@@ -624,71 +622,48 @@ export default function LeasingDashboard() {
                 </button>
               </div>
 
-              {/* Top 3 Matched Inventory */}
+              {/* Matched Inventory */}
               <div className="space-y-3">
-                {[
-                  {
-                    id: "prop-1",
-                    title: "Apex Business Tower",
-                    floor: "Floors 3 & 4 (Warm Shell)",
-                    area: "50,000 sq.ft.",
-                    rent: "₹130 / sq.ft.",
-                    score: "96% Match",
-                    badge: "Best Fit",
-                    highlight: "Full floor plate · 100% DG backup · 45 car parks"
-                  },
-                  {
-                    id: "prop-2",
-                    title: "One BKC — North Wing",
-                    floor: "Floor 6 Executive Suite",
-                    area: "16,500 sq.ft.",
-                    rent: "₹265 / sq.ft.",
-                    score: "91% Match",
-                    badge: "Grade A+",
-                    highlight: "Turnkey fit-out · Metro connectivity · IGBC Platinum"
-                  },
-                  {
-                    id: "prop-3",
-                    title: "Godrej BKC Horizon",
-                    floor: "Floor 9 Commercial Suite",
-                    area: "14,000 sq.ft.",
-                    rent: "₹280 / sq.ft.",
-                    score: "87% Match",
-                    badge: "Prime Location",
-                    highlight: "Furnished acoustic cabins · 120 dedicated desks"
-                  }
-                ].map((prop) => (
-                  <div key={prop.id} className="p-4 rounded-2xl border border-slate-200 hover:border-[#0F8B7D] transition-all bg-slate-50/60">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
-                        {prop.score}
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-500">{prop.badge}</span>
-                    </div>
-                    <h4 className="text-sm font-black text-slate-900">{prop.title}</h4>
-                    <p className="text-xs text-slate-600 font-medium">{prop.floor} · {prop.area}</p>
-                    <p className="text-xs font-bold text-[#0F8B7D] mt-1">{prop.rent}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">{prop.highlight}</p>
-
-                    <button
-                      type="button"
-                      onClick={() => setProposalAttached(prop.id)}
-                      className={`w-full mt-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        proposalAttached === prop.id
-                          ? "bg-emerald-600 text-white"
-                          : "bg-white border border-slate-200 hover:border-[#0F8B7D] text-slate-800"
-                      }`}
-                    >
-                      {proposalAttached === prop.id ? (
-                        <>
-                          <Check size={13} /> Attached to Proposal ✓
-                        </>
-                      ) : (
-                        "Attach to Proposal"
-                      )}
-                    </button>
+                {catalogProperties.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <Building size={28} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-xs font-bold text-slate-700">No properties in portfolio catalog</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Add commercial properties in the Property Registry to generate AI space matches.</p>
                   </div>
-                ))}
+                ) : (
+                  catalogProperties.map((prop: any) => (
+                    <div key={prop.id} className="p-4 rounded-2xl border border-slate-200 hover:border-[#0F8B7D] transition-all bg-slate-50/60">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md">
+                          {prop.score || "95% Match"}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500">{prop.badge || "Verified Asset"}</span>
+                      </div>
+                      <h4 className="text-sm font-black text-slate-900">{prop.title || prop.name}</h4>
+                      <p className="text-xs text-slate-600 font-medium">{prop.floor || "Full Floor Plate"} · {prop.area || `${Number(prop.totalArea || 0).toLocaleString()} sq.ft.`}</p>
+                      <p className="text-xs font-bold text-[#0F8B7D] mt-1">{prop.rent || "Market Rate"}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">{prop.highlight || "Full DG backup · Dedicated parking"}</p>
+
+                      <button
+                        type="button"
+                        onClick={() => setProposalAttached(prop.id)}
+                        className={`w-full mt-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          proposalAttached === prop.id
+                            ? "bg-emerald-600 text-white"
+                            : "bg-white border border-slate-200 hover:border-[#0F8B7D] text-slate-800"
+                        }`}
+                      >
+                        {proposalAttached === prop.id ? (
+                          <>
+                            <CheckCheck size={14} /> Proposal Attached
+                          </>
+                        ) : (
+                          "Attach to Tenant Proposal"
+                        )}
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

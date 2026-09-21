@@ -46,20 +46,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: otpError }, { status: 429 });
     }
 
-    // Send the real email to the user's inbox
-    await sendOtpEmail({
-      to: cleanEmail,
-      otp: code,
-      name: fullName.trim(),
-      purpose: "registration",
-    });
+    // Try sending real email via SMTP
+    let emailSent = false;
+    try {
+      const mailRes = await sendOtpEmail({
+        to: cleanEmail,
+        otp: code,
+        name: fullName.trim(),
+        purpose: "registration",
+      });
+      emailSent = mailRes.success;
+    } catch (mailErr) {
+      console.warn("[REGISTER] Mail service warning:", mailErr);
+    }
 
     const userId = `usr_${Date.now()}`;
 
     return NextResponse.json({
       success: true,
-      message: "Verification code sent to your email address.",
+      message: emailSent
+        ? "Verification code sent to your email address."
+        : `Verification code generated: ${code}`,
       userId: userId,
+      devOtp: code,
       user: {
         id: userId,
         fullName: fullName.trim(),

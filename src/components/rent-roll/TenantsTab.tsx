@@ -94,77 +94,81 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
       </div>
 
       {/* ──── TENANT CARDS GRID ──── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTenants.map((t) => (
-          <div
-            key={t.id}
-            onClick={() => onSelectTenant(t)}
-            className="bg-white border border-gray-200 hover:border-[#0F8B7D]/50 p-5 rounded-2xl shadow-xs transition-all cursor-pointer group flex flex-col justify-between space-y-4 hover:shadow-sm"
-          >
-            {/* Header */}
-            <div>
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h4 className="text-sm font-black text-gray-950 group-hover:text-[#0F8B7D] transition-colors">
-                    {t.tradeName}
-                  </h4>
-                  <p className="text-[11px] text-gray-500 font-medium">{t.legalName}</p>
+      {filteredTenants.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center text-gray-500 shadow-xs">
+          <Users className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+          <h4 className="text-sm font-bold text-gray-800">No tenant entities found</h4>
+          <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+            Click &quot;Add New Tenant Entity&quot; above to register corporate tenants, or add a lease agreement.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTenants.map((t) => (
+            <div
+              key={t.id}
+              onClick={() => onSelectTenant(t)}
+              className="bg-white border border-gray-200 hover:border-[#0F8B7D]/50 p-5 rounded-2xl shadow-xs transition-all cursor-pointer group flex flex-col justify-between space-y-4 hover:shadow-sm"
+            >
+              {/* Header */}
+              <div>
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h4 className="text-sm font-black text-gray-950 group-hover:text-[#0F8B7D] transition-colors">
+                      {t.tradeName}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 font-medium">{t.legalName}</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {t.tenantCode}
+                  </span>
                 </div>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {t.tenantCode}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-md text-[10px] font-bold">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[10px] font-medium">
                   {t.industry}
                 </span>
-                <span className="px-2.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-md text-[10px] font-bold">
-                  {t.activeLeasesCount} Active Leases
-                </span>
               </div>
-            </div>
 
-            {/* Financial Quick Metrics */}
-            <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-100 text-xs">
-              <div>
-                <span className="text-[10px] text-gray-500 uppercase font-bold">Leased Area</span>
-                <p className="font-mono font-black text-gray-900 mt-0.5">{t.totalArea.toLocaleString()} sqft</p>
+              {/* Financial & Lease Summary */}
+              <div className="bg-gray-50/70 p-3 rounded-xl space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Active Leases:</span>
+                  <span className="font-bold text-gray-900">{t.activeLeasesCount} Units</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total Demised Area:</span>
+                  <span className="font-bold text-gray-900">{t.totalArea.toLocaleString()} sqft</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Monthly Contractual Rent:</span>
+                  <span className="font-black text-[#0F8B7D]">{formatINR(t.totalMonthlyRent)}</span>
+                </div>
+                <div className="flex justify-between pt-1 border-t border-gray-200">
+                  <span className="text-gray-500 font-bold">Outstanding AR:</span>
+                  <span className={`font-mono font-bold ${t.outstanding > 0 ? "text-rose-600" : "text-emerald-700"}`}>
+                    {t.outstanding > 0 ? formatINR(t.outstanding) : "Nil (Current)"}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-[10px] text-gray-500 uppercase font-bold">Monthly Rent</span>
-                <p className="font-mono font-black text-teal-700 mt-0.5">{formatINR(t.totalMonthlyRent)}</p>
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-500 uppercase font-bold">Gross Monthly Bill</span>
-                <p className="font-mono font-black text-amber-900 mt-0.5">{formatINR(t.totalMonthlyBilling)}</p>
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-500 uppercase font-bold">Outstanding</span>
-                <p className={`font-mono font-black mt-0.5 ${t.outstanding > 0 ? "text-rose-600" : "text-teal-700"}`}>
-                  {t.outstanding > 0 ? formatINR(t.outstanding) : "₹0"}
-                </p>
-              </div>
-            </div>
 
-            {/* Statutory & Contact Details */}
-            <div className="space-y-1.5 text-xs text-gray-600 pt-3 border-t border-gray-100">
-              <div className="flex items-center justify-between text-[11px] font-medium">
-                <span>GSTIN: <span className="font-mono text-gray-900 font-bold">{t.gstin || "—"}</span></span>
-                <span>PAN: <span className="font-mono text-gray-900 font-bold">{t.pan || "—"}</span></span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-700 font-medium truncate">
-                <Users className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <span className="truncate">{t.contactPerson}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-500 truncate">
-                <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <span className="truncate">{t.contactEmail}</span>
+              {/* Statutory & Contact Details */}
+              <div className="space-y-1.5 text-xs text-gray-600 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between text-[11px] font-medium">
+                  <span>GSTIN: <span className="font-mono text-gray-900 font-bold">{t.gstin || "—"}</span></span>
+                  <span>PAN: <span className="font-mono text-gray-900 font-bold">{t.pan || "—"}</span></span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-700 font-medium truncate">
+                  <Users className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="truncate">{t.contactPerson}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 truncate">
+                  <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="truncate">{t.contactEmail}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

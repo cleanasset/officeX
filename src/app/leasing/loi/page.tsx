@@ -27,94 +27,23 @@ export default function LOIAndLeaseWorkflow() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewLoiModal, setShowNewLoiModal] = useState(false);
-  const [expandedDeal, setExpandedDeal] = useState<string | null>("DX-2024-089");
+  const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [previewLoiDeal, setPreviewLoiDeal] = useState<DealItem | null>(null);
 
   // New LOI Form State
   const [newDealForm, setNewDealForm] = useState({
     client: "",
-    property: "One BKC — North Wing Executive",
-    area: "4,500 sq.ft.",
-    seats: "60 Seats",
-    rent: "₹1,25,000/mo",
-    deposit: "3 Months (₹3.75L)",
-    lockIn: "3 Years",
+    property: "",
+    area: "",
+    seats: "",
+    rent: "",
+    deposit: "",
+    lockIn: "",
     escalation: "5% p.a."
   });
 
-  const [deals, setDeals] = useState<DealItem[]>([
-    {
-      id: "DX-2026-042",
-      client: "Global Logistics India",
-      property: "Apex Business Tower — Floors 3 & 4",
-      rent: "₹65.00L",
-      stage: "LOI Prep",
-      stageColor: "bg-blue-50 text-blue-700 border border-blue-200",
-      agreedRent: "₹65,00,000/mo",
-      deposit: "6 Months (₹3.90 Cr)",
-      lockIn: "3 Years",
-      escalation: "5% p.a.",
-      area: "50,000 sq.ft.",
-      seats: "550 Seats"
-    },
-    {
-      id: "DX-2024-089",
-      client: "Tata Digital Ltd",
-      property: "One BKC — North Wing Executive (Fl 4)",
-      rent: "₹1.25L",
-      stage: "LOI Signed",
-      stageColor: "bg-teal-50 text-[#0F8B7D] border border-teal-200",
-      agreedRent: "₹1,25,000/mo",
-      deposit: "3 Months (₹3.75L)",
-      lockIn: "3 Years",
-      escalation: "5% p.a.",
-      area: "4,500 sq.ft.",
-      seats: "60 Seats"
-    },
-    {
-      id: "DX-2024-092",
-      client: "Amazon (AWS)",
-      property: "Maker Maxity — 5th Floor Suite",
-      rent: "₹72K",
-      stage: "Negotiation",
-      stageColor: "bg-amber-50 text-amber-700 border border-amber-200",
-      agreedRent: "₹72,000/mo",
-      deposit: "6 Months",
-      lockIn: "3 Years",
-      escalation: "5% p.a.",
-      area: "2,800 sq.ft.",
-      seats: "35 Seats"
-    },
-    {
-      id: "DX-2024-105",
-      client: "Microsoft R&D",
-      property: "Godrej BKC — Floor 8 Horizon Plate",
-      rent: "₹2.10L",
-      stage: "LOI Prep",
-      stageColor: "bg-blue-50 text-blue-700 border border-blue-200",
-      agreedRent: "₹2,10,000/mo",
-      deposit: "6 Months",
-      lockIn: "5 Years",
-      escalation: "5% p.a.",
-      area: "6,200 sq.ft.",
-      seats: "90 Seats"
-    },
-    {
-      id: "DX-2024-112",
-      client: "Google Enterprise",
-      property: "The Capital (Platina) — Cybernetic Floor",
-      rent: "₹1.85L",
-      stage: "Lease Executed",
-      stageColor: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-      agreedRent: "₹1,85,000/mo",
-      deposit: "6 Months",
-      lockIn: "3 Years",
-      escalation: "5% p.a.",
-      area: "5,200 sq.ft.",
-      seats: "75 Seats"
-    }
-  ]);
+  const [deals, setDeals] = useState<DealItem[]>([]);
 
   const milestonesList: Array<DealItem["stage"]> = [
     "Property Selected",
@@ -265,7 +194,14 @@ export default function LOIAndLeaseWorkflow() {
           <div className="text-right">CURRENT STAGE</div>
         </div>
 
-        {filteredDeals.map((deal) => {
+        {filteredDeals.length === 0 ? (
+          <div className="p-12 text-center text-gray-400 text-xs">
+            <FileText size={28} className="mx-auto text-gray-300 mb-2" />
+            <p className="font-bold text-gray-700">No active LOIs or lease drafts</p>
+            <p className="text-gray-400 mt-1">Draft a new Letter of Intent using the button above to begin tenant negotiations.</p>
+          </div>
+        ) : (
+          filteredDeals.map((deal) => {
           const isExpanded = expandedDeal === deal.id;
           const currentStageIndex = milestonesList.indexOf(deal.stage);
 
@@ -438,7 +374,8 @@ export default function LOIAndLeaseWorkflow() {
               )}
             </div>
           );
-        })}
+        })
+      )}
       </div>
 
       {/* Draft New LOI Modal */}

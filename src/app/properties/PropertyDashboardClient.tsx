@@ -167,13 +167,9 @@ export default function PropertyDashboardClient({
       return Array.from(mergedMap.values());
     }
 
-    // 3. For new users / clean state, return empty array
-    if (isCleanMode) {
-      return [];
-    }
-
-    return initialProperties;
-  }, [initialProperties, customProperties, userId, userEmail, isCleanMode]);
+    // For any user without properties, default to clean empty state
+    return [];
+  }, [initialProperties, customProperties, userId, userEmail]);
 
   const propertiesCount = displayedProperties.length;
   const openTicketsCount = propertiesCount === 0 ? 0 : initialTickets.filter(t => t.status === "open").length;
@@ -240,29 +236,31 @@ export default function PropertyDashboardClient({
         </button>
       </div>
 
-      {/* Time-Sensitive Statutory Renewal Alert Strip (per UI/UX Review) */}
-      <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
-            <ShieldAlert size={18} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span className="font-black text-amber-950 text-xs uppercase tracking-wider">Urgent Statutory Compliance Action</span>
+      {/* Time-Sensitive Statutory Renewal Alert Strip (Only when real expired certs exist) */}
+      {expiredCertsCount > 0 && propertiesCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+              <ShieldAlert size={18} />
             </div>
-            <p className="text-amber-800 text-xs font-medium mt-0.5">
-              Fire Safety NOC &amp; Lift Inspector Renewal due in <strong className="text-amber-950 font-black">3 days</strong> for Apex Business Tower (Phase 1).
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span className="font-black text-amber-950 text-xs uppercase tracking-wider">Urgent Statutory Compliance Action</span>
+              </div>
+              <p className="text-amber-800 text-xs font-medium mt-0.5">
+                Fire Safety NOC &amp; Lift Inspector Renewal due in <strong className="text-amber-950 font-black">3 days</strong>.
+              </p>
+            </div>
           </div>
+          <Link
+            href="/properties/compliance"
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs text-center"
+          >
+            Review &amp; Renew NOC →
+          </Link>
         </div>
-        <Link
-          href="/properties/compliance"
-          className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs text-center"
-        >
-          Review &amp; Renew NOC →
-        </Link>
-      </div>
+      )}
 
       {/* ═══ LIVE RENT ROLL & LEASE PERFORMANCE COMMAND HUB ═══ */}
       <div className="bg-gradient-to-r from-[#0B1F3A] to-[#1E3A8A] rounded-3xl p-6 sm:p-7 text-white shadow-xl">
@@ -278,7 +276,7 @@ export default function PropertyDashboardClient({
               <span>Rent Roll &amp; Commercial Lease Performance</span>
             </h2>
             <p className="text-xs text-blue-200/80 mt-0.5">
-              Automated lease-to-cash operating system across {rentRollData?.propertyCount || 5} institutional Grade-A assets.
+              {rentRollData?.propertyCount ? `Automated lease-to-cash operating system across ${rentRollData.propertyCount} institutional Grade-A assets.` : "Automated commercial lease-to-cash operating system."}
             </p>
           </div>
 
@@ -313,27 +311,27 @@ export default function PropertyDashboardClient({
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Monthly Gross Rent</span>
             <div className="text-xl sm:text-2xl font-black text-white mt-1">
-              ₹{rentRollData?.summary?.totalMonthlyRent ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) : "6.45"} Cr
+              ₹{rentRollData?.summary?.totalMonthlyRent ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) : "0.00"} Cr
             </div>
             <span className="text-[10px] text-blue-200 mt-1 block">
-              {rentRollData?.summary?.activeLeasesCount || 10} Active Commercial Leases
+              {rentRollData?.summary?.activeLeasesCount || 0} Active Commercial Leases
             </span>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Portfolio Occupancy</span>
             <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
-              {rentRollData?.occupancy?.occupancyPct || 89.4}%
+              {rentRollData?.occupancy?.occupancyPct || 0}%
             </div>
             <span className="text-[10px] text-emerald-300 mt-1 block">
-              {rentRollData?.occupancy?.totalArea ? `${(rentRollData.occupancy.totalArea / 1000).toFixed(0)}k sq.ft Total Area` : "1.86M sq.ft Area"}
+              {rentRollData?.occupancy?.totalArea ? `${(rentRollData.occupancy.totalArea / 1000).toFixed(0)}k sq.ft Total Area` : "0 sq.ft Total Area"}
             </span>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Total Outstanding</span>
             <div className="text-xl sm:text-2xl font-black text-white mt-1">
-              ₹{rentRollData?.summary?.totalOutstanding ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) : "1.25"} Cr
+              ₹{rentRollData?.summary?.totalOutstanding ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) : "0.00"} Cr
             </div>
             <span className="text-[10px] text-emerald-400 font-bold mt-1 block">
               ● {rentRollData?.summary?.overdueLeasesCount || 0} Leases Overdue
@@ -343,10 +341,10 @@ export default function PropertyDashboardClient({
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">WALT (Lease Horizon)</span>
             <div className="text-xl sm:text-2xl font-black text-white mt-1">
-              {rentRollData?.walt?.waltByRentMonths ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` : "4.2 Yrs"}
+              {rentRollData?.walt?.waltByRentMonths ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` : "0.0 Yrs"}
             </div>
             <span className="text-[10px] text-amber-300 mt-1 block">
-              {rentRollData?.summary?.escalationsDueCount || 2} Escalations Due Soon
+              {rentRollData?.summary?.escalationsDueCount || 0} Escalations Due Soon
             </span>
           </div>
         </div>
@@ -372,15 +370,19 @@ export default function PropertyDashboardClient({
           </div>
         </Link>
 
-        {/* Portfolio Health Score (Client Page 5 Recommended) */}
+        {/* Portfolio Health Score */}
         <Link 
           href="/ops" 
           className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#0F8B7D]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Portfolio Health</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0F8B7D] mt-2 group-hover:text-teal-800">91/100</div>
-            <span className="text-[10px] text-teal-700 font-bold mt-1 block">● Optimal (FM Ops Live)</span>
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#0F8B7D] mt-2 group-hover:text-teal-800">
+              {propertiesCount === 0 ? "—" : "100/100"}
+            </div>
+            <span className="text-[10px] text-teal-700 font-bold mt-1 block">
+              {propertiesCount === 0 ? "No assets to monitor" : "● Optimal (FM Ops Live)"}
+            </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] group-hover:scale-110 transition-transform">
             <Activity size={22} />
@@ -456,39 +458,66 @@ export default function PropertyDashboardClient({
           <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-bold text-emerald-900">0–30 Days (Current / On-Time)</span>
-              <span className="font-black text-emerald-700">92.4%</span>
+              <span className="font-black text-emerald-700">
+                {rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+              </span>
             </div>
-            <div className="text-xl font-black text-emerald-950">₹42,80,450</div>
+            <div className="text-xl font-black text-emerald-950">
+              ₹{rentRollData?.aging?.current ? Number(rentRollData.aging.current).toLocaleString("en-IN") : "0"}
+            </div>
             <div className="w-full bg-emerald-200/60 h-2 rounded-full overflow-hidden mt-2.5">
-              <div className="bg-emerald-600 h-full rounded-full" style={{ width: "92.4%" }} />
+              <div 
+                className="bg-emerald-600 h-full rounded-full" 
+                style={{ width: `${rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+              />
             </div>
-            <span className="text-[10px] text-emerald-700 font-semibold mt-1.5 block">14 Corporate Leases Cleared</span>
+            <span className="text-[10px] text-emerald-700 font-semibold mt-1.5 block">
+              {rentRollData?.summary?.activeLeasesCount || 0} Corporate Leases Cleared
+            </span>
           </div>
 
           {/* 31-60 Days Follow-up */}
           <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-bold text-amber-900">31–60 Days (Grace Period)</span>
-              <span className="font-black text-amber-700">6.8%</span>
+              <span className="font-black text-amber-700">
+                {rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+              </span>
             </div>
-            <div className="text-xl font-black text-amber-950">₹3,15,000</div>
+            <div className="text-xl font-black text-amber-950">
+              ₹{rentRollData?.aging?.bucket31to60 ? Number(rentRollData.aging.bucket31to60).toLocaleString("en-IN") : "0"}
+            </div>
             <div className="w-full bg-amber-200/60 h-2 rounded-full overflow-hidden mt-2.5">
-              <div className="bg-amber-500 h-full rounded-full" style={{ width: "6.8%" }} />
+              <div 
+                className="bg-amber-500 h-full rounded-full" 
+                style={{ width: `${rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+              />
             </div>
-            <span className="text-[10px] text-amber-700 font-semibold mt-1.5 block">2 Leases Pending Reconciliation</span>
+            <span className="text-[10px] text-amber-700 font-semibold mt-1.5 block">
+              {rentRollData?.summary?.overdueLeasesCount || 0} Leases Pending Reconciliation
+            </span>
           </div>
 
           {/* 61-90+ Days Overdue */}
           <div className="bg-rose-50/60 border border-rose-100 rounded-xl p-4">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-bold text-rose-900">61–90+ Days (Overdue Notice)</span>
-              <span className="font-black text-rose-700">0.8%</span>
+              <span className="font-black text-rose-700">
+                {rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+              </span>
             </div>
-            <div className="text-xl font-black text-rose-950">₹45,200</div>
+            <div className="text-xl font-black text-rose-950">
+              ₹{rentRollData?.aging?.bucket61to90 ? Number(rentRollData.aging.bucket61to90 + (rentRollData.aging.bucket90Plus || 0)).toLocaleString("en-IN") : "0"}
+            </div>
             <div className="w-full bg-rose-200/60 h-2 rounded-full overflow-hidden mt-2.5">
-              <div className="bg-rose-500 h-full rounded-full" style={{ width: "0.8%" }} />
+              <div 
+                className="bg-rose-500 h-full rounded-full" 
+                style={{ width: `${rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+              />
             </div>
-            <span className="text-[10px] text-rose-700 font-semibold mt-1.5 block">Statutory Reminder Dispatched</span>
+            <span className="text-[10px] text-rose-700 font-semibold mt-1.5 block">
+              {rentRollData?.aging?.bucket90Plus ? "Statutory Reminder Dispatched" : "No overdue notices"}
+            </span>
           </div>
         </div>
       </div>
