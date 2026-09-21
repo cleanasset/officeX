@@ -785,8 +785,8 @@ function OnboardingWizardContent() {
 
   const stepsList = [
     { num: 1, title: "Registration", subtitle: "Account & Role" },
-    { num: 2, title: "Org Master", subtitle: "GST Architecture" },
-    { num: 3, title: "Role Profile", subtitle: "Category Specific" },
+    { num: 2, title: "Legal Entity", subtitle: "Company & GSTIN" },
+    { num: 3, title: "Role Profile", subtitle: "Business Scope" },
     { num: 4, title: "Operational", subtitle: "Policies & SLAs" },
     { num: 5, title: "KYC Engine", subtitle: "Statutory Checks" },
     { num: 6, title: "Documents", subtitle: "Compliance Vault" },
@@ -817,26 +817,21 @@ function OnboardingWizardContent() {
 
       {/* Header Bar - Clean Light Mode */}
       <header className="border-b border-slate-200/90 bg-white/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3">
           <Link href="/" className="inline-flex items-center group">
             <Image
               src="/officex-logo-full.png"
               alt="OfficeX - Workspaces, Simplified"
               width={160}
-              height={42}
-              className="h-9 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              height={40}
+              className="h-8 sm:h-9 w-auto object-contain group-hover:opacity-90 transition-opacity"
               priority
             />
           </Link>
-          <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1" />
-          <div className="hidden sm:block">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                GST Architectural Model
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 font-medium">Role-Based Business Onboarding System • Shared Organization Master</p>
-          </div>
+          <div className="hidden sm:block h-5 w-px bg-slate-200 mx-1" />
+          <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600">
+            Enterprise Onboarding
+          </span>
         </div>
 
         <div className="flex items-center gap-4 text-xs">

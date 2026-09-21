@@ -289,23 +289,13 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
       <div className="w-full max-w-[480px] mx-auto relative z-10">
         {/* Header Branding (Centered) */}
         <div className="flex items-center justify-center mb-4">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
+          <Link href="/" className="inline-flex items-center group">
             <Image
-              src="/logo-removebg-preview.png"
-              alt="OfficeX Logo"
-              width={50}
-              height={50}
-              className="object-contain group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "38px" }}
-              priority
-            />
-            <Image
-              src="/name-removebg-preview.png"
-              alt="OfficeX"
-              width={150}
-              height={38}
-              className="object-contain"
-              style={{ width: "auto", height: "38px" }}
+              src="/officex-logo-full.png"
+              alt="OfficeX - Workspaces, Simplified"
+              width={180}
+              height={45}
+              className="h-10 w-auto object-contain group-hover:scale-105 transition-transform"
               priority
             />
           </Link>
