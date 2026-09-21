@@ -767,7 +767,45 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 3. List Your Space */}
+          {/* 3. Operations Suite Dropdown */}
+          <div className="relative group py-2">
+            <Link href="/operate" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+              <span>Operations Suite</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </Link>
+            <div className="absolute top-full left-0 w-[330px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
+                <span>CRE &amp; FM SaaS Modules</span>
+                <Link href="/operate" className="text-[#0F8B7D] hover:underline font-bold text-[10px]">
+                  View Hub &rarr;
+                </Link>
+              </div>
+              <div className="space-y-1">
+                <Link href="/operate/rent-roll" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Rent Roll &amp; Billing Engine</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Auto escalations, CAM pooling, bank escrow</div>
+                </Link>
+                <Link href="/operate/compliance" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Statutory Compliance Calendar</div>
+                  <div className="text-[11px] text-slate-500 font-normal">48 Pre-configured commercial tower licenses</div>
+                </Link>
+                <Link href="/operate/ppm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">52-Week PPM &amp; CAFM</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Equipment servicing matrices &amp; QR passports</div>
+                </Link>
+                <Link href="/operate/visitors" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Visitor Flow &amp; Speed-Gates</div>
+                  <div className="text-[11px] text-slate-500 font-normal">WhatsApp QR passes &amp; turnstile integration</div>
+                </Link>
+                <Link href="/operate/lease-crm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                  <div className="text-xs font-bold text-slate-900">Commercial Lease CRM</div>
+                  <div className="text-[11px] text-slate-500 font-normal">Stacking plans, LOI generator, deal velocity</div>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. List Your Space */}
           <Link
             href="/properties/add"
             className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
@@ -848,6 +886,10 @@ export default function LandingPage() {
           </div>
           <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Office Spaces</Link>
           <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services Marketplace</Link>
+          <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D] flex items-center justify-between">
+            <span>Operations Suite</span>
+            <span className="text-xs bg-teal-100 px-2 py-0.5 rounded text-[#0F8B7D] font-bold">Rent Roll &amp; CAFM</span>
+          </Link>
           <Link href="/properties/add" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D]">List Your Space</Link>
           <Link href="/vendor" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D] flex items-center justify-between">
             <span>Register as Vendor</span>
@@ -1952,12 +1994,11 @@ export default function LandingPage() {
         <div className="mt-5 text-center text-xs text-slate-500 font-medium">
           Prefer an immediate consultation?{" "}
           <a
-            href="https://calendly.com/officex-sales/30min"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-bold text-[#0F8B7D] hover:underline"
+            href="https://calendly.com/admin-cleanasset/30min"
+            data-calendly="true"
+            className="font-bold text-[#0F8B7D] hover:underline cursor-pointer"
           >
-            Schedule a 30-minute call on Calendly →
+            Schedule a 30-minute call on Calendly &rarr;
           </a>
         </div>
       </div>

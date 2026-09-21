@@ -76,7 +76,6 @@ export default function SignInForm({
   const [ssoProvider, setSsoProvider] = useState("");
   const [ssoUrl, setSsoUrl] = useState("");
   const [cooldown, setCooldown] = useState(0);
-  const [demoCodeHint, setDemoCodeHint] = useState<string | null>("482910");
 
   // Memberships for Context Chooser
   const [memberships, setMemberships] = useState<WorkspaceMembership[]>(
@@ -171,8 +170,6 @@ export default function SignInForm({
       // 2. One-time Code (OTP)
       else if (data.next === "code") {
         setChannel(data.channel || "whatsapp");
-        setCooldown(data.cooldown_seconds || 30);
-        setDemoCodeHint("482910");
         setStep("code");
       }
       // 3. Password
@@ -253,7 +250,6 @@ export default function SignInForm({
       }
       setChannel(targetChannel);
       setCooldown(data.cooldown || 30);
-      if (data.demo_code) setDemoCodeHint(data.demo_code);
       if (data.masked) setMaskedId(data.masked);
       setInfoMessage(
         lang === "hi"
@@ -644,7 +640,7 @@ export default function SignInForm({
           {/* Canonical Domain Trust Anchor */}
           <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold tracking-wide">officex.pro</span>
+            <span className="font-bold tracking-wide">OfficeX</span>
             <span className="text-blue-300">·</span>
             <span className="text-blue-800">{t.verifiedGateway}</span>
           </div>
@@ -957,23 +953,6 @@ export default function SignInForm({
                   </p>
                 </div>
 
-                {/* Demo Helper Pill */}
-                {demoCodeHint && (
-                  <div className="mb-4 p-2.5 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs">
-                    <span className="text-slate-600 font-medium">Demo Code:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const demoArr = demoCodeHint.split("");
-                        setOtpDigits(demoArr);
-                        verifyOtpCode(demoCodeHint);
-                      }}
-                      className="text-blue-700 hover:underline font-mono font-bold bg-blue-100/80 px-2 py-0.5 rounded cursor-pointer"
-                    >
-                      {demoCodeHint} (Click to Fill)
-                    </button>
-                  </div>
-                )}
 
                 <div className="space-y-5">
                   {/* 6 Individual Code Inputs */}
@@ -1132,20 +1111,6 @@ export default function SignInForm({
                   </p>
                 </div>
 
-                {/* Demo Helper Pill */}
-                <div className="mb-4 p-2.5 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs">
-                  <span className="text-slate-600 font-medium">Authenticator Code:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMfaDigits(["1", "2", "3", "4", "5", "6"]);
-                      verifyMfaCode("123456");
-                    }}
-                    className="text-blue-700 hover:underline font-mono font-bold bg-blue-100/80 px-2 py-0.5 rounded cursor-pointer"
-                  >
-                    123456 (Click to Fill)
-                  </button>
-                </div>
 
                 <div className="space-y-4">
                   <div className="flex justify-between gap-2">
@@ -1505,7 +1470,7 @@ export default function SignInForm({
                     maxLength={6}
                     value={recoveryCode}
                     onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ""))}
-                    placeholder="482910"
+                    placeholder="000000"
                     className="w-full text-center tracking-[0.3em] font-mono font-bold py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-base focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

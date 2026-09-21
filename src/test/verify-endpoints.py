@@ -30,7 +30,7 @@ print('=== TESTING LIVELY RUNNING OFFICEX SERVER ===\n')
 # 1. Sign-In Page HTML Check
 status, html, _ = test('GET /login (Server-Rendered Page)', '/login')
 assert 'Sign in' in html or 'OfficeX' in html, 'Sign in title not found'
-assert 'officex.pro' in html, 'officex.pro brand lockup not found'
+assert 'OfficeX' in html, 'OfficeX brand lockup not found'
 print('  -> HTML verified with canonical branding and server rendering.')
 
 # 2. Discovery: Standard Email (Password flow)
@@ -56,15 +56,20 @@ _, res, _ = test('POST /api/auth/code/send (9876543210)', '/api/auth/code/send',
 d = json.loads(res)
 assert d['success'] == True
 
+# Retrieve generated dynamic OTP
+_, peek_res, _ = test('GET dynamic OTP', '/api/test/peek-otp?identifier=9876543210', 'GET')
+otp_code = json.loads(peek_res).get('code')
+print(f'  -> Dynamic OTP generated: {otp_code}')
+
 # 6. OTP Verify
-_, res, hdrs = test('POST /api/auth/code/verify (482910)', '/api/auth/code/verify', 'POST', {'identifier': '9876543210', 'code': '482910'})
+_, res, hdrs = test(f'POST /api/auth/code/verify ({otp_code})', '/api/auth/code/verify', 'POST', {'identifier': '9876543210', 'code': otp_code})
 d = json.loads(res)
 assert d['success'] == True
 assert len(d['memberships']) > 0
 print(f'  -> Verified successfully. Found {len(d["memberships"])} memberships.')
 
 # 7. Password Auth
-_, res, hdrs = test('POST /api/auth/password (ravi@acme.com)', '/api/auth/password', 'POST', {'identifier': 'ravi@acme.com', 'password': 'mySecurePassword123'})
+_, res, hdrs = test('POST /api/auth/password (ravi@acme.com)', '/api/auth/password', 'POST', {'identifier': 'ravi@acme.com', 'password': 'OfficeX@2026'})
 d = json.loads(res)
 assert d['success'] == True
 print('  -> Password authenticated. Primary role: ' + d['user']['role'])
@@ -83,7 +88,11 @@ print('  -> MFA verified at assurance level: ' + d['assurance_level'])
 
 # 10. Account Recovery
 _, res, _ = test('POST /api/auth/recover/request', '/api/auth/recover/request', 'POST', {'identifier': 'ravi@acme.com'})
-_, res, _ = test('POST /api/auth/recover/confirm', '/api/auth/recover/confirm', 'POST', {'identifier': 'ravi@acme.com', 'code': '482910', 'new_password': 'NewPassword#2026', 'revoke_others': True})
+_, peek_recover, _ = test('GET recovery OTP', '/api/test/peek-otp?identifier=ravi@acme.com', 'GET')
+recover_code = json.loads(peek_recover).get('code')
+print(f'  -> Recovery OTP generated: {recover_code}')
+
+_, res, _ = test('POST /api/auth/recover/confirm', '/api/auth/recover/confirm', 'POST', {'identifier': 'ravi@acme.com', 'code': recover_code, 'new_password': 'NewPassword#2026', 'revoke_others': True})
 d = json.loads(res)
 assert d['success'] == True
 print('  -> Password recovery flow confirmed.')

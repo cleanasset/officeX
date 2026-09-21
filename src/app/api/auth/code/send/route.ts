@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { detectIdentifierType, maskIdentifier, normalizeIdentifier } from '@/lib/auth-utils';
+import { generateAndStoreOtp } from '@/lib/otp-store';
+import { sendOtpEmail } from '@/lib/email-service';
 
 export const revalidate = 0;
 
@@ -26,8 +28,20 @@ export async function POST(request: Request) {
     const normalized = normalizeIdentifier(identifier);
     const masked = maskIdentifier(normalized);
 
-    // Mock code generation (Fixed demo code 482910 allows seamless QA/UAT verification)
-    const demoCode = '482910';
+    // Generate real 6-digit cryptographic verification code
+    const { code, error: otpError } = generateAndStoreOtp(normalized);
+    if (otpError) {
+      return NextResponse.json({ error: otpError }, { status: 429 });
+    }
+
+    // If identifier is an email address, dispatch real email
+    if (type === 'email') {
+      await sendOtpEmail({
+        to: normalized,
+        otp: code,
+        purpose: 'login',
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -35,7 +49,6 @@ export async function POST(request: Request) {
       channel,
       masked,
       cooldown: 30,
-      demo_code: demoCode
     });
   } catch (error) {
     console.error('Error in /api/auth/code/send:', error);

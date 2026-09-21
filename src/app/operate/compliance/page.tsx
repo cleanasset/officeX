@@ -145,7 +145,7 @@ export default function ComplianceCalendarProductPage() {
               
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#0D7B6C] text-xs sm:text-sm font-extrabold tracking-wide mb-4 sm:mb-5 shadow-2xs">
                 <FileCheck2 size={15} className="text-[#0D7B6C]" />
-                <span>OFFICEX.PRO · STATUTORY COMPLIANCE</span>
+                <span>OFFICEX · STATUTORY COMPLIANCE</span>
               </div>
 
               <h1 className="text-3xl sm:text-5xl lg:text-[46px] font-extrabold tracking-tight text-[#0F172A] leading-[1.14] mb-4">

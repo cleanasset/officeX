@@ -63,7 +63,6 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
 
   // OTP Fields (S03)
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
-  const [otpHint, setOtpHint] = useState<string | null>("482910");
   const [resendCountdown, setResendCountdown] = useState(30);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -156,7 +155,6 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
         localStorage.setItem("officex_intended_role", selectedRole);
       }
 
-      setOtpHint(data.otpHint || "482910");
       setStep(2);
       setResendCountdown(30);
       setSuccessMsg("Verification code dispatched to your work email and mobile.");
@@ -300,7 +298,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
             {/* Canonical Domain Trust Anchor */}
             <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold tracking-wide">officex.pro</span>
+              <span className="font-bold tracking-wide">OfficeX</span>
               <span className="text-blue-300">·</span>
               <span className="text-blue-800">Verified Registration Gateway</span>
             </div>
@@ -551,23 +549,6 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                     </p>
                   </div>
 
-                  {/* Demo Helper Pill */}
-                  {otpHint && (
-                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs">
-                      <span className="text-slate-600 font-medium">Demo Code:</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const demoArr = otpHint.split("");
-                          setOtpDigits(demoArr);
-                          verifyOtp(otpHint);
-                        }}
-                        className="text-blue-700 hover:underline font-mono font-bold bg-blue-100/80 px-2 py-0.5 rounded cursor-pointer"
-                      >
-                        {otpHint} (Click to Fill)
-                      </button>
-                    </div>
-                  )}
 
                   {/* 6 OTP Boxes */}
                   <div className="space-y-4">

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { normalizeIdentifier } from '@/lib/auth-utils';
+import { verifyStoredOtp } from '@/lib/otp-store';
 
 export const revalidate = 0;
 
@@ -31,6 +32,15 @@ export async function POST(request: Request) {
 
     const norm = normalizeIdentifier(identifier);
 
+    // Verify cryptographic OTP
+    const verification = verifyStoredOtp(norm, code);
+    if (!verification.valid) {
+      return NextResponse.json(
+        { error: verification.error || 'Invalid or expired recovery code.' },
+        { status: 400 }
+      );
+    }
+
     const response = NextResponse.json({
       success: true,
       message: 'Password has been securely reset. You may now sign in.',
@@ -38,7 +48,7 @@ export async function POST(request: Request) {
       revoked_other_sessions: revoke_others
     });
 
-    // Optionally set initial session cookie
+    // Set initial session cookie
     response.cookies.set('officex_auth', '1', {
       path: '/',
       httpOnly: false,

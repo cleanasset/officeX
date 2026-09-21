@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { generateAndStoreOtp } from "@/lib/otp-store";
+import { sendOtpEmail } from "@/lib/email-service";
 
 export async function POST(req: Request) {
   try {
@@ -38,14 +40,25 @@ export async function POST(req: Request) {
       console.warn("DB check fallback:", e);
     }
 
-    // Generate a secure simulated OTP for immediate verification
-    const simulatedOtp = "482910";
+    // Generate real 6-digit cryptographic verification code
+    const { code, error: otpError } = generateAndStoreOtp(cleanEmail);
+    if (otpError) {
+      return NextResponse.json({ error: otpError }, { status: 429 });
+    }
+
+    // Send the real email to the user's inbox
+    await sendOtpEmail({
+      to: cleanEmail,
+      otp: code,
+      name: fullName.trim(),
+      purpose: "registration",
+    });
 
     const userId = `usr_${Date.now()}`;
 
     return NextResponse.json({
       success: true,
-      message: "Account initiated. Verification OTP sent to email and mobile.",
+      message: "Verification code sent to your email address.",
       userId: userId,
       user: {
         id: userId,
@@ -54,10 +67,8 @@ export async function POST(req: Request) {
         mobileNumber: `${mobileCountryCode}${cleanMobile}`,
         emailVerified: false,
         mobileVerified: false,
-        status: "PENDING_CONTACT"
+        status: "PENDING_CONTACT",
       },
-      // In development/demo, provide OTP hint
-      otpHint: simulatedOtp
     });
   } catch (err: any) {
     console.error("Registration error:", err);

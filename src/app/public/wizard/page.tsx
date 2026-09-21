@@ -132,7 +132,7 @@ export default function RequirementSubmissionWizard() {
         <div className="flex items-center gap-6 text-xs font-semibold text-gray-600">
           <Link href="/public/search" className="hover:text-gray-900">Property Marketplace</Link>
           <Link href="/marketplace" className="hover:text-gray-900">FM Marketplace</Link>
-          <Link href="/portfolio" className="hover:text-gray-900">OFFICEX.PRO</Link>
+          <Link href="/portfolio" className="hover:text-gray-900">Operations</Link>
         </div>
 
         <div className="flex items-center gap-3">

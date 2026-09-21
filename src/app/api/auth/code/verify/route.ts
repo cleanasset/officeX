@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findMockUser, normalizeIdentifier } from '@/lib/auth-utils';
+import { verifyStoredOtp } from '@/lib/otp-store';
 
 export const revalidate = 0;
 
@@ -15,14 +16,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Support QA testing for invalid OTP using 000000
-    if (code === '000000') {
-      return NextResponse.json(
-        { error: 'Invalid or expired verification code. Use demo code 482910.' },
-        { status: 401 }
-      );
-    }
-
     if (!identifier) {
       return NextResponse.json(
         { error: 'Identifier is missing.' },
@@ -31,6 +24,15 @@ export async function POST(request: Request) {
     }
 
     const norm = normalizeIdentifier(identifier);
+
+    // Verify against real OTP generated for this user
+    const otpResult = verifyStoredOtp(norm, code);
+    if (!otpResult.valid) {
+      return NextResponse.json(
+        { error: otpResult.error || 'Invalid or expired verification code.' },
+        { status: 401 }
+      );
+    }
     const user = findMockUser(norm);
 
     // If privileged user requiring MFA (Assurance level 2)

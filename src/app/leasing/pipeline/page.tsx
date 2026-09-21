@@ -477,7 +477,7 @@ export default function PipelineKanbanBoard() {
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-gray-900">Workspace Onboarding Bridge</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Lease Executed $\rightarrow$ Activating OFFICEX.PRO SaaS</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Lease Executed &rarr; Activating OfficeX Operations</p>
                 </div>
               </div>
               <button 

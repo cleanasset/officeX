@@ -76,16 +76,6 @@ export default function MarketingHeader({
               style={{ width: "auto", height: "28px" }}
             />
           </Link>
-          {isOperate && (
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#0D7B6C] border border-teal-200 shadow-2xs">
-              SAAS PLATFORM
-            </span>
-          )}
-          {isFmMarketplace && (
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
-              FM MARKETPLACE
-            </span>
-          )}
         </div>
 
         {/* Center: Context-Aware Main Navigation */}
@@ -327,13 +317,13 @@ export default function MarketingHeader({
                 </div>
               </div>
 
-              {/* OfficeX.pro SaaS Dropdown */}
+              {/* Operations Suite Dropdown */}
               <div className="relative group py-2">
                 <Link
                   href="/operate"
                   className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <span>OfficeX.pro SaaS</span>
+                  <span>Operations Suite</span>
                   <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
                 </Link>
                 <div className="absolute top-full left-0 w-[320px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
@@ -451,7 +441,7 @@ export default function MarketingHeader({
                 <span>Register as Vendor</span>
                 <span className="text-xs bg-teal-100 px-2 py-0.5 rounded text-[#0F8B7D] font-bold">Escrow Hub</span>
               </Link>
-              <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">OfficeX.pro SaaS Suite</Link>
+              <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">Operations Suite</Link>
               <Link href="/fm-marketplace#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">
                 How It Works
               </Link>

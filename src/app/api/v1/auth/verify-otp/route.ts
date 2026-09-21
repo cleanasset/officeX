@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { verifyStoredOtp } from "@/lib/otp-store";
 
 export async function POST(req: Request) {
   try {
@@ -12,11 +13,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please enter a valid 6-digit OTP." }, { status: 400 });
     }
 
-    // Accept valid 6-digit OTP (e.g. 482910 or any valid testing code)
-    const isValidOtp = otp.trim() === "482910" || /^\d{6}$/.test(otp.trim());
+    const identifier = email || mobileNumber;
+    if (!identifier) {
+      return NextResponse.json({ error: "Email or mobile number is required to verify OTP." }, { status: 400 });
+    }
 
-    if (!isValidOtp) {
-      return NextResponse.json({ error: "Invalid OTP entered. Please check and retry." }, { status: 400 });
+    // Verify against real OTP stored during registration
+    const result = verifyStoredOtp(identifier, otp);
+    if (!result.valid) {
+      return NextResponse.json({ error: result.error || "Invalid verification code." }, { status: 400 });
     }
 
     return NextResponse.json({

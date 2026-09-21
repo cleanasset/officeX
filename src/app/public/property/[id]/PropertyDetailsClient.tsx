@@ -632,7 +632,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">OFFICEX.PRO SaaS</h4>
+            <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">Operations Suite</h4>
             <ul className="space-y-1.5 text-gray-400">
               <li><Link href="/portfolio" className="hover:text-white">Landlord Portfolio</Link></li>
               <li><Link href="/properties/rent-roll" className="hover:text-white">Rent Roll Master</Link></li>
