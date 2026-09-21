@@ -24,18 +24,20 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={42} 
-              height={42} 
+              width={60} 
+              height={60} 
               priority 
               className="object-contain" 
+              style={{ width: "auto", height: "44px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX Name" 
-              width={140} 
-              height={32} 
+              width={180} 
+              height={44} 
               priority 
               className="object-contain" 
+              style={{ width: "auto", height: "44px" }}
             />
           </Link>
         </div>
@@ -109,16 +111,18 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={48} 
-              height={48} 
+              width={50} 
+              height={50} 
+              className="object-contain"
               style={{ width: "auto", height: "40px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={155} 
-              height={36} 
-              style={{ width: "auto", height: "30px" }}
+              width={160} 
+              height={40} 
+              className="object-contain"
+              style={{ width: "auto", height: "40px" }}
             />
           </div>
           <Link 

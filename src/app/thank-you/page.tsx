@@ -86,18 +86,18 @@ export default function ThankYouPage() {
           <Image
             src="/logo-removebg-preview.png"
             alt="OfficeX Logo"
-            width={50}
-            height={50}
+            width={60}
+            height={60}
             className="object-contain"
-            style={{ width: "auto", height: "40px" }}
+            style={{ width: "auto", height: "42px" }}
           />
           <Image
             src="/name-removebg-preview.png"
             alt="OfficeX"
-            width={150}
-            height={34}
+            width={170}
+            height={42}
             className="object-contain"
-            style={{ width: "auto", height: "28px" }}
+            style={{ width: "auto", height: "42px" }}
           />
         </Link>
         <Link href="/" className="text-xs font-bold text-gray-600 hover:text-[#0F8B7D]">

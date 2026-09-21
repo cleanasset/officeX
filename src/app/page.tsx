@@ -687,10 +687,10 @@ export default function LandingPage() {
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
               width={200} 
-              height={44} 
+              height={46} 
               priority
               className={`object-contain transition-all ${isScrolledPastHero ? "filter brightness-0 invert" : ""}`}
-              style={{ width: "auto", height: "35px" }}
+              style={{ width: "auto", height: "46px" }}
             />
           </Link>
         </div>
@@ -872,16 +872,18 @@ export default function LandingPage() {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={48} 
-              height={48} 
+              width={50} 
+              height={50} 
+              className="object-contain"
               style={{ width: "auto", height: "40px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={155} 
-              height={36} 
-              style={{ width: "auto", height: "30px" }}
+              width={160} 
+              height={40} 
+              className="object-contain"
+              style={{ width: "auto", height: "40px" }}
             />
           </div>
           <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Office Spaces</Link>
@@ -1998,7 +2000,7 @@ export default function LandingPage() {
             data-calendly="true"
             className="font-bold text-[#0F8B7D] hover:underline cursor-pointer"
           >
-            Schedule a 30-minute call on Calendly &rarr;
+            Schedule a 30-minute call &rarr;
           </a>
         </div>
       </div>

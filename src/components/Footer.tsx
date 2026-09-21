@@ -32,7 +32,7 @@ export default function Footer() {
               width={80} 
               height={80} 
               className="object-contain filter brightness-0 invert group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "60px" }}
+              style={{ width: "auto", height: "56px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
@@ -40,7 +40,7 @@ export default function Footer() {
               width={250} 
               height={60} 
               className="object-contain filter brightness-0 invert group-hover:opacity-90 transition-opacity"
-              style={{ width: "auto", height: "48px" }}
+              style={{ width: "auto", height: "56px" }}
             />
           </Link>
           <p className="text-xs text-slate-400 leading-relaxed mt-1 font-medium">

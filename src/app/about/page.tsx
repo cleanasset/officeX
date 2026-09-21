@@ -15,18 +15,18 @@ export default function AboutPage() {
           <Image
             src="/logo-removebg-preview.png"
             alt="OfficeX Logo"
-            width={50}
-            height={50}
+            width={60}
+            height={60}
             className="object-contain"
-            style={{ width: "auto", height: "42px" }}
+            style={{ width: "auto", height: "44px" }}
           />
           <Image
             src="/name-removebg-preview.png"
             alt="OfficeX"
-            width={160}
-            height={36}
+            width={180}
+            height={44}
             className="object-contain"
-            style={{ width: "auto", height: "30px" }}
+            style={{ width: "auto", height: "44px" }}
           />
         </Link>
         <div className="flex items-center gap-4 text-xs font-bold">

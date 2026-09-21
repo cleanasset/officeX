@@ -60,20 +60,20 @@ export default function MarketingHeader({
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={50}
-              height={50}
+              width={60}
+              height={60}
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "38px" }}
+              style={{ width: "auto", height: "44px" }}
             />
             <Image
               src="/name-removebg-preview.png"
               alt="OfficeX"
-              width={160}
-              height={36}
+              width={180}
+              height={44}
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "28px" }}
+              style={{ width: "auto", height: "44px" }}
             />
           </Link>
         </div>
@@ -419,16 +419,18 @@ export default function MarketingHeader({
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={48}
-              height={48}
-              style={{ width: "auto", height: "40px" }}
+              width={50}
+              height={50}
+              className="object-contain"
+              style={{ width: "auto", height: "38px" }}
             />
             <Image
               src="/name-removebg-preview.png"
               alt="OfficeX"
-              width={155}
-              height={36}
-              style={{ width: "auto", height: "30px" }}
+              width={160}
+              height={40}
+              className="object-contain"
+              style={{ width: "auto", height: "38px" }}
             />
           </div>
 

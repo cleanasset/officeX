@@ -54,8 +54,8 @@ export default function SecurityPage() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-2xs">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Image src="/logo-removebg-preview.png" alt="OfficeX" width={28} height={28} />
-            <Image src="/name-removebg-preview.png" alt="OfficeX" width={90} height={18} />
+            <Image src="/logo-removebg-preview.png" alt="OfficeX" width={45} height={45} style={{ width: "auto", height: "36px" }} />
+            <Image src="/name-removebg-preview.png" alt="OfficeX" width={140} height={36} style={{ width: "auto", height: "36px" }} />
           </Link>
           <span className="text-slate-300 font-light">|</span>
           <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Trust & Security Center</span>

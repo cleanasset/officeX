@@ -25,16 +25,16 @@ export default function DiscoverPage() {
               height={60} 
               priority
               className="object-contain"
-              style={{ width: "auto", height: "50px" }}
+              style={{ width: "auto", height: "48px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
               width={200} 
-              height={44} 
+              height={48} 
               priority
               className="object-contain"
-              style={{ width: "auto", height: "38px" }}
+              style={{ width: "auto", height: "48px" }}
             />
           </Link>
         </div>

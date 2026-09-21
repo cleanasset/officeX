@@ -613,8 +613,8 @@ Generated via OFFICEX Operating Platform · https://officex.in
         <div className="max-w-7xl mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-xs">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <img src="/logo-removebg-preview.png" alt="OfficeX Logo" className="w-8 h-8 object-contain" />
-              <img src="/name-removebg-preview.png" alt="OfficeX" className="h-5 w-auto object-contain brightness-0 invert" />
+              <img src="/logo-removebg-preview.png" alt="OfficeX Logo" className="h-8 w-auto object-contain" />
+              <img src="/name-removebg-preview.png" alt="OfficeX" className="h-8 w-auto object-contain brightness-0 invert" />
             </div>
             <p className="text-gray-400 leading-relaxed text-[11px]">
               The unified operating platform for commercial workspaces — streamlining discovery, transactions, vendor procurement, and building operations.

@@ -120,12 +120,12 @@ export default function RequirementSubmissionWizard() {
           <img 
             src="/logo-removebg-preview.png" 
             alt="OfficeX Logo" 
-            className="w-8 h-8 object-contain"
+            className="h-9 w-auto object-contain"
           />
           <img 
             src="/name-removebg-preview.png" 
             alt="OfficeX" 
-            className="h-5 w-auto object-contain"
+            className="h-9 w-auto object-contain"
           />
         </Link>
 

@@ -92,8 +92,8 @@ export default async function PropertyComparePage() {
       {/* Navbar Header */}
       <header className="h-[60px] bg-white border-b border-gray-200 px-4 sm:px-8 flex items-center justify-between shadow-xs sticky top-0 z-30">
         <Link href="/" className="flex items-center gap-2 sm:gap-3">
-          <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={28} height={28} className="object-contain" />
-          <Image src="/name-removebg-preview.png" alt="OfficeX" width={90} height={18} className="object-contain" />
+          <Image src="/logo-removebg-preview.png" alt="OfficeX Logo" width={45} height={45} className="object-contain" style={{ width: "auto", height: "36px" }} />
+          <Image src="/name-removebg-preview.png" alt="OfficeX" width={140} height={36} className="object-contain" style={{ width: "auto", height: "36px" }} />
         </Link>
         <Link href="/public/search" className="text-xs font-semibold text-gray-500 hover:text-[#0F8B7D] transition-colors flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Listings

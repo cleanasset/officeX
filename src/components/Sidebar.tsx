@@ -270,16 +270,18 @@ export default function Sidebar() {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={32} 
-              height={32} 
+              width={45} 
+              height={45} 
               className="object-contain group-hover:scale-105 transition-transform"
+              style={{ width: "auto", height: "36px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={95} 
-              height={19} 
+              width={140} 
+              height={36} 
               className="object-contain"
+              style={{ width: "auto", height: "36px" }}
             />
           </Link>
           

@@ -21,18 +21,18 @@ export default function DashboardPage() {
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={32} 
-              height={32} 
+              width={45} 
+              height={45} 
               className="object-contain filter brightness-0 invert"
-              style={{ width: "auto", height: "24px" }}
+              style={{ width: "auto", height: "32px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={100} 
-              height={24} 
+              width={130} 
+              height={32} 
               className="object-contain filter brightness-0 invert"
-              style={{ width: "auto", height: "18px" }}
+              style={{ width: "auto", height: "32px" }}
             />
           </Link>
         </div>

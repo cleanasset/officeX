@@ -608,17 +608,19 @@ export default function SignInForm({
               <Image
                 src="/logo-removebg-preview.png"
                 alt="OfficeX Logo"
-                width={36}
-                height={36}
+                width={50}
+                height={50}
                 className="object-contain group-hover:scale-105 transition-transform"
+                style={{ width: "auto", height: "38px" }}
                 priority
               />
               <Image
                 src="/name-removebg-preview.png"
                 alt="OfficeX"
-                width={120}
-                height={26}
+                width={150}
+                height={38}
                 className="object-contain"
+                style={{ width: "auto", height: "38px" }}
                 priority
               />
             </Link>
