@@ -5,7 +5,8 @@ import {
   calculateMarketplaceTakeRate
 } from "@/lib/commission-engine";
 
-const globalTransactions: CommissionTransaction[] = [
+// Initial transactions seed
+const initialTransactions: CommissionTransaction[] = [
   {
     id: "TXN-8801",
     type: "marketplace_escrow",
@@ -91,6 +92,17 @@ const globalTransactions: CommissionTransaction[] = [
     timestamp: Date.now() - 7 * 24 * 3600 * 1000
   }
 ];
+
+// Attach to globalThis for shared memory persistence across Next.js Turbopack route modules
+const globalForCommissions = globalThis as unknown as {
+  globalTransactions?: CommissionTransaction[];
+};
+
+if (!globalForCommissions.globalTransactions) {
+  globalForCommissions.globalTransactions = [...initialTransactions];
+}
+
+const globalTransactions = globalForCommissions.globalTransactions;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

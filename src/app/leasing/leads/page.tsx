@@ -52,9 +52,61 @@ export default function LeadsEnquiriesManager() {
       isLive: true
     }));
 
-    setLeads(formattedPublic);
-    if (formattedPublic.length > 0 && !selectedLeadId) {
-      setSelectedLeadId(formattedPublic[0].id);
+    const seedLeads: LeadItem[] = [
+      {
+        id: "lead-seed-1",
+        name: "Acme Innovations Pvt Ltd",
+        contactName: "Rajesh Varma (VP Real Estate)",
+        email: "rajesh.v@acmeinnovations.io",
+        phone: "+91 98201 44821",
+        property: "One BKC — North Wing Executive",
+        details: "60 Seats • Bandra Kurla Complex, Mumbai",
+        seats: "60 Seats",
+        stage: "SITE VISIT SCHEDULED",
+        stageColor: "bg-blue-100 text-blue-800 border border-blue-300",
+        time: "Today, 11:30 AM",
+        budget: "₹1.8L - ₹2.5L/mo",
+        moveIn: "Immediate",
+        isLive: false
+      },
+      {
+        id: "lead-seed-2",
+        name: "Zerodha Tech Labs",
+        contactName: "Sneha Nair (Director Workplace)",
+        email: "sneha.n@zerodha.tech",
+        phone: "+91 98110 55432",
+        property: "Godrej BKC — Floor 8 Horizon Plate",
+        details: "120 Seats • G Block, BKC Main Road",
+        seats: "120 Seats",
+        stage: "LOI SENT",
+        stageColor: "bg-amber-100 text-amber-800 border border-amber-300",
+        time: "Yesterday",
+        budget: "₹3.5L - ₹4.2L/mo",
+        moveIn: "01 Nov 2026",
+        isLive: false
+      },
+      {
+        id: "lead-seed-3",
+        name: "Tata Digital Enterprise",
+        contactName: "Amitabh Sen (Head Corporate Facilities)",
+        email: "amitabh.sen@tatadigital.com",
+        phone: "+91 98450 78219",
+        property: "Prestige Tech Cloud — Cyber Pavilion",
+        details: "150 Seats • Hebbal / ORR, Bengaluru",
+        seats: "150 Seats",
+        stage: "UNDER NEGOTIATION",
+        stageColor: "bg-purple-100 text-purple-800 border border-purple-300",
+        time: "2 days ago",
+        budget: "₹4.0L - ₹5.5L/mo",
+        moveIn: "15 Nov 2026",
+        isLive: false
+      }
+    ];
+
+    const combined = [...formattedPublic, ...seedLeads];
+    setLeads(combined);
+    if (combined.length > 0 && !selectedLeadId) {
+      setSelectedLeadId(combined[0].id);
     }
   };
 

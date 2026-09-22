@@ -100,17 +100,43 @@ export default function OperationsDashboard() {
     } catch (e) {}
   }, []);
 
-  const handleConfirmDispatch = (techName: string) => {
+  const handleConfirmDispatch = async (techName: string) => {
     if (!dispatchModal) return;
 
-    if (dispatchModal.action === "Dispatch Schindler OEM") {
+    if (dispatchModal.action === "Dispatch Schindler OEM" || dispatchModal.action?.includes("OEM")) {
+      const woId = `#WO-SCH-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      try {
+        await fetch("/api/work-orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: woId,
+            title: `Emergency OEM Escalation: ${dispatchModal.title || "Elevator Controller Failure"}`,
+            client: "Apex Business Tower Management",
+            vendor: "Schindler Lifts & Escalators India",
+            property: dispatchModal.location || "Apex Business Tower, Mumbai BKC",
+            startDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+            progress: "Emergency Dispatch",
+            pct: 15,
+            status: "Active",
+            statusClass: "bg-red-50 text-red-700 border border-red-200",
+            contractValue: "₹45,000 (SLA Callout)",
+            escrowStatus: "Authorized Emergency Escrow",
+            milestoneRule: "100% on Service Sign-off",
+            leadTechnician: "Schindler OEM Field Engineer"
+          })
+        });
+      } catch (err) {
+        console.error("Error creating work order from ops dispatch:", err);
+      }
+
       setDispatches(prev => prev.map(d => {
         if (d.id === dispatchModal.id) {
-          return { ...d, assignedTo: "Schindler OEM Response (WO-SCH-2026-9921)", remaining: "OEM Dispatch Confirmed" };
+          return { ...d, assignedTo: `Schindler OEM Response (${woId})`, remaining: "OEM Dispatch Confirmed" };
         }
         return d;
       }));
-      showToast("FM Marketplace Work Order #WO-SCH-2026-9921 created! Schindler OEM dispatched.");
+      showToast(`FM Marketplace Work Order ${woId} created! Schindler OEM dispatched.`);
     } else {
       setDispatches(prev => prev.map(d => {
         if (d.id === dispatchModal.id) {

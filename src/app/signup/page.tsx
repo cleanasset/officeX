@@ -1,5 +1,15 @@
 import React, { Suspense } from "react";
+import type { Metadata } from "next";
 import SignupForm from "./SignupForm";
+
+export const metadata: Metadata = {
+  title: "Create your Account · OfficeX",
+  description: "Register for your OfficeX workspace and access property management, leasing, and workplace tools.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export const dynamic = "force-dynamic";
 

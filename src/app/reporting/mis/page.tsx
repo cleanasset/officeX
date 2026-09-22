@@ -286,12 +286,144 @@ export default function MonthlyMISReportGenerator() {
   };
 
   const handlePrintPdf = () => {
-    // Invoke browser print layout
-    setToast(`Preparing high-res print document for ${property}...`);
-    setTimeout(() => {
+    setToast(`Generating executive MIS PDF document for ${property}...`);
+    const printWindow = window.open("", "_blank", "width=900,height=1000");
+    if (!printWindow) {
       window.print();
-      setToast(null);
-    }, 500);
+      return;
+    }
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>OFFICEX-MIS-${activeProp.name.replace(/\s+/g, "-")}-${month}-${year}</title>
+          <style>
+            @page { size: A4; margin: 15mm; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 0; padding: 24px; font-size: 12px; line-height: 1.5; }
+            .header { border-bottom: 2px solid #0f8b7d; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .badge { background: #f0fdfa; color: #0f8b7d; font-weight: bold; font-size: 10px; padding: 3px 8px; border-radius: 4px; border: 1px solid #ccfbf1; text-transform: uppercase; }
+            h1 { font-size: 22px; margin: 6px 0 2px 0; color: #0b1f3a; font-weight: 900; }
+            .prop-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+            .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+            .card-title { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 700; }
+            .card-val { font-size: 16px; font-weight: 900; color: #0f172a; margin-top: 4px; }
+            .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #0b1f3a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin: 20px 0 10px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+            th { text-align: left; padding: 8px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-weight: 700; color: #334155; }
+            td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+            .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <span class="badge">OfficeX Institutional Audit Pack</span>
+              <h1>Monthly Facility MIS Report</h1>
+              <div class="prop-name">${activeProp.name} — ${activeProp.grade}</div>
+              <div style="color: #64748b; font-size: 11px;">📍 ${activeProp.location}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 800; font-size: 13px;">${month} ${year}</div>
+              <div style="color: #64748b;">${timeframe}</div>
+              <div style="margin-top: 8px; font-size: 10px; color: #059669; font-weight: 700;">✓ Institutional Grade Verified</div>
+            </div>
+          </div>
+
+          <div class="grid-4">
+            <div class="card">
+              <div class="card-title">Leasable Area</div>
+              <div class="card-val">${activeProp.totalAreaSqFt.toLocaleString()} sq.ft.</div>
+              <div style="color: #0f8b7d; font-weight: 700; font-size: 10px;">${activeProp.occupancyPercent}% Occupied</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Monthly Collections</div>
+              <div class="card-val">${activeProp.baseRentCollected}</div>
+              <div style="color: #059669; font-weight: 700; font-size: 10px;">${activeProp.recoveryRate} Recovery Rate</div>
+            </div>
+            <div class="card">
+              <div class="card-title">SLA Compliance</div>
+              <div class="card-val">${activeProp.slaMep}</div>
+              <div style="color: #64748b; font-size: 10px;">MEP &amp; HVAC Aggregated</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Green Rating</div>
+              <div class="card-val">${activeProp.greenCert.split(" ")[0]} ${activeProp.greenCert.split(" ")[1]}</div>
+              <div style="color: #059669; font-weight: 700; font-size: 10px;">${activeProp.certScore}</div>
+            </div>
+          </div>
+
+          <div class="section-title">1. Executive Summary &amp; Campus Health</div>
+          <p style="color: #334155; line-height: 1.6;">
+            Overall asset operations for <strong>${activeProp.name}</strong> remained optimal during ${month} ${year}, maintaining an occupancy of <strong>${activeProp.occupancyPercent}%</strong> across ${activeProp.activeTenants} enterprise tenants (${activeProp.keyTenants.join(", ")}). Power consumption recorded efficiency gains with preventive maintenance (PPM) at ${activeProp.slaMep} SLA compliance with zero unbudgeted downtime.
+          </p>
+
+          <div class="section-title">2. Financial Operations &amp; CAM Collections</div>
+          <table>
+            <thead>
+              <tr><th>Metric</th><th>Billed Amount</th><th>Collected</th><th>Recovery</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Base Lease Rent</td><td>${activeProp.baseRentBilled}</td><td>${activeProp.baseRentCollected}</td><td>${activeProp.recoveryRate}</td></tr>
+              <tr><td>CAM &amp; Maintenance</td><td>${activeProp.camBilled}</td><td>${activeProp.camCollected}</td><td>98.5%</td></tr>
+              <tr><td>Overdue (&gt; 30 Days)</td><td colspan="3" style="color: #dc2626; font-weight: 700;">${activeProp.overdue30d}</td></tr>
+            </tbody>
+          </table>
+
+          <div class="section-title">3. Monthly Energy &amp; Power Telemetry (6-Month Historical)</div>
+          <table>
+            <thead>
+              <tr><th>Month</th><th>Grid Power (kWh)</th><th>Solar (kWh)</th><th>DG Backup (kWh)</th><th>Total (kWh)</th><th>Peak (kVA)</th></tr>
+            </thead>
+            <tbody>
+              ${activeProp.monthlyTrends.map(t => `
+                <tr>
+                  <td><strong>${t.month}</strong></td>
+                  <td>${t.gridKwh.toLocaleString()}</td>
+                  <td>${t.solarKwh.toLocaleString()}</td>
+                  <td>${t.dgKwh.toLocaleString()}</td>
+                  <td><strong>${t.totalKwh.toLocaleString()}</strong></td>
+                  <td>${t.peakKva} kVA</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <div class="section-title">4. Active Facility Work Orders &amp; CAPEX</div>
+          <table>
+            <thead>
+              <tr><th>WO ID</th><th>Description</th><th>Priority</th><th>Vendor Partner</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              ${activeProp.activeWorkOrders.map(w => `
+                <tr>
+                  <td><code>${w.id}</code></td>
+                  <td>${w.desc}</td>
+                  <td><strong style="color: ${w.priority === "Critical" ? "#dc2626" : "#2563eb"}">${w.priority}</strong></td>
+                  <td>${w.vendor}</td>
+                  <td>${w.status}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <div>OfficeX Commercial Asset Management · Institutional Compliance Engine</div>
+            <div>Generated on ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })} · Confidential</div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setToast(null);
   };
 
   const handleExportCsv = () => {

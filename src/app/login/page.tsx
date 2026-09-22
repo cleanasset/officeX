@@ -1,6 +1,16 @@
 import React from "react";
+import type { Metadata } from "next";
 import SignInForm from "./SignInForm";
 import { validateRedirect } from "@/lib/auth-utils";
+
+export const metadata: Metadata = {
+  title: "Sign in · OfficeX",
+  description: "Sign in to access your OfficeX workspace, property portfolio, tenant portal, or vendor operations.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export const dynamic = "force-dynamic";
 

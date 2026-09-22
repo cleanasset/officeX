@@ -560,48 +560,22 @@ export default function SignInForm({
       return;
     }
 
-    // Check if user has completed business onboarding
-    const hasCompletedOnboarding = typeof window !== "undefined" && (
-      localStorage.getItem("officex_onboarding_completed") === "1" ||
-      sessionStorage.getItem("officex_onboarding_completed") === "1" ||
-      Boolean(localStorage.getItem("officex_active_org"))
-    );
+    // Set onboarding completed flag to prevent blocking gates
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_onboarding_completed", "1");
+    }
 
-    let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "/";
-
-    if (!hasCompletedOnboarding) {
-      setIsOnboardingNeeded(true);
-      // Map user's intended role to canonical onboarding role
+    // Determine target destination (preserves redirects like /properties/rent-roll)
+    let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "";
+    if (!destination || destination === "/") {
       const lowerRole = (roleName || initialRole || "owner").toLowerCase();
-      const targetRole = lowerRole.includes("broker")
-        ? "broker"
+      destination = lowerRole.includes("broker")
+        ? "/leasing"
         : lowerRole.includes("vendor") || lowerRole.includes("fm")
-        ? "vendor"
+        ? "/vendor"
         : lowerRole.includes("tenant")
-        ? "tenant"
-        : "owner";
-
-      const queryParams = new URLSearchParams({
-        role: targetRole,
-      });
-
-      const cleanVal = userEmailOrPhone.trim();
-      if (cleanVal.includes("@")) {
-        queryParams.set("email", cleanVal);
-      } else if (cleanVal) {
-        queryParams.set("mobile", cleanVal);
-      }
-
-      if (storedName) {
-        queryParams.set("name", storedName);
-      }
-
-      // Preserve intended destination as redirect after onboarding finishes
-      if (destination && destination !== "/" && !destination.startsWith("/login")) {
-        queryParams.set("redirect", destination);
-      }
-
-      destination = `/onboarding?${queryParams.toString()}`;
+        ? "/tenant"
+        : "/properties";
     }
 
     setStep("signed_in_success");
@@ -648,7 +622,7 @@ export default function SignInForm({
       // Non-blocking
     }
 
-    const destination = initialRedirect ? safeRedirect : "/";
+    const destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : (membership.workspaceUrl || "/properties");
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;

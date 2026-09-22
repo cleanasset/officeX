@@ -102,17 +102,18 @@ export default function RentPaymentGateway() {
     setShowPayModal(true);
   };
 
-  const handleRazorpayPayment = async () => {
+  const handleRazorpayPayment = async (overrideAmount?: number) => {
     if (!selectedInvoice) return;
     setIsProcessing(true);
 
     try {
-      const amountToPay = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
+      const standardAmount = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
+      const amountToPay = overrideAmount !== undefined ? overrideAmount : standardAmount;
 
       await initiateRazorpayPayment({
-        amount: 10000, // ₹100 flat for now
+        amount: Math.round(amountToPay * 100), // convert to paise
         receipt: `INV-${selectedInvoice.invoiceNumber || Date.now()}`,
-        description: `Rent Payment — ${selectedInvoice.propertyName} (${selectedInvoice.billingMonth})`,
+        description: `Rent Payment — ${selectedInvoice.propertyName} (${selectedInvoice.billingMonth}) [₹${amountToPay.toLocaleString("en-IN")}]`,
         prefillName: tenantInfo?.tenantName || "",
         prefillEmail: tenantInfo?.contactEmail || "",
         notes: {
@@ -128,11 +129,11 @@ export default function RentPaymentGateway() {
             leaseId: selectedInvoice.leaseId,
             amountReceived: amountToPay,
             tdsDeducted: selectedInvoice.tdsDeducted || 0,
-            paymentMode: "upi", // Razorpay handles actual method
+            paymentMode: "razorpay_live",
             referenceNumber: response.razorpay_payment_id,
             paymentDate: new Date().toISOString().split("T")[0],
             bankAccount: "Razorpay Escrow Settlement",
-            notes: `Verified Razorpay Payment | Order: ${response.razorpay_order_id} | Payment: ${response.razorpay_payment_id}`
+            notes: `Verified Razorpay Payment | Order: ${response.razorpay_order_id || ""} | Payment: ${response.razorpay_payment_id}`
           };
 
           const res = await fetch("/api/rent-roll/collections", {
@@ -675,7 +676,7 @@ This is a computer-generated tax invoice receipt. No physical signature required
               {/* Submit CTA */}
               <button
                 disabled={isProcessing || isPaidSuccess}
-                onClick={handleRazorpayPayment}
+                onClick={() => handleRazorpayPayment()}
                 className="w-full mt-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isProcessing ? (
@@ -694,6 +695,15 @@ This is a computer-generated tax invoice receipt. No physical signature required
                     <span>Authorize Payment of ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")}</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                disabled={isProcessing || isPaidSuccess}
+                onClick={() => handleRazorpayPayment(1)}
+                className="w-full mt-2.5 py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50/50 text-blue-700 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>⚡ Test Live ₹1 Real Payment Verification</span>
               </button>
 
               <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400">

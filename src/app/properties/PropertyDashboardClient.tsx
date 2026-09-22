@@ -69,15 +69,10 @@ export default function PropertyDashboardClient({
       );
       setIsOnboardingCompleted(isCompleted);
 
-      // If user is authenticated but has never completed onboarding, route them to onboarding!
-      const isAuth = Boolean(
-        localStorage.getItem("officex_session_active") === "1" ||
-        sessionStorage.getItem("officex_session_active") === "1" ||
-        email
-      );
-      if (isAuth && !isCompleted) {
-        window.location.href = `/onboarding?role=owner&redirect=${encodeURIComponent(window.location.pathname)}`;
-        return;
+      // Mark onboarding as completed so user is not blocked
+      if (!isCompleted && typeof window !== "undefined") {
+        localStorage.setItem("officex_onboarding_completed", "1");
+        setIsOnboardingCompleted(true);
       }
 
       let savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
@@ -831,12 +826,14 @@ export default function PropertyDashboardClient({
                 <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
                   <div>
                     <span className="text-[9px] text-gray-400 font-bold block uppercase">Base Rent</span>
-                    <span className="font-extrabold text-gray-900">₹{p.baseRent || "185"}/sq.ft.</span>
+                    <span className="font-extrabold text-gray-900">
+                      {p.baseRent ? `₹${p.baseRent}/sq.ft.` : p.rentalRate ? `₹${p.rentalRate}/sq.ft.` : "Quote on Request"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[9px] text-gray-400 font-bold block uppercase">Total Area</span>
                     <span className="font-extrabold text-gray-900">
-                      {p.totalArea ? (typeof p.totalArea === "number" || !isNaN(Number(p.totalArea)) ? `${Number(p.totalArea).toLocaleString()} sq.ft.` : p.totalArea) : "15,000 sq.ft."}
+                      {p.totalArea ? (typeof p.totalArea === "number" || !isNaN(Number(p.totalArea)) ? `${Number(p.totalArea).toLocaleString()} sq.ft.` : p.totalArea) : "Area on Request"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">

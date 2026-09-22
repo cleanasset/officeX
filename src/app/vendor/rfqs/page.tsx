@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Clock, CheckCircle, X, ArrowRight, FileText, Send, DollarSign, ShieldCheck, Check, Sparkles } from "lucide-react";
 
 export default function MatchedRFQsBrowser() {
-  const [selectedRfqId, setSelectedRfqId] = useState<string | null>("RFQ-2024-8842");
+  const [selectedRfqId, setSelectedRfqId] = useState<string | null>("RFQ-2026-8842");
   const [toast, setToast] = useState<string | null>(null);
   const [rfqList, setRfqList] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
@@ -40,16 +40,53 @@ export default function MatchedRFQsBrowser() {
     setShowQuoteModal(true);
   };
 
-  const handleSubmitQuote = (e: React.FormEvent) => {
+  const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+
+  const handleSubmitQuote = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowQuoteModal(false);
-    setToast(`Quotation of ${quoteForm.bidAmount} submitted for ${activeRfq?.id || "RFQ"}! Transmitted to Building Owner.`);
-    setTimeout(() => setToast(null), 4000);
+    if (!activeRfq) return;
+    setIsSubmittingQuote(true);
+    try {
+      const res = await fetch("/api/rfqs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "submit_quote",
+          rfqId: activeRfq.id,
+          vendorName: "Apex Facility Solutions Pvt Ltd",
+          bidAmount: quoteForm.bidAmount,
+          timeline: quoteForm.timeline,
+          warranty: quoteForm.warranty,
+          notes: quoteForm.notes
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.quote) {
+        setShowQuoteModal(false);
+        setToast(`Quotation of ${quoteForm.bidAmount} submitted for ${activeRfq.id}! Transmitted to Building Owner.`);
+        // Update local state with incremented quotes count and evaluating status
+        setRfqList((prev) =>
+          prev.map((r) =>
+            r.id === activeRfq.id
+              ? { ...r, quotesCount: (r.quotesCount || 0) + 1, status: "evaluating" }
+              : r
+          )
+        );
+      } else {
+        setToast(data.error || "Failed to submit quotation.");
+      }
+    } catch (err) {
+      console.error(err);
+      setToast("Error transmitting quotation.");
+    } finally {
+      setIsSubmittingQuote(false);
+      setTimeout(() => setToast(null), 4500);
+    }
   };
 
   const displayRfqs = rfqList.length > 0 ? rfqList : [
     {
-      id: "RFQ-2024-8842",
+      id: "RFQ-2026-8842",
       title: "DG Set Annual Maintenance Contract",
       category: "HVAC",
       match: "98% Match",
@@ -59,7 +96,7 @@ export default function MatchedRFQsBrowser() {
       timeRemaining: "1d : 08h : 45m"
     },
     {
-      id: "RFQ-2024-8843",
+      id: "RFQ-2026-8843",
       title: "Facade Cleaning Service — Quarterly",
       category: "Cleaning",
       match: "96% Match",
@@ -69,7 +106,7 @@ export default function MatchedRFQsBrowser() {
       timeRemaining: "2d : 14h : 05m"
     },
     {
-      id: "RFQ-2024-8844",
+      id: "RFQ-2026-8844",
       title: "UPS Battery Replacement & Testing",
       category: "Electrical",
       match: "92% Match",
@@ -79,7 +116,7 @@ export default function MatchedRFQsBrowser() {
       timeRemaining: "4d : 09h : 20m"
     },
     {
-      id: "RFQ-2024-8845",
+      id: "RFQ-2026-8845",
       title: "Access Control System Upgrade",
       category: "Security",
       match: "88% Match",
@@ -353,9 +390,10 @@ export default function MatchedRFQsBrowser() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5"
+                  disabled={isSubmittingQuote}
+                  className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 disabled:opacity-60 cursor-pointer"
                 >
-                  <Send size={13} /> Confirm &amp; Submit Bid
+                  <Send size={13} /> {isSubmittingQuote ? "Transmitting Bid..." : "Confirm & Submit Bid"}
                 </button>
               </div>
             </form>

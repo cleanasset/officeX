@@ -124,18 +124,18 @@ OFFICEX VERIFIED INSTITUTIONAL PROPERTY PACK
 
 PROPERTY DETAILS:
 -----------------
-Building Name: ${property.name || "One BKC — North Wing Executive"}
-Micro-market: ${property.address || "G Block, Bandra Kurla Complex, Mumbai"}
+Building Name: ${property.name || property.title || "One BKC — North Wing Executive"}
+Micro-market: ${property.address || property.location || "G Block, Bandra Kurla Complex, Mumbai"}
 Grade: ${property.grade || "Grade A+"}
-OFFICEX Property Score: 86 / 100 (Institutional Grade)
-Sustainability Certification: LEED Gold / IGBC Platinum
+OFFICEX Property Score: ${property.propertyScore || 86} / 100 (Institutional Grade)
+Sustainability Certification: ${property.energyRating || "LEED Gold / IGBC Platinum"}
 
 COMMERCIAL TERMS:
 -----------------
-Quoted Base Rent: ₹185 / sq.ft. / month
+Quoted Base Rent: ${property.pricePerSqft || "₹185 / sq.ft. / month"}
 Common Area Maintenance (CAM): ₹18 / sq.ft. / month
-Estimated Monthly Rent (4,500 sq.ft.): ₹1,25,000 / month
-Rate per Seat: ₹12,500 / seat / month (60 Seats Capacity)
+Estimated Monthly Rent (${property.area || "4,500 sq.ft."}): ${property.price || "₹1,25,000 / month"}
+Rate per Seat: ${property.pricePerSeat || "₹12,500 / seat / month"} (${property.capacity || "60 Seats"} Capacity)
 Security Deposit: 3 Months Interest-Free Refundable
 Annual Rent Escalation: 5% Compounded Annually
 Standard Lease Lock-in: 36 Months

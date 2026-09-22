@@ -175,7 +175,7 @@ export default function VendorRegistrationWizard() {
       </div>
 
       <div className="py-6 text-center text-xs text-gray-400">
-        © 2024 OfficeX Vendor Management Platform
+        © 2026 OfficeX Vendor Management Platform
       </div>
     </div>
   );

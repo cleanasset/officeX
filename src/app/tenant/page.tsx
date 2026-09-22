@@ -1,12 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   Home, CreditCard, Wrench, Users, FileText, Calendar, Clock, 
   MessageSquare, ChevronLeft, ChevronRight, MapPin, Maximize2, 
   X, CheckCircle2, Download, ShieldCheck, Send, AlertTriangle,
-  Check, Bell, Laptop, ArrowRight, UserCheck, Sparkles
+  Check, Bell, Laptop, ArrowRight, UserCheck, Sparkles, Loader2,
+  Receipt
 } from "lucide-react";
+import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 export default function TenantHomepage() {
   const [noticeIndex, setNoticeIndex] = useState(0);
@@ -14,6 +16,26 @@ export default function TenantHomepage() {
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success">("idle");
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [rentPaid, setRentPaid] = useState(false);
+  const [paymentReceipt, setPaymentReceipt] = useState<{
+    paymentId: string;
+    orderId?: string;
+    date: string;
+    amount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (localStorage.getItem("officex_tenant_rent_paid") === "1") {
+        setRentPaid(true);
+        const pid = localStorage.getItem("officex_tenant_last_payment_id") || "pay_live_verified";
+        setPaymentReceipt({
+          paymentId: pid,
+          date: "15 Sep 2026",
+          amount: 191000
+        });
+      }
+    }
+  }, []);
 
   // Chat with Helpdesk state
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -72,13 +94,66 @@ export default function TenantHomepage() {
     }
   ];
 
-  const handlePayRent = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayRentRazorpay = async (amountInRupees: number = 191000) => {
     setPaymentStatus("processing");
-    setTimeout(() => {
-      setPaymentStatus("success");
-      setRentPaid(true);
-    }, 1200);
+    try {
+      await initiateRazorpayPayment({
+        amount: amountInRupees * 100, // in paise
+        receipt: `RENT-${Date.now()}`,
+        description: `Monthly Commercial Rent — Unit 5A (Apex Tower) [₹${amountInRupees.toLocaleString("en-IN")}]`,
+        prefillName: "Tata Digital Enterprise",
+        prefillEmail: "accounts@tatadigital.com",
+        notes: {
+          tenant: "Tata Digital Enterprise",
+          unit: "Unit 5A",
+          property: "Apex Business Tower",
+          billingMonth: "September 2026",
+          type: "commercial_lease_rent"
+        },
+        onSuccess: async (response) => {
+          setRentPaid(true);
+          setPaymentStatus("success");
+          const nowStr = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+          setPaymentReceipt({
+            paymentId: response.razorpay_payment_id,
+            orderId: response.razorpay_order_id,
+            date: nowStr,
+            amount: amountInRupees
+          });
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_tenant_rent_paid", "1");
+            localStorage.setItem("officex_tenant_last_payment_id", response.razorpay_payment_id);
+          }
+          try {
+            await fetch("/api/rent-roll/collections", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                invoiceId: "INV-2026-09-TATA",
+                leaseId: "LS-TATA-5A",
+                amountReceived: amountInRupees,
+                tdsDeducted: Math.round(amountInRupees * 0.1),
+                paymentMode: "razorpay_live",
+                referenceNumber: response.razorpay_payment_id,
+                paymentDate: new Date().toISOString().split("T")[0],
+                bankAccount: "Razorpay Live Escrow Nodal",
+                notes: `Live Verified Razorpay Payment | Order: ${response.razorpay_order_id || ""} | ID: ${response.razorpay_payment_id}`
+              })
+            });
+          } catch (e) {
+            console.error("Collections recording error:", e);
+          }
+        },
+        onFailure: (err) => {
+          console.error("Razorpay payment failed:", err);
+          setPaymentStatus("idle");
+        }
+      });
+    } catch (err: any) {
+      console.error("Razorpay init error:", err);
+      setPaymentStatus("idle");
+      alert(err.message || "Failed to initialize Razorpay");
+    }
   };
 
   const handleSendChat = (e: React.FormEvent) => {
@@ -351,137 +426,7 @@ export default function TenantHomepage() {
         </div>
       </div>
 
-      {/* RENT PAYMENT MODAL (per UI/UX Review Finding 5.3) */}
-      {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 relative">
-            <button 
-              onClick={() => setIsPaymentModalOpen(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 cursor-pointer"
-            >
-              <X size={20} />
-            </button>
 
-            {paymentStatus === "success" ? (
-              <div className="text-center py-6">
-                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-200">
-                  <CheckCircle2 size={36} />
-                </div>
-                <h3 className="text-xl font-black text-slate-900">Rent Payment Successful</h3>
-                <p className="text-xs text-slate-600 mt-1.5">
-                  Transaction ref: <strong className="font-mono text-slate-900">TXN-SEP-882914</strong>
-                </p>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mt-5 text-left text-xs space-y-2">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Base Rent (Floor 5 Unit 5A)</span>
-                    <span className="font-bold text-slate-900">₹1,55,000</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>CAM Charges</span>
-                    <span className="font-bold text-slate-900">₹26,000</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>GST (18%)</span>
-                    <span className="font-bold text-slate-900">₹10,000</span>
-                  </div>
-                  <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-900">
-                    <span>Total Paid</span>
-                    <span className="text-[#0F8B7D]">₹1,91,000</span>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-col gap-2">
-                  <button 
-                    onClick={() => {
-                      alert("Downloading Official Tax Invoice / Payment Receipt PDF...");
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-                  >
-                    <Download size={14} /> Download Receipt (PDF)
-                  </button>
-                  <button 
-                    onClick={() => setIsPaymentModalOpen(false)}
-                    className="w-full py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <ShieldCheck size={18} className="text-[#0F8B7D]" />
-                  <span className="text-[10px] font-bold text-[#0F8B7D] uppercase tracking-wider">Secure Escrow Checkout</span>
-                </div>
-                <h3 className="text-xl font-black text-slate-900">Pay Monthly Rent</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Apex Business Tower · Unit 5A · September 2026</p>
-
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 my-5 text-xs space-y-2">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Base Rental</span>
-                    <span className="font-bold text-slate-900">₹1,55,000</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Common Area Maintenance (CAM)</span>
-                    <span className="font-bold text-slate-900">₹26,000</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Applicable GST (18%)</span>
-                    <span className="font-bold text-slate-900">₹10,000</span>
-                  </div>
-                  <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-900 text-sm">
-                    <span>Total Due</span>
-                    <span className="text-[#0F8B7D]">₹1,91,000</span>
-                  </div>
-                </div>
-
-                <form onSubmit={handlePayRent}>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                    Select Payment Method
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 mb-5">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("upi")}
-                      className={`p-2.5 rounded-xl border text-xs font-bold text-center cursor-pointer transition-all ${
-                        paymentMethod === "upi" ? "border-[#0F8B7D] bg-teal-50/60 text-[#0F8B7D]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Instant UPI
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("card")}
-                      className={`p-2.5 rounded-xl border text-xs font-bold text-center cursor-pointer transition-all ${
-                        paymentMethod === "card" ? "border-[#0F8B7D] bg-teal-50/60 text-[#0F8B7D]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Credit/Debit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("netbanking")}
-                      className={`p-2.5 rounded-xl border text-xs font-bold text-center cursor-pointer transition-all ${
-                        paymentMethod === "netbanking" ? "border-[#0F8B7D] bg-teal-50/60 text-[#0F8B7D]" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      NetBanking
-                    </button>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={paymentStatus === "processing"}
-                    className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-bold text-xs transition-colors cursor-pointer shadow-md flex items-center justify-center gap-2"
-                  >
-                    {paymentStatus === "processing" ? "Processing Escrow Payment..." : "Confirm & Pay ₹1,91,000"}
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* CHAT WITH HELPDESK MODAL / DRAWER                                        */}
@@ -707,6 +652,194 @@ export default function TenantHomepage() {
                     Confirm Booking (Deduct 2 Credits)
                   </button>
                 </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Live Rent Payment & GST Tax Receipt Modal */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto">
+            {rentPaid || paymentStatus === "success" ? (
+              <div>
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                      <CheckCircle2 size={22} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">Payment Completed</h3>
+                      <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                        <ShieldCheck size={12} />
+                        <span>Settled via Live Razorpay Escrow</span>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* GST Tax Invoice Box */}
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 text-xs space-y-3 font-mono">
+                  <div className="flex justify-between items-start pb-3 border-b border-slate-200">
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm font-sans">OFFICEX REALTY TRUST</p>
+                      <p className="text-[10px] text-slate-500 font-sans">GSTIN: 27AAACT0000A1Z5</p>
+                      <p className="text-[10px] text-slate-500 font-sans">Nodal Commercial Escrow Account</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider font-sans">
+                      PAID ✓
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] py-1">
+                    <div>
+                      <p className="text-slate-400 text-[10px] font-sans uppercase">Tax Invoice No.</p>
+                      <p className="font-bold text-slate-800">INV-2026-09-TATA</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-[10px] font-sans uppercase">Date of Payment</p>
+                      <p className="font-bold text-slate-800">{paymentReceipt?.date || "15 Sep 2026"}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-[10px] font-sans uppercase">Tenant Name</p>
+                      <p className="font-bold text-slate-800">Tata Digital Enterprise</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-[10px] font-sans uppercase">Unit &amp; Property</p>
+                      <p className="font-bold text-slate-800">Unit 5A, Apex Tower</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200 space-y-1.5 text-[11px]">
+                    <div className="flex justify-between text-slate-600 font-sans">
+                      <span>Base Rent (8,500 sqft @ ₹17.65/sqft)</span>
+                      <span className="font-mono">₹1,50,000</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600 font-sans">
+                      <span>CAM Charges</span>
+                      <span className="font-mono">₹25,000</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600 font-sans">
+                      <span>Integrated GST (18% on CAM/Services)</span>
+                      <span className="font-mono">₹16,000</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 font-black text-sm pt-2 border-t border-slate-200">
+                      <span className="font-sans">Total Amount Settled</span>
+                      <span className="font-mono text-emerald-700">₹{(paymentReceipt?.amount || 191000).toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-dashed border-slate-300 text-[10px] text-slate-500 space-y-0.5">
+                    <p><strong>Razorpay Payment ID:</strong> {paymentReceipt?.paymentId || "pay_live_verified"}</p>
+                    {paymentReceipt?.orderId && (
+                      <p><strong>Razorpay Order ID:</strong> {paymentReceipt.orderId}</p>
+                    )}
+                    <p><strong>Escrow Settlement:</strong> Instant (Auto-reconciled with Rent Roll)</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.print();
+                      }
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Download size={14} />
+                    <span>Download GST Invoice</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">Commercial Lease Rent Payment</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Apex Business Tower · Unit 5A (September 2026)</p>
+                  </div>
+                  <button
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-4 space-y-2 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Base Lease Rent (8,500 sqft)</span>
+                    <span className="font-bold text-slate-900 font-mono">₹1,50,000</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Common Area Maintenance (CAM)</span>
+                    <span className="font-bold text-slate-900 font-mono">₹25,000</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Applicable GST (18% on CAM)</span>
+                    <span className="font-bold text-slate-900 font-mono">₹16,000</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+                    <span className="font-bold text-slate-900">Total Net Payable</span>
+                    <span className="text-xl font-black text-[#0F8B7D] font-mono">₹1,91,000</span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-teal-50/70 border border-teal-200/80 rounded-xl mb-4 flex items-start gap-2.5">
+                  <ShieldCheck size={18} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                  <div className="text-[11px] text-teal-900">
+                    <p className="font-bold">Live Razorpay Escrow Gateway</p>
+                    <p className="text-teal-700 mt-0.5 leading-relaxed">
+                      Secured by 256-bit encryption. Supports UPI, NetBanking, NEFT/RTGS, Corporate Credit Cards. Instant automated GST tax invoice issued upon settlement.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    disabled={paymentStatus === "processing"}
+                    onClick={() => handlePayRentRazorpay(191000)}
+                    className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] disabled:opacity-60 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {paymentStatus === "processing" ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Opening Razorpay Live Checkout...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={16} />
+                        <span>Pay ₹1,91,000 with Live Razorpay</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={paymentStatus === "processing"}
+                    onClick={() => handlePayRentRazorpay(1)}
+                    className="w-full py-2.5 rounded-xl border border-teal-300 hover:bg-teal-50/50 text-[#0F8B7D] text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>⚡ Test Live ₹1 Real Payment Verification</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

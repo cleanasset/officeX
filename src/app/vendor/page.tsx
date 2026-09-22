@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
 import { 
@@ -53,9 +53,9 @@ export default function VendorPortalDashboard() {
   ]);
 
   const payouts = [
-    { date: "15 Dec 2024", ref: "Ref: AXIS-982341", amount: "₹45,500", color: "text-emerald-600" },
-    { date: "01 Dec 2024", ref: "Ref: HDFC-772901", amount: "₹1,12,000", color: "text-gray-900" },
-    { date: "15 Nov 2024", ref: "Ref: SBIN-332199", amount: "₹68,200", color: "text-gray-900" }
+    { date: "15 Sep 2026", ref: "Ref: RZP-ESC-982341", amount: "₹45,500", color: "text-emerald-600" },
+    { date: "01 Sep 2026", ref: "Ref: RZP-ESC-772901", amount: "₹1,12,000", color: "text-gray-900" },
+    { date: "15 Aug 2026", ref: "Ref: RZP-ESC-332199", amount: "₹68,200", color: "text-gray-900" }
   ];
 
   const [workOrders, setWorkOrders] = useState([
@@ -64,6 +64,28 @@ export default function VendorPortalDashboard() {
     { id: "WO-039", client: "Infosys", property: "Nexus Hub", category: "Electrical", catColor: "bg-amber-100 text-amber-700", timeline: "20 Nov - 30 Nov", progress: 100, status: "Completed", gross: 120000 },
     { id: "WO-035", client: "Deloitte", property: "Crystal Tower", category: "Plumbing", catColor: "bg-purple-100 text-purple-700", timeline: "08 Dec - 12 Dec", progress: 10, status: "Onboarding", gross: 28000 }
   ]);
+
+  useEffect(() => {
+    fetch("/api/work-orders")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.workOrders) && data.workOrders.length > 0) {
+          const mapped = data.workOrders.map((w: any) => ({
+            id: w.id,
+            client: w.client || "Apex Business Tower",
+            property: w.property || "Apex Tower",
+            category: w.title.includes("Chiller") || w.title.includes("HVAC") ? "HVAC" : w.title.includes("Lift") || w.title.includes("Elevator") ? "OEM Lift" : "MEP Service",
+            catColor: "bg-teal-100 text-teal-700",
+            timeline: w.startDate || "Active",
+            progress: w.pct || 50,
+            status: w.status || "In Progress",
+            gross: parseInt(w.contractValue?.replace(/\D/g, "") || "45000") || 45000
+          }));
+          setWorkOrders(mapped);
+        }
+      })
+      .catch(err => console.error("Error loading work orders in vendor dashboard:", err));
+  }, []);
 
   return (
     <div className="flex flex-col gap-6 font-sans">

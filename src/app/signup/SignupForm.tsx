@@ -256,22 +256,37 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
         localStorage.setItem("officex_user_name", fullName.trim());
         localStorage.setItem("officex_phone_verified", "1");
         localStorage.setItem("officex_email_verified", "1");
+        localStorage.setItem("officex_onboarding_completed", "1");
 
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
       }
 
-      setSuccessMsg("Contact verified! Routing to business onboarding...");
+      setSuccessMsg("Contact verified! Taking you to your workspace...");
       setTimeout(() => {
-        const cleanMobile = mobileNumber.replace(/\D/g, "");
-        const queryParams = new URLSearchParams({
-          role: selectedRole,
-          name: fullName.trim(),
-          email: email.trim().toLowerCase(),
-          mobile: cleanMobile,
-          verified: "1"
-        });
-        router.push(`/onboarding?${queryParams.toString()}`);
+        const rawRedirect = searchParams?.get("redirect");
+        let destination = rawRedirect && !rawRedirect.startsWith("/login") ? rawRedirect : "";
+        if (!destination) {
+          switch (selectedRole) {
+            case "broker":
+              destination = "/leasing";
+              break;
+            case "vendor":
+              destination = "/vendor";
+              break;
+            case "pm":
+              destination = "/ops";
+              break;
+            case "tenant":
+              destination = "/tenant";
+              break;
+            case "owner":
+            default:
+              destination = "/properties";
+              break;
+          }
+        }
+        router.push(destination);
       }, 700);
     } catch (err: any) {
       console.error("OTP error:", err);
