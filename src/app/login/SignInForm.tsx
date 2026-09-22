@@ -26,7 +26,8 @@ import {
   Globe,
   KeyRound,
   Check,
-  Building
+  Building,
+  Loader2
 } from "lucide-react";
 import {
   validateRedirect,
@@ -44,7 +45,7 @@ interface SignInFormProps {
   initialContext?: string;
 }
 
-type Step = "identifier" | "password" | "code" | "sso" | "mfa" | "workspace_chooser";
+type Step = "identifier" | "password" | "code" | "sso" | "mfa" | "workspace_chooser" | "signed_in_success";
 type Lang = "en" | "hi";
 
 export default function SignInForm({
@@ -60,6 +61,7 @@ export default function SignInForm({
 
   // Primary workflow state
   const [step, setStep] = useState<Step>("identifier");
+  const [successUserName, setSuccessUserName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -539,10 +541,8 @@ export default function SignInForm({
       document.cookie = `officex_user_role=${encodeURIComponent(roleName)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    if (initialRedirect && safeRedirect !== "/properties") {
-      window.location.href = safeRedirect;
-      return;
-    }
+    const storedName = (typeof window !== "undefined" && (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name"))) || "";
+    setSuccessUserName(storedName || userEmailOrPhone.split("@")[0] || "Member");
 
     const memList = availableMemberships && availableMemberships.length > 0 ? availableMemberships : memberships;
 
@@ -559,8 +559,11 @@ export default function SignInForm({
       return;
     }
 
-    // Direct routing to Commercial Rent Roll desk for individual users
-    window.location.href = safeRedirect !== "/properties" ? safeRedirect : "/properties/rent-roll";
+    const destination = (initialRedirect && safeRedirect !== "/properties") ? safeRedirect : "/properties/rent-roll";
+    setStep("signed_in_success");
+    setTimeout(() => {
+      window.location.href = destination;
+    }, 1200);
   };
 
   // --------------------------------------------------------------------------
@@ -602,7 +605,10 @@ export default function SignInForm({
     }
 
     const destination = safeRedirect !== "/properties" ? safeRedirect : membership.workspaceUrl;
-    window.location.href = destination;
+    setStep("signed_in_success");
+    setTimeout(() => {
+      window.location.href = destination;
+    }, 1200);
   };
 
   // --------------------------------------------------------------------------
@@ -861,6 +867,31 @@ export default function SignInForm({
               <div className="mb-5 p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold flex items-start gap-2.5 animate-fadeIn">
                 <CheckCircle2 size={16} className="shrink-0 text-blue-600 mt-0.5" />
                 <span className="leading-relaxed">{infoMessage}</span>
+              </div>
+            )}
+
+            {/* ===============================================================
+                AUTHENTICATION CONFIRMED / SIGNED IN SUCCESS
+                =============================================================== */}
+            {step === "signed_in_success" && (
+              <div className="text-center py-8 animate-fadeIn">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mb-4 shadow-sm">
+                  <CheckCircle2 size={32} />
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                  <CheckCircle2 size={12} />
+                  Authentication Confirmed
+                </span>
+                <h2 className="text-2xl font-black text-slate-950 tracking-tight mt-1">
+                  Signed In Successfully!
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-xs mx-auto">
+                  Welcome back{successUserName ? `, ${successUserName}` : ""}. Loading your workspace &amp; checking subscription status...
+                </p>
+                <div className="mt-6 flex justify-center items-center gap-2 text-xs font-bold text-[#0F8B7D]">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Preparing SaaS dashboard...</span>
+                </div>
               </div>
             )}
 

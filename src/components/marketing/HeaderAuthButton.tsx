@@ -160,12 +160,12 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
 
             <div className="py-1">
               <Link
-                href="/login"
+                href="/properties/rent-roll"
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-[#0F8B7D] hover:bg-teal-50 transition-colors"
               >
                 <LayoutDashboard size={15} className="text-[#0F8B7D]" />
-                <span>Open Live Dashboard</span>
+                <span>{isSubscribed ? "Open Live Dashboard" : "Activate Subscription (₹100)"}</span>
               </Link>
             </div>
 

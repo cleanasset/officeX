@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2 } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 interface SubscriptionGateProps {
@@ -29,6 +29,38 @@ export default function SubscriptionGate({
   const [userRole, setUserRole] = useState("");
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentToast, setPaymentToast] = useState<string | null>(null);
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
+
+  const isDiscounted = appliedCoupon === "RENTROLL12";
+  const finalPriceInRupees = isDiscounted ? 1 : 100;
+  const finalAmountInPaise = isDiscounted ? 100 : 10000;
+
+  const handleApplyCoupon = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = couponInput.trim().toUpperCase();
+    if (!clean) return;
+
+    if (clean === "RENTROLL12") {
+      setAppliedCoupon("RENTROLL12");
+      setCouponSuccess("Coupon 'RENTROLL12' applied! 99% discount active — you pay only ₹1.");
+      setCouponError(null);
+    } else {
+      setCouponError("Invalid coupon code. Try RENTROLL12 for 99% off.");
+      setCouponSuccess(null);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponSuccess(null);
+    setCouponError(null);
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -61,15 +93,17 @@ export default function SubscriptionGate({
     setIsPaymentProcessing(true);
     try {
       await initiateRazorpayPayment({
-        amount: 10000, // ₹100 in paise
+        amount: finalAmountInPaise,
         receipt: `SUB-${Date.now()}`,
-        description: "OfficeX Platform Subscription — Operational Workspace Access",
+        description: `OfficeX Platform Subscription — ${portalName}${isDiscounted ? " (RENTROLL12 99% OFF)" : ""}`,
         prefillName: userName,
         prefillEmail: userEmail,
         notes: {
           portal: portalName,
           user_email: userEmail,
           type: "subscription",
+          coupon: appliedCoupon || "none",
+          discount: isDiscounted ? "99%" : "0%",
         },
         onSuccess: (response) => {
           // Payment verified — activate subscription
@@ -157,18 +191,42 @@ export default function SubscriptionGate({
             </button>
           </div>
 
-          <div className="text-center py-6">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-teal-50 border border-teal-100 text-[#0F8B7D] flex items-center justify-center mb-4 shadow-xs">
-              <Lock size={26} />
+          {/* Step 1 Indicator: Prominent User Signed In Status */}
+          <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 my-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#0F8B7D] to-teal-500 text-white font-black flex items-center justify-center text-base shadow-xs shrink-0">
+                {userName ? userName.charAt(0).toUpperCase() : "U"}
+              </div>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-black text-slate-900 truncate max-w-[200px] sm:max-w-xs">{userName}</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    <CheckCircle size={11} className="text-emerald-700" />
+                    Signed In
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium truncate max-w-[220px] sm:max-w-sm mt-0.5">{userEmail || "Google Verified Account"}</p>
+              </div>
+            </div>
+            <div className="self-start sm:self-center shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-white border border-emerald-300 px-2.5 py-1 rounded-lg shadow-2xs">
+                Step 1 of 2 Complete
+              </span>
+            </div>
+          </div>
+
+          <div className="text-center py-4">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mb-3 shadow-xs">
+              <Lock size={22} />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-              SUBSCRIPTION REQUIRED
+              STEP 2 OF 2: SUBSCRIPTION REQUIRED
             </span>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-3 tracking-tight">
-              Activate Subscription to Access Live Dashboard
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2.5 tracking-tight">
+              Activate Subscription to Enter Live Dashboard
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-md mx-auto leading-relaxed">
-              Hello <strong className="text-slate-900">{userName}</strong> ({userEmail}). Your account is verified, but access to the operational dashboard requires an active portfolio plan.
+              Your Google account is signed in and verified. To unlock the live Rent Roll, statutory compliance, and facility management tools, complete your ₹100 monthly subscription.
             </p>
           </div>
 
@@ -191,11 +249,100 @@ export default function SubscriptionGate({
             </div>
           </div>
 
+          {/* Coupon Code Section */}
+          <div className="mb-5 bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <Tag size={13} className="text-[#0F8B7D]" />
+                Have a coupon or promo code?
+              </span>
+              {appliedCoupon && (
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black font-mono tracking-wider text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                    {appliedCoupon}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700">
+                    99% OFF Applied (-₹99)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                  title="Remove coupon"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleApplyCoupon} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value);
+                    if (couponError) setCouponError(null);
+                  }}
+                  placeholder="Enter code (e.g. RENTROLL12)"
+                  className="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] uppercase"
+                />
+                <button
+                  type="submit"
+                  disabled={!couponInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Apply
+                </button>
+              </form>
+            )}
+
+            {couponError && (
+              <p className="text-[11px] font-semibold text-rose-600 mt-1.5">{couponError}</p>
+            )}
+            {couponSuccess && (
+              <p className="text-[11px] font-semibold text-emerald-600 mt-1.5 flex items-center gap-1">
+                <CheckCircle size={12} /> {couponSuccess}
+              </p>
+            )}
+          </div>
+
           {/* Pricing Banner */}
           <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 border border-teal-200 mb-6 text-center">
-            <div className="text-[10px] font-black uppercase tracking-widest text-teal-700 mb-1">SUBSCRIPTION FEE</div>
-            <div className="text-3xl font-black text-[#0F8B7D]">₹100<span className="text-sm font-bold text-slate-500">/mo</span></div>
-            <div className="text-[10px] text-slate-500 font-semibold mt-1">Secure payment via Razorpay • Instant activation</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-teal-700 mb-1">
+              {isDiscounted ? "PROMOTIONAL RATE APPLIED" : "SUBSCRIPTION FEE"}
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              {isDiscounted ? (
+                <>
+                  <span className="text-xl font-bold text-slate-400 line-through">₹100</span>
+                  <span className="text-4xl font-black text-[#0F8B7D]">₹1</span>
+                  <span className="text-xs font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                    99% OFF
+                  </span>
+                </>
+              ) : (
+                <div className="text-3xl font-black text-[#0F8B7D]">
+                  ₹100<span className="text-sm font-bold text-slate-500">/mo</span>
+                </div>
+              )}
+            </div>
+            <div className="text-[10px] text-slate-500 font-semibold mt-1">
+              {isDiscounted
+                ? "Special promo applied (RENTROLL12) • Secure payment via Razorpay"
+                : "Secure payment via Razorpay • Instant activation"}
+            </div>
           </div>
 
           {/* Action CTAs */}
@@ -213,7 +360,7 @@ export default function SubscriptionGate({
               ) : (
                 <>
                   <CreditCard size={14} />
-                  <span>Pay ₹100 &amp; Activate Subscription Now</span>
+                  <span>Pay ₹{finalPriceInRupees} &amp; Activate Subscription Now</span>
                 </>
               )}
             </button>
