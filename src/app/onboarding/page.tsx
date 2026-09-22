@@ -4223,30 +4223,6 @@ function OnboardingWizardContent() {
                       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
                       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
                       document.cookie = `officex_user_role=${encodeURIComponent(role === "owner" ? "Property Owner (SaaS)" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant")}; path=/; max-age=86400; SameSite=Lax`;
-
-                      // Save the onboarded org as a property entry for the dashboard
-                      if (role === "owner") {
-                        const existingProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-                        const newProp = {
-                          id: orgData.id || `prop-${Date.now()}`,
-                          name: orgData.tradeName || orgData.legalName || "My Commercial Property",
-                          city: orgCity,
-                          state: orgState,
-                          address: principalPlace.addressLine1 || "",
-                          microMarket: principalPlace.city || "",
-                          grade: "Grade A",
-                          totalArea: ownerProfile.totalCommercialGLASqft || "0",
-                          baseRent: ownerProfile.askingRentSqftMonth || "",
-                          ownerName: userData.fullName,
-                          ownerEmail: userData.email,
-                          createdAt: new Date().toISOString()
-                        };
-                        const alreadyExists = existingProps.some((p: any) => p.name?.toLowerCase() === newProp.name.toLowerCase());
-                        if (!alreadyExists) {
-                          existingProps.push(newProp);
-                          localStorage.setItem("officex_user_properties", JSON.stringify(existingProps));
-                        }
-                      }
                     }
                   }}
                   className={`w-full sm:w-auto px-10 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2.5 transition-all shadow-xl ${
