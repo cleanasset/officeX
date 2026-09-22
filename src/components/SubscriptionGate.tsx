@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 interface SubscriptionGateProps {
@@ -36,9 +36,10 @@ export default function SubscriptionGate({
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
-  const isDiscounted = appliedCoupon === "RENTROLL12";
-  const finalPriceInRupees = isDiscounted ? 1 : 100;
-  const finalAmountInPaise = isDiscounted ? 100 : 10000;
+  // 100% Free promo code
+  const is100PercentDiscount = appliedCoupon === "RENTROLL12";
+  const finalPriceInRupees = is100PercentDiscount ? 0 : 100;
+  const finalAmountInPaise = is100PercentDiscount ? 0 : 10000;
 
   const handleApplyCoupon = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -47,10 +48,10 @@ export default function SubscriptionGate({
 
     if (clean === "RENTROLL12") {
       setAppliedCoupon("RENTROLL12");
-      setCouponSuccess("Coupon 'RENTROLL12' applied! 99% discount active — you pay only ₹1.");
+      setCouponSuccess("🎉 Coupon 'RENTROLL12' applied! 100% FREE Access activated (₹0).");
       setCouponError(null);
     } else {
-      setCouponError("Invalid coupon code. Try RENTROLL12 for 99% off.");
+      setCouponError("Invalid coupon code. Try RENTROLL12 for 100% FREE access.");
       setCouponSuccess(null);
     }
   };
@@ -62,14 +63,45 @@ export default function SubscriptionGate({
     setCouponError(null);
   };
 
-  useEffect(() => {
+  // Helper to permanently persist subscription across all storage layers
+  const persistSubscription = async (email: string, coupon: string = "none", paymentId: string = "FREE_RENTROLL12") => {
+    const cleanEmail = email.toLowerCase().trim();
     if (typeof window !== "undefined") {
-      const email = localStorage.getItem("officex_user_email");
-      const name = localStorage.getItem("officex_user_name") || "Member";
-      const role = localStorage.getItem("officex_user_role") || "Property Owner";
-      const sub = localStorage.getItem("officex_subscription");
+      localStorage.setItem("officex_subscription", "active");
+      sessionStorage.setItem("officex_subscription", "active");
+      if (cleanEmail) {
+        localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
+        sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
+        document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=31536000; SameSite=Lax`;
+      }
+      document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+      localStorage.setItem("officex_payment_id", paymentId);
+      localStorage.setItem("officex_order_id", `ORD_${paymentId}`);
+    }
 
-      setUserEmail(email || "");
+    // Call server to persist in database/memory cache
+    try {
+      if (cleanEmail) {
+        await fetch("/api/subscription/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, coupon, paymentId })
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
+  };
+
+  useEffect(() => {
+    const checkSubscriptionState = async () => {
+      if (typeof window === "undefined") return;
+
+      const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const name = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "Member";
+      const role = localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role") || "Property Owner";
+      
+      setUserEmail(email);
       setUserName(name);
       setUserRole(role);
 
@@ -77,40 +109,79 @@ export default function SubscriptionGate({
         setIsLoggedIn(false);
         setIsSubscribed(false);
         router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-      } else {
-        setIsLoggedIn(true);
-        if (sub === "active") {
-          setIsSubscribed(true);
-        } else {
-          setIsSubscribed(false);
-        }
+        setIsChecking(false);
+        return;
       }
+
+      setIsLoggedIn(true);
+
+      // Check multi-layer client storage
+      const subLocal = localStorage.getItem("officex_subscription") === "active";
+      const subSession = sessionStorage.getItem("officex_subscription") === "active";
+      const subEmailLocal = email ? localStorage.getItem(`officex_sub_${email}`) === "active" : false;
+      const subCookie = document.cookie.includes("officex_subscription=active") || (email && document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`));
+
+      if (subLocal || subSession || subEmailLocal || subCookie) {
+        setIsSubscribed(true);
+        setIsChecking(false);
+        return;
+      }
+
+      // Query server-side subscription database for this email
+      try {
+        const res = await fetch(`/api/subscription/status?email=${encodeURIComponent(email)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.subscribed) {
+            persistSubscription(email, "verified_server", "SERVER_SAVED");
+            setIsSubscribed(true);
+            setIsChecking(false);
+            return;
+          }
+        }
+      } catch {
+        // Fallback
+      }
+
+      setIsSubscribed(false);
       setIsChecking(false);
-    }
+    };
+
+    checkSubscriptionState();
   }, [pathname, router]);
 
-  const handleRazorpaySubscription = async () => {
+  // Handle 100% Free Instant Claim or Paid Razorpay Subscription
+  const handleActivateSubscription = async () => {
     setIsPaymentProcessing(true);
+    const email = userEmail || localStorage.getItem("officex_user_email") || "";
+
+    // If 100% Discounted (RENTROLL12) — Instant One-Click Free Activation
+    if (is100PercentDiscount) {
+      await persistSubscription(email, "RENTROLL12", `FREE_RENTROLL12_${Date.now()}`);
+      setIsSubscribed(true);
+      setIsPaymentProcessing(false);
+      setPaymentToast("🎉 100% Free Subscription Activated! Welcome to OfficeX Live Dashboard.");
+      setTimeout(() => setPaymentToast(null), 6000);
+      return;
+    }
+
+    // Standard ₹100 / paid subscription via Razorpay
     try {
       await initiateRazorpayPayment({
         amount: Math.round(finalAmountInPaise),
         receipt: `SUB_${Date.now()}`,
-        description: `OfficeX Platform Subscription - ${portalName}${isDiscounted ? " (RENTROLL12 99% OFF)" : ""}`,
+        description: `OfficeX Platform Subscription - ${portalName}`,
         prefillName: userName || "Member",
-        prefillEmail: userEmail || "",
+        prefillEmail: email,
         notes: {
           portal: portalName,
-          user_email: userEmail || "",
+          user_email: email,
           type: "subscription",
           coupon: appliedCoupon || "none",
-          discount: isDiscounted ? "99%" : "0%",
+          discount: "0%",
         },
-        onSuccess: (response) => {
-          // Payment verified — activate subscription
-          localStorage.setItem("officex_subscription", "active");
-          localStorage.setItem("officex_payment_id", response.razorpay_payment_id);
-          localStorage.setItem("officex_order_id", response.razorpay_order_id);
-          document.cookie = "officex_subscription=active; path=/; max-age=2592000";
+        onSuccess: async (response) => {
+          await persistSubscription(email, appliedCoupon || "none", response.razorpay_payment_id);
           setIsSubscribed(true);
           setPaymentToast(`Subscription activated! Payment ID: ${response.razorpay_payment_id}`);
           setTimeout(() => setPaymentToast(null), 6000);
@@ -226,7 +297,7 @@ export default function SubscriptionGate({
               Activate Subscription to Enter Live Dashboard
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-md mx-auto leading-relaxed">
-              Your Google account is signed in and verified. To unlock the live Rent Roll, statutory compliance, and facility management tools, complete your ₹100 monthly subscription.
+              Your account is verified. To unlock the live Rent Roll, statutory compliance, and facility management tools, activate your monthly subscription.
             </p>
           </div>
 
@@ -273,8 +344,8 @@ export default function SubscriptionGate({
                   <span className="text-xs font-black font-mono tracking-wider text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-300">
                     {appliedCoupon}
                   </span>
-                  <span className="text-xs font-bold text-emerald-700">
-                    99% OFF Applied (-₹99)
+                  <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                    <Gift size={13} /> 100% FREE Access (₹0 Forever)
                   </span>
                 </div>
                 <button
@@ -321,15 +392,15 @@ export default function SubscriptionGate({
           {/* Pricing Banner */}
           <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 border border-teal-200 mb-6 text-center">
             <div className="text-[10px] font-black uppercase tracking-widest text-teal-700 mb-1">
-              {isDiscounted ? "PROMOTIONAL RATE APPLIED" : "SUBSCRIPTION FEE"}
+              {is100PercentDiscount ? "PROMOTIONAL 100% FREE ACCESS" : "SUBSCRIPTION FEE"}
             </div>
             <div className="flex items-center justify-center gap-3">
-              {isDiscounted ? (
+              {is100PercentDiscount ? (
                 <>
                   <span className="text-xl font-bold text-slate-400 line-through">₹100</span>
-                  <span className="text-4xl font-black text-[#0F8B7D]">₹1</span>
+                  <span className="text-4xl font-black text-[#0F8B7D]">₹0 FREE</span>
                   <span className="text-xs font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                    99% OFF
+                    100% OFF
                   </span>
                 </>
               ) : (
@@ -339,8 +410,8 @@ export default function SubscriptionGate({
               )}
             </div>
             <div className="text-[10px] text-slate-500 font-semibold mt-1">
-              {isDiscounted
-                ? "Special promo applied (RENTROLL12) • Secure payment via Razorpay"
+              {is100PercentDiscount
+                ? "Promo active: RENTROLL12 • 1-click instant lifetime dashboard unlock"
                 : "Secure payment via Razorpay • Instant activation"}
             </div>
           </div>
@@ -348,14 +419,23 @@ export default function SubscriptionGate({
           {/* Action CTAs */}
           <div className="flex flex-col gap-3">
             <button
-              onClick={handleRazorpaySubscription}
+              onClick={handleActivateSubscription}
               disabled={isPaymentProcessing}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className={`w-full py-3.5 px-4 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                is100PercentDiscount
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/20"
+                  : "bg-[#0F8B7D] hover:bg-[#0D7A6E]"
+              }`}
             >
               {isPaymentProcessing ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Processing Payment...</span>
+                  <span>Activating Workspace...</span>
+                </>
+              ) : is100PercentDiscount ? (
+                <>
+                  <Sparkles size={14} className="text-yellow-300" />
+                  <span>✨ Claim 100% Free Access &amp; Unlock Dashboard Now</span>
                 </>
               ) : (
                 <>

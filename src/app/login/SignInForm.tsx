@@ -521,11 +521,22 @@ export default function SignInForm({
       localStorage.setItem("officex_user_role", roleName);
       // Subscription is NOT auto-activated — requires Razorpay payment
 
-      const cleanVal = userEmailOrPhone.trim();
+      const cleanVal = userEmailOrPhone.trim().toLowerCase();
       if (cleanVal.includes("@")) {
         sessionStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_email_verified", "1");
+
+        // Check if this specific email is already subscribed
+        const isEmailSubscribed = localStorage.getItem(`officex_sub_${cleanVal}`) === "active" ||
+          sessionStorage.getItem(`officex_sub_${cleanVal}`) === "active" ||
+          document.cookie.includes(`officex_sub_${encodeURIComponent(cleanVal)}=active`);
+
+        if (isEmailSubscribed) {
+          localStorage.setItem("officex_subscription", "active");
+          sessionStorage.setItem("officex_subscription", "active");
+          document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        }
       } else if (/^\+?[0-9\s-]+$/.test(cleanVal)) {
         sessionStorage.setItem("officex_user_mobile", cleanVal);
         localStorage.setItem("officex_user_mobile", cleanVal);
