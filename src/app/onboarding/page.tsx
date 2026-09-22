@@ -624,15 +624,16 @@ function OnboardingWizardContent() {
       showToast("Please enter a valid Bank Account Number (minimum 9 digits).", "error");
       return;
     }
-    if (!ifsc || ifsc.length !== 11) {
-      showToast("Please enter an 11-digit Bank IFSC code.", "error");
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscRegex.test(ifsc)) {
+      showToast("Invalid Bank IFSC format (e.g. HDFC0000123). 4 letters + '0' (zero) + 6 digits/letters.", "error");
       return;
     }
     setIsVerifyingBank(true);
     setTimeout(() => {
       setIsVerifyingBank(false);
       setKycChecks((prev) => ({ ...prev, bankVerified: true }));
-      const bName = verifiedBankDetails?.bank || brokerProfile.commissionEscrowBankName || "Bank";
+      const bName = verifiedBankDetails?.bank || brokerProfile.commissionEscrowBankName || "HDFC Bank";
       showToast(`₹1 Penny Drop executed via NPCI IMPS! Account verified at ${bName} matching "${orgData.legalName || 'Authorized Entity'}".`, "success");
     }, 800);
   };

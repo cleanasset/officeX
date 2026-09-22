@@ -120,16 +120,16 @@ export default function PropertyMasterRegistry() {
           }
         }
 
-        const mapped = local.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          type: p.type || "Commercial Office",
-          location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
-          area: Number(p.totalArea || 0).toLocaleString(),
+        const mapped = (local || []).map((p: any) => ({
+          id: p?.id || `prop-${Math.random().toString(36).substring(7)}`,
+          name: p?.name || p?.propertyName || "Commercial Tower",
+          type: p?.type || p?.subType || "Commercial Office",
+          location: `${p?.city || "Mumbai"}${p?.state ? `, ${p.state}` : ""}`,
+          area: Number(p?.totalArea || p?.totalAreaSft || 0).toLocaleString(),
           occupied: 0,
-          vacant: Number(p.totalArea || 0),
+          vacant: Number(p?.totalArea || p?.totalAreaSft || 0),
           occPct: 0,
-          grade: p.grade || "A"
+          grade: p?.grade || "A"
         }));
         setProperties(mapped);
         if (mapped.length > 0) setSelectedPropId(mapped[0].id);
@@ -140,13 +140,13 @@ export default function PropertyMasterRegistry() {
     loadProperties();
   }, []);
 
-  const filteredProperties = properties.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.location.toLowerCase().includes(search.toLowerCase()) ||
-    p.id.toLowerCase().includes(search.toLowerCase())
+  const filteredProperties = (properties || []).filter((p) =>
+    (p?.name || "").toLowerCase().includes((search || "").toLowerCase()) ||
+    (p?.location || "").toLowerCase().includes((search || "").toLowerCase()) ||
+    (p?.id || "").toLowerCase().includes((search || "").toLowerCase())
   );
 
-  const selectedProp = properties.find((p) => p.id === selectedPropId);
+  const selectedProp = (properties || []).find((p) => p?.id === selectedPropId);
 
   return (
     <div className="flex gap-6 font-sans relative">
