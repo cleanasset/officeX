@@ -1149,13 +1149,21 @@ function OnboardingWizardContent() {
       {/* Header Bar - Clean Light Mode */}
       <header className="border-b border-slate-200/90 bg-white/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <Link href="/" className="inline-flex items-center group">
+          <Link href="/" className="inline-flex items-center gap-3 group">
             <Image
-              src="/officex-logo-full.png"
-              alt="OfficeX - Workspaces, Simplified"
-              width={160}
+              src="/logo-removebg-preview.png"
+              alt="OfficeX Logo"
+              width={40}
               height={40}
-              className="h-8 sm:h-9 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              className="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform"
+              priority
+            />
+            <Image
+              src="/name-removebg-preview.png"
+              alt="OfficeX"
+              width={140}
+              height={36}
+              className="h-7 sm:h-8 w-auto object-contain"
               priority
             />
           </Link>

@@ -614,7 +614,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <img src="/logo-removebg-preview.png" alt="OfficeX Logo" className="h-8 w-auto object-contain" />
-              <img src="/name-removebg-preview.png" alt="OfficeX" className="h-8 w-auto object-contain brightness-0 invert" />
+              <img src="/name-removebg-preview.png" alt="OfficeX" className="h-8 w-auto object-contain" />
             </div>
             <p className="text-gray-400 leading-relaxed text-[11px]">
               The unified operating platform for commercial workspaces — streamlining discovery, transactions, vendor procurement, and building operations.

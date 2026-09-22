@@ -680,7 +680,7 @@ export default function LandingPage() {
               width={60} 
               height={60} 
               priority
-              className={`object-contain transition-all ${isScrolledPastHero ? "filter brightness-0 invert" : ""}`}
+              className="object-contain transition-all"
               style={{ width: "auto", height: "46px" }}
             />
             <Image 
@@ -689,7 +689,7 @@ export default function LandingPage() {
               width={200} 
               height={46} 
               priority
-              className={`object-contain transition-all ${isScrolledPastHero ? "filter brightness-0 invert" : ""}`}
+              className="object-contain transition-all"
               style={{ width: "auto", height: "46px" }}
             />
           </Link>

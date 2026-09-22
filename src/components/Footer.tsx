@@ -31,7 +31,7 @@ export default function Footer() {
               alt="OfficeX Logo" 
               width={80} 
               height={80} 
-              className="object-contain filter brightness-0 invert group-hover:scale-105 transition-transform"
+              className="object-contain group-hover:scale-105 transition-transform"
               style={{ width: "auto", height: "56px" }}
             />
             <Image 
@@ -39,7 +39,7 @@ export default function Footer() {
               alt="OfficeX" 
               width={250} 
               height={60} 
-              className="object-contain filter brightness-0 invert group-hover:opacity-90 transition-opacity"
+              className="object-contain group-hover:opacity-90 transition-opacity"
               style={{ width: "auto", height: "56px" }}
             />
           </Link>
