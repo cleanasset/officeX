@@ -65,11 +65,21 @@ export async function initiateRazorpayPayment(
 
     const orderData = await orderRes.json();
 
-    // Step 2: Ensure Razorpay SDK is loaded
+    // Step 2: Ensure Razorpay SDK script is loaded
     if (!window.Razorpay) {
-      throw new Error(
-        "Razorpay SDK not loaded. Please refresh the page and try again."
-      );
+      const loaded = await new Promise<boolean>((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+      if (!loaded || !window.Razorpay) {
+        throw new Error(
+          "Failed to load Razorpay checkout SDK. Please check your internet connection."
+        );
+      }
     }
 
     // Step 3: Open Razorpay Checkout

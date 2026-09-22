@@ -1,20 +1,34 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    const key_id = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!key_id || !key_secret) {
+      return NextResponse.json(
+        {
+          error: "Razorpay credentials not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Vercel environment variables.",
+        },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const {
-      amount = 10000, // Default ₹100 in paise
+      amount = 10000, // ₹100 in paise
       currency = "INR",
       receipt = `rcpt_${Date.now()}`,
       notes = {},
     } = body;
+
+    const razorpay = new Razorpay({
+      key_id,
+      key_secret,
+    });
 
     const order = await razorpay.orders.create({
       amount,
@@ -28,7 +42,7 @@ export async function POST(request: Request) {
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        key: process.env.RAZORPAY_KEY_ID,
+        key: key_id,
       },
       { status: 201 }
     );

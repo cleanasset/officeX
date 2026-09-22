@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -13,9 +15,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify signature using HMAC SHA256
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!key_secret) {
+      return NextResponse.json(
+        { error: "RAZORPAY_KEY_SECRET is not configured on the server." },
+        { status: 500 }
+      );
+    }
+
+    // Verify cryptographic signature using HMAC SHA256
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac("sha256", key_secret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
@@ -25,13 +35,10 @@ export async function POST(request: Request) {
         received: razorpay_signature,
       });
       return NextResponse.json(
-        { error: "Payment verification failed — signature mismatch" },
+        { error: "Payment verification failed — invalid signature" },
         { status: 400 }
       );
     }
-
-    // Signature verified — payment is authentic
-    // Optionally persist to audit log here via DB insert
 
     return NextResponse.json(
       {
