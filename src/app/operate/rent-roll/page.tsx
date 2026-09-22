@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -20,7 +20,9 @@ import {
   Clock,
   Sparkles,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  CreditCard,
+  Tag
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -29,6 +31,21 @@ import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 export default function RentRollProductPage() {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("officex_user_email");
+      const sub = localStorage.getItem("officex_subscription");
+      setIsLoggedIn(!!email);
+      setIsSubscribed(sub === "active");
+    }
+  }, []);
+
+  const subscribeHref = isLoggedIn
+    ? "/properties/rent-roll"
+    : "/login?redirect=/properties/rent-roll";
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -180,22 +197,43 @@ export default function RentRollProductPage() {
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-3 mb-4 w-full sm:w-auto">
+                <Link
+                  href={subscribeHref}
+                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:shadow-[#0D7B6C]/35 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
+                >
+                  <CreditCard size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
+                  <span>
+                    {isSubscribed
+                      ? "Open Rent Roll Dashboard"
+                      : isLoggedIn
+                      ? "Activate Rent Roll Subscription (₹100/mo)"
+                      : "Subscribe to Rent Roll"}
+                  </span>
+                  <ArrowRight size={15} />
+                </Link>
+                <Link
+                  href="/properties/rent-roll"
+                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                >
+                  <span>Explore Live Demo</span>
+                  <ArrowUpRight size={14} className="text-[#0D7B6C]" />
+                </Link>
                 <button
                   type="button"
                   onClick={() => setEnquiryOpen(true)}
-                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  className="px-5 py-3.5 rounded-xl bg-teal-50/70 hover:bg-teal-50 text-[#0D7B6C] font-bold text-xs sm:text-sm border border-teal-200/80 transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                 >
-                  <span>Enquire for Rent Roll</span>
-                  <ArrowRight size={15} />
+                  <span>Enquire / Custom Walkthrough</span>
                 </button>
-                <Link
-                  href="/properties/rent-roll"
-                  className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  <span>Explore Live Portal Demo</span>
-                  <ArrowUpRight size={14} className="text-[#0D7B6C]" />
-                </Link>
+              </div>
+
+              {/* Direct Subscription Quick Note */}
+              <div className="mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50/90 border border-emerald-200 text-[11px] text-emerald-900 font-medium">
+                <Sparkles size={13} className="text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Direct Access:</strong> Sign in &amp; activate instantly for ₹100/mo (use code <strong className="font-mono text-emerald-700 bg-white px-1 py-0.5 rounded border border-emerald-300">RENTROLL12</strong> for ₹1 trial)
+                </span>
               </div>
 
               {/* Trust Badges */}
@@ -438,7 +476,103 @@ export default function RentRollProductPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
-          6. BOTTOM CALL TO ACTION
+          6. DIRECT SUBSCRIPTION & SAAS PRICING SECTION
+          ═══════════════════════════════════════════════════════════════ */}
+      <section className="py-16 bg-[#F1F5F9] border-b border-slate-200/80 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden relative">
+            <div className="h-2 bg-gradient-to-r from-[#0D7B6C] via-teal-400 to-[#0F172A]" />
+
+            <div className="p-6 sm:p-10 lg:p-12">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                {/* Left Plan Details */}
+                <div className="lg:col-span-7">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#0D7B6C] text-xs font-black uppercase tracking-wider mb-3">
+                    <Sparkles size={13} />
+                    <span>Instant Direct Subscription</span>
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mb-2">
+                    Rent Roll &amp; Revenue Management License
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6 font-medium">
+                    No enterprise sales gatekeeping. Sign in with your work email or Google account to unlock live commercial lease registries, automated CAM reconciliation, and board-ready financial packs.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700 font-semibold">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0D7B6C] shrink-0" />
+                      <span>Unlimited Leases &amp; Stacking Charts</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0D7B6C] shrink-0" />
+                      <span>Automated 90-Day Escalation Alerts</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0D7B6C] shrink-0" />
+                      <span>CAM Square-Foot Expense Pooling</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0D7B6C] shrink-0" />
+                      <span>SEBI REIT &amp; Statutory Audit Exports</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0D7B6C] shrink-0" />
+                      <span>Nodal Bank Escrow Reconciled Billing</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#0D7B6C] shrink-0" />
+                      <span>Section 106 Statutory Arrears Notices</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Pricing Card */}
+                <div className="lg:col-span-5 bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Transparent SaaS License
+                  </span>
+                  <div className="my-3 flex items-baseline justify-center gap-1">
+                    <span className="text-4xl sm:text-5xl font-black text-slate-900 font-mono">₹100</span>
+                    <span className="text-xs sm:text-sm text-slate-500 font-semibold">/ month</span>
+                  </div>
+
+                  <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 mb-5 text-[11px] text-emerald-800 font-medium">
+                    <div className="font-bold flex items-center justify-center gap-1 text-emerald-900">
+                      <Tag size={12} className="text-emerald-700" />
+                      <span>Promo: Apply code <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-300">RENTROLL12</strong></span>
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-emerald-700">99% launch discount — pay only ₹1 for your first month</div>
+                  </div>
+
+                  <Link
+                    href={subscribeHref}
+                    className="w-full py-3.5 px-6 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                  >
+                    <CreditCard size={15} className="text-teal-200 group-hover:scale-110 transition-transform" />
+                    <span>
+                      {isSubscribed
+                        ? "Open Rent Roll Dashboard"
+                        : isLoggedIn
+                        ? "Activate Subscription Now"
+                        : "Login & Subscribe Directly"}
+                    </span>
+                    <ArrowRight size={14} />
+                  </Link>
+
+                  <p className="text-[10px] text-slate-500 mt-3 font-medium">
+                    Secured by Razorpay · Cancel anytime · Instant activation
+                  </p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          7. BOTTOM CALL TO ACTION
           ═══════════════════════════════════════════════════════════════ */}
       <section className="py-16 bg-gradient-to-r from-[#0D7B6C] to-[#0A6357] text-white px-4 sm:px-6 text-center">
         <div className="max-w-3xl mx-auto">
@@ -446,21 +580,36 @@ export default function RentRollProductPage() {
             Ready to Streamline Your Portfolio Rent Roll?
           </h2>
           <p className="text-sm sm:text-base text-teal-50 mb-8 font-medium max-w-xl mx-auto leading-relaxed">
-            Join leading commercial REITs and Grade-A office landlords. Schedule a personalized walkthrough of the Rent Roll &amp; CAM billing engine today.
+            Join leading commercial REITs and Grade-A office landlords. Subscribe directly for instant live access or request a custom walkthrough.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5">
+            <Link
+              href={subscribeHref}
+              className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 group"
+            >
+              <CreditCard size={15} className="text-[#0D7B6C] group-hover:scale-110 transition-transform" />
+              <span>
+                {isSubscribed
+                  ? "Open Rent Roll Dashboard"
+                  : isLoggedIn
+                  ? "Activate Subscription (₹100/mo)"
+                  : "Subscribe to Rent Roll"}
+              </span>
+              <ArrowRight size={14} />
+            </Link>
             <button
               type="button"
               onClick={() => setEnquiryOpen(true)}
-              className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+              className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all cursor-pointer"
             >
-              Request Rent Roll Walkthrough
+              Request Custom Walkthrough
             </button>
             <Link
               href="/properties/rent-roll"
-              className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all"
+              className="px-6 py-3.5 bg-teal-900/60 hover:bg-teal-900 text-teal-100 font-semibold rounded-xl text-xs sm:text-sm border border-teal-400/20 transition-all flex items-center gap-1.5"
             >
-              Explore Live Portal Demo
+              <span>Explore Live Demo</span>
+              <ArrowUpRight size={14} />
             </Link>
           </div>
         </div>
