@@ -22,7 +22,8 @@ import {
   FileSpreadsheet,
   Layers,
   ArrowUpRight,
-  UserPlus
+  UserPlus,
+  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
@@ -44,9 +45,10 @@ export default function PropertyDashboardClient({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [isCleanMode, setIsCleanMode] = useState(false);
-  const [userEmail, setUserEmail] = useState("owner@officex.in");
+  const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [customProperties, setCustomProperties] = useState<any[]>([]);
+  const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(true);
 
   // Detect Clean Mode on mount
   React.useEffect(() => {
@@ -59,6 +61,24 @@ export default function PropertyDashboardClient({
       setIsCleanMode(isTest);
       setUserEmail(email);
       setUserId(uid);
+
+      const isCompleted = Boolean(
+        localStorage.getItem("officex_onboarding_completed") === "1" ||
+        sessionStorage.getItem("officex_onboarding_completed") === "1" ||
+        Boolean(localStorage.getItem("officex_active_org"))
+      );
+      setIsOnboardingCompleted(isCompleted);
+
+      // If user is authenticated but has never completed onboarding, route them to onboarding!
+      const isAuth = Boolean(
+        localStorage.getItem("officex_session_active") === "1" ||
+        sessionStorage.getItem("officex_session_active") === "1" ||
+        email
+      );
+      if (isAuth && !isCompleted) {
+        window.location.href = `/onboarding?role=owner&redirect=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
 
       let savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
 
@@ -89,9 +109,9 @@ export default function PropertyDashboardClient({
         }
       }
 
-      // Final fallback: if STILL no properties, fetch the user's organization from the database
-      if (savedProps.length === 0) {
-        fetch(`/api/me/organization${uid ? `?userId=${uid}` : ""}`)
+      // Fetch user's organization from database only if user ID exists
+      if (savedProps.length === 0 && uid) {
+        fetch(`/api/me/organization?userId=${uid}`)
           .then(res => res.json())
           .then(data => {
             if (data.organizations && data.organizations.length > 0) {
@@ -113,28 +133,11 @@ export default function PropertyDashboardClient({
                   imageUrl: p.image_url || null,
                   createdAt: p.created_at || new Date().toISOString()
                 }));
-              } else {
-                newProps = [{
-                  id: org.id || `prop-db-${Date.now()}`,
-                  name: org.name || "My Commercial Property",
-                  city: org.city || "",
-                  state: org.state || "",
-                  address: org.address || "",
-                  microMarket: org.city || "",
-                  grade: "Grade A",
-                  totalArea: "",
-                  baseRent: "",
-                  ownerName: localStorage.getItem("officex_user_name") || "",
-                  ownerEmail: email,
-                  createdAt: org.createdAt || new Date().toISOString()
-                }];
               }
-              localStorage.setItem("officex_user_properties", JSON.stringify(newProps));
-              localStorage.setItem("officex_org_name", org.name || "");
-              localStorage.setItem("officex_active_org", org.name || "");
-              localStorage.setItem("officex_org_city", org.city || "");
-              localStorage.setItem("officex_org_state", org.state || "");
-              setCustomProperties(newProps);
+              if (newProps.length > 0) {
+                localStorage.setItem("officex_user_properties", JSON.stringify(newProps));
+                setCustomProperties(newProps);
+              }
             }
           })
           .catch(() => { /* silently fail if API unreachable */ });
@@ -339,7 +342,7 @@ export default function PropertyDashboardClient({
     // 2. If user is matched by ownerUserId or email
     const userDbProps = initialProperties.filter(p => 
       (userId && p.ownerUserId === userId) ||
-      (userEmail && userEmail !== "owner@officex.in" && p.ownerEmail === userEmail)
+      (userEmail && p.ownerEmail === userEmail)
     );
     if (userDbProps.length > 0) return userDbProps;
 
@@ -351,15 +354,6 @@ export default function PropertyDashboardClient({
         (p.name && p.name.toLowerCase().includes(activeOrg.toLowerCase()))
       );
       if (orgProps.length > 0) return orgProps;
-    }
-
-    // 4. Fallback to user's onboarded company properties (e.g. devasya gold) if available
-    const devasyaProps = initialProperties.filter(p => p.ownerCompany && p.ownerCompany.toLowerCase().includes("devasya"));
-    if (devasyaProps.length > 0) return devasyaProps;
-
-    // 5. If initialProperties exists, display them
-    if (initialProperties.length > 0) {
-      return initialProperties;
     }
 
     return [];
@@ -425,6 +419,38 @@ export default function PropertyDashboardClient({
         </div>
       </div>
 
+      {/* Onboarding Incomplete Action Banner */}
+      {!isOnboardingCompleted && (
+        <div className="bg-gradient-to-r from-teal-900 via-[#0F8B7D] to-teal-800 rounded-2xl p-5 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-teal-600/40">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white shrink-0 shadow-inner">
+              <Sparkles size={22} className="text-amber-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  Action Required
+                </span>
+                <span className="text-xs font-bold text-teal-100">Setup Business Master</span>
+              </div>
+              <h3 className="text-base font-black text-white mt-1">
+                Complete Your 7-Step Business Onboarding
+              </h3>
+              <p className="text-xs text-teal-100/90 mt-0.5 max-w-xl">
+                Register your legal organization, GST master, statutory KYC documents, and commercial property details to launch your institutional dashboard.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/onboarding?role=owner&redirect=/properties"
+            className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-teal-950 font-black text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer hover:scale-[1.02]"
+          >
+            <span>Launch Onboarding Form</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
+
       {/* S12 Profile Completion & Progressive KYC Meter (v1.0 Spec Section 15) */}
       <ProfileCompletionMeter role="owner" />
 
@@ -489,7 +515,9 @@ export default function PropertyDashboardClient({
               <span>Rent Roll &amp; Commercial Lease Performance</span>
             </h2>
             <p className="text-xs text-blue-200/80 mt-0.5">
-              {rentRollData?.propertyCount ? `Automated lease-to-cash operating system across ${rentRollData.propertyCount} institutional Grade-A assets.` : "Automated commercial lease-to-cash operating system."}
+              {propertiesCount > 0 && rentRollData?.propertyCount
+                ? `Automated lease-to-cash operating system across ${propertiesCount} institutional Grade-A assets.`
+                : "Automated commercial lease-to-cash operating system. Onboard your assets to track lease billing."}
             </p>
           </div>
 
@@ -524,40 +552,40 @@ export default function PropertyDashboardClient({
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Monthly Gross Rent</span>
             <div className="text-xl sm:text-2xl font-black text-white mt-1">
-              ₹{rentRollData?.summary?.totalMonthlyRent ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) : "0.00"} Cr
+              ₹{propertiesCount > 0 && rentRollData?.summary?.totalMonthlyRent ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) : "0.00"} Cr
             </div>
             <span className="text-[10px] text-blue-200 mt-1 block">
-              {rentRollData?.summary?.activeLeasesCount || 0} Active Commercial Leases
+              {propertiesCount > 0 ? (rentRollData?.summary?.activeLeasesCount || 0) : 0} Active Commercial Leases
             </span>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Portfolio Occupancy</span>
             <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
-              {rentRollData?.occupancy?.occupancyPct || 0}%
+              {propertiesCount > 0 ? (rentRollData?.occupancy?.occupancyPct || 0) : 0}%
             </div>
             <span className="text-[10px] text-emerald-300 mt-1 block">
-              {rentRollData?.occupancy?.totalArea ? `${(rentRollData.occupancy.totalArea / 1000).toFixed(0)}k sq.ft Total Area` : "0 sq.ft Total Area"}
+              {propertiesCount > 0 && rentRollData?.occupancy?.totalArea ? `${(rentRollData.occupancy.totalArea / 1000).toFixed(0)}k sq.ft Total Area` : "0 sq.ft Total Area"}
             </span>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Total Outstanding</span>
             <div className="text-xl sm:text-2xl font-black text-white mt-1">
-              ₹{rentRollData?.summary?.totalOutstanding ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) : "0.00"} Cr
+              ₹{propertiesCount > 0 && rentRollData?.summary?.totalOutstanding ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) : "0.00"} Cr
             </div>
             <span className="text-[10px] text-emerald-400 font-bold mt-1 block">
-              ● {rentRollData?.summary?.overdueLeasesCount || 0} Leases Overdue
+              ● {propertiesCount > 0 ? (rentRollData?.summary?.overdueLeasesCount || 0) : 0} Leases Overdue
             </span>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">WALT (Lease Horizon)</span>
             <div className="text-xl sm:text-2xl font-black text-white mt-1">
-              {rentRollData?.walt?.waltByRentMonths ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` : "0.0 Yrs"}
+              {propertiesCount > 0 && rentRollData?.walt?.waltByRentMonths ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` : "0.0 Yrs"}
             </div>
             <span className="text-[10px] text-amber-300 mt-1 block">
-              {rentRollData?.summary?.escalationsDueCount || 0} Escalations Due Soon
+              {propertiesCount > 0 ? (rentRollData?.summary?.escalationsDueCount || 0) : 0} Escalations Due Soon
             </span>
           </div>
         </div>
@@ -672,20 +700,20 @@ export default function PropertyDashboardClient({
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-bold text-emerald-900">0–30 Days (Current / On-Time)</span>
               <span className="font-black text-emerald-700">
-                {rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+                {propertiesCount > 0 && rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
               </span>
             </div>
             <div className="text-xl font-black text-emerald-950">
-              ₹{rentRollData?.aging?.current ? Number(rentRollData.aging.current).toLocaleString("en-IN") : "0"}
+              ₹{propertiesCount > 0 && rentRollData?.aging?.current ? Number(rentRollData.aging.current).toLocaleString("en-IN") : "0"}
             </div>
             <div className="w-full bg-emerald-200/60 h-2 rounded-full overflow-hidden mt-2.5">
               <div 
                 className="bg-emerald-600 h-full rounded-full" 
-                style={{ width: `${rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+                style={{ width: `${propertiesCount > 0 && rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
               />
             </div>
             <span className="text-[10px] text-emerald-700 font-semibold mt-1.5 block">
-              {rentRollData?.summary?.activeLeasesCount || 0} Corporate Leases Cleared
+              {propertiesCount > 0 ? (rentRollData?.summary?.activeLeasesCount || 0) : 0} Corporate Leases Cleared
             </span>
           </div>
 
@@ -694,20 +722,20 @@ export default function PropertyDashboardClient({
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-bold text-amber-900">31–60 Days (Grace Period)</span>
               <span className="font-black text-amber-700">
-                {rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+                {propertiesCount > 0 && rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
               </span>
             </div>
             <div className="text-xl font-black text-amber-950">
-              ₹{rentRollData?.aging?.bucket31to60 ? Number(rentRollData.aging.bucket31to60).toLocaleString("en-IN") : "0"}
+              ₹{propertiesCount > 0 && rentRollData?.aging?.bucket31to60 ? Number(rentRollData.aging.bucket31to60).toLocaleString("en-IN") : "0"}
             </div>
             <div className="w-full bg-amber-200/60 h-2 rounded-full overflow-hidden mt-2.5">
               <div 
                 className="bg-amber-500 h-full rounded-full" 
-                style={{ width: `${rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+                style={{ width: `${propertiesCount > 0 && rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
               />
             </div>
             <span className="text-[10px] text-amber-700 font-semibold mt-1.5 block">
-              {rentRollData?.summary?.overdueLeasesCount || 0} Leases Pending Reconciliation
+              {propertiesCount > 0 ? (rentRollData?.summary?.overdueLeasesCount || 0) : 0} Leases Pending Reconciliation
             </span>
           </div>
 
@@ -716,20 +744,20 @@ export default function PropertyDashboardClient({
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="font-bold text-rose-900">61–90+ Days (Overdue Notice)</span>
               <span className="font-black text-rose-700">
-                {rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+                {propertiesCount > 0 && rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
               </span>
             </div>
             <div className="text-xl font-black text-rose-950">
-              ₹{rentRollData?.aging?.bucket61to90 ? Number(rentRollData.aging.bucket61to90 + (rentRollData.aging.bucket90Plus || 0)).toLocaleString("en-IN") : "0"}
+              ₹{propertiesCount > 0 && rentRollData?.aging?.bucket61to90 ? Number(rentRollData.aging.bucket61to90 + (rentRollData.aging.bucket90Plus || 0)).toLocaleString("en-IN") : "0"}
             </div>
             <div className="w-full bg-rose-200/60 h-2 rounded-full overflow-hidden mt-2.5">
               <div 
                 className="bg-rose-500 h-full rounded-full" 
-                style={{ width: `${rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+                style={{ width: `${propertiesCount > 0 && rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
               />
             </div>
             <span className="text-[10px] text-rose-700 font-semibold mt-1.5 block">
-              {rentRollData?.aging?.bucket90Plus ? "Statutory Reminder Dispatched" : "No overdue notices"}
+              {propertiesCount > 0 && rentRollData?.aging?.bucket90Plus ? "Statutory Reminder Dispatched" : "No overdue notices"}
             </span>
           </div>
         </div>

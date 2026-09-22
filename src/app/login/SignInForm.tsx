@@ -62,6 +62,7 @@ export default function SignInForm({
   // Primary workflow state
   const [step, setStep] = useState<Step>("identifier");
   const [successUserName, setSuccessUserName] = useState("");
+  const [isOnboardingNeeded, setIsOnboardingNeeded] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -559,7 +560,50 @@ export default function SignInForm({
       return;
     }
 
-    const destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "/";
+    // Check if user has completed business onboarding
+    const hasCompletedOnboarding = typeof window !== "undefined" && (
+      localStorage.getItem("officex_onboarding_completed") === "1" ||
+      sessionStorage.getItem("officex_onboarding_completed") === "1" ||
+      Boolean(localStorage.getItem("officex_active_org"))
+    );
+
+    let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "/";
+
+    if (!hasCompletedOnboarding) {
+      setIsOnboardingNeeded(true);
+      // Map user's intended role to canonical onboarding role
+      const lowerRole = (roleName || initialRole || "owner").toLowerCase();
+      const targetRole = lowerRole.includes("broker")
+        ? "broker"
+        : lowerRole.includes("vendor") || lowerRole.includes("fm")
+        ? "vendor"
+        : lowerRole.includes("tenant")
+        ? "tenant"
+        : "owner";
+
+      const queryParams = new URLSearchParams({
+        role: targetRole,
+      });
+
+      const cleanVal = userEmailOrPhone.trim();
+      if (cleanVal.includes("@")) {
+        queryParams.set("email", cleanVal);
+      } else if (cleanVal) {
+        queryParams.set("mobile", cleanVal);
+      }
+
+      if (storedName) {
+        queryParams.set("name", storedName);
+      }
+
+      // Preserve intended destination as redirect after onboarding finishes
+      if (destination && destination !== "/" && !destination.startsWith("/login")) {
+        queryParams.set("redirect", destination);
+      }
+
+      destination = `/onboarding?${queryParams.toString()}`;
+    }
+
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;
@@ -883,10 +927,12 @@ export default function SignInForm({
                   Authentication Confirmed
                 </span>
                 <h2 className="text-2xl font-black text-slate-950 tracking-tight mt-1">
-                  Signed In Successfully!
+                  {isOnboardingNeeded ? "Welcome to OfficeX!" : "Signed In Successfully!"}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-xs mx-auto">
-                  Welcome back{successUserName ? `, ${successUserName}` : ""}. Taking you to OfficeX...
+                  {isOnboardingNeeded
+                    ? `Welcome${successUserName ? `, ${successUserName}` : ""}. Setting up your business onboarding...`
+                    : `Welcome back${successUserName ? `, ${successUserName}` : ""}. Taking you to OfficeX...`}
                 </p>
                 <div className="mt-6 flex justify-center items-center gap-2 text-xs font-bold text-[#0F8B7D]">
                   <Loader2 size={16} className="animate-spin" />

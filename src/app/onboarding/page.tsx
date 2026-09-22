@@ -1101,6 +1101,10 @@ function OnboardingWizardContent() {
   };
 
   const getDashboardDestination = () => {
+    const redirectParam = searchParams.get("redirect");
+    if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("/login")) {
+      return redirectParam;
+    }
     switch (role) {
       case "owner":
         return "/properties";
@@ -4103,6 +4107,11 @@ function OnboardingWizardContent() {
                     }
 
                     if (typeof window !== "undefined") {
+                      // Mark onboarding as completed
+                      localStorage.setItem("officex_onboarding_completed", "1");
+                      sessionStorage.setItem("officex_onboarding_completed", "1");
+                      document.cookie = "officex_onboarding_completed=1; path=/; max-age=31536000; SameSite=Lax";
+
                       // Persist the onboarded organization as the active org
                       const orgName = orgData.legalName || orgData.tradeName || "My Organization";
                       const orgCity = principalPlace.city || "";

@@ -37,24 +37,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. If no user-specific properties, fetch all properties from DB
-    const { data: allProps } = await client.from("properties").select("*").order("created_at", { ascending: false }).limit(10);
-    if (allProps && allProps.length > 0) {
-      const firstOrg = allProps.find(p => p.owner_company && p.owner_company !== "OfficeX Management") || allProps[0];
-      return NextResponse.json({
-        organizations: [
-          {
-            id: firstOrg.id,
-            name: firstOrg.owner_company || firstOrg.name,
-            legalName: firstOrg.owner_company || firstOrg.name,
-            city: firstOrg.city,
-            state: firstOrg.state,
-            properties: allProps
-          }
-        ]
-      });
-    }
-
     return NextResponse.json({ organizations: [] });
   } catch (error: any) {
     console.error("GET /api/me/organization error:", error);

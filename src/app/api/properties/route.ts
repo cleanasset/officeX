@@ -23,7 +23,12 @@ export async function GET(req: Request) {
       return NextResponse.json(data);
     }
 
-    // Fallback: return all active properties
+    // If querying for a specific user or company, do not return other people's properties
+    if (userId || ownerCompany) {
+      return NextResponse.json([]);
+    }
+
+    // Fallback for public search: return all active properties
     const { data: allProps } = await client.from('properties').select('*').order('created_at', { ascending: false });
     if (allProps && allProps.length > 0) {
       return NextResponse.json(allProps);
