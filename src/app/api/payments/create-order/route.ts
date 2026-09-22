@@ -19,11 +19,29 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const {
-      amount = 10000, // ₹100 in paise
+      amount = 10000,
       currency = "INR",
       receipt = `rcpt_${Date.now()}`,
       notes = {},
     } = body;
+
+    const numericAmount = Number(amount);
+    const validAmount = Number.isFinite(numericAmount) && numericAmount > 0
+      ? Math.round(numericAmount)
+      : 10000;
+
+    const cleanReceipt = String(receipt || `rcpt_${Date.now()}`)
+      .replace(/[^\w-]/g, "_")
+      .slice(0, 40);
+
+    const sanitizedNotes: Record<string, string> = {};
+    if (notes && typeof notes === "object") {
+      for (const [k, v] of Object.entries(notes)) {
+        if (v !== undefined && v !== null) {
+          sanitizedNotes[String(k).slice(0, 40)] = String(v).slice(0, 255);
+        }
+      }
+    }
 
     const razorpay = new Razorpay({
       key_id,
@@ -31,10 +49,10 @@ export async function POST(request: Request) {
     });
 
     const order = await razorpay.orders.create({
-      amount,
-      currency,
-      receipt,
-      notes,
+      amount: validAmount,
+      currency: currency || "INR",
+      receipt: cleanReceipt,
+      notes: sanitizedNotes,
     });
 
     return NextResponse.json(

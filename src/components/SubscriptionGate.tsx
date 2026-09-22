@@ -93,14 +93,14 @@ export default function SubscriptionGate({
     setIsPaymentProcessing(true);
     try {
       await initiateRazorpayPayment({
-        amount: finalAmountInPaise,
-        receipt: `SUB-${Date.now()}`,
-        description: `OfficeX Platform Subscription — ${portalName}${isDiscounted ? " (RENTROLL12 99% OFF)" : ""}`,
-        prefillName: userName,
-        prefillEmail: userEmail,
+        amount: Math.round(finalAmountInPaise),
+        receipt: `SUB_${Date.now()}`,
+        description: `OfficeX Platform Subscription - ${portalName}${isDiscounted ? " (RENTROLL12 99% OFF)" : ""}`,
+        prefillName: userName || "Member",
+        prefillEmail: userEmail || "",
         notes: {
           portal: portalName,
-          user_email: userEmail,
+          user_email: userEmail || "",
           type: "subscription",
           coupon: appliedCoupon || "none",
           discount: isDiscounted ? "99%" : "0%",

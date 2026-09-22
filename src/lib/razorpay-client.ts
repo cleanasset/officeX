@@ -55,7 +55,11 @@ export async function initiateRazorpayPayment(
     const orderRes = await fetch("/api/payments/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, receipt, notes }),
+      body: JSON.stringify({
+        amount: Math.round(Number(amount) || 10000),
+        receipt,
+        notes,
+      }),
     });
 
     if (!orderRes.ok) {
@@ -64,6 +68,9 @@ export async function initiateRazorpayPayment(
     }
 
     const orderData = await orderRes.json();
+    if (!orderData.orderId) {
+      throw new Error("Invalid order response from payment server");
+    }
 
     // Step 2: Ensure Razorpay SDK script is loaded
     if (!window.Razorpay) {
@@ -82,26 +89,58 @@ export async function initiateRazorpayPayment(
       }
     }
 
-    // Step 3: Open Razorpay Checkout
-    const rzp = new window.Razorpay({
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderData.key,
+    // Step 3: Build sanitized prefill without empty strings
+    const prefill: Record<string, string> = {};
+    if (prefillName && prefillName.trim()) {
+      prefill.name = prefillName.trim();
+    }
+    if (prefillEmail && prefillEmail.trim()) {
+      prefill.email = prefillEmail.trim();
+    }
+    if (prefillPhone && prefillPhone.trim()) {
+      prefill.contact = prefillPhone.trim();
+    }
+
+    // Step 4: Sanitize description & notes (ASCII only, reasonable lengths)
+    const cleanDescription = (description || "OfficeX Payment")
+      .replace(/[\u2014\u2013]/g, "-")
+      .replace(/[^\x20-\x7E]/g, "")
+      .slice(0, 255);
+
+    const cleanNotes: Record<string, string> = {};
+    if (notes && typeof notes === "object") {
+      for (const [k, v] of Object.entries(notes)) {
+        if (v !== undefined && v !== null) {
+          cleanNotes[String(k).slice(0, 40)] = String(v).slice(0, 255);
+        }
+      }
+    }
+
+    // Step 5: Open Razorpay Checkout with server order key priority
+    const rzpKey = orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    if (!rzpKey) {
+      throw new Error("Razorpay Key ID is not configured on the server or client.");
+    }
+
+    const checkoutOptions: any = {
+      key: rzpKey,
       amount: orderData.amount,
-      currency: orderData.currency,
+      currency: orderData.currency || "INR",
       name: "OfficeX",
-      description,
+      description: cleanDescription,
       order_id: orderData.orderId,
-      prefill: {
-        name: prefillName,
-        email: prefillEmail,
-        contact: prefillPhone,
-      },
-      notes,
       theme: {
         color: "#0F8B7D",
       },
+      modal: {
+        confirm_close: true,
+        ondismiss: function () {
+          console.log("Razorpay checkout dismissed by user.");
+        },
+      },
       handler: async function (response: RazorpayPaymentResponse) {
         try {
-          // Step 4: Verify payment on server
+          // Verify payment on server
           const verifyRes = await fetch("/api/payments/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -119,34 +158,37 @@ export async function initiateRazorpayPayment(
             );
           }
 
-          // Step 5: Payment verified — call success callback
+          // Payment verified — call success callback
           onSuccess(response);
         } catch (verifyError: any) {
           console.error("Payment verification error:", verifyError);
           if (onFailure) {
             onFailure(verifyError);
           } else {
-            alert(
-              `Payment received but verification failed: ${verifyError.message}`
+            console.error(
+              `Payment verification failed: ${verifyError.message}`
             );
           }
         }
       },
-      modal: {
-        ondismiss: function () {
-          console.log("Razorpay checkout dismissed by user.");
-        },
-      },
-    });
+    };
+
+    if (Object.keys(prefill).length > 0) {
+      checkoutOptions.prefill = prefill;
+    }
+    if (Object.keys(cleanNotes).length > 0) {
+      checkoutOptions.notes = cleanNotes;
+    }
+
+    const rzp = new window.Razorpay(checkoutOptions);
 
     rzp.on("payment.failed", function (response: any) {
-      console.error("Razorpay payment failed:", response.error);
+      console.error("Razorpay payment failed:", response?.error);
+      const err = response?.error || {
+        description: "Payment failed or was cancelled.",
+      };
       if (onFailure) {
-        onFailure(response.error);
-      } else {
-        alert(
-          `Payment failed: ${response.error.description || "Unknown error"}`
-        );
+        onFailure(err);
       }
     });
 
@@ -156,7 +198,7 @@ export async function initiateRazorpayPayment(
     if (onFailure) {
       onFailure(error);
     } else {
-      alert(`Payment error: ${error.message}`);
+      console.error(`Payment initialization error: ${error.message}`);
     }
   }
 }
