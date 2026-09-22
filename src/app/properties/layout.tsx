@@ -1,4 +1,6 @@
 import React, { Suspense } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -30,11 +32,20 @@ function PortalLayoutContent({
   );
 }
 
-export default function PortalLayout({
+export default async function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Server-side auth gate: check for session cookies
+  const cookieStore = await cookies();
+  const hasAuth = cookieStore.get("officex_auth")?.value === "1" ||
+                  cookieStore.get("officex_session_active")?.value === "1";
+  
+  if (!hasAuth) {
+    redirect("/login?redirect=/properties");
+  }
+
   return (
     <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center"><div className="w-6 h-6 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" /></div>}>
       <PortalLayoutContent>{children}</PortalLayoutContent>

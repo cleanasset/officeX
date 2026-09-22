@@ -52,6 +52,22 @@ function RentRollPageInner() {
   const router = useRouter();
   const tabFromUrl = searchParams.get("tab") || "dashboard";
 
+  // Auth Gate: Redirect to login if no active session
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasSession =
+        localStorage.getItem("officex_session_active") === "1" ||
+        sessionStorage.getItem("officex_session_active") === "1" ||
+        document.cookie.includes("officex_auth=1");
+      if (!hasSession) {
+        router.replace("/login?redirect=/properties/rent-roll");
+        return;
+      }
+      setAuthChecked(true);
+    }
+  }, [router]);
+
   // Navigation State
   const [activeTab, setActiveTab] = useState<string>(tabFromUrl);
 
@@ -248,6 +264,11 @@ function RentRollPageInner() {
     { id: "dictionary", label: "Financial Terms Dictionary", icon: BookOpen },
     { id: "audit", label: "Audit & Config", icon: ShieldCheck },
   ];
+
+  // Don't render dashboard until auth is confirmed
+  if (!authChecked) {
+    return <div className="p-12 text-center text-gray-500 font-medium">Verifying session...</div>;
+  }
 
   return (
     <div className="flex flex-col gap-5 font-sans relative w-full">

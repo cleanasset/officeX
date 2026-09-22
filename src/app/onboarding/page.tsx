@@ -553,8 +553,10 @@ function OnboardingWizardContent() {
       return;
     }
     const cleanGst = orgData.gstin.trim().toUpperCase();
-    if (!cleanGst || cleanGst.length !== 15) {
-      showToast("Please enter a valid 15-digit GSTIN (e.g. 24AAABC1234M1Z5).", "error");
+    // Strict GSTIN format: 2-digit state code + PAN (10 chars) + 1 entity code + Z + 1 check digit
+    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!cleanGst || !gstinRegex.test(cleanGst)) {
+      showToast("Invalid GSTIN format. Must be 15 characters (e.g. 24AAABC1234M1Z5). Check state code and PAN embedded within.", "error");
       return;
     }
     setIsVerifyingGstin(true);
@@ -569,11 +571,11 @@ function OnboardingWizardContent() {
         setKycChecks((prev) => ({ ...prev, gstinVerified: true }));
         showToast(`GSTIN ${data.gstin} verified active for ${data.legalName} on GST Common Portal!`, "success");
       } else {
-        showToast(data.message || "Invalid GSTIN format or registry record.", "error");
+        showToast(data.message || "GSTIN verification failed. Please check the number and retry.", "error");
       }
     } catch {
-      setKycChecks((prev) => ({ ...prev, gstinVerified: true }));
-      showToast(`GSTIN ${cleanGst} validated active and matched with Form GST REG-06!`, "success");
+      // API unreachable — do NOT auto-verify. Show pending status.
+      showToast(`GST Portal temporarily unreachable. GSTIN ${cleanGst} submitted for admin review. You may proceed.", "info");
     } finally {
       setIsVerifyingGstin(false);
     }
@@ -590,12 +592,20 @@ function OnboardingWizardContent() {
       showToast("Please enter Corporate CIN or LLPIN Number.", "error");
       return;
     }
+    // Validate CIN format: L/U + 5 digits + 2 alpha + 4 digits + 3 alpha + 6 digits
+    const cinRegex = /^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
+    // Validate LLPIN format: AAX-XXXX (alphanumeric, typically 8 chars)
+    const llpinRegex = /^[A-Z]{3}-[0-9]{4}$/;
+    if (!cinRegex.test(cleanCin) && !llpinRegex.test(cleanCin) && cleanCin.length < 8) {
+      showToast("Invalid CIN/LLPIN format. CIN should be 21 characters (e.g. L12345MH2020PLC123456).", "error");
+      return;
+    }
     setIsVerifyingMca(true);
     setTimeout(() => {
       setIsVerifyingMca(false);
       setKycChecks((prev) => ({ ...prev, mcaVerified: true }));
-      showToast(`CIN ${cleanCin} verified active with Ministry of Corporate Affairs (RoC).`, "success");
-    }, 600);
+      showToast(`CIN ${cleanCin} submitted and queued for MCA21 RoC verification. Admin will confirm.`, "info");
+    }, 800);
   };
 
   const handleVerifyRoleCred = () => {
@@ -608,8 +618,8 @@ function OnboardingWizardContent() {
     setTimeout(() => {
       setIsVerifyingRoleCred(false);
       setKycChecks((prev) => ({ ...prev, roleCredVerified: true }));
-      showToast("Statutory clearance authenticated with state regulatory authorities.", "success");
-    }, 600);
+      showToast("Document submitted for regulatory verification. Admin team will review and confirm within 24-48 hours.", "info");
+    }, 800);
   };
 
   const handleExecutePennyDrop = () => {

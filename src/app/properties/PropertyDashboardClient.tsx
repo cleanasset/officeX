@@ -103,14 +103,21 @@ export default function PropertyDashboardClient({
                 }));
               }
               if (newProps.length > 0) {
-                localStorage.setItem("officex_user_properties", JSON.stringify(newProps));
-                setCustomProperties(newProps);
+                // Deduplicate: merge with any existing savedProps by ID
+                const propMap = new Map<string, any>();
+                savedProps.forEach((p: any) => propMap.set(p.id, p));
+                newProps.forEach((p: any) => propMap.set(p.id, p));
+                const deduped = Array.from(propMap.values());
+                localStorage.setItem("officex_user_properties", JSON.stringify(deduped));
+                setCustomProperties(deduped);
+                return; // Don't re-set from savedProps below
               }
             }
           })
           .catch(() => { /* silently fail if API unreachable */ });
       }
 
+      // Only set from localStorage if API fetch was not triggered
       setCustomProperties(savedProps);
       const savedPartnerships = JSON.parse(localStorage.getItem("officex_user_partnerships") || "[]");
       setPartnerships(savedPartnerships);
