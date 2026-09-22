@@ -1509,6 +1509,32 @@ function OnboardingWizardContent() {
               {/* TAB 1: BUSINESS DETAILS */}
               {orgMasterTab === "business" && (
                 <div className="space-y-4">
+                  {/* Test Data Quick Fill Helper */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 px-3.5 rounded-xl bg-teal-50 border border-teal-200 text-xs">
+                    <span className="text-[11px] font-bold text-teal-900 flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-[#0F8B7D]" />
+                      Testing Onboarding? Real PAN is NOT required — you can use mock/sample credentials:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrgData(prev => ({
+                          ...prev,
+                          legalName: prev.legalName || "Fortune Commercial Realty Pvt Ltd",
+                          tradeName: prev.tradeName || "Fortune Ltd",
+                          pan: "AAACF1234M",
+                          gstin: "24AAACF1234M1Z5",
+                          cin: prev.cin || "U70100GJ2018PTC104523",
+                          yearEstablished: prev.yearEstablished || "2018"
+                        }));
+                        showToast("✓ Sample Business PAN & GSTIN loaded for testing!", "success");
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-[#0F8B7D] text-white font-black text-[10px] hover:bg-[#0c7267] cursor-pointer transition-colors shrink-0"
+                    >
+                      ⚡ Auto-Fill Sample PAN &amp; GSTIN
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div className="sm:col-span-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
@@ -1565,9 +1591,19 @@ function OnboardingWizardContent() {
                         maxLength={10}
                         value={orgData.pan}
                         onChange={(e) => setOrgData({ ...orgData, pan: e.target.value.toUpperCase() })}
-                        placeholder="e.g. AAACG5678K"
+                        placeholder="e.g. AAACF1234M"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-mono font-black tracking-wider focus:border-[#0F8B7D] focus:outline-none"
                       />
+                      <div className="flex items-center justify-between mt-1 text-[10px]">
+                        <span className="text-slate-400 font-medium">5 Letters + 4 Digits + 1 Letter</span>
+                        <button
+                          type="button"
+                          onClick={() => setOrgData({ ...orgData, pan: "AAACF1234M" })}
+                          className="text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                        >
+                          Use: AAACF1234M
+                        </button>
+                      </div>
                     </div>
 
                     <div>
@@ -1579,9 +1615,19 @@ function OnboardingWizardContent() {
                         maxLength={15}
                         value={orgData.gstin}
                         onChange={(e) => setOrgData({ ...orgData, gstin: e.target.value.toUpperCase() })}
-                        placeholder="e.g. 27AAACG5678K1Z2"
+                        placeholder="e.g. 24AAACF1234M1Z5"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-mono font-black tracking-wider focus:border-[#0F8B7D] focus:outline-none"
                       />
+                      <div className="flex items-center justify-between mt-1 text-[10px]">
+                        <span className="text-slate-400 font-medium">15 Characters (e.g. 24 + PAN + 1Z5)</span>
+                        <button
+                          type="button"
+                          onClick={() => setOrgData({ ...orgData, gstin: (orgData.pan && orgData.pan.length === 10 ? `24${orgData.pan}1Z5` : "24AAACF1234M1Z5") })}
+                          className="text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                        >
+                          Use: 24AAACF1234M1Z5
+                        </button>
+                      </div>
                     </div>
 
                     <div>
