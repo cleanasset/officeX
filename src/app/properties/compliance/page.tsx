@@ -373,13 +373,6 @@ export default function ComplianceTrackerDashboard() {
             </span>
           </button>
         </div>
-        <Link
-          href="/ops/ppm"
-          className="px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-slate-200 self-start sm:self-auto"
-        >
-          <CalendarIcon size={15} />
-          <span>52-Week Equipment PPM Schedule</span>
-        </Link>
       </div>
 
       {suiteMode === "operations_center" ? (

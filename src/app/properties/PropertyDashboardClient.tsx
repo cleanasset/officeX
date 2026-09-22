@@ -613,7 +613,7 @@ export default function PropertyDashboardClient({
 
         {/* Portfolio Health Score */}
         <Link 
-          href="/ops" 
+          href="/properties/rent-roll?tab=dashboard" 
           className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-[#0F8B7D]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
