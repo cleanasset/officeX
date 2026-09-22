@@ -20,17 +20,17 @@ export default function ComplianceTrackerDashboard() {
   const [calendarSubView, setCalendarSubView] = useState<"split" | "full" | "roadmap">("split");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProperty, setSelectedProperty] = useState<string>("PROP-DG-001");
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [certificates, setCertificates] = useState<StatutoryCertificate[]>([]);
   const [health, setHealth] = useState<any>({
-    score: 86,
-    total: 14,
-    valid: 9,
-    expiringSoon: 3,
-    expired: 2,
+    score: 100,
+    total: 0,
+    valid: 0,
+    expiringSoon: 0,
+    expired: 0,
     inRenewal: 0
   });
-  const [propertyName, setPropertyName] = useState<string>("Devasya Gold");
+  const [propertyName, setPropertyName] = useState<string>("Commercial Asset");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Calendar Navigation State (Default to September 2026 - Current Live Audit Period)
@@ -94,6 +94,10 @@ export default function ComplianceTrackerDashboard() {
 
   useEffect(() => {
     fetchCertificates();
+    if (typeof window !== "undefined") {
+      const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_active_org");
+      if (orgName) setPropertyName(orgName);
+    }
   }, [fetchCertificates]);
 
   // Calendar Helpers

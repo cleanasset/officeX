@@ -16,7 +16,7 @@ interface ComplianceOperationsCenterProps {
 
 export default function ComplianceOperationsCenter({
   portalRole = "owner",
-  defaultProperty = "Devasya Gold - Commercial Tower"
+  defaultProperty = "Commercial Asset"
 }: ComplianceOperationsCenterProps) {
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "register" | "calendar" | "evidence" | "incidents" | "capa" | "permits" | "risks" | "inspections"
@@ -33,275 +33,69 @@ export default function ComplianceOperationsCenter({
   const [uploadObligationId, setUploadObligationId] = useState<string | null>(null);
   const [selectedIncidentForCapa, setSelectedIncidentForCapa] = useState<any | null>(null);
 
-  // Compliance Obligations Master Dataset (CM-02, CM-03)
-  const [obligations, setObligations] = useState<any[]>([
-    {
-      id: "obl-001",
-      name: "Fire Safety NOC (Form-B Inspection)",
-      category: "Fire & Life Safety",
-      authority: "Directorate of Fire & Emergency Services",
-      frequency: "ANNUAL",
-      criticality: "CRITICAL", // Critical gating rule BR-C03 / BR-C04
-      weight: 25,
-      status: "compliant",
-      dueDate: "2026-11-30",
-      expiryDate: "2026-11-30",
-      certificateNumber: "NOC-MH-2025-8812-B",
-      ownerName: "Chief EHS Officer",
-      evidenceAttached: true,
-      verified: true
-    },
-    {
-      id: "obl-002",
-      name: "Elevator & Escalator Safety License (Form A)",
-      category: "Lift & Escalator",
-      authority: "Chief Electrical Inspectorate / PWD",
-      frequency: "ANNUAL",
-      criticality: "CRITICAL",
-      weight: 20,
-      status: "compliant",
-      dueDate: "2026-12-15",
-      expiryDate: "2026-12-15",
-      certificateNumber: "LIFT-INSP-2025-441",
-      ownerName: "Lead Facility Engineer",
-      evidenceAttached: true,
-      verified: true
-    },
-    {
-      id: "obl-003",
-      name: "Pollution Control Board Consent to Operate (CTO)",
-      category: "Environmental",
-      authority: "State Pollution Control Board (SPCB)",
-      frequency: "BIENNIAL",
-      criticality: "HIGH",
-      weight: 15,
-      status: "expiring_soon",
-      dueDate: "2026-10-31",
-      expiryDate: "2026-10-31",
-      certificateNumber: "SPCB/CTO/AIR-WATER/9902",
-      ownerName: "Environmental Compliance Officer",
-      evidenceAttached: true,
-      verified: true
-    },
-    {
-      id: "obl-004",
-      name: "Diesel Generator CPCB-IV Emission & Noise Test",
-      category: "Electrical & Power",
-      authority: "Central Pollution Control Board",
-      frequency: "QUARTERLY",
-      criticality: "HIGH",
-      weight: 15,
-      status: "due",
-      dueDate: "2026-09-30",
-      expiryDate: "2026-09-30",
-      certificateNumber: "DG-CPCB-Q2-2026-118",
-      ownerName: "Substation In-Charge",
-      evidenceAttached: false,
-      verified: false
-    },
-    {
-      id: "obl-005",
-      name: "Commercial Occupancy Certificate (OC)",
-      category: "Municipal & Structural",
-      authority: "Municipal Urban Development Authority",
-      frequency: "PERMANENT",
-      criticality: "CRITICAL",
-      weight: 15,
-      status: "compliant",
-      dueDate: "2099-12-31",
-      expiryDate: "2099-12-31",
-      certificateNumber: "MCGM-OC-COMM-2022-771",
-      ownerName: "General Counsel",
-      evidenceAttached: true,
-      verified: true
-    },
-    {
-      id: "obl-006",
-      name: "Building Facade Stability & BMU Anchor Audit",
-      category: "Structural Safety",
-      authority: "Certified Chartered Structural Engineer",
-      frequency: "ANNUAL",
-      criticality: "MEDIUM",
-      weight: 10,
-      status: "overdue", // BR-C04 Overdue
-      dueDate: "2026-08-31",
-      expiryDate: "2026-08-31",
-      certificateNumber: "STRUCT-FACADE-2025-309",
-      ownerName: "Chief Technical Officer",
-      evidenceAttached: false,
-      verified: false
+  // Compliance Obligations Master Dataset (CM-02, CM-03) - Real user data
+  const [obligations, setObligations] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_compliance_obligations");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [];
+  });
 
-  // Incidents Register (CM-07)
-  const [incidents, setIncidents] = useState<any[]>([
-    {
-      id: "INC-2026-081",
-      title: "False Fire Alarm Activation - Zone 4 AHU Smoke Detector",
-      location: "Tower A, 8th Floor Server Room",
-      type: "Fire & Safety",
-      severity: "minor",
-      occurredAt: "2026-09-15T10:14:00Z",
-      status: "closed",
-      immediateAction: "Silenced hooter, checked server rack; sensor dust cleaned.",
-      capaId: "CAPA-2026-104",
-      capaStatus: "closed"
-    },
-    {
-      id: "INC-2026-082",
-      title: "Diesel Transfer Pipe Minor Weep Leakage",
-      location: "Basement 2, Bulk Fuel Storage Room",
-      type: "Environmental & Hazardous Material",
-      severity: "moderate",
-      occurredAt: "2026-09-17T14:30:00Z",
-      status: "capa_assigned",
-      immediateAction: "Isolated valve line 2B, deployed sand spill kit and boom.",
-      capaId: "CAPA-2026-105",
-      capaStatus: "in_progress"
-    },
-    {
-      id: "INC-2026-083",
-      title: "Passenger Lift 4 Door Interlock Safety Trip",
-      location: "Core B, Ground Lobby",
-      type: "Vertical Transportation",
-      severity: "critical", // C-025 Critical escalation
-      occurredAt: "2026-09-18T08:45:00Z",
-      status: "investigating",
-      immediateAction: "Lift grounded, car evacuated safely (0 passengers trapped), Otis summoned.",
-      capaId: "CAPA-2026-106",
-      capaStatus: "pending_verification"
+  // Incidents Register (CM-07) - Real user data
+  const [incidents, setIncidents] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_compliance_incidents");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [];
+  });
 
-  // CAPA Management (CM-08)
-  const [capas, setCapas] = useState<any[]>([
-    {
-      id: "CAPA-2026-104",
-      action: "Perform ultrasonic cleaning on all 14 server room smoke detectors and calibrate sensitivity threshold.",
-      source: "INC-2026-081",
-      actionType: "PREVENTIVE",
-      owner: "Kailash Verma (Fire Tech Lead)",
-      dueDate: "2026-09-20",
-      priority: "medium",
-      evidenceAttached: true,
-      verificationStatus: "verified",
-      status: "closed"
-    },
-    {
-      id: "CAPA-2026-105",
-      action: "Replace braided flexible fuel hose on Line 2B with high-pressure stainless steel reinforced flange.",
-      source: "INC-2026-082",
-      actionType: "CORRECTIVE",
-      owner: "Vendor Manager (Piping AMC)",
-      dueDate: "2026-09-22",
-      priority: "high",
-      evidenceAttached: false,
-      verificationStatus: "pending_evidence",
-      status: "in_progress"
-    },
-    {
-      id: "CAPA-2026-106",
-      action: "Otis OEM technician to replace door interlock switch assembly and submit 100-cycle stress test certificate.",
-      source: "INC-2026-083",
-      actionType: "CORRECTIVE",
-      owner: "Otis Elevator Engineer",
-      dueDate: "2026-09-21",
-      priority: "critical",
-      evidenceAttached: true,
-      verificationStatus: "pending_verification",
-      status: "under_review"
+  // CAPA Management (CM-08) - Real user data
+  const [capas, setCapas] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_compliance_capas");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [];
+  });
 
-  // Permits to Work (CM-09)
-  const [permits, setPermits] = useState<any[]>([
-    {
-      id: "PTW-2026-401",
-      permitType: "HOT_WORK",
-      title: "Chilled Water Header Pipe Arc Welding & Flange Fitting",
-      contractor: "Voltas Mechanical Contractors",
-      location: "Basement 1, AHU Plant Room",
-      validFrom: "2026-09-19T08:00:00Z",
-      validTo: "2026-09-19T18:00:00Z",
-      riskControls: "Fire blankets deployed, 2x 9kg DCP extinguishers on-site, 60-min continuous fire watch.",
-      vendorPrerequisiteValid: true,
-      status: "active"
-    },
-    {
-      id: "PTW-2026-402",
-      permitType: "HEIGHT_WORK",
-      title: "North Facade Glass Cleaning & BMU Cradle Operation",
-      contractor: "Apex Facility Solutions LLP",
-      location: "External Perimeter - Floors 10 to 18",
-      validFrom: "2026-09-20T07:00:00Z",
-      validTo: "2026-09-20T16:00:00Z",
-      riskControls: "Full-body harness with double lanyard, wind speed meter < 25 km/h, drop-zone barricaded.",
-      vendorPrerequisiteValid: true,
-      status: "pending_approval"
-    },
-    {
-      id: "PTW-2026-403",
-      permitType: "CONFINED_SPACE",
-      title: "Raw Water Underground Sump Tank De-sludging",
-      contractor: "AquaTech Environmental Services",
-      location: "Basement 3, Domestic Water Tank 02",
-      validFrom: "2026-09-21T09:00:00Z",
-      validTo: "2026-09-21T17:00:00Z",
-      riskControls: "Forced mechanical ventilation, multi-gas 4-gas sniffer test, lifeline tripod stand.",
-      vendorPrerequisiteValid: false, // BR-C11 / C-029 Prerequisite expired!
-      status: "approval_blocked",
-      prerequisiteError: "Contractor Confined Space Medical Fitness Certificate expired on 10-Sep-2026."
+  // Permits to Work (CM-09) - Real user data
+  const [permits, setPermits] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_compliance_permits");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [];
+  });
 
-  // Risk Register (CM-13)
-  const [risks, setRisks] = useState<any[]>([
-    {
-      id: "RSK-001",
-      category: "Fire & Life Safety",
-      statement: "Risk of high-rise facade smoke propagation due to unsealed vertical MEP risers in Tower A.",
-      likelihood: 4,
-      impact: 5,
-      inherentScore: 20, // 4 * 5 = 20 (C-026)
-      rating: "CRITICAL",
-      mitigation: "Install 2-hour rated intumescent firestop collars on all floor penetrations.",
-      residualLikelihood: 1,
-      residualImpact: 3,
-      residualScore: 3, // C-027
-      owner: "Head of Safety",
-      status: "mitigated"
-    },
-    {
-      id: "RSK-002",
-      category: "Environmental & Legal",
-      statement: "STP treated water BOD/COD levels exceeding SPCB threshold leading to municipal notice.",
-      likelihood: 3,
-      impact: 4,
-      inherentScore: 12,
-      rating: "HIGH",
-      mitigation: "Daily automated online water quality sensor telemetry; dosing pump redundancy.",
-      residualLikelihood: 1,
-      residualImpact: 4,
-      residualScore: 4,
-      owner: "Environmental Engineer",
-      status: "monitoring"
-    },
-    {
-      id: "RSK-003",
-      category: "Structural Safety",
-      statement: "Water seepage in Basement 3 retaining wall causing rebar corrosion and foundation degradation.",
-      likelihood: 3,
-      impact: 3,
-      inherentScore: 9,
-      rating: "MEDIUM",
-      mitigation: "Polyurethane chemical pressure injection grouting completed; moisture sensors installed.",
-      residualLikelihood: 1,
-      residualImpact: 2,
-      residualScore: 2,
-      owner: "Civil Works Contractor",
-      status: "mitigated"
+  // Risk Register (CM-13) - Real user data
+  const [risks, setRisks] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("officex_compliance_risks");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_active_org");
+      if (orgName) {
+        setSelectedProperty(orgName);
+      }
+    }
+  }, []);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
@@ -555,32 +349,48 @@ export default function ComplianceOperationsCenter({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {obligations.map(o => (
-                <div key={o.id} className="p-4 rounded-xl border border-slate-200 hover:border-teal-400 transition-all bg-slate-50/50">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                      {o.category}
-                    </span>
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                      o.status === "compliant" ? "bg-emerald-100 text-emerald-800" :
-                      o.status === "expiring_soon" ? "bg-amber-100 text-amber-800" :
-                      o.status === "due" ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800 animate-pulse"
-                    }`}>
-                      {o.status.replace("_", " ")}
-                    </span>
-                  </div>
+            {obligations.length === 0 ? (
+              <div className="p-8 text-center flex flex-col items-center justify-center gap-2 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <ShieldCheck size={28} className="text-[#0F8B7D]" />
+                <h4 className="text-xs font-bold text-slate-900">No Active Obligations to Monitor</h4>
+                <p className="text-[11px] text-slate-500 max-w-sm">
+                  Upload your commercial asset's statutory certificates to activate live validity clocks and compliance radar.
+                </p>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="mt-2 px-3.5 py-1.5 bg-[#0F8B7D] text-white text-xs font-bold rounded-lg hover:bg-teal-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                >
+                  <Upload size={13} /> Upload First Statutory NOC
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {obligations.map(o => (
+                  <div key={o.id} className="p-4 rounded-xl border border-slate-200 hover:border-teal-400 transition-all bg-slate-50/50">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                        {o.category}
+                      </span>
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        o.status === "compliant" ? "bg-emerald-100 text-emerald-800" :
+                        o.status === "expiring_soon" ? "bg-amber-100 text-amber-800" :
+                        o.status === "due" ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800 animate-pulse"
+                      }`}>
+                        {o.status.replace("_", " ")}
+                      </span>
+                    </div>
 
-                  <h4 className="text-xs font-black text-slate-900 line-clamp-1">{o.name}</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{o.authority}</p>
+                    <h4 className="text-xs font-black text-slate-900 line-clamp-1">{o.name}</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{o.authority}</p>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-200/80 flex items-center justify-between text-[10px]">
-                    <span className="text-slate-500">Due: <strong>{o.dueDate}</strong></span>
-                    <span className="font-bold text-teal-800">Weight: {o.weight}%</span>
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/80 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-500">Due: <strong>{o.dueDate}</strong></span>
+                      <span className="font-bold text-teal-800">Weight: {o.weight}%</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -626,9 +436,30 @@ export default function ComplianceOperationsCenter({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {obligations
-                  .filter(o => categoryFilter === "all" || o.category === categoryFilter)
-                  .map(o => (
+                {obligations.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 px-4 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+                          <ShieldCheck size={20} />
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-900">No Compliance Obligations Registered</h4>
+                        <p className="text-[11px] text-slate-500 max-w-sm">
+                          Your statutory register is clean. Upload statutory certificates (Fire NOC, Lift License, Pollution CTO) to track renewals.
+                        </p>
+                        <button
+                          onClick={() => setShowUploadModal(true)}
+                          className="mt-1 px-3.5 py-1.5 bg-[#0F8B7D] text-white text-xs font-bold rounded-lg hover:bg-teal-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                        >
+                          <Upload size={13} /> Upload First Statutory NOC
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  obligations
+                    .filter(o => categoryFilter === "all" || o.category === categoryFilter)
+                    .map(o => (
                     <tr key={o.id} className="hover:bg-slate-50/70">
                       <td className="py-3 px-3">
                         <span className="font-black text-slate-900 block">{o.name}</span>
@@ -667,7 +498,7 @@ export default function ComplianceOperationsCenter({
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )))}
               </tbody>
             </table>
           </div>
@@ -750,40 +581,46 @@ export default function ComplianceOperationsCenter({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {obligations.map(o => (
-              <div key={o.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                <div className="flex items-center justify-between mb-2">
-                  <FileText size={18} className="text-teal-700" />
-                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    o.verified ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                  }`}>
-                    {o.verified ? "Verified ✓" : "Pending Sign-Off"}
-                  </span>
-                </div>
-                <h4 className="font-bold text-xs text-slate-900">{o.name}</h4>
-                <p className="text-[11px] text-slate-500 mt-1">Authority: {o.authority}</p>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{o.certificateNumber}</p>
+          {obligations.length === 0 ? (
+            <div className="py-12 text-center text-xs text-slate-400">
+              No certificate documents uploaded to vault yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {obligations.map(o => (
+                <div key={o.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <FileText size={18} className="text-teal-700" />
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      o.verified ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                    }`}>
+                      {o.verified ? "Verified ✓" : "Pending Sign-Off"}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-xs text-slate-900">{o.name}</h4>
+                  <p className="text-[11px] text-slate-500 mt-1">Authority: {o.authority}</p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{o.certificateNumber}</p>
 
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() => showToast(`Downloading official certificate for ${o.name}...`, "info")}
-                    className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold cursor-pointer"
-                  >
-                    Download
-                  </button>
-                  {!o.verified && (
+                  <div className="flex gap-2 mt-4">
                     <button
-                      onClick={() => handleVerifyEvidence(o.id)}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                      onClick={() => showToast(`Downloading official certificate for ${o.name}...`, "info")}
+                      className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold cursor-pointer"
                     >
-                      Verify
+                      Download
                     </button>
-                  )}
+                    {!o.verified && (
+                      <button
+                        onClick={() => handleVerifyEvidence(o.id)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                      >
+                        Verify
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -805,22 +642,28 @@ export default function ComplianceOperationsCenter({
             </div>
 
             <div className="space-y-3">
-              {incidents.map(inc => (
-                <div key={inc.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-[10px] font-bold text-slate-500">{inc.id}</span>
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                      inc.severity === "critical" ? "bg-red-100 text-red-800 animate-pulse" :
-                      inc.severity === "moderate" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
-                    }`}>
-                      {inc.severity}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-xs text-slate-900">{inc.title}</h4>
-                  <p className="text-[11px] text-slate-600 mt-1">Location: {inc.location}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Immediate Action: <strong>{inc.immediateAction}</strong></p>
+              {incidents.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No incidents logged. Safety register is completely clean.
                 </div>
-              ))}
+              ) : (
+                incidents.map(inc => (
+                  <div key={inc.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-[10px] font-bold text-slate-500">{inc.id}</span>
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        inc.severity === "critical" ? "bg-red-100 text-red-800 animate-pulse" :
+                        inc.severity === "moderate" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
+                      }`}>
+                        {inc.severity}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-xs text-slate-900">{inc.title}</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">Location: {inc.location}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Immediate Action: <strong>{inc.immediateAction}</strong></p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -837,35 +680,41 @@ export default function ComplianceOperationsCenter({
             </div>
 
             <div className="space-y-3">
-              {capas.map(c => (
-                <div key={c.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-[10px] font-bold text-slate-500">{c.id} · {c.source}</span>
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                      c.status === "closed" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                    }`}>
-                      {c.status.replace("_", " ")}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-xs text-slate-900">{c.action}</h4>
-                  <p className="text-[11px] text-slate-600 mt-1">Owner: {c.owner} · Due: <strong>{c.dueDate}</strong></p>
-
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-200 text-[10px]">
-                    <span className="text-slate-500">
-                      Evidence: {c.evidenceAttached ? <strong className="text-emerald-700">Uploaded ✓</strong> : <span className="text-red-600">Missing</span>}
-                    </span>
-
-                    {c.status !== "closed" && (
-                      <button
-                        onClick={() => handleCloseCapa(c)}
-                        className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white rounded-lg font-bold cursor-pointer"
-                      >
-                        Close CAPA
-                      </button>
-                    )}
-                  </div>
+              {capas.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No open corrective or preventive actions.
                 </div>
-              ))}
+              ) : (
+                capas.map(c => (
+                  <div key={c.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-[10px] font-bold text-slate-500">{c.id}</span>
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        c.status === "closed" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                      }`}>
+                        {c.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-xs text-slate-900">{c.action}</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">Owner: {c.owner} · Due: <strong>{c.dueDate}</strong></p>
+
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-200 text-[10px]">
+                      <span className="text-slate-500">
+                        Evidence: {c.evidenceAttached ? <strong className="text-emerald-700">Uploaded ✓</strong> : <span className="text-red-600">Missing</span>}
+                      </span>
+
+                      {c.status !== "closed" && (
+                        <button
+                          onClick={() => handleCloseCapa(c)}
+                          className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white rounded-lg font-bold cursor-pointer"
+                        >
+                          Close CAPA
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -890,7 +739,12 @@ export default function ComplianceOperationsCenter({
           </div>
 
           <div className="space-y-3">
-            {permits.map(p => (
+            {permits.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No active work permits. Issue Hot Work, Height Work, or Confined Space permits when contractors are on-site.
+              </div>
+            ) : (
+              permits.map(p => (
               <div key={p.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -937,7 +791,7 @@ export default function ComplianceOperationsCenter({
                   )}
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </div>
       )}
@@ -983,7 +837,12 @@ export default function ComplianceOperationsCenter({
           </div>
 
           <div className="space-y-3">
-            {risks.map(r => (
+            {risks.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No EHS risks identified. Safety matrix is clear.
+              </div>
+            ) : (
+              risks.map(r => (
               <div key={r.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
@@ -1010,7 +869,7 @@ export default function ComplianceOperationsCenter({
                   Mitigation Controls: <strong className="text-slate-800">{r.mitigation}</strong>
                 </p>
               </div>
-            ))}
+            )))}
           </div>
         </div>
       )}
