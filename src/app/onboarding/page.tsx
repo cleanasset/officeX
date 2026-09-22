@@ -56,6 +56,7 @@ function OnboardingWizardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryRole = searchParams.get("role") || "";
+  const queryStep = searchParams.get("step") || "";
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -435,16 +436,45 @@ function OnboardingWizardContent() {
   // Step 6: Statutory Declaration (Unchecked by default to enforce explicit compliance consent)
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
-  // Sync role with query params
+  // Sync role and step with query params & stored session
   useEffect(() => {
-    if (queryRole) {
-      const lower = queryRole.toLowerCase();
+    let targetRole = queryRole;
+    if (!targetRole && typeof window !== "undefined") {
+      targetRole = localStorage.getItem("officex_user_role") || "";
+    }
+
+    if (targetRole) {
+      const lower = targetRole.toLowerCase();
       if (lower.includes("broker")) setRole("broker");
       else if (lower.includes("vendor")) setRole("vendor");
       else if (lower.includes("tenant")) setRole("tenant");
       else setRole("owner");
     }
-  }, [queryRole]);
+
+    if (queryStep) {
+      const parsed = parseInt(queryStep, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 6) {
+        setCurrentStep(parsed);
+      }
+    } else if (queryRole && typeof window !== "undefined") {
+      // If user came via "Resume Onboarding" with an established role and no explicit step,
+      // and has already completed contact verification, auto-advance to step 2 (Organization Master)
+      const savedStep = localStorage.getItem("officex_onboarding_step");
+      if (savedStep) {
+        const p = parseInt(savedStep, 10);
+        if (!isNaN(p) && p >= 1 && p <= 6) setCurrentStep(p);
+      } else if (localStorage.getItem("officex_user_id") || localStorage.getItem("officex_user_email") || localStorage.getItem("officex_phone_verified")) {
+        setCurrentStep(2); // Jump directly to Organization Master / Legal Entity & PAN
+      }
+    }
+  }, [queryRole, queryStep]);
+
+  // Persist current step progress
+  useEffect(() => {
+    if (typeof window !== "undefined" && currentStep > 1) {
+      localStorage.setItem("officex_onboarding_step", String(currentStep));
+    }
+  }, [currentStep]);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
     setToast({ message, type });
@@ -1257,6 +1287,27 @@ function OnboardingWizardContent() {
                   OfficeX adapts the business onboarding form, statutory disclosures, and operating parameters to your role. All roles share a single, unified Organization Master.
                 </p>
               </div>
+
+              {/* Active Workspace Banner if pre-assigned */}
+              {role && (
+                <div className="p-3 px-4 rounded-xl bg-teal-50/80 border border-teal-200 text-teal-900 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold">
+                    <CheckCircle size={14} className="text-[#0F8B7D]" />
+                    <span>Active Workspace: <strong className="font-black text-slate-900 capitalize">{role === "owner" ? "Property Owner / Landlord" : role}</strong></span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(2);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="text-[11px] font-black text-[#0F8B7D] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Jump to Step 2 (Legal Entity &amp; PAN)</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              )}
 
               {/* Account Signer Contact Strip */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">

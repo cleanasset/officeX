@@ -125,18 +125,29 @@ export default function ProfileCompletionMeter({
             ))}
           </div>
 
-          <div className="pt-2 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500">
-              {data.pendingActions.length > 0 ? `Next step: ${data.pendingActions[0]}` : "All mandatory items verified"}
-            </span>
-            <Link
-              href={`/onboarding?role=${encodeURIComponent(role)}`}
-              className="text-[11px] font-black text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors"
-            >
-              <span>Resume Onboarding</span>
-              <ArrowRight size={12} />
-            </Link>
-          </div>
+          {/* Calculate dynamic next pending step */}
+          {(() => {
+            const orgPending = data.breakdown.find(b => b.category.toLowerCase().includes("organization") && !b.completed);
+            const rolePending = data.breakdown.find(b => (b.category.toLowerCase().includes("role") || b.category.toLowerCase().includes("portfolio")) && !b.completed);
+            const kycPending = data.breakdown.find(b => (b.category.toLowerCase().includes("kyc") || b.category.toLowerCase().includes("evidence") || b.category.toLowerCase().includes("statutory") || b.category.toLowerCase().includes("banking")) && !b.completed);
+            
+            const nextStepNum = orgPending ? 2 : rolePending ? 3 : kycPending ? 5 : 2;
+
+            return (
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {data.pendingActions.length > 0 ? `Next step: ${data.pendingActions[0]}` : "All mandatory items verified"}
+                </span>
+                <Link
+                  href={`/onboarding?role=${encodeURIComponent(role)}&step=${nextStepNum}`}
+                  className="text-[11px] font-black text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span>Resume Onboarding (Step {nextStepNum})</span>
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

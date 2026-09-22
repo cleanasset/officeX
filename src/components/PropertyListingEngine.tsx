@@ -33,7 +33,15 @@ import {
   Check,
   ChevronRight,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  UploadCloud,
+  Image as ImageIcon,
+  Trash2,
+  Star,
+  Plus,
+  X,
+  Eye
 } from "lucide-react";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import PropertyTitleAutocomplete from "@/components/PropertyTitleAutocomplete";
@@ -63,6 +71,11 @@ export default function PropertyListingEngine({
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [mediaMode, setMediaMode] = useState<"upload" | "presets" | "url">("upload");
+  const [isDragging, setIsDragging] = useState(false);
+  const [customUrlInput, setCustomUrlInput] = useState("");
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Unit system for area: "sft" (Square Feet) vs "smt" (Square Meter)
   // 1 sq. meter = 10.7639 sq. feet
@@ -168,7 +181,10 @@ export default function PropertyListingEngine({
     possessionStatus: "Ready to Move",
 
     // Media
-    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1000&auto=format&fit=crop&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1000&auto=format&fit=crop&q=80",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1000&auto=format&fit=crop&q=80"
+    ] as string[]
   });
 
   // Load existing profile context from localStorage if available
@@ -344,6 +360,183 @@ export default function PropertyListingEngine({
   };
 
   // ─────────────────────────────────────────────────────────────────────────
+  // IMAGE & MEDIA MANAGEMENT (SINGLE / MULTI UPLOAD & TEMPLATES)
+  // ─────────────────────────────────────────────────────────────────────────
+  const popularCities = [
+    { name: "Mumbai", state: "Maharashtra" },
+    { name: "Bengaluru", state: "Karnataka" },
+    { name: "Delhi NCR", state: "Delhi" },
+    { name: "Hyderabad", state: "Telangana" },
+    { name: "Pune", state: "Maharashtra" },
+    { name: "Ahmedabad / GIFT City", state: "Gujarat" },
+    { name: "Chennai", state: "Tamil Nadu" },
+    { name: "Kolkata", state: "West Bengal" }
+  ];
+
+  const templateImages = [
+    {
+      label: "Modern Glass Facade IT Park",
+      url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1000&auto=format&fit=crop&q=80"
+    },
+    {
+      label: "Premium Corporate Tower",
+      url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1000&auto=format&fit=crop&q=80"
+    },
+    {
+      label: "Furnished Workstation Floor",
+      url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&auto=format&fit=crop&q=80"
+    },
+    {
+      label: "Logistics Warehouse Park",
+      url: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1000&auto=format&fit=crop&q=80"
+    }
+  ];
+
+  const processFiles = async (files: FileList | File[]) => {
+    const validImageFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (f.type.startsWith("image/")) {
+        validImageFiles.push(f);
+      }
+    }
+
+    if (validImageFiles.length === 0) {
+      showToast("Please upload valid image files (JPG, PNG, WEBP).", "error");
+      return;
+    }
+
+    setIsProcessingImages(true);
+    showToast(`Uploading ${validImageFiles.length} photo${validImageFiles.length > 1 ? "s" : ""}...`, "info");
+
+    try {
+      const readPromises = validImageFiles.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              resolve(e.target.result as string);
+            } else {
+              reject(new Error("Failed to read file"));
+            }
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const dataUrls = await Promise.all(readPromises);
+
+      setFormData(prev => {
+        const currentGallery = prev.galleryImages || [];
+        const isDefaultTemplate = currentGallery.length === 1 && templateImages.some(t => t.url === currentGallery[0]);
+        const newGallery = isDefaultTemplate ? dataUrls : [...currentGallery, ...dataUrls];
+        const newPrimary = prev.imageUrl && !isDefaultTemplate ? prev.imageUrl : dataUrls[0];
+
+        return {
+          ...prev,
+          galleryImages: newGallery,
+          imageUrl: newPrimary
+        };
+      });
+
+      showToast(`✓ Added ${dataUrls.length} photo${dataUrls.length > 1 ? "s" : ""} to listing gallery!`, "success");
+    } catch (err) {
+      console.error("Image processing error:", err);
+      showToast("Error reading image files. Please try again.", "error");
+    } finally {
+      setIsProcessingImages(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+    }
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleSetCoverPhoto = (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      imageUrl: url
+    }));
+    showToast("✓ Showcase cover photo updated!", "success");
+  };
+
+  const handleRemovePhoto = (indexToRemove: number) => {
+    setFormData(prev => {
+      const updatedGallery = (prev.galleryImages || []).filter((_, idx) => idx !== indexToRemove);
+      let updatedCover = prev.imageUrl;
+      
+      if (prev.imageUrl === prev.galleryImages[indexToRemove]) {
+        updatedCover = updatedGallery.length > 0 ? updatedGallery[0] : templateImages[0].url;
+      }
+      
+      return {
+        ...prev,
+        galleryImages: updatedGallery.length > 0 ? updatedGallery : [templateImages[0].url],
+        imageUrl: updatedCover
+      };
+    });
+    showToast("Photo removed from gallery.", "info");
+  };
+
+  const handleAddCustomUrl = () => {
+    const trimmed = customUrlInput.trim();
+    if (!trimmed) {
+      showToast("Please enter a valid image URL.", "error");
+      return;
+    }
+    setFormData(prev => {
+      const currentGallery = prev.galleryImages || [];
+      const isDefaultTemplate = currentGallery.length === 1 && templateImages.some(t => t.url === currentGallery[0]);
+      const newGallery = isDefaultTemplate ? [trimmed] : [...currentGallery, trimmed];
+      return {
+        ...prev,
+        galleryImages: newGallery,
+        imageUrl: trimmed
+      };
+    });
+    setCustomUrlInput("");
+    showToast("✓ Custom image added to gallery & set as cover!", "success");
+  };
+
+  const handleSelectTemplate = (url: string) => {
+    setFormData(prev => {
+      const currentGallery = prev.galleryImages || [];
+      const alreadyInGallery = currentGallery.includes(url);
+      return {
+        ...prev,
+        imageUrl: url,
+        galleryImages: alreadyInGallery ? currentGallery : [url, ...currentGallery]
+      };
+    });
+    showToast("✓ Preset template photo selected!", "success");
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   // SUBMISSION / PUBLISH HANDLER
   // ─────────────────────────────────────────────────────────────────────────
   const handlePublish = async () => {
@@ -379,6 +572,7 @@ export default function PropertyListingEngine({
       ownerCompany: formData.companyName || (portalRole === "broker" ? "Leasing Desk" : "OfficeX Asset Mgmt"),
       ownerUserId: ownerUserId || undefined,
       imageUrl: formData.imageUrl,
+      galleryImages: formData.galleryImages,
       compliance: {
         fireNocCertified: formData.isNocCertified,
         fireNocExpiry: formData.fireNocExpiry || undefined,
@@ -444,36 +638,6 @@ export default function PropertyListingEngine({
       setIsPublishing(false);
     }
   };
-
-  const popularCities = [
-    { name: "Mumbai", state: "Maharashtra" },
-    { name: "Bengaluru", state: "Karnataka" },
-    { name: "Delhi NCR", state: "Delhi" },
-    { name: "Hyderabad", state: "Telangana" },
-    { name: "Pune", state: "Maharashtra" },
-    { name: "Ahmedabad / GIFT City", state: "Gujarat" },
-    { name: "Chennai", state: "Tamil Nadu" },
-    { name: "Kolkata", state: "West Bengal" }
-  ];
-
-  const templateImages = [
-    {
-      label: "Modern Glass Facade IT Park",
-      url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1000&auto=format&fit=crop&q=80"
-    },
-    {
-      label: "Premium Corporate Tower",
-      url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1000&auto=format&fit=crop&q=80"
-    },
-    {
-      label: "Furnished Workstation Floor",
-      url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&auto=format&fit=crop&q=80"
-    },
-    {
-      label: "Logistics Warehouse Park",
-      url: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1000&auto=format&fit=crop&q=80"
-    }
-  ];
 
   const steps = [
     { num: 1, label: "Intent & Category" },
@@ -1852,36 +2016,263 @@ export default function PropertyListingEngine({
               )}
             </div>
 
-            {/* MEDIA PRESETS */}
-            <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">
-                SELECT PROPERTY SHOWCASE PHOTO OR ENTER CUSTOM IMAGE URL
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-                {templateImages.map((img, idx) => (
+            {/* MEDIA & MULTI-IMAGE UPLOAD SUITE */}
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3.5">
+                <div>
+                  <label className="text-[11px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-[#0F8B7D]" />
+                    PROPERTY SHOWCASE MEDIA & PHOTO GALLERY
+                  </label>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    Upload high-resolution property photos (multi-image upload supported). First photo is your main listing cover.
+                  </p>
+                </div>
+
+                {/* Mode Switcher Tabs */}
+                <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl self-start sm:self-auto shrink-0">
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => setFormData({ ...formData, imageUrl: img.url })}
-                    className={`relative rounded-2xl overflow-hidden border-2 text-left cursor-pointer transition-all aspect-video group ${
-                      formData.imageUrl === img.url ? "border-[#0F8B7D] shadow-md ring-2 ring-teal-200" : "border-slate-200 opacity-70 hover:opacity-100"
+                    onClick={() => setMediaMode("upload")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      mediaMode === "upload" ? "bg-white text-[#0F8B7D] shadow-xs" : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent p-2 flex items-end">
-                      <span className="text-[10px] font-bold text-white leading-tight truncate">{img.label}</span>
-                    </div>
+                    <UploadCloud size={13} />
+                    <span>Upload Photos</span>
+                    {(formData.galleryImages?.length || 0) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-teal-100 text-teal-800 font-black">
+                        {formData.galleryImages.length}
+                      </span>
+                    )}
                   </button>
-                ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setMediaMode("presets")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      mediaMode === "presets" ? "bg-white text-[#0F8B7D] shadow-xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Layers size={13} />
+                    <span>Stock Presets</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMediaMode("url")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      mediaMode === "url" ? "bg-white text-[#0F8B7D] shadow-xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <span>URL Link</span>
+                  </button>
+                </div>
               </div>
 
-              <input
-                type="text"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="Custom Image URL (https://...)"
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50"
-              />
+              {/* TAB 1: UPLOAD PHOTOS (SINGLE & MULTIPLE) */}
+              {mediaMode === "upload" && (
+                <div className="space-y-4">
+                  {/* Drag & Drop Dropzone */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                      isDragging
+                        ? "border-[#0F8B7D] bg-teal-50/70 scale-[1.01]"
+                        : "border-slate-300 hover:border-[#0F8B7D] bg-white hover:bg-teal-50/20 shadow-xs"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                    />
+
+                    <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0F8B7D] shadow-xs">
+                      {isProcessingImages ? (
+                        <Loader2 size={24} className="animate-spin" />
+                      ) : (
+                        <UploadCloud size={28} />
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800">
+                        {isDragging ? "Drop images now..." : "Click to browse or Drag & Drop multiple photos"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        Supports <span className="font-bold text-slate-700">JPG, PNG, WEBP</span> (Multiple file selection enabled)
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isProcessingImages}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>Select Photos from Computer</span>
+                    </button>
+                  </div>
+
+                  {/* Uploaded Gallery Grid */}
+                  {formData.galleryImages && formData.galleryImages.length > 0 && (
+                    <div className="space-y-2.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>Listing Gallery ({formData.galleryImages.length} Photos)</span>
+                          <span className="text-[10px] text-slate-400 font-normal lowercase">(click any photo to set as cover)</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-[11px] font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus size={12} /> Add More
+                          </button>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                galleryImages: [templateImages[0].url],
+                                imageUrl: templateImages[0].url
+                              }));
+                              showToast("Reset photo gallery to default template.", "info");
+                            }}
+                            className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        {formData.galleryImages.map((imgUrl, idx) => {
+                          const isPrimary = formData.imageUrl === imgUrl;
+                          return (
+                            <div
+                              key={idx}
+                              className={`relative group rounded-2xl overflow-hidden border-2 aspect-video bg-slate-100 transition-all ${
+                                isPrimary
+                                  ? "border-[#0F8B7D] ring-2 ring-teal-200 shadow-md"
+                                  : "border-slate-200 hover:border-slate-400"
+                              }`}
+                            >
+                              <img
+                                src={imgUrl}
+                                alt={`Property ${idx + 1}`}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => handleSetCoverPhoto(imgUrl)}
+                              />
+
+                              {/* Index pill */}
+                              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-white text-[9px] font-black backdrop-blur-xs">
+                                #{idx + 1}
+                              </span>
+
+                              {/* Primary badge */}
+                              {isPrimary && (
+                                <span className="absolute bottom-1.5 left-1.5 right-1.5 px-2 py-0.5 rounded-md bg-[#0F8B7D] text-white text-[9px] font-black text-center shadow-xs flex items-center justify-center gap-1">
+                                  <Star size={10} className="fill-white" /> Primary Cover
+                                </span>
+                              )}
+
+                              {/* Action Buttons on Hover */}
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
+                                {!isPrimary && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetCoverPhoto(imgUrl)}
+                                    title="Set as Main Cover"
+                                    className="px-2 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Star size={10} /> Cover
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePhoto(idx)}
+                                  title="Delete Photo"
+                                  className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold cursor-pointer"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: STOCK COMMERCIAL PRESETS */}
+              {mediaMode === "presets" && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {templateImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectTemplate(img.url)}
+                        className={`relative rounded-2xl overflow-hidden border-2 text-left cursor-pointer transition-all aspect-video group ${
+                          formData.imageUrl === img.url ? "border-[#0F8B7D] shadow-md ring-2 ring-teal-200" : "border-slate-200 opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent p-2 flex items-end justify-between">
+                          <span className="text-[10px] font-bold text-white leading-tight truncate">{img.label}</span>
+                          {formData.imageUrl === img.url && (
+                            <span className="px-1.5 py-0.5 rounded bg-teal-500 text-white text-[8px] font-black">Cover</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: CUSTOM URL LINK */}
+              {mediaMode === "url" && (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customUrlInput}
+                      onChange={(e) => setCustomUrlInput(e.target.value)}
+                      placeholder="Enter custom image URL (https://images.unsplash.com/...)"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddCustomUrl();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomUrl}
+                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      Add & Set Cover
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* LIVE PREVIEW CARD */}
@@ -1894,14 +2285,45 @@ export default function PropertyListingEngine({
               </div>
 
               <div className="p-5 flex flex-col md:flex-row gap-5">
-                <div className="w-full md:w-56 h-40 rounded-2xl overflow-hidden relative shrink-0">
-                  <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                  <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-900/90 text-white backdrop-blur-xs">
-                    {formData.grade}
-                  </span>
-                  <span className="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0F8B7D] text-white">
-                    {formData.intent === "rent" ? "For Lease" : "For Sale"}
-                  </span>
+                <div className="w-full md:w-56 shrink-0 flex flex-col gap-2">
+                  <div className="h-40 rounded-2xl overflow-hidden relative border border-slate-200 bg-slate-100">
+                    <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-900/90 text-white backdrop-blur-xs">
+                      {formData.grade}
+                    </span>
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#0F8B7D] text-white">
+                      {formData.intent === "rent" ? "For Lease" : "For Sale"}
+                    </span>
+                    {(formData.galleryImages?.length || 0) > 1 && (
+                      <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[9px] font-black bg-black/75 text-white backdrop-blur-xs flex items-center gap-1">
+                        <ImageIcon size={10} /> {formData.galleryImages.length} Photos
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mini Gallery Strip in Preview */}
+                  {(formData.galleryImages?.length || 0) > 1 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+                      {formData.galleryImages.slice(0, 5).map((thumb, tIdx) => (
+                        <button
+                          key={tIdx}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, imageUrl: thumb })}
+                          title={`Preview photo #${tIdx + 1}`}
+                          className={`w-10 h-8 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                            formData.imageUrl === thumb ? "border-[#0F8B7D] scale-105" : "border-slate-200 opacity-60 hover:opacity-100"
+                          }`}
+                        >
+                          <img src={thumb} alt={`thumb ${tIdx}`} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                      {formData.galleryImages.length > 5 && (
+                        <div className="w-10 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500 shrink-0">
+                          +{formData.galleryImages.length - 5}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-1 space-y-2">
