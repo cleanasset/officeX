@@ -575,7 +575,7 @@ function OnboardingWizardContent() {
       }
     } catch {
       // API unreachable — do NOT auto-verify. Show pending status.
-      showToast(`GST Portal temporarily unreachable. GSTIN ${cleanGst} submitted for admin review. You may proceed.", "info");
+      showToast(`GST Portal temporarily unreachable. GSTIN ${cleanGst} submitted for admin review. You may proceed.`, "info");
     } finally {
       setIsVerifyingGstin(false);
     }
