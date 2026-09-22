@@ -2,53 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
-    const capas = [
-      {
-        id: "CAPA-2026-104",
-        sourceType: "incident",
-        sourceId: "INC-2026-081",
-        actionType: "PREVENTIVE",
-        action: "Perform ultrasonic cleaning on all 14 server room smoke detectors and calibrate sensitivity threshold.",
-        owner: "Kailash Verma (Fire Tech Lead)",
-        dueDate: "2026-09-20",
-        priority: "medium",
-        evidenceAttached: true,
-        evidenceName: "Smoke_Detector_Calibration_Cert_Sep2026.pdf",
-        verificationStatus: "verified",
-        status: "closed",
-        closedAt: "2026-09-16T11:00:00.000Z"
-      },
-      {
-        id: "CAPA-2026-105",
-        sourceType: "incident",
-        sourceId: "INC-2026-082",
-        actionType: "CORRECTIVE",
-        action: "Replace braided flexible fuel hose on Line 2B with high-pressure stainless steel reinforced flange.",
-        owner: "Vendor Manager (Piping AMC)",
-        dueDate: "2026-09-22",
-        priority: "high",
-        evidenceAttached: false,
-        evidenceName: null,
-        verificationStatus: "pending_evidence",
-        status: "in_progress",
-        closedAt: null
-      },
-      {
-        id: "CAPA-2026-106",
-        sourceType: "incident",
-        sourceId: "INC-2026-083",
-        actionType: "CORRECTIVE",
-        action: "Otis OEM technician to replace door interlock switch assembly and submit 100-cycle stress test certificate.",
-        owner: "Otis Elevator Engineer",
-        dueDate: "2026-09-21",
-        priority: "critical",
-        evidenceAttached: true,
-        evidenceName: "Otis_Lift4_Door_Interlock_Replacement_JobSheet.pdf",
-        verificationStatus: "pending_verification",
-        status: "under_review",
-        closedAt: null
-      }
-    ];
+    const capas: any[] = [];
 
     return NextResponse.json({
       totalCapas: capas.length,

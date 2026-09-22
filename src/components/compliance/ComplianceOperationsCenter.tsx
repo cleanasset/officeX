@@ -6,13 +6,155 @@ import {
   Calendar, FileText, Upload, Plus, Search, Filter, Eye,
   Building, Wrench, Flame, Zap, Award, AlertCircle, ChevronRight,
   TrendingUp, Download, RefreshCw, X, ChevronDown, Check,
-  BarChart3, Layers, SlidersHorizontal, Lock, CheckCircle2, ArrowRight
+  BarChart3, Layers, SlidersHorizontal, Lock, CheckCircle2, ArrowRight,
+  Compass, Building2
 } from "lucide-react";
 
 interface ComplianceOperationsCenterProps {
   portalRole?: "owner" | "fm" | "admin";
   defaultProperty?: string;
 }
+
+// Mandatory Statutory Document Catalog for Indian Commercial Buildings & Towers
+export interface MandatoryDocumentTemplate {
+  key: string;
+  name: string;
+  shortTitle: string;
+  category: string;
+  authority: string;
+  frequency: string;
+  criticality: "CRITICAL" | "HIGH" | "MEDIUM";
+  weight: number;
+  description: string;
+  iconType: "fire" | "lift" | "env" | "building" | "power" | "electrical" | "structural" | "water";
+}
+
+export const MANDATORY_STATUTORY_DOCUMENTS: MandatoryDocumentTemplate[] = [
+  {
+    key: "fire_noc",
+    name: "Fire Safety Certificate & NOC (Form-B Inspection)",
+    shortTitle: "Fire Safety NOC",
+    category: "Fire & Life Safety",
+    authority: "Directorate of Fire & Emergency Services",
+    frequency: "ANNUAL",
+    criticality: "CRITICAL",
+    weight: 25,
+    description: "Annual municipal fire prevention, hydrants, sprinklers & life safety inspection clearance.",
+    iconType: "fire"
+  },
+  {
+    key: "lift_license",
+    name: "Elevator & Escalator Safety License (Form-A)",
+    shortTitle: "Lift Safety License",
+    category: "Lift & Escalator",
+    authority: "Chief Electrical Inspectorate / PWD Lift Division",
+    frequency: "ANNUAL",
+    criticality: "CRITICAL",
+    weight: 20,
+    description: "Annual statutory lift operation license, rope test & emergency brake safety certificate.",
+    iconType: "lift"
+  },
+  {
+    key: "spcb_cto",
+    name: "Pollution Control Board Consent to Operate (CTO)",
+    shortTitle: "SPCB Consent (CTO)",
+    category: "Environmental",
+    authority: "State Pollution Control Board (SPCB / CPCB)",
+    frequency: "BIENNIAL",
+    criticality: "HIGH",
+    weight: 15,
+    description: "Air & Water Pollution Prevention Acts consent for building emissions & effluent discharge.",
+    iconType: "env"
+  },
+  {
+    key: "occupancy_cert",
+    name: "Commercial Occupancy Certificate (OC) / BU Permission",
+    shortTitle: "Occupancy Certificate (OC)",
+    category: "Municipal & Structural",
+    authority: "Municipal Urban Development Authority",
+    frequency: "PERMANENT",
+    criticality: "CRITICAL",
+    weight: 15,
+    description: "Permanent building authorization certifying construction per approved sanction plans.",
+    iconType: "building"
+  },
+  {
+    key: "dg_cpcb",
+    name: "Diesel Generator CPCB-IV Emission & Noise Test",
+    shortTitle: "DG Emission & Noise Test",
+    category: "Electrical & Power",
+    authority: "Central Pollution Control Board (CPCB)",
+    frequency: "QUARTERLY",
+    criticality: "HIGH",
+    weight: 10,
+    description: "Acoustic enclosure noise dbA check and stack emission particulate monitoring report.",
+    iconType: "power"
+  },
+  {
+    key: "electrical_substation",
+    name: "Electrical Substation & Transformer Safety NOC (CEIG)",
+    shortTitle: "Electrical Substation NOC",
+    category: "Electrical & Power",
+    authority: "Central / State Electrical Inspectorate to Govt (CEIG)",
+    frequency: "ANNUAL",
+    criticality: "HIGH",
+    weight: 10,
+    description: "Transformer insulation resistance, HT/LT switchgear, and earth-pit resistance sign-off.",
+    iconType: "electrical"
+  },
+  {
+    key: "facade_audit",
+    name: "Building Facade Stability & BMU Anchor Audit",
+    shortTitle: "Facade & BMU Audit",
+    category: "Structural Safety",
+    authority: "Certified Chartered Structural Engineer",
+    frequency: "ANNUAL",
+    criticality: "MEDIUM",
+    weight: 5,
+    description: "Glass curtain-wall integrity, anchor bolt pull tests, and BMU cradle load certificate.",
+    iconType: "structural"
+  },
+  {
+    key: "stp_water",
+    name: "STP Treated Water Quality & Discharge Lab Test",
+    shortTitle: "Water / STP Lab Test",
+    category: "Environmental",
+    authority: "State Pollution Control Board / Accredited Lab",
+    frequency: "QUARTERLY",
+    criticality: "MEDIUM",
+    weight: 5,
+    description: "Sewage treatment plant treated effluent BOD/COD/TDS testing certifying reuse standards.",
+    iconType: "water"
+  }
+];
+
+// Mock Detector: Identifies legacy dummy IDs to guarantee zero mock data
+const isMockEntry = (item: any): boolean => {
+  if (!item || typeof item !== "object") return true;
+  const id = String(item.id || "");
+  if (
+    id.startsWith("obl-00") ||
+    id === "obl-001" || id === "obl-002" || id === "obl-003" || id === "obl-004" || id === "obl-005" || id === "obl-006" ||
+    id === "INC-2026-081" || id === "INC-2026-082" || id === "INC-2026-083" || id === "INC-2026-089" || id === "INC-2026-092" || id === "INC-2026-104" ||
+    id === "CAPA-2026-089" || id === "CAPA-2026-092" || id === "CAPA-2026-104" || id === "CAPA-2026-105" || id === "CAPA-2026-106" ||
+    id.startsWith("PTW-2026-40") || id.startsWith("PTW-2026-44") ||
+    id === "RSK-001" || id === "RSK-002" || id === "RSK-003"
+  ) {
+    return true;
+  }
+  const certNo = String(item.certificateNumber || "");
+  if (
+    certNo === "NOC-MH-2025-8812-B" ||
+    certNo === "LIFT-INSP-2025-441" ||
+    certNo === "SPCB/CTO/AIR-WATER/9902" ||
+    certNo === "DG-CPCB-Q2-2026-118" ||
+    certNo === "MCGM-OC-COMM-2022-771" ||
+    certNo === "STRUCT-FACADE-2025-309"
+  ) {
+    return true;
+  }
+  return false;
+};
 
 export default function ComplianceOperationsCenter({
   portalRole = "owner",
@@ -27,69 +169,135 @@ export default function ComplianceOperationsCenter({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Modals & Drawers
+  // Modals & Upload State
   const [selectedObligation, setSelectedObligation] = useState<any | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadObligationId, setUploadObligationId] = useState<string | null>(null);
   const [selectedIncidentForCapa, setSelectedIncidentForCapa] = useState<any | null>(null);
 
-  // Compliance Obligations Master Dataset (CM-02, CM-03) - Real user data
+  // Upload Form State
+  const [uploadFormData, setUploadFormData] = useState({
+    requirementKey: "",
+    name: "",
+    category: "Fire & Life Safety",
+    authority: "",
+    frequency: "ANNUAL",
+    criticality: "CRITICAL" as "CRITICAL" | "HIGH" | "MEDIUM",
+    weight: 20,
+    certificateNumber: "",
+    issueDate: new Date().toISOString().split("T")[0],
+    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    isPermanent: false,
+    fileName: ""
+  });
+
+  // Compliance Obligations Master Dataset (CM-02, CM-03) - Real user data only
   const [obligations, setObligations] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("officex_compliance_obligations");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(o => !isMockEntry(o));
+          }
+        }
       } catch (e) {}
     }
     return [];
   });
 
-  // Incidents Register (CM-07) - Real user data
+  // Incidents Register (CM-07) - Real user data only
   const [incidents, setIncidents] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("officex_compliance_incidents");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(i => !isMockEntry(i));
+          }
+        }
       } catch (e) {}
     }
     return [];
   });
 
-  // CAPA Management (CM-08) - Real user data
+  // CAPA Management (CM-08) - Real user data only
   const [capas, setCapas] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("officex_compliance_capas");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(c => !isMockEntry(c));
+          }
+        }
       } catch (e) {}
     }
     return [];
   });
 
-  // Permits to Work (CM-09) - Real user data
+  // Permits to Work (CM-09) - Real user data only
   const [permits, setPermits] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("officex_compliance_permits");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(p => !isMockEntry(p));
+          }
+        }
       } catch (e) {}
     }
     return [];
   });
 
-  // Risk Register (CM-13) - Real user data
+  // Risk Register (CM-13) - Real user data only
   const [risks, setRisks] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("officex_compliance_risks");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(r => !isMockEntry(r));
+          }
+        }
       } catch (e) {}
     }
     return [];
   });
 
+  // Purge any stale legacy mock data from browser localStorage permanently
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const keys = [
+        "officex_compliance_obligations",
+        "officex_compliance_incidents",
+        "officex_compliance_capas",
+        "officex_compliance_permits",
+        "officex_compliance_risks"
+      ];
+      keys.forEach(k => {
+        const val = localStorage.getItem(k);
+        if (val) {
+          try {
+            const arr = JSON.parse(val);
+            if (Array.isArray(arr)) {
+              const cleaned = arr.filter(item => !isMockEntry(item));
+              if (cleaned.length !== arr.length) {
+                localStorage.setItem(k, JSON.stringify(cleaned));
+              }
+            }
+          } catch (e) {
+            localStorage.removeItem(k);
+          }
+        }
+      });
+
       const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_active_org");
       if (orgName) {
         setSelectedProperty(orgName);
@@ -102,8 +310,134 @@ export default function ComplianceOperationsCenter({
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Open upload modal pre-filled with a statutory document template
+  const openUploadForTemplate = (tpl: MandatoryDocumentTemplate) => {
+    setUploadFormData({
+      requirementKey: tpl.key,
+      name: tpl.name,
+      category: tpl.category,
+      authority: tpl.authority,
+      frequency: tpl.frequency,
+      criticality: tpl.criticality,
+      weight: tpl.weight,
+      certificateNumber: "",
+      issueDate: new Date().toISOString().split("T")[0],
+      expiryDate: tpl.frequency === "PERMANENT" ? "2099-12-31" : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      isPermanent: tpl.frequency === "PERMANENT",
+      fileName: ""
+    });
+    setUploadObligationId(null);
+    setShowUploadModal(true);
+  };
+
+  // Handle saving real user-uploaded certificate
+  const handleUploadSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFormData.name.trim()) return;
+
+    const expiry = uploadFormData.isPermanent ? "2099-12-31" : (uploadFormData.expiryDate || "2099-12-31");
+    const today = new Date().toISOString().split("T")[0];
+    let status = "compliant";
+    if (expiry < today) {
+      status = "overdue";
+    } else {
+      const diffDays = Math.round((new Date(expiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 30) {
+        status = "due";
+      } else if (diffDays <= 60) {
+        status = "expiring_soon";
+      }
+    }
+
+    const newObligation = {
+      id: `obl-${Date.now()}`,
+      requirementKey: uploadFormData.requirementKey || "custom",
+      name: uploadFormData.name.trim(),
+      category: uploadFormData.category,
+      authority: uploadFormData.authority.trim() || "Government Regulatory Authority",
+      frequency: uploadFormData.frequency,
+      criticality: uploadFormData.criticality,
+      weight: uploadFormData.weight || 15,
+      status,
+      dueDate: expiry,
+      expiryDate: expiry,
+      issueDate: uploadFormData.issueDate,
+      lastRenewed: uploadFormData.issueDate,
+      certificateNumber: uploadFormData.certificateNumber.trim() || `CERT-${Date.now().toString().slice(-6)}`,
+      ownerName: "Compliance Manager",
+      evidenceAttached: true,
+      verified: true,
+      fileName: uploadFormData.fileName || `${uploadFormData.name.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
+      uploadedAt: new Date().toISOString()
+    };
+
+    const updated = [newObligation, ...obligations.filter(o => o.id !== uploadObligationId)];
+    setObligations(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_compliance_obligations", JSON.stringify(updated));
+    }
+    showToast(`✓ "${newObligation.name}" uploaded to Compliance Vault!`, "success");
+    setShowUploadModal(false);
+    setUploadObligationId(null);
+  };
+
+  // Handle Certificate Official Download Record
+  const handleDownloadCertificate = (o: any) => {
+    const content = `OFFICEX STATUTORY COMPLIANCE VAULT
+==================================================
+Asset: ${selectedProperty}
+Document: ${o.name}
+Registration / Certificate No: ${o.certificateNumber}
+Regulatory Authority: ${o.authority}
+Category: ${o.category}
+Frequency: ${o.frequency}
+Issue Date: ${o.issueDate || "N/A"}
+Expiry / Due Date: ${o.dueDate || o.expiryDate || "N/A"}
+Verification Status: ${o.verified ? "VERIFIED BY COMPLIANCE OFFICER" : "PENDING VERIFICATION"}
+Attached Evidence File: ${o.fileName || "official_certified_scan.pdf"}
+Vault Timestamp: ${o.uploadedAt || new Date().toISOString()}
+==================================================
+`;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${o.name.replace(/[^a-zA-Z0-9]/g, "_")}_Record.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Downloading official record for ${o.name}...`, "info");
+  };
+
+  // Icon Helper for Template Cards
+  const renderDocIcon = (type: string, className: string = "w-5 h-5") => {
+    switch (type) {
+      case "fire": return <Flame className={`${className} text-orange-500`} />;
+      case "lift": return <Building className={`${className} text-purple-600`} />;
+      case "env": return <Compass className={`${className} text-emerald-600`} />;
+      case "building": return <Building2 className={`${className} text-blue-600`} />;
+      case "power": return <Zap className={`${className} text-amber-500`} />;
+      case "electrical": return <Zap className={`${className} text-yellow-600`} />;
+      case "structural": return <Layers className={`${className} text-slate-700`} />;
+      case "water": return <RefreshCw className={`${className} text-cyan-600`} />;
+      default: return <FileText className={`${className} text-teal-600`} />;
+    }
+  };
+
   // BR-C03 Weighted Score Calculation
   const { complianceScore, totalWeight, compliantCount, dueCount, overdueCount, criticalOverdueCount } = useMemo(() => {
+    if (obligations.length === 0) {
+      return {
+        complianceScore: 0,
+        totalWeight: 0,
+        compliantCount: 0,
+        dueCount: 0,
+        overdueCount: 0,
+        criticalOverdueCount: 0
+      };
+    }
+
     let tWeight = 0;
     let eWeight = 0;
     let cCount = 0;
@@ -127,7 +461,7 @@ export default function ComplianceOperationsCenter({
       }
     });
 
-    const score = Math.round((eWeight / (tWeight || 1)) * 100);
+    const score = tWeight > 0 ? Math.round((eWeight / tWeight) * 100) : 0;
     return {
       complianceScore: score,
       totalWeight: tWeight,
@@ -197,13 +531,30 @@ export default function ComplianceOperationsCenter({
             Statutory Compliance Radar &amp; EHS Center
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            48 pre-configured commercial tower licenses, Fire NOC, Lift Form-A, SPCB CTO, Incidents, CAPA, and PTW.
+            Institutional statutory compliance repository, automated renewal radar, audit-ready evidence vault, CAPA, and PTW.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => {
+              setUploadFormData({
+                requirementKey: "custom",
+                name: "",
+                category: "Fire & Life Safety",
+                authority: "",
+                frequency: "ANNUAL",
+                criticality: "HIGH",
+                weight: 15,
+                certificateNumber: "",
+                issueDate: new Date().toISOString().split("T")[0],
+                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+                isPermanent: false,
+                fileName: ""
+              });
+              setUploadObligationId(null);
+              setShowUploadModal(true);
+            }}
             className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Upload size={14} /> Upload Evidence
@@ -350,18 +701,36 @@ export default function ComplianceOperationsCenter({
             </div>
 
             {obligations.length === 0 ? (
-              <div className="p-8 text-center flex flex-col items-center justify-center gap-2 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                <ShieldCheck size={28} className="text-[#0F8B7D]" />
-                <h4 className="text-xs font-bold text-slate-900">No Active Obligations to Monitor</h4>
-                <p className="text-[11px] text-slate-500 max-w-sm">
-                  Upload your commercial asset's statutory certificates to activate live validity clocks and compliance radar.
-                </p>
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="mt-2 px-3.5 py-1.5 bg-[#0F8B7D] text-white text-xs font-bold rounded-lg hover:bg-teal-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                >
-                  <Upload size={13} /> Upload First Statutory NOC
-                </button>
+              <div className="p-8 text-center flex flex-col items-center justify-center gap-3 border border-dashed border-slate-200 rounded-2xl bg-gradient-to-b from-slate-50/70 to-teal-50/20">
+                <div className="w-12 h-12 rounded-2xl bg-teal-100 text-[#0F8B7D] flex items-center justify-center">
+                  <ShieldCheck size={26} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">Setup Your Asset's Statutory Compliance Vault</h4>
+                  <p className="text-xs text-slate-500 max-w-lg mt-1">
+                    No statutory documents uploaded yet. As a new user, you must upload your building's mandatory certificates first to activate live validity radar and institutional scoring.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                  <button
+                    onClick={() => setActiveTab("evidence")}
+                    className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white text-xs font-black rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Upload size={14} /> View All Upload Options (Evidence Vault)
+                  </button>
+                  <button
+                    onClick={() => openUploadForTemplate(MANDATORY_STATUTORY_DOCUMENTS[0])}
+                    className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    + Upload Fire NOC
+                  </button>
+                  <button
+                    onClick={() => openUploadForTemplate(MANDATORY_STATUTORY_DOCUMENTS[1])}
+                    className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    + Upload Lift License
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -509,8 +878,8 @@ export default function ComplianceOperationsCenter({
       {/* TAB 3: 52-WEEK COMPLIANCE CALENDAR (CM-04)                                */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {activeTab === "calendar" && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+          <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-black text-slate-900">52-Week Compliance Renewal Pipeline (CM-04)</h3>
               <p className="text-xs text-slate-500">Upcoming municipal statutory milestones, audits, and OEM renewals.</p>
@@ -520,46 +889,64 @@ export default function ComplianceOperationsCenter({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-black text-xs text-slate-900">Q2 · Sep 2026</span>
-                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">1 Due</span>
+          {obligations.length === 0 ? (
+            <div className="py-12 px-4 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+                <Calendar size={24} />
               </div>
-              <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-1">
-                <p className="font-bold text-slate-900">Diesel Generator CPCB-IV Test</p>
-                <p className="text-[11px] text-slate-500">Due: 30 Sep 2026 · Quarterly Audit</p>
-              </div>
+              <h4 className="text-sm font-black text-slate-900">No Scheduled Statutory Milestones</h4>
+              <p className="text-xs text-slate-500 max-w-md">
+                Your 52-week renewal pipeline is currently clear. Upload your building&apos;s statutory certificates (Fire NOC, Lift License, Pollution CTO) to automatically schedule municipal audits and renewal milestones.
+              </p>
+              <button
+                onClick={() => setActiveTab("evidence")}
+                className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Upload size={14} /> Go to Evidence Vault &amp; Upload
+              </button>
             </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-black text-xs text-slate-900">Q3 · Oct – Nov 2026</span>
-                <span className="text-[10px] font-bold bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">2 Renewals</span>
-              </div>
-              <div className="space-y-2">
-                <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-1">
-                  <p className="font-bold text-slate-900">Pollution Board Consent (CTO)</p>
-                  <p className="text-[11px] text-slate-500">Due: 31 Oct 2026 · SPCB Biennial</p>
-                </div>
-                <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-1">
-                  <p className="font-bold text-slate-900">Fire Safety NOC (Form-B)</p>
-                  <p className="text-[11px] text-slate-500">Due: 30 Nov 2026 · Annual Municipal</p>
-                </div>
-              </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[
+                { label: "Q1 · Apr – Jun", start: "04-01", end: "06-30" },
+                { label: "Q2 · Jul – Sep", start: "07-01", end: "09-30" },
+                { label: "Q3 · Oct – Dec", start: "10-01", end: "12-31" },
+                { label: "Q4 · Jan – Mar", start: "01-01", end: "03-31" }
+              ].map((q, idx) => {
+                const qItems = obligations.filter(o => {
+                  const d = o.dueDate || o.expiryDate || "";
+                  const mDay = d.slice(5);
+                  return mDay >= q.start && mDay <= q.end;
+                });
+                return (
+                  <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-black text-xs text-slate-900">{q.label}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          qItems.length > 0 ? "bg-teal-100 text-teal-800" : "bg-slate-200 text-slate-600"
+                        }`}>
+                          {qItems.length} {qItems.length === 1 ? "Item" : "Items"}
+                        </span>
+                      </div>
+                      <div className="space-y-2 mt-2">
+                        {qItems.length === 0 ? (
+                          <p className="text-[11px] text-slate-400 py-3 text-center">No renewals this quarter</p>
+                        ) : (
+                          qItems.map(item => (
+                            <div key={item.id} className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-1">
+                              <p className="font-bold text-slate-900 line-clamp-1">{item.name}</p>
+                              <p className="text-[11px] text-slate-500">Due: {item.dueDate} · {item.authority}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-black text-xs text-slate-900">Q4 · Dec 2026 – Mar 2027</span>
-                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">1 Renewal</span>
-              </div>
-              <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-1">
-                <p className="font-bold text-slate-900">Lift Safety License (Form A)</p>
-                <p className="text-[11px] text-slate-500">Due: 15 Dec 2026 · Electrical Inspectorate</p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -567,60 +954,163 @@ export default function ComplianceOperationsCenter({
       {/* TAB 4: EVIDENCE VAULT & VERIFICATION (CM-05)                              */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {activeTab === "evidence" && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-black text-slate-900">Statutory Evidence &amp; Certificate Vault (CM-05)</h3>
-              <p className="text-xs text-slate-500">Audit-ready document storage with versioning and Compliance Manager sign-off.</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900">Statutory Evidence &amp; Certificate Vault (CM-05)</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200">
+                  {obligations.length} / {MANDATORY_STATUTORY_DOCUMENTS.length} Uploaded
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Audit-ready document storage with versioning and Compliance Manager sign-off.
+              </p>
             </div>
             <button
-              onClick={() => setShowUploadModal(true)}
-              className="px-3.5 py-2 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs"
+              onClick={() => {
+                setUploadFormData({
+                  requirementKey: "custom",
+                  name: "",
+                  category: "Fire & Life Safety",
+                  authority: "",
+                  frequency: "ANNUAL",
+                  criticality: "HIGH",
+                  weight: 15,
+                  certificateNumber: "",
+                  issueDate: new Date().toISOString().split("T")[0],
+                  expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+                  isPermanent: false,
+                  fileName: ""
+                });
+                setUploadObligationId(null);
+                setShowUploadModal(true);
+              }}
+              className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
             >
-              + Upload Document
+              <Plus size={14} /> Upload Custom Document
             </button>
           </div>
 
-          {obligations.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400">
-              No certificate documents uploaded to vault yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {obligations.map(o => (
-                <div key={o.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <FileText size={18} className="text-teal-700" />
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                      o.verified ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                    }`}>
-                      {o.verified ? "Verified ✓" : "Pending Sign-Off"}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-xs text-slate-900">{o.name}</h4>
-                  <p className="text-[11px] text-slate-500 mt-1">Authority: {o.authority}</p>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{o.certificateNumber}</p>
+          {/* Uploaded Certificates List */}
+          {obligations.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">
+                  Uploaded &amp; Verified Certificates ({obligations.length})
+                </h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {obligations.map(o => (
+                  <div key={o.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/80 hover:border-teal-400 hover:bg-white transition-all shadow-2xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <FileText size={18} className="text-[#0F8B7D]" />
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">{o.category}</span>
+                        </div>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          o.verified ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {o.verified ? "Verified ✓" : "Pending Sign-Off"}
+                        </span>
+                      </div>
+                      <h4 className="font-black text-xs text-slate-900 line-clamp-2">{o.name}</h4>
+                      <p className="text-[11px] text-slate-500 mt-1">Authority: {o.authority}</p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">Reg/Cert: {o.certificateNumber}</p>
+                      {o.expiryDate && (
+                        <p className="text-[10px] text-slate-600 font-medium mt-1">
+                          Valid until: <strong className="text-slate-800">{o.expiryDate === "2099-12-31" ? "Permanent" : o.expiryDate}</strong>
+                        </p>
+                      )}
+                    </div>
 
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => showToast(`Downloading official certificate for ${o.name}...`, "info")}
-                      className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold cursor-pointer"
-                    >
-                      Download
-                    </button>
-                    {!o.verified && (
+                    <div className="flex gap-2 mt-4 pt-3 border-t border-slate-200">
                       <button
-                        onClick={() => handleVerifyEvidence(o.id)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                        onClick={() => handleDownloadCertificate(o)}
+                        className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                       >
-                        Verify
+                        <Download size={12} /> Download
                       </button>
-                    )}
+                      {!o.verified && (
+                        <button
+                          onClick={() => handleVerifyEvidence(o.id)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold cursor-pointer"
+                        >
+                          Verify
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
+
+          {/* Options to Upload Everything First (Mandatory Statutory Catalog) */}
+          <div className="space-y-4 pt-2">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-50/60 to-emerald-50/40 border border-teal-200/80">
+              <div className="flex items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-black uppercase text-teal-950 tracking-wide">
+                    {obligations.length === 0 ? "Step 1: Upload Mandatory Commercial Certificates First" : "Pending Mandatory Documents"}
+                  </h4>
+                  <p className="text-[11px] text-teal-800 mt-0.5">
+                    {obligations.length === 0
+                      ? "As a new user, you have not uploaded anything yet. Please select and upload each mandatory certificate below to complete your asset's statutory baseline:"
+                      : "Upload the remaining mandatory commercial licenses below to achieve 100% audit readiness:"}
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-white text-[#0F8B7D] border border-teal-200 shrink-0">
+                  {MANDATORY_STATUTORY_DOCUMENTS.filter(m => !obligations.some(o => o.requirementKey === m.key || o.name.toLowerCase().includes(m.shortTitle.toLowerCase()))).length} Pending
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {MANDATORY_STATUTORY_DOCUMENTS
+                .filter(m => !obligations.some(o => o.requirementKey === m.key || o.name.toLowerCase().includes(m.shortTitle.toLowerCase())))
+                .map(doc => (
+                  <div
+                    key={doc.key}
+                    className="p-5 rounded-2xl border-2 border-dashed border-slate-200 hover:border-teal-400 bg-white hover:bg-teal-50/20 transition-all flex flex-col justify-between group shadow-2xs"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="p-2 rounded-xl bg-slate-100 group-hover:bg-teal-100 text-slate-700 group-hover:text-[#0F8B7D] transition-colors">
+                          {renderDocIcon(doc.iconType)}
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                          Required · Not Uploaded
+                        </span>
+                      </div>
+
+                      <h4 className="text-xs font-black text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-tight">
+                        {doc.name}
+                      </h4>
+                      <p className="text-[11px] font-medium text-slate-500 mt-1">
+                        Authority: <strong className="text-slate-700">{doc.authority}</strong>
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Cycle: {doc.frequency} · Weight: {doc.weight}%
+                      </p>
+                      <p className="text-[11px] text-slate-600 mt-2 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        {doc.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100">
+                      <button
+                        onClick={() => openUploadForTemplate(doc)}
+                        className="w-full py-2.5 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black rounded-xl cursor-pointer shadow-xs flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <Upload size={13} /> + Upload {doc.shortTitle}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -878,50 +1368,159 @@ export default function ComplianceOperationsCenter({
       {/* MODAL: UPLOAD STATUTORY EVIDENCE (CM-05)                                  */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in">
-            <h4 className="text-base font-black text-slate-900">Upload Statutory Evidence</h4>
-            <p className="text-xs text-slate-500 mt-0.5">Upload certified renewal report or certificate.</p>
-
-            <form onSubmit={e => {
-              e.preventDefault();
-              showToast("Certificate evidence uploaded! Submitted to Compliance Manager for verification.", "success");
-              setShowUploadModal(false);
-            }} className="space-y-3.5 mt-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 animate-in fade-in my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Document Title</label>
-                <input required placeholder="e.g. Fire Form B Renewal Certificate 2026" className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]" />
+                <h4 className="text-base font-black text-slate-900">Upload Statutory Document</h4>
+                <p className="text-xs text-slate-500 mt-0.5">Attach audit-ready certificate scan &amp; set renewal clocks.</p>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4 mt-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document / Obligation Name *</label>
+                <input
+                  required
+                  value={uploadFormData.name}
+                  onChange={e => setUploadFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Fire Safety Certificate & NOC (Form-B)"
+                  className="mt-1 w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Issue Date</label>
-                  <input type="date" required className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Regulatory Authority *</label>
+                  <input
+                    required
+                    value={uploadFormData.authority}
+                    onChange={e => setUploadFormData(prev => ({ ...prev, authority: e.target.value }))}
+                    placeholder="e.g. Directorate of Fire & Emergency Services"
+                    className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                  />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Expiry Date</label>
-                  <input type="date" required className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Category</label>
+                  <select
+                    value={uploadFormData.category}
+                    onChange={e => setUploadFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
+                  >
+                    <option value="Fire & Life Safety">Fire &amp; Life Safety</option>
+                    <option value="Lift & Escalator">Lift &amp; Escalator</option>
+                    <option value="Environmental">Environmental (SPCB)</option>
+                    <option value="Municipal & Structural">Municipal &amp; Structural</option>
+                    <option value="Electrical & Power">Electrical &amp; Power</option>
+                    <option value="Structural Safety">Structural Safety</option>
+                    <option value="General Statutory">General Statutory</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">
-                <Upload size={24} className="mx-auto text-slate-400 mb-1" />
-                <p className="text-xs font-bold text-slate-700">Drop PDF / Certificate Scan</p>
-                <p className="text-[10px] text-slate-400">PDF, JPG up to 25MB</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Certificate / Registration Number *</label>
+                  <input
+                    required
+                    value={uploadFormData.certificateNumber}
+                    onChange={e => setUploadFormData(prev => ({ ...prev, certificateNumber: e.target.value }))}
+                    placeholder="e.g. NOC-MH-2026-9041"
+                    className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Inspection Frequency</label>
+                  <select
+                    value={uploadFormData.frequency}
+                    onChange={e => {
+                      const freq = e.target.value;
+                      setUploadFormData(prev => ({
+                        ...prev,
+                        frequency: freq,
+                        isPermanent: freq === "PERMANENT",
+                        expiryDate: freq === "PERMANENT" ? "2099-12-31" : prev.expiryDate
+                      }));
+                    }}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
+                  >
+                    <option value="ANNUAL">Annual Mandatory</option>
+                    <option value="BIENNIAL">Biennial (Every 2 Years)</option>
+                    <option value="QUARTERLY">Quarterly Monitoring</option>
+                    <option value="MONTHLY">Monthly Audit</option>
+                    <option value="PERMANENT">Permanent Asset License</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="flex gap-2 justify-end pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Issue Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={uploadFormData.issueDate}
+                    onChange={e => setUploadFormData(prev => ({ ...prev, issueDate: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    {uploadFormData.isPermanent ? "Expiry Date (Permanent)" : "Expiry Date *"}
+                  </label>
+                  <input
+                    type="date"
+                    disabled={uploadFormData.isPermanent}
+                    required={!uploadFormData.isPermanent}
+                    value={uploadFormData.isPermanent ? "" : uploadFormData.expiryDate}
+                    onChange={e => setUploadFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+                    className={`mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D] ${
+                      uploadFormData.isPermanent ? "bg-slate-100 text-slate-400 cursor-not-allowed" : ""
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className="border-2 border-dashed border-teal-200 rounded-2xl p-5 text-center bg-teal-50/20 hover:bg-teal-50/40 transition-colors">
+                <Upload size={26} className="mx-auto text-[#0F8B7D] mb-1.5" />
+                <p className="text-xs font-bold text-slate-800">Drop PDF / Scanned Statutory Clearance</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Government stamped scans up to 25MB (PDF, JPG, PNG)</p>
+                <input
+                  type="file"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setUploadFormData(prev => ({ ...prev, fileName: file.name }));
+                    }
+                  }}
+                  className="mt-2 text-[11px] text-slate-600 block mx-auto file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-[#0F8B7D] hover:file:bg-teal-100 cursor-pointer"
+                />
+                {uploadFormData.fileName && (
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">
+                    ✓ Attached: {uploadFormData.fileName}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 justify-end pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black rounded-xl cursor-pointer shadow-xs"
+                  className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black rounded-xl cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
                 >
-                  Save &amp; Submit
+                  <Check size={14} /> Save to Compliance Vault
                 </button>
               </div>
             </form>
