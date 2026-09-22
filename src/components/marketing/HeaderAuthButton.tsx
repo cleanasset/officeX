@@ -9,7 +9,9 @@ import {
   LayoutDashboard,
   ShieldAlert,
   ChevronDown,
-  CheckCircle2
+  CheckCircle2,
+  Building2,
+  ShieldCheck
 } from "lucide-react";
 
 interface HeaderAuthButtonProps {
@@ -144,28 +146,32 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
                 </span>
               </div>
               <p className="text-[11px] font-medium text-slate-500 mt-0.5">{userRole}</p>
-
-              <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500">Dashboard Access:</span>
-                {isSubscribed ? (
-                  <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">Active</span>
-                ) : (
-                  <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
-                    <ShieldAlert size={11} />
-                    Subscription Needed
-                  </span>
-                )}
-              </div>
             </div>
 
             <div className="py-1">
               <Link
-                href="/properties/rent-roll"
+                href="/operate"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-[#0F8B7D] hover:bg-teal-50 transition-colors"
+                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:text-[#0F8B7D] hover:bg-teal-50 transition-colors"
               >
-                <LayoutDashboard size={15} className="text-[#0F8B7D]" />
-                <span>{isSubscribed ? "Open Live Dashboard" : "Activate Subscription (₹100)"}</span>
+                <LayoutDashboard size={14} className="text-[#0F8B7D]" />
+                <span>Operate &amp; Manage Suite</span>
+              </Link>
+              <Link
+                href="/marketplace"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:text-[#0F8B7D] hover:bg-teal-50 transition-colors"
+              >
+                <Building2 size={14} className="text-[#0F8B7D]" />
+                <span>Office Marketplace (Free)</span>
+              </Link>
+              <Link
+                href="/fm-marketplace"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:text-[#0F8B7D] hover:bg-teal-50 transition-colors"
+              >
+                <ShieldCheck size={14} className="text-[#0F8B7D]" />
+                <span>FM Vendor Marketplace (Free)</span>
               </Link>
             </div>
 

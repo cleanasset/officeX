@@ -53,7 +53,7 @@ export default function SignInForm({
   initialRole,
   initialContext
 }: SignInFormProps) {
-  const safeRedirect = validateRedirect(initialRedirect, "/properties");
+  const safeRedirect = validateRedirect(initialRedirect, "/");
 
   // Locale state: English or Hindi
   const [lang, setLang] = useState<Lang>("en");
@@ -559,11 +559,11 @@ export default function SignInForm({
       return;
     }
 
-    const destination = (initialRedirect && safeRedirect !== "/properties") ? safeRedirect : "/properties/rent-roll";
+    const destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "/";
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;
-    }, 1200);
+    }, 1000);
   };
 
   // --------------------------------------------------------------------------
@@ -886,11 +886,11 @@ export default function SignInForm({
                   Signed In Successfully!
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-xs mx-auto">
-                  Welcome back{successUserName ? `, ${successUserName}` : ""}. Loading your workspace &amp; checking subscription status...
+                  Welcome back{successUserName ? `, ${successUserName}` : ""}. Taking you to OfficeX...
                 </p>
                 <div className="mt-6 flex justify-center items-center gap-2 text-xs font-bold text-[#0F8B7D]">
                   <Loader2 size={16} className="animate-spin" />
-                  <span>Preparing SaaS dashboard...</span>
+                  <span>Redirecting...</span>
                 </div>
               </div>
             )}
