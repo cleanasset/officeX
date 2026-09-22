@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   X,
   Plus,
-  Building,
+  Building2,
   Calendar,
   Layers,
   TrendingUp,
   Percent,
   DollarSign,
   Shield,
-  Sparkles
+  Sparkles,
+  ArrowRight,
+  AlertCircle
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -20,6 +23,7 @@ interface AddLeaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onOpenAddProperty?: () => void;
 }
 
 export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
@@ -27,59 +31,108 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  onOpenAddProperty,
 }) => {
-  const [propertyId, setPropertyId] = useState(properties[0]?.id || "PROP-001");
+  const router = useRouter();
+  const [propertyId, setPropertyId] = useState(properties[0]?.id || "");
   const [tenantName, setTenantName] = useState("");
-  const [unitNumber, setUnitNumber] = useState("Suite 101");
-  const [floorNumber, setFloorNumber] = useState(1);
-  const [startDate, setStartDate] = useState("2026-10-01");
-  const [endDate, setEndDate] = useState("2031-09-30");
-  const [chargeableArea, setChargeableArea] = useState<number>(15000);
-  const [monthlyRent, setMonthlyRent] = useState<number>(3000000);
-  const [camRatePsf, setCamRatePsf] = useState<number>(20);
-  const [utilityFixedMonthly, setUtilityFixedMonthly] = useState<number>(100000);
+  const [unitNumber, setUnitNumber] = useState("");
+  const [floorNumber, setFloorNumber] = useState<number | "">("");
+  
+  const todayStr = new Date().toISOString().split("T")[0];
+  const next3YearsStr = new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(next3YearsStr);
+  const [chargeableArea, setChargeableArea] = useState<number | "">("");
+  const [monthlyRent, setMonthlyRent] = useState<number | "">("");
+  const [camRatePsf, setCamRatePsf] = useState<number | "">("");
+  const [utilityFixedMonthly, setUtilityFixedMonthly] = useState<number | "">("");
   const [escalationPct, setEscalationPct] = useState<number>(5);
   const [escalationFrequencyMonths, setEscalationFrequencyMonths] = useState<number>(24);
   const [securityDepositMonths, setSecurityDepositMonths] = useState<number>(6);
   const [lockInMonths, setLockInMonths] = useState<number>(36);
   const [noticePeriodDays, setNoticePeriodDays] = useState<number>(90);
-  const [brokerName, setBrokerName] = useState("Direct / Institutional");
+  const [brokerName, setBrokerName] = useState("Direct");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Sync propertyId when properties list updates
+  useEffect(() => {
+    if (properties.length > 0 && (!propertyId || !properties.some(p => p.id === propertyId))) {
+      setPropertyId(properties[0].id);
+    }
+  }, [properties, propertyId]);
 
   if (!isOpen) return null;
 
   // Real-time calculations
-  const baseRentPsf = chargeableArea > 0 ? Math.round((monthlyRent / chargeableArea) * 100) / 100 : 0;
-  const camMonthly = Math.round(chargeableArea * camRatePsf);
-  const subtotal = monthlyRent + camMonthly + utilityFixedMonthly;
+  const numArea = typeof chargeableArea === "number" ? chargeableArea : 0;
+  const numRent = typeof monthlyRent === "number" ? monthlyRent : 0;
+  const numCam = typeof camRatePsf === "number" ? camRatePsf : 0;
+  const numUtil = typeof utilityFixedMonthly === "number" ? utilityFixedMonthly : 0;
+
+  const baseRentPsf = numArea > 0 ? Math.round((numRent / numArea) * 100) / 100 : 0;
+  const camMonthly = Math.round(numArea * numCam);
+  const subtotal = numRent + camMonthly + numUtil;
   const gstAmount = Math.round(subtotal * 0.18);
   const totalMonthlyGross = subtotal + gstAmount;
   const annualGross = totalMonthlyGross * 12;
-  const securityDepositRequired = monthlyRent * securityDepositMonths;
+  const securityDepositRequired = numRent * securityDepositMonths;
+
+  const handleNavigateToAddProperty = () => {
+    onClose();
+    if (onOpenAddProperty) {
+      onOpenAddProperty();
+    } else {
+      router.push("/properties/add");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (properties.length === 0) {
+      setErrorMsg("Please register at least one commercial property before adding a lease.");
+      return;
+    }
+    if (!propertyId) {
+      setErrorMsg("Please select a target property.");
+      return;
+    }
+    if (!tenantName.trim()) {
+      setErrorMsg("Please enter the tenant trade name.");
+      return;
+    }
+    if (!numArea || numArea <= 0) {
+      setErrorMsg("Chargeable Area must be greater than 0 sq ft.");
+      return;
+    }
+    if (!numRent || numRent <= 0) {
+      setErrorMsg("Monthly Base Rent must be greater than 0.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg("");
 
     try {
+      const selectedProp = properties.find(p => p.id === propertyId);
       const res = await fetch("/api/rent-roll/leases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          propertyId: properties.find(p => p.id === propertyId)?.id || (propertyId.startsWith("PROP-") ? propertyId : `PROP-${Date.now()}`),
-          propertyName: properties.find(p => p.id === propertyId)?.name || propertyId,
-          tenantName,
-          unitNumber,
-          floorNumber,
+          propertyId: selectedProp?.id || propertyId,
+          propertyName: selectedProp?.name || propertyId,
+          tenantName: tenantName.trim(),
+          unitNumber: unitNumber ? String(unitNumber).trim() : "Unit 1",
+          floorNumber: typeof floorNumber === "number" ? floorNumber : 1,
           startDate,
           endDate,
-          chargeableArea,
-          carpetArea: Math.round(chargeableArea * 0.85),
-          monthlyRent,
-          camRatePsf,
-          utilityFixedMonthly,
+          chargeableArea: numArea,
+          carpetArea: Math.round(numArea * 0.85),
+          monthlyRent: numRent,
+          camRatePsf: numCam,
+          utilityFixedMonthly: numUtil,
           escalationPct,
           escalationFrequencyMonths,
           securityDepositMonths,
@@ -104,6 +157,82 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
     }
   };
 
+  // ──── ZERO PROPERTIES STATE: FORCE USER TO REGISTER PROPERTY FIRST ────
+  if (properties.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/50 backdrop-blur-xs flex justify-center items-center p-4 sm:p-6 animate-fadeIn">
+        <div className="w-full max-w-lg bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
+          <div className="p-5 bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-teal-600 text-white rounded-xl shadow-xs">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-950">Property Required First</h3>
+                <p className="text-xs text-teal-700 font-semibold">Step 1 of 2 in Commercial Onboarding</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 bg-white/80 hover:bg-white text-gray-500 hover:text-gray-900 rounded-xl transition-colors cursor-pointer border border-teal-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 text-center flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shadow-inner">
+              <Building2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1.5 max-w-md">
+              <h4 className="text-base font-extrabold text-gray-900">No Commercial Properties Found</h4>
+              <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                Before onboarding commercial leases and allocating tenant units, you must first register your commercial property asset (building, business park, or IT tower).
+              </p>
+            </div>
+
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-left text-xs text-slate-700 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-slate-900">
+                <Sparkles className="w-4 h-4 text-teal-600" />
+                <span>Onboarding Roadmap</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-200/80">
+                <div className="bg-white p-2 rounded-lg border border-teal-200 shadow-2xs">
+                  <span className="font-extrabold text-teal-700 block">Step 1 (Now)</span>
+                  <span className="text-slate-600 font-medium">Register Property Asset</span>
+                </div>
+                <div className="bg-white/60 p-2 rounded-lg border border-slate-200">
+                  <span className="font-bold text-slate-400 block">Step 2</span>
+                  <span className="text-slate-500 font-medium">Onboard Leases &amp; Rent Roll</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-1/3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleNavigateToAddProperty}
+                className="w-2/3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+              >
+                <span>+ Register Property Asset</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ──── ACTIVE LEASE ONBOARDING MODAL (WHEN PROPERTIES EXIST) ────
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/40 backdrop-blur-xs flex justify-center items-center p-4 sm:p-6 animate-fadeIn">
       <div className="w-full max-w-2xl bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
@@ -130,38 +259,37 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs font-medium text-gray-700">
           {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold">
-              {errorMsg}
+            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{errorMsg}</span>
             </div>
           )}
 
           {/* Section 1: Property & Tenant */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 font-bold mb-1">Target Property *</label>
-              {properties.length > 0 ? (
-                <select
-                  value={propertyId}
-                  onChange={(e) => setPropertyId(e.target.value)}
-                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs cursor-pointer font-medium"
-                  required
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-gray-700 font-bold">Target Property *</label>
+                <button
+                  type="button"
+                  onClick={handleNavigateToAddProperty}
+                  className="text-[11px] text-teal-600 hover:text-teal-800 font-bold hover:underline"
                 >
-                  {properties.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.city})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  placeholder="Enter property name (e.g. Apex Horizon Tower)"
-                  value={propertyId}
-                  onChange={(e) => setPropertyId(e.target.value)}
-                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs font-medium"
-                  required
-                />
-              )}
+                  + Add New Property
+                </button>
+              </div>
+              <select
+                value={propertyId}
+                onChange={(e) => setPropertyId(e.target.value)}
+                className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs cursor-pointer font-medium"
+                required
+              >
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.city || "Commercial"})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -180,6 +308,7 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
               <label className="block text-gray-700 font-bold mb-1">Unit / Space Number</label>
               <input
                 type="text"
+                placeholder="e.g. Suite 402, Wing-A"
                 value={unitNumber}
                 onChange={(e) => setUnitNumber(e.target.value)}
                 className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs font-medium"
@@ -190,8 +319,9 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
               <label className="block text-gray-700 font-bold mb-1">Floor Number</label>
               <input
                 type="number"
+                placeholder="e.g. 4"
                 value={floorNumber}
-                onChange={(e) => setFloorNumber(parseInt(e.target.value) || 1)}
+                onChange={(e) => setFloorNumber(e.target.value ? parseInt(e.target.value) : "")}
                 className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none shadow-2xs font-medium"
               />
             </div>
@@ -203,8 +333,9 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
               <label className="block text-gray-700 font-bold mb-1">Chargeable Area (Sq Ft) *</label>
               <input
                 type="number"
+                placeholder="e.g. 10000"
                 value={chargeableArea}
-                onChange={(e) => setChargeableArea(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setChargeableArea(e.target.value ? parseFloat(e.target.value) : "")}
                 className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none font-mono font-bold shadow-2xs"
                 required
               />
@@ -214,8 +345,9 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
               <label className="block text-gray-700 font-bold mb-1">Monthly Base Rent (₹) *</label>
               <input
                 type="number"
+                placeholder="e.g. 1500000"
                 value={monthlyRent}
-                onChange={(e) => setMonthlyRent(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setMonthlyRent(e.target.value ? parseFloat(e.target.value) : "")}
                 className="w-full bg-white border border-gray-200 text-[#0F8B7D] rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none font-mono font-black shadow-2xs"
                 required
               />
@@ -232,8 +364,9 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
               <label className="block text-gray-700 font-bold mb-1">CAM Rate PSF (₹/mo)</label>
               <input
                 type="number"
+                placeholder="e.g. 20"
                 value={camRatePsf}
-                onChange={(e) => setCamRatePsf(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setCamRatePsf(e.target.value ? parseFloat(e.target.value) : "")}
                 className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none font-mono shadow-2xs"
               />
             </div>
@@ -242,8 +375,9 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
               <label className="block text-gray-700 font-bold mb-1">Utilities Monthly (₹)</label>
               <input
                 type="number"
+                placeholder="e.g. 50000"
                 value={utilityFixedMonthly}
-                onChange={(e) => setUtilityFixedMonthly(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setUtilityFixedMonthly(e.target.value ? parseFloat(e.target.value) : "")}
                 className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-[#0F8B7D] focus:outline-none font-mono shadow-2xs"
               />
             </div>

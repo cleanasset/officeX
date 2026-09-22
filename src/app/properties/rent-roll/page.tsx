@@ -422,6 +422,7 @@ function RentRollPageInner() {
         isOpen={isAddLeaseOpen}
         onClose={() => setIsAddLeaseOpen(false)}
         onSuccess={fetchAllData}
+        onOpenAddProperty={() => router.push("/properties/add")}
       />
 
       <ApplyEscalationModal
