@@ -57,33 +57,33 @@ export default function ProfileCompletionMeter({
   }
 
   return (
-    <div className={`p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xl space-y-3 font-sans ${className}`}>
+    <div className={`p-4 sm:p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3 font-sans transition-all ${className}`}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-teal-950 border border-teal-800 flex items-center justify-center text-[#0F8B7D]">
-            <ShieldCheck size={18} />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] shrink-0">
+            <ShieldCheck size={19} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-white">Profile & KYC Completion</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-950 text-teal-300 border border-teal-800">
+              <span className="text-xs font-black text-slate-900">Profile &amp; KYC Verification</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200">
                 {data.statusLabel}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Complete verification to unlock higher transaction & listing limits.</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Complete statutory verification to unlock higher transaction and listing limits.</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="text-right">
             <span className="text-sm font-black text-[#0F8B7D]">{data.completionPercentage}%</span>
-            <span className="text-[9px] text-slate-500 block">Completed</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
           </div>
 
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
           >
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -91,16 +91,16 @@ export default function ProfileCompletionMeter({
       </div>
 
       {/* Progress bar */}
-      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-[#0F8B7D] to-teal-500 transition-all duration-500"
           style={{ width: `${data.completionPercentage}%` }}
         />
       </div>
 
       {/* Expanded Actions */}
       {isExpanded && (
-        <div className="pt-2 border-t border-slate-800 space-y-2 text-xs">
+        <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
             PENDING VERIFICATION CRITERIA:
           </span>
@@ -109,29 +109,29 @@ export default function ProfileCompletionMeter({
               <div
                 key={idx}
                 className={`p-2.5 rounded-xl border flex items-center justify-between ${
-                  item.completed ? "bg-teal-950/40 border-teal-800/60 text-slate-300" : "bg-slate-950 border-slate-800 text-slate-400"
+                  item.completed ? "bg-teal-50/50 border-teal-200/80 text-teal-950" : "bg-slate-50 border-slate-200/80 text-slate-600"
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[9px] font-black ${
-                    item.completed ? "bg-teal-500 text-slate-950" : "border border-slate-700 text-slate-600"
+                  <span className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-black ${
+                    item.completed ? "bg-[#0F8B7D] text-white" : "border border-slate-300 text-slate-400 bg-white"
                   }`}>
                     {item.completed ? "✓" : "!"}
                   </span>
                   <span className="text-[11px] font-bold">{item.category}</span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-500">+{item.weight}%</span>
+                <span className="text-[10px] font-mono font-semibold text-slate-400">+{item.weight}%</span>
               </div>
             ))}
           </div>
 
           <div className="pt-2 flex items-center justify-between">
-            <span className="text-[10px] text-slate-400">
-              {data.pendingActions.length > 0 ? `Next: ${data.pendingActions[0]}` : "All mandatory items in order"}
+            <span className="text-[11px] text-slate-500">
+              {data.pendingActions.length > 0 ? `Next step: ${data.pendingActions[0]}` : "All mandatory items verified"}
             </span>
             <Link
               href={`/onboarding?role=${encodeURIComponent(role)}`}
-              className="text-[11px] font-black text-[#0F8B7D] hover:text-teal-300 flex items-center gap-1 transition-colors"
+              className="text-[11px] font-black text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors"
             >
               <span>Resume Onboarding</span>
               <ArrowRight size={12} />

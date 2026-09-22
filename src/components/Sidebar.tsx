@@ -191,9 +191,7 @@ export default function Sidebar() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
   const [orgCity, setOrgCity] = useState<string>("");
-  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({
-    "Rent Roll Master": true
-  });
+  const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({});
 
   // Synchronously compute active portal from URL first, handling both direct keys and aliases
   const findPortalKey = (path: string): string | undefined => {

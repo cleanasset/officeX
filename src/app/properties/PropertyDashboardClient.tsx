@@ -389,27 +389,31 @@ export default function PropertyDashboardClient({
               }
               setShowAddTenantModal(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <UserPlus size={14} /> + Add Existing Tenant
+            <UserPlus size={14} className="text-[#0F8B7D]" />
+            <span>Add Tenant</span>
           </button>
           <Link
             href="/properties/rent-roll?tab=tenants"
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
           >
-            <Users size={14} /> Tenant Directory
+            <Users size={14} className="text-slate-500" />
+            <span>Tenant Directory</span>
           </Link>
           <button 
             onClick={() => setShowAssignModal(true)}
-            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <Handshake size={14} /> Assign Broker
+            <Handshake size={14} className="text-purple-600" />
+            <span>Assign Broker</span>
           </button>
           <Link 
             href="/properties/add" 
-            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1"
+            className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
           >
-            <Plus size={14} /> Add Property
+            <Plus size={15} />
+            <span>Add Property</span>
           </Link>
         </div>
       </div>
@@ -497,29 +501,29 @@ export default function PropertyDashboardClient({
       )}
 
       {/* ═══ LIVE RENT ROLL & LEASE PERFORMANCE COMMAND HUB ═══ */}
-      <div className="bg-gradient-to-r from-[#0B1F3A] to-[#1E3A8A] rounded-3xl p-6 sm:p-7 text-white shadow-xl">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/10 pb-5">
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/30 text-blue-200 border border-blue-400/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-[#0F8B7D] border border-teal-200/70">
                 SaaS Module S04-03
               </span>
-              <span className="text-xs text-blue-200 font-medium">Live Institutional Engine</span>
+              <span className="text-xs text-slate-500 font-medium">Live Institutional Engine</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white mt-1.5 flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1.5 flex items-center gap-2">
               <span>Rent Roll &amp; Commercial Lease Performance</span>
             </h2>
-            <p className="text-xs text-blue-200/80 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               {propertiesCount > 0 && rentRollData?.propertyCount
                 ? `Automated lease-to-cash operating system across ${propertiesCount} institutional Grade-A assets.`
                 : "Automated commercial lease-to-cash operating system. Onboard your assets to track lease billing."}
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/properties/rent-roll?tab=master"
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5"
             >
               <FileSpreadsheet size={14} />
               <span>Full Rent Roll</span>
@@ -527,14 +531,14 @@ export default function PropertyDashboardClient({
             </Link>
             <Link
               href="/properties/rent-roll?tab=invoices"
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all border border-slate-200/90 flex items-center gap-1.5 shadow-2xs"
             >
               <Receipt size={14} />
               <span>Invoices</span>
             </Link>
             <Link
               href="/properties/rent-roll?tab=escalations"
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all border border-slate-200/90 flex items-center gap-1.5 shadow-2xs"
             >
               <TrendingUp size={14} />
               <span>Escalations</span>
@@ -543,43 +547,44 @@ export default function PropertyDashboardClient({
         </div>
 
         {/* Live Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-            <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Monthly Gross Rent</span>
-            <div className="text-xl sm:text-2xl font-black text-white mt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-5">
+          <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Monthly Gross Rent</span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
               ₹{propertiesCount > 0 && rentRollData?.summary?.totalMonthlyRent ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) : "0.00"} Cr
             </div>
-            <span className="text-[10px] text-blue-200 mt-1 block">
+            <span className="text-[10px] text-slate-500 font-medium mt-1 block">
               {propertiesCount > 0 ? (rentRollData?.summary?.activeLeasesCount || 0) : 0} Active Commercial Leases
             </span>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-            <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Portfolio Occupancy</span>
-            <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+          <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Portfolio Occupancy</span>
+            <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
               {propertiesCount > 0 ? (rentRollData?.occupancy?.occupancyPct || 0) : 0}%
             </div>
-            <span className="text-[10px] text-emerald-300 mt-1 block">
+            <span className="text-[10px] text-emerald-600 font-semibold mt-1 block">
               {propertiesCount > 0 && rentRollData?.occupancy?.totalArea ? `${(rentRollData.occupancy.totalArea / 1000).toFixed(0)}k sq.ft Total Area` : "0 sq.ft Total Area"}
             </span>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-            <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">Total Outstanding</span>
-            <div className="text-xl sm:text-2xl font-black text-white mt-1">
+          <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Total Outstanding</span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
               ₹{propertiesCount > 0 && rentRollData?.summary?.totalOutstanding ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) : "0.00"} Cr
             </div>
-            <span className="text-[10px] text-emerald-400 font-bold mt-1 block">
-              ● {propertiesCount > 0 ? (rentRollData?.summary?.overdueLeasesCount || 0) : 0} Leases Overdue
+            <span className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              {propertiesCount > 0 ? (rentRollData?.summary?.overdueLeasesCount || 0) : 0} Leases Overdue
             </span>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-            <span className="text-[10px] uppercase font-bold text-blue-300/80 tracking-wider block">WALT (Lease Horizon)</span>
-            <div className="text-xl sm:text-2xl font-black text-white mt-1">
+          <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">WALT (Lease Horizon)</span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
               {propertiesCount > 0 && rentRollData?.walt?.waltByRentMonths ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` : "0.0 Yrs"}
             </div>
-            <span className="text-[10px] text-amber-300 mt-1 block">
+            <span className="text-[10px] text-amber-600 font-semibold mt-1 block">
               {propertiesCount > 0 ? (rentRollData?.summary?.escalationsDueCount || 0) : 0} Escalations Due Soon
             </span>
           </div>
@@ -592,16 +597,16 @@ export default function PropertyDashboardClient({
         {/* Total Properties */}
         <Link 
           href="/properties/add" 
-          className="premium-card p-4 sm:p-5 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Properties</span>
-            <div className="text-2xl font-extrabold text-gray-900 mt-1.5 group-hover:text-[#8B5CF6]">{propertiesCount}</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 block">
-              {propertiesCount === 0 ? "⚪ 0 Listed (Empty)" : "🟢 Active Portfolio"}
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Properties</span>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-[#8B5CF6] transition-colors">{propertiesCount}</div>
+            <span className="text-[10px] text-slate-500 font-semibold mt-1 block">
+              {propertiesCount === 0 ? "0 Listed (Ready to Add)" : "🟢 Active Portfolio"}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-105 transition-transform shrink-0">
             <Building size={22} />
           </div>
         </Link>
@@ -609,18 +614,18 @@ export default function PropertyDashboardClient({
         {/* Portfolio Health Score */}
         <Link 
           href="/ops" 
-          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-[#0F8B7D]/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-[#0F8B7D]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Portfolio Health</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0F8B7D] mt-2 group-hover:text-teal-800">
-              {propertiesCount === 0 ? "—" : "100/100"}
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Portfolio Health</span>
+            <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] mt-1.5 group-hover:text-teal-800 transition-colors">
+              {propertiesCount === 0 ? "100%" : "100/100"}
             </div>
-            <span className="text-[10px] text-teal-700 font-bold mt-1 block">
-              {propertiesCount === 0 ? "No assets to monitor" : "● Optimal (FM Ops Live)"}
+            <span className="text-[10px] text-teal-700 font-semibold mt-1 block">
+              {propertiesCount === 0 ? "● Systems Ready" : "● Optimal (FM Ops Live)"}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] group-hover:scale-105 transition-transform shrink-0">
             <Activity size={22} />
           </div>
         </Link>
@@ -628,16 +633,16 @@ export default function PropertyDashboardClient({
         {/* Occupancy Rate */}
         <Link 
           href="/properties/rent-roll" 
-          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Occupancy</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-emerald-700">{occupancyDisplay}</div>
-            <span className="text-[10px] text-green-600 font-bold mt-1 block">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Occupancy</span>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-emerald-700 transition-colors">{occupancyDisplay}</div>
+            <span className="text-[10px] text-emerald-600 font-semibold mt-1 block">
               {isCleanMode ? "Clean Sandbox Metrics" : "↑ 1.8% vs last month"}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform shrink-0">
             <TrendingUp size={22} />
           </div>
         </Link>
@@ -645,14 +650,16 @@ export default function PropertyDashboardClient({
         {/* Tenant Requests & Service Issues */}
         <Link 
           href="/properties/tenants" 
-          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Tenant Requests</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-2 group-hover:text-amber-700">{openTicketsCount}</div>
-            <span className="text-[10px] text-amber-600 font-bold mt-1 block">⚠ {openTicketsCount} open tenant requests</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Tenant Requests</span>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-amber-700 transition-colors">{openTicketsCount}</div>
+            <span className="text-[10px] text-amber-600 font-semibold mt-1 block">
+              {openTicketsCount === 0 ? "No open requests" : `⚠ ${openTicketsCount} open tenant requests`}
+            </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform shrink-0">
             <AlertTriangle size={22} />
           </div>
         </Link>
@@ -660,14 +667,20 @@ export default function PropertyDashboardClient({
         {/* Expired Compliance NOCs */}
         <Link 
           href="/properties/compliance" 
-          className="premium-card p-5 sm:p-6 border border-gray-200 flex items-center justify-between bg-white shadow-sm hover:border-red-500/50 hover:shadow-md transition-all cursor-pointer group"
+          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-red-500/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Expired NOCs</span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-red-600 mt-2 group-hover:text-red-700">{expiredCertsCount}</div>
-            <span className="text-[10px] text-red-600 font-bold mt-1 block">✗ Renewal Required</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Expired NOCs</span>
+            <div className={`text-2xl sm:text-3xl font-black mt-1.5 transition-colors ${expiredCertsCount === 0 ? "text-slate-900 group-hover:text-slate-700" : "text-red-600 group-hover:text-red-700"}`}>
+              {expiredCertsCount}
+            </div>
+            <span className={`text-[10px] font-semibold mt-1 block ${expiredCertsCount === 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {expiredCertsCount === 0 ? "✓ All NOCs Compliant" : "✗ Renewal Required"}
+            </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+          <div className={`w-12 h-12 rounded-xl border flex items-center justify-center group-hover:scale-105 transition-transform shrink-0 ${
+            expiredCertsCount === 0 ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-red-50 border-red-100 text-red-600"
+          }`}>
             <ShieldCheck size={22} />
           </div>
         </Link>
