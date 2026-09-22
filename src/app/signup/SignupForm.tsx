@@ -57,6 +57,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(true);
 
   // OTP Fields (S03)
@@ -327,7 +328,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               {/* Status Step Badge */}
               <div className="mb-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
-                  {step === 1 ? "Step 02: Account Registration" : "Step 03: Contact Verification"}
+                  {step === 1 ? "Step 1 of 2: Account Registration" : "Step 2 of 2: Contact Verification"}
                 </span>
               </div>
 
@@ -370,7 +371,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                     <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
                       I AM JOINING AS:
                     </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
                       {ROLE_OPTIONS.map((r) => {
                         const isSelected = selectedRole === r.id;
                         return (
@@ -378,15 +379,15 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                             key={r.id}
                             type="button"
                             onClick={() => setSelectedRole(r.id)}
-                            className={`py-2 px-1 rounded-xl text-center transition-all cursor-pointer border flex flex-col items-center gap-1 ${
+                            className={`py-2 px-1 rounded-xl text-center transition-all cursor-pointer border flex flex-col items-center justify-center gap-1 min-h-[56px] ${
                               isSelected
                                 ? "bg-blue-50 border-blue-600 text-blue-900 shadow-2xs font-bold ring-1 ring-blue-600"
                                 : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-blue-50/50 hover:border-slate-300 font-medium"
                             }`}
                           >
                             <r.icon size={15} className={isSelected ? "text-blue-600" : "text-slate-400"} />
-                            <span className="text-[10px] truncate max-w-full leading-tight">
-                              {r.label.split(" ")[0]}
+                            <span className="text-[10px] sm:text-[11px] font-semibold leading-tight text-center">
+                              {r.label}
                             </span>
                           </button>
                         );
@@ -499,16 +500,28 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                       <div className="relative">
                         <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
                         <input
-                          type="password"
+                          type={showConfirmPassword ? "text" : "password"}
                           required
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="••••••••••"
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
+                          className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
                       </div>
                     </div>
                   </div>
+
+                  {/* Password requirement hint */}
+                  <p className="text-[10px] text-slate-500 -mt-2">
+                    Password must be at least 8 characters with uppercase, numbers, and symbols.
+                  </p>
 
                   {/* Terms & Conditions */}
                   <div className="flex items-start gap-2 pt-1">
