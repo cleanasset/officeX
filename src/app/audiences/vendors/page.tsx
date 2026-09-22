@@ -24,6 +24,7 @@ export default function FMVendorsJourney() {
         roleName="FM Service Partner &amp; Vendor"
         dashboardHref="/vendor"
         dashboardName="Vendor Bidding &amp; Payout Portal"
+        isFreePortal={true}
       />
 
       <HeroSection

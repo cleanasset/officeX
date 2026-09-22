@@ -3,18 +3,21 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, CheckCircle, ArrowRight, Sparkles, Shield, LogOut } from "lucide-react";
+import { User, Lock, CheckCircle, ArrowRight, Sparkles, Shield, LogOut, CreditCard, Loader2 } from "lucide-react";
+import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 interface UserLandingBannerProps {
   roleName: string;
   dashboardHref: string;
   dashboardName: string;
+  isFreePortal?: boolean; // FM Marketplace & Office Marketplace portals are free
 }
 
 export default function UserLandingBanner({
   roleName,
   dashboardHref,
-  dashboardName
+  dashboardName,
+  isFreePortal = false
 }: UserLandingBannerProps) {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
@@ -22,6 +25,7 @@ export default function UserLandingBanner({
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -37,12 +41,44 @@ export default function UserLandingBanner({
     }
   }, []);
 
-  const handleActivateAndLaunch = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_subscription", "active");
-      document.cookie = "officex_subscription=active; path=/; max-age=2592000";
-      setIsSubscribed(true);
+  const handlePayAndLaunch = async () => {
+    if (isFreePortal) {
+      // Free portals — just go to dashboard, no payment needed
       router.push(dashboardHref);
+      return;
+    }
+
+    setIsPaymentProcessing(true);
+    try {
+      await initiateRazorpayPayment({
+        amount: 10000, // ₹100 in paise
+        receipt: `SUB-${Date.now()}`,
+        description: `OfficeX ${dashboardName} — Subscription Activation`,
+        prefillName: userName,
+        prefillEmail: userEmail,
+        notes: {
+          portal: dashboardName,
+          user_email: userEmail,
+          type: "subscription",
+        },
+        onSuccess: (response) => {
+          localStorage.setItem("officex_subscription", "active");
+          localStorage.setItem("officex_payment_id", response.razorpay_payment_id);
+          localStorage.setItem("officex_order_id", response.razorpay_order_id);
+          document.cookie = "officex_subscription=active; path=/; max-age=2592000";
+          setIsSubscribed(true);
+          router.push(dashboardHref);
+        },
+        onFailure: (error) => {
+          console.error("Subscription payment failed:", error);
+          alert(`Payment failed: ${error?.description || error?.message || "Please try again"}`);
+        },
+      });
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      alert(`Error: ${error.message || "Could not initiate payment"}`);
+    } finally {
+      setIsPaymentProcessing(false);
     }
   };
 
@@ -55,6 +91,8 @@ export default function UserLandingBanner({
       localStorage.removeItem("officex_subscription");
       localStorage.removeItem("officex_dashboard");
       localStorage.removeItem("officex_active_portal");
+      localStorage.removeItem("officex_payment_id");
+      localStorage.removeItem("officex_order_id");
       document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
       document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
@@ -67,6 +105,9 @@ export default function UserLandingBanner({
   if (!isClient) return null;
 
   if (isLoggedIn) {
+    // Determine if the user can access directly (free portal or already subscribed)
+    const canAccessDirectly = isFreePortal || isSubscribed;
+
     return (
       <div className="w-full bg-gradient-to-r from-teal-50/70 via-white to-slate-50 border-b border-teal-100/80 px-4 sm:px-8 py-2.5 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -78,13 +119,17 @@ export default function UserLandingBanner({
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-extrabold text-slate-900">Welcome, {userName}</span>
               <span className="text-[11px] font-medium text-slate-500 hidden md:inline">({roleName})</span>
-              {isSubscribed ? (
+              {isFreePortal ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                  <CheckCircle size={10} /> Free Access
+                </span>
+              ) : isSubscribed ? (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
                   <CheckCircle size={10} /> Active Subscription
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                  <Lock size={10} /> Preview Mode • Dashboard Locked
+                  <Lock size={10} /> Subscription Required • ₹100/mo
                 </span>
               )}
             </div>
@@ -92,7 +137,7 @@ export default function UserLandingBanner({
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2 shrink-0">
-            {isSubscribed ? (
+            {canAccessDirectly ? (
               <Link
                 href={dashboardHref}
                 className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -103,11 +148,21 @@ export default function UserLandingBanner({
             ) : (
               <>
                 <button
-                  onClick={handleActivateAndLaunch}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer hover:-translate-y-0.5"
+                  onClick={handlePayAndLaunch}
+                  disabled={isPaymentProcessing}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Sparkles size={12} />
-                  <span>Subscribe &amp; Enter Dashboard</span>
+                  {isPaymentProcessing ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={12} />
+                      <span>Pay ₹100 &amp; Enter Dashboard</span>
+                    </>
+                  )}
                 </button>
                 <Link
                   href="/pricing"

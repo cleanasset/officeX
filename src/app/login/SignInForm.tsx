@@ -512,11 +512,11 @@ export default function SignInForm({
     if (typeof window !== "undefined") {
       sessionStorage.setItem("officex_session_active", "1");
       sessionStorage.setItem("officex_user_role", roleName);
-      sessionStorage.setItem("officex_subscription", "active");
+      // Subscription is NOT auto-activated — requires Razorpay payment
 
       localStorage.setItem("officex_session_active", "1");
       localStorage.setItem("officex_user_role", roleName);
-      localStorage.setItem("officex_subscription", "active");
+      // Subscription is NOT auto-activated — requires Razorpay payment
 
       const cleanVal = userEmailOrPhone.trim();
       if (cleanVal.includes("@")) {
