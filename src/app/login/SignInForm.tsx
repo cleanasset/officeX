@@ -604,11 +604,11 @@ export default function SignInForm({
       // Non-blocking
     }
 
-    const destination = safeRedirect !== "/properties" ? safeRedirect : membership.workspaceUrl;
+    const destination = initialRedirect ? safeRedirect : "/";
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;
-    }, 1200);
+    }, 1000);
   };
 
   // --------------------------------------------------------------------------
