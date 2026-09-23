@@ -92,7 +92,8 @@ export default function SignInForm({
   const [setupRole, setSetupRole] = useState<"owner" | "broker" | "vendor" | "tenant">("owner");
   const [setupOrgName, setSetupOrgName] = useState("");
   const [setupPropertyName, setSetupPropertyName] = useState("");
-  const [setupCity, setSetupCity] = useState("Mumbai");
+  const [setupCity, setSetupCity] = useState("Pan-India");
+  const [customSetupCity, setCustomSetupCity] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isSettingUpOrg, setIsSettingUpOrg] = useState(false);
 
@@ -652,7 +653,7 @@ export default function SignInForm({
     setIsSettingUpOrg(true);
     const orgName = setupOrgName.trim() || `${successUserName || "My"}'s Commercial Asset`;
     const propName = setupPropertyName.trim() || "Apex Commercial Tower";
-    const city = setupCity || "Mumbai";
+    const city = (setupCity === "CUSTOM" && customSetupCity.trim()) ? customSetupCity.trim() : setupCity || "Pan-India";
 
     const roleTitle = setupRole === "owner" 
       ? "Property Owner & Asset Manager" 
@@ -1757,20 +1758,73 @@ export default function SignInForm({
                     {/* City */}
                     <div>
                       <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                        Operating City *
+                        Operating Market / City *
                       </label>
                       <select
                         value={setupCity}
                         onChange={(e) => setSetupCity(e.target.value)}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                       >
-                        <option value="Mumbai">Mumbai (BKC / Nariman Point / Andheri)</option>
-                        <option value="Bengaluru">Bengaluru (Whitefield / ORR / CBD)</option>
-                        <option value="Delhi NCR">Delhi NCR (Cyber City / Golf Course Rd / Noida)</option>
-                        <option value="Ahmedabad">Ahmedabad / GIFT City</option>
-                        <option value="Pune">Pune (Kharadi / Hinjewadi)</option>
-                        <option value="Hyderabad">Hyderabad (Hitec City / Financial District)</option>
+                        <optgroup label="🌍 Global & Pan-India Coverage">
+                          <option value="Pan-India">Pan-India (All India Metros & Regions)</option>
+                          <option value="Worldwide / Global Operations">Worldwide / Global Operations</option>
+                        </optgroup>
+
+                        <optgroup label="🏢 Top Indian Commercial Metros (Tier-1)">
+                          <option value="Mumbai MMR">Mumbai MMR (BKC / Nariman Pt / Andheri / Navi Mumbai)</option>
+                          <option value="Bengaluru">Bengaluru (Whitefield / ORR / CBD / Electronic City)</option>
+                          <option value="Delhi NCR">Delhi NCR (Gurugram / Cyber City / Noida / Delhi)</option>
+                          <option value="Hyderabad">Hyderabad (Hitec City / Financial District / Gachibowli)</option>
+                          <option value="Pune">Pune (Kharadi / Hinjewadi / Viman Nagar)</option>
+                          <option value="Chennai">Chennai (OMR / Guindy / Mount Road)</option>
+                          <option value="Kolkata">Kolkata (Sector V / New Town / Park Street)</option>
+                          <option value="Ahmedabad">Ahmedabad / GIFT City</option>
+                        </optgroup>
+
+                        <optgroup label="📍 Emerging Indian Commercial Hubs (Tier-2)">
+                          <option value="Jaipur">Jaipur / Rajasthan</option>
+                          <option value="Chandigarh">Chandigarh / Mohali / Panchkula</option>
+                          <option value="Kochi">Kochi / Kerala</option>
+                          <option value="Indore">Indore / Madhya Pradesh</option>
+                          <option value="Lucknow">Lucknow / Uttar Pradesh</option>
+                          <option value="Coimbatore">Coimbatore / Tamil Nadu</option>
+                          <option value="Nagpur">Nagpur / Maharashtra</option>
+                          <option value="Bhubaneswar">Bhubaneswar / Odisha</option>
+                          <option value="Visakhapatnam">Visakhapatnam / Andhra Pradesh</option>
+                          <option value="Surat">Surat & Vadodara / Gujarat</option>
+                          <option value="Goa">Goa</option>
+                          <option value="Guwahati">Guwahati / North East</option>
+                        </optgroup>
+
+                        <optgroup label="🌐 International Commercial Hubs">
+                          <option value="Dubai / UAE">Dubai & UAE / Middle East (DIFC / Business Bay)</option>
+                          <option value="Singapore">Singapore & Southeast Asia (Marina Bay / CBD)</option>
+                          <option value="London / UK">London & UK / Europe (City of London / Canary Wharf)</option>
+                          <option value="New York / USA">New York & North America (Manhattan / Midtown)</option>
+                          <option value="San Francisco / USA">San Francisco / Silicon Valley</option>
+                          <option value="Riyadh / Saudi Arabia">Riyadh / Saudi Arabia (KAFD / Olaya)</option>
+                          <option value="Sydney / Australia">Sydney & Australia (CBD)</option>
+                          <option value="Tokyo / Japan">Tokyo & East Asia</option>
+                          <option value="Frankfurt / Europe">Frankfurt & Western Europe</option>
+                        </optgroup>
+
+                        <optgroup label="✍ Other / Specific City">
+                          <option value="CUSTOM">Other (Specify Custom City / Country)</option>
+                        </optgroup>
                       </select>
+
+                      {setupCity === "CUSTOM" && (
+                        <div className="mt-2 animate-fadeIn">
+                          <input
+                            type="text"
+                            required
+                            value={customSetupCity}
+                            onChange={(e) => setCustomSetupCity(e.target.value)}
+                            placeholder="Type your city, state or country..."
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Submit Button */}

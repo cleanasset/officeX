@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Building2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Building2, ChevronLeft, ChevronRight, Share2, Sparkles, KeyRound } from "lucide-react";
 import Link from "next/link";
+import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 
 interface PropertyItem {
   id: string;
@@ -13,36 +14,71 @@ interface PropertyItem {
   vacant: number;
   occPct: number;
   grade?: string;
+  inviteCode?: string;
+  ownerName?: string;
 }
+
+const SEED_PROP_IDS = new Set([
+  "357554cc-221d-4c7f-9465-32afcec7a8e7",
+  "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
+  "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
+  "401f394a-6d27-4c23-9a21-411baa7eef3b",
+  "cfa13505-71a5-4a43-be33-37497f416fdc",
+  "cf5a0b49-c4fd-4762-ae22-40c42ac6332d"
+]);
+
+const SEED_PROP_NAMES = new Set([
+  "eka club",
+  "business hub",
+  "shivalik shilp",
+  "apex business tower",
+  "meridian tech park",
+  "nexus hub"
+]);
 
 export default function PropertyMasterRegistry() {
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [inviteModalProp, setInviteModalProp] = useState<PropertyItem | null>(null);
 
   useEffect(() => {
     async function loadProperties() {
+      const email = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
+      const isDemoAccount = email.includes("demo.seed") || (typeof window !== "undefined" && localStorage.getItem("officex_mode") === "demo");
+
       try {
         const res = await fetch("/api/rent-roll/properties");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
-            const mapped = data.map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              type: p.type || "Commercial Office",
-              location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
-              area: Number(p.totalArea || 0).toLocaleString(),
-              occupied: p.activeLeasesCount || 0,
-              vacant: Math.max(0, (p.totalArea || 0) - (p.occupiedArea || 0)),
-              occPct: p.occupancyPct || 0,
-              grade: p.grade || "A"
-            }));
-            setProperties(mapped);
-            if (mapped.length > 0) setSelectedPropId(mapped[0].id);
-            setIsLoading(false);
-            return;
+            const filtered = isDemoAccount
+              ? data
+              : data.filter((p: any) => !SEED_PROP_IDS.has(p.id) && !SEED_PROP_NAMES.has((p.name || "").toLowerCase().trim()));
+
+            if (filtered.length > 0) {
+              const mapped = filtered.map((p: any) => {
+                const codeNum = (p.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
+                return {
+                  id: p.id,
+                  name: p.name,
+                  type: p.type || "Commercial Office",
+                  location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
+                  area: Number(p.totalArea || 0).toLocaleString(),
+                  occupied: p.activeLeasesCount || 0,
+                  vacant: Math.max(0, (p.totalArea || 0) - (p.occupiedArea || 0)),
+                  occPct: p.occupancyPct || 0,
+                  grade: p.grade || "A",
+                  inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+                  ownerName: p.ownerName || p.owner_name || p.ownerCompany || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
+                };
+              });
+              setProperties(mapped);
+              setSelectedPropId(mapped[0].id);
+              setIsLoading(false);
+              return;
+            }
           }
         }
       } catch (e) {
@@ -50,64 +86,63 @@ export default function PropertyMasterRegistry() {
       }
 
       if (typeof window !== "undefined") {
-        let local = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-
-        // Final fallback: fetch org properties from database if still no properties
-        if (local.length === 0) {
-          const uid = localStorage.getItem("officex_user_id") || "";
-          try {
-            const orgRes = await fetch(`/api/me/organization${uid ? `?userId=${uid}` : ""}`);
-            const orgData = await orgRes.json();
-            if (orgData.organizations && orgData.organizations.length > 0) {
-              const org = orgData.organizations[0];
-              if (org.properties && org.properties.length > 0) {
-                local = org.properties.map((p: any) => ({
-                  id: p.id,
-                  name: p.name,
-                  city: p.city || "",
-                  state: p.state || "",
-                  type: p.type || "Commercial Office",
-                  totalArea: p.total_area || 15000,
-                  grade: p.grade || "A",
-                  ownerName: p.owner_name || localStorage.getItem("officex_user_name") || "",
-                  createdAt: p.created_at || new Date().toISOString()
-                }));
-              } else {
-                const dbProp = {
-                  id: org.id || `prop-db-${Date.now()}`,
-                  name: org.name || "My Commercial Property",
-                  city: org.city || "",
-                  state: org.state || "",
-                  type: "Commercial Office",
-                  totalArea: 15000,
-                  grade: "A",
-                  ownerName: localStorage.getItem("officex_user_name") || "",
-                  createdAt: org.createdAt || new Date().toISOString()
-                };
-                local = [dbProp];
-              }
-              localStorage.setItem("officex_user_properties", JSON.stringify(local));
-              localStorage.setItem("officex_org_name", org.name || "");
-              localStorage.setItem("officex_active_org", org.name || "");
-              localStorage.setItem("officex_org_city", org.city || "");
-              localStorage.setItem("officex_org_state", org.state || "");
-            }
-          } catch (e) {
-            // silently fail
-          }
+        let rawLocal: any[] = [];
+        try {
+          rawLocal = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        } catch {
+          rawLocal = [];
         }
 
-        const mapped = (local || []).map((p: any) => ({
-          id: p?.id || `prop-${Math.random().toString(36).substring(7)}`,
-          name: p?.name || p?.propertyName || "Commercial Tower",
-          type: p?.type || p?.subType || "Commercial Office",
-          location: `${p?.city || "Mumbai"}${p?.state ? `, ${p.state}` : ""}`,
-          area: Number(p?.totalArea || p?.totalAreaSft || 0).toLocaleString(),
-          occupied: 0,
-          vacant: Number(p?.totalArea || p?.totalAreaSft || 0),
-          occPct: 0,
-          grade: p?.grade || "A"
-        }));
+        // Sanitize: Purge global demo seed properties from standard users' storage
+        let local = isDemoAccount
+          ? rawLocal
+          : rawLocal.filter((p: any) => !SEED_PROP_IDS.has(p?.id) && !SEED_PROP_NAMES.has((p?.name || p?.propertyName || "").toLowerCase().trim()));
+
+        // Check if user has a registered property from signup/onboarding
+        const registeredPropName = localStorage.getItem("officex_property_name");
+        if (
+          local.length === 0 &&
+          registeredPropName &&
+          !SEED_PROP_NAMES.has(registeredPropName.toLowerCase().trim())
+        ) {
+          const city = localStorage.getItem("officex_org_city") || "Mumbai";
+          const state = localStorage.getItem("officex_org_state") || "Maharashtra";
+          const code = `OX-${Math.floor(1000 + Math.random() * 9000)}`;
+          const userProp = {
+            id: `prop-${Date.now()}`,
+            name: registeredPropName,
+            type: "Commercial Office",
+            city: city,
+            state: state,
+            totalArea: 15000,
+            grade: "A",
+            inviteCode: code,
+            ownerName: localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org") || "Commercial Asset Owner",
+            createdAt: new Date().toISOString()
+          };
+          local = [userProp];
+        }
+
+        // Write sanitized list back to localStorage to cure browser state
+        localStorage.setItem("officex_user_properties", JSON.stringify(local));
+
+        const mapped: PropertyItem[] = local.map((p: any) => {
+          const codeNum = (p?.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
+          return {
+            id: p?.id || `prop-${Math.random().toString(36).substring(7)}`,
+            name: p?.name || p?.propertyName || "Commercial Asset",
+            type: p?.type || p?.subType || "Commercial Office",
+            location: `${p?.city || "Mumbai"}${p?.state ? `, ${p.state}` : ""}`,
+            area: Number(p?.totalArea || p?.totalAreaSft || 0).toLocaleString(),
+            occupied: p?.occupied || 0,
+            vacant: Number(p?.totalArea || p?.totalAreaSft || 0),
+            occPct: p?.occPct || 0,
+            grade: p?.grade || "A",
+            inviteCode: p?.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+            ownerName: p?.ownerName || p?.owner_name || p?.ownerCompany || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
+          };
+        });
+
         setProperties(mapped);
         if (mapped.length > 0) setSelectedPropId(mapped[0].id);
       }
@@ -153,19 +188,19 @@ export default function PropertyMasterRegistry() {
           />
         </div>
 
-        {/* Master Table or Empty State */}
+        {/* Master Table or Clean Empty State */}
         {filteredProperties.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center shadow-sm flex flex-col items-center justify-center">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center mb-3">
-              <Building2 size={24} />
+            <div className="w-14 h-14 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center mb-4">
+              <Building2 size={28} />
             </div>
             <h3 className="text-base font-bold text-gray-900">No properties in master registry</h3>
-            <p className="text-xs text-gray-400 mt-1 max-w-sm">
-              Your property catalog is currently empty. Click below to add your first commercial building asset.
+            <p className="text-xs text-gray-500 mt-1.5 max-w-sm leading-relaxed">
+              Your property catalog is currently empty. Click below to register your commercial building asset and instantly get a tenant invitation link.
             </p>
             <Link
               href="/properties/add"
-              className="mt-4 px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+              className="mt-5 px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
             >
               <Plus size={14} /> Register Commercial Asset
             </Link>
@@ -173,7 +208,7 @@ export default function PropertyMasterRegistry() {
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse min-w-[700px]">
+              <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                     <th className="py-3 px-6">PROPERTY ID</th>
@@ -182,7 +217,8 @@ export default function PropertyMasterRegistry() {
                     <th className="py-3 px-4">LOCATION</th>
                     <th className="py-3 px-4">TOTAL AREA</th>
                     <th className="py-3 px-4">ACTIVE LEASES</th>
-                    <th className="py-3 px-6">OCCUPANCY</th>
+                    <th className="py-3 px-4">OCCUPANCY</th>
+                    <th className="py-3 px-6 text-right">ACTION</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -200,10 +236,23 @@ export default function PropertyMasterRegistry() {
                       <td className="py-4 px-4 text-gray-600">{p.location}</td>
                       <td className="py-4 px-4 font-semibold text-gray-900">{p.area} sqft</td>
                       <td className="py-4 px-4 text-gray-700">{p.occupied}</td>
-                      <td className="py-4 px-6">
-                        <div className="w-24 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                      <td className="py-4 px-4">
+                        <div className="w-20 h-1.5 rounded-full bg-gray-200 overflow-hidden">
                           <div className="h-full rounded-full bg-[#0F8B7D]" style={{ width: `${p.occPct}%` }} />
                         </div>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInviteModalProp(p);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white text-xs font-bold transition-all shadow-xs"
+                          title="Generate invitation link & building code for tenants"
+                        >
+                          <Share2 size={12} /> Invite Tenants
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -223,28 +272,54 @@ export default function PropertyMasterRegistry() {
         <div className="fixed right-0 top-0 bottom-0 w-[400px] bg-white border-l border-gray-200 shadow-xl z-40 overflow-y-auto p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
-              <h2 className="text-base font-bold text-gray-900">{selectedProp.name}</h2>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">{selectedProp.name}</h2>
+                <div className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-800 text-[11px] font-mono font-bold">
+                  <KeyRound size={11} className="text-[#0F8B7D]" /> {selectedProp.inviteCode || "OX-8841"}
+                </div>
+              </div>
               <button onClick={() => setSelectedPropId(null)} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
             </div>
 
             <div className="space-y-4 text-xs">
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2.5">
                 <div className="flex justify-between"><span className="text-gray-400">Location</span><span className="font-bold text-gray-800">{selectedProp.location}</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">Total Leasable</span><span className="font-bold text-gray-800">{selectedProp.area} sq ft</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">Current Occupancy</span><span className="font-bold text-[#0F8B7D]">{selectedProp.occPct}%</span></div>
                 <div className="flex justify-between"><span className="text-gray-400">Property Grade</span><span className="font-bold text-teal-700">Grade {selectedProp.grade} Commercial</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Building Code</span><span className="font-mono font-bold text-gray-900">{selectedProp.inviteCode || "OX-8841"}</span></div>
               </div>
             </div>
           </div>
 
-          <Link
-            href="/properties/rent-roll?tab=occupancy"
-            className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold mt-4 shadow-sm text-center block"
-          >
-            Open Stacking Plan &amp; Units
-          </Link>
+          <div className="space-y-2 mt-4">
+            <button
+              type="button"
+              onClick={() => setInviteModalProp(selectedProp)}
+              className="w-full py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs"
+            >
+              <Share2 size={13} /> Invite Tenants & Share Link
+            </button>
+
+            <Link
+              href={`/properties/rent-roll?propertyId=${selectedProp.id}`}
+              className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold shadow-sm text-center flex items-center justify-center gap-2 transition-all"
+            >
+              Open Stacking Plan & Rent Roll →
+            </Link>
+          </div>
         </div>
+      )}
+
+      {/* Tenant Invitation Modal */}
+      {inviteModalProp && (
+        <TenantInviteModal
+          isOpen={Boolean(inviteModalProp)}
+          onClose={() => setInviteModalProp(null)}
+          property={inviteModalProp}
+        />
       )}
     </div>
   );
+}
 }

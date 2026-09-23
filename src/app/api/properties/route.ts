@@ -241,6 +241,35 @@ export async function POST(req: Request) {
       }
     }
 
+    // Mirror to Rent Roll database so property immediately appears in Rent Roll system
+    try {
+      const { getRentRollDb, saveRentRollDb } = await import("@/lib/rent-roll-store");
+      const rDb = getRentRollDb();
+      const exists = rDb.properties.some((p: any) => p.name.toLowerCase() === name.trim().toLowerCase());
+      if (!exists) {
+        rDb.properties.push({
+          id: createdProperty.id,
+          orgId: rDb.organization.id,
+          name: createdProperty.name,
+          type: createdProperty.type || "Commercial Office",
+          address: createdProperty.address || "",
+          city: createdProperty.city || "Mumbai",
+          state: createdProperty.state || "Maharashtra",
+          microMarket: createdProperty.microMarket || createdProperty.city || "CBD",
+          pincode: createdProperty.pincode || "400001",
+          grade: sanitizedGrade,
+          totalArea: parseFloat(String(totalArea)) || 50000,
+          chargeableArea: parseFloat(String(totalArea)) || 50000,
+          occupancyTargetPct: 95,
+          imageUrl: createdProperty.imageUrl,
+          assetValue: 0
+        });
+        saveRentRollDb(rDb);
+      }
+    } catch (rrErr) {
+      console.warn("Rent roll store sync note:", rrErr);
+    }
+
     return NextResponse.json(createdProperty);
   } catch (error: any) {
     console.error("Property creation error:", error);

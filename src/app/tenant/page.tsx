@@ -23,8 +23,19 @@ export default function TenantHomepage() {
     amount: number;
   } | null>(null);
 
+  const [buildingName, setBuildingName] = useState("Commercial Workplace Tower");
+  const [ownerName, setOwnerName] = useState("");
+  const [unitNumber, setUnitNumber] = useState("Unit 5A");
+
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const b = localStorage.getItem("officex_tenant_building") || localStorage.getItem("officex_property_name");
+      if (b) setBuildingName(b);
+      const o = localStorage.getItem("officex_tenant_owner");
+      if (o) setOwnerName(o);
+      const u = localStorage.getItem("officex_tenant_unit");
+      if (u) setUnitNumber(u);
+
       if (localStorage.getItem("officex_tenant_rent_paid") === "1") {
         setRentPaid(true);
         const pid = localStorage.getItem("officex_tenant_last_payment_id") || "pay_live_verified";
@@ -212,8 +223,15 @@ export default function TenantHomepage() {
               </span>
               <span className="text-[10px] font-mono text-slate-400">ID: APX-5A-2026</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900">Apex Business Tower</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Floor 5, Unit 5A · Platinum Grade Asset</p>
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900">{buildingName}</h1>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <p className="text-xs sm:text-sm text-gray-500">Floor 4, {unitNumber} · Platinum Grade Asset</p>
+              {ownerName && (
+                <span className="text-[11px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                  Landlord: {ownerName}
+                </span>
+              )}
+            </div>
             
             <div className="flex items-center gap-6 mt-3">
               <div className="flex items-center gap-1.5">

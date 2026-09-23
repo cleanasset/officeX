@@ -39,6 +39,7 @@ export function proxy(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/tenant/join') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/public') ||

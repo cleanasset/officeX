@@ -23,10 +23,12 @@ import {
   Layers,
   ArrowUpRight,
   UserPlus,
-  Sparkles
+  Sparkles,
+  Share2
 } from "lucide-react";
 import Link from "next/link";
 import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
+import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 
 interface PropertyDashboardClientProps {
   initialProperties: any[];
@@ -49,6 +51,7 @@ export default function PropertyDashboardClient({
   const [userId, setUserId] = useState("");
   const [customProperties, setCustomProperties] = useState<any[]>([]);
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(true);
+  const [inviteModalProp, setInviteModalProp] = useState<any | null>(null);
 
   // Detect Clean Mode on mount
   React.useEffect(() => {
@@ -75,7 +78,56 @@ export default function PropertyDashboardClient({
         setIsOnboardingCompleted(true);
       }
 
-      let savedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+      const SEED_PROP_IDS = new Set([
+        "357554cc-221d-4c7f-9465-32afcec7a8e7",
+        "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
+        "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
+        "401f394a-6d27-4c23-9a21-411baa7eef3b",
+        "cfa13505-71a5-4a43-be33-37497f416fdc",
+        "cf5a0b49-c4fd-4762-ae22-40c42ac6332d"
+      ]);
+      const SEED_PROP_NAMES = new Set([
+        "eka club",
+        "business hub",
+        "shivalik shilp",
+        "apex business tower",
+        "meridian tech park",
+        "nexus hub"
+      ]);
+
+      let rawSavedProps: any[] = [];
+      try {
+        rawSavedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+      } catch {
+        rawSavedProps = [];
+      }
+
+      // Purge demo seed properties for standard accounts
+      let savedProps = isTest
+        ? rawSavedProps.filter((p: any) => !SEED_PROP_IDS.has(p?.id) && !SEED_PROP_NAMES.has((p?.name || p?.propertyName || "").toLowerCase().trim()))
+        : rawSavedProps;
+
+      // Recover property from user signup if local list was empty
+      const registeredPropName = localStorage.getItem("officex_property_name");
+      if (savedProps.length === 0 && registeredPropName && !SEED_PROP_NAMES.has(registeredPropName.toLowerCase().trim())) {
+        const city = localStorage.getItem("officex_org_city") || "Mumbai";
+        const state = localStorage.getItem("officex_org_state") || "Maharashtra";
+        const code = `OX-${Math.floor(1000 + Math.random() * 9000)}`;
+        const userProp = {
+          id: `prop-${Date.now()}`,
+          name: registeredPropName,
+          type: "Commercial Office",
+          city: city,
+          state: state,
+          totalArea: "15,000",
+          grade: "Grade A",
+          inviteCode: code,
+          createdAt: new Date().toISOString()
+        };
+        savedProps = [userProp];
+      }
+
+      localStorage.setItem("officex_user_properties", JSON.stringify(savedProps));
 
       // Fetch user's organization from database only if user ID exists
       if (savedProps.length === 0 && uid) {
@@ -833,6 +885,23 @@ export default function PropertyDashboardClient({
                     <button
                       type="button"
                       onClick={() => {
+                        const codeNum = (p.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
+                        setInviteModalProp({
+                          id: p.id,
+                          name: p.name,
+                          location: `${p.city || ''}, ${p.state || ''}`,
+                          inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+                          ownerName: p.ownerName || p.ownerCompany || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
+                        });
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] hover:text-white text-[#0F8B7D] text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                      title="Generate Tenant Invitation Link & Building Code"
+                    >
+                      <Share2 size={11} /> Invite Tenants
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setNewTenantData(prev => ({ ...prev, propertyId: p.id }));
                         setShowAddTenantModal(true);
                       }}
@@ -842,10 +911,10 @@ export default function PropertyDashboardClient({
                       <UserPlus size={11} /> + Tenant
                     </button>
                     <Link
-                      href={`/public/search?q=${encodeURIComponent(p.name)}&city=${encodeURIComponent(p.city || "Ahmedabad")}&id=${p.id || ""}`}
+                      href={`/properties/rent-roll?propertyId=${p.id || ""}`}
                       className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-[#0F8B7D] hover:text-white text-gray-700 text-[10px] font-bold transition-colors cursor-pointer"
                     >
-                      View Map →
+                      Rent Roll →
                     </Link>
                   </div>
                 </div>
@@ -1335,6 +1404,13 @@ export default function PropertyDashboardClient({
             </form>
           </div>
         </div>
+      {/* Tenant Invitation Modal */}
+      {inviteModalProp && (
+        <TenantInviteModal
+          isOpen={Boolean(inviteModalProp)}
+          onClose={() => setInviteModalProp(null)}
+          property={inviteModalProp}
+        />
       )}
 
     </div>

@@ -11,7 +11,11 @@ export async function GET(req: NextRequest) {
     const userId = req.nextUrl.searchParams.get("userId");
     const orgNameParam = req.nextUrl.searchParams.get("orgName");
 
-    // 1. Fetch properties for this user or matching company
+    // 1. Fetch properties for this specific user or matching company
+    if (!orgNameParam && (!userId || !/^[0-9a-fA-F-]{36}$/.test(userId))) {
+      return NextResponse.json({ organizations: [] });
+    }
+
     let query = client.from("properties").select("*").order("created_at", { ascending: false });
     if (orgNameParam) {
       query = query.ilike("owner_company", `%${orgNameParam}%`);

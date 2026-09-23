@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import PropertyTitleAutocomplete from "@/components/PropertyTitleAutocomplete";
+import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 
 const MapPinPicker = dynamic(() => import("@/components/MapPinPicker"), {
   ssr: false,
@@ -75,6 +76,12 @@ export default function PropertyListingEngine({
   const [isDragging, setIsDragging] = useState(false);
   const [customUrlInput, setCustomUrlInput] = useState("");
   const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [createdPropForInvite, setCreatedPropForInvite] = useState<{
+    id: string;
+    name: string;
+    location?: string;
+    inviteCode?: string;
+  } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Unit system for area: "sft" (Square Feet) vs "smt" (Square Meter)
@@ -588,12 +595,15 @@ export default function PropertyListingEngine({
       });
 
       const dbProp = await res.json();
+      const codeNum = (dbProp?.id || String(Date.now())).replace(/\D/g, "").slice(-4) || String(Math.floor(1000 + Math.random() * 9000));
+      const inviteCode = `OX-${codeNum.padStart(4, "7")}`;
 
       if (typeof window !== "undefined") {
         const fullListingRecord = {
-          id: dbProp.id || `prop-${Date.now()}`,
+          id: dbProp?.id || `prop-${Date.now()}`,
           ...formData,
           totalAreaSft: totalAreaSft,
+          inviteCode: inviteCode,
           publishedAt: new Date().toISOString(),
           dateFormatted: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
           status: "Available"
@@ -601,6 +611,8 @@ export default function PropertyListingEngine({
 
         const existing = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
         localStorage.setItem("officex_user_properties", JSON.stringify([fullListingRecord, ...existing]));
+        localStorage.setItem("officex_property_name", formData.propertyName);
+        localStorage.setItem("officex_last_invite_code", inviteCode);
 
         const brokerListings = JSON.parse(localStorage.getItem("officex_broker_listings") || "[]");
         localStorage.setItem("officex_broker_listings", JSON.stringify([fullListingRecord, ...brokerListings]));
@@ -608,32 +620,44 @@ export default function PropertyListingEngine({
         window.dispatchEvent(new CustomEvent("officex-property-added", { detail: fullListingRecord }));
       }
 
-      showToast("🎉 Commercial Property Listing published successfully!", "success");
+      showToast("🎉 Commercial Property registered! Share building code with tenants.", "success");
 
-      const destination = redirectPath || (portalRole === "broker" ? "/leasing" : "/properties");
-      setTimeout(() => {
-        router.push(destination);
-      }, 1200);
+      setCreatedPropForInvite({
+        id: dbProp?.id || `prop-${Date.now()}`,
+        name: formData.propertyName || "Commercial Asset",
+        location: `${formData.city}, ${formData.state}`,
+        inviteCode: inviteCode,
+        ownerName: formData.companyName || formData.contactName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
+      });
     } catch (err) {
       console.error("Listing submission error:", err);
       showToast("Network error publishing listing. Saved to your local workspace.", "info");
+
+      const codeNum = String(Date.now()).replace(/\D/g, "").slice(-4) || String(Math.floor(1000 + Math.random() * 9000));
+      const inviteCode = `OX-${codeNum.padStart(4, "7")}`;
 
       if (typeof window !== "undefined") {
         const fullListingRecord = {
           id: `prop-local-${Date.now()}`,
           ...formData,
           totalAreaSft: totalAreaSft,
+          inviteCode: inviteCode,
           publishedAt: new Date().toISOString(),
           status: "Available"
         };
         const existing = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
         localStorage.setItem("officex_user_properties", JSON.stringify([fullListingRecord, ...existing]));
+        localStorage.setItem("officex_property_name", formData.propertyName);
+        localStorage.setItem("officex_last_invite_code", inviteCode);
       }
 
-      const destination = redirectPath || (portalRole === "broker" ? "/leasing" : "/properties");
-      setTimeout(() => {
-        router.push(destination);
-      }, 1400);
+      setCreatedPropForInvite({
+        id: `prop-local-${Date.now()}`,
+        name: formData.propertyName || "Commercial Asset",
+        location: `${formData.city}, ${formData.state}`,
+        inviteCode: inviteCode,
+        ownerName: formData.companyName || formData.contactName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
+      });
     } finally {
       setIsPublishing(false);
     }
@@ -2457,6 +2481,18 @@ export default function PropertyListingEngine({
           </div>
         </div>
       </div>
+
+      {/* Instant Tenant Invitation Modal right after registration */}
+      {createdPropForInvite && (
+        <TenantInviteModal
+          isOpen={Boolean(createdPropForInvite)}
+          onClose={() => {
+            setCreatedPropForInvite(null);
+            router.push(redirectPath || (portalRole === "broker" ? "/leasing" : "/properties/registry"));
+          }}
+          property={createdPropForInvite}
+        />
+      )}
     </div>
   );
 }
