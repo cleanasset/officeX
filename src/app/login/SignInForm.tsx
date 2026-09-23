@@ -27,7 +27,8 @@ import {
   KeyRound,
   Check,
   Building,
-  Loader2
+  Loader2,
+  Users
 } from "lucide-react";
 import {
   validateRedirect,
@@ -35,7 +36,8 @@ import {
   detectIdentifierType,
   WorkspaceMembership,
   MOCK_USERS,
-  AUTH_LOCALES
+  AUTH_LOCALES,
+  findMockUser
 } from "@/lib/auth-utils";
 import { supabase } from "@/lib/supabase";
 
@@ -45,7 +47,7 @@ interface SignInFormProps {
   initialContext?: string;
 }
 
-type Step = "identifier" | "password" | "code" | "sso" | "mfa" | "workspace_chooser" | "signed_in_success";
+type Step = "identifier" | "password" | "code" | "sso" | "mfa" | "workspace_chooser" | "signed_in_success" | "no_workspace";
 type Lang = "en" | "hi";
 
 export default function SignInForm({
@@ -84,6 +86,15 @@ export default function SignInForm({
   // Memberships for Context Chooser
   const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
   const [selectedMembershipId, setSelectedMembershipId] = useState<string>("");
+
+  // No Workspace Setup State (Client Spec Section 17 & Table 52)
+  const [setupMode, setSetupMode] = useState<"choose" | "create_org" | "enter_invite">("choose");
+  const [setupRole, setSetupRole] = useState<"owner" | "broker" | "vendor">("owner");
+  const [setupOrgName, setSetupOrgName] = useState("");
+  const [setupPropertyName, setSetupPropertyName] = useState("");
+  const [setupCity, setSetupCity] = useState("Mumbai");
+  const [inviteCode, setInviteCode] = useState("");
+  const [isSettingUpOrg, setIsSettingUpOrg] = useState(false);
 
   // Recovery Modal state (3 distinct steps: 1=Request, 2=Verify, 3=Set Password)
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
@@ -138,9 +149,10 @@ export default function SignInForm({
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const u = session.user;
-          if (u.email) {
-            localStorage.setItem("officex_user_email", u.email);
-            sessionStorage.setItem("officex_user_email", u.email);
+          const cleanEmail = (u.email || "").toLowerCase();
+          if (cleanEmail) {
+            localStorage.setItem("officex_user_email", cleanEmail);
+            sessionStorage.setItem("officex_user_email", cleanEmail);
             localStorage.setItem("officex_email_verified", "1");
           }
           if (u.phone) {
@@ -153,9 +165,14 @@ export default function SignInForm({
             localStorage.setItem("officex_user_name", fullName);
             sessionStorage.setItem("officex_user_name", fullName);
           }
+
+          const mockUser = findMockUser(cleanEmail);
+          const userMemberships = mockUser?.memberships || [];
+
           handleAuthSuccess(
-            u.email || u.phone || identifier,
-            u.user_metadata?.role || "Commercial Member"
+            cleanEmail || u.phone || identifier,
+            mockUser ? mockUser.name : (fullName || cleanEmail.split("@")[0] || "New Member"),
+            userMemberships
           );
         }
       } catch (e) {
@@ -168,9 +185,10 @@ export default function SignInForm({
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         const u = session.user;
-        if (u.email) {
-          localStorage.setItem("officex_user_email", u.email);
-          sessionStorage.setItem("officex_user_email", u.email);
+        const cleanEmail = (u.email || "").toLowerCase();
+        if (cleanEmail) {
+          localStorage.setItem("officex_user_email", cleanEmail);
+          sessionStorage.setItem("officex_user_email", cleanEmail);
           localStorage.setItem("officex_email_verified", "1");
         }
         if (u.phone) {
@@ -183,9 +201,14 @@ export default function SignInForm({
           localStorage.setItem("officex_user_name", fullName);
           sessionStorage.setItem("officex_user_name", fullName);
         }
+
+        const mockUser = findMockUser(cleanEmail);
+        const userMemberships = mockUser?.memberships || [];
+
         handleAuthSuccess(
-          u.email || u.phone || identifier,
-          u.user_metadata?.role || "Commercial Member"
+          cleanEmail || u.phone || identifier,
+          mockUser ? mockUser.name : (fullName || cleanEmail.split("@")[0] || "New Member"),
+          userMemberships
         );
       } else if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryOpen(true);
@@ -556,7 +579,7 @@ export default function SignInForm({
     const storedName = (typeof window !== "undefined" && (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name"))) || "";
     setSuccessUserName(storedName || userEmailOrPhone.split("@")[0] || "Member");
 
-    const memList = availableMemberships && availableMemberships.length > 0 ? availableMemberships : memberships;
+    const memList = availableMemberships !== undefined ? availableMemberships : memberships;
 
     // Only prompt for workspace if the user genuinely has multiple distinct corporate memberships
     if (memList.length > 1) {
@@ -568,6 +591,33 @@ export default function SignInForm({
 
     if (memList.length === 1) {
       handleSelectWorkspace(memList[0]);
+      return;
+    }
+
+    // Client Spec Section 17 & Table 54:
+    // 0 active memberships → Show "No Workspace Yet" screen!
+    if (memList.length === 0) {
+      const savedOrg = typeof window !== "undefined" ? localStorage.getItem("officex_active_org") : null;
+      if (savedOrg) {
+        let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "";
+        if (!destination || destination === "/") {
+          const lowerRole = (localStorage.getItem("officex_user_role") || roleName || initialRole || "owner").toLowerCase();
+          destination = lowerRole.includes("broker")
+            ? "/leasing"
+            : lowerRole.includes("vendor") || lowerRole.includes("fm")
+            ? "/vendor"
+            : lowerRole.includes("tenant")
+            ? "/tenant"
+            : "/properties";
+        }
+        setStep("signed_in_success");
+        setTimeout(() => {
+          window.location.href = destination;
+        }, 1000);
+        return;
+      }
+
+      setStep("no_workspace");
       return;
     }
 
@@ -593,6 +643,52 @@ export default function SignInForm({
     setTimeout(() => {
       window.location.href = destination;
     }, 1000);
+  };
+
+  // --------------------------------------------------------------------------
+  // Handle Onboarding / Create New Organization (No Workspace Yet)
+  // --------------------------------------------------------------------------
+  const handleCreateNewOrg = () => {
+    setIsSettingUpOrg(true);
+    const orgName = setupOrgName.trim() || `${successUserName || "My"}'s Commercial Asset`;
+    const propName = setupPropertyName.trim() || "Apex Commercial Tower";
+    const city = setupCity || "Mumbai";
+
+    const roleTitle = setupRole === "owner" 
+      ? "Property Owner & Asset Manager" 
+      : setupRole === "broker" 
+      ? "Broker / Channel Partner" 
+      : "Facility / Service Vendor";
+
+    const workspaceUrl = setupRole === "owner" 
+      ? "/properties" 
+      : setupRole === "broker" 
+      ? "/leasing" 
+      : "/vendor";
+
+    const newMembership: WorkspaceMembership = {
+      id: `mem_${Date.now()}`,
+      orgId: `org_${Date.now()}`,
+      orgName,
+      role: roleTitle,
+      roleCode: setupRole === "owner" ? "OWNER" : setupRole === "broker" ? "LEASING" : "VENDOR",
+      workspaceTitle: setupRole === "owner" ? "Commercial Landlord Desk" : setupRole === "broker" ? "Leasing Broker CRM" : "Vendor Hub",
+      workspaceUrl,
+      propertyScope: `${propName} · ${city}`,
+      badge: setupRole === "owner" ? "Asset Owner" : setupRole === "broker" ? "Leasing" : "Vendor",
+      badgeColor: "bg-blue-500/20 text-blue-700 border-blue-400/30",
+      isLastUsed: true
+    };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_active_org", orgName);
+      localStorage.setItem("officex_user_role", roleTitle);
+      localStorage.setItem("officex_property_name", propName);
+      localStorage.setItem("officex_property_city", city);
+      localStorage.setItem("officex_onboarding_completed", "1");
+    }
+
+    handleSelectWorkspace(newMembership);
   };
 
   // --------------------------------------------------------------------------
@@ -1475,6 +1571,285 @@ export default function SignInForm({
                   <span>{t.openWorkspaceBtn}</span>
                   <ArrowRight size={16} />
                 </button>
+              </div>
+            )}
+
+            {/* ===============================================================
+                CLIENT SPEC SECTION 17 / TABLE 52: NO WORKSPACE YET
+                =============================================================== */}
+            {step === "no_workspace" && (
+              <div className="animate-fadeIn">
+                <div className="mb-5">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700 mb-2">
+                    <CheckCircle2 size={12} />
+                    <span>Identity Verified</span>
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-950 tracking-tight">
+                    No Workspace Yet
+                  </h2>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    You're signed in as <strong className="text-slate-900 font-semibold">{successUserName || identifier || "user"}</strong>, but no commercial organisation or building has added you yet.
+                  </p>
+                </div>
+
+                {setupMode === "choose" && (
+                  <div className="space-y-3 mb-5">
+                    <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Choose How to Get Started:
+                    </div>
+
+                    {/* Card 1: Set Up an Asset / Organisation */}
+                    <button
+                      type="button"
+                      onClick={() => setSetupMode("create_org")}
+                      className="w-full p-4 rounded-2xl bg-blue-50/60 border border-blue-200 hover:bg-blue-50 hover:border-blue-500 text-left transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                          <Building2 size={20} />
+                        </div>
+                        <div className="space-y-0.5 flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                              Register a Commercial Asset / Business
+                            </span>
+                            <ArrowRight size={15} className="text-blue-600 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            For Building Owners, Landlords, Brokers & Service Vendors. Sets up your portfolio, Live Rent Roll & building operations.
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Card 2: Join Existing Company via Invite */}
+                    <button
+                      type="button"
+                      onClick={() => setSetupMode("enter_invite")}
+                      className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-left transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+                          <Users size={20} />
+                        </div>
+                        <div className="space-y-0.5 flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-slate-900 group-hover:text-slate-950 transition-colors">
+                              Join an Existing Company / Building
+                            </span>
+                            <ArrowRight size={15} className="text-slate-500 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            For Corporate Tenants & Employees. Enter a 6-digit company invite code or request access to your office floor.
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="pt-3 text-center space-y-2">
+                      <Link
+                        href="/signup?step=3"
+                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1.5"
+                      >
+                        <span>Need full business registration & KYC (S05–S12)? Complete here</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStep("identifier");
+                            setSetupMode("choose");
+                          }}
+                          className="text-[11px] text-slate-500 hover:text-slate-800 font-medium underline cursor-pointer"
+                        >
+                          Sign out / Use a different account
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {setupMode === "create_org" && (
+                  <div className="space-y-4 mb-4 animate-fadeIn">
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setSetupMode("choose")}
+                        className="text-xs font-semibold text-slate-600 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ArrowLeft size={13} />
+                        <span>Back to Options</span>
+                      </button>
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 uppercase tracking-wider">
+                        Organisation Setup
+                      </span>
+                    </div>
+
+                    {/* Role Selector */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        Select Your Primary Business Role *
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: "owner", label: "Property Owner", badge: "Rent Roll + FM" },
+                          { id: "broker", label: "Broker / Partner", badge: "Leasing CRM" },
+                          { id: "vendor", label: "Service Vendor", badge: "FM Contracts" }
+                        ].map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => setSetupRole(r.id as any)}
+                            className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                              setupRole === r.id
+                                ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600"
+                                : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 font-medium"
+                            }`}
+                          >
+                            <span className="text-xs block font-bold">{r.label}</span>
+                            <span className="text-[9px] text-blue-700 font-semibold block mt-0.5">{r.badge}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Company Legal Name */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        Company / Entity Legal Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={setupOrgName}
+                        onChange={(e) => setSetupOrgName(e.target.value)}
+                        placeholder="e.g. Apex Commercial Realty Ltd"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* First Property Name (For Owners) */}
+                    {setupRole === "owner" && (
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                          Primary Commercial Building Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={setupPropertyName}
+                          onChange={(e) => setSetupPropertyName(e.target.value)}
+                          placeholder="e.g. Apex Horizon Tower"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          We will initialize your live Rent Roll and Building FM desk with this property.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* City */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        Operating City *
+                      </label>
+                      <select
+                        value={setupCity}
+                        onChange={(e) => setSetupCity(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                      >
+                        <option value="Mumbai">Mumbai (BKC / Nariman Point / Andheri)</option>
+                        <option value="Bengaluru">Bengaluru (Whitefield / ORR / CBD)</option>
+                        <option value="Delhi NCR">Delhi NCR (Cyber City / Golf Course Rd / Noida)</option>
+                        <option value="Ahmedabad">Ahmedabad / GIFT City</option>
+                        <option value="Pune">Pune (Kharadi / Hinjewadi)</option>
+                        <option value="Hyderabad">Hyderabad (Hitec City / Financial District)</option>
+                      </select>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="button"
+                      disabled={isSettingUpOrg || !setupOrgName.trim() || (setupRole === "owner" && !setupPropertyName.trim())}
+                      onClick={handleCreateNewOrg}
+                      className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+                    >
+                      {isSettingUpOrg ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" />
+                          <span>Provisioning Workspace...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Launch {setupRole === "owner" ? "Building Workspace & Rent Roll" : "Workspace"}</span>
+                          <ArrowRight size={15} />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {setupMode === "enter_invite" && (
+                  <div className="space-y-4 mb-4 animate-fadeIn">
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setSetupMode("choose")}
+                        className="text-xs font-semibold text-slate-600 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ArrowLeft size={13} />
+                        <span>Back to Options</span>
+                      </button>
+                      <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">
+                        Company Invitation
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 leading-relaxed">
+                      If your facility administrator, employer, or landlord invited you to OfficeX, enter the 6-character code from your invitation email or SMS.
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        Corporate Invitation Code (e.g. OX-9281)
+                      </label>
+                      <input
+                        type="text"
+                        value={inviteCode}
+                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                        placeholder="OX-XXXX"
+                        maxLength={8}
+                        className="w-full text-center tracking-[0.2em] font-mono font-bold text-base py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={inviteCode.trim().length < 4}
+                      onClick={() => {
+                        const tenantMembership: WorkspaceMembership = {
+                          id: `mem_tenant_${Date.now()}`,
+                          orgId: `org_novatech`,
+                          orgName: "NovaTech Solutions India",
+                          role: "Corporate Workplace Admin",
+                          roleCode: "TENANT",
+                          workspaceTitle: "Enterprise Workplace Portal",
+                          workspaceUrl: "/tenant",
+                          propertyScope: "Apex Business Tower · Floor 5A",
+                          badge: "Occupier",
+                          badgeColor: "bg-indigo-500/20 text-indigo-700 border-indigo-400/30",
+                          isLastUsed: true
+                        };
+                        handleSelectWorkspace(tenantMembership);
+                      }}
+                      className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+                    >
+                      <span>Connect to Company Workspace</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
