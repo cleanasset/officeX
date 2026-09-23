@@ -181,15 +181,12 @@ function TenantJoinContent() {
       return;
     }
 
-    if (!companyName.trim()) {
-      setError("Please enter your Company / Tenant Name.");
+    if (!fullName.trim() || !email.trim()) {
+      setError("Please provide your Name and Email address.");
       return;
     }
 
-    if (!fullName.trim() || !email.trim()) {
-      setError("Please provide your Name and Work Email.");
-      return;
-    }
+    const effectiveTenantName = companyName.trim() || fullName.trim() || "Tenant Occupier";
 
     setIsLoading(true);
 
@@ -199,12 +196,12 @@ function TenantJoinContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tradeName: companyName.trim(),
-          legalName: companyName.trim(),
+          tradeName: effectiveTenantName,
+          legalName: companyName.trim() || effectiveTenantName,
           contactPerson: fullName.trim(),
           contactEmail: email.trim().toLowerCase(),
           contactPhone: mobile.trim() || "+91 98000 00000",
-          industry: "Corporate Occupier",
+          industry: companyName.trim() ? "Corporate Occupier" : "Individual / Professional Tenant",
           status: "active"
         })
       });
@@ -437,21 +434,40 @@ function TenantJoinContent() {
                     2. CONFIRM YOUR TENANT DETAILS
                   </span>
 
-                  {/* Occupier Company Name */}
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      TENANT / OCCUPIER COMPANY NAME *
-                    </label>
-                    <div className="relative">
-                      <Users size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        required
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="e.g. Tata Consultancy Services Ltd"
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                      />
+                  {/* Full Name & Email */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        YOUR FULL NAME *
+                      </label>
+                      <div className="relative">
+                        <User size={14} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          required
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="e.g. Rahul Verma"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        EMAIL ADDRESS *
+                      </label>
+                      <div className="relative">
+                        <Mail size={14} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. rahul@example.com"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -473,40 +489,23 @@ function TenantJoinContent() {
                     </div>
                   </div>
 
-                  {/* Full Name & Work Email */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                        YOUR NAME *
+                  {/* Company / Firm Name (Optional) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+                        COMPANY / BUSINESS NAME <span className="text-slate-400 font-normal lowercase">(optional)</span>
                       </label>
-                      <div className="relative">
-                        <User size={14} className="absolute left-3 top-3 text-slate-400" />
-                        <input
-                          type="text"
-                          required
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="e.g. Rahul Verma"
-                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                        />
-                      </div>
+                      <span className="text-[9px] text-slate-400">Leave blank if renting as an individual</span>
                     </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                        WORK EMAIL *
-                      </label>
-                      <div className="relative">
-                        <Mail size={14} className="absolute left-3 top-3 text-slate-400" />
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="rahul@company.in"
-                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
-                        />
-                      </div>
+                    <div className="relative">
+                      <Users size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="e.g. Acme Corp / Scalezix (Optional)"
+                        className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      />
                     </div>
                   </div>
 
