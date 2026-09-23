@@ -101,6 +101,14 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
   ]);
   const [yearsInBusiness, setYearsInBusiness] = useState("5");
 
+  // Owner Services Required (Client Spec Table 6)
+  const [selectedServices, setSelectedServices] = useState<string[]>(["RENT_ROLL", "LEASING", "FM"]);
+
+  // Tenant Fields:
+  const [tenantOfficeName, setTenantOfficeName] = useState("");
+  const [tenantSeatCount, setTenantSeatCount] = useState("45");
+  const [tenantInviteCode, setTenantInviteCode] = useState("");
+
   // S10 Self-Declaration
   const [declarationAccepted, setDeclarationAccepted] = useState(true);
 
@@ -200,14 +208,6 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
         setError(data.error || "Registration failed. Please check your inputs.");
         setIsLoading(false);
         return;
-      }
-
-      // Pre-fill suggested org name if blank
-      if (!orgLegalName) {
-        setOrgLegalName(`${fullName.trim().split(" ")[0]}'s Commercial Asset Realty`);
-      }
-      if (!propertyName) {
-        setPropertyName("Apex Commercial Tower");
       }
 
       setStep(2);
@@ -360,12 +360,24 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
       return;
     }
 
+    if (selectedRole === "tenant" && !tenantOfficeName.trim()) {
+      setError("Please specify your current workplace office location or building name.");
+      return;
+    }
+
     if (typeof window !== "undefined") {
       if (selectedRole === "owner") {
         localStorage.setItem("officex_property_name", propertyName.trim());
         localStorage.setItem("officex_property_city", operatingCity);
         localStorage.setItem("officex_leasable_area", leasableArea);
         localStorage.setItem("officex_occupancy_pct", approxOccupancy);
+        localStorage.setItem("officex_services", JSON.stringify(selectedServices));
+      } else if (selectedRole === "tenant") {
+        localStorage.setItem("officex_tenant_office", tenantOfficeName.trim());
+        localStorage.setItem("officex_tenant_seats", tenantSeatCount);
+        if (tenantInviteCode.trim()) {
+          localStorage.setItem("officex_invite_code", tenantInviteCode.trim());
+        }
       }
     }
 
@@ -526,68 +538,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               ================================================================= */}
           {step === 1 && (
             <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
-              {/* Primary Role Selector */}
-              <div>
-                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  I AM JOINING AS:
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                  {ROLE_OPTIONS.map((r) => {
-                    const isSelected = selectedRole === r.id;
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => setSelectedRole(r.id)}
-                        className={`py-2 px-1 rounded-xl text-center transition-all cursor-pointer border flex flex-col items-center gap-1 ${
-                          isSelected
-                            ? "bg-blue-50 border-blue-600 text-blue-900 shadow-2xs font-bold ring-1 ring-blue-600"
-                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-blue-50/50 hover:border-slate-300 font-medium"
-                        }`}
-                      >
-                        <r.icon size={15} className={isSelected ? "text-blue-600" : "text-slate-400"} />
-                        <span className="text-[9.5px] leading-tight text-center px-0.5 font-medium line-clamp-2">
-                          {r.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Role Capability Scope Preview */}
-                <div className="mt-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/90 text-[11px] text-blue-950 flex items-start gap-2">
-                  <ShieldCheck size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                  <div className="leading-snug">
-                    {selectedRole === "owner" && (
-                      <span>
-                        <strong className="text-blue-900 font-bold">Property Owner & Asset Manager:</strong> Includes live Rent Roll cash flow, tenant lease CRM, building FM operations & statutory compliance.
-                      </span>
-                    )}
-                    {selectedRole === "broker" && (
-                      <span>
-                        <strong className="text-blue-900 font-bold">Broker / Channel Partner:</strong> Includes commercial listings, tenant deal pipeline, site visit booking & digital LOIs.
-                      </span>
-                    )}
-                    {selectedRole === "vendor" && (
-                      <span>
-                        <strong className="text-blue-900 font-bold">Facility / Service Vendor:</strong> Includes service RFPs, AMC maintenance contracts & work order dispatches.
-                      </span>
-                    )}
-                    {selectedRole === "pm" && (
-                      <span>
-                        <strong className="text-blue-900 font-bold">Property / Facility Manager:</strong> Includes building operations, PPM maintenance schedules, helpdesk & visitor logs.
-                      </span>
-                    )}
-                    {selectedRole === "tenant" && (
-                      <span>
-                        <strong className="text-blue-900 font-bold">Tenant / Occupier:</strong> Includes workplace portal, employee office passes & facility service requests.
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Full Name */}
+              {/* Full Legal Name */}
               <div>
                 <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
                   FULL LEGAL NAME *
@@ -864,14 +815,55 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 flex items-start gap-2">
                 <Building2 size={16} className="text-blue-600 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Organization Master (S06):</strong> Attaches your user identity, verified tax records, and commercial assets into a single auditable profile.
+                  <strong>Organization Master (S06):</strong> Attaches your verified user identity, tax records, and commercial business context into an auditable organization profile.
                 </span>
+              </div>
+
+              {/* Entity Category / Focus */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                  SELECT BUSINESS ENTITY TYPE *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "owner", label: "Property Owner / Landlord", badge: "Commercial Asset Portfolio & Leases", icon: Building },
+                    { id: "broker", label: "Broker / Advisory Partner", badge: "Commercial Leasing & Deals", icon: Handshake },
+                    { id: "vendor", label: "FM & Service Contractor", badge: "FM Contracts & Operations", icon: Truck },
+                    { id: "tenant", label: "Corporate Tenant / Occupier", badge: "Workplace & Leased Office Space", icon: Users }
+                  ].map((r) => {
+                    const isSelected = selectedRole === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setSelectedRole(r.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600 shadow-2xs"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 font-medium"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <r.icon size={14} className={isSelected ? "text-blue-600" : "text-slate-400"} />
+                          <span className="text-xs font-bold leading-tight">{r.label}</span>
+                        </div>
+                        <span className="text-[9.5px] text-blue-700 font-semibold block mt-1">{r.badge}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Legal Entity Name */}
               <div>
                 <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  COMPANY / ENTITY LEGAL NAME *
+                  {selectedRole === "owner" 
+                    ? "COMMERCIAL ASSET MANAGEMENT / LANDLORD ENTITY NAME *"
+                    : selectedRole === "broker"
+                    ? "COMMERCIAL BROKERAGE / ADVISORY FIRM NAME *"
+                    : selectedRole === "vendor"
+                    ? "FACILITY MANAGEMENT CONTRACTOR / FIRM LEGAL NAME *"
+                    : "TENANT / CORPORATE OCCUPIER LEGAL NAME *"}
                 </label>
                 <div className="relative">
                   <Building2 size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
@@ -880,11 +872,63 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                     required
                     value={orgLegalName}
                     onChange={(e) => setOrgLegalName(e.target.value)}
-                    placeholder="e.g. Acme Commercial Realty Ltd"
+                    placeholder={
+                      selectedRole === "owner"
+                        ? "e.g. Apex Commercial Realty Ltd"
+                        : selectedRole === "broker"
+                        ? "e.g. Knight & Partners Commercial Advisory LLP"
+                        : selectedRole === "vendor"
+                        ? "e.g. CleanPro Integrated Facility Management Services Pvt Ltd"
+                        : "e.g. Acme Technologies India Pvt Ltd"
+                    }
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
+
+              {/* Services Required - per Client Spec Table 6 (When Owner is chosen) */}
+              {selectedRole === "owner" && (
+                <div>
+                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    SERVICES REQUIRED FOR THIS ASSET PORTFOLIO *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: "RENT_ROLL", label: "Live Rent Roll", desc: "Automated billing, collections, escalations & cash flows" },
+                      { id: "LEASING", label: "Commercial Leasing", desc: "Listings, vacancy marketing & tenant pipeline CRM" },
+                      { id: "FM", label: "Facility Management", desc: "Building operations, work orders & compliance" }
+                    ].map((srv) => {
+                      const isChecked = selectedServices.includes(srv.id);
+                      return (
+                        <button
+                          key={srv.id}
+                          type="button"
+                          onClick={() => {
+                            if (isChecked) {
+                              if (selectedServices.length > 1) {
+                                setSelectedServices(selectedServices.filter((s) => s !== srv.id));
+                              }
+                            } else {
+                              setSelectedServices([...selectedServices, srv.id]);
+                            }
+                          }}
+                          className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                            isChecked
+                              ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600 shadow-2xs"
+                              : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold">{srv.label}</span>
+                            {isChecked && <CheckCircle2 size={13} className="text-blue-600" />}
+                          </div>
+                          <p className="text-[9.5px] text-slate-500 font-normal mt-0.5 leading-snug">{srv.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Entity Type / Constitution */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -928,7 +972,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    COMPANY PAN (10-DIGIT)
+                    COMPANY PAN (10-DIGIT, OPTIONAL)
                   </label>
                   <input
                     type="text"
@@ -958,7 +1002,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               {/* Registered Address */}
               <div>
                 <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  REGISTERED OFFICE ADDRESS *
+                  {selectedRole === "tenant" ? "OFFICE / WORKPLACE LOCATION ADDRESS *" : "REGISTERED OFFICE ADDRESS *"}
                 </label>
                 <div className="relative">
                   <MapPin size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
@@ -967,7 +1011,11 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                     required
                     value={registeredAddress}
                     onChange={(e) => setRegisteredAddress(e.target.value)}
-                    placeholder="e.g. Level 14, Tower B, Commercial Boulevard"
+                    placeholder={
+                      selectedRole === "tenant"
+                        ? "e.g. 5th Floor, Tower B, Bandra Kurla Complex"
+                        : "e.g. Level 14, Tower B, Commercial Boulevard"
+                    }
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1177,10 +1225,64 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                 </>
               )}
 
-              {/* PM or Tenant */}
-              {(selectedRole === "pm" || selectedRole === "tenant") && (
+              {/* Tenant Occupier Questionnaire */}
+              {selectedRole === "tenant" && (
+                <>
+                  <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 flex items-start gap-2">
+                    <Building2 size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Workplace Configuration:</strong> Specify your leased commercial office location and employee workstation count to set up your corporate portal.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                      CURRENT OFFICE BUILDING / TECH PARK *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={tenantOfficeName}
+                      onChange={(e) => setTenantOfficeName(e.target.value)}
+                      placeholder="e.g. Apex Horizon Tower, 7th Floor, BKC"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        ESTIMATED SEAT COUNT / EMPLOYEES
+                      </label>
+                      <input
+                        type="number"
+                        value={tenantSeatCount}
+                        onChange={(e) => setTenantSeatCount(e.target.value)}
+                        placeholder="50"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        HAVE A WORKSPACE INVITE CODE? (OPTIONAL)
+                      </label>
+                      <input
+                        type="text"
+                        value={tenantInviteCode}
+                        onChange={(e) => setTenantInviteCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. OX-4829"
+                        className="w-full font-mono uppercase px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* PM Role */}
+              {selectedRole === "pm" && (
                 <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-900">
-                  Your workplace and facility preferences will automatically synchronize with your corporate office site upon launching.
+                  Your building operations and facility management preferences will automatically synchronize with your assigned site upon launch.
                 </div>
               )}
 
@@ -1231,11 +1333,47 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                     <>
                       <div>
                         <span className="text-[10px] text-slate-500 block">Primary Asset</span>
-                        <strong className="text-blue-900">{propertyName || "Apex Commercial Tower"}</strong>
+                        <strong className="text-blue-900">{propertyName || "Commercial Tower"}</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block">Leasable Area</span>
-                        <strong className="text-slate-900">{leasableArea} Sq. Ft.</strong>
+                        <span className="text-[10px] text-slate-500 block">Services Activated</span>
+                        <strong className="text-slate-900">{selectedServices.join(" · ")}</strong>
+                      </div>
+                    </>
+                  )}
+                  {selectedRole === "vendor" && (
+                    <>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Primary FM Services</span>
+                        <strong className="text-blue-900">{selectedVendorServices.slice(0, 2).join(", ")}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Experience</span>
+                        <strong className="text-slate-900">{yearsInBusiness} Years in Operations</strong>
+                      </div>
+                    </>
+                  )}
+                  {selectedRole === "tenant" && (
+                    <>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Workplace Office</span>
+                        <strong className="text-blue-900">{tenantOfficeName || "Corporate Office"}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Workstations</span>
+                        <strong className="text-slate-900">{tenantSeatCount} Desks</strong>
+                      </div>
+                    </>
+                  )}
+                  {selectedRole === "broker" && (
+                    <>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Advisory Type</span>
+                        <strong className="text-blue-900">{brokerType}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">RERA Status</span>
+                        <strong className="text-slate-900">{reraNumber || "Applicable"}</strong>
                       </div>
                     </>
                   )}
@@ -1290,7 +1428,9 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                         ? "Launch Commercial Workspace & Live Rent Roll" 
                         : selectedRole === "broker" 
                         ? "Launch Leasing Broker CRM" 
-                        : "Launch Verified Workspace"}
+                        : selectedRole === "vendor"
+                        ? "Launch FM Contractor Hub"
+                        : "Launch Corporate Tenant Portal"}
                     </span>
                     <ArrowRight size={17} />
                   </>

@@ -85,13 +85,13 @@ export default function MarketingHeader({
             /* 1. DEDICATED SAAS PLATFORM (OFFICEX.PRO) NAVIGATION                        */
             /* ========================================================================= */
             <>
-              {/* SaaS Modules Dropdown */}
+              {/* Operating Modules Dropdown */}
               <div className="relative group py-2">
                 <Link
                   href="/operate"
                   className="text-[#0D7B6C] font-extrabold flex items-center gap-1 cursor-pointer"
                 >
-                  <span>SaaS Modules</span>
+                  <span>Operating Modules</span>
                   <ChevronDown size={13} className="text-[#0D7B6C] group-hover:rotate-180 transition-transform" />
                 </Link>
                 <div className="absolute top-full left-0 w-[340px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
@@ -147,27 +147,6 @@ export default function MarketingHeader({
               >
                 <span>Live Portal Demo</span>
               </Link>
-
-              {/* Switch to Marketplaces */}
-              <div className="relative group py-2">
-                <button className="hover:text-[#0D7B6C] transition-colors flex items-center gap-1 cursor-pointer">
-                  <span>Marketplaces</span>
-                  <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0D7B6C] group-hover:rotate-180 transition-transform" />
-                </button>
-                <div className="absolute top-full right-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
-                    OfficeX Marketplaces
-                  </div>
-                  <Link href="/marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="text-xs font-bold text-slate-900">Property Marketplace</div>
-                    <div className="text-[11px] text-slate-500">Find, lease, or buy commercial space</div>
-                  </Link>
-                  <Link href="/fm-marketplace" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
-                    <div className="text-xs font-bold text-slate-900">FM Vendor Marketplace</div>
-                    <div className="text-[11px] text-slate-500">Procure HVAC, security &amp; MEP AMCs</div>
-                  </Link>
-                </div>
-              </div>
             </>
           ) : isFmMarketplace ? (
             /* ========================================================================= */
@@ -434,7 +413,37 @@ export default function MarketingHeader({
             />
           </div>
 
-          {isFmMarketplace ? (
+          {isOperate ? (
+            <>
+              <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">
+                Platform Overview
+              </Link>
+              <Link href="/properties/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">
+                Live Portal Demo
+              </Link>
+              <div className="py-2 border-y border-slate-100 flex flex-col gap-2">
+                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Operating Modules</div>
+                <Link href="/operate/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · Rent Roll &amp; Billing
+                </Link>
+                <Link href="/operate/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · Statutory Compliance Calendar
+                </Link>
+                <Link href="/operate/ppm" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · 52-Week PPM &amp; CAFM
+                </Link>
+                <Link href="/operate/visitors" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · Visitor Flow &amp; Speed-Gates
+                </Link>
+                <Link href="/operate/lease-crm" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · Commercial Lease CRM
+                </Link>
+                <Link href="/operate/helpdesk" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · Tenant Helpdesk &amp; Rooms
+                </Link>
+              </div>
+            </>
+          ) : isFmMarketplace ? (
             <>
               <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Commercial Space</Link>
               <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Vendor Marketplace</Link>

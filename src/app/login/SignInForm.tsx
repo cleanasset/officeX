@@ -89,7 +89,7 @@ export default function SignInForm({
 
   // No Workspace Setup State (Client Spec Section 17 & Table 52)
   const [setupMode, setSetupMode] = useState<"choose" | "create_org" | "enter_invite">("choose");
-  const [setupRole, setSetupRole] = useState<"owner" | "broker" | "vendor">("owner");
+  const [setupRole, setSetupRole] = useState<"owner" | "broker" | "vendor" | "tenant">("owner");
   const [setupOrgName, setSetupOrgName] = useState("");
   const [setupPropertyName, setSetupPropertyName] = useState("");
   const [setupCity, setSetupCity] = useState("Mumbai");
@@ -658,24 +658,28 @@ export default function SignInForm({
       ? "Property Owner & Asset Manager" 
       : setupRole === "broker" 
       ? "Broker / Channel Partner" 
-      : "Facility / Service Vendor";
+      : setupRole === "vendor"
+      ? "Facility / Service Vendor"
+      : "Corporate Tenant / Occupier";
 
     const workspaceUrl = setupRole === "owner" 
       ? "/properties" 
       : setupRole === "broker" 
       ? "/leasing" 
-      : "/vendor";
+      : setupRole === "vendor"
+      ? "/vendor"
+      : "/tenant";
 
     const newMembership: WorkspaceMembership = {
       id: `mem_${Date.now()}`,
       orgId: `org_${Date.now()}`,
       orgName,
       role: roleTitle,
-      roleCode: setupRole === "owner" ? "OWNER" : setupRole === "broker" ? "LEASING" : "VENDOR",
-      workspaceTitle: setupRole === "owner" ? "Commercial Landlord Desk" : setupRole === "broker" ? "Leasing Broker CRM" : "Vendor Hub",
+      roleCode: setupRole === "owner" ? "OWNER" : setupRole === "broker" ? "LEASING" : setupRole === "vendor" ? "VENDOR" : "TENANT",
+      workspaceTitle: setupRole === "owner" ? "Commercial Landlord Desk" : setupRole === "broker" ? "Leasing Broker CRM" : setupRole === "vendor" ? "Vendor Hub" : "Corporate Workplace",
       workspaceUrl,
       propertyScope: `${propName} · ${city}`,
-      badge: setupRole === "owner" ? "Asset Owner" : setupRole === "broker" ? "Leasing" : "Vendor",
+      badge: setupRole === "owner" ? "Asset Owner" : setupRole === "broker" ? "Leasing" : setupRole === "vendor" ? "Vendor" : "Tenant",
       badgeColor: "bg-blue-500/20 text-blue-700 border-blue-400/30",
       isLastUsed: true
     };
@@ -1686,29 +1690,30 @@ export default function SignInForm({
                       </span>
                     </div>
 
-                    {/* Role Selector */}
+                    {/* Organisation Focus Selector */}
                     <div>
-                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                        Select Your Primary Business Role *
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                        Select Organisation Type / Business Focus *
                       </label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {[
-                          { id: "owner", label: "Property Owner", badge: "Leasing · Rent Roll · FM" },
-                          { id: "broker", label: "Broker / Partner", badge: "Leasing CRM" },
-                          { id: "vendor", label: "Service Vendor", badge: "FM Contracts" }
+                          { id: "owner", label: "Property Owner / Landlord", badge: "Commercial Asset Portfolio & Leases" },
+                          { id: "broker", label: "Broker / Advisory Partner", badge: "Commercial Leasing & Deals" },
+                          { id: "vendor", label: "FM & Service Contractor", badge: "FM Contracts & Operations" },
+                          { id: "tenant", label: "Corporate Tenant / Occupier", badge: "Workplace & Leased Office Space" }
                         ].map((r) => (
                           <button
                             key={r.id}
                             type="button"
                             onClick={() => setSetupRole(r.id as any)}
-                            className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                               setupRole === r.id
-                                ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600"
+                                ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600 shadow-2xs"
                                 : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 font-medium"
                             }`}
                           >
-                            <span className="text-xs block font-bold">{r.label}</span>
-                            <span className="text-[9px] text-blue-700 font-semibold block mt-0.5">{r.badge}</span>
+                            <span className="text-xs block font-bold leading-tight">{r.label}</span>
+                            <span className="text-[9.5px] text-blue-700 font-semibold block mt-1">{r.badge}</span>
                           </button>
                         ))}
                       </div>
