@@ -81,6 +81,7 @@ export default function PropertyListingEngine({
     name: string;
     location?: string;
     inviteCode?: string;
+    ownerName?: string;
   } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 

@@ -1404,6 +1404,8 @@ export default function PropertyDashboardClient({
             </form>
           </div>
         </div>
+      )}
+
       {/* Tenant Invitation Modal */}
       {inviteModalProp && (
         <TenantInviteModal
