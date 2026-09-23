@@ -33,7 +33,7 @@ import {
 
 // Primary roles defined in Section 1.2 & Table 0 of Registration Specification
 const ROLE_OPTIONS = [
-  { id: "owner", code: "OWNER", label: "Property Owner", badge: "Rent Roll + FM", desc: "Commercial asset owner / landlord", icon: Building },
+  { id: "owner", code: "OWNER", label: "Property Owner", badge: "Leasing · Rent Roll · FM", desc: "Commercial asset owner / landlord", icon: Building },
   { id: "broker", code: "BROKER", label: "Broker / Partner", badge: "Leasing CRM", desc: "Channel partner & advisory", icon: Handshake },
   { id: "vendor", code: "VENDOR", label: "Facility Vendor", badge: "FM Contracts", desc: "FM & property contractor", icon: Truck },
   { id: "pm", code: "PM", label: "Facility Manager", badge: "Site Operations", desc: "Building & site operations", icon: Settings },

@@ -1693,7 +1693,7 @@ export default function SignInForm({
                       </label>
                       <div className="grid grid-cols-3 gap-2">
                         {[
-                          { id: "owner", label: "Property Owner", badge: "Rent Roll + FM" },
+                          { id: "owner", label: "Property Owner", badge: "Leasing · Rent Roll · FM" },
                           { id: "broker", label: "Broker / Partner", badge: "Leasing CRM" },
                           { id: "vendor", label: "Service Vendor", badge: "FM Contracts" }
                         ].map((r) => (

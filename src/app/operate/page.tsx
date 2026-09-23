@@ -177,7 +177,7 @@ export default function OperatePage() {
               href="#saas-modules"
               className="px-6 py-3 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg inline-flex items-center gap-2 group cursor-pointer"
             >
-              <span>Explore 6 SaaS Modules</span>
+              <span>Explore SaaS Modules</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </a>
             <button
