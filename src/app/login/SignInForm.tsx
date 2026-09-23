@@ -685,12 +685,46 @@ export default function SignInForm({
       isLastUsed: true
     };
 
+    const userProp = {
+      id: `prop-${Date.now()}`,
+      name: propName,
+      type: "Commercial Office",
+      city: city,
+      state: city.toLowerCase().includes("delhi") ? "Delhi" : city.toLowerCase().includes("mumbai") ? "Maharashtra" : "India",
+      totalArea: 15000,
+      grade: "Grade A",
+      inviteCode: `OX-${Math.floor(1000 + Math.random() * 9000)}`,
+      ownerName: orgName || successUserName || "Commercial Asset Owner",
+      createdAt: new Date().toISOString()
+    };
+
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_active_org", orgName);
       localStorage.setItem("officex_user_role", roleTitle);
       localStorage.setItem("officex_property_name", propName);
       localStorage.setItem("officex_property_city", city);
       localStorage.setItem("officex_onboarding_completed", "1");
+      if (setupRole === "owner") {
+        localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
+      }
+    }
+
+    if (setupRole === "owner") {
+      try {
+        fetch("/api/rent-roll/properties", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: propName,
+            type: "Commercial Office",
+            city: city,
+            state: city.toLowerCase().includes("delhi") ? "Delhi" : "Maharashtra",
+            totalArea: 15000
+          })
+        }).catch((e) => console.warn("Rent roll prop sync note:", e));
+      } catch (err) {
+        console.warn("Prop sync note:", err);
+      }
     }
 
     handleSelectWorkspace(newMembership);

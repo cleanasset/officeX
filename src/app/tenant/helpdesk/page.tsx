@@ -4,30 +4,26 @@ import Link from "next/link";
 import { Filter, X, Send, FileText, CheckCircle, Clock, AlertTriangle, MessageCircle, Paperclip, Plus } from "lucide-react";
 
 export default function HelpdeskTicketsTracker() {
-  const [selectedTicket, setSelectedTicket] = useState<string | null>("TK-245");
+  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [tickets, setTickets] = useState([
-    {
-      id: "TK-245", status: "IN PROGRESS", statusColor: "bg-blue-500", priority: "CRITICAL", priorityColor: "bg-red-100 text-red-600",
-      title: "Server Room AC Failure", category: "HVAC", raised: "Oct 24, 09:30 AM",
-      responseSla: { label: "Met in 12 mins", color: "text-emerald-600", progress: 100 },
-      resolutionSla: { label: "3h remaining", color: "text-amber-600", progress: 60 }
-    },
-    {
-      id: "TK-244", status: "OPEN", statusColor: "bg-emerald-500", priority: "HIGH", priorityColor: "bg-amber-100 text-amber-600",
-      title: "Intermittent WiFi in Boardroom", category: "IT", raised: "Oct 24, 11:15 AM",
-      responseSla: { label: "10m remaining", color: "text-amber-600", progress: 30 },
-      resolutionSla: { label: "Pending Response", color: "text-gray-400", progress: 0 }
-    },
-    {
-      id: "TK-242", status: "RESOLVED", statusColor: "bg-gray-400", priority: "MEDIUM", priorityColor: "bg-blue-100 text-blue-600",
-      title: "Flickering Lights on Floor 4", category: "Electrical", raised: "Oct 23, 02:00 PM",
-      responseSla: { label: "Met in 5 mins", color: "text-emerald-600", progress: 100 },
-      resolutionSla: { label: "Met in 4 hours", color: "text-emerald-600", progress: 100 }
-    }
-  ]);
+  const [tickets, setTickets] = useState<any[]>([]);
 
   useEffect(() => {
+    // 1. Check local tickets from storage
+    let localList: any[] = [];
+    try {
+      localList = JSON.parse(localStorage.getItem("officex_tenant_tickets") || "[]");
+    } catch {
+      localList = [];
+    }
+
+    if (localList.length > 0) {
+      setTickets(localList);
+      setSelectedTicket(localList[0].id);
+      return;
+    }
+
+    // 2. Query tickets API
     async function loadTickets() {
       try {
         const res = await fetch("/api/tickets");
@@ -35,21 +31,24 @@ export default function HelpdeskTicketsTracker() {
         if (data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
           const mapped = data.tickets.map((t: any) => ({
             id: t.id,
-            status: t.status.toUpperCase(),
+            status: (t.status || "open").toUpperCase(),
             statusColor: t.status === "open" ? "bg-emerald-500" : t.status === "in-progress" ? "bg-blue-500" : "bg-gray-400",
-            priority: t.priority.toUpperCase(),
+            priority: (t.priority || "Standard").toUpperCase(),
             priorityColor: t.priority === "Critical" ? "bg-red-100 text-red-600" : t.priority === "High" ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600",
             title: t.title,
-            category: t.category,
-            raised: t.created,
+            category: t.category || "General",
+            raised: t.created || "Today",
             responseSla: { label: t.slaDeadline ? `Deadline ${t.slaDeadline}` : "Under Review", color: "text-emerald-600", progress: 80 },
             resolutionSla: { label: t.slaRemaining || "Pending", color: "text-amber-600", progress: 50 }
           }));
           setTickets(mapped);
           if (mapped.length > 0) setSelectedTicket(mapped[0].id);
+        } else {
+          setTickets([]);
         }
       } catch (e) {
         console.error("Failed to load tickets", e);
+        setTickets([]);
       }
     }
     loadTickets();
@@ -66,39 +65,39 @@ export default function HelpdeskTicketsTracker() {
   return (
     <div className="flex flex-col gap-6 font-sans">
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Raised</p>
-            <p className="text-3xl font-black text-gray-900">12</p>
+            <p className="text-3xl font-black text-gray-900">{tickets.length}</p>
           </div>
           <FileText size={20} className="text-gray-300" />
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Open</p>
-            <p className="text-3xl font-black text-gray-900">2</p>
+            <p className="text-3xl font-black text-gray-900">{tickets.filter(t => t.status === "OPEN").length}</p>
           </div>
           <AlertTriangle size={20} className="text-red-300" />
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">In Progress</p>
-            <p className="text-3xl font-black text-gray-900">1</p>
+            <p className="text-3xl font-black text-gray-900">{tickets.filter(t => t.status === "IN PROGRESS" || t.status === "IN-PROGRESS").length}</p>
           </div>
           <Clock size={20} className="text-amber-300" />
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Resolved</p>
-            <p className="text-3xl font-black text-gray-900">1</p>
+            <p className="text-3xl font-black text-gray-900">{tickets.filter(t => t.status === "RESOLVED").length}</p>
           </div>
           <CheckCircle size={20} className="text-emerald-300" />
         </div>
       </div>
 
       {/* Active Tickets + Chat Drawer */}
-      <div className="grid grid-cols-[1fr_400px] gap-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
         {/* Ticket List */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -110,20 +109,30 @@ export default function HelpdeskTicketsTracker() {
               >
                 <Plus size={13} /> Raise Ticket
               </Link>
-              <button className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer">
-                <Filter size={13} /> Filter
-              </button>
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            {tickets.map((t) => (
-              <div
-                key={t.id}
-                onClick={() => setSelectedTicket(t.id)}
-                className={`bg-white rounded-2xl border p-5 cursor-pointer transition-all ${
-                  selectedTicket === t.id ? "border-[#0F8B7D] shadow-md" : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
+            {tickets.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
+                <CheckCircle size={36} className="text-emerald-500 mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-gray-900">No Tickets Logged</h3>
+                <p className="text-xs text-gray-500 mt-1 mb-4">You have not raised any facility or maintenance tickets.</p>
+                <Link
+                  href="/tenant/tickets/new"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#0F8B7D] hover:bg-[#0D7A6E] px-4 py-2 rounded-xl shadow-xs"
+                >
+                  <Plus size={14} /> Raise First Ticket
+                </Link>
+              </div>
+            ) : (
+              tickets.map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => setSelectedTicket(t.id)}
+                  className={`bg-white rounded-2xl border p-5 cursor-pointer transition-all ${
+                    selectedTicket === t.id ? "border-[#0F8B7D] shadow-md" : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
@@ -159,7 +168,8 @@ export default function HelpdeskTicketsTracker() {
                   </div>
                 </div>
               </div>
-            ))}
+            ))
+          )}
           </div>
         </div>
 

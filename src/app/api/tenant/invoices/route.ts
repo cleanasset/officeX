@@ -5,15 +5,41 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const requestedTenantId = searchParams.get("tenantId");
+    const requestedEmail = searchParams.get("email")?.toLowerCase();
+    const requestedName = searchParams.get("name") || searchParams.get("tenantName");
 
     const db = getRentRollDb();
 
-    // If specific tenantId provided, filter by that; otherwise default to the primary tenant (TNT-001 / TCS)
-    const activeTenant = requestedTenantId
-      ? db.tenants.find((t) => t.id === requestedTenantId || t.tenantCode === requestedTenantId)
-      : db.tenants[0];
+    // Look up specific tenant by ID, email, or name
+    let activeTenant = null;
+    if (requestedTenantId) {
+      activeTenant = db.tenants.find((t) => t.id === requestedTenantId || t.tenantCode === requestedTenantId);
+    } else if (requestedEmail) {
+      activeTenant = db.tenants.find((t) => t.contactEmail?.toLowerCase() === requestedEmail);
+    } else if (requestedName) {
+      activeTenant = db.tenants.find(
+        (t) => t.tradeName?.toLowerCase() === requestedName.toLowerCase() ||
+               t.legalName?.toLowerCase() === requestedName.toLowerCase()
+      );
+    }
 
-    const tenantId = activeTenant ? activeTenant.id : db.tenants[0]?.id;
+    if (!activeTenant) {
+      return NextResponse.json({
+        tenant: null,
+        leases: [],
+        invoices: [],
+        pendingInvoices: [],
+        collections: [],
+        summary: {
+          totalOutstanding: 0,
+          pendingCount: 0,
+          nextDueInvoice: null,
+          activeLeaseCount: 0,
+        },
+      });
+    }
+
+    const tenantId = activeTenant.id;
 
     // Find all leases for this tenant
     const leases = db.leases.filter((l) => l.tenantId === tenantId);

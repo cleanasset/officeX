@@ -391,7 +391,24 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
   const handleCompleteOnboarding = () => {
     setIsLoading(true);
 
-    const propDisplay = selectedRole === "owner" ? propertyName.trim() || "Apex Commercial Tower" : "Portfolio Asset";
+    const effectiveCity = (operatingCity === "CUSTOM" && customCity.trim() ? customCity.trim() : operatingCity) || "Delhi NCR";
+    const effectiveState = effectiveCity.toLowerCase().includes("delhi") ? "Delhi" : effectiveCity.toLowerCase().includes("mumbai") ? "Maharashtra" : "India";
+    const effectivePropName = (propertyName.trim() || orgLegalName.trim() || "Commercial Asset").trim();
+    const effectiveArea = Number(leasableArea) || 15000;
+
+    const userProp = {
+      id: `prop-${Date.now()}`,
+      name: effectivePropName,
+      type: assetType === "OFFICE" ? "Commercial Office" : assetType === "RETAIL" ? "Retail Mall / High Street" : "Industrial / Logistics",
+      city: effectiveCity,
+      state: effectiveState,
+      totalArea: effectiveArea,
+      grade: "A",
+      inviteCode: `OX-${Math.floor(1000 + Math.random() * 9000)}`,
+      ownerName: orgLegalName.trim() || fullName.trim() || "Commercial Property Owner",
+      createdAt: new Date().toISOString()
+    };
+
     const roleTitle = selectedRole === "owner" 
       ? "Property Owner & Asset Manager" 
       : selectedRole === "broker" 
@@ -413,13 +430,38 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
       : "/tenant";
 
     if (typeof window !== "undefined") {
-      localStorage.setItem("officex_active_org", orgLegalName.trim() || "Acme Commercial Realty Ltd");
+      localStorage.setItem("officex_active_org", orgLegalName.trim() || effectivePropName);
+      localStorage.setItem("officex_org_city", effectiveCity);
+      localStorage.setItem("officex_property_name", effectivePropName);
+      localStorage.setItem("officex_property_city", effectiveCity);
+      localStorage.setItem("officex_leasable_area", String(effectiveArea));
       localStorage.setItem("officex_user_role", roleTitle);
       localStorage.setItem("officex_dashboard", workspaceUrl);
       localStorage.setItem("officex_onboarding_completed", "1");
       localStorage.setItem("officex_kyc_stage", "K1_BUSINESS_SUBMITTED");
+      if (selectedRole === "owner") {
+        localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
+      }
       document.cookie = `officex_user_role=${encodeURIComponent(roleTitle)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
+    }
+
+    if (selectedRole === "owner") {
+      try {
+        fetch("/api/rent-roll/properties", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: effectivePropName,
+            type: userProp.type,
+            city: effectiveCity,
+            state: effectiveState,
+            totalArea: effectiveArea
+          })
+        }).catch((e) => console.warn("Rent roll prop sync note:", e));
+      } catch (err) {
+        console.warn("Prop sync note:", err);
+      }
     }
 
     setSuccessMsg("Onboarding complete! Launching your verified commercial workspace...");
@@ -1371,25 +1413,25 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="text-[10px] text-slate-500 block">User Name</span>
-                    <strong className="text-slate-900">{fullName || "Vikramaditya"}</strong>
+                    <strong className="text-slate-900">{fullName || "Primary Admin"}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">Contact Email</span>
-                    <strong className="text-slate-900 truncate block">{email || "vikram@apex.in"}</strong>
+                    <strong className="text-slate-900 truncate block">{email || "—"}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">Organization</span>
-                    <strong className="text-slate-900">{orgLegalName || "Acme Realty Ltd"}</strong>
+                    <strong className="text-slate-900">{orgLegalName || "My Organization"}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">Primary City</span>
-                    <strong className="text-slate-900">{operatingCity}</strong>
+                    <strong className="text-slate-900">{operatingCity === "CUSTOM" && customCity.trim() ? customCity.trim() : operatingCity}</strong>
                   </div>
                   {selectedRole === "owner" && (
                     <>
                       <div>
                         <span className="text-[10px] text-slate-500 block">Primary Asset</span>
-                        <strong className="text-blue-900">{propertyName || "Commercial Tower"}</strong>
+                        <strong className="text-blue-900">{propertyName || orgLegalName || "Commercial Property"}</strong>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-500 block">Services Activated</span>

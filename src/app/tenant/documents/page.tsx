@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Upload, Search, FolderOpen, FileText, ChevronLeft, ChevronRight, CheckCircle, Clock, Download, Eye, X, Plus } from "lucide-react";
 
 interface DocItem {
@@ -25,16 +25,16 @@ export default function DocumentLockerDashboard() {
     fileName: ""
   });
 
-  const [documents, setDocuments] = useState<DocItem[]>([
-    { name: "Apex_Business_Tower_Signed_Lease_2026.pdf", category: "Lease Agreements", type: "PDF", size: "2.8 MB", date: "15 Jan 2026", status: "Verified" },
-    { name: "Statutory_CAM_Reconciliation_Schedule.pdf", category: "Billing Invoices", type: "PDF", size: "1.2 MB", date: "01 Sep 2026", status: "Verified" },
-    { name: "CFO_Fire_Safety_NOC_Compliance.pdf", category: "Compliance & NOC", type: "PDF", size: "1.9 MB", date: "12 Feb 2026", status: "Verified" },
-    { name: "Corporate_GSTIN_Incorporation.pdf", category: "Tenant KYC", type: "PDF", size: "850 KB", date: "18 Aug 2026", status: "Verified" },
-    { name: "Director_Corporate_PAN.pdf", category: "Tenant KYC", type: "PDF", size: "620 KB", date: "18 Aug 2026", status: "Verified" },
-    { name: "Commercial_General_Liability_Policy.pdf", category: "Insurance Certificates", type: "PDF", size: "3.4 MB", date: "10 Mar 2026", status: "Verified" },
-    { name: "Authorized_Staff_Access_Badge_Roster.xlsx", category: "Staff Directory", type: "XLSX", size: "420 KB", date: "05 Sep 2026", status: "Verified" },
-    { name: "Floor_5_Architectural_Fitout_Floorplan.dwg.pdf", category: "Lease Agreements", type: "PDF", size: "5.1 MB", date: "10 Jan 2026", status: "Verified" }
-  ]);
+  const [documents, setDocuments] = useState<DocItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("officex_tenant_documents") || "[]");
+      setDocuments(Array.isArray(stored) ? stored : []);
+    } catch {
+      setDocuments([]);
+    }
+  }, []);
 
   const folders = [
     { name: "Lease Agreements", count: documents.filter(d => d.category === "Lease Agreements").length },
@@ -57,6 +57,14 @@ export default function DocumentLockerDashboard() {
       date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
       status: "Pending"
     };
+
+    const updated = [newDoc, ...documents];
+    setDocuments(updated);
+    try {
+      localStorage.setItem("officex_tenant_documents", JSON.stringify(updated));
+    } catch (e) {
+      console.warn("Doc store note:", e);
+    }
 
     setDocuments(prev => [newDoc, ...prev]);
     setIsUploadOpen(false);
@@ -171,44 +179,54 @@ export default function DocumentLockerDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredDocs.map((d) => (
-                <tr key={d.name} className="text-xs hover:bg-slate-50/60 transition-colors">
-                  <td className="py-3.5 px-4 font-semibold text-gray-900 flex items-center gap-2.5">
-                    <FileText size={16} className="text-[#0F8B7D] shrink-0" />
-                    <span className="truncate max-w-xs">{d.name}</span>
-                  </td>
-                  <td className="py-3.5 px-3 text-gray-600">{d.category}</td>
-                  <td className="py-3.5 px-3 text-gray-500 font-mono text-[11px]">{d.type}</td>
-                  <td className="py-3.5 px-3 text-gray-500">{d.size}</td>
-                  <td className="py-3.5 px-3 text-gray-600">{d.date}</td>
-                  <td className="py-3.5 px-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      d.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                      "bg-amber-50 text-amber-700 border border-amber-200"
-                    }`}>
-                      {d.status === "Verified" ? "Verified ✓" : "Pending ⏳"}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => setPreviewDoc(d)}
-                        className="px-2.5 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                        title="Preview Document"
-                      >
-                        <Eye size={13} /> View
-                      </button>
-                      <button
-                        onClick={() => handleDownload(d)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                        title="Download Document"
-                      >
-                        <Download size={13} />
-                      </button>
-                    </div>
+              {filteredDocs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <FolderOpen size={36} className="text-slate-300 mx-auto mb-2" />
+                    <p className="font-bold text-slate-700 text-sm">No documents in this locker folder</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Click &quot;Upload Document&quot; to store your lease agreements, KYC, or compliance files.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredDocs.map((d) => (
+                  <tr key={d.name} className="text-xs hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-gray-900 flex items-center gap-2.5">
+                      <FileText size={16} className="text-[#0F8B7D] shrink-0" />
+                      <span className="truncate max-w-xs">{d.name}</span>
+                    </td>
+                    <td className="py-3.5 px-3 text-gray-600">{d.category}</td>
+                    <td className="py-3.5 px-3 text-gray-500 font-mono text-[11px]">{d.type}</td>
+                    <td className="py-3.5 px-3 text-gray-500">{d.size}</td>
+                    <td className="py-3.5 px-3 text-gray-600">{d.date}</td>
+                    <td className="py-3.5 px-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        d.status === "Verified" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                        "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}>
+                        {d.status === "Verified" ? "Verified ✓" : "Pending ⏳"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setPreviewDoc(d)}
+                          className="px-2.5 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                          title="Preview Document"
+                        >
+                          <Eye size={13} /> View
+                        </button>
+                        <button
+                          onClick={() => handleDownload(d)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                          title="Download Document"
+                        >
+                          <Download size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

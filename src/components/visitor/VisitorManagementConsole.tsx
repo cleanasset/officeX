@@ -176,6 +176,26 @@ export default function VisitorManagementConsole({
     setTimeout(() => setToast(null), 4000);
   };
 
+  useEffect(() => {
+    if (portalRole === "tenant" && typeof window !== "undefined") {
+      try {
+        const stored = JSON.parse(localStorage.getItem("officex_tenant_visitors") || "[]");
+        setVisitsList(Array.isArray(stored) ? stored : []);
+      } catch {
+        setVisitsList([]);
+      }
+      const b = localStorage.getItem("officex_tenant_building");
+      if (b) setSelectedProperty(b);
+      const myUser = localStorage.getItem("officex_user_name") || "Tenant Lead";
+      const myOrg = localStorage.getItem("officex_active_org") || myUser;
+      setForm((prev) => ({
+        ...prev,
+        hostName: myUser,
+        tenantName: myOrg
+      }));
+    }
+  }, [portalRole]);
+
   // KPIs
   const totalExpected = visitsList.length;
   const insideOccupants = visitsList.filter(v => v.status === "checked_in" || v.status === "overstay");
@@ -236,7 +256,17 @@ export default function VisitorManagementConsole({
       evacuationStatus: "UNACCOUNTED"
     };
 
-    setVisitsList(prev => [newEntry, ...prev]);
+    setVisitsList(prev => {
+      const updated = [newEntry, ...prev];
+      if (portalRole === "tenant" && typeof window !== "undefined") {
+        try {
+          localStorage.setItem("officex_tenant_visitors", JSON.stringify(updated));
+        } catch (err) {
+          console.warn("Storage note:", err);
+        }
+      }
+      return updated;
+    });
     showToast(form.requiresApproval ? "Pre-registration submitted to host approval queue." : "🎉 Visitor pre-registered! Digital pass activated.", "success");
     setSelectedVisitForBadge(newEntry);
 

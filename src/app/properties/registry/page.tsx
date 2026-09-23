@@ -24,7 +24,7 @@ const SEED_PROP_IDS = new Set([
   "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
   "401f394a-6d27-4c23-9a21-411baa7eef3b",
   "cfa13505-71a5-4a43-be33-37497f416fdc",
-  "cf5a0b49-c4fd-4762-ae22-40c42ac6332d"
+  "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
 ]);
 
 const SEED_PROP_NAMES = new Set([
@@ -32,8 +32,11 @@ const SEED_PROP_NAMES = new Set([
   "business hub",
   "shivalik shilp",
   "apex business tower",
+  "apex commercial tower",
   "meridian tech park",
-  "nexus hub"
+  "nexus hub",
+  "maker maxity",
+  "godrej bkc horizon"
 ]);
 
 export default function PropertyMasterRegistry() {
@@ -48,6 +51,16 @@ export default function PropertyMasterRegistry() {
       const email = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "";
       const isDemoAccount = email.includes("demo.seed") || (typeof window !== "undefined" && localStorage.getItem("officex_mode") === "demo");
 
+      const regName = typeof window !== "undefined"
+        ? (localStorage.getItem("officex_property_name") || localStorage.getItem("officex_active_org") || "").trim()
+        : "";
+      const regCity = typeof window !== "undefined"
+        ? (localStorage.getItem("officex_property_city") || localStorage.getItem("officex_org_city") || "Delhi NCR").trim()
+        : "Delhi NCR";
+      const regState = regCity.toLowerCase().includes("delhi") ? "Delhi" : regCity.toLowerCase().includes("mumbai") ? "Maharashtra" : "India";
+
+      let loadedProps: PropertyItem[] = [];
+
       try {
         const res = await fetch("/api/rent-roll/properties");
         if (res.ok) {
@@ -58,26 +71,22 @@ export default function PropertyMasterRegistry() {
               : data.filter((p: any) => !SEED_PROP_IDS.has(p.id) && !SEED_PROP_NAMES.has((p.name || "").toLowerCase().trim()));
 
             if (filtered.length > 0) {
-              const mapped = filtered.map((p: any) => {
+              loadedProps = filtered.map((p: any) => {
                 const codeNum = (p.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
                 return {
                   id: p.id,
                   name: p.name,
                   type: p.type || "Commercial Office",
-                  location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
-                  area: Number(p.totalArea || 0).toLocaleString(),
+                  location: `${p.city || regCity}, ${p.state || regState}`,
+                  area: Number(p.totalArea || 15000).toLocaleString(),
                   occupied: p.activeLeasesCount || 0,
-                  vacant: Math.max(0, (p.totalArea || 0) - (p.occupiedArea || 0)),
+                  vacant: Math.max(0, (p.totalArea || 15000) - (p.occupiedArea || 0)),
                   occPct: p.occupancyPct || 0,
                   grade: p.grade || "A",
                   inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
                   ownerName: p.ownerName || p.owner_name || p.ownerCompany || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
                 };
               });
-              setProperties(mapped);
-              setSelectedPropId(mapped[0].id);
-              setIsLoading(false);
-              return;
             }
           }
         }
@@ -85,66 +94,88 @@ export default function PropertyMasterRegistry() {
         // Fallback to local
       }
 
+      // Also merge any properties stored in localStorage (officex_user_properties)
       if (typeof window !== "undefined") {
-        let rawLocal: any[] = [];
         try {
-          rawLocal = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-        } catch {
-          rawLocal = [];
+          const localStored = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          if (Array.isArray(localStored)) {
+            for (const item of localStored) {
+              if (item?.name && !SEED_PROP_NAMES.has(item.name.toLowerCase().trim())) {
+                const exists = loadedProps.some(p => p.name.toLowerCase() === item.name.toLowerCase().trim());
+                if (!exists) {
+                  const codeNum = (item.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "7001";
+                  loadedProps.push({
+                    id: item.id || `prop-${Date.now()}`,
+                    name: item.name,
+                    type: item.type || "Commercial Office",
+                    location: `${item.city || regCity}, ${item.state || regState}`,
+                    area: Number(item.totalArea || 15000).toLocaleString(),
+                    occupied: item.occupied || item.activeLeasesCount || 0,
+                    vacant: item.vacant || (Number(item.totalArea || 15000) - (item.occupiedArea || 0)),
+                    occPct: item.occPct || item.occupancyPct || 0,
+                    grade: item.grade || "A",
+                    inviteCode: item.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+                    ownerName: item.ownerName || (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) || "Commercial Property Owner"
+                  });
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
         }
+      }
 
-        // Sanitize: Purge global demo seed properties from standard users' storage
-        let local = isDemoAccount
-          ? rawLocal
-          : rawLocal.filter((p: any) => !SEED_PROP_IDS.has(p?.id) && !SEED_PROP_NAMES.has((p?.name || p?.propertyName || "").toLowerCase().trim()));
-
-        // Check if user has a registered property from signup/onboarding
-        const registeredPropName = localStorage.getItem("officex_property_name");
-        if (
-          local.length === 0 &&
-          registeredPropName &&
-          !SEED_PROP_NAMES.has(registeredPropName.toLowerCase().trim())
-        ) {
-          const city = localStorage.getItem("officex_org_city") || "Mumbai";
-          const state = localStorage.getItem("officex_org_state") || "Maharashtra";
+      // Check if user has a registered property from signup/login (e.g. fortune sky in Delhi NCR)
+      const regArea = typeof window !== "undefined" ? (localStorage.getItem("officex_leasable_area") || "15000") : "15000";
+      if (regName && !SEED_PROP_NAMES.has(regName.toLowerCase())) {
+        const alreadyInLoaded = loadedProps.some((p) => p.name.toLowerCase() === regName.toLowerCase());
+        if (!alreadyInLoaded) {
           const code = `OX-${Math.floor(1000 + Math.random() * 9000)}`;
-          const userProp = {
+          const userPropItem: PropertyItem = {
             id: `prop-${Date.now()}`,
-            name: registeredPropName,
+            name: regName,
             type: "Commercial Office",
-            city: city,
-            state: state,
-            totalArea: 15000,
+            location: `${regCity}, ${regState}`,
+            area: Number(regArea).toLocaleString(),
+            occupied: 0,
+            vacant: Number(regArea),
+            occPct: 0,
             grade: "A",
             inviteCode: code,
-            ownerName: localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org") || "Commercial Asset Owner",
-            createdAt: new Date().toISOString()
+            ownerName: (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
           };
-          local = [userProp];
+          loadedProps = [userPropItem, ...loadedProps];
+
+          // Save to local storage for persistence
+          if (typeof window !== "undefined") {
+            const raw = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+            const clean = raw.filter((p: any) => !SEED_PROP_NAMES.has((p?.name || "").toLowerCase().trim()));
+            localStorage.setItem("officex_user_properties", JSON.stringify([
+              {
+                id: userPropItem.id,
+                name: userPropItem.name,
+                type: userPropItem.type,
+                city: regCity,
+                state: regState,
+                totalArea: Number(regArea),
+                grade: "A",
+                inviteCode: code,
+                ownerName: userPropItem.ownerName,
+                createdAt: new Date().toISOString()
+              },
+              ...clean
+            ]));
+          }
         }
+      }
 
-        // Write sanitized list back to localStorage to cure browser state
-        localStorage.setItem("officex_user_properties", JSON.stringify(local));
-
-        const mapped: PropertyItem[] = local.map((p: any) => {
-          const codeNum = (p?.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
-          return {
-            id: p?.id || `prop-${Math.random().toString(36).substring(7)}`,
-            name: p?.name || p?.propertyName || "Commercial Asset",
-            type: p?.type || p?.subType || "Commercial Office",
-            location: `${p?.city || "Mumbai"}${p?.state ? `, ${p.state}` : ""}`,
-            area: Number(p?.totalArea || p?.totalAreaSft || 0).toLocaleString(),
-            occupied: p?.occupied || 0,
-            vacant: Number(p?.totalArea || p?.totalAreaSft || 0),
-            occPct: p?.occPct || 0,
-            grade: p?.grade || "A",
-            inviteCode: p?.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
-            ownerName: p?.ownerName || p?.owner_name || p?.ownerCompany || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
-          };
-        });
-
-        setProperties(mapped);
-        if (mapped.length > 0) setSelectedPropId(mapped[0].id);
+      if (loadedProps.length > 0) {
+        setProperties(loadedProps);
+        setSelectedPropId(loadedProps[0].id);
+      } else {
+        setProperties([]);
+        setSelectedPropId(null);
       }
       setIsLoading(false);
     }

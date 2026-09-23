@@ -84,15 +84,19 @@ export default function PropertyDashboardClient({
         "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
         "401f394a-6d27-4c23-9a21-411baa7eef3b",
         "cfa13505-71a5-4a43-be33-37497f416fdc",
-        "cf5a0b49-c4fd-4762-ae22-40c42ac6332d"
+        "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
+        "PROP-8841"
       ]);
       const SEED_PROP_NAMES = new Set([
         "eka club",
         "business hub",
         "shivalik shilp",
         "apex business tower",
+        "apex commercial tower",
         "meridian tech park",
-        "nexus hub"
+        "nexus hub",
+        "maker maxity",
+        "godrej bkc horizon"
       ]);
 
       let rawSavedProps: any[] = [];
@@ -108,10 +112,12 @@ export default function PropertyDashboardClient({
         : rawSavedProps;
 
       // Recover property from user signup if local list was empty
-      const registeredPropName = localStorage.getItem("officex_property_name");
-      if (savedProps.length === 0 && registeredPropName && !SEED_PROP_NAMES.has(registeredPropName.toLowerCase().trim())) {
-        const city = localStorage.getItem("officex_org_city") || "Mumbai";
-        const state = localStorage.getItem("officex_org_state") || "Maharashtra";
+      const registeredPropName = (localStorage.getItem("officex_property_name") || localStorage.getItem("officex_active_org") || "").trim();
+      const city = localStorage.getItem("officex_property_city") || localStorage.getItem("officex_org_city") || "Delhi NCR";
+      const state = city.toLowerCase().includes("delhi") ? "Delhi" : city.toLowerCase().includes("mumbai") ? "Maharashtra" : "India";
+      const regArea = localStorage.getItem("officex_leasable_area") || "15000";
+
+      if ((savedProps.length === 0 || savedProps.some(p => SEED_PROP_NAMES.has((p?.name || "").toLowerCase().trim()))) && registeredPropName && !SEED_PROP_NAMES.has(registeredPropName.toLowerCase().trim())) {
         const code = `OX-${Math.floor(1000 + Math.random() * 9000)}`;
         const userProp = {
           id: `prop-${Date.now()}`,
@@ -119,9 +125,10 @@ export default function PropertyDashboardClient({
           type: "Commercial Office",
           city: city,
           state: state,
-          totalArea: "15,000",
+          totalArea: Number(regArea).toLocaleString(),
           grade: "Grade A",
           inviteCode: code,
+          ownerName: localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org") || "Commercial Asset Owner",
           createdAt: new Date().toISOString()
         };
         savedProps = [userProp];
