@@ -96,37 +96,11 @@ export default function PropertyMasterRegistry() {
         // Fallback to local
       }
 
-      // Also merge any properties stored in localStorage (officex_user_properties)
+      // Synchronize localStorage with backend truth, clearing out any ghost records
       if (typeof window !== "undefined") {
         try {
-          const localStored = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-          if (Array.isArray(localStored)) {
-            for (const item of localStored) {
-              const itemName = (item?.name || "").toLowerCase().trim();
-              if (item?.name && !SEED_PROP_NAMES.has(itemName) && !SEED_PROP_IDS.has(item?.id) && !itemName.includes("commercial portfolio")) {
-                const exists = loadedProps.some(p => p.id === item.id || p.name.toLowerCase() === itemName);
-                if (!exists) {
-                  const codeNum = (item.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "7001";
-                  loadedProps.push({
-                    id: item.id || `prop-${Date.now()}`,
-                    name: item.name,
-                    type: item.type || "Commercial Office",
-                    location: `${item.city || "Mumbai"}, ${item.state || "Maharashtra"}`,
-                    area: Number(item.totalArea || 15000).toLocaleString(),
-                    occupied: item.occupied || item.activeLeasesCount || 0,
-                    vacant: item.vacant || (Number(item.totalArea || 15000) - (item.occupiedArea || 0)),
-                    occPct: item.occPct || item.occupancyPct || 0,
-                    grade: item.grade || "A",
-                    inviteCode: item.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
-                    ownerName: item.ownerName || (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) || "Commercial Property Owner"
-                  });
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
+          localStorage.setItem("officex_user_properties", JSON.stringify(loadedProps));
+        } catch (e) {}
       }
 
       setProperties(loadedProps);

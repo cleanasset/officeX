@@ -72,21 +72,23 @@ export default function PropertyDashboardClient({
       if (propsRes.ok) {
         const propsData = await propsRes.json();
         if (Array.isArray(propsData)) {
-          // Merge server properties with any local session properties
-          let localProps: any[] = [];
-          try {
-            localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-          } catch {}
-
-          const propMap = new Map<string, any>();
-          propsData.forEach(p => propMap.set(p.id, p));
-          localProps.forEach(p => {
-            if (p?.id && !propMap.has(p.id)) {
-              propMap.set(p.id, p);
-            }
+          const SEED_PROP_NAMES = new Set([
+            "fortune sky", "apex horizon tower", "signature tower b", "eka club", 
+            "business hub", "shivalik shilp", "apex business tower", "apex commercial tower", 
+            "meridian tech park", "nexus hub", "maker maxity", "godrej bkc horizon"
+          ]);
+          const cleanProps = propsData.filter((p: any) => {
+            const name = (p?.name || "").toLowerCase().trim();
+            return !SEED_PROP_NAMES.has(name) && !name.includes("commercial portfolio");
           });
-          const merged = Array.from(propMap.values());
-          setProperties(merged);
+
+          // Synchronize localStorage with backend truth, clearing out any ghost records
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("officex_user_properties", JSON.stringify(cleanProps));
+            } catch {}
+          }
+          setProperties(cleanProps);
         }
       }
 
@@ -401,14 +403,25 @@ export default function PropertyDashboardClient({
         
         {/* Total Properties */}
         <Link 
-          href="/properties/add" 
+          href={propertiesCount > 0 ? "#portfolio-properties" : "/properties/add"} 
+          onClick={(e) => {
+            if (propertiesCount > 0) {
+              e.preventDefault();
+              const el = document.getElementById("portfolio-properties");
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth" });
+              } else {
+                window.location.href = "/properties/registry";
+              }
+            }
+          }}
           className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-[#8B5CF6]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Properties</span>
             <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-[#8B5CF6] transition-colors">{propertiesCount}</div>
             <span className="text-[10px] text-slate-500 font-semibold mt-1 block">
-              {propertiesCount === 0 ? "0 Assets (Ready to Add)" : "🟢 Active Portfolio"}
+              {propertiesCount === 0 ? "0 Assets (Click to Add)" : "🟢 View Portfolio Assets"}
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-105 transition-transform shrink-0">
@@ -577,18 +590,32 @@ export default function PropertyDashboardClient({
       </div>
 
       {/* PORTFOLIO PROPERTY BUILDINGS LIST / EMPTY STATE */}
-      <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
+      <div id="portfolio-properties" className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm scroll-mt-6">
         <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
           <div className="flex items-center gap-2">
             <Building size={18} className="text-[#0F8B7D]" />
             <h3 className="text-base font-bold text-gray-900">Commercial Property Portfolio</h3>
+            {propertiesCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-violet-50 text-[#8B5CF6] text-[10px] font-bold border border-violet-100">
+                {propertiesCount} {propertiesCount === 1 ? "Asset" : "Assets"}
+              </span>
+            )}
           </div>
-          <Link
-            href="/properties/add"
-            className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-2xs flex items-center gap-1"
-          >
-            <Plus size={13} /> Add Property
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/properties/registry"
+              className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200/80 transition-colors flex items-center gap-1"
+            >
+              <span>Property Registry</span>
+              <ArrowUpRight size={13} />
+            </Link>
+            <Link
+              href="/properties/add"
+              className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-2xs flex items-center gap-1"
+            >
+              <Plus size={13} /> Add Property
+            </Link>
+          </div>
         </div>
 
         {propertiesCount === 0 ? (
