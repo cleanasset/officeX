@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 
@@ -360,7 +360,7 @@ export default function SubscriptionGate({
                 </Link>
               </div>
 
-              {/* Google 1-Click Button */}
+              {/* Google 1-Click Button with Payment Gateway Verification */}
               <button
                 type="button"
                 onClick={async () => {
@@ -368,12 +368,44 @@ export default function SubscriptionGate({
                     const redirectUrl = typeof window !== "undefined"
                       ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`
                       : "http://localhost:3000/login";
-                    await supabase.auth.signInWithOAuth({
-                      provider: "google",
-                      options: { redirectTo: redirectUrl }
+
+                    if (is100PercentDiscount) {
+                      await persistSubscription(userEmail || "google-subscriber@officex.in", "RENTROLL12", `FREE_RENTROLL12_${Date.now()}`);
+                      setPaymentToast("🎉 100% Free Lifetime Offer Activated! Redirecting to Google...");
+                      setTimeout(async () => {
+                        await supabase.auth.signInWithOAuth({
+                          provider: "google",
+                          options: { redirectTo: redirectUrl }
+                        });
+                      }, 700);
+                      return;
+                    }
+
+                    // Otherwise launch payment gateway first!
+                    await initiateRazorpayPayment({
+                      amount: finalAmountInPaise,
+                      receipt: `GOOGLE_GATE_${Date.now()}`,
+                      description: `Rent Roll Subscription for ${buildingName || "Commercial Property"}`,
+                      prefillName: ownerName || "Commercial Landlord",
+                      prefillEmail: userEmail,
+                      notes: { portal: portalName, auth_provider: "google" },
+                      onSuccess: async (response) => {
+                        await persistSubscription(userEmail || "google-subscriber@officex.in", "none", response.razorpay_payment_id);
+                        setPaymentToast("Payment verified! Redirecting to Google to complete sign-in...");
+                        setTimeout(async () => {
+                          await supabase.auth.signInWithOAuth({
+                            provider: "google",
+                            options: { redirectTo: redirectUrl }
+                          });
+                        }, 700);
+                      },
+                      onFailure: (err) => {
+                        setPaymentToast(err?.description || "Payment cancelled. Please complete payment to unlock Rent Roll via Google.");
+                      }
                     });
-                  } catch (e) {
+                  } catch (e: any) {
                     console.error("Google auth error:", e);
+                    setPaymentToast(e.message || "Could not launch payment gateway.");
                   }
                 }}
                 className="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs transition-all flex items-center justify-center gap-2.5 shadow-2xs cursor-pointer"
@@ -384,7 +416,11 @@ export default function SubscriptionGate({
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                 </svg>
-                <span>Continue with Google</span>
+                <span>
+                  {is100PercentDiscount
+                    ? "Continue with Google (100% Free · ₹0)"
+                    : "Continue with Google (Pay ₹100 & Unlock)"}
+                </span>
               </button>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
@@ -468,73 +504,91 @@ export default function SubscriptionGate({
             </div>
           </div>
 
-          {/* Coupon Code Section */}
-          <div className="mb-5 bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                <Tag size={13} className="text-[#0F8B7D]" />
-                Have a coupon or promo code?
+          {/* ──── LIMITED TIME PROMOTIONAL OFFER (100% OFF) ──── */}
+          <div className="mb-5 relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-teal-50/70 p-4 shadow-xs">
+            {/* Header Badge */}
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                  <Sparkles size={11} />
+                  Limited Time Offer
+                </span>
+                <span className="text-[11px] font-bold text-amber-900">
+                  100% Off Promotional Access
+                </span>
+              </div>
+              <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300/80">
+                Save ₹100/mo
               </span>
-              {appliedCoupon && (
-                <button
-                  type="button"
-                  onClick={handleRemoveCoupon}
-                  className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
-                >
-                  Remove
-                </button>
-              )}
             </div>
 
-            {appliedCoupon ? (
-              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black font-mono tracking-wider text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-300">
-                    {appliedCoupon}
-                  </span>
-                  <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                    <Gift size={13} /> 100% FREE Access (₹0 Forever)
-                  </span>
+            {/* Ticket Showcase Card */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs rounded-xl p-3 border border-amber-200 shadow-2xs">
+              <div className="flex items-start sm:items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100/80 text-amber-800 shrink-0 mt-0.5 sm:mt-0">
+                  <Gift size={20} />
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveCoupon}
-                  className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                  title="Remove coupon"
-                >
-                  <X size={13} />
-                </button>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm sm:text-base font-black tracking-widest text-[#0F8B7D] px-2.5 py-0.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-300">
+                      RENTROLL12
+                    </span>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      100% FREE
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-snug">
+                    Use code <strong className="text-slate-900 font-bold">RENTROLL12</strong> for 100% free lifetime access to Rent Roll &amp; CAM billing.
+                  </p>
+                </div>
               </div>
-            ) : (
-              <form onSubmit={handleApplyCoupon} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={couponInput}
-                  onChange={(e) => {
-                    setCouponInput(e.target.value);
-                    if (couponError) setCouponError(null);
-                  }}
-                  placeholder="Enter code (e.g. RENTROLL12)"
-                  className="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] uppercase"
-                />
-                <button
-                  type="submit"
-                  disabled={!couponInput.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-black tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Apply
-                </button>
-              </form>
-            )}
 
-            {couponError && (
-              <p className="text-[11px] font-semibold text-rose-600 mt-1.5">{couponError}</p>
-            )}
-            {couponSuccess && (
-              <p className="text-[11px] font-semibold text-emerald-600 mt-1.5 flex items-center gap-1">
-                <CheckCircle size={12} /> {couponSuccess}
-              </p>
-            )}
+              {/* 1-Click Apply Button or Applied Status */}
+              <div className="shrink-0 self-end sm:self-center">
+                {appliedCoupon === "RENTROLL12" ? (
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                      <CheckCircle2 size={13} />
+                      <span>Applied (₹0)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon("RENTROLL12");
+                      setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
+                      setCouponError(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <Sparkles size={13} />
+                    <span>Apply 100% Off</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Subtext info */}
+            <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px]">
+              {appliedCoupon === "RENTROLL12" ? (
+                <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                  <CheckCircle2 size={12} className="text-emerald-600" />
+                  Free Lifetime Subscription Active · ₹0 charged
+                </span>
+              ) : (
+                <span className="text-amber-800/80 text-[10px] font-medium">
+                  ⚡ Instant unlock: No credit card required with code RENTROLL12.
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Pricing Banner */}

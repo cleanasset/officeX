@@ -22,7 +22,9 @@ import {
   Eye,
   EyeOff,
   Mail,
-  Phone as PhoneIcon
+  Phone as PhoneIcon,
+  LogIn,
+  CheckCircle2
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
@@ -124,28 +126,120 @@ export default function RentRollPaymentModal({
     setCouponError(null);
   };
 
-  // Google OAuth Login
-  const handleGoogleAuth = async () => {
+  // Google OAuth Login with Payment Gateway Requirement
+  const handleGoogleAuthWithPayment = async () => {
     setIsGoogleLoading(true);
     setErrorMsg(null);
-    try {
-      const redirectUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`
-        : "http://localhost:3000/login?context=rent-roll&redirect=/properties/rent-roll";
+    setSuccessMsg(null);
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
+    const redirectUrl = typeof window !== "undefined"
+      ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`
+      : "http://localhost:3000/login?context=rent-roll&redirect=/properties/rent-roll";
 
-      if (error) {
-        setErrorMsg(error.message || "Google authentication failed. Please try again.");
+    // In Sign-In mode: verify existing subscription with Google
+    if (mode === "signin") {
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: redirectUrl,
+          },
+        });
+
+        if (error) {
+          setErrorMsg(error.message || "Google authentication failed. Please try again.");
+          setIsGoogleLoading(false);
+        }
+      } catch (err: any) {
+        setErrorMsg("Network error connecting to Google. Please try email sign in.");
         setIsGoogleLoading(false);
       }
+      return;
+    }
+
+    // In Subscribe / Onboard mode: MUST complete payment gateway FIRST!
+    // Case 1: 100% Free Lifetime Offer (Coupon RENTROLL12)
+    if (is100PercentDiscount) {
+      const freePaymentId = `FREE_RENTROLL12_${Date.now()}`;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_payment_id", freePaymentId);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        if (email.trim()) {
+          const cleanEmail = email.trim().toLowerCase();
+          localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
+          sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
+        }
+      }
+      setSuccessMsg("🎉 100% Free Lifetime Offer Activated! Redirecting to Google Sign In...");
+      setTimeout(async () => {
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: { redirectTo: redirectUrl },
+          });
+          if (error) {
+            setErrorMsg(error.message || "Google authentication failed.");
+            setIsGoogleLoading(false);
+          }
+        } catch (e: any) {
+          setErrorMsg("Google sign in failed. Please try email sign in.");
+          setIsGoogleLoading(false);
+        }
+      }, 700);
+      return;
+    }
+
+    // Case 2: Standard Plan (₹100) — Launch Razorpay Payment Gateway FIRST!
+    try {
+      await initiateRazorpayPayment({
+        amount: finalAmountInPaise,
+        receipt: `GOOGLE_SUB_${Date.now()}`,
+        description: `Rent Roll Subscription for ${buildingName.trim() || "Commercial Property"}`,
+        prefillName: personName.trim() || "Commercial Landlord",
+        prefillEmail: email.trim(),
+        prefillPhone: phone.trim(),
+        notes: {
+          portal: "Rent Roll & Revenue Management",
+          user_email: email.trim(),
+          auth_provider: "google",
+          type: "subscription",
+          coupon: appliedCoupon || "none",
+        },
+        onSuccess: async (response) => {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_payment_id", response.razorpay_payment_id);
+            localStorage.setItem("officex_subscription", "active");
+            sessionStorage.setItem("officex_subscription", "active");
+            document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+            if (email.trim()) {
+              const cleanEmail = email.trim().toLowerCase();
+              localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
+              sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
+            }
+          }
+          setSuccessMsg("Payment verified! Redirecting to Google Sign In to complete account linking...");
+          setTimeout(async () => {
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: { redirectTo: redirectUrl },
+            });
+            if (error) {
+              setErrorMsg(error.message || "Google authentication failed.");
+              setIsGoogleLoading(false);
+            }
+          }, 800);
+        },
+        onFailure: (err) => {
+          console.error("Payment failed:", err);
+          setErrorMsg(err?.description || err?.message || "Payment required to unlock Rent Roll. Please complete payment to continue with Google.");
+          setIsGoogleLoading(false);
+        },
+      });
     } catch (err: any) {
-      setErrorMsg("Network error connecting to Google. Please try email sign in.");
+      console.error("Checkout error:", err);
+      setErrorMsg(err.message || "Could not launch Razorpay gateway. Please try again.");
       setIsGoogleLoading(false);
     }
   };
@@ -462,7 +556,7 @@ export default function RentRollPaymentModal({
                 <span>Rent Roll &amp; CAM Billing Suite</span>
               </div>
               <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                {mode === "onboard" ? "Landlord Onboarding & Payment Gateway" : "Sign In to Rent Roll Desk"}
+                {mode === "onboard" ? "Unlock Rent Roll & CAM Suite" : "Sign In to Rent Roll Desk"}
               </h2>
             </div>
           </div>
@@ -485,13 +579,14 @@ export default function RentRollPaymentModal({
                 setMode("onboard");
                 setErrorMsg(null);
               }}
-              className={`py-2 rounded-lg transition-all cursor-pointer ${
+              className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 mode === "onboard"
                   ? "bg-white text-[#0D7B6C] shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              1. New Owner (Onboard &amp; Pay)
+              <Sparkles size={13} className={mode === "onboard" ? "text-amber-500" : "text-slate-400"} />
+              <span>Subscribe &amp; Unlock</span>
             </button>
             <button
               type="button"
@@ -499,13 +594,14 @@ export default function RentRollPaymentModal({
                 setMode("signin");
                 setErrorMsg(null);
               }}
-              className={`py-2 rounded-lg transition-all cursor-pointer ${
+              className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 mode === "signin"
                   ? "bg-white text-[#0D7B6C] shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              2. Existing Member (Sign In)
+              <LogIn size={13} className={mode === "signin" ? "text-teal-600" : "text-slate-400"} />
+              <span>Sign In</span>
             </button>
           </div>
         </div>
@@ -531,7 +627,7 @@ export default function RentRollPaymentModal({
           <div>
             <button
               type="button"
-              onClick={handleGoogleAuth}
+              onClick={handleGoogleAuthWithPayment}
               disabled={isGoogleLoading}
               className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 shadow-2xs"
             >
@@ -553,7 +649,15 @@ export default function RentRollPaymentModal({
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>{isGoogleLoading ? "Connecting Google..." : mode === "onboard" ? "Continue with Google" : "Sign in with Google"}</span>
+              <span>
+                {isGoogleLoading
+                  ? "Connecting Payment & Google..."
+                  : mode === "onboard"
+                  ? is100PercentDiscount
+                    ? "Continue with Google (100% Free · ₹0)"
+                    : "Continue with Google (Pay ₹100 & Unlock)"
+                  : "Sign in with Google"}
+              </span>
             </button>
 
             <div className="relative my-3">
@@ -705,18 +809,18 @@ export default function RentRollPaymentModal({
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#0D7B6C] block">
                     COMMERCIAL LANDLORD PLAN
                   </span>
-                  <div className="flex items-baseline gap-1 mt-0.5">
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
                     {is100PercentDiscount ? (
                       <>
-                        <span className="text-xs font-bold text-slate-400 line-through">₹100</span>
-                        <span className="text-xl sm:text-2xl font-black text-[#0D7B6C] font-mono">₹0 FREE</span>
-                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase ml-1">
-                          100% OFF
+                        <span className="text-sm font-bold text-slate-400 line-through">₹100</span>
+                        <span className="text-2xl font-black text-emerald-700 font-mono">₹0 FREE</span>
+                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-200/90 px-2.5 py-0.5 rounded-full uppercase ml-1">
+                          100% OFF APPLIED
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-xl sm:text-2xl font-black text-slate-900 font-mono">₹100</span>
+                        <span className="text-2xl font-black text-slate-900 font-mono">₹100</span>
                         <span className="text-xs text-slate-500 font-semibold">/ month</span>
                       </>
                     )}
@@ -730,68 +834,91 @@ export default function RentRollPaymentModal({
                 </div>
               </div>
 
-              {/* Coupon Code Section */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    <Tag size={12} className="text-[#0D7B6C]" />
-                    Promotional Coupon:
+              {/* ──── LIMITED TIME PROMOTIONAL OFFER (100% OFF) ──── */}
+              <div className="relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-teal-50/70 p-4 shadow-xs">
+                {/* Header Badge */}
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                      <Sparkles size={11} />
+                      Limited Time Offer
+                    </span>
+                    <span className="text-[11px] font-bold text-amber-900">
+                      100% Off Promotional Access
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300/80">
+                    Save ₹100/mo
                   </span>
-                  {appliedCoupon && (
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  )}
                 </div>
 
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-black text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-300">
-                        {appliedCoupon}
-                      </span>
-                      <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                        <Gift size={13} /> 100% Free Lifetime Access (₹0)
-                      </span>
+                {/* Ticket Showcase Card */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs rounded-xl p-3 border border-amber-200 shadow-2xs">
+                  <div className="flex items-start sm:items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-amber-100/80 text-amber-800 shrink-0 mt-0.5 sm:mt-0">
+                      <Gift size={20} />
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                      title="Remove coupon"
-                    >
-                      <X size={13} />
-                    </button>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm sm:text-base font-black tracking-widest text-[#0D7B6C] px-2.5 py-0.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-300">
+                          RENTROLL12
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          100% FREE
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-1 leading-snug">
+                        Use code <strong className="text-slate-900 font-bold">RENTROLL12</strong> for 100% free lifetime access to Rent Roll &amp; CAM billing.
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={couponInput}
-                      onChange={(e) => {
-                        setCouponInput(e.target.value);
-                        if (couponError) setCouponError(null);
-                      }}
-                      placeholder="Try code RENTROLL12"
-                      className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold uppercase focus:outline-none focus:ring-2 focus:ring-[#0D7B6C]/20"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      disabled={!couponInput.trim()}
-                      className="px-3 py-1.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-black transition-all disabled:opacity-50 cursor-pointer"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                )}
 
-                {couponError && <p className="text-[10px] font-semibold text-rose-600 mt-1">{couponError}</p>}
-                {couponSuccess && <p className="text-[10px] font-semibold text-emerald-600 mt-1">{couponSuccess}</p>}
+                  {/* 1-Click Apply Button or Applied Status */}
+                  <div className="shrink-0 self-end sm:self-center">
+                    {appliedCoupon === "RENTROLL12" ? (
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                          <CheckCircle2 size={13} />
+                          <span>Applied (₹0)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAppliedCoupon("RENTROLL12");
+                          setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
+                          setCouponError(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                      >
+                        <Sparkles size={13} />
+                        <span>Apply 100% Off</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Subtext info */}
+                <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px]">
+                  {appliedCoupon === "RENTROLL12" ? (
+                    <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                      <CheckCircle2 size={12} className="text-emerald-600" />
+                      Free Lifetime Subscription Active · ₹0 charged
+                    </span>
+                  ) : (
+                    <span className="text-amber-800/80 text-[10px] font-medium">
+                      ⚡ Instant unlock: No credit card required with code RENTROLL12.
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Submit CTA */}
