@@ -29,13 +29,13 @@ export default function SubscriptionGate({
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
   const [ownerName, setOwnerName] = useState("");
-  const [buildingName, setBuildingName] = useState("");
+  const [phone, setPhone] = useState("");
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentToast, setPaymentToast] = useState<string | null>(null);
 
-  // Coupon state
+  // Coupon state (Pre-applied with RENTROLL12 for 100% Free access)
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>("RENTROLL12");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
@@ -156,10 +156,19 @@ export default function SubscriptionGate({
     setIsPaymentProcessing(true);
     const email = (userEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "").trim().toLowerCase();
     const effectiveName = (userName || ownerName || "Commercial Landlord").trim();
-    const effectiveBuilding = (buildingName || (typeof window !== "undefined" ? localStorage.getItem("officex_property_name") : "") || "Commercial Asset Tower").trim();
+    const effectiveBuilding = (typeof window !== "undefined" ? localStorage.getItem("officex_property_name") : "") || `${effectiveName}'s Commercial Portfolio`;
+    const cleanPhone = phone.trim();
+    const phoneDigits = cleanPhone.replace(/\D/g, "");
 
     if (!email) {
       setPaymentToast("Please provide your work email above to activate subscription.");
+      setTimeout(() => setPaymentToast(null), 4000);
+      setIsPaymentProcessing(false);
+      return;
+    }
+
+    if (!isLoggedIn && (!cleanPhone || phoneDigits.length < 10)) {
+      setPaymentToast("Mobile number is mandatory. Please enter a valid 10-digit number.");
       setTimeout(() => setPaymentToast(null), 4000);
       setIsPaymentProcessing(false);
       return;
@@ -171,6 +180,10 @@ export default function SubscriptionGate({
       sessionStorage.setItem("officex_user_name", effectiveName);
       localStorage.setItem("officex_property_name", effectiveBuilding);
       sessionStorage.setItem("officex_property_name", effectiveBuilding);
+      if (cleanPhone) {
+        localStorage.setItem("officex_user_phone", cleanPhone);
+        localStorage.setItem("officex_user_mobile", cleanPhone);
+      }
       localStorage.setItem("officex_onboarding_completed", "1");
     }
 
@@ -385,7 +398,7 @@ export default function SubscriptionGate({
                     await initiateRazorpayPayment({
                       amount: finalAmountInPaise,
                       receipt: `GOOGLE_GATE_${Date.now()}`,
-                      description: `Rent Roll Subscription for ${buildingName || "Commercial Property"}`,
+                      description: `Rent Roll Subscription - Commercial Portfolio`,
                       prefillName: ownerName || "Commercial Landlord",
                       prefillEmail: userEmail,
                       notes: { portal: portalName, auth_provider: "google" },
@@ -439,13 +452,13 @@ export default function SubscriptionGate({
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Commercial Building Name *
+                    Work Email Address *
                   </label>
                   <input
-                    type="text"
-                    value={buildingName}
-                    onChange={(e) => setBuildingName(e.target.value)}
-                    placeholder="e.g. Apex Commercial Tower"
+                    type="email"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    placeholder="e.g. landlord@commercial.com"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
                     required
                   />
@@ -454,13 +467,13 @@ export default function SubscriptionGate({
 
               <div>
                 <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  Work Email Address *
+                  Mobile Number <span className="text-rose-500">*</span>
                 </label>
                 <input
-                  type="email"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  placeholder="e.g. landlord@commercial.com"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
                   required
                 />
