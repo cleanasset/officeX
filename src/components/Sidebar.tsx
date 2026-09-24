@@ -260,6 +260,33 @@ export default function Sidebar() {
     }
   };
 
+  // Strictly extract the name by which the user signed in (e.g. "Jiya Patel")
+  const getSignedInName = () => {
+    let name = (userName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name")) : "") || "").trim();
+    if (!name) {
+      const email = userEmail || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email")) : "") || "";
+      if (email) {
+        name = email.split("@")[0].replace(/[._-]/g, " ");
+      }
+    }
+    // Clean any accidental company suffix attached to the user name
+    name = name.replace(/\s+(Commercial Holdings|Holdings|Pvt Ltd|Private Limited|LLC|LLP|Inc).*$/i, "").trim();
+    if (!name) return "Jiya Patel";
+    return name
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const signedInName = getSignedInName();
+  const initials = signedInName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(n => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "JP";
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -306,20 +333,14 @@ export default function Sidebar() {
             <div className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase">
-                  {(orgDisplayName || userName || activeRole.roleName || "OX")
-                    .trim()
-                    .split(/\s+/)
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
+                  {initials}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-black text-gray-900 truncate leading-tight capitalize">
-                    {orgDisplayName || userName || activeRole.label}
+                  <span className="text-xs font-black text-gray-900 truncate leading-tight">
+                    {signedInName}
                   </span>
                   <span className="text-[10px] text-teal-700 font-semibold truncate">
-                    {activeRole.roleName}{orgCity ? ` · ${orgCity}` : ""}
+                    {activeRole.roleName}
                   </span>
                 </div>
               </div>
