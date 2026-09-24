@@ -1941,7 +1941,9 @@ export default function SignInForm({
                         <optgroup label="🏢 Top Indian Commercial Metros (Tier-1)">
                           <option value="Mumbai MMR">Mumbai MMR (BKC / Nariman Pt / Andheri / Navi Mumbai)</option>
                           <option value="Bengaluru">Bengaluru (Whitefield / ORR / CBD / Electronic City)</option>
-                          <option value="Delhi NCR">Delhi NCR (Gurugram / Cyber City / Noida / Delhi)</option>
+                          <option value="Delhi">Delhi (CBD / Aerocity / Connaught Place)</option>
+                          <option value="Gurgaon">Gurgaon / Gurugram (Cyber City / Golf Course Rd)</option>
+                          <option value="Noida">Noida (Sector 62 / Expressway / Greater Noida)</option>
                           <option value="Hyderabad">Hyderabad (Hitec City / Financial District / Gachibowli)</option>
                           <option value="Pune">Pune (Kharadi / Hinjewadi / Viman Nagar)</option>
                           <option value="Chennai">Chennai (OMR / Guindy / Mount Road)</option>

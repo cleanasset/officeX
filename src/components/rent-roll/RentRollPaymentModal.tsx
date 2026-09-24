@@ -66,7 +66,7 @@ export const ALL_INDIAN_CITIES: string[] = [
   "Cuttack",
   "Darbhanga",
   "Dehradun",
-  "Delhi NCR (New Delhi, Gurugram, Noida)",
+  "Delhi",
   "Dhanbad",
   "Dhule",
   "Durgapur",
@@ -76,9 +76,10 @@ export const ALL_INDIAN_CITIES: string[] = [
   "Gaya",
   "Ghaziabad",
   "Gorakhpur",
+  "Greater Noida",
   "Gulbarga (Kalaburagi)",
   "Guntur",
-  "Gurugram (Gurgaon)",
+  "Gurgaon (Gurugram)",
   "Guwahati",
   "Gwalior",
   "Haldia",
@@ -411,7 +412,7 @@ export default function RentRollPaymentModal({
       name: cleanPortfolioName,
       type: "Commercial Office",
       city: cleanCity,
-      state: cleanCity.toLowerCase().includes("delhi") ? "Delhi" : cleanCity.toLowerCase().includes("mumbai") ? "Maharashtra" : "India",
+      state: cleanCity.toLowerCase().includes("delhi") ? "Delhi" : (cleanCity.toLowerCase().includes("gurgaon") || cleanCity.toLowerCase().includes("gurugram")) ? "Haryana" : cleanCity.toLowerCase().includes("noida") ? "Uttar Pradesh" : cleanCity.toLowerCase().includes("mumbai") ? "Maharashtra" : "India",
       totalArea: 25000,
       grade: "Grade A",
       inviteCode: `OX-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -498,7 +499,7 @@ export default function RentRollPaymentModal({
           name: cleanPortfolioName,
           type: "Commercial Office",
           city: cleanCity,
-          state: cleanCity.toLowerCase().includes("delhi") ? "Delhi" : "Maharashtra",
+          state: cleanCity.toLowerCase().includes("delhi") ? "Delhi" : (cleanCity.toLowerCase().includes("gurgaon") || cleanCity.toLowerCase().includes("gurugram")) ? "Haryana" : cleanCity.toLowerCase().includes("noida") ? "Uttar Pradesh" : "Maharashtra",
           totalArea: 25000
         })
       });
@@ -906,7 +907,9 @@ export default function RentRollPaymentModal({
                     >
                       <optgroup label="Top Commercial Hubs">
                         <option value="Mumbai (MMR)">Mumbai (MMR)</option>
-                        <option value="Delhi NCR (New Delhi, Gurugram, Noida)">Delhi NCR (New Delhi, Gurugram, Noida)</option>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Gurgaon (Gurugram)">Gurgaon (Gurugram)</option>
+                        <option value="Noida">Noida</option>
                         <option value="Bengaluru (Bangalore)">Bengaluru (Bangalore)</option>
                         <option value="Hyderabad">Hyderabad</option>
                         <option value="Pune">Pune</option>
