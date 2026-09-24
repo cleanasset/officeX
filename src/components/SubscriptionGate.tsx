@@ -33,9 +33,9 @@ export default function SubscriptionGate({
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentToast, setPaymentToast] = useState<string | null>(null);
 
-  // Coupon state (Pre-applied with RENTROLL12 for 100% Free access)
+  // Coupon state (Initially null; user must click apply to activate 100% Free access)
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>("RENTROLL12");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 

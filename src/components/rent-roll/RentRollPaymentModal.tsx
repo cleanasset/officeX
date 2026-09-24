@@ -215,8 +215,8 @@ export default function RentRollPaymentModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Promotional Coupon (Pre-applied with RENTROLL12 for 100% Free Lifetime Access)
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>("RENTROLL12");
+  // Promotional Coupon (Initially null; user must click apply to activate 100% Free offer)
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
@@ -720,14 +720,22 @@ export default function RentRollPaymentModal({
                   {mode === "onboard" ? "Unlock Rent Roll Desk" : "Sign In to Rent Roll Desk"}
                 </h2>
                 {mode === "onboard" && (
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/80">
-                    100% Free
-                  </span>
+                  appliedCoupon === "RENTROLL12" ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/80">
+                      100% Free
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                      ₹100 / mo
+                    </span>
+                  )
                 )}
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
                 {mode === "onboard"
-                  ? "Commercial Landlord Suite · Promotional Access Active"
+                  ? appliedCoupon === "RENTROLL12"
+                    ? "100% Free Promotional Access Activated (₹0)"
+                    : "Commercial Landlord Plan · Apply offer below for 100% free access"
                   : "Enter your registered credentials to open your dashboard"}
               </p>
             </div>
@@ -748,6 +756,12 @@ export default function RentRollPaymentModal({
           {errorMsg && (
             <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
               {errorMsg}
+            </div>
+          )}
+          {couponSuccess && !errorMsg && (
+            <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+              <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+              <span>{couponSuccess}</span>
             </div>
           )}
           {successMsg && (
@@ -950,21 +964,85 @@ export default function RentRollPaymentModal({
                   </div>
                 ) : (
                   <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">
-                      Promotional Plan
-                    </label>
-                    <div className="h-[38px] px-3 rounded-xl bg-emerald-50/90 border border-emerald-200 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <Gift size={13} className="text-emerald-700" />
-                        <span className="font-mono font-bold text-emerald-900 text-[11px]">RENTROLL12</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-slate-700">Special Offer</label>
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">100% Off</span>
+                    </div>
+                    <div className="h-[38px] px-2.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 flex items-center justify-between text-xs shadow-2xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Gift size={13} className="text-amber-600 shrink-0" />
+                        <span className="font-mono font-bold text-slate-900 text-[11px]">RENTROLL12</span>
                       </div>
-                      <span className="font-black text-emerald-800 text-[10px] bg-emerald-200/90 px-2 py-0.5 rounded-full uppercase">
-                        100% Free · ₹0
-                      </span>
+                      {appliedCoupon === "RENTROLL12" ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <CheckCircle2 size={11} className="text-emerald-600" />
+                            Applied (₹0)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoupon}
+                            className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 underline cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppliedCoupon("RENTROLL12");
+                            setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
+                            setErrorMsg(null);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-[11px] shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          Apply Free
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* When "Other (Specify City)" is chosen, render the offer card cleanly below Row 3 */}
+              {city === "Other (Specify City)" && (
+                <div className="h-[38px] px-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/50 flex items-center justify-between text-xs shadow-2xs">
+                  <div className="flex items-center gap-2">
+                    <Gift size={14} className="text-amber-600 shrink-0" />
+                    <span className="text-xs font-semibold text-slate-800">
+                      Special Offer: Code <strong className="font-mono text-[#0D7B6C] bg-white px-1.5 py-0.5 rounded border border-amber-200">RENTROLL12</strong> (100% Off)
+                    </span>
+                  </div>
+                  {appliedCoupon === "RENTROLL12" ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <CheckCircle2 size={11} className="text-emerald-600" />
+                        Applied (₹0)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 underline cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedCoupon("RENTROLL12");
+                        setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
+                        setErrorMsg(null);
+                      }}
+                      className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-[11px] shadow-2xs cursor-pointer active:scale-95 transition-all"
+                    >
+                      Apply Free
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Submit CTA */}
               <button
@@ -977,10 +1055,15 @@ export default function RentRollPaymentModal({
                     <Loader2 size={15} className="animate-spin" />
                     <span>Launching Rent Roll...</span>
                   </>
-                ) : (
+                ) : is100PercentDiscount ? (
                   <>
                     <Sparkles size={15} className="text-yellow-300" />
-                    <span>Complete Sign In &amp; Launch Rent Roll (₹0)</span>
+                    <span>Complete Sign In &amp; Launch Rent Roll (₹0 FREE)</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={15} />
+                    <span>Pay ₹100 via Razorpay &amp; Launch Rent Roll</span>
                   </>
                 )}
               </button>
