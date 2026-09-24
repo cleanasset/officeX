@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Building, 
   ShieldCheck, 
@@ -12,10 +12,8 @@ import {
   X, 
   CheckCircle, 
   TrendingUp, 
-  Handshake, 
   DollarSign,
   ArrowRight,
-  Send,
   Trash2,
   Activity,
   Receipt,
@@ -46,422 +44,157 @@ export default function PropertyDashboardClient({
 }: PropertyDashboardClientProps) {
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [isCleanMode, setIsCleanMode] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [userId, setUserId] = useState("");
-  const [customProperties, setCustomProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>(initialProperties || []);
+  const [activeLeases, setActiveLeases] = useState<any[]>([]);
+  const [rentRollData, setRentRollData] = useState<any>(null);
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(true);
   const [inviteModalProp, setInviteModalProp] = useState<any | null>(null);
-
-  // Detect Clean Mode on mount
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const mode = localStorage.getItem("officex_mode");
-      const email = localStorage.getItem("officex_user_email") || "";
-      const uid = localStorage.getItem("officex_user_id") || "";
-      // Any authenticated user who is not explicitly a demo seed account gets clean mode
-      const isTest = Boolean(mode === "clean_test" || (email && !email.includes("demo.seed")));
-      setIsCleanMode(isTest);
-      setUserEmail(email);
-      setUserId(uid);
-
-      const isCompleted = Boolean(
-        localStorage.getItem("officex_onboarding_completed") === "1" ||
-        sessionStorage.getItem("officex_onboarding_completed") === "1" ||
-        Boolean(localStorage.getItem("officex_active_org"))
-      );
-      setIsOnboardingCompleted(isCompleted);
-
-      // Mark onboarding as completed so user is not blocked
-      if (!isCompleted && typeof window !== "undefined") {
-        localStorage.setItem("officex_onboarding_completed", "1");
-        setIsOnboardingCompleted(true);
-      }
-
-      const SEED_PROP_IDS = new Set([
-        "357554cc-221d-4c7f-9465-32afcec7a8e7",
-        "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
-        "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
-        "401f394a-6d27-4c23-9a21-411baa7eef3b",
-        "cfa13505-71a5-4a43-be33-37497f416fdc",
-        "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
-        "PROP-8841"
-      ]);
-      const SEED_PROP_NAMES = new Set([
-        "eka club",
-        "business hub",
-        "shivalik shilp",
-        "apex business tower",
-        "apex commercial tower",
-        "meridian tech park",
-        "nexus hub",
-        "maker maxity",
-        "godrej bkc horizon"
-      ]);
-
-      let rawSavedProps: any[] = [];
-      try {
-        rawSavedProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-      } catch {
-        rawSavedProps = [];
-      }
-
-      // Purge demo seed properties for standard accounts
-      let savedProps = isTest
-        ? rawSavedProps.filter((p: any) => !SEED_PROP_IDS.has(p?.id) && !SEED_PROP_NAMES.has((p?.name || p?.propertyName || "").toLowerCase().trim()))
-        : rawSavedProps;
-
-      // Recover property from user signup if local list was empty
-      const registeredPropName = (localStorage.getItem("officex_property_name") || localStorage.getItem("officex_active_org") || "").trim();
-      const city = localStorage.getItem("officex_property_city") || localStorage.getItem("officex_org_city") || "Delhi NCR";
-      const state = city.toLowerCase().includes("delhi") ? "Delhi" : city.toLowerCase().includes("mumbai") ? "Maharashtra" : "India";
-      const regArea = localStorage.getItem("officex_leasable_area") || "15000";
-
-      if ((savedProps.length === 0 || savedProps.some(p => SEED_PROP_NAMES.has((p?.name || "").toLowerCase().trim()))) && registeredPropName && !SEED_PROP_NAMES.has(registeredPropName.toLowerCase().trim())) {
-        const code = `OX-${Math.floor(1000 + Math.random() * 9000)}`;
-        const userProp = {
-          id: `prop-${Date.now()}`,
-          name: registeredPropName,
-          type: "Commercial Office",
-          city: city,
-          state: state,
-          totalArea: Number(regArea).toLocaleString(),
-          grade: "Grade A",
-          inviteCode: code,
-          ownerName: localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org") || "Commercial Asset Owner",
-          createdAt: new Date().toISOString()
-        };
-        savedProps = [userProp];
-      }
-
-      localStorage.setItem("officex_user_properties", JSON.stringify(savedProps));
-
-      // Fetch user's organization from database only if user ID exists
-      if (savedProps.length === 0 && uid) {
-        fetch(`/api/me/organization?userId=${uid}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.organizations && data.organizations.length > 0) {
-              const org = data.organizations[0];
-              let newProps: any[] = [];
-              if (org.properties && org.properties.length > 0) {
-                newProps = org.properties.map((p: any) => ({
-                  id: p.id,
-                  name: p.name,
-                  city: p.city || "",
-                  state: p.state || "",
-                  address: p.address || "",
-                  microMarket: p.micro_market || p.city || "",
-                  grade: p.grade || "Grade A",
-                  totalArea: p.total_area || "",
-                  baseRent: "",
-                  ownerName: p.owner_name || localStorage.getItem("officex_user_name") || "",
-                  ownerEmail: email,
-                  imageUrl: p.image_url || null,
-                  createdAt: p.created_at || new Date().toISOString()
-                }));
-              }
-              if (newProps.length > 0) {
-                // Deduplicate: merge with any existing savedProps by ID
-                const propMap = new Map<string, any>();
-                savedProps.forEach((p: any) => propMap.set(p.id, p));
-                newProps.forEach((p: any) => propMap.set(p.id, p));
-                const deduped = Array.from(propMap.values());
-                localStorage.setItem("officex_user_properties", JSON.stringify(deduped));
-                setCustomProperties(deduped);
-                return; // Don't re-set from savedProps below
-              }
-            }
-          })
-          .catch(() => { /* silently fail if API unreachable */ });
-      }
-
-      // Only set from localStorage if API fetch was not triggered
-      setCustomProperties(savedProps);
-      const savedPartnerships = JSON.parse(localStorage.getItem("officex_user_partnerships") || "[]");
-      setPartnerships(savedPartnerships);
-    }
-  }, []);
-
-  // Live Rent Roll Dashboard KPIs & Active Leases
-  const [rentRollData, setRentRollData] = useState<any>(null);
-  const [activeLeases, setActiveLeases] = useState<any[]>([]);
-
-  const loadLeasesAndDashboard = async () => {
-    try {
-      const [leasesRes, dashRes] = await Promise.all([
-        fetch("/api/rent-roll/leases"),
-        fetch("/api/rent-roll/dashboard")
-      ]);
-      if (leasesRes.ok) {
-        const data = await leasesRes.json();
-        if (Array.isArray(data)) {
-          let localLeases: any[] = [];
-          try {
-            localLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
-          } catch {}
-          const mergedMap = new Map<string, any>();
-          data.forEach((l: any) => mergedMap.set(l.id || l.tenantName, l));
-          localLeases.forEach((l: any) => mergedMap.set(l.id || l.tenantName, l));
-          setActiveLeases(Array.from(mergedMap.values()));
-        }
-      }
-      if (dashRes.ok) {
-        const data = await dashRes.json();
-        if (data) setRentRollData(data);
-      }
-    } catch (e) {
-      console.warn("Rent roll load error:", e);
-    }
-  };
-
-  React.useEffect(() => {
-    loadLeasesAndDashboard();
-  }, []);
-
-  // Add Tenant Modal Form State
   const [showAddTenantModal, setShowAddTenantModal] = useState(false);
-  const [isSubmittingTenant, setIsSubmittingTenant] = useState(false);
-  const [newTenantData, setNewTenantData] = useState({
-    propertyId: "",
-    tradeName: "",
-    legalName: "",
-    contactPerson: "",
-    contactEmail: "",
-    contactPhone: "",
-    unitNumber: "Suite 101",
-    floorNumber: 1,
-    chargeableArea: "5000",
-    monthlyRent: "250000",
-    securityDeposit: "750000",
-    leaseStartDate: "2025-04-01",
-    leaseEndDate: "2028-03-31",
-    escalationPct: "5%"
-  });
-
-  const handleAddTenantSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTenantData.tradeName.trim()) {
-      showToast("Please enter tenant business / trade name.");
-      return;
-    }
-    setIsSubmittingTenant(true);
-
-    try {
-      const selectedProp = displayedProperties.find(p => p.id === newTenantData.propertyId) || displayedProperties[0];
-      const propId = selectedProp ? selectedProp.id : "PROP-FORTUNE-SKY";
-      const propName = selectedProp ? selectedProp.name : "fortune sky";
-      const inviteCode = selectedProp?.inviteCode || `OX-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      const newLeaseRecord = {
-        id: `LEASE-${Date.now().toString().slice(-4)}`,
-        propertyId: propId,
-        propertyName: propName,
-        tenantName: newTenantData.tradeName.trim(),
-        tradeName: newTenantData.tradeName.trim(),
-        legalName: (newTenantData.legalName || newTenantData.tradeName).trim(),
-        contactPerson: newTenantData.contactPerson || "Authorized Manager",
-        contactEmail: newTenantData.contactEmail || "billing@tenant.in",
-        contactPhone: newTenantData.contactPhone || "+91 98000 00000",
-        unitNumber: newTenantData.unitNumber || "Suite 101",
-        floorNumber: Number(newTenantData.floorNumber) || 1,
-        chargeableArea: Number(newTenantData.chargeableArea) || 5000,
-        carpetArea: Math.round((Number(newTenantData.chargeableArea) || 5000) * 0.8),
-        monthlyRent: Number(newTenantData.monthlyRent) || 250000,
-        camMonthly: Math.round((Number(newTenantData.chargeableArea) || 5000) * 15),
-        totalMonthlyGross: Number(newTenantData.monthlyRent) || 250000,
-        securityDepositAmount: Number(newTenantData.securityDeposit) || 750000,
-        startDate: newTenantData.leaseStartDate || "2025-04-01",
-        endDate: newTenantData.leaseEndDate || "2028-03-31",
-        escalationPct: parseFloat(newTenantData.escalationPct) || 5,
-        status: "active",
-        inviteCode: inviteCode
-      };
-
-      // 1. Instantly update UI state so tenant appears in dashboard table immediately
-      setActiveLeases(prev => [newLeaseRecord, ...prev.filter(l => (l.tenantName || "").toLowerCase() !== newLeaseRecord.tenantName.toLowerCase())]);
-
-      // 2. Persist to localStorage
-      try {
-        const stored = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
-        const clean = stored.filter((l: any) => (l.tenantName || "").toLowerCase() !== newLeaseRecord.tenantName.toLowerCase());
-        localStorage.setItem("officex_active_leases", JSON.stringify([newLeaseRecord, ...clean]));
-      } catch {}
-
-      // 3. Post to Tenants API
-      await fetch("/api/rent-roll/tenants", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tradeName: newTenantData.tradeName.trim(),
-          legalName: (newTenantData.legalName || newTenantData.tradeName).trim(),
-          contactPerson: newTenantData.contactPerson || "Authorized Manager",
-          contactEmail: newTenantData.contactEmail || "billing@tenant.in",
-          contactPhone: newTenantData.contactPhone || "+91 98000 00000",
-          industry: "Corporate / Commercial",
-          billingAddress: `${propName}, Unit ${newTenantData.unitNumber}`,
-          billingCity: selectedProp?.city || "Delhi NCR",
-          billingState: selectedProp?.state || "Delhi",
-          billingPincode: selectedProp?.pincode || "110001"
-        })
-      });
-
-      // 4. Post to Leases API
-      await fetch("/api/rent-roll/leases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          propertyId: propId,
-          propertyName: propName,
-          tenantName: newTenantData.tradeName.trim(),
-          unitNumber: newTenantData.unitNumber || "Suite 101",
-          floorNumber: Number(newTenantData.floorNumber) || 1,
-          chargeableArea: Number(newTenantData.chargeableArea) || 5000,
-          carpetArea: Math.round((Number(newTenantData.chargeableArea) || 5000) * 0.8),
-          monthlyRent: Number(newTenantData.monthlyRent) || 250000,
-          camMonthly: Math.round((Number(newTenantData.chargeableArea) || 5000) * 15),
-          securityDepositAmount: Number(newTenantData.securityDeposit) || 750000,
-          startDate: newTenantData.leaseStartDate || "2025-04-01",
-          endDate: newTenantData.leaseEndDate || "2028-03-31",
-          escalationPct: parseFloat(newTenantData.escalationPct) || 5
-        })
-      });
-
-      showToast(`🎉 Tenant "${newTenantData.tradeName}" registered and added to your active dashboard!`);
-      setShowAddTenantModal(false);
-      setNewTenantData({
-        propertyId: "",
-        tradeName: "",
-        legalName: "",
-        contactPerson: "",
-        contactEmail: "",
-        contactPhone: "",
-        unitNumber: "Suite 101",
-        floorNumber: 1,
-        chargeableArea: "5000",
-        monthlyRent: "250000",
-        securityDeposit: "750000",
-        leaseStartDate: "2025-04-01",
-        leaseEndDate: "2028-03-31",
-        escalationPct: "5%"
-      });
-
-      // Refresh dashboard data
-      loadLeasesAndDashboard();
-    } catch (err) {
-      console.error("Error creating tenant:", err);
-      showToast("Registered tenant saved to your local portfolio session.");
-      setShowAddTenantModal(false);
-    } finally {
-      setIsSubmittingTenant(false);
-    }
-  };
-
-  // Form state
-  const [assignPropertyId, setAssignPropertyId] = useState(initialProperties[0]?.id || "");
-  const [assignBroker, setAssignBroker] = useState("Ravi Menon (Leasing Director)");
-  const [commissionType, setCommissionType] = useState("1 Month Rent");
-  const [commissionRate, setCommissionRate] = useState("8.33%");
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Mock list of registered brokers in the directory
-  const brokerDirectory = [
-    { name: "Ravi Menon", role: "Leasing Director", experience: "12 Yrs", activeDeals: 15, rating: "4.8/5" },
-    { name: "Amit Kumar", role: "Commercial Partner", experience: "8 Yrs", activeDeals: 8, rating: "4.6/5" },
-    { name: "Priya Sharma", role: "Co-working Specialist", experience: "6 Yrs", activeDeals: 12, rating: "4.7/5" }
-  ];
+  // Primary data synchronization from real backend APIs
+  const loadDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const [propsRes, leasesRes, dashRes] = await Promise.all([
+        fetch("/api/rent-roll/properties"),
+        fetch("/api/rent-roll/leases"),
+        fetch("/api/rent-roll/dashboard")
+      ]);
 
-  // Active & Pending partnerships
-  const [partnerships, setPartnerships] = useState<any[]>([]);
+      if (propsRes.ok) {
+        const propsData = await propsRes.json();
+        if (Array.isArray(propsData)) {
+          // Merge server properties with any local session properties
+          let localProps: any[] = [];
+          try {
+            localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          } catch {}
 
-  const handleCreateAssignment = (e: React.FormEvent) => {
-    e.preventDefault();
-    const activeList = isCleanMode ? customProperties : initialProperties;
-    const selectedProp = activeList.find(p => p.id === assignPropertyId) || { name: "Commercial Tower" };
-    
-    const newP = {
-      id: "BP-" + Math.floor(Math.random() * 900 + 100),
-      propertyName: selectedProp.name,
-      brokerName: assignBroker.split(" (")[0],
-      commission: commissionType,
-      status: "Awaiting Acceptance",
-      date: new Date().toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      })
-    };
+          const propMap = new Map<string, any>();
+          propsData.forEach(p => propMap.set(p.id, p));
+          localProps.forEach(p => {
+            if (p?.id && !propMap.has(p.id)) {
+              propMap.set(p.id, p);
+            }
+          });
+          const merged = Array.from(propMap.values());
+          setProperties(merged);
+        }
+      }
 
-    const updated = [newP, ...partnerships];
-    setPartnerships(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_user_partnerships", JSON.stringify(updated));
+      if (leasesRes.ok) {
+        const leasesData = await leasesRes.json();
+        if (Array.isArray(leasesData)) {
+          setActiveLeases(leasesData);
+        }
+      }
+
+      if (dashRes.ok) {
+        const dashData = await dashRes.json();
+        if (dashData) setRentRollData(dashData);
+      }
+    } catch (err) {
+      console.warn("Real-time dashboard synchronization warning:", err);
+    } finally {
+      setIsLoading(false);
     }
-    setShowAssignModal(false);
-    showToast(`Brokerage invite sent to ${newP.brokerName} for ${newP.propertyName}! Commission set to ${newP.commission}.`);
   };
 
-  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isCompleted = Boolean(
+        localStorage.getItem("officex_onboarding_completed") === "1" ||
+        sessionStorage.getItem("officex_onboarding_completed") === "1" ||
+        Boolean(localStorage.getItem("officex_active_org"))
+      );
+      setIsOnboardingCompleted(isCompleted);
+    }
 
+    loadDashboardData();
+
+    // Listen for custom event when a new property is created anywhere in the app
+    const handlePropertyAdded = () => {
+      loadDashboardData();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("officex-property-added", handlePropertyAdded);
+      return () => {
+        window.removeEventListener("officex-property-added", handlePropertyAdded);
+      };
+    }
+  }, []);
+
+  // Real Delete Handler: deletes from database and re-syncs state
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      if (deleteTarget.id) {
-        // Remove from custom local properties
-        const updated = customProperties.filter(p => p.id !== deleteTarget.id);
-        setCustomProperties(updated);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("officex_user_properties", JSON.stringify(updated));
-        }
+      const res = await fetch(`/api/rent-roll/properties?id=${encodeURIComponent(deleteTarget.id)}`, {
+        method: "DELETE"
+      });
+
+      // Also call general properties DELETE to clean up both tables
+      await fetch(`/api/properties?id=${encodeURIComponent(deleteTarget.id)}`, {
+        method: "DELETE"
+      }).catch(() => {});
+
+      // Clean up localStorage cache if present
+      if (typeof window !== "undefined") {
+        try {
+          const stored = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          const filtered = stored.filter((p: any) => p.id !== deleteTarget.id);
+          localStorage.setItem("officex_user_properties", JSON.stringify(filtered));
+        } catch {}
       }
+
       showToast(`Property "${deleteTarget.name}" deleted from your portfolio.`);
       setDeleteTarget(null);
+      await loadDashboardData();
     } catch (e) {
-      showToast("Error deleting property.");
+      console.error("Delete property error:", e);
+      showToast("Error deleting property from database.");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Calculate displayed properties: Merge real DB properties for this user + any local additions
-  const displayedProperties = React.useMemo(() => {
-    // 1. If user has custom properties in state, show them
-    if (customProperties.length > 0) {
-      return customProperties;
-    }
+  // Real Metric Calculations
+  const propertiesCount = properties.length;
+  const totalPortfolioArea = properties.reduce((sum, p) => sum + (Number(p.totalArea) || 0), 0);
+  const totalLeasedArea = activeLeases.reduce((sum, l) => sum + (Number(l.chargeableArea) || 0), 0);
 
-    // 2. If user is matched by ownerUserId or email
-    const userDbProps = initialProperties.filter(p => 
-      (userId && p.ownerUserId === userId) ||
-      (userEmail && p.ownerEmail === userEmail)
-    );
-    if (userDbProps.length > 0) return userDbProps;
+  const occupancyPctCalculated = totalPortfolioArea > 0 
+    ? Math.min(100, Math.round((totalLeasedArea / totalPortfolioArea) * 100))
+    : (activeLeases.length > 0 ? 100 : 0);
 
-    // 3. Match by active organization if set in localStorage
-    const activeOrg = typeof window !== "undefined" ? (localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || "") : "";
-    if (activeOrg) {
-      const orgProps = initialProperties.filter(p => 
-        (p.ownerCompany && p.ownerCompany.toLowerCase().includes(activeOrg.toLowerCase())) ||
-        (p.name && p.name.toLowerCase().includes(activeOrg.toLowerCase()))
-      );
-      if (orgProps.length > 0) return orgProps;
-    }
+  const occupancyDisplay = propertiesCount > 0 
+    ? (rentRollData?.occupancy?.occupancyPct !== undefined ? `${rentRollData.occupancy.occupancyPct}%` : `${occupancyPctCalculated}%`)
+    : "0.0%";
 
-    return [];
-  }, [initialProperties, customProperties, userId, userEmail]);
-
-  const propertiesCount = displayedProperties.length;
-  const openTicketsCount = propertiesCount === 0 ? 0 : initialTickets.filter(t => t.status === "open").length;
   const expiredCertsCount = propertiesCount === 0 ? 0 : initialCerts.filter(c => c.status === "expired").length;
-  const occupancyDisplay = propertiesCount > 0 ? "100%" : "0.0%";
+  const activeLeasesCount = propertiesCount > 0 
+    ? (rentRollData?.summary?.activeLeasesCount ?? activeLeases.length)
+    : 0;
 
+  const totalMonthlyGrossCr = propertiesCount > 0 && rentRollData?.summary?.totalMonthlyRent 
+    ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) 
+    : (activeLeases.length > 0 ? (activeLeases.reduce((sum, l) => sum + Number(l.monthlyRent || l.totalMonthlyGross || 0), 0) / 10000000).toFixed(2) : "0.00");
+
+  const totalOutstandingCr = propertiesCount > 0 && rentRollData?.summary?.totalOutstanding 
+    ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) 
+    : "0.00";
+
+  const waltDisplay = propertiesCount > 0 && rentRollData?.walt?.waltByRentMonths 
+    ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` 
+    : (activeLeases.length > 0 ? "3.0 Yrs" : "0.0 Yrs");
 
   return (
     <div className="flex flex-col gap-8 font-sans relative">
@@ -469,7 +202,7 @@ export default function PropertyDashboardClient({
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-gray-800 animate-bounce">
-          <CheckCircle size={16} className="text-purple-400" />
+          <CheckCircle size={16} className="text-[#0F8B7D]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -481,17 +214,12 @@ export default function PropertyDashboardClient({
             Commercial Portfolio &amp; Assets
           </h1>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
-            Manage your commercial real estate portfolio, vacant spaces, and leasing partnerships.
+            Manage your commercial real estate portfolio, institutional tenants, rent rolls, and cash flows.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => {
-              if (displayedProperties.length > 0) {
-                setNewTenantData(prev => ({ ...prev, propertyId: displayedProperties[0].id }));
-              }
-              setShowAddTenantModal(true);
-            }}
+            onClick={() => setShowAddTenantModal(true)}
             className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <UserPlus size={14} className="text-[#0F8B7D]" />
@@ -504,13 +232,6 @@ export default function PropertyDashboardClient({
             <Users size={14} className="text-slate-500" />
             <span>Tenant Directory</span>
           </Link>
-          <button 
-            onClick={() => setShowAssignModal(true)}
-            className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Handshake size={14} className="text-purple-600" />
-            <span>Assign Broker</span>
-          </button>
           <Link 
             href="/properties/add" 
             className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
@@ -544,7 +265,7 @@ export default function PropertyDashboardClient({
             </div>
           </div>
           <Link
-            href="/signup?context=rent-roll&role=owner&module=rent-roll&redirect=/properties"
+            href="/onboarding?role=owner"
             className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-teal-950 font-black text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer hover:scale-[1.02]"
           >
             <span>Launch Onboarding Form</span>
@@ -553,29 +274,8 @@ export default function PropertyDashboardClient({
         </div>
       )}
 
-      {/* S12 Profile Completion & Progressive KYC Meter (v1.0 Spec Section 15) */}
+      {/* Profile Completion & Progressive KYC Meter */}
       <ProfileCompletionMeter role="owner" />
-
-      {/* Broker Partnership Alert Banner — only show when user has real partnerships */}
-      {partnerships.length > 0 && (
-        <div className="bg-purple-50/80 border border-purple-200/90 rounded-2xl p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-purple-900 shadow-2xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
-              <Handshake size={16} />
-            </div>
-            <div>
-              <span className="font-black text-purple-950 block">{partnerships[0].id} {partnerships[0].propertyName} — Broker contract {partnerships[0].status?.toLowerCase()}</span>
-              <span className="text-[11px] text-purple-700">Commercial Partner: {partnerships[0].brokerName} ({partnerships[0].commission}) · {partnerships[0].date}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowAssignModal(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shrink-0 transition-colors shadow-2xs cursor-pointer text-center"
-          >
-            Manage Contract
-          </button>
-        </div>
-      )}
 
       {/* Time-Sensitive Statutory Renewal Alert Strip (Only when real expired certs exist) */}
       {expiredCertsCount > 0 && propertiesCount > 0 && (
@@ -590,7 +290,7 @@ export default function PropertyDashboardClient({
                 <span className="font-black text-amber-950 text-xs uppercase tracking-wider">Urgent Statutory Compliance Action</span>
               </div>
               <p className="text-amber-800 text-xs font-medium mt-0.5">
-                Fire Safety NOC &amp; Lift Inspector Renewal due in <strong className="text-amber-950 font-black">3 days</strong>.
+                Fire Safety NOC &amp; Lift Inspector Renewal due.
               </p>
             </div>
           </div>
@@ -617,9 +317,9 @@ export default function PropertyDashboardClient({
               <span>Rent Roll &amp; Commercial Lease Performance</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              {propertiesCount > 0 && rentRollData?.propertyCount
+              {propertiesCount > 0 
                 ? `Automated lease-to-cash operating system across ${propertiesCount} institutional Grade-A assets.`
-                : "Automated commercial lease-to-cash operating system. Onboard your assets to track lease billing."}
+                : "Automated commercial lease-to-cash operating system. Add your assets to track lease billing."}
             </p>
           </div>
 
@@ -654,27 +354,29 @@ export default function PropertyDashboardClient({
           <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Monthly Gross Rent</span>
             <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-              ₹{propertiesCount > 0 && rentRollData?.summary?.totalMonthlyRent ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) : (activeLeases.length > 0 ? (activeLeases.reduce((sum, l) => sum + Number(l.monthlyRent || l.totalMonthlyGross || 0), 0) / 10000000).toFixed(2) : "0.00")} Cr
+              ₹{totalMonthlyGrossCr} Cr
             </div>
             <span className="text-[10px] text-slate-500 font-medium mt-1 block">
-              {propertiesCount > 0 ? (rentRollData?.summary?.activeLeasesCount || activeLeases.length || 0) : 0} Active Commercial Leases
+              {activeLeasesCount} Active Commercial Leases
             </span>
           </div>
 
           <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Portfolio Occupancy</span>
             <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
-              {propertiesCount > 0 ? (rentRollData?.occupancy?.occupancyPct || (activeLeases.length > 0 ? "33.3" : 0)) : 0}%
+              {propertiesCount > 0 ? (rentRollData?.occupancy?.occupancyPct ?? occupancyPctCalculated) : 0}%
             </div>
             <span className="text-[10px] text-emerald-600 font-semibold mt-1 block">
-              {propertiesCount > 0 && (rentRollData?.occupancy?.totalArea || activeLeases.length > 0) ? `${((rentRollData?.occupancy?.totalArea || 15000) / 1000).toFixed(0)}k sq.ft Total Area` : "0 sq.ft Total Area"}
+              {propertiesCount > 0 && (totalPortfolioArea > 0 || totalLeasedArea > 0) 
+                ? `${Math.round((totalPortfolioArea || totalLeasedArea) / 1000)}k sq.ft Leasable Area` 
+                : "0 sq.ft Leasable Area"}
             </span>
           </div>
 
           <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">Total Outstanding</span>
             <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-              ₹{propertiesCount > 0 && rentRollData?.summary?.totalOutstanding ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) : "0.00"} Cr
+              ₹{totalOutstandingCr} Cr
             </div>
             <span className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -685,7 +387,7 @@ export default function PropertyDashboardClient({
           <div className="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">WALT (Lease Horizon)</span>
             <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-              {propertiesCount > 0 && rentRollData?.walt?.waltByRentMonths ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` : "0.0 Yrs"}
+              {waltDisplay}
             </div>
             <span className="text-[10px] text-amber-600 font-semibold mt-1 block">
               {propertiesCount > 0 ? (rentRollData?.summary?.escalationsDueCount || 0) : 0} Escalations Due Soon
@@ -694,7 +396,7 @@ export default function PropertyDashboardClient({
         </div>
       </div>
 
-      {/* BLOCK 1: KPI BENTO GRID (5 Columns with Portfolio Health Score from /ops) */}
+      {/* BLOCK 1: KPI BENTO GRID (5 Columns with Real Commercial Portfolio KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         
         {/* Total Properties */}
@@ -706,7 +408,7 @@ export default function PropertyDashboardClient({
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Properties</span>
             <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-[#8B5CF6] transition-colors">{propertiesCount}</div>
             <span className="text-[10px] text-slate-500 font-semibold mt-1 block">
-              {propertiesCount === 0 ? "0 Listed (Ready to Add)" : "🟢 Active Portfolio"}
+              {propertiesCount === 0 ? "0 Assets (Ready to Add)" : "🟢 Active Portfolio"}
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-105 transition-transform shrink-0">
@@ -722,10 +424,10 @@ export default function PropertyDashboardClient({
           <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Portfolio Health</span>
             <div className="text-2xl sm:text-3xl font-black text-[#0F8B7D] mt-1.5 group-hover:text-teal-800 transition-colors">
-              {propertiesCount === 0 ? "100%" : "100/100"}
+              {propertiesCount === 0 ? "100%" : (expiredCertsCount > 0 ? "85/100" : "100/100")}
             </div>
             <span className="text-[10px] text-teal-700 font-semibold mt-1 block">
-              {propertiesCount === 0 ? "● Systems Ready" : "● Optimal (FM Ops Live)"}
+              {propertiesCount === 0 ? "● Ready to Onboard" : (expiredCertsCount > 0 ? "⚠ Compliance Action Due" : "● Optimal Operation")}
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0F8B7D] group-hover:scale-105 transition-transform shrink-0">
@@ -742,7 +444,7 @@ export default function PropertyDashboardClient({
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Occupancy</span>
             <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-emerald-700 transition-colors">{occupancyDisplay}</div>
             <span className="text-[10px] text-emerald-600 font-semibold mt-1 block">
-              {isCleanMode ? "Clean Sandbox Metrics" : "↑ 1.8% vs last month"}
+              Direct Commercial Occupancy
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform shrink-0">
@@ -750,20 +452,20 @@ export default function PropertyDashboardClient({
           </div>
         </Link>
 
-        {/* Tenant Requests & Service Issues */}
+        {/* Active Commercial Leases */}
         <Link 
-          href="/properties/tenants" 
-          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer group"
+          href="/properties/rent-roll?tab=tenants" 
+          className="p-5 rounded-2xl border border-slate-200/90 flex items-center justify-between bg-white shadow-2xs hover:border-[#0F8B7D]/50 hover:shadow-md transition-all cursor-pointer group"
         >
           <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Tenant Requests</span>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-amber-700 transition-colors">{openTicketsCount}</div>
-            <span className="text-[10px] text-amber-600 font-semibold mt-1 block">
-              {openTicketsCount === 0 ? "No open requests" : `⚠ ${openTicketsCount} open tenant requests`}
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Active Leases</span>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1.5 group-hover:text-teal-700 transition-colors">{activeLeasesCount}</div>
+            <span className="text-[10px] text-teal-600 font-semibold mt-1 block">
+              {activeLeasesCount === 0 ? "No active leases" : `✓ ${activeLeasesCount} corporate tenants live`}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform shrink-0">
-            <AlertTriangle size={22} />
+          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 group-hover:scale-105 transition-transform shrink-0">
+            <Users size={22} />
           </div>
         </Link>
 
@@ -790,7 +492,7 @@ export default function PropertyDashboardClient({
 
       </div>
 
-      {/* RECEIVABLES AGEING & RECOVERY LEDGER (per UI/UX Review Finding 2.3) */}
+      {/* RECEIVABLES AGEING & RECOVERY LEDGER */}
       <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gray-50 pb-3">
           <div>
@@ -885,7 +587,7 @@ export default function PropertyDashboardClient({
             href="/properties/add"
             className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-2xs flex items-center gap-1"
           >
-            <Plus size={13} /> Add Property Listing
+            <Plus size={13} /> Add Property
           </Link>
         </div>
 
@@ -897,19 +599,19 @@ export default function PropertyDashboardClient({
             <div>
               <h4 className="text-sm font-bold text-gray-900">No Properties in Portfolio Yet</h4>
               <p className="text-xs text-gray-500 max-w-sm mt-1">
-                You haven&apos;t added any commercial properties yet. Click below to create your first commercial building and start managing your portfolio!
+                You haven&apos;t added any commercial properties yet. Click below to add your first commercial building and start managing your portfolio!
               </p>
             </div>
             <Link
               href="/properties/add"
               className="mt-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-teal-800 transition-all shadow-md flex items-center gap-1.5"
             >
-              <Plus size={14} /> Create First Property Listing
+              <Plus size={14} /> Add Commercial Property
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayedProperties.map((p, idx) => (
+            {properties.map((p, idx) => (
               <div key={p.id || idx} className="p-4 rounded-2xl border border-gray-200 bg-white hover:border-[#0F8B7D] hover:shadow-md transition-all flex flex-col justify-between gap-3 group">
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -918,7 +620,7 @@ export default function PropertyDashboardClient({
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Listing
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active Asset
                       </span>
                       <button
                         type="button"
@@ -927,7 +629,7 @@ export default function PropertyDashboardClient({
                           e.stopPropagation();
                           setDeleteTarget(p);
                         }}
-                        title="Remove / Delete Listing"
+                        title="Delete Asset"
                         className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                       >
                         <Trash2 size={13} />
@@ -972,10 +674,7 @@ export default function PropertyDashboardClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setNewTenantData(prev => ({ ...prev, propertyId: p.id }));
-                        setShowAddTenantModal(true);
-                      }}
+                      onClick={() => setShowAddTenantModal(true)}
                       className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
                       title="Add Existing Tenant to this property"
                     >
@@ -1013,10 +712,7 @@ export default function PropertyDashboardClient({
             </span>
             <button
               type="button"
-              onClick={() => {
-                setNewTenantData(prev => ({ ...prev, propertyId: displayedProperties[0]?.id || "" }));
-                setShowAddTenantModal(true);
-              }}
+              onClick={() => setShowAddTenantModal(true)}
               className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
             >
               <UserPlus size={13} /> Add Tenant
@@ -1043,10 +739,7 @@ export default function PropertyDashboardClient({
             </div>
             <button
               type="button"
-              onClick={() => {
-                setNewTenantData(prev => ({ ...prev, propertyId: displayedProperties[0]?.id || "" }));
-                setShowAddTenantModal(true);
-              }}
+              onClick={() => setShowAddTenantModal(true)}
               className="mt-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
             >
               <UserPlus size={14} /> Add First Tenant & Lease
@@ -1068,7 +761,7 @@ export default function PropertyDashboardClient({
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs">
                 {activeLeases.map((l: any, idx: number) => {
-                  const prop = displayedProperties.find(p => p.id === l.propertyId || p.name?.toLowerCase() === l.propertyName?.toLowerCase()) || displayedProperties[0];
+                  const prop = properties.find(p => p.id === l.propertyId || p.name?.toLowerCase() === l.propertyName?.toLowerCase()) || properties[0];
                   const codeNum = (l.propertyId || prop?.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
                   const inviteCode = l.inviteCode || prop?.inviteCode || `OX-${codeNum.padStart(4, "7")}`;
                   const rentAmt = Number(l.monthlyRent || l.totalMonthlyGross || 250000);
@@ -1085,7 +778,7 @@ export default function PropertyDashboardClient({
                         )}
                       </td>
                       <td className="py-3 px-3">
-                        <div className="font-bold text-gray-800">{l.propertyName || prop?.name || "fortune sky"}</div>
+                        <div className="font-bold text-gray-800">{l.propertyName || prop?.name || "Commercial Asset"}</div>
                         <div className="text-[10px] text-gray-400 font-medium">
                           {l.unitNumber || "Suite 401"}{l.floorNumber ? ` (Floor ${l.floorNumber})` : ""}
                         </div>
@@ -1113,9 +806,9 @@ export default function PropertyDashboardClient({
                             type="button"
                             onClick={() => {
                               setInviteModalProp({
-                                id: l.propertyId || prop?.id || "prop-fs",
-                                name: l.propertyName || prop?.name || "fortune sky",
-                                location: prop?.location || "Delhi NCR",
+                                id: l.propertyId || prop?.id || `prop-${Date.now()}`,
+                                name: l.propertyName || prop?.name || "Commercial Asset",
+                                location: prop?.city ? `${prop.city}, ${prop.state || ''}` : "Delhi NCR",
                                 inviteCode: inviteCode,
                                 ownerName: prop?.ownerName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Asset Owner"
                               });
@@ -1142,86 +835,21 @@ export default function PropertyDashboardClient({
         )}
       </div>
 
-      {/* LEASING BROKER PARTNERSHIPS & COMMISSION AGREEMENTS LIST */}
-      <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6 border-b border-gray-50 pb-3">
-          <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-            <Handshake size={18} className="text-purple-600" />
-            Leasing Broker Partnerships & Commission Agreements
-          </h3>
-          <span className="px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-100 text-purple-700 text-[10px] font-bold">
-            {partnerships.length} Active Listings Contracts
-          </span>
-        </div>
-
-        {partnerships.length === 0 ? (
-          <div className="p-6 rounded-xl border border-dashed border-gray-200 bg-gray-50/40 text-center flex flex-col items-center justify-center gap-2">
-            <Handshake size={20} className="text-purple-400" />
-            <p className="text-xs font-semibold text-gray-600">No Broker Partnerships Yet</p>
-            <p className="text-[11px] text-gray-400 max-w-sm">
-              Assign a licensed commercial broker to market your vacant floors and earn standardized leasing commissions.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowAssignModal(true)}
-              className="mt-1 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors cursor-pointer"
-            >
-              + Assign Broker Now
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[650px]">
-              <thead>
-                <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                  <th className="py-4">Contract ID</th>
-                  <th className="py-4">Property Address</th>
-                  <th className="py-4">Assigned Broker</th>
-                  <th className="py-4">Brokerage Commission Terms</th>
-                  <th className="py-4">Status</th>
-                  <th className="py-4">Agreement Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {partnerships.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 text-xs hover:bg-purple-50/20 transition-colors">
-                    <td className="py-4 font-mono font-bold text-purple-600">{p.id}</td>
-                    <td className="py-4 font-bold text-gray-900">{p.propertyName}</td>
-                    <td className="py-4 font-bold text-gray-800">{p.brokerName}</td>
-                    <td className="py-4 text-emerald-600 font-extrabold">{p.commission}</td>
-                    <td className="py-4">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                        p.status.includes("Active")
-                          ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                          : "bg-amber-50 border border-amber-200 text-amber-700"
-                      }`}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="py-4 text-gray-400 font-semibold">{p.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
       {/* BLOCK 2: TWO-COLUMN ALERTS & RECENT ACTIVITY */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Critical Alerts */}
         <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-6">
-            <AlertTriangle size={18} className="text-red-500" />
-            Critical Compliance & Collections Alerts
+            <ShieldCheck size={18} className="text-[#0F8B7D]" />
+            Statutory Compliance &amp; NOC Status
           </h3>
           <div className="flex flex-col gap-4">
             {initialCerts.filter(c => c.status === "expired").map((cert, idx) => (
               <div key={idx} className="p-4 rounded-xl border-l-4 border-red-500 bg-red-50/50 flex justify-between items-center text-xs">
                 <div>
                   <div className="font-bold text-gray-900">{cert.name} Expired</div>
-                  <div className="text-gray-500 font-semibold mt-1">Property: {initialProperties.find(p => p.id === cert.propertyId)?.name || "Apex Tower"}</div>
+                  <div className="text-gray-500 font-semibold mt-1">Property: {properties.find(p => p.id === cert.propertyId)?.name || properties[0]?.name || "Commercial Asset"}</div>
                 </div>
                 <Link href="/properties/compliance" className="px-3.5 py-1.5 rounded-lg bg-red-600 text-white font-bold text-[10px] uppercase shadow-sm hover:bg-red-700 transition-colors">
                   Renew Certificate
@@ -1229,139 +857,57 @@ export default function PropertyDashboardClient({
               </div>
             ))}
             
-            {initialCerts.filter(c => c.status === "valid" && c.name.includes("Electrical")).map((cert, idx) => (
+            {initialCerts.filter(c => c.status === "valid" && c.name?.includes("Electrical")).map((cert, idx) => (
               <div key={idx} className="p-4 rounded-xl border-l-4 border-amber-500 bg-amber-50/50 flex justify-between items-center text-xs">
                 <div>
                   <div className="font-bold text-gray-900">{cert.name} Expiring Soon</div>
                   <div className="text-gray-500 font-semibold mt-1">Expiry Date: {new Date(cert.expiryDate).toLocaleDateString()}</div>
                 </div>
-                <span className="text-amber-600 font-extrabold">38 Days Left</span>
+                <span className="text-amber-600 font-extrabold">Renewal Window Open</span>
               </div>
             ))}
+
+            {initialCerts.filter(c => c.status === "expired").length === 0 && (
+              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex items-center gap-3 text-xs text-emerald-900">
+                <ShieldCheck size={20} className="text-emerald-600 shrink-0" />
+                <div>
+                  <span className="font-bold block">All Statutory NOCs Fully Compliant</span>
+                  <span className="text-[11px] text-emerald-700">Fire Safety NOC, Lift Inspector License, and Electrical CEA certifications are valid across your portfolio.</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Recent Audit Timeline */}
         <div className="premium-card p-6 border border-gray-200 bg-white shadow-sm">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-6">
-            <ClipboardList size={18} className="text-purple-600" />
-            Security & Audit Activity Logs
+            <ClipboardList size={18} className="text-[#0F8B7D]" />
+            Security &amp; Audit Activity Logs
           </h3>
           <div className="flex flex-col gap-5 relative border-l border-gray-100 pl-6 ml-3">
-            {initialLogs.slice(0, 4).map((log, idx) => (
-              <div key={idx} className="relative text-xs">
-                <span className="absolute -left-[31px] w-2.5 h-2.5 rounded-full bg-purple-500 border-2 border-white"></span>
-                <div className="flex justify-between items-center text-gray-400 font-semibold">
-                  <span>{new Date(log.createdAt || "").toLocaleDateString()}</span>
-                  <span>{log.traceId}</span>
+            {initialLogs.length > 0 ? (
+              initialLogs.slice(0, 4).map((log, idx) => (
+                <div key={idx} className="relative text-xs">
+                  <span className="absolute -left-[31px] w-2.5 h-2.5 rounded-full bg-[#0F8B7D] border-2 border-white"></span>
+                  <div className="flex justify-between items-center text-gray-400 font-semibold">
+                    <span>{new Date(log.createdAt || "").toLocaleDateString()}</span>
+                    <span>{log.traceId || `TR-${idx + 101}`}</span>
+                  </div>
+                  <p className="font-bold text-gray-800 mt-1">{log.action}</p>
+                  <div className="text-[10px] text-gray-500 font-bold mt-0.5">IP: {log.ipAddress || "127.0.0.1"} | Module: {log.module || "RentRoll"}</div>
                 </div>
-                <p className="font-bold text-gray-800 mt-1">{log.action}</p>
-                <div className="text-[10px] text-gray-500 font-bold mt-0.5">IP: {log.ipAddress} | Module: {log.module}</div>
+              ))
+            ) : (
+              <div className="text-xs text-gray-500 py-3">
+                <span className="font-semibold block text-gray-700">System Ready &amp; Encrypted</span>
+                <span className="text-[11px] text-gray-400 mt-0.5 block">Audit trail logging active for lease creation, GST invoicing, and collection receipts.</span>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
       </div>
-
-      {/* ===== ASSIGN LEASING BROKER MODAL ===== */}
-      {showAssignModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <form 
-            onSubmit={handleCreateAssignment}
-            className="bg-white rounded-2xl max-w-md w-full p-8 flex flex-col gap-5 shadow-2xl border border-gray-100 animate-scale-up"
-          >
-            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-              <div>
-                <span className="text-[10px] font-bold text-purple-600 uppercase">Lease Commissions Brokerage</span>
-                <h3 className="font-extrabold text-gray-900 text-base mt-0.5">Assign Leasing Broker</h3>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setShowAssignModal(false)}
-                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-4 text-xs">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-gray-400 font-bold uppercase">Select Listed Property</label>
-                <select 
-                  value={assignPropertyId}
-                  onChange={(e) => setAssignPropertyId(e.target.value)}
-                  className="px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold bg-white cursor-pointer"
-                >
-                  {initialProperties.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-gray-400 font-bold uppercase">Select Verified Broker partner</label>
-                <select 
-                  value={assignBroker}
-                  onChange={(e) => setAssignBroker(e.target.value)}
-                  className="px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold bg-white cursor-pointer"
-                >
-                  {brokerDirectory.map((b, i) => (
-                    <option key={i} value={`${b.name} (${b.role})`}>
-                      {b.name} - {b.role} (Rating: {b.rating})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase">Commission Model</label>
-                  <select 
-                    value={commissionType}
-                    onChange={(e) => setCommissionType(e.target.value)}
-                    className="px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold bg-white cursor-pointer"
-                  >
-                    <option value="1 Month Rent">1 Month Rent Value</option>
-                    <option value="2.0% Sale Value">2.0% Total Contract</option>
-                    <option value="5.0% Lease Value">5.0% Annual Value</option>
-                    <option value="Flat Fee ₹1L">Flat Fee ₹1,00,000</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-gray-400 font-bold uppercase">Commission Rate</label>
-                  <input 
-                    type="text" 
-                    value={commissionRate}
-                    onChange={(e) => setCommissionRate(e.target.value)}
-                    className="px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-purple-600 bg-white"
-                  />
-                </div>
-              </div>
-
-              <p className="text-[10px] text-gray-500 font-semibold leading-relaxed">
-                Assigning a broker binds this specific listing to the broker directory, attaching their contact cards to public search views.
-              </p>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4 flex justify-end gap-3 mt-2">
-              <button
-                type="button"
-                onClick={() => setShowAssignModal(false)}
-                className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <Send size={13} /> Send Assignment Proposal
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
@@ -1380,9 +926,9 @@ export default function PropertyDashboardClient({
               </button>
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900">Delete Property Listing?</h3>
+              <h3 className="text-base font-bold text-gray-900">Delete Commercial Property?</h3>
               <p className="text-xs text-gray-500 mt-1">
-                Are you sure you want to delete <span className="font-bold text-gray-900">"{deleteTarget.name}"</span>? This will permanently remove this commercial building from your portfolio and public marketplace maps.
+                Are you sure you want to delete <span className="font-bold text-gray-900">"{deleteTarget.name}"</span>? This will permanently remove this commercial building and its associated units from your private landlord portfolio.
               </p>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -1410,12 +956,13 @@ export default function PropertyDashboardClient({
       <AddTenantModal
         isOpen={showAddTenantModal}
         onClose={() => setShowAddTenantModal(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           showToast("🎉 Tenant & active lease registered successfully!");
-          loadLeasesAndDashboard();
+          await loadDashboardData();
         }}
-        properties={displayedProperties}
+        properties={properties}
       />
+
       {/* Tenant Invitation Modal */}
       {inviteModalProp && (
         <TenantInviteModal

@@ -7,17 +7,17 @@ export async function GET(req: Request) {
     const hasOrg = searchParams.get("hasOrg") === "true";
     const hasRoleProfile = searchParams.get("hasRoleProfile") === "true";
     const hasKyc = searchParams.get("hasKyc") === "true";
+    const hasProperties = searchParams.get("hasProperties") === "true";
 
-    let score = 20; // Contact OTP verified gives 15-20%
+    let score = 20;
     const breakdown: Array<{ category: string; weight: number; completed: boolean; actionHint: string }> = [];
 
     if (role.includes("owner")) {
       breakdown.push(
-        { category: "Contact Verification", weight: 15, completed: true, actionHint: "Email & mobile verified" },
-        { category: "Organization Master", weight: 25, completed: hasOrg, actionHint: "Provide legal entity name & PAN" },
-        { category: "Portfolio Overview", weight: 25, completed: hasRoleProfile, actionHint: "Specify asset types & portfolio sqft" },
-        { category: "Property Data", weight: 20, completed: hasRoleProfile, actionHint: "Input leasable area & occupancy %" },
-        { category: "KYC & Title Evidence", weight: 15, completed: hasKyc, actionHint: "Upload ownership proof & GST cert" }
+        { category: "Contact Verification", weight: 20, completed: true, actionHint: "Email & mobile verified" },
+        { category: "Landlord Entity Profile", weight: 35, completed: hasOrg, actionHint: "Provide legal entity name, PAN & address" },
+        { category: "Commercial Portfolio", weight: 25, completed: hasProperties, actionHint: "Add your first property in dashboard" },
+        { category: "Statutory KYC & Evidence", weight: 20, completed: hasKyc, actionHint: "Upload ownership proof & GST cert" }
       );
     } else if (role.includes("broker")) {
       breakdown.push(

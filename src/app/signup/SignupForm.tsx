@@ -518,68 +518,26 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       localStorage.setItem("officex_dashboard", workspaceUrl);
       localStorage.setItem("officex_onboarding_completed", "1");
       localStorage.setItem("officex_kyc_stage", "K1_BUSINESS_SUBMITTED");
+      localStorage.setItem("officex_user_properties", "[]");
+      localStorage.setItem("officex_active_leases", "[]");
+      localStorage.removeItem("officex_property_name");
+
       if (isRentRoll) {
-        // Subscription is NOT active until paid via Razorpay; mark as pending
+        // Subscription is active or pending via Razorpay
         localStorage.setItem("officex_subscription", "pending");
         sessionStorage.setItem("officex_subscription", "pending");
         document.cookie = "officex_subscription=pending; path=/; max-age=86400; SameSite=Lax";
-        localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
-        
-        // Seed initial active lease for the owner's building so dashboard has immediate live data
-        let existingLeases = [];
-        try {
-          existingLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
-        } catch {}
-        if (existingLeases.length === 0) {
-          localStorage.setItem("officex_active_leases", JSON.stringify([
-            {
-              id: `LEASE-${Date.now()}`,
-              tenantName: "Nexus Tech Corp",
-              propertyName: effectivePropName,
-              unitNumber: "Tower 1 · Suite 402",
-              floorNumber: 4,
-              chargeableArea: 5000,
-              monthlyRent: 350000,
-              camRate: 15,
-              monthlyCam: 75000,
-              totalMonthlyGross: 425000,
-              escalationPct: 5,
-              leaseStartDate: "2025-04-01",
-              leaseEndDate: "2028-03-31",
-              status: "active",
-              inviteCode: `OX-${Math.floor(1000 + Math.random() * 9000)}`
-            }
-          ]));
-        }
-      } else if (selectedRole === "owner") {
-        localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
       }
       document.cookie = `officex_user_role=${encodeURIComponent(roleTitle)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    if (selectedRole === "owner") {
-      try {
-        fetch("/api/rent-roll/properties", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: effectivePropName,
-            type: userProp.type,
-            city: effectiveCity,
-            state: effectiveState,
-            totalArea: effectiveArea
-          })
-        }).catch((e) => console.warn("Rent roll prop sync note:", e));
-      } catch (err) {
-        console.warn("Prop sync note:", err);
-      }
-    }
-
-    setSuccessMsg("Onboarding complete! Launching your verified commercial workspace...");
+    setSuccessMsg("Account created! Launching Property Owner Onboarding...");
     setTimeout(() => {
       const rawRedirect = searchParams?.get("redirect") || initialRedirect;
-      const target = rawRedirect && !rawRedirect.startsWith("/login") ? rawRedirect : workspaceUrl;
+      const target = rawRedirect && !rawRedirect.startsWith("/login")
+        ? rawRedirect
+        : (selectedRole === "owner" || isRentRoll ? "/onboarding?role=owner" : workspaceUrl);
       router.push(target);
     }, 800);
   };

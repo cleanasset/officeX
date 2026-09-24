@@ -178,28 +178,13 @@ export default function SubscriptionGate({
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_user_name", effectiveName);
       sessionStorage.setItem("officex_user_name", effectiveName);
-      localStorage.setItem("officex_property_name", effectiveBuilding);
-      sessionStorage.setItem("officex_property_name", effectiveBuilding);
       if (cleanPhone) {
         localStorage.setItem("officex_user_phone", cleanPhone);
         localStorage.setItem("officex_user_mobile", cleanPhone);
       }
-      localStorage.setItem("officex_onboarding_completed", "1");
+      localStorage.setItem("officex_user_properties", "[]");
+      localStorage.setItem("officex_active_leases", "[]");
     }
-
-    try {
-      fetch("/api/rent-roll/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: effectiveBuilding,
-          type: "Commercial Office",
-          city: "Mumbai",
-          state: "Maharashtra",
-          totalArea: 25000
-        })
-      }).catch(() => {});
-    } catch {}
 
     // If 100% Discounted (RENTROLL12) — Instant One-Click Free Activation
     if (is100PercentDiscount) {

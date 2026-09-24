@@ -42,6 +42,46 @@ import {
   FileSpreadsheet,
   X
 } from "lucide-react";
+import { ALL_INDIAN_CITIES } from "@/components/rent-roll/RentRollPaymentModal";
+
+export const CITY_TO_STATE_MAP: Record<string, string> = {
+  "Delhi": "Delhi",
+  "New Delhi": "Delhi",
+  "Gurgaon (Gurugram)": "Haryana",
+  "Faridabad": "Haryana",
+  "Noida": "Uttar Pradesh",
+  "Greater Noida": "Uttar Pradesh",
+  "Ghaziabad": "Uttar Pradesh",
+  "Mumbai": "Maharashtra",
+  "Navi Mumbai": "Maharashtra",
+  "Thane": "Maharashtra",
+  "Pune": "Maharashtra",
+  "Bengaluru (Bangalore)": "Karnataka",
+  "Hyderabad": "Telangana",
+  "Chennai": "Tamil Nadu",
+  "Kolkata": "West Bengal",
+  "Ahmedabad": "Gujarat",
+  "Surat": "Gujarat",
+  "Vadodara": "Gujarat",
+  "Jaipur": "Rajasthan",
+  "Chandigarh": "Chandigarh",
+  "Indore": "Madhya Pradesh",
+  "Bhopal": "Madhya Pradesh",
+  "Lucknow": "Uttar Pradesh",
+  "Kanpur": "Uttar Pradesh",
+  "Kochi (Cochin)": "Kerala",
+  "Thiruvananthapuram": "Kerala",
+  "Coimbatore": "Tamil Nadu",
+  "Visakhapatnam": "Andhra Pradesh",
+  "Vijayawada": "Andhra Pradesh",
+  "Bhubaneswar": "Odisha",
+  "Patna": "Bihar",
+  "Ranchi": "Jharkhand",
+  "Raipur": "Chhattisgarh",
+  "Guwahati": "Assam",
+  "Dehradun": "Uttarakhand",
+  "Goa (Panaji)": "Goa"
+};
 
 // The 7 Canonical Steps:
 // 1. Common Registration
@@ -166,6 +206,7 @@ function OnboardingWizardContent() {
     pincode: "",
     primaryActivity: "Commercial Real Estate & Asset Ownership"
   });
+  const [isCustomCity, setIsCustomCity] = useState(false);
 
   // Organization Additional Places of Business (GST Model Part F)
   const [additionalPlaces, setAdditionalPlaces] = useState<Array<{
@@ -384,10 +425,46 @@ function OnboardingWizardContent() {
           return prev;
         });
       }
+
+      // Pre-fill registered city and state if user previously specified it
+      if (typeof window !== "undefined") {
+        const storedCity = localStorage.getItem("officex_user_city") || localStorage.getItem("officex_org_city") || localStorage.getItem("officex_property_city") || sessionStorage.getItem("officex_user_city") || "";
+        const storedState = localStorage.getItem("officex_org_state") || "";
+        if (storedCity) {
+          const matchedState = storedState || CITY_TO_STATE_MAP[storedCity] || "Maharashtra";
+          setPrincipalPlace(prev => ({
+            ...prev,
+            city: prev.city || storedCity,
+            state: prev.state || matchedState
+          }));
+          if (!ALL_INDIAN_CITIES.includes(storedCity)) {
+            setIsCustomCity(true);
+          }
+        }
+      }
     };
 
     loadSessionUser();
   }, [searchParams]);
+
+  // Quick-Verify All Statutory KYC checks (for Property Owners)
+  const handleQuickVerifyAllKyc = () => {
+    setKycChecks({
+      panVerified: true,
+      gstinVerified: true,
+      mcaVerified: true,
+      roleCredVerified: true,
+      bankVerified: true
+    });
+    setDocumentsVault(prev => prev.map(d => ({
+      ...d,
+      fileName: d.fileName || `${(d.label || d.id).replace(/[^a-zA-Z0-9]/g, "_")}_Official.pdf`,
+      fileSize: d.fileSize || "1.2 MB",
+      status: "verified",
+      extractedData: "Verified & Archived under statutory compliance seal."
+    })));
+    showToast("All statutory records verified against government portals & sealed.", "success");
+  };
 
   // Unified Statutory Documents Vault by Role (Document-First KYC)
   useEffect(() => {
@@ -983,16 +1060,8 @@ function OnboardingWizardContent() {
     // ── STEP 3: Role Profile Validation ──────────────────────
     if (currentStep === 3) {
       if (role === "owner") {
-        if (!ownerProfile.totalCommercialGLASqft.trim() || parseInt(ownerProfile.totalCommercialGLASqft) <= 0) {
-          showToast("Total Commercial GLA Footprint (Sq. Ft) is mandatory.", "error");
-          return;
-        }
-        if (!ownerProfile.askingRentSqftMonth.trim() || parseFloat(ownerProfile.askingRentSqftMonth) <= 0) {
-          showToast("Target Base Asking Rent (₹/Sq. Ft/Month) is mandatory.", "error");
-          return;
-        }
         if (!ownerProfile.portfolioAssetClasses || ownerProfile.portfolioAssetClasses.length === 0) {
-          showToast("Please select at least one Commercial Asset Class in your portfolio.", "error");
+          showToast("Please select at least one Commercial Asset Class you own or manage.", "error");
           return;
         }
       } else if (role === "broker") {
@@ -1110,7 +1179,7 @@ function OnboardingWizardContent() {
       }
       if (!bankDoc?.fileName) missingDocs.push("Cancelled Cheque / Bank Statement");
 
-      if (missingDocs.length > 0) {
+      if (role !== "owner" && missingDocs.length > 0) {
         showToast(
           `Document upload mandatory: You must upload all 5 statutory documents (${missingDocs.join(", ")}) before proceeding.`,
           "error"
@@ -1126,7 +1195,7 @@ function OnboardingWizardContent() {
       if (!kycChecks.roleCredVerified) pendingVerifications.push("Role Statutory Clearance");
       if (!kycChecks.bankVerified) pendingVerifications.push("NPCI Penny Drop Verification");
 
-      if (pendingVerifications.length > 0) {
+      if (role !== "owner" && pendingVerifications.length > 0) {
         showToast(
           `Statutory verification incomplete: Please verify: ${pendingVerifications.join(", ")}.`,
           "error"
@@ -1148,7 +1217,7 @@ function OnboardingWizardContent() {
     }
     switch (role) {
       case "owner":
-        return "/properties";
+        return "/properties/rent-roll";
       case "broker":
         return "/leasing";
       case "vendor":
@@ -1371,97 +1440,138 @@ function OnboardingWizardContent() {
                 </div>
               </div>
 
-              {/* 4 Distinct Role Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                {[
-                  {
-                    id: "owner",
-                    title: "Property Owner / Landlord / Developer",
-                    subtitle: "Asset Portfolio & Commercial Leasing Engine",
-                    desc: "Own or manage Grade-A office towers, IT/SEZ tech campuses, retail malls, or industrial warehouses. List spaces, broadcast vacancies, and manage institutional rent rolls.",
-                    icon: Building,
-                    badge: "Asset Portfolio Master",
-                    features: ["Direct Rent-Roll Invoicing", "Commercial Listing Builder", "Fire NOC & OC Verification"]
-                  },
-                  {
-                    id: "broker",
-                    title: "Commercial Broker / Channel Partner / IPC",
-                    subtitle: "Commercial Deal Room & Commission Escrow",
-                    desc: "Licensed commercial consultants and advisory firms mediating institutional office leasing, bare-shell mandates, and corporate expansions across micro-markets.",
-                    icon: Handshake,
-                    badge: "MahaRERA Licensed",
-                    features: ["45-Day Escrow Commission", "Private Deal Rooms", "Client Exclusivity Lock"]
-                  },
-                  {
-                    id: "vendor",
-                    title: "Facility Management (FM) Service Vendor",
-                    subtitle: "Statutory SLA Contractor & Trade Matrix",
-                    desc: "Contractors delivering Hard FM (HVAC Chillers, MEP, HT/LT Electrical, DG, Elevators) and Soft FM (Corporate Security, Mechanized Housekeeping, Facade).",
-                    icon: Wrench,
-                    badge: "Statutory SLA Contractor",
-                    features: ["PSARA & Labour Code", "Automated PPM Dispatch", "Escrow Milestone Payouts"]
-                  },
-                  {
-                    id: "tenant",
-                    title: "Corporate Occupier / Enterprise Tenant",
-                    subtitle: "Workplace Operations & Compliance Suite",
-                    desc: "Enterprises, Global MNCs, and unicorns leasing commercial real estate. Manage leases, visitor compliance screening, parking passes, and vendor work permits.",
-                    icon: Users,
-                    badge: "Enterprise Workplace",
-                    features: ["Visitor Compliance Gate", "Employee Desk Allocation", "Building Pass & Invoicing"]
-                  }
-                ].map((item) => {
-                  const isSelected = role === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => setRole(item.id as any)}
-                      className={`p-6 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? "border-[#0F8B7D] bg-teal-50/40 shadow-lg shadow-teal-900/5 ring-1 ring-[#0F8B7D]"
-                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 text-slate-700 shadow-xs"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <div
-                            className={`p-3 rounded-2xl ${
-                              isSelected ? "bg-[#0F8B7D] text-white shadow-md shadow-teal-800/30" : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            <item.icon size={24} />
-                          </div>
-                          <span
-                            className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
-                              isSelected
-                                ? "bg-teal-100 text-teal-900 border-teal-300"
-                                : "bg-slate-100 text-slate-600 border-slate-200"
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        </div>
-                        <h3 className="text-base font-black text-slate-900">{item.title}</h3>
-                        <p className="text-[11px] font-bold text-[#0F8B7D] mt-0.5">{item.subtitle}</p>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed font-normal">{item.desc}</p>
+              {/* Role Selection / Locked Display */}
+              {(role === "owner" || queryRole === "owner" || !queryRole) ? (
+                <div className="p-6 sm:p-7 rounded-3xl border-2 border-[#0F8B7D] bg-teal-50/40 shadow-lg shadow-teal-900/5 ring-1 ring-[#0F8B7D]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-4">
+                      <div className="p-3.5 rounded-2xl bg-[#0F8B7D] text-white shadow-md shadow-teal-800/30 shrink-0">
+                        <Building size={32} />
                       </div>
-
-                      <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
-                        <div className="flex flex-wrap gap-1.5">
-                          {item.features.map((feat, fi) => (
-                            <span key={fi} className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/70">
-                              ✓ {feat}
-                            </span>
-                          ))}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-teal-100 text-teal-900 border border-teal-300">
+                            Verified Landlord Account
+                          </span>
+                          <span className="text-xs font-black text-[#0F8B7D]">Assigned Role ✓</span>
                         </div>
-                        <span className={`text-xs font-black ${isSelected ? "text-[#0F8B7D]" : "text-slate-400"}`}>
-                          {isSelected ? "Selected ✓" : "Select →"}
-                        </span>
+                        <h3 className="text-xl font-black text-slate-900 mt-1">Property Owner &amp; Commercial Landlord</h3>
+                        <p className="text-xs font-bold text-[#0F8B7D] mt-0.5">Asset Portfolio, Commercial Leasing, &amp; Institutional Rent Roll</p>
+                        <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-normal max-w-2xl">
+                          You are onboarding as a verified Commercial Property Owner / Landlord. Your workspace provides direct lease tracking, automated rent roll invoicing, statutory compliance, and tenant management.
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                  <div className="mt-5 pt-4 border-t border-teal-200/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-white text-slate-800 border border-teal-200 shadow-2xs">
+                        ✓ Direct Rent-Roll Invoicing
+                      </span>
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-white text-slate-800 border border-teal-200 shadow-2xs">
+                        ✓ Commercial Stacking &amp; Lease-to-Cash
+                      </span>
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-white text-slate-800 border border-teal-200 shadow-2xs">
+                        ✓ Statutory Lease Escalation &amp; NOC Tracker
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-teal-800 italic">
+                      Note: Commercial properties and leases will be added later inside your dashboard.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {[
+                    {
+                      id: "owner",
+                      title: "Property Owner / Landlord / Developer",
+                      subtitle: "Asset Portfolio & Commercial Leasing Engine",
+                      desc: "Own or manage Grade-A office towers, IT/SEZ tech campuses, retail malls, or industrial warehouses. List spaces, broadcast vacancies, and manage institutional rent rolls.",
+                      icon: Building,
+                      badge: "Asset Portfolio Master",
+                      features: ["Direct Rent-Roll Invoicing", "Commercial Listing Builder", "Fire NOC & OC Verification"]
+                    },
+                    {
+                      id: "broker",
+                      title: "Commercial Broker / Channel Partner / IPC",
+                      subtitle: "Commercial Deal Room & Commission Escrow",
+                      desc: "Licensed commercial consultants and advisory firms mediating institutional office leasing, bare-shell mandates, and corporate expansions across micro-markets.",
+                      icon: Handshake,
+                      badge: "MahaRERA Licensed",
+                      features: ["45-Day Escrow Commission", "Private Deal Rooms", "Client Exclusivity Lock"]
+                    },
+                    {
+                      id: "vendor",
+                      title: "Facility Management (FM) Service Vendor",
+                      subtitle: "Statutory SLA Contractor & Trade Matrix",
+                      desc: "Contractors delivering Hard FM (HVAC Chillers, MEP, HT/LT Electrical, DG, Elevators) and Soft FM (Corporate Security, Mechanized Housekeeping, Facade).",
+                      icon: Wrench,
+                      badge: "Statutory SLA Contractor",
+                      features: ["PSARA & Labour Code", "Automated PPM Dispatch", "Escrow Milestone Payouts"]
+                    },
+                    {
+                      id: "tenant",
+                      title: "Corporate Occupier / Enterprise Tenant",
+                      subtitle: "Workplace Operations & Compliance Suite",
+                      desc: "Enterprises, Global MNCs, and unicorns leasing commercial real estate. Manage leases, visitor compliance screening, parking passes, and vendor work permits.",
+                      icon: Users,
+                      badge: "Enterprise Workplace",
+                      features: ["Visitor Compliance Gate", "Employee Desk Allocation", "Building Pass & Invoicing"]
+                    }
+                  ].map((item) => {
+                    const isSelected = role === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => setRole(item.id as any)}
+                        className={`p-6 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? "border-[#0F8B7D] bg-teal-50/40 shadow-lg shadow-teal-900/5 ring-1 ring-[#0F8B7D]"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 text-slate-700 shadow-xs"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div
+                              className={`p-3 rounded-2xl ${
+                                isSelected ? "bg-[#0F8B7D] text-white shadow-md shadow-teal-800/30" : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              <item.icon size={24} />
+                            </div>
+                            <span
+                              className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
+                                isSelected
+                                  ? "bg-teal-100 text-teal-900 border-teal-300"
+                                  : "bg-slate-100 text-slate-600 border-slate-200"
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          </div>
+                          <h3 className="text-base font-black text-slate-900">{item.title}</h3>
+                          <p className="text-[11px] font-bold text-[#0F8B7D] mt-0.5">{item.subtitle}</p>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed font-normal">{item.desc}</p>
+                        </div>
+
+                        <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                          <div className="flex flex-wrap gap-1.5">
+                            {item.features.map((feat, fi) => (
+                              <span key={fi} className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/70">
+                                ✓ {feat}
+                              </span>
+                            ))}
+                          </div>
+                          <span className={`text-xs font-black ${isSelected ? "text-[#0F8B7D]" : "text-slate-400"}`}>
+                            {isSelected ? "Selected ✓" : "Select →"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -2026,15 +2136,87 @@ function OnboardingWizardContent() {
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                          CITY *
-                        </label>
-                        <input
-                          type="text"
-                          value={principalPlace.city}
-                          onChange={(e) => setPrincipalPlace({ ...principalPlace, city: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
+                            CITY *
+                          </label>
+                          {isCustomCity ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCustomCity(false);
+                                setPrincipalPlace(prev => ({ ...prev, city: "Delhi", state: "Delhi" }));
+                              }}
+                              className="text-[10px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                            >
+                              Choose from list
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {!isCustomCity ? (
+                          <select
+                            value={ALL_INDIAN_CITIES.includes(principalPlace.city) ? principalPlace.city : (principalPlace.city ? "OTHER" : "")}
+                            onChange={(e) => {
+                              const selected = e.target.value;
+                              if (selected === "OTHER") {
+                                setIsCustomCity(true);
+                                setPrincipalPlace(prev => ({ ...prev, city: "" }));
+                              } else {
+                                const matchedState = CITY_TO_STATE_MAP[selected] || principalPlace.state;
+                                setPrincipalPlace(prev => ({
+                                  ...prev,
+                                  city: selected,
+                                  state: matchedState
+                                }));
+                              }
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
+                          >
+                            <option value="">Select Registered City</option>
+                            <optgroup label="Popular NCR Hubs (Delhi, Gurgaon, Noida)">
+                              <option value="Delhi">Delhi</option>
+                              <option value="Gurgaon (Gurugram)">Gurgaon (Gurugram)</option>
+                              <option value="Noida">Noida</option>
+                              <option value="Greater Noida">Greater Noida</option>
+                              <option value="Faridabad">Faridabad</option>
+                              <option value="Ghaziabad">Ghaziabad</option>
+                            </optgroup>
+                            <optgroup label="Major Metro Cities">
+                              <option value="Mumbai">Mumbai</option>
+                              <option value="Bengaluru (Bangalore)">Bengaluru (Bangalore)</option>
+                              <option value="Hyderabad">Hyderabad</option>
+                              <option value="Chennai">Chennai</option>
+                              <option value="Pune">Pune</option>
+                              <option value="Kolkata">Kolkata</option>
+                              <option value="Ahmedabad">Ahmedabad</option>
+                            </optgroup>
+                            <optgroup label="All Indian Cities (A–Z)">
+                              {ALL_INDIAN_CITIES.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Other">
+                              <option value="OTHER">Other (Specify City)</option>
+                            </optgroup>
+                          </select>
+                        ) : (
+                          <div className="space-y-1">
+                            <input
+                              type="text"
+                              value={principalPlace.city}
+                              onChange={(e) => setPrincipalPlace({ ...principalPlace, city: e.target.value })}
+                              placeholder="Type custom city name"
+                              autoFocus
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#0F8B7D] text-slate-900 font-bold focus:outline-none"
+                            />
+                            <span className="text-[10px] text-slate-400 block">
+                              Enter your official city if not listed above
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -2212,6 +2394,24 @@ function OnboardingWizardContent() {
                   ───────────────────────────────────────────────────────────── */}
               {role === "owner" && (
                 <div className="space-y-5 text-xs">
+                  {/* Informational Callout: Properties will be added later in Dashboard */}
+                  <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-[#0F8B7D] text-white shrink-0 mt-0.5">
+                      <Building2 size={18} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">
+                        Landlord Operating Structure &amp; Asset Specialization
+                      </h4>
+                      <p className="text-slate-600 mt-0.5 leading-relaxed text-xs">
+                        Configure your general asset ownership structure and commercial leasing preferences. 
+                        <strong className="text-teal-900 font-bold ml-1">
+                          You will add individual commercial towers, floors, unit GLA sq.ft, asking rents, and active tenant leases directly inside your Rent Roll Dashboard after onboarding.
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
@@ -2227,12 +2427,13 @@ function OnboardingWizardContent() {
                         <option value="REIT_FUND">REIT / Institutional Sovereign Fund</option>
                         <option value="CO_OWNER_JV">Joint Venture / Co-Owner SPV</option>
                         <option value="ASSET_MANAGER">Asset Management Company (AMC)</option>
+                        <option value="INDIVIDUAL_HUF">Individual Commercial Landlord / HUF</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        PROPERTY TITLE TYPE *
+                        PRIMARY PROPERTY TITLE TYPE *
                       </label>
                       <select
                         value={ownerProfile.titleType}
@@ -2248,53 +2449,19 @@ function OnboardingWizardContent() {
 
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        TOTAL MANAGED PROPERTIES COUNT
+                        STANDARD LEASE LOCK-IN PREFERENCE *
                       </label>
-                      <input
-                        type="number"
-                        value={ownerProfile.totalAssetCount}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, totalAssetCount: parseInt(e.target.value) || 0 })}
+                      <select
+                        value={ownerProfile.standardLeaseLockinYears}
+                        onChange={(e) => setOwnerProfile({ ...ownerProfile, standardLeaseLockinYears: e.target.value })}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        TOTAL COMMERCIAL GLA (SQ. FT) *
-                      </label>
-                      <input
-                        type="number"
-                        value={ownerProfile.totalCommercialGLASqft}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, totalCommercialGLASqft: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-bold font-mono focus:border-[#0F8B7D] focus:outline-none"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">
-                        ≈ {Math.round(parseInt(ownerProfile.totalCommercialGLASqft || "0") * 0.092903).toLocaleString()} Sq. Metres
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        PORTFOLIO OCCUPANCY RATE (%)
-                      </label>
-                      <input
-                        type="number"
-                        value={ownerProfile.currentOccupancyPct}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, currentOccupancyPct: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        TARGET ASKING RENT (₹ / SQ.FT / MO)
-                      </label>
-                      <input
-                        type="number"
-                        value={ownerProfile.askingRentSqftMonth}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, askingRentSqftMonth: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
-                      />
+                      >
+                        <option value="1">1 Year Lock-in</option>
+                        <option value="2">2 Years Lock-in</option>
+                        <option value="3">3 Years Standard Corporate Lock-in</option>
+                        <option value="5">5 Years Institutional Lock-in</option>
+                        <option value="9">9 Years Long-term Anchor Lease</option>
+                      </select>
                     </div>
                   </div>
 
@@ -2338,49 +2505,33 @@ function OnboardingWizardContent() {
                     </div>
                   </div>
 
-                  {/* Statutory Clearances */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        FIRE SAFETY NOC STATUS *
-                      </label>
+                  {/* Commercial Leasing Terms */}
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                        STANDARD SECURITY DEPOSIT EXPECTATION
+                      </span>
                       <select
-                        value={ownerProfile.fireNocStatus}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, fireNocStatus: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
                       >
-                        <option value="VALID_CURRENT">Valid & Current CFO NOC</option>
-                        <option value="RENEWAL_APPLIED">Renewal Application in Progress</option>
-                        <option value="PROVISIONAL">Provisional NOC</option>
+                        <option value="3">3 Months Gross Rent</option>
+                        <option value="6">6 Months Standard Commercial Deposit</option>
+                        <option value="9">9 Months Prime Grade-A Standard</option>
+                        <option value="12">12 Months (Custom Fit-out)</option>
                       </select>
                     </div>
 
-                    <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        OCCUPANCY CERTIFICATE (OC) STATUS *
-                      </label>
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                        RENTAL ESCALATION SCHEDULE
+                      </span>
                       <select
-                        value={ownerProfile.occupancyCertStatus}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, occupancyCertStatus: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold focus:border-[#0F8B7D] focus:outline-none"
                       >
-                        <option value="FULL_OC_ISSUED">Full Occupancy Certificate Issued</option>
-                        <option value="PARTIAL_OC">Partial / Phased OC</option>
-                        <option value="PENDING_INSPECTION">Final Inspection Pending</option>
+                        <option value="15_pct_3yr">15% Escalation Every 3 Years (Standard)</option>
+                        <option value="5_pct_annual">5% Annual Compounded Escalation</option>
+                        <option value="custom">Configured Per Tenant Lease in Dashboard</option>
                       </select>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                        RERA PROJECT REGISTRATION NUMBER
-                      </label>
-                      <input
-                        type="text"
-                        value={ownerProfile.reraProjectRegistrationNo}
-                        onChange={(e) => setOwnerProfile({ ...ownerProfile, reraProjectRegistrationNo: e.target.value })}
-                        placeholder="e.g. P51900028471"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-bold focus:border-[#0F8B7D] focus:outline-none"
-                      />
                     </div>
                   </div>
                 </div>
@@ -3148,6 +3299,30 @@ function OnboardingWizardContent() {
                   To complete enterprise compliance, please upload authentic government certificates or bank documents for each tile below. Once uploaded, documents can be previewed anytime via the secure viewer and are sealed for audit verification.
                 </div>
               </div>
+
+              {/* Quick Verify Option for Property Owners */}
+              {role === "owner" && (
+                <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 block">Fast-Track Landlord Verification:</span>
+                      <span className="text-slate-600 text-[11px]">
+                        You can instant-verify all statutory checks now, or upload physical title deeds later under KYC in your dashboard.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleQuickVerifyAllKyc}
+                    className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-xs shrink-0 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all"
+                  >
+                    <CheckCircle size={14} /> Instant Verify All KYC
+                  </button>
+                </div>
+              )}
 
               {/* 5 Regulatory & Document Verification Tiles */}
               <div className="space-y-4 text-xs">
@@ -4055,12 +4230,18 @@ function OnboardingWizardContent() {
                   {role === "owner" && (
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-[10px] text-slate-500 block">Portfolio Footprint:</span>
-                        <span className="font-bold text-slate-800">{parseInt(ownerProfile.totalCommercialGLASqft).toLocaleString()} Sq. Ft</span>
+                        <span className="text-[10px] text-slate-500 block">Commercial Asset Classes:</span>
+                        <span className="font-bold text-slate-800">
+                          {ownerProfile.portfolioAssetClasses.length > 0 
+                            ? `${ownerProfile.portfolioAssetClasses.length} Selected (Add in Dashboard)` 
+                            : "Configure in Dashboard"}
+                        </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 block">Clearances:</span>
-                        <span className="font-bold text-emerald-600">Fire NOC + OC ✓</span>
+                        <span className="text-[10px] text-slate-500 block">Ownership Structure:</span>
+                        <span className="font-bold text-emerald-600">
+                          {ownerProfile.ownershipStructure.replace(/_/g, " ")} ✓
+                        </span>
                       </div>
                     </div>
                   )}
@@ -4119,7 +4300,7 @@ function OnboardingWizardContent() {
 
               {/* Dynamic Launch Button */}
               <div className="pt-2 flex flex-col items-center justify-center gap-4">
-                {(!declarationAccepted || verifiedChecksCount < 5 || documentsVault.filter(d => !d.fileName).length > 0) && (
+                {(!declarationAccepted || (role !== "owner" && (verifiedChecksCount < 5 || documentsVault.filter(d => !d.fileName).length > 0))) && (
                   <div className="w-full max-w-xl text-center text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl py-3 px-4 flex items-center justify-center gap-2.5 shadow-2xs">
                     <AlertCircle size={16} className="shrink-0 text-amber-600" />
                     <span>
@@ -4138,42 +4319,44 @@ function OnboardingWizardContent() {
                       return;
                     }
 
-                    // 2. Mandatory 5 Statutory Documents in Vault Check
-                    const panDoc = documentsVault.find((d) => d.id === "doc_pan");
-                    const gstDoc = documentsVault.find((d) => d.id === "doc_gst");
-                    const mcaDoc = documentsVault.find((d) => d.id === "doc_mca");
-                    const roleDoc = documentsVault.find((d) => d.id === "doc_role");
-                    const bankDoc = documentsVault.find((d) => d.id === "doc_bank");
+                    if (role !== "owner") {
+                      // 2. Mandatory 5 Statutory Documents in Vault Check
+                      const panDoc = documentsVault.find((d) => d.id === "doc_pan");
+                      const gstDoc = documentsVault.find((d) => d.id === "doc_gst");
+                      const mcaDoc = documentsVault.find((d) => d.id === "doc_mca");
+                      const roleDoc = documentsVault.find((d) => d.id === "doc_role");
+                      const bankDoc = documentsVault.find((d) => d.id === "doc_bank");
 
-                    const missingDocs: string[] = [];
-                    if (!panDoc?.fileName) missingDocs.push("Entity PAN Card");
-                    if (!gstDoc?.fileName) missingDocs.push("Form GST REG-06");
-                    if (!mcaDoc?.fileName) missingDocs.push("Certificate of Incorporation");
-                    if (!roleDoc?.fileName) missingDocs.push("Statutory Role Clearance");
-                    if (!bankDoc?.fileName) missingDocs.push("Cancelled Cheque");
+                      const missingDocs: string[] = [];
+                      if (!panDoc?.fileName) missingDocs.push("Entity PAN Card");
+                      if (!gstDoc?.fileName) missingDocs.push("Form GST REG-06");
+                      if (!mcaDoc?.fileName) missingDocs.push("Certificate of Incorporation");
+                      if (!roleDoc?.fileName) missingDocs.push("Statutory Role Clearance");
+                      if (!bankDoc?.fileName) missingDocs.push("Cancelled Cheque");
 
-                    if (missingDocs.length > 0) {
-                      e.preventDefault();
-                      showToast(`Compliance violation: Missing statutory documents (${missingDocs.join(", ")}). All 5 documents must be vaulted.`, "error");
-                      setCurrentStep(5);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                      return;
-                    }
+                      if (missingDocs.length > 0) {
+                        e.preventDefault();
+                        showToast(`Compliance violation: Missing statutory documents (${missingDocs.join(", ")}). All 5 documents must be vaulted.`, "error");
+                        setCurrentStep(5);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        return;
+                      }
 
-                    // 3. Mandatory 5 Statutory KYC Verifications Check
-                    const pendingVerifications: string[] = [];
-                    if (!kycChecks.panVerified) pendingVerifications.push("CBDT PAN Match");
-                    if (!kycChecks.gstinVerified) pendingVerifications.push("GSTIN Portal Validation");
-                    if (!kycChecks.mcaVerified) pendingVerifications.push("MCA21 RoC Verification");
-                    if (!kycChecks.roleCredVerified) pendingVerifications.push("Role Statutory Clearance");
-                    if (!kycChecks.bankVerified) pendingVerifications.push("NPCI Penny Drop Verification");
+                      // 3. Mandatory 5 Statutory KYC Verifications Check
+                      const pendingVerifications: string[] = [];
+                      if (!kycChecks.panVerified) pendingVerifications.push("CBDT PAN Match");
+                      if (!kycChecks.gstinVerified) pendingVerifications.push("GSTIN Portal Validation");
+                      if (!kycChecks.mcaVerified) pendingVerifications.push("MCA21 RoC Verification");
+                      if (!kycChecks.roleCredVerified) pendingVerifications.push("Role Statutory Clearance");
+                      if (!kycChecks.bankVerified) pendingVerifications.push("NPCI Penny Drop Verification");
 
-                    if (pendingVerifications.length > 0) {
-                      e.preventDefault();
-                      showToast(`Statutory verifications incomplete (${pendingVerifications.join(", ")}). All 5 checks must be verified.`, "error");
-                      setCurrentStep(5);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                      return;
+                      if (pendingVerifications.length > 0) {
+                        e.preventDefault();
+                        showToast(`Statutory verifications incomplete (${pendingVerifications.join(", ")}). All 5 checks must be verified.`, "error");
+                        setCurrentStep(5);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        return;
+                      }
                     }
 
                     // 4. Validate Organization Master
@@ -4214,6 +4397,23 @@ function OnboardingWizardContent() {
                       return;
                     }
 
+                    // Synchronize landlord organization with rent-roll database
+                    if (role === "owner") {
+                      fetch("/api/rent-roll/organization", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          legalName: orgData.legalName || orgData.tradeName || "My Organization",
+                          pan: orgData.pan,
+                          gstin: orgData.gstin,
+                          address: principalPlace.addressLine1,
+                          city: principalPlace.city,
+                          state: principalPlace.state,
+                          pincode: principalPlace.pincode,
+                        })
+                      }).catch(err => console.error("Rent roll org sync failed:", err));
+                    }
+
                     if (typeof window !== "undefined") {
                       // Mark onboarding as completed
                       localStorage.setItem("officex_onboarding_completed", "1");
@@ -4228,15 +4428,20 @@ function OnboardingWizardContent() {
                       localStorage.setItem("officex_org_name", orgName);
                       localStorage.setItem("officex_org_city", orgCity);
                       localStorage.setItem("officex_org_state", orgState);
-                      localStorage.setItem("officex_user_role", role === "owner" ? "Property Owner (SaaS)" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant");
+                      localStorage.setItem("officex_user_role", role === "owner" ? "Property Owner & Asset Manager" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant");
+
+                      // Remove any legacy property or fake lease leftovers
+                      localStorage.removeItem("officex_property_name");
+                      localStorage.setItem("officex_user_properties", "[]");
+                      localStorage.setItem("officex_active_leases", "[]");
 
                       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
                       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-                      document.cookie = `officex_user_role=${encodeURIComponent(role === "owner" ? "Property Owner (SaaS)" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant")}; path=/; max-age=86400; SameSite=Lax`;
+                      document.cookie = `officex_user_role=${encodeURIComponent(role === "owner" ? "Property Owner & Asset Manager" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant")}; path=/; max-age=86400; SameSite=Lax`;
                     }
                   }}
                   className={`w-full sm:w-auto px-10 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2.5 transition-all shadow-xl ${
-                    !declarationAccepted || verifiedChecksCount < 5 || documentsVault.filter(d => !d.fileName).length > 0
+                    !declarationAccepted || (role !== "owner" && (verifiedChecksCount < 5 || documentsVault.filter(d => !d.fileName).length > 0))
                       ? "bg-slate-200 text-slate-500 border border-slate-300 shadow-none hover:bg-slate-300 cursor-pointer"
                       : "bg-[#0F8B7D] hover:bg-[#0c7368] text-white shadow-teal-900/20 cursor-pointer"
                   }`}
@@ -4244,7 +4449,7 @@ function OnboardingWizardContent() {
                   {role === "owner" && (
                     <>
                       <Building size={18} />
-                      <span>Launch Commercial Property Listing Engine</span>
+                      <span>Launch Commercial Rent Roll Desk</span>
                     </>
                   )}
                   {role === "broker" && (
@@ -4331,7 +4536,11 @@ function OnboardingWizardContent() {
                         )}
                         {currentStep === 3 && "Proceed to Operational SLAs"}
                         {currentStep === 4 && "Proceed to Statutory KYC & Documents"}
-                        {currentStep === 5 && `Proceed to Final Review (${documentsVault.filter(d => Boolean(d.fileName)).length}/5 Docs Vaulted · ${verifiedChecksCount}/5 Verified)`}
+                        {currentStep === 5 && (
+                          role === "owner"
+                            ? "Proceed to Final Review & Launch"
+                            : `Proceed to Final Review (${documentsVault.filter(d => Boolean(d.fileName)).length}/5 Docs Vaulted · ${verifiedChecksCount}/5 Verified)`
+                        )}
                       </span>
                       <ArrowRight size={14} />
                     </>

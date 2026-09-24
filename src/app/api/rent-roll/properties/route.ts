@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
 import { getRentRollDb, saveRentRollDb, PropertyEntity } from "@/lib/rent-roll-store";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    const ownerUserId = searchParams.get("ownerUserId")?.trim();
+
     const db = getRentRollDb();
-    const properties = db.properties.map(p => {
+
+    // Exclude any legacy dummy properties if ever present
+    const cleanDbProps = db.properties.filter(p => {
+      const lower = (p.name || "").toLowerCase().trim();
+      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
+    });
+
+    const scopedProps = (ownerEmail || ownerUserId)
+      ? cleanDbProps.filter(p => 
+          (ownerEmail && (p.ownerEmail || "").toLowerCase().trim() === ownerEmail) ||
+          (ownerUserId && p.ownerUserId === ownerUserId)
+        )
+      : cleanDbProps;
+
+    const properties = scopedProps.map(p => {
       const propLeases = db.leases.filter(l => l.propertyId === p.id && (l.status === "active" || l.status === "under_notice"));
       const occupiedArea = propLeases.reduce((sum, l) => sum + l.chargeableArea, 0);
       const occupancyPct = p.totalArea > 0 ? Math.round((occupiedArea / p.totalArea) * 1000) / 10 : 0;
@@ -32,7 +50,22 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, type, address, city, state, microMarket, pincode, grade, totalArea, chargeableArea, assetValue } = body;
+    const {
+      name,
+      type,
+      address,
+      city,
+      state,
+      microMarket,
+      pincode,
+      grade,
+      totalArea,
+      chargeableArea,
+      assetValue,
+      ownerEmail,
+      ownerUserId,
+      ownerName
+    } = body;
     if (!name) {
       return NextResponse.json({ error: "Property name is required" }, { status: 400 });
     }
@@ -52,6 +85,9 @@ export async function POST(req: Request) {
       chargeableArea: Number(chargeableArea) || Number(totalArea) || 50000,
       occupancyTargetPct: 95,
       assetValue: Number(assetValue) || 0,
+      ownerEmail: ownerEmail || "",
+      ownerUserId: ownerUserId || "",
+      ownerName: ownerName || "",
     };
     db.properties.push(newProp);
     saveRentRollDb(db);

@@ -49,6 +49,52 @@ import { ApplyEscalationModal } from "@/components/rent-roll/ApplyEscalationModa
 import { ManagePropertiesModal } from "@/components/rent-roll/ManagePropertiesModal";
 import { DeletePropertyModal } from "@/components/rent-roll/DeletePropertyModal";
 
+const SEED_PROP_IDS = new Set([
+  "prop-1",
+  "prop-2",
+  "prop-3",
+  "401f394a-6d27-4c23-9a21-411baa7eef3b",
+  "cfa13505-71a5-4a43-be33-37497f416fdc",
+  "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
+  "PROP-8841",
+  "PROP-FORTUNE-SKY",
+  "PROP-001",
+  "PROP-1790239048961"
+]);
+
+const SEED_PROP_NAMES = new Set([
+  "fortune sky",
+  "apex horizon tower",
+  "signature tower b",
+  "eka club",
+  "business hub",
+  "shivalik shilp",
+  "apex business tower",
+  "apex commercial tower",
+  "meridian tech park",
+  "nexus hub",
+  "maker maxity",
+  "godrej bkc horizon"
+]);
+
+const isSeedProperty = (p: any) => {
+  if (!p) return true;
+  if (SEED_PROP_IDS.has(p.id)) return true;
+  const name = (p.name || p.propertyName || "").trim().toLowerCase();
+  if (SEED_PROP_NAMES.has(name)) return true;
+  if (name.includes("fortune sky") || name.includes("apex horizon") || name.includes("signature tower b")) return true;
+  return false;
+};
+
+const isSeedLeaseItem = (l: any) => {
+  if (!l) return true;
+  const propName = (l.propertyName || l.buildingName || "").toLowerCase();
+  const tenant = (l.tenantName || "").toLowerCase();
+  if (propName.includes("fortune sky") || propName.includes("apex horizon") || propName.includes("signature tower b")) return true;
+  if (tenant.includes("nexus enterprise") || tenant.includes("tata consultancy") || tenant.includes("hdfc bank corporate")) return true;
+  return false;
+};
+
 function RentRollPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -242,8 +288,12 @@ function RentRollPageInner() {
           localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
         } catch {}
         const mergedMap = new Map();
-        serverProps.forEach((p: any) => mergedMap.set(p.id, p));
-        localProps.forEach((p: any) => mergedMap.set(p.id, p));
+        serverProps.forEach((p: any) => {
+          if (!isSeedProperty(p)) mergedMap.set(p.id, p);
+        });
+        localProps.forEach((p: any) => {
+          if (!isSeedProperty(p)) mergedMap.set(p.id, p);
+        });
         setProperties(Array.from(mergedMap.values()));
       }
       if (leasesRes.ok) {
@@ -253,8 +303,12 @@ function RentRollPageInner() {
           localLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
         } catch {}
         const mergedMap = new Map();
-        serverLeases.forEach((l: any) => mergedMap.set(l.id || l.tenantName, l));
-        localLeases.forEach((l: any) => mergedMap.set(l.id || l.tenantName, l));
+        serverLeases.forEach((l: any) => {
+          if (!isSeedLeaseItem(l)) mergedMap.set(l.id || l.tenantName, l);
+        });
+        localLeases.forEach((l: any) => {
+          if (!isSeedLeaseItem(l)) mergedMap.set(l.id || l.tenantName, l);
+        });
         setLeases(Array.from(mergedMap.values()));
       }
       if (dashRes.ok) setDashboardData(await dashRes.json());

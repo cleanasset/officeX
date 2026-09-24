@@ -261,6 +261,9 @@ export async function POST(req: Request) {
           totalArea: parseFloat(String(totalArea)) || 50000,
           chargeableArea: parseFloat(String(totalArea)) || 50000,
           occupancyTargetPct: 95,
+          ownerName: ownerName || createdProperty.ownerName || "",
+          ownerUserId: ownerUserId || createdProperty.ownerUserId || "",
+          ownerEmail: body.contactEmail || body.ownerEmail || "",
           imageUrl: createdProperty.imageUrl,
           assetValue: 0
         });
@@ -307,9 +310,25 @@ export async function DELETE(req: Request) {
       console.warn("Could not delete user properties:", e);
     }
 
+    // Delete from Rent Roll Store database
+    try {
+      const { getRentRollDb, saveRentRollDb } = await import("@/lib/rent-roll-store");
+      const rDb = getRentRollDb();
+      rDb.properties = rDb.properties.filter(p => p.id !== id);
+      rDb.spaces = rDb.spaces.filter(s => s.propertyId !== id);
+      const removedLeases = new Set(rDb.leases.filter(l => l.propertyId === id).map(l => l.id));
+      rDb.leases = rDb.leases.filter(l => l.propertyId !== id);
+      rDb.escalations = rDb.escalations.filter(e => !removedLeases.has(e.leaseId));
+      rDb.invoices = rDb.invoices.filter(i => i.propertyId !== id && !removedLeases.has(i.leaseId));
+      rDb.expenses = rDb.expenses.filter(e => e.propertyId !== id);
+      saveRentRollDb(rDb);
+    } catch (e) {
+      console.warn("Rent roll store sync delete note:", e);
+    }
+
     // Delete property from database
     await db.delete(properties).where(eq(properties.id, id));
-    return NextResponse.json({ success: true, message: "Property listing deleted successfully" });
+    return NextResponse.json({ success: true, message: "Property deleted successfully" });
   } catch (error: any) {
     console.error("Property deletion error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

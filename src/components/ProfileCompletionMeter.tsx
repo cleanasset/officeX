@@ -20,17 +20,16 @@ export default function ProfileCompletionMeter({
     pendingActions: string[];
     statusLabel: string;
   }>({
-    completionPercentage: 70,
+    completionPercentage: 20,
     isFullyVerified: false,
     breakdown: [
-      { category: "Contact Verification", weight: 15, completed: true, actionHint: "Email & mobile OTP verified" },
-      { category: "Organization Master", weight: 25, completed: true, actionHint: "Entity legal details provided" },
-      { category: "Role Business Profile", weight: 30, completed: true, actionHint: "Operating parameters saved" },
-      { category: "KYC Statutory Evidence", weight: 15, completed: false, actionHint: "Upload official tax / RERA documents" },
-      { category: "Banking & Settlement", weight: 15, completed: false, actionHint: "Verify bank IFSC & cancelled cheque" }
+      { category: "Contact Verification", weight: 20, completed: true, actionHint: "Email & mobile verified" },
+      { category: "Landlord Entity Profile", weight: 35, completed: false, actionHint: "Provide legal entity name, PAN & address" },
+      { category: "Commercial Portfolio", weight: 25, completed: false, actionHint: "Add your first property in dashboard" },
+      { category: "Statutory KYC & Evidence", weight: 20, completed: false, actionHint: "Upload ownership proof & GST cert" }
     ],
-    pendingActions: ["Upload official tax / RERA documents", "Verify bank IFSC & cancelled cheque"],
-    statusLabel: "Partially Verified"
+    pendingActions: ["Provide legal entity name, PAN & address", "Add your first property in dashboard"],
+    statusLabel: "Basic Access"
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -38,9 +37,21 @@ export default function ProfileCompletionMeter({
   useEffect(() => {
     const fetchCompletion = async () => {
       try {
-        const hasOrg = typeof window !== "undefined" && Boolean(localStorage.getItem("officex_org_id"));
+        const hasOrg = typeof window !== "undefined" && Boolean(
+          localStorage.getItem("officex_active_org") ||
+          localStorage.getItem("officex_onboarding_completed") === "1" ||
+          localStorage.getItem("officex_org_id")
+        );
+        const hasProperties = typeof window !== "undefined" && (() => {
+          try {
+            const p = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+            return Array.isArray(p) && p.length > 0;
+          } catch {
+            return false;
+          }
+        })();
         const hasKyc = typeof window !== "undefined" && localStorage.getItem("officex_kyc_status") === "SUBMITTED";
-        const res = await fetch(`/api/v1/profile/completion?role=${role}&hasOrg=${hasOrg}&hasRoleProfile=true&hasKyc=${hasKyc}`);
+        const res = await fetch(`/api/v1/profile/completion?role=${role}&hasOrg=${hasOrg}&hasProperties=${hasProperties}&hasRoleProfile=${hasOrg}&hasKyc=${hasKyc}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -127,11 +138,12 @@ export default function ProfileCompletionMeter({
 
           {/* Calculate dynamic next pending step */}
           {(() => {
-            const orgPending = data.breakdown.find(b => b.category.toLowerCase().includes("organization") && !b.completed);
-            const rolePending = data.breakdown.find(b => (b.category.toLowerCase().includes("role") || b.category.toLowerCase().includes("portfolio")) && !b.completed);
-            const kycPending = data.breakdown.find(b => (b.category.toLowerCase().includes("kyc") || b.category.toLowerCase().includes("evidence") || b.category.toLowerCase().includes("statutory") || b.category.toLowerCase().includes("banking")) && !b.completed);
+            const orgPending = data.breakdown.find(b => (b.category.toLowerCase().includes("organization") || b.category.toLowerCase().includes("landlord")) && !b.completed);
+            const propPending = data.breakdown.find(b => (b.category.toLowerCase().includes("portfolio") || b.category.toLowerCase().includes("property")) && !b.completed);
+            const kycPending = data.breakdown.find(b => (b.category.toLowerCase().includes("kyc") || b.category.toLowerCase().includes("evidence")) && !b.completed);
             
-            const nextStepNum = orgPending ? 2 : rolePending ? 3 : kycPending ? 5 : 2;
+            const nextHref = orgPending ? `/onboarding?role=${encodeURIComponent(role)}&step=2` : propPending ? "/properties/add" : kycPending ? `/onboarding?role=${encodeURIComponent(role)}&step=5` : "/properties/rent-roll";
+            const nextLabel = orgPending ? "Complete Onboarding (Step 2)" : propPending ? "Add First Property" : kycPending ? "Upload KYC Evidence" : "View Portfolio";
 
             return (
               <div className="pt-2 flex items-center justify-between">
@@ -139,10 +151,10 @@ export default function ProfileCompletionMeter({
                   {data.pendingActions.length > 0 ? `Next step: ${data.pendingActions[0]}` : "All mandatory items verified"}
                 </span>
                 <Link
-                  href={`/onboarding?role=${encodeURIComponent(role)}&step=${nextStepNum}`}
+                  href={nextHref}
                   className="text-[11px] font-black text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
                 >
-                  <span>Resume Onboarding (Step {nextStepNum})</span>
+                  <span>{nextLabel}</span>
                   <ArrowRight size={12} />
                 </Link>
               </div>

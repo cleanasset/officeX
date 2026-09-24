@@ -284,8 +284,8 @@ export default function RentRollPaymentModal({
     setSuccessMsg(null);
 
     const redirectUrl = typeof window !== "undefined"
-      ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`
-      : "http://localhost:3000/login?context=rent-roll&redirect=/properties/rent-roll";
+      ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent("/onboarding?role=owner")}`
+      : "http://localhost:3000/login?context=rent-roll&redirect=/onboarding?role=owner";
 
     // In Sign-In mode: authenticate directly with Google
     if (mode === "signin") {
@@ -392,7 +392,7 @@ export default function RentRollPaymentModal({
     }
   };
 
-  // Complete Onboarding & Save Landlord Profile to Storage & Database
+  // Complete Landlord Account Setup & Route to Onboarding Form
   const completeLandlordOnboarding = async (
     targetEmail: string,
     targetName: string,
@@ -405,28 +405,14 @@ export default function RentRollPaymentModal({
     const cleanName = targetName.trim() || "Commercial Landlord";
     const cleanCity = targetCity.trim() || "Mumbai";
     const cleanPhone = targetPhone.trim();
-    const cleanPortfolioName = `${cleanName}'s Commercial Portfolio`;
-
-    const userProp = {
-      id: `prop-${Date.now()}`,
-      name: cleanPortfolioName,
-      type: "Commercial Office",
-      city: cleanCity,
-      state: cleanCity.toLowerCase().includes("delhi") ? "Delhi" : (cleanCity.toLowerCase().includes("gurgaon") || cleanCity.toLowerCase().includes("gurugram")) ? "Haryana" : cleanCity.toLowerCase().includes("noida") ? "Uttar Pradesh" : cleanCity.toLowerCase().includes("mumbai") ? "Maharashtra" : "India",
-      totalArea: 25000,
-      grade: "Grade A",
-      inviteCode: `OX-${Math.floor(1000 + Math.random() * 9000)}`,
-      ownerName: cleanName,
-      createdAt: new Date().toISOString()
-    };
 
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_user_name", cleanName);
       sessionStorage.setItem("officex_user_name", cleanName);
       localStorage.setItem("officex_user_email", cleanEmail);
       sessionStorage.setItem("officex_user_email", cleanEmail);
-      localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
-      sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+      localStorage.setItem("officex_user_role", "Property Owner & Commercial Landlord");
+      sessionStorage.setItem("officex_user_role", "Property Owner & Commercial Landlord");
 
       if (cleanPhone) {
         localStorage.setItem("officex_user_phone", cleanPhone);
@@ -435,10 +421,8 @@ export default function RentRollPaymentModal({
         sessionStorage.setItem("officex_user_mobile", cleanPhone);
       }
 
-      localStorage.setItem("officex_property_name", cleanPortfolioName);
+      localStorage.setItem("officex_user_city", cleanCity);
       localStorage.setItem("officex_property_city", cleanCity);
-      localStorage.setItem("officex_active_org", `${cleanName} Commercial Holdings`);
-      localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
       localStorage.setItem("officex_dashboard", "/properties/rent-roll");
 
       // Subscription permanent persistence
@@ -449,62 +433,22 @@ export default function RentRollPaymentModal({
       document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=31536000; SameSite=Lax`;
       document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
 
-      // Session flags
+      // Session flags - Ensure onboarding is marked pending until form is completed
       localStorage.setItem("officex_session_active", "1");
       sessionStorage.setItem("officex_session_active", "1");
-      localStorage.setItem("officex_onboarding_completed", "1");
+      localStorage.removeItem("officex_onboarding_completed");
+      sessionStorage.removeItem("officex_onboarding_completed");
       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
 
-      // Seed initial active lease so dashboard has immediate customized data
-      let existingLeases = [];
-      try {
-        existingLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
-      } catch {}
-      if (existingLeases.length === 0) {
-        localStorage.setItem("officex_active_leases", JSON.stringify([
-          {
-            id: `LEASE-${Date.now()}`,
-            tenantName: "Nexus Enterprise Technologies",
-            propertyName: cleanPortfolioName,
-            unitNumber: "Tower 1 · Suite 402",
-            floorNumber: 4,
-            chargeableArea: 8500,
-            monthlyRent: 595000,
-            camRate: 18,
-            monthlyCam: 153000,
-            totalMonthlyGross: 748000,
-            escalationPct: 5,
-            leaseStartDate: "2025-04-01",
-            leaseEndDate: "2028-03-31",
-            status: "active",
-            lockInMonths: 36,
-            securityDeposit: 3570000,
-            paymentMode: "RTGS Escrow",
-            gstNumber: "27AABCN1234F1Z5"
-          }
-        ]));
-      }
+      // Clean slate: ZERO dummy properties and ZERO fake leases
+      localStorage.setItem("officex_user_properties", "[]");
+      localStorage.setItem("officex_active_leases", "[]");
+      localStorage.removeItem("officex_property_name");
+      localStorage.removeItem("officex_active_org");
 
       localStorage.setItem("officex_payment_id", paymentId);
       localStorage.setItem("officex_order_id", `ORD_${paymentId}`);
-    }
-
-    // Call server to persist property in database
-    try {
-      await fetch("/api/rent-roll/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: cleanPortfolioName,
-          type: "Commercial Office",
-          city: cleanCity,
-          state: cleanCity.toLowerCase().includes("delhi") ? "Delhi" : (cleanCity.toLowerCase().includes("gurgaon") || cleanCity.toLowerCase().includes("gurugram")) ? "Haryana" : cleanCity.toLowerCase().includes("noida") ? "Uttar Pradesh" : "Maharashtra",
-          totalArea: 25000
-        })
-      });
-    } catch (e) {
-      console.warn("Property sync note:", e);
     }
 
     // Call server to persist subscription status
@@ -564,10 +508,10 @@ export default function RentRollPaymentModal({
         `FREE_RENTROLL12_${Date.now()}`,
         "RENTROLL12"
       );
-      setSuccessMsg("🎉 Account created & 100% Free Subscription Activated! Launching Rent Roll dashboard...");
+      setSuccessMsg("🎉 Account created & 100% Free Subscription Activated! Launching Property Owner Onboarding...");
       setTimeout(() => {
         onClose();
-        router.push("/properties/rent-roll");
+        router.push("/onboarding?role=owner");
       }, 1000);
       return;
     }
@@ -597,10 +541,10 @@ export default function RentRollPaymentModal({
             response.razorpay_payment_id,
             appliedCoupon || "none"
           );
-          setSuccessMsg("Payment successful! Your commercial account and dashboard are ready...");
+          setSuccessMsg("Payment successful! Launching Property Owner Onboarding...");
           setTimeout(() => {
             onClose();
-            router.push("/properties/rent-roll");
+            router.push("/onboarding?role=owner");
           }, 1000);
         },
         onFailure: (err) => {

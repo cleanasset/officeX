@@ -42,6 +42,9 @@ export interface PropertyEntity {
   occupancyTargetPct: number;
   imageUrl?: string;
   assetValue?: number; // for Cap Rate calculation
+  ownerEmail?: string;
+  ownerUserId?: string;
+  ownerName?: string;
 }
 
 export interface SpaceEntity {

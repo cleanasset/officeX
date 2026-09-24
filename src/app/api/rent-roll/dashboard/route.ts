@@ -16,10 +16,14 @@ export async function GET(req: Request) {
     const propertyId = searchParams.get("propertyId");
 
     const db = getRentRollDb();
-    let leases = db.leases;
-    let properties = db.properties;
-    let invoices = db.invoices;
-    let expenses = db.expenses;
+    let properties = db.properties.filter(p => {
+      const lower = (p.name || "").toLowerCase().trim();
+      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
+    });
+    const validPropIds = new Set(properties.map(p => p.id));
+    let leases = db.leases.filter(l => validPropIds.has(l.propertyId));
+    let invoices = db.invoices.filter(i => validPropIds.has(i.propertyId));
+    let expenses = db.expenses.filter(e => validPropIds.has(e.propertyId));
 
     if (propertyId && propertyId !== "ALL") {
       leases = leases.filter(l => l.propertyId === propertyId);
