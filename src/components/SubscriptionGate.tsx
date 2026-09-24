@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
+import { supabase } from "@/lib/supabase";
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
@@ -27,6 +28,8 @@ export default function SubscriptionGate({
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [buildingName, setBuildingName] = useState("");
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentToast, setPaymentToast] = useState<string | null>(null);
 
@@ -152,6 +155,8 @@ export default function SubscriptionGate({
   const handleActivateSubscription = async () => {
     setIsPaymentProcessing(true);
     const email = (userEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "").trim().toLowerCase();
+    const effectiveName = (userName || ownerName || "Commercial Landlord").trim();
+    const effectiveBuilding = (buildingName || (typeof window !== "undefined" ? localStorage.getItem("officex_property_name") : "") || "Commercial Asset Tower").trim();
 
     if (!email) {
       setPaymentToast("Please provide your work email above to activate subscription.");
@@ -159,6 +164,29 @@ export default function SubscriptionGate({
       setIsPaymentProcessing(false);
       return;
     }
+
+    // Persist onboarding details
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_name", effectiveName);
+      sessionStorage.setItem("officex_user_name", effectiveName);
+      localStorage.setItem("officex_property_name", effectiveBuilding);
+      sessionStorage.setItem("officex_property_name", effectiveBuilding);
+      localStorage.setItem("officex_onboarding_completed", "1");
+    }
+
+    try {
+      fetch("/api/rent-roll/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: effectiveBuilding,
+          type: "Commercial Office",
+          city: "Mumbai",
+          state: "Maharashtra",
+          totalArea: 25000
+        })
+      }).catch(() => {});
+    } catch {}
 
     // If 100% Discounted (RENTROLL12) — Instant One-Click Free Activation
     if (is100PercentDiscount) {
@@ -319,26 +347,85 @@ export default function SubscriptionGate({
               </div>
             </div>
           ) : (
-            <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-4 my-5 shadow-xs">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">
-                    Commercial Landlord Subscription
-                  </span>
-                  <Link
-                    href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
-                    className="text-xs font-bold text-[#0F8B7D] hover:underline"
-                  >
-                    Already Subscribed? Sign In
-                  </Link>
+            <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-4 my-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">
+                  New Landlord Onboarding &amp; Subscription
+                </span>
+                <Link
+                  href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
+                  className="text-xs font-bold text-[#0F8B7D] hover:underline"
+                >
+                  Already Subscribed? Sign In
+                </Link>
+              </div>
+
+              {/* Google 1-Click Button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const redirectUrl = typeof window !== "undefined"
+                      ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`
+                      : "http://localhost:3000/login";
+                    await supabase.auth.signInWithOAuth({
+                      provider: "google",
+                      options: { redirectTo: redirectUrl }
+                    });
+                  } catch (e) {
+                    console.error("Google auth error:", e);
+                  }
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs transition-all flex items-center justify-center gap-2.5 shadow-2xs cursor-pointer"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    Your Full Name (Owner / Manager) *
+                  </label>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="e.g. Rajesh Sharma"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
+                    required
+                  />
                 </div>
-                <label className="text-xs font-bold text-slate-700">Enter your work email to activate access:</label>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    Commercial Building Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={buildingName}
+                    onChange={(e) => setBuildingName(e.target.value)}
+                    placeholder="e.g. Apex Commercial Tower"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                  Work Email Address *
+                </label>
                 <input
                   type="email"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
                   placeholder="e.g. landlord@commercial.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
                   required
                 />
               </div>

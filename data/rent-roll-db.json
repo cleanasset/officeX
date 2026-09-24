@@ -42,6 +42,22 @@
       "totalArea": 13000,
       "chargeableArea": 13000,
       "occupancyTargetPct": 90
+    },
+    {
+      "id": "PROP-1790239048961",
+      "orgId": "org-officex-default",
+      "name": "Signature Tower B",
+      "type": "Commercial Office",
+      "address": "Commercial Business District",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "microMarket": "Bengaluru",
+      "pincode": "400001",
+      "grade": "A",
+      "totalArea": 35000,
+      "chargeableArea": 35000,
+      "occupancyTargetPct": 95,
+      "assetValue": 0
     }
   ],
   "spaces": [],

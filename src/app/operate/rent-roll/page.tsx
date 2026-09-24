@@ -37,6 +37,7 @@ export default function RentRollProductPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentModalMode, setPaymentModalMode] = useState<"onboard" | "signin">("onboard");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -163,7 +164,14 @@ export default function RentRollProductPage() {
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
       <MarketingHeader
         activePath="/operate/rent-roll"
-        onSignInClick={() => isSubscribed ? router.push("/properties/rent-roll") : setPaymentModalOpen(true)}
+        onSignInClick={() => {
+          if (isSubscribed) {
+            router.push("/properties/rent-roll");
+          } else {
+            setPaymentModalMode("signin");
+            setPaymentModalOpen(true);
+          }
+        }}
       />
 
       {/* ── Breadcrumb Bar ── */}
@@ -226,7 +234,10 @@ export default function RentRollProductPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setPaymentModalOpen(true)}
+                    onClick={() => {
+                      setPaymentModalMode("onboard");
+                      setPaymentModalOpen(true);
+                    }}
                     className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:shadow-[#0D7B6C]/35 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                   >
                     <CreditCard size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
@@ -245,7 +256,10 @@ export default function RentRollProductPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setPaymentModalOpen(true)}
+                    onClick={() => {
+                      setPaymentModalMode("onboard");
+                      setPaymentModalOpen(true);
+                    }}
                     className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                   >
                     <span>Explore Live Demo (Subscription Required)</span>
@@ -590,7 +604,10 @@ export default function RentRollProductPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setPaymentModalOpen(true)}
+                      onClick={() => {
+                        setPaymentModalMode("onboard");
+                        setPaymentModalOpen(true);
+                      }}
                       className="w-full py-3.5 px-6 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
                     >
                       <CreditCard size={15} className="text-teal-200 group-hover:scale-110 transition-transform" />
@@ -654,7 +671,10 @@ export default function RentRollProductPage() {
             ) : (
               <button
                 type="button"
-                onClick={() => setPaymentModalOpen(true)}
+                onClick={() => {
+                  setPaymentModalMode("onboard");
+                  setPaymentModalOpen(true);
+                }}
                 className="px-6 py-3.5 bg-teal-900/60 hover:bg-teal-900 text-teal-100 font-semibold rounded-xl text-xs sm:text-sm border border-teal-400/20 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Explore Live Demo (Subscription Required)</span>
@@ -676,6 +696,7 @@ export default function RentRollProductPage() {
       {/* Rent Roll Dedicated Payment Gateway Modal */}
       <RentRollPaymentModal
         isOpen={paymentModalOpen}
+        initialMode={paymentModalMode}
         onClose={() => setPaymentModalOpen(false)}
       />
     </div>
