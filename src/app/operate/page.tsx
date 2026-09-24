@@ -135,7 +135,7 @@ export default function OperatePage() {
       {/* ═══════════════════════════════════════════════════════════
           1. HERO SECTION — Sunlit High-Tech SaaS Operations Command Center
           ═══════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-[560px] sm:min-h-[600px] lg:min-h-[640px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-12 sm:pt-16 pb-12 sm:pb-16 bg-[#F8FAFC] border-b border-slate-200/80">
+      <section className="relative min-h-[600px] sm:min-h-[640px] lg:min-h-[680px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 sm:pt-14 pb-10 sm:pb-14 bg-[#F8FAFC] border-b border-slate-200/80">
         {/* Background Banner Image — Displays All 6 SaaS Modules on Holographic Glass Displays */}
         <div className="absolute inset-0 z-0 pointer-events-none select-none">
           <Image
@@ -148,11 +148,11 @@ export default function OperatePage() {
           />
 
           {/* Clean Optical Clarity Scrim: Enhances text readability across the center frosted partition while keeping all 6 SaaS screens 100% sharp and readable */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_65%_at_50%_44%,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.50)_50%,transparent_100%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_75%_at_50%_50%,rgba(255,255,255,0.90)_0%,rgba(255,255,255,0.60)_55%,transparent_100%)] pointer-events-none" />
         </div>
 
         {/* Hero Content — Centered Perfectly Between the 6 SaaS Displays */}
-        <div className="relative z-10 max-w-2xl lg:max-w-[680px] mx-auto w-full px-4 sm:px-6 text-center flex flex-col items-center">
+        <div className="relative z-10 max-w-2xl lg:max-w-[700px] mx-auto w-full px-4 sm:px-6 text-center flex flex-col items-center">
           {/* Eyebrow Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-teal-200/90 text-[#0D7B6C] text-xs sm:text-sm font-extrabold tracking-wide mb-4 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-[#0D7B6C] animate-pulse shrink-0" />
@@ -166,13 +166,13 @@ export default function OperatePage() {
           </h1>
 
           {/* Subheadline */}
-          <p className="max-w-xl mx-auto text-xs sm:text-sm md:text-base text-slate-700 font-semibold leading-relaxed mb-7">
+          <p className="max-w-xl mx-auto text-xs sm:text-sm md:text-base text-slate-700 font-semibold leading-relaxed mb-6">
             One unified institutional platform for 52-week automated PPM, tenant rent roll,
             turnstile speed-gates, lease dealflow, and statutory compliance.
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-6">
             <a
               href="#saas-modules"
               className="px-6 py-3 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg inline-flex items-center gap-2 group cursor-pointer"
@@ -188,17 +188,48 @@ export default function OperatePage() {
             </button>
           </div>
 
-          {/* Enterprise Client Trust Strip */}
-          <div className="pt-4 text-center">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2.5">
-              TRUSTED BY ASSET MANAGERS &amp; OPERATORS ACROSS 15M+ SQ.FT
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-5 sm:gap-8 text-xs sm:text-sm font-black tracking-wider text-slate-800">
-              <span className="hover:text-[#0D7B6C] transition-colors">PRESTIGE GROUP</span>
-              <span className="hover:text-[#0D7B6C] transition-colors">BRIGADE TECH</span>
-              <span className="hover:text-[#0D7B6C] transition-colors">EMBASSY PARKS</span>
-              <span className="hover:text-[#0D7B6C] transition-colors">BROOKFIELD</span>
-              <span className="hover:text-[#0D7B6C] transition-colors">MINDSPACE REIT</span>
+          {/* SaaS Modules Quick Navigation — Icons & Names */}
+          <div className="w-full mb-6">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+              {productTabs.map((product) => {
+                const Icon = product.icon;
+                return (
+                  <a
+                    key={product.id}
+                    href={`#${product.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById(product.id)?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/90 hover:bg-white border border-slate-200/90 hover:border-[#0D7B6C] shadow-2xs hover:shadow-md text-slate-800 hover:text-[#0D7B6C] text-xs font-bold transition-all duration-200 backdrop-blur-md group cursor-pointer"
+                  >
+                    <div className="w-5 h-5 rounded-md bg-teal-50 group-hover:bg-[#0D7B6C] text-[#0D7B6C] group-hover:text-white flex items-center justify-center transition-all duration-200 shrink-0">
+                      <Icon size={12} className="stroke-[2.5]" />
+                    </div>
+                    <span className="whitespace-nowrap">{product.name}</span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Enterprise Client Trust Badge */}
+          <div className="w-full text-center">
+            <div className="inline-flex flex-col items-center px-5 sm:px-7 py-2.5 sm:py-3 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-2xs">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-1.5">
+                TRUSTED BY ASSET MANAGERS &amp; OPERATORS ACROSS 15M+ SQ.FT
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-x-3.5 sm:gap-x-5 gap-y-1 text-[11px] sm:text-xs font-black tracking-wider text-slate-700">
+                <span className="hover:text-[#0D7B6C] transition-colors">PRESTIGE GROUP</span>
+                <span className="text-slate-300 select-none">•</span>
+                <span className="hover:text-[#0D7B6C] transition-colors">BRIGADE TECH</span>
+                <span className="text-slate-300 select-none">•</span>
+                <span className="hover:text-[#0D7B6C] transition-colors">EMBASSY PARKS</span>
+                <span className="text-slate-300 select-none">•</span>
+                <span className="hover:text-[#0D7B6C] transition-colors">BROOKFIELD</span>
+                <span className="text-slate-300 select-none">•</span>
+                <span className="hover:text-[#0D7B6C] transition-colors">MINDSPACE REIT</span>
+              </div>
             </div>
           </div>
         </div>
