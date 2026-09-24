@@ -62,11 +62,14 @@ export default function PropertyDashboardClient({
   // Primary data synchronization from real backend APIs
   const loadDashboardData = async () => {
     setIsLoading(true);
+    const email = (typeof window !== "undefined" && (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email"))) || "";
+    const emailQuery = email ? `?ownerEmail=${encodeURIComponent(email)}` : "";
+
     try {
       const [propsRes, leasesRes, dashRes] = await Promise.all([
-        fetch("/api/rent-roll/properties"),
-        fetch("/api/rent-roll/leases"),
-        fetch("/api/rent-roll/dashboard")
+        fetch(`/api/rent-roll/properties${emailQuery}`),
+        fetch(`/api/rent-roll/leases${emailQuery}`),
+        fetch(`/api/rent-roll/dashboard${emailQuery}`)
       ]);
 
       if (propsRes.ok) {

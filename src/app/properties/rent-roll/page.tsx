@@ -48,6 +48,7 @@ import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
 import { ApplyEscalationModal } from "@/components/rent-roll/ApplyEscalationModal";
 import { ManagePropertiesModal } from "@/components/rent-roll/ManagePropertiesModal";
 import { DeletePropertyModal } from "@/components/rent-roll/DeletePropertyModal";
+import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal";
 
 const SEED_PROP_IDS = new Set([
   "prop-1",
@@ -174,6 +175,7 @@ function RentRollPageInner() {
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState<boolean>(false);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
   const [isAddTenantOpen, setIsAddTenantOpen] = useState<boolean>(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   // Logged-in Landlord identity state
   const [userInfo, setUserInfo] = useState({
@@ -247,9 +249,19 @@ function RentRollPageInner() {
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const propQuery = selectedProperty !== "ALL" ? `?propertyId=${selectedProperty}` : "";
-      const statusQuery = selectedStatus !== "ALL" ? `&status=${selectedStatus}` : "";
-      const searchQueryParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : "";
+      const email = typeof window !== "undefined"
+        ? (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "")
+        : "";
+      const emailParam = email ? `ownerEmail=${encodeURIComponent(email)}` : "";
+
+      const propParam = selectedProperty !== "ALL" ? `propertyId=${encodeURIComponent(selectedProperty)}` : "";
+      const statusParam = selectedStatus !== "ALL" ? `status=${encodeURIComponent(selectedStatus)}` : "";
+      const searchParam = searchQuery ? `search=${encodeURIComponent(searchQuery)}` : "";
+
+      const makeQuery = (extra: string[] = []) => {
+        const parts = [emailParam, ...extra].filter(Boolean);
+        return parts.length > 0 ? `?${parts.join("&")}` : "";
+      };
 
       const [
         propRes,
@@ -266,19 +278,19 @@ function RentRollPageInner() {
         auditRes,
         alertRes
       ] = await Promise.all([
-        fetch("/api/rent-roll/properties"),
-        fetch(`/api/rent-roll/leases${propQuery}${statusQuery}${searchQueryParam}`),
-        fetch(`/api/rent-roll/dashboard${propQuery}`),
-        fetch(`/api/rent-roll/invoices${propQuery}`),
-        fetch(`/api/rent-roll/collections${propQuery}`),
-        fetch(`/api/rent-roll/escalations${propQuery}`),
-        fetch(`/api/rent-roll/aging${propQuery}`),
-        fetch(`/api/rent-roll/occupancy${propQuery}`),
-        fetch(`/api/rent-roll/forecast${propQuery}`),
-        fetch(`/api/rent-roll/pnl${propQuery}`),
-        fetch(`/api/rent-roll/tenants`),
-        fetch(`/api/rent-roll/audit`),
-        fetch(`/api/rent-roll/alerts`)
+        fetch(`/api/rent-roll/properties${makeQuery()}`),
+        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam])}`),
+        fetch(`/api/rent-roll/dashboard${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/invoices${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/collections${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/escalations${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/aging${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/occupancy${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/forecast${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/pnl${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/tenants${makeQuery()}`),
+        fetch(`/api/rent-roll/audit${makeQuery()}`),
+        fetch(`/api/rent-roll/alerts${makeQuery()}`)
       ]);
 
       if (propRes.ok) {
@@ -292,7 +304,9 @@ function RentRollPageInner() {
           if (!isSeedProperty(p)) mergedMap.set(p.id, p);
         });
         localProps.forEach((p: any) => {
-          if (!isSeedProperty(p)) mergedMap.set(p.id, p);
+          if (!isSeedProperty(p) && (!p.ownerEmail || (email && p.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+            mergedMap.set(p.id, p);
+          }
         });
         setProperties(Array.from(mergedMap.values()));
       }
@@ -307,7 +321,9 @@ function RentRollPageInner() {
           if (!isSeedLeaseItem(l)) mergedMap.set(l.id || l.tenantName, l);
         });
         localLeases.forEach((l: any) => {
-          if (!isSeedLeaseItem(l)) mergedMap.set(l.id || l.tenantName, l);
+          if (!isSeedLeaseItem(l) && (!l.ownerEmail || (email && l.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+            mergedMap.set(l.id || l.tenantName, l);
+          }
         });
         setLeases(Array.from(mergedMap.values()));
       }
@@ -442,6 +458,7 @@ function RentRollPageInner() {
         }}
         onOpenAddExpense={() => setIsAddExpenseOpen(true)}
         onOpenAddTenant={() => setIsAddTenantOpen(true)}
+        onOpenImportCsv={() => setIsImportModalOpen(true)}
         onExportCsv={handleExportCsv}
         onRefresh={fetchAllData}
         isLoading={isLoading}
@@ -485,6 +502,9 @@ function RentRollPageInner() {
               setIsRecordPaymentOpen(true);
             }}
             onOpenGenerateInvoices={handleGenerateInvoicesBatch}
+            propertiesCount={properties.length}
+            onOpenAddProperty={() => router.push("/properties/add")}
+            onOpenImportCsv={() => setIsImportModalOpen(true)}
           />
         )}
 
@@ -690,6 +710,14 @@ function RentRollPageInner() {
           }
         }}
         properties={properties}
+      />
+
+      <ImportRentRollModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={fetchAllData}
+        properties={properties}
+        selectedPropertyId={selectedProperty}
       />
 
       <ManagePropertiesModal

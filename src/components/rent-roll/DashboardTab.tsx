@@ -85,6 +85,9 @@ interface DashboardTabProps {
   onNavigateTab: (tab: string) => void;
   onOpenRecordPayment: () => void;
   onOpenGenerateInvoices: () => void;
+  propertiesCount?: number;
+  onOpenAddProperty?: () => void;
+  onOpenImportCsv?: () => void;
 }
 
 export const formatINR = (val: number | undefined | null): string => {
@@ -106,6 +109,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onNavigateTab,
   onOpenRecordPayment,
   onOpenGenerateInvoices,
+  propertiesCount = 0,
+  onOpenAddProperty,
+  onOpenImportCsv,
 }) => {
   if (!data) {
     return (
@@ -120,8 +126,43 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* ──── ONBOARDING EMPTY STATE BANNER (When 0 leases exist) ──── */}
-      {summary.totalLeasesCount === 0 && (
+      {/* ──── ONBOARDING EMPTY STATE BANNER ──── */}
+      {propertiesCount === 0 ? (
+        <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 rounded-2xl p-6 text-white shadow-md border border-teal-800/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                Pristine Portfolio Workspace
+              </span>
+              <span className="text-xs text-teal-200 font-medium">Ready for Your Portfolio Data</span>
+            </div>
+            <h2 className="text-lg md:text-xl font-black text-white">Welcome to your Commercial Rent Roll Desk</h2>
+            <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+              No commercial properties are currently registered in your portfolio. Add your first commercial office building or import your existing Excel rent roll to unlock automated billing, step-up escalations, and NOI analytics.
+            </p>
+          </div>
+          <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+            {onOpenAddProperty && (
+              <button
+                type="button"
+                onClick={onOpenAddProperty}
+                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white text-xs font-black transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>+ Add Commercial Property</span>
+              </button>
+            )}
+            {onOpenImportCsv && (
+              <button
+                type="button"
+                onClick={onOpenImportCsv}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Import Rent Roll (CSV)</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : summary.totalLeasesCount === 0 ? (
         <div className="bg-gradient-to-r from-teal-900 via-[#0F8B7D] to-teal-800 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -130,9 +171,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               </span>
               <span className="text-xs text-teal-100 font-medium">Clean Portfolio Desk</span>
             </div>
-            <h2 className="text-lg md:text-xl font-black">Welcome to your Commercial Rent Roll Desk</h2>
+            <h2 className="text-lg md:text-xl font-black">Register Your Active Tenant Leases</h2>
             <p className="text-xs text-teal-100/90 mt-1 max-w-xl">
-              Your dashboard is active and ready. Click &quot;+ Add New Lease&quot; to record tenant contracts, configure annual rental escalations, and automate monthly GST invoicing.
+              Your property is registered. Click &quot;+ Add First Lease&quot; or &quot;Import Rent Roll (CSV)&quot; to record tenant contracts, configure annual rental escalations, and automate monthly GST invoicing.
             </p>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
@@ -142,15 +183,17 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             >
               <span>+ Add First Lease</span>
             </button>
-            <button
-              onClick={() => onNavigateTab("occupancy")}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>Stacking Plan</span>
-            </button>
+            {onOpenImportCsv && (
+              <button
+                onClick={onOpenImportCsv}
+                className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all border border-white/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Import CSV</span>
+              </button>
+            )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* ──── 8 PRIMARY KPI METRIC CARDS (Excel Dashboard Layout) ──── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

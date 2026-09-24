@@ -60,7 +60,8 @@ export default function PropertyMasterRegistry() {
       let loadedProps: PropertyItem[] = [];
 
       try {
-        const res = await fetch("/api/rent-roll/properties");
+        const emailQuery = email ? `?ownerEmail=${encodeURIComponent(email)}` : "";
+        const res = await fetch(`/api/rent-roll/properties${emailQuery}`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {

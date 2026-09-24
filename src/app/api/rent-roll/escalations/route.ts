@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getRentRollDb, saveRentRollDb, recordAuditLog } from "@/lib/rent-roll-store";
 import { calculateEscalationRent, computeFullLeaseSummary } from "@/lib/rent-roll-engine";
 
@@ -7,9 +8,31 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const propertyId = searchParams.get("propertyId");
+    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
+
+    if (!ownerEmail) {
+      try {
+        const cookieStore = await cookies();
+        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+      } catch {}
+    }
 
     const db = getRentRollDb();
-    let escalations = db.escalations;
+    let properties = db.properties.filter(p => {
+      const lower = (p.name || "").toLowerCase().trim();
+      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
+    });
+
+    if (ownerEmail) {
+      properties = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
+    } else if (!isDemo) {
+      properties = [];
+    }
+
+    const validPropIds = new Set(properties.map(p => p.id));
+    const validLeaseIds = new Set(db.leases.filter(l => validPropIds.has(l.propertyId)).map(l => l.id));
+    let escalations = db.escalations.filter(e => validLeaseIds.has(e.leaseId));
 
     if (status && status !== "ALL") {
       escalations = escalations.filter(e => e.status.toLowerCase() === status.toLowerCase());

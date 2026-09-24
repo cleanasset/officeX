@@ -7,12 +7,8 @@ import {
   User,
   LogOut,
   LayoutDashboard,
-  ShieldAlert,
   ChevronDown,
-  CheckCircle2,
-  Building2,
-  ShieldCheck,
-  Wrench
+  CheckCircle2
 } from "lucide-react";
 
 interface HeaderAuthButtonProps {
@@ -169,7 +165,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200/90 shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
             {/* User Profile Header */}
             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
               <div className="flex items-center justify-between gap-2">
@@ -182,80 +178,35 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
               <p className="text-[11px] font-medium text-slate-500 mt-0.5 truncate">{userRole}</p>
             </div>
 
-            {/* Core Operating SaaS Navigation */}
+            {/* Core User Navigation */}
             <div className="py-1.5 space-y-0.5">
               {/* Go to My Dashboard */}
               <Link
                 href={effectiveDashboardHref}
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
               >
                 <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
                   <LayoutDashboard size={13} className="stroke-[2.2]" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Go to My Dashboard</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Portfolio &amp; Asset Overview</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Portfolio &amp; Workspace</span>
                 </div>
               </Link>
 
-              {/* My Profile & KYC */}
+              {/* My Profile */}
               <Link
                 href="/onboarding"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
               >
                 <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
                   <User size={13} className="stroke-[2.2]" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">My Profile &amp; KYC</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Account &amp; Entity Verification</span>
-                </div>
-              </Link>
-
-              {/* Rent Roll & Billing */}
-              <Link
-                href="/properties/rent-roll"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
-              >
-                <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <Building2 size={13} className="stroke-[2.2]" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Rent Roll &amp; Billing</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Automated Leases &amp; CAM</span>
-                </div>
-              </Link>
-
-              {/* 52-Week PPM Schedule */}
-              <Link
-                href="/ops"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
-              >
-                <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <Wrench size={13} className="stroke-[2.2]" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">52-Week PPM &amp; CAFM</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Preventive Equipment Servicing</span>
-                </div>
-              </Link>
-
-              {/* Compliance Calendar */}
-              <Link
-                href="/compliance"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
-              >
-                <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <ShieldCheck size={13} className="stroke-[2.2]" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Compliance Calendar</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Statutory Licenses &amp; Audits</span>
+                  <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Profile &amp; KYC</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Account &amp; Organization</span>
                 </div>
               </Link>
             </div>

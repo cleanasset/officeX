@@ -608,6 +608,7 @@ export default function SignInForm({
 
       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+      document.cookie = `officex_user_email=${encodeURIComponent(cleanVal)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_user_role=${encodeURIComponent(roleName)}; path=/; max-age=86400; SameSite=Lax`;
     }
 

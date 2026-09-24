@@ -386,6 +386,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
       }
 
       setSuccessMsg("Contact verified! Proceeding to Organization Master (S05/S06)...");

@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getRentRollDb, saveRentRollDb, PropertyEntity } from "@/lib/rent-roll-store";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
     const ownerUserId = searchParams.get("ownerUserId")?.trim();
+    const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
+
+    if (!ownerEmail && !ownerUserId) {
+      try {
+        const cookieStore = await cookies();
+        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+      } catch {}
+    }
 
     const db = getRentRollDb();
 
@@ -15,12 +24,17 @@ export async function GET(req: Request) {
       return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
     });
 
-    const scopedProps = (ownerEmail || ownerUserId)
-      ? cleanDbProps.filter(p => 
-          (ownerEmail && (p.ownerEmail || "").toLowerCase().trim() === ownerEmail) ||
-          (ownerUserId && p.ownerUserId === ownerUserId)
-        )
-      : cleanDbProps;
+    let scopedProps: PropertyEntity[] = [];
+    if (ownerEmail || ownerUserId) {
+      scopedProps = cleanDbProps.filter(p => 
+        (ownerEmail && (p.ownerEmail || "").toLowerCase().trim() === ownerEmail) ||
+        (ownerUserId && p.ownerUserId === ownerUserId)
+      );
+    } else if (isDemo) {
+      scopedProps = cleanDbProps;
+    } else {
+      scopedProps = [];
+    }
 
     const properties = scopedProps.map(p => {
       const propLeases = db.leases.filter(l => l.propertyId === p.id && (l.status === "active" || l.status === "under_notice"));
@@ -69,6 +83,15 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json({ error: "Property name is required" }, { status: 400 });
     }
+
+    let effectiveEmail = (ownerEmail || "").toLowerCase().trim();
+    if (!effectiveEmail) {
+      try {
+        const cookieStore = await cookies();
+        effectiveEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+      } catch {}
+    }
+
     const db = getRentRollDb();
     const newProp: PropertyEntity = {
       id: `PROP-${Date.now()}`,
@@ -85,7 +108,7 @@ export async function POST(req: Request) {
       chargeableArea: Number(chargeableArea) || Number(totalArea) || 50000,
       occupancyTargetPct: 95,
       assetValue: Number(assetValue) || 0,
-      ownerEmail: ownerEmail || "",
+      ownerEmail: effectiveEmail,
       ownerUserId: ownerUserId || "",
       ownerName: ownerName || "",
     };

@@ -312,7 +312,7 @@ export function calculateOccupancy(totalAreaSqft: number, occupiedAreaSqft: numb
   const occupied = occupiedAreaSqft || 0;
   const vacant = Math.max(0, total - occupied);
   const occupancyPct = total > 0 ? round2((occupied / total) * 100) : 0;
-  const vacancyPct = round2(100 - occupancyPct);
+  const vacancyPct = total > 0 ? round2(100 - occupancyPct) : 0;
 
   return {
     totalArea: total,

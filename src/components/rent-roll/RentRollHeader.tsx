@@ -21,7 +21,8 @@ import {
   Sparkles,
   FileSpreadsheet,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  UploadCloud
 } from "lucide-react";
 
 interface RentRollHeaderProps {
@@ -45,6 +46,7 @@ interface RentRollHeaderProps {
   onOpenRecordPayment?: () => void;
   onOpenAddExpense?: () => void;
   onOpenAddTenant?: () => void;
+  onOpenImportCsv?: () => void;
   onExportCsv: (type: string) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -173,7 +175,9 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   const displayBuildingName =
     selectedProperty !== "ALL"
       ? currentSelectedProp?.name || primaryBuildingName || "Selected Property"
-      : primaryBuildingName || (properties[0]?.name ? `${properties[0].name} (+${properties.length - 1} more)` : "Commercial Portfolio");
+      : properties.length === 0
+      ? "No Assets Registered"
+      : primaryBuildingName || (properties[0]?.name ? `${properties[0].name} (+${properties.length - 1} more)` : "Active Portfolio");
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -265,6 +269,18 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                   {unreadAlertsCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* Import CSV Trigger */}
+          {onOpenImportCsv && (
+            <button
+              onClick={onOpenImportCsv}
+              className="px-3 py-2 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0F8B7D] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Bulk Import Rent Roll (Excel / CSV)"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-[#0F8B7D]" />
+              <span>Import CSV</span>
             </button>
           )}
 
