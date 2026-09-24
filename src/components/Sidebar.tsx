@@ -188,6 +188,7 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("properties");
   const [userEmail, setUserEmail] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
   const [orgCity, setOrgCity] = useState<string>("");
   const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({});
@@ -207,7 +208,10 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedEmail = localStorage.getItem("officex_user_email");
+      const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
+      if (storedName) setUserName(storedName);
+
+      const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
       if (storedEmail) setUserEmail(storedEmail);
 
       const saved = localStorage.getItem("officex_active_portal");
@@ -416,10 +420,12 @@ export default function Sidebar() {
         <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-slate-50/80">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
-              {activeRole.roleName[0]}
+              {(userName || userEmail || activeRole.roleName)[0].toUpperCase()}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-extrabold text-gray-900 leading-none truncate">{activeRole.roleName}</span>
+              <span className="text-xs font-extrabold text-gray-900 leading-none truncate">
+                {userName || activeRole.roleName}
+              </span>
               <span className="text-[10px] text-gray-400 mt-1 leading-none font-mono truncate">
                 {userEmail || activeRole.email}
               </span>

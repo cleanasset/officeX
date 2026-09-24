@@ -46,6 +46,8 @@ import { AddExpenseModal } from "@/components/rent-roll/AddExpenseModal";
 import { AlertsModal, AlertNotification } from "@/components/rent-roll/AlertsModal";
 import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
 import { ApplyEscalationModal } from "@/components/rent-roll/ApplyEscalationModal";
+import { ManagePropertiesModal } from "@/components/rent-roll/ManagePropertiesModal";
+import { DeletePropertyModal } from "@/components/rent-roll/DeletePropertyModal";
 
 function RentRollPageInner() {
   const searchParams = useSearchParams();
@@ -126,6 +128,74 @@ function RentRollPageInner() {
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState<boolean>(false);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
   const [isAddTenantOpen, setIsAddTenantOpen] = useState<boolean>(false);
+
+  // Logged-in Landlord identity state
+  const [userInfo, setUserInfo] = useState({
+    name: "",
+    email: "",
+    role: "Property Owner & Asset Manager",
+    primaryBuilding: ""
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const name = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "";
+      const email = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
+      const role = localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role") || "Property Owner & Asset Manager";
+      const primaryBuilding = localStorage.getItem("officex_property_name") || sessionStorage.getItem("officex_property_name") || "";
+
+      setUserInfo({
+        name,
+        email,
+        role,
+        primaryBuilding
+      });
+    }
+  }, []);
+
+  // Property removal & management states
+  const [isManagePropertiesOpen, setIsManagePropertiesOpen] = useState<boolean>(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<any | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  // Property Removal Handler
+  const handleRemoveProperty = async (propertyId: string) => {
+    try {
+      const res = await fetch(`/api/rent-roll/properties?id=${encodeURIComponent(propertyId)}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to remove property");
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          const localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          const filtered = localProps.filter((p: any) => p.id !== propertyId);
+          localStorage.setItem("officex_user_properties", JSON.stringify(filtered));
+        } catch {}
+
+        if (userInfo.primaryBuilding === data.deletedProperty?.name) {
+          localStorage.removeItem("officex_property_name");
+          setUserInfo(prev => ({ ...prev, primaryBuilding: "" }));
+        }
+      }
+
+      if (selectedProperty === propertyId) {
+        setSelectedProperty("ALL");
+      }
+
+      setProperties(prev => prev.filter(p => p.id !== propertyId));
+      await fetchAllData();
+
+      setActionFeedback(`Property "${data.deletedProperty?.name || propertyId}" removed successfully from portfolio.`);
+      setTimeout(() => setActionFeedback(null), 5000);
+    } catch (err: any) {
+      console.error("Failed to remove property:", err);
+      throw err;
+    }
+  };
 
   // Load all data from API
   const fetchAllData = useCallback(async () => {
@@ -323,7 +393,32 @@ function RentRollPageInner() {
         isLoading={isLoading}
         unreadAlertsCount={unreadAlerts.length}
         onOpenAlerts={() => setIsAlertsModalOpen(true)}
+        userName={userInfo.name}
+        userEmail={userInfo.email}
+        userRole={userInfo.role}
+        primaryBuildingName={userInfo.primaryBuilding}
+        onOpenDeleteProperty={(propId) => {
+          const p = properties.find((item) => item.id === propId);
+          if (p) setPropertyToDelete(p);
+        }}
+        onOpenManageProperties={() => setIsManagePropertiesOpen(true)}
       />
+
+      {/* Action Feedback Banner */}
+      {actionFeedback && (
+        <div className="p-3.5 px-5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold flex items-center justify-between shadow-2xs animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{actionFeedback}</span>
+          </div>
+          <button
+            onClick={() => setActionFeedback(null)}
+            className="text-emerald-600 hover:text-emerald-900 font-bold text-xs p-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ──── MAIN BODY CONTENT ──── */}
       <div className="w-full">
@@ -541,6 +636,24 @@ function RentRollPageInner() {
           }
         }}
         properties={properties}
+      />
+
+      <ManagePropertiesModal
+        isOpen={isManagePropertiesOpen}
+        properties={properties}
+        onClose={() => setIsManagePropertiesOpen(false)}
+        onRemoveProperty={handleRemoveProperty}
+        onOpenAddProperty={() => router.push("/properties/add")}
+      />
+
+      <DeletePropertyModal
+        isOpen={Boolean(propertyToDelete)}
+        property={propertyToDelete}
+        onClose={() => setPropertyToDelete(null)}
+        onConfirm={async (id) => {
+          await handleRemoveProperty(id);
+          setPropertyToDelete(null);
+        }}
       />
     </div>
   );

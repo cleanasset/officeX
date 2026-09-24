@@ -61,3 +61,64 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const url = new URL(req.url);
+    let id = url.searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body.id;
+      } catch {
+        // query param is preferred
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "Property ID is required for deletion" }, { status: 400 });
+    }
+
+    const db = getRentRollDb();
+    const propIndex = db.properties.findIndex(p => p.id === id);
+
+    if (propIndex === -1) {
+      return NextResponse.json({ error: `Property with ID ${id} not found` }, { status: 404 });
+    }
+
+    const deletedProp = db.properties[propIndex];
+
+    // Remove the property
+    db.properties.splice(propIndex, 1);
+
+    // Clean up spaces associated with this property
+    db.spaces = db.spaces.filter(s => s.propertyId !== id);
+
+    // Clean up leases associated with this property
+    const removedLeaseIds = new Set(db.leases.filter(l => l.propertyId === id).map(l => l.id));
+    db.leases = db.leases.filter(l => l.propertyId !== id);
+
+    // Clean up escalations for removed leases
+    db.escalations = db.escalations.filter(e => !removedLeaseIds.has(e.leaseId));
+
+    // Clean up invoices for removed leases or property
+    db.invoices = db.invoices.filter(i => i.propertyId !== id && !removedLeaseIds.has(i.leaseId));
+
+    // Clean up expenses for removed property
+    db.expenses = db.expenses.filter(e => e.propertyId !== id);
+
+    // Save database
+    saveRentRollDb(db);
+
+    return NextResponse.json({
+      success: true,
+      message: `Property "${deletedProp.name}" removed successfully`,
+      deletedId: id,
+      deletedProperty: deletedProp
+    });
+  } catch (error: any) {
+    console.error("DELETE /api/rent-roll/properties error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

@@ -37,6 +37,7 @@ export default function Topbar() {
   const [activeOrg, setActiveOrg] = useState("");
   const [activeRole, setActiveRole] = useState("Property Owner");
   const [userEmail, setUserEmail] = useState("owner@officex.in");
+  const [userName, setUserName] = useState("");
   const [memberships, setMemberships] = useState<WorkspaceMembership[]>(
     MOCK_USERS["owner@officex.in"].memberships
   );
@@ -65,17 +66,19 @@ export default function Topbar() {
   // Sync session state from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedEmail = localStorage.getItem("officex_user_email");
-      const storedRole = localStorage.getItem("officex_user_role");
-      const storedOrg = localStorage.getItem("officex_active_org");
+      const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
+      const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
+      const storedRole = localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role");
+      const storedOrg = localStorage.getItem("officex_active_org") || sessionStorage.getItem("officex_active_org");
 
+      if (storedName) setUserName(storedName);
       if (storedEmail) setUserEmail(storedEmail);
       if (storedRole) setActiveRole(storedRole);
       if (storedOrg) {
         setActiveOrg(storedOrg);
       } else {
-        // Fallback: try org_name from onboarding
-        const orgName = localStorage.getItem("officex_org_name");
+        // Fallback: try org_name or property_name from onboarding
+        const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_property_name");
         if (orgName) setActiveOrg(orgName);
       }
 
@@ -364,14 +367,15 @@ export default function Topbar() {
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className="w-9 h-9 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-blue-100"
           >
-            {userEmail ? userEmail[0].toUpperCase() : "U"}
+            {(userName || userEmail || "U")[0].toUpperCase()}
           </button>
 
           {/* Profile Dropdown */}
           {isProfileMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
               <div className="p-3 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-900 block truncate">{userEmail}</span>
+                <span className="text-xs font-bold text-slate-900 block truncate">{userName || userEmail}</span>
+                {userName && <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>}
                 <span className="text-[10px] text-blue-600 font-semibold">{activeRole}</span>
               </div>
 

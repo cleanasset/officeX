@@ -19,12 +19,22 @@ import {
   RefreshCw,
   Bell,
   Sparkles,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Trash2,
+  CheckCircle2
 } from "lucide-react";
 
 interface RentRollHeaderProps {
   activeTab?: string;
-  properties: Array<{ id: string; name: string; city: string }>;
+  properties: Array<{
+    id: string;
+    name: string;
+    city: string;
+    state?: string;
+    totalArea?: number;
+    activeLeasesCount?: number;
+    grade?: string;
+  }>;
   selectedProperty: string;
   onSelectProperty: (id: string) => void;
   selectedStatus: string;
@@ -40,6 +50,16 @@ interface RentRollHeaderProps {
   isLoading?: boolean;
   unreadAlertsCount: number;
   onOpenAlerts: () => void;
+
+  // Logged-in Landlord identity
+  userName?: string;
+  userEmail?: string;
+  userRole?: string;
+  primaryBuildingName?: string;
+
+  // Property deletion & management
+  onOpenDeleteProperty?: (propertyId: string) => void;
+  onOpenManageProperties?: () => void;
 }
 
 const TAB_CONFIGS: Record<string, { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -123,6 +143,12 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   isLoading,
   unreadAlertsCount,
   onOpenAlerts,
+  userName,
+  userEmail,
+  userRole,
+  primaryBuildingName,
+  onOpenDeleteProperty,
+  onOpenManageProperties,
 }) => {
   const currentTabConfig = TAB_CONFIGS[activeTab] || TAB_CONFIGS.dashboard;
   const IconComponent = currentTabConfig.icon;
@@ -142,8 +168,65 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   const showStatusFilter = activeTab === "rentroll";
   const showLeaseSearch = activeTab === "rentroll";
 
+  // Active property name calculation
+  const currentSelectedProp = properties.find((p) => p.id === selectedProperty);
+  const displayBuildingName =
+    selectedProperty !== "ALL"
+      ? currentSelectedProp?.name || primaryBuildingName || "Selected Property"
+      : primaryBuildingName || (properties[0]?.name ? `${properties[0].name} (+${properties.length - 1} more)` : "Commercial Portfolio");
+
   return (
     <div className="flex flex-col gap-4 w-full">
+      {/* ──── LOGGED IN LANDLORD & ACTIVE ASSET IDENTITY STRIP ──── */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950 border border-slate-700/60 rounded-2xl p-3.5 px-5 shadow-sm text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F8B7D] to-teal-500 text-white font-black text-sm flex items-center justify-center shadow-md border border-teal-300/30 shrink-0">
+            {(userName || userEmail || "O")[0]?.toUpperCase() || "O"}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-extrabold text-white tracking-tight truncate">
+                {userName || "Commercial Landlord"}
+              </span>
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                {userRole || "Owner & Asset Manager"}
+              </span>
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Active Pro License
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-slate-300 mt-0.5 font-medium flex-wrap">
+              <span className="font-mono text-slate-400 text-[11px] truncate max-w-[200px] sm:max-w-none">
+                {userEmail || "owner@officex.in"}
+              </span>
+              <span className="text-slate-600 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5 text-teal-200 text-xs">
+                <Building2 className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                <span className="text-slate-400">Active Asset:</span>
+                <strong className="text-white font-bold truncate max-w-[220px] sm:max-w-none">
+                  {displayBuildingName}
+                </strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right side quick actions */}
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          {onOpenManageProperties && (
+            <button
+              type="button"
+              onClick={onOpenManageProperties}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="View and manage portfolio properties"
+            >
+              <Building2 className="w-3.5 h-3.5 text-teal-300" />
+              <span>Portfolio ({properties.length} Assets)</span>
+            </button>
+          )}
+        </div>
+      </div>
       {/* ──── TOP ROW: PAGE TITLE & CONTEXTUAL ACTIONS ──── */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
         {/* Title & Subtitle */}
@@ -300,7 +383,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
         <div className="bg-white border border-gray-200/80 rounded-2xl p-3 px-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             {/* Property Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Property:</span>
               <select
                 value={selectedProperty}
@@ -314,6 +397,32 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                   </option>
                 ))}
               </select>
+
+              {/* Remove selected property button */}
+              {selectedProperty !== "ALL" && onOpenDeleteProperty && (
+                <button
+                  type="button"
+                  onClick={() => onOpenDeleteProperty(selectedProperty)}
+                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  title="Remove this selected property from portfolio"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove Property</span>
+                </button>
+              )}
+
+              {/* Manage properties trigger button */}
+              {onOpenManageProperties && (
+                <button
+                  type="button"
+                  onClick={onOpenManageProperties}
+                  className="px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  title="Manage and remove properties"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Manage ({properties.length})</span>
+                </button>
+              )}
             </div>
 
             {/* Status Filter (Only on Master Grid) */}
