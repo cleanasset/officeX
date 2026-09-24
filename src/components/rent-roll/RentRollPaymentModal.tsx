@@ -715,13 +715,21 @@ export default function RentRollPaymentModal({
               className="object-contain"
             />
             <div>
-              <div className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#0D7B6C]">
-                <Building2 size={12} />
-                <span>Rent Roll &amp; CAM Suite</span>
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                  {mode === "onboard" ? "Unlock Rent Roll Desk" : "Sign In to Rent Roll Desk"}
+                </h2>
+                {mode === "onboard" && (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/80">
+                    100% Free
+                  </span>
+                )}
               </div>
-              <h2 className="text-sm sm:text-base font-black text-slate-900 leading-tight">
-                {mode === "onboard" ? "Unlock Rent Roll Desk" : "Sign In to Rent Roll Desk"}
-              </h2>
+              <p className="text-[11px] text-slate-500 font-medium">
+                {mode === "onboard"
+                  ? "Commercial Landlord Suite · Promotional Access Active"
+                  : "Enter your registered credentials to open your dashboard"}
+              </p>
             </div>
           </div>
           <button
@@ -730,44 +738,8 @@ export default function RentRollPaymentModal({
             className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
-        </div>
-
-        {/* Mode Selector Tabs */}
-        <div className="px-4 sm:px-5 py-2 bg-slate-50/80 border-b border-slate-100 shrink-0">
-          <div className="grid grid-cols-2 p-1 bg-slate-200/70 rounded-xl text-xs font-extrabold">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("onboard");
-                setErrorMsg(null);
-              }}
-              className={`py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                mode === "onboard"
-                  ? "bg-white text-[#0D7B6C] shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Sparkles size={12} className={mode === "onboard" ? "text-amber-500" : "text-slate-400"} />
-              <span>Subscribe &amp; Unlock</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("signin");
-                setErrorMsg(null);
-              }}
-              className={`py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                mode === "signin"
-                  ? "bg-white text-[#0D7B6C] shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <LogIn size={12} className={mode === "signin" ? "text-teal-600" : "text-slate-400"} />
-              <span>Sign In</span>
-            </button>
-          </div>
         </div>
 
         {/* Modal Scrollable Body */}
@@ -791,7 +763,7 @@ export default function RentRollPaymentModal({
               type="button"
               onClick={handleGoogleAuthWithPayment}
               disabled={isGoogleLoading}
-              className="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+              className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-2xs"
             >
               <svg width="16" height="16" viewBox="0 0 24 24">
                 <path
@@ -842,8 +814,8 @@ export default function RentRollPaymentModal({
               {/* Row 1: Full Name & Work Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Your Full Name <span className="text-rose-500">*</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Full Name <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -859,8 +831,8 @@ export default function RentRollPaymentModal({
                 </div>
 
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Work Email Address <span className="text-rose-500">*</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Work Email <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -876,10 +848,10 @@ export default function RentRollPaymentModal({
                 </div>
               </div>
 
-              {/* Row 2: Mobile Number (Mandatory!) & Operating City (All Indian Cities) */}
+              {/* Row 2: Mobile Number & Password — Paired in 2-Column Balance */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Mobile Number <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -896,7 +868,34 @@ export default function RentRollPaymentModal({
                 </div>
 
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Password <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      required
+                      className="w-full pl-8 pr-9 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
+                    />
+                    <KeyRound size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Operating City & Promotional Plan / Custom City — Paired in 2-Column Balance */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Operating City <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -930,130 +929,76 @@ export default function RentRollPaymentModal({
                     <MapPin size={14} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-              </div>
 
-              {/* Conditional Row: Specify Other City Name */}
-              {city === "Other (Specify City)" && (
-                <div className="animate-in fade-in-50 slide-in-from-top-1 duration-150">
-                  <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Specify Your City Name <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={customCity}
-                      onChange={(e) => setCustomCity(e.target.value)}
-                      placeholder="Type your city name (e.g. Surat, Indore, Dehradun)"
-                      required
-                      autoFocus
-                      className="w-full pl-8 pr-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
-                    />
-                    <MapPin size={14} className="absolute left-2.5 top-2.5 text-amber-600" />
-                  </div>
-                </div>
-              )}
-
-              {/* Row 3: Account Password */}
-              <div>
-                <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  Create Account Password <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min 6 characters so you can sign in anytime"
-                    required
-                    className="w-full pl-8 pr-10 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
-                  />
-                  <KeyRound size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Compact Unified Pricing & 100% Free Promo Bar */}
-              <div className="rounded-xl border border-emerald-300/80 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-amber-50/70 p-2.5 sm:p-3 shadow-2xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 sm:gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 shrink-0">
-                      <Gift size={16} className="text-emerald-700" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">
-                          Promo Offer:
-                        </span>
-                        <span className="font-mono text-xs font-black tracking-wider text-[#0D7B6C] px-1.5 py-0.5 rounded bg-white border border-dashed border-amber-300">
-                          RENTROLL12
-                        </span>
-                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-emerald-200/90 text-emerald-900">
-                          100% FREE
-                        </span>
-                      </div>
-                      <div className="flex items-baseline gap-1.5 mt-0.5">
-                        <span className="text-xs font-bold text-slate-400 line-through">₹100</span>
-                        <span className="text-sm sm:text-base font-black text-emerald-700 font-mono">₹0 FREE</span>
-                        <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">· Instant Lifetime Access</span>
-                      </div>
+                {city === "Other (Specify City)" ? (
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Specify City <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={customCity}
+                        onChange={(e) => setCustomCity(e.target.value)}
+                        placeholder="Type city name"
+                        required
+                        autoFocus
+                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
+                      />
+                      <MapPin size={14} className="absolute left-2.5 top-2.5 text-amber-600" />
                     </div>
                   </div>
-
-                  <div className="shrink-0">
-                    {appliedCoupon === "RENTROLL12" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold shadow-2xs">
-                        <CheckCircle2 size={12} />
-                        <span>Applied</span>
+                ) : (
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Promotional Plan
+                    </label>
+                    <div className="h-[38px] px-3 rounded-xl bg-emerald-50/90 border border-emerald-200 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Gift size={13} className="text-emerald-700" />
+                        <span className="font-mono font-bold text-emerald-900 text-[11px]">RENTROLL12</span>
+                      </div>
+                      <span className="font-black text-emerald-800 text-[10px] bg-emerald-200/90 px-2 py-0.5 rounded-full uppercase">
+                        100% Free · ₹0
                       </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAppliedCoupon("RENTROLL12");
-                          setCouponSuccess("Code RENTROLL12 applied (₹0)");
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-bold text-[11px] shadow-2xs cursor-pointer"
-                      >
-                        Apply Free
-                      </button>
-                    )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Submit CTA */}
               <button
                 type="submit"
                 disabled={isProcessing}
-                className={`w-full py-2.5 sm:py-3 px-4 rounded-xl text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
-                  is100PercentDiscount
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/20"
-                    : "bg-[#0D7B6C] hover:bg-[#0A6357]"
-                }`}
+                className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed mt-1"
               >
                 {isProcessing ? (
                   <>
                     <Loader2 size={15} className="animate-spin" />
                     <span>Launching Rent Roll...</span>
                   </>
-                ) : is100PercentDiscount ? (
+                ) : (
                   <>
                     <Sparkles size={15} className="text-yellow-300" />
                     <span>Complete Sign In &amp; Launch Rent Roll (₹0)</span>
                   </>
-                ) : (
-                  <>
-                    <CreditCard size={15} />
-                    <span>Pay ₹{finalPriceInRupees} &amp; Launch Rent Roll</span>
-                  </>
                 )}
               </button>
+
+              {/* Clean bottom switcher */}
+              <div className="text-center pt-0.5 text-xs text-slate-500">
+                <span>Already have a Rent Roll account? </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signin");
+                    setErrorMsg(null);
+                  }}
+                  className="font-bold text-[#0D7B6C] hover:underline cursor-pointer"
+                >
+                  Sign in here →
+                </button>
+              </div>
             </form>
           )}
 
@@ -1063,7 +1008,7 @@ export default function RentRollPaymentModal({
           {mode === "signin" && (
             <form onSubmit={handleExistingSignIn} className="space-y-3">
               <div>
-                <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Registered Work Email or Mobile <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -1081,8 +1026,8 @@ export default function RentRollPaymentModal({
               </div>
 
               <div>
-                <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  Account Password <span className="text-rose-500">*</span>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Password <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -1122,14 +1067,17 @@ export default function RentRollPaymentModal({
                 )}
               </button>
 
-              <div className="text-center pt-1 text-xs text-slate-500">
-                <span>New Property Owner? </span>
+              <div className="text-center pt-0.5 text-xs text-slate-500">
+                <span>New property owner? </span>
                 <button
                   type="button"
-                  onClick={() => setMode("onboard")}
+                  onClick={() => {
+                    setMode("onboard");
+                    setErrorMsg(null);
+                  }}
                   className="font-bold text-[#0D7B6C] hover:underline cursor-pointer"
                 >
-                  Subscribe &amp; unlock here →
+                  Create account &amp; unlock free access →
                 </button>
               </div>
             </form>
