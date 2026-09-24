@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   FileSpreadsheet,
@@ -27,19 +28,31 @@ import {
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import RentRollPaymentModal from "@/components/rent-roll/RentRollPaymentModal";
 
 export default function RentRollProductPage() {
+  const router = useRouter();
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const email = localStorage.getItem("officex_user_email");
-      const sub = localStorage.getItem("officex_subscription");
+      const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       setIsLoggedIn(!!email);
-      setIsSubscribed(sub === "active");
+      const isSub = email ? (
+        localStorage.getItem(`officex_sub_${email}`) === "active" ||
+        sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
+        document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
+      ) : false;
+      setIsSubscribed(isSub);
+
+      const search = window.location.search;
+      if (search.includes("action=subscribe") || search.includes("action=payment")) {
+        setPaymentModalOpen(true);
+      }
     }
   }, []);
 
@@ -148,7 +161,10 @@ export default function RentRollProductPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
-      <MarketingHeader activePath="/operate/rent-roll" />
+      <MarketingHeader
+        activePath="/operate/rent-roll"
+        onSignInClick={() => isSubscribed ? router.push("/properties/rent-roll") : setPaymentModalOpen(true)}
+      />
 
       {/* ── Breadcrumb Bar ── */}
       <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5">
@@ -198,27 +214,44 @@ export default function RentRollProductPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3 mb-4 w-full sm:w-auto">
-                <Link
-                  href={subscribeHref}
-                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:shadow-[#0D7B6C]/35 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
-                >
-                  <CreditCard size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
-                  <span>
-                    {isSubscribed
-                      ? "Open Rent Roll Dashboard"
-                      : isLoggedIn
-                      ? "Activate Rent Roll Subscription (₹100/mo)"
-                      : "Subscribe to Rent Roll"}
-                  </span>
-                  <ArrowRight size={15} />
-                </Link>
-                <Link
-                  href="/properties/rent-roll"
-                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  <span>Explore Live Demo</span>
-                  <ArrowUpRight size={14} className="text-[#0D7B6C]" />
-                </Link>
+                {isSubscribed ? (
+                  <Link
+                    href="/properties/rent-roll"
+                    className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:shadow-[#0D7B6C]/35 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
+                  >
+                    <CreditCard size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
+                    <span>Open Rent Roll Dashboard</span>
+                    <ArrowRight size={15} />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentModalOpen(true)}
+                    className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:shadow-[#0D7B6C]/35 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
+                  >
+                    <CreditCard size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
+                    <span>Subscribe to Rent Roll (₹100/mo)</span>
+                    <ArrowRight size={15} />
+                  </button>
+                )}
+                {isSubscribed ? (
+                  <Link
+                    href="/properties/rent-roll"
+                    className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    <span>Explore Live Dashboard</span>
+                    <ArrowUpRight size={14} className="text-[#0D7B6C]" />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentModalOpen(true)}
+                    className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  >
+                    <span>Explore Live Demo (Subscription Required)</span>
+                    <ArrowUpRight size={14} className="text-[#0D7B6C]" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setEnquiryOpen(true)}
@@ -545,20 +578,26 @@ export default function RentRollProductPage() {
                     <div className="mt-0.5 text-[10px] text-emerald-700">99% launch discount — pay only ₹1 for your first month</div>
                   </div>
 
-                  <Link
-                    href={subscribeHref}
-                    className="w-full py-3.5 px-6 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                  >
-                    <CreditCard size={15} className="text-teal-200 group-hover:scale-110 transition-transform" />
-                    <span>
-                      {isSubscribed
-                        ? "Open Rent Roll Dashboard"
-                        : isLoggedIn
-                        ? "Activate Subscription Now"
-                        : "Login & Subscribe Directly"}
-                    </span>
-                    <ArrowRight size={14} />
-                  </Link>
+                  {isSubscribed ? (
+                    <Link
+                      href="/properties/rent-roll"
+                      className="w-full py-3.5 px-6 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                    >
+                      <CreditCard size={15} className="text-teal-200 group-hover:scale-110 transition-transform" />
+                      <span>Open Rent Roll Dashboard</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentModalOpen(true)}
+                      className="w-full py-3.5 px-6 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0D7B6C]/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                    >
+                      <CreditCard size={15} className="text-teal-200 group-hover:scale-110 transition-transform" />
+                      <span>Subscribe &amp; Activate Access Now</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  )}
 
                   <p className="text-[10px] text-slate-500 mt-3 font-medium">
                     Secured by Razorpay · Cancel anytime · Instant activation
@@ -604,13 +643,24 @@ export default function RentRollProductPage() {
             >
               Request Custom Walkthrough
             </button>
-            <Link
-              href="/properties/rent-roll"
-              className="px-6 py-3.5 bg-teal-900/60 hover:bg-teal-900 text-teal-100 font-semibold rounded-xl text-xs sm:text-sm border border-teal-400/20 transition-all flex items-center gap-1.5"
-            >
-              <span>Explore Live Demo</span>
-              <ArrowUpRight size={14} />
-            </Link>
+            {isSubscribed ? (
+              <Link
+                href="/properties/rent-roll"
+                className="px-6 py-3.5 bg-teal-900/60 hover:bg-teal-900 text-teal-100 font-semibold rounded-xl text-xs sm:text-sm border border-teal-400/20 transition-all flex items-center gap-1.5"
+              >
+                <span>Open Rent Roll Dashboard</span>
+                <ArrowUpRight size={14} />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setPaymentModalOpen(true)}
+                className="px-6 py-3.5 bg-teal-900/60 hover:bg-teal-900 text-teal-100 font-semibold rounded-xl text-xs sm:text-sm border border-teal-400/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Explore Live Demo (Subscription Required)</span>
+                <ArrowUpRight size={14} />
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -621,6 +671,12 @@ export default function RentRollProductPage() {
         isOpen={enquiryOpen}
         onClose={() => setEnquiryOpen(false)}
         prefill={{ modules: ["Rent Roll & CAM Billing"] }}
+      />
+
+      {/* Rent Roll Dedicated Payment Gateway Modal */}
+      <RentRollPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
       />
     </div>
   );

@@ -519,8 +519,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       localStorage.setItem("officex_onboarding_completed", "1");
       localStorage.setItem("officex_kyc_stage", "K1_BUSINESS_SUBMITTED");
       if (isRentRoll) {
-        localStorage.setItem("officex_subscription", "active");
-        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        // Subscription is NOT active until paid via Razorpay; mark as pending
+        localStorage.setItem("officex_subscription", "pending");
+        sessionStorage.setItem("officex_subscription", "pending");
+        document.cookie = "officex_subscription=pending; path=/; max-age=86400; SameSite=Lax";
         localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
         
         // Seed initial active lease for the owner's building so dashboard has immediate live data

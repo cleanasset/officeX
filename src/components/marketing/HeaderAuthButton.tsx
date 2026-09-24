@@ -18,9 +18,10 @@ interface HeaderAuthButtonProps {
   className?: string;
   /** Context key passed to /login?context=... for contextual portal filtering */
   loginContext?: "marketplace" | "fm" | "operate" | "properties" | "rent-roll" | "";
+  onSignInClick?: () => void;
 }
 
-export default function HeaderAuthButton({ className = "", loginContext = "" }: HeaderAuthButtonProps) {
+export default function HeaderAuthButton({ className = "", loginContext = "", onSignInClick }: HeaderAuthButtonProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -55,7 +56,11 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
       const email = sessionStorage.getItem("officex_user_email") || localStorage.getItem("officex_user_email");
       const name = sessionStorage.getItem("officex_user_name") || localStorage.getItem("officex_user_name") || "Member";
       const role = sessionStorage.getItem("officex_user_role") || localStorage.getItem("officex_user_role") || "Commercial Owner";
-      const sub = sessionStorage.getItem("officex_subscription") === "active" || localStorage.getItem("officex_subscription") === "active";
+      const sub = email ? (
+        sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
+        localStorage.getItem(`officex_sub_${email}`) === "active" ||
+        document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
+      ) : false;
 
       if (email) {
         setIsLoggedIn(true);
@@ -159,6 +164,16 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
             </div>
 
             <div className="py-1">
+              {loginContext === "rent-roll" && (
+                <Link
+                  href="/properties/rent-roll"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:text-[#0F8B7D] hover:bg-teal-50 transition-colors"
+                >
+                  <Building2 size={14} className="text-[#0F8B7D]" />
+                  <span>Rent Roll Dashboard {isSubscribed ? "✓" : "(Subscription Required)"}</span>
+                </Link>
+              )}
               <Link
                 href="/operate"
                 onClick={() => setMenuOpen(false)}
@@ -198,6 +213,18 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
           </div>
         )}
       </div>
+    );
+  }
+
+  if (onSignInClick) {
+    return (
+      <button
+        type="button"
+        onClick={onSignInClick}
+        className={`text-xs sm:text-sm font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors cursor-pointer ${className}`}
+      >
+        Sign In
+      </button>
     );
   }
 

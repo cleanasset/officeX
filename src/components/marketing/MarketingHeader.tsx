@@ -11,11 +11,13 @@ import EnquirySlideIn from "./EnquirySlideIn";
 interface MarketingHeaderProps {
   transparentAtTop?: boolean;
   activePath?: string;
+  onSignInClick?: () => void;
 }
 
 export default function MarketingHeader({
   transparentAtTop = false,
-  activePath = ""
+  activePath = "",
+  onSignInClick
 }: MarketingHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -371,7 +373,7 @@ export default function MarketingHeader({
 
         {/* Right: Actions — per client doc Section 6.1 */}
         <div className="hidden md:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
-          <HeaderAuthButton loginContext={loginContext} />
+          <HeaderAuthButton loginContext={loginContext} onSignInClick={onSignInClick} />
           <button
             type="button"
             onClick={() => setEnquiryOpen(true)}
@@ -506,7 +508,13 @@ export default function MarketingHeader({
 
           <hr className="border-slate-200 my-2" />
           <div className="py-1">
-            <HeaderAuthButton loginContext={loginContext} />
+            <HeaderAuthButton
+              loginContext={loginContext}
+              onSignInClick={() => {
+                setMobileMenuOpen(false);
+                if (onSignInClick) onSignInClick();
+              }}
+            />
           </div>
           <button
             type="button"

@@ -108,20 +108,18 @@ export default function SubscriptionGate({
       if (!email) {
         setIsLoggedIn(false);
         setIsSubscribed(false);
-        router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         setIsChecking(false);
         return;
       }
 
       setIsLoggedIn(true);
 
-      // Check multi-layer client storage
-      const subLocal = localStorage.getItem("officex_subscription") === "active";
-      const subSession = sessionStorage.getItem("officex_subscription") === "active";
-      const subEmailLocal = email ? localStorage.getItem(`officex_sub_${email}`) === "active" : false;
-      const subCookie = document.cookie.includes("officex_subscription=active") || (email && document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`));
+      // Check strictly email-specific subscription — DO NOT allow un-scoped global active flags to bypass
+      const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
+        sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
+        document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`);
 
-      if (subLocal || subSession || subEmailLocal || subCookie) {
+      if (subEmailLocal) {
         setIsSubscribed(true);
         setIsChecking(false);
         return;
@@ -153,11 +151,27 @@ export default function SubscriptionGate({
   // Handle 100% Free Instant Claim or Paid Razorpay Subscription
   const handleActivateSubscription = async () => {
     setIsPaymentProcessing(true);
-    const email = userEmail || localStorage.getItem("officex_user_email") || "";
+    const email = (userEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "").trim().toLowerCase();
+
+    if (!email) {
+      setPaymentToast("Please provide your work email above to activate subscription.");
+      setTimeout(() => setPaymentToast(null), 4000);
+      setIsPaymentProcessing(false);
+      return;
+    }
 
     // If 100% Discounted (RENTROLL12) — Instant One-Click Free Activation
     if (is100PercentDiscount) {
       await persistSubscription(email, "RENTROLL12", `FREE_RENTROLL12_${Date.now()}`);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("officex_session_active", "1");
+        localStorage.setItem("officex_session_active", "1");
+        sessionStorage.setItem("officex_user_email", email);
+        localStorage.setItem("officex_user_email", email);
+        document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+      }
+      setIsLoggedIn(true);
       setIsSubscribed(true);
       setIsPaymentProcessing(false);
       setPaymentToast("🎉 100% Free Subscription Activated! Welcome to OfficeX Live Dashboard.");
@@ -182,6 +196,15 @@ export default function SubscriptionGate({
         },
         onSuccess: async (response) => {
           await persistSubscription(email, appliedCoupon || "none", response.razorpay_payment_id);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("officex_session_active", "1");
+            localStorage.setItem("officex_session_active", "1");
+            sessionStorage.setItem("officex_user_email", email);
+            localStorage.setItem("officex_user_email", email);
+            document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+            document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+          }
+          setIsLoggedIn(true);
           setIsSubscribed(true);
           setPaymentToast(`Subscription activated! Payment ID: ${response.razorpay_payment_id}`);
           setTimeout(() => setPaymentToast(null), 6000);
@@ -253,51 +276,89 @@ export default function SubscriptionGate({
                 <p className="text-[11px] text-slate-500 font-semibold">Institutional Commercial Operating Suite</p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-xs font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <LogOut size={13} />
-              <span>Sign Out</span>
-            </button>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="text-xs font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <LogOut size={13} />
+                <span>Sign Out</span>
+              </button>
+            ) : (
+              <Link
+                href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
+                className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors"
+              >
+                <span>Existing Subscriber Sign In →</span>
+              </Link>
+            )}
           </div>
 
-          {/* Step 1 Indicator: Prominent User Signed In Status */}
-          <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 my-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#0F8B7D] to-teal-500 text-white font-black flex items-center justify-center text-base shadow-xs shrink-0">
-                {userName ? userName.charAt(0).toUpperCase() : "U"}
-              </div>
-              <div className="text-left min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-black text-slate-900 truncate max-w-[200px] sm:max-w-xs">{userName}</span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    <CheckCircle size={11} className="text-emerald-700" />
-                    Signed In
-                  </span>
+          {/* Step 1 Indicator: Prominent User Signed In Status or Email Capture */}
+          {isLoggedIn ? (
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 my-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#0F8B7D] to-teal-500 text-white font-black flex items-center justify-center text-base shadow-xs shrink-0">
+                  {userName ? userName.charAt(0).toUpperCase() : "U"}
                 </div>
-                <p className="text-xs text-slate-500 font-medium truncate max-w-[220px] sm:max-w-sm mt-0.5">{userEmail || "Google Verified Account"}</p>
+                <div className="text-left min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-black text-slate-900 truncate max-w-[200px] sm:max-w-xs">{userName}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      <CheckCircle size={11} className="text-emerald-700" />
+                      Signed In
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium truncate max-w-[220px] sm:max-w-sm mt-0.5">{userEmail || "Google Verified Account"}</p>
+                </div>
+              </div>
+              <div className="self-start sm:self-center shrink-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-white border border-emerald-300 px-2.5 py-1 rounded-lg shadow-2xs">
+                  Step 1 of 2 Complete
+                </span>
               </div>
             </div>
-            <div className="self-start sm:self-center shrink-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-white border border-emerald-300 px-2.5 py-1 rounded-lg shadow-2xs">
-                Step 1 of 2 Complete
-              </span>
+          ) : (
+            <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-4 my-5 shadow-xs">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">
+                    Commercial Landlord Subscription
+                  </span>
+                  <Link
+                    href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
+                    className="text-xs font-bold text-[#0F8B7D] hover:underline"
+                  >
+                    Already Subscribed? Sign In
+                  </Link>
+                </div>
+                <label className="text-xs font-bold text-slate-700">Enter your work email to activate access:</label>
+                <input
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="e.g. landlord@commercial.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
+                  required
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="text-center py-4">
             <div className="w-12 h-12 mx-auto rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mb-3 shadow-xs">
               <Lock size={22} />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-              STEP 2 OF 2: SUBSCRIPTION REQUIRED
+              {isLoggedIn ? "STEP 2 OF 2: SUBSCRIPTION REQUIRED" : "SUBSCRIPTION REQUIRED TO ACCESS RENT ROLL"}
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2.5 tracking-tight">
               Activate Subscription to Enter Live Dashboard
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-md mx-auto leading-relaxed">
-              Your account is verified. To unlock the live Rent Roll, statutory compliance, and facility management tools, activate your monthly subscription.
+              {isLoggedIn
+                ? "Your account is verified. To unlock the live Rent Roll, statutory compliance, and facility management tools, activate your monthly subscription."
+                : "The Rent Roll module is a dedicated commercial SaaS tool. Activate your subscription below to unlock the full live dashboard."}
             </p>
           </div>
 
