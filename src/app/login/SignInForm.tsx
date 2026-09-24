@@ -671,29 +671,35 @@ export default function SignInForm({
       return;
     }
 
-    // Set onboarding completed flag to prevent blocking gates
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_onboarding_completed", "1");
-    }
+    const hasCompletedOnboarding = typeof window !== "undefined" && Boolean(
+      localStorage.getItem("officex_onboarding_completed") === "1" ||
+      sessionStorage.getItem("officex_onboarding_completed") === "1"
+    );
 
-    // Determine target destination (preserves redirects like /properties/rent-roll)
-    let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "";
-    if (!destination || destination === "/") {
-      if (isRentRollContext) {
-        destination = "/properties/rent-roll";
-      } else if (isOperateContext) {
-        destination = "/operate";
-      } else if (isFmContext) {
-        destination = "/fm-marketplace";
-      } else {
-        const lowerRole = (roleName || initialRole || "tenant").toLowerCase();
-        destination = lowerRole.includes("broker")
-          ? "/leasing"
-          : lowerRole.includes("owner")
-          ? "/properties/add"
-          : lowerRole.includes("vendor") || lowerRole.includes("fm")
-          ? "/vendor"
-          : "/marketplace";
+    const lowerRole = (roleName || initialRole || "owner").toLowerCase();
+    const effectiveRole = lowerRole.includes("broker") ? "broker" : lowerRole.includes("vendor") ? "vendor" : lowerRole.includes("tenant") ? "tenant" : "owner";
+
+    let destination = "";
+    if (!hasCompletedOnboarding) {
+      destination = `/onboarding?role=${encodeURIComponent(effectiveRole)}`;
+    } else {
+      destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "";
+      if (!destination || destination === "/") {
+        if (isRentRollContext) {
+          destination = "/properties/rent-roll";
+        } else if (isOperateContext) {
+          destination = "/operate";
+        } else if (isFmContext) {
+          destination = "/fm-marketplace";
+        } else {
+          destination = lowerRole.includes("broker")
+            ? "/leasing"
+            : lowerRole.includes("owner")
+            ? "/properties"
+            : lowerRole.includes("vendor") || lowerRole.includes("fm")
+            ? "/vendor"
+            : "/marketplace";
+        }
       }
     }
 
@@ -803,7 +809,14 @@ export default function SignInForm({
       // Non-blocking
     }
 
-    const destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : (membership.workspaceUrl || "/properties");
+    const hasCompletedOnboarding = typeof window !== "undefined" && Boolean(
+      localStorage.getItem("officex_onboarding_completed") === "1" ||
+      sessionStorage.getItem("officex_onboarding_completed") === "1"
+    );
+    const destination = !hasCompletedOnboarding
+      ? `/onboarding?role=${encodeURIComponent(membership.roleCode === "LEASING" ? "broker" : membership.roleCode === "VENDOR" ? "vendor" : membership.roleCode === "TENANT" ? "tenant" : "owner")}`
+      : (initialRedirect && safeRedirect !== "/") ? safeRedirect : (membership.workspaceUrl || "/properties");
+
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;

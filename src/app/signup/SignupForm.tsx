@@ -516,8 +516,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       localStorage.setItem("officex_leasable_area", String(effectiveArea));
       localStorage.setItem("officex_user_role", roleTitle);
       localStorage.setItem("officex_dashboard", workspaceUrl);
-      localStorage.setItem("officex_onboarding_completed", "1");
-      localStorage.setItem("officex_kyc_stage", "K1_BUSINESS_SUBMITTED");
+      localStorage.setItem("officex_onboarding_completed", "0");
+      sessionStorage.setItem("officex_onboarding_completed", "0");
+      document.cookie = "officex_onboarding_completed=0; path=/; max-age=86400; SameSite=Lax";
+      localStorage.setItem("officex_kyc_stage", "K0_REGISTERED");
       localStorage.setItem("officex_user_properties", "[]");
       localStorage.setItem("officex_active_leases", "[]");
       localStorage.removeItem("officex_property_name");
@@ -532,13 +534,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    setSuccessMsg("Account created! Launching Property Owner Onboarding...");
+    setSuccessMsg("Account created! Launching Role-Based Onboarding Suite...");
     setTimeout(() => {
-      const rawRedirect = searchParams?.get("redirect") || initialRedirect;
-      const target = rawRedirect && !rawRedirect.startsWith("/login")
-        ? rawRedirect
-        : (selectedRole === "owner" || isRentRoll ? "/onboarding?role=owner" : workspaceUrl);
-      router.push(target);
+      const roleParam = selectedRole === "owner" ? "owner" : selectedRole === "broker" ? "broker" : selectedRole === "vendor" ? "vendor" : "tenant";
+      router.push(`/onboarding?role=${encodeURIComponent(roleParam)}`);
     }, 800);
   };
 

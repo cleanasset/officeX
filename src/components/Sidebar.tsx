@@ -154,17 +154,16 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   ]
 };
 
-// Mapping roles to their dashboard home routes & user identity (9 Portals)
 const roleHomes: Record<string, { label: string; roleName: string; route: string; email: string }> = {
-  properties: { label: "Property Owner (SaaS)", roleName: "Property Owner", route: "/properties", email: "owner@officex.in" },
-  ops: { label: "Facility Manager (Ops)", roleName: "Facility Manager", route: "/ops", email: "facilitymanager@officex.in" },
-  tenant: { label: "Tenant Admin (Portal)", roleName: "Tenant Admin", route: "/tenant", email: "tenant@officex.in" },
-  vendor: { label: "Service Vendor (Hub)", roleName: "Service Vendor", route: "/vendor", email: "vendor@officex.in" },
-  leasing: { label: "Leasing Broker (CRM)", roleName: "Leasing Broker", route: "/leasing", email: "broker@officex.in" },
-  marketplace: { label: "FM Procurement (Marketplace)", roleName: "Procurement Lead", route: "/marketplace", email: "procurement@officex.in" },
-  admin: { label: "Super Admin (Console)", roleName: "Super Admin", route: "/admin", email: "admin@officex.in" },
-  reporting: { label: "Auditor / Analyst (BI)", roleName: "Auditor / Analyst", route: "/reporting", email: "auditor@officex.in" },
-  public: { label: "Public Discovery (Portal)", roleName: "Public Discovery", route: "/public/search", email: "guest@officex.in" }
+  properties: { label: "Commercial Portfolio", roleName: "Property Owner", route: "/properties", email: "owner@officex.in" },
+  ops: { label: "Facility Management", roleName: "Facility Manager", route: "/ops", email: "facilitymanager@officex.in" },
+  tenant: { label: "Corporate Workplace", roleName: "Tenant Admin", route: "/tenant", email: "tenant@officex.in" },
+  vendor: { label: "Facility Services", roleName: "Service Vendor", route: "/vendor", email: "vendor@officex.in" },
+  leasing: { label: "Commercial Leasing", roleName: "Leasing Broker", route: "/leasing", email: "broker@officex.in" },
+  marketplace: { label: "FM Procurement", roleName: "Procurement Lead", route: "/marketplace", email: "procurement@officex.in" },
+  admin: { label: "Executive Control", roleName: "Super Admin", route: "/admin", email: "admin@officex.in" },
+  reporting: { label: "Workplace Analytics", roleName: "Auditor / Analyst", route: "/reporting", email: "auditor@officex.in" },
+  public: { label: "Commercial Discovery", roleName: "Public Discovery", route: "/public/search", email: "guest@officex.in" }
 };
 
 // Mapping alias paths to corresponding portal keys
@@ -306,15 +305,21 @@ export default function Sidebar() {
             
             <div className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-6 h-6 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[10px] shadow-2xs shrink-0">
-                  {activeRole.roleName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                <div className="w-7 h-7 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase">
+                  {(orgDisplayName || userName || activeRole.roleName || "OX")
+                    .trim()
+                    .split(/\s+/)
+                    .map((n: string) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-black text-gray-900 truncate leading-tight">
-                    {activeRole.label}
+                  <span className="text-xs font-black text-gray-900 truncate leading-tight capitalize">
+                    {orgDisplayName || userName || activeRole.label}
                   </span>
-                  <span className="text-[10px] text-teal-700 font-bold truncate font-mono">
-                    {orgDisplayName ? `${orgDisplayName}${orgCity ? ` · ${orgCity}` : ""}` : "Your Workspace"}
+                  <span className="text-[10px] text-teal-700 font-semibold truncate">
+                    {activeRole.roleName}{orgCity ? ` · ${orgCity}` : ""}
                   </span>
                 </div>
               </div>

@@ -114,8 +114,7 @@ export default function PropertyDashboardClient({
     if (typeof window !== "undefined") {
       const isCompleted = Boolean(
         localStorage.getItem("officex_onboarding_completed") === "1" ||
-        sessionStorage.getItem("officex_onboarding_completed") === "1" ||
-        Boolean(localStorage.getItem("officex_active_org"))
+        sessionStorage.getItem("officex_onboarding_completed") === "1"
       );
       setIsOnboardingCompleted(isCompleted);
     }

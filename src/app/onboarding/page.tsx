@@ -4427,8 +4427,11 @@ function OnboardingWizardContent() {
                       localStorage.setItem("officex_active_org", orgName);
                       localStorage.setItem("officex_org_name", orgName);
                       localStorage.setItem("officex_org_city", orgCity);
-                      localStorage.setItem("officex_org_state", orgState);
                       localStorage.setItem("officex_user_role", role === "owner" ? "Property Owner & Asset Manager" : role === "broker" ? "Leasing Broker" : role === "vendor" ? "FM Vendor" : "Corporate Tenant");
+                      localStorage.setItem("officex_contact_verified", userData.otpVerified || userData.mobile ? "1" : "0");
+                      if (kycChecks.panVerified && kycChecks.gstinVerified) {
+                        localStorage.setItem("officex_kyc_status", "SUBMITTED");
+                      }
 
                       // Remove any legacy property or fake lease leftovers
                       localStorage.removeItem("officex_property_name");

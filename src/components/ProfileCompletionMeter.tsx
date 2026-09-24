@@ -20,16 +20,16 @@ export default function ProfileCompletionMeter({
     pendingActions: string[];
     statusLabel: string;
   }>({
-    completionPercentage: 20,
+    completionPercentage: 0,
     isFullyVerified: false,
     breakdown: [
-      { category: "Contact Verification", weight: 20, completed: true, actionHint: "Email & mobile verified" },
-      { category: "Landlord Entity Profile", weight: 35, completed: false, actionHint: "Provide legal entity name, PAN & address" },
-      { category: "Commercial Portfolio", weight: 25, completed: false, actionHint: "Add your first property in dashboard" },
+      { category: "Contact Verification", weight: 20, completed: false, actionHint: "Verify mobile & email via OTP" },
+      { category: "Landlord Entity Profile", weight: 35, completed: false, actionHint: "Provide legal entity name, PAN & registered address in onboarding" },
+      { category: "Commercial Portfolio", weight: 25, completed: false, actionHint: "Add your first commercial property" },
       { category: "Statutory KYC & Evidence", weight: 20, completed: false, actionHint: "Upload ownership proof & GST cert" }
     ],
-    pendingActions: ["Provide legal entity name, PAN & address", "Add your first property in dashboard"],
-    statusLabel: "Basic Access"
+    pendingActions: ["Complete 7-Step Business Onboarding Form"],
+    statusLabel: "0% Completed"
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -37,10 +37,21 @@ export default function ProfileCompletionMeter({
   useEffect(() => {
     const fetchCompletion = async () => {
       try {
-        const hasOrg = typeof window !== "undefined" && Boolean(
-          localStorage.getItem("officex_active_org") ||
+        const hasOnboarded = typeof window !== "undefined" && Boolean(
           localStorage.getItem("officex_onboarding_completed") === "1" ||
-          localStorage.getItem("officex_org_id")
+          sessionStorage.getItem("officex_onboarding_completed") === "1"
+        );
+        const hasContactVerified = typeof window !== "undefined" && Boolean(
+          hasOnboarded && (
+            localStorage.getItem("officex_phone_verified") === "1" ||
+            localStorage.getItem("officex_contact_verified") === "1"
+          )
+        );
+        const hasOrg = typeof window !== "undefined" && Boolean(
+          hasOnboarded && (
+            localStorage.getItem("officex_org_id") ||
+            localStorage.getItem("officex_org_code")
+          )
         );
         const hasProperties = typeof window !== "undefined" && (() => {
           try {
@@ -50,8 +61,14 @@ export default function ProfileCompletionMeter({
             return false;
           }
         })();
-        const hasKyc = typeof window !== "undefined" && localStorage.getItem("officex_kyc_status") === "SUBMITTED";
-        const res = await fetch(`/api/v1/profile/completion?role=${role}&hasOrg=${hasOrg}&hasProperties=${hasProperties}&hasRoleProfile=${hasOrg}&hasKyc=${hasKyc}`);
+        const hasKyc = typeof window !== "undefined" && Boolean(
+          hasOnboarded && (
+            localStorage.getItem("officex_kyc_status") === "SUBMITTED" ||
+            localStorage.getItem("officex_kyc_status") === "VERIFIED"
+          )
+        );
+
+        const res = await fetch(`/api/v1/profile/completion?role=${role}&hasOnboarded=${hasOnboarded}&hasContactVerified=${hasContactVerified}&hasOrg=${hasOrg}&hasProperties=${hasProperties}&hasRoleProfile=${hasOrg}&hasKyc=${hasKyc}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -138,6 +155,28 @@ export default function ProfileCompletionMeter({
 
           {/* Calculate dynamic next pending step */}
           {(() => {
+            const hasOnboarded = typeof window !== "undefined" && Boolean(
+              localStorage.getItem("officex_onboarding_completed") === "1" ||
+              sessionStorage.getItem("officex_onboarding_completed") === "1"
+            );
+
+            if (!hasOnboarded) {
+              return (
+                <div className="pt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Next step: Complete 7-Step Business Onboarding Form
+                  </span>
+                  <Link
+                    href={`/onboarding?role=${encodeURIComponent(role)}`}
+                    className="text-[11px] font-black text-[#0F8B7D] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <span>Complete Onboarding Setup</span>
+                    <ArrowRight size={12} />
+                  </Link>
+                </div>
+              );
+            }
+
             const orgPending = data.breakdown.find(b => (b.category.toLowerCase().includes("organization") || b.category.toLowerCase().includes("landlord")) && !b.completed);
             const propPending = data.breakdown.find(b => (b.category.toLowerCase().includes("portfolio") || b.category.toLowerCase().includes("property")) && !b.completed);
             const kycPending = data.breakdown.find(b => (b.category.toLowerCase().includes("kyc") || b.category.toLowerCase().includes("evidence")) && !b.completed);
