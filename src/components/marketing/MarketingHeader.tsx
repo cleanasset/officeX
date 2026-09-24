@@ -20,14 +20,14 @@ export default function MarketingHeader({
   const router = useRouter();
   const pathname = usePathname();
   const isFmMarketplace = pathname === "/fm-marketplace" || activePath === "/fm-marketplace";
-  const isOfficeMarketplace = pathname === "/marketplace" || activePath === "/marketplace";
+  const isOfficeMarketplace = pathname === "/marketplace" || activePath === "/marketplace" || pathname === "/" || activePath === "/";
 
   // Derive login context for contextual portal filtering
-  const loginContext: "marketplace" | "fm" | "operate" | "properties" | "" =
+  const loginContext: "marketplace" | "fm" | "operate" | "properties" | "rent-roll" =
     isFmMarketplace ? "fm" :
-    isOfficeMarketplace ? "marketplace" :
+    (pathname === "/operate/rent-roll" || activePath === "/operate/rent-roll") ? "rent-roll" :
     pathname?.startsWith("/operate") ? "operate" :
-    pathname?.startsWith("/properties") ? "properties" : "";
+    pathname?.startsWith("/properties") ? "properties" : "marketplace";
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

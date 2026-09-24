@@ -61,7 +61,8 @@ function RentRollPageInner() {
         sessionStorage.getItem("officex_session_active") === "1" ||
         document.cookie.includes("officex_auth=1");
       if (!hasSession) {
-        router.replace("/login?redirect=/properties/rent-roll");
+        const fullPath = window.location.pathname + window.location.search;
+        router.replace(`/login?context=rent-roll&redirect=${encodeURIComponent(fullPath)}`);
         return;
       }
       setAuthChecked(true);
@@ -77,6 +78,14 @@ function RentRollPageInner() {
       setActiveTab(tabFromUrl);
     }
   }, [tabFromUrl]);
+
+  // Open Add Tenant modal when action=add-tenant is in URL
+  const actionFromUrl = searchParams.get("action");
+  useEffect(() => {
+    if (actionFromUrl === "add-tenant") {
+      setIsAddTenantOpen(true);
+    }
+  }, [actionFromUrl]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -156,8 +165,28 @@ function RentRollPageInner() {
         fetch(`/api/rent-roll/alerts`)
       ]);
 
-      if (propRes.ok) setProperties(await propRes.json());
-      if (leasesRes.ok) setLeases(await leasesRes.json());
+      if (propRes.ok) {
+        const serverProps = await propRes.json();
+        let localProps: any[] = [];
+        try {
+          localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        } catch {}
+        const mergedMap = new Map();
+        serverProps.forEach((p: any) => mergedMap.set(p.id, p));
+        localProps.forEach((p: any) => mergedMap.set(p.id, p));
+        setProperties(Array.from(mergedMap.values()));
+      }
+      if (leasesRes.ok) {
+        const serverLeases = await leasesRes.json();
+        let localLeases: any[] = [];
+        try {
+          localLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
+        } catch {}
+        const mergedMap = new Map();
+        serverLeases.forEach((l: any) => mergedMap.set(l.id || l.tenantName, l));
+        localLeases.forEach((l: any) => mergedMap.set(l.id || l.tenantName, l));
+        setLeases(Array.from(mergedMap.values()));
+      }
       if (dashRes.ok) setDashboardData(await dashRes.json());
       if (invRes.ok) setInvoices(await invRes.json());
       if (colRes.ok) setCollections(await colRes.json());
@@ -497,8 +526,21 @@ function RentRollPageInner() {
 
       <AddTenantModal
         isOpen={isAddTenantOpen}
-        onClose={() => setIsAddTenantOpen(false)}
-        onSuccess={fetchAllData}
+        onClose={() => {
+          setIsAddTenantOpen(false);
+          if (searchParams.get("action") === "add-tenant") {
+            const currentTab = searchParams.get("tab") || "dashboard";
+            router.replace(`/properties/rent-roll?tab=${currentTab}`, { scroll: false });
+          }
+        }}
+        onSuccess={() => {
+          fetchAllData();
+          if (searchParams.get("action") === "add-tenant") {
+            const currentTab = searchParams.get("tab") || "dashboard";
+            router.replace(`/properties/rent-roll?tab=${currentTab}`, { scroll: false });
+          }
+        }}
+        properties={properties}
       />
     </div>
   );

@@ -17,6 +17,9 @@ interface SignupPageProps {
   searchParams: Promise<{
     role?: string;
     intent?: string;
+    module?: string;
+    context?: string;
+    redirect?: string;
   }>;
 }
 
@@ -34,6 +37,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       <SignupForm
         initialRole={params?.role}
         initialIntent={params?.intent}
+        initialModule={params?.module}
+        initialContext={params?.context}
+        initialRedirect={params?.redirect}
       />
     </Suspense>
   );

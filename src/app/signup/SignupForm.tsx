@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { 
   Building, 
   Handshake, 
@@ -28,7 +29,8 @@ import {
   FileText,
   CheckCircle2,
   Building2,
-  Sparkles
+  Sparkles,
+  Layers
 } from "lucide-react";
 
 // Primary roles defined in Section 1.2 & Table 0 of Registration Specification
@@ -43,12 +45,49 @@ const ROLE_OPTIONS = [
 interface SignupFormProps {
   initialRole?: string;
   initialIntent?: string;
+  initialModule?: string;
+  initialContext?: string;
+  initialRedirect?: string;
 }
 
-export default function SignupForm({ initialRole, initialIntent }: SignupFormProps) {
+export default function SignupForm({ initialRole, initialIntent, initialModule, initialContext, initialRedirect }: SignupFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlRole = initialRole || initialIntent || searchParams?.get("role") || searchParams?.get("intent") || "owner";
+  const rawRole = initialRole || initialIntent || searchParams?.get("role") || searchParams?.get("intent") || "";
+  const normalizedRole = (rawRole === "leasing_broker" ? "broker" : rawRole).toLowerCase();
+
+  const isRentRoll =
+    initialModule === "rent-roll" ||
+    initialContext === "rent-roll" ||
+    searchParams?.get("module") === "rent-roll" ||
+    searchParams?.get("context") === "rent-roll" ||
+    (initialRedirect ? initialRedirect.includes("rent-roll") : false) ||
+    (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("rent-roll") : false);
+
+  const isOperate =
+    !isRentRoll && (
+      initialModule === "operate" ||
+      initialContext === "operate" ||
+      searchParams?.get("module") === "operate" ||
+      searchParams?.get("context") === "operate" ||
+      (initialRedirect ? initialRedirect.includes("operate") : false) ||
+      (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("operate") : false)
+    );
+
+  const isFm =
+    initialModule === "fm" ||
+    initialContext === "fm" ||
+    searchParams?.get("context") === "fm" ||
+    (initialRedirect ? initialRedirect.includes("fm") : false) ||
+    (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("fm") : false);
+
+  const isMarketplace = !isRentRoll && !isOperate && !isFm;
+
+  const defaultRole = isRentRoll
+    ? "owner"
+    : isFm
+    ? (normalizedRole || "vendor")
+    : normalizedRole || "tenant";
 
   // Step state: 
   // 1 = Create Account (S02)
@@ -57,7 +96,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
   // 4 = Role Business Profile (S07/S08)
   // 5 = Review & Launch (S10-S12)
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [selectedRole, setSelectedRole] = useState(urlRole.toLowerCase());
+  const [selectedRole, setSelectedRole] = useState(defaultRole);
 
   // Form Fields - S02 (Account Credentials)
   const [fullName, setFullName] = useState("");
@@ -156,6 +195,44 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
     }
     return () => clearTimeout(timer);
   }, [step, resendCountdown]);
+
+  // Social OAuth (Google via Supabase)
+  const handleOAuthSignUp = async (provider: "google" = "google") => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const canonicalRedirect = initialRedirect || (
+        isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
+      );
+      const searchStr = typeof window !== "undefined" && window.location.search
+        ? window.location.search
+        : `?context=${isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "marketplace"}&redirect=${encodeURIComponent(canonicalRedirect)}`;
+
+      const redirectUrl = typeof window !== "undefined"
+        ? `${window.location.origin}/login${searchStr}`
+        : "http://localhost:3000/login";
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message || "Failed to initiate Google sign up.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to connect to Google authentication.");
+      setIsLoading(false);
+    }
+  };
 
   // S02: Handle Initial Account Creation
   const handleCreateAccount = async (e: React.FormEvent) => {
@@ -410,24 +487,26 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
     };
 
     const roleTitle = selectedRole === "owner" 
-      ? "Property Owner & Asset Manager" 
+      ? (isMarketplace ? "Commercial Property Owner & Lister" : "Property Owner & Asset Manager")
       : selectedRole === "broker" 
       ? "Broker / Channel Partner" 
       : selectedRole === "vendor" 
       ? "Facility / Service Vendor" 
       : selectedRole === "pm" 
       ? "Property / Facility Manager" 
-      : "Tenant / Occupier";
+      : (isMarketplace ? "Space Seeker / Corporate Occupier" : "Tenant / Occupier");
 
-    const workspaceUrl = selectedRole === "owner" 
-      ? "/properties" 
+    const workspaceUrl = isRentRoll 
+      ? "/properties/rent-roll" 
+      : selectedRole === "owner" 
+      ? (isMarketplace ? "/properties/add" : "/properties") 
       : selectedRole === "broker" 
       ? "/leasing" 
       : selectedRole === "vendor" 
       ? "/vendor" 
       : selectedRole === "pm" 
       ? "/ops" 
-      : "/tenant";
+      : (isMarketplace ? "/marketplace" : "/tenant");
 
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_active_org", orgLegalName.trim() || effectivePropName);
@@ -439,7 +518,38 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
       localStorage.setItem("officex_dashboard", workspaceUrl);
       localStorage.setItem("officex_onboarding_completed", "1");
       localStorage.setItem("officex_kyc_stage", "K1_BUSINESS_SUBMITTED");
-      if (selectedRole === "owner") {
+      if (isRentRoll) {
+        localStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
+        
+        // Seed initial active lease for the owner's building so dashboard has immediate live data
+        let existingLeases = [];
+        try {
+          existingLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
+        } catch {}
+        if (existingLeases.length === 0) {
+          localStorage.setItem("officex_active_leases", JSON.stringify([
+            {
+              id: `LEASE-${Date.now()}`,
+              tenantName: "Nexus Tech Corp",
+              propertyName: effectivePropName,
+              unitNumber: "Tower 1 · Suite 402",
+              floorNumber: 4,
+              chargeableArea: 5000,
+              monthlyRent: 350000,
+              camRate: 15,
+              monthlyCam: 75000,
+              totalMonthlyGross: 425000,
+              escalationPct: 5,
+              leaseStartDate: "2025-04-01",
+              leaseEndDate: "2028-03-31",
+              status: "active",
+              inviteCode: `OX-${Math.floor(1000 + Math.random() * 9000)}`
+            }
+          ]));
+        }
+      } else if (selectedRole === "owner") {
         localStorage.setItem("officex_user_properties", JSON.stringify([userProp]));
       }
       document.cookie = `officex_user_role=${encodeURIComponent(roleTitle)}; path=/; max-age=86400; SameSite=Lax`;
@@ -466,7 +576,7 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
 
     setSuccessMsg("Onboarding complete! Launching your verified commercial workspace...");
     setTimeout(() => {
-      const rawRedirect = searchParams?.get("redirect");
+      const rawRedirect = searchParams?.get("redirect") || initialRedirect;
       const target = rawRedirect && !rawRedirect.startsWith("/login") ? rawRedirect : workspaceUrl;
       router.push(target);
     }, 800);
@@ -503,12 +613,35 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
 
         {/* Canonical Domain Trust Anchor (Centered) */}
         <div className="mb-4 flex justify-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold tracking-wide">OfficeX</span>
-            <span className="text-blue-300">·</span>
-            <span className="text-blue-800">Verified Registration & Onboarding Gateway</span>
-          </div>
+          {isRentRoll ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-[#0D7B6C] animate-pulse" />
+              <span className="font-bold tracking-wide">OfficeX</span>
+              <span className="text-teal-300">·</span>
+              <span className="text-teal-800">Commercial Landlord &amp; Rent Roll Onboarding</span>
+            </div>
+          ) : isOperate ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-900 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+              <span className="font-bold tracking-wide">OfficeX Operate</span>
+              <span className="text-indigo-300">·</span>
+              <span className="text-indigo-800">FM Operations &amp; Statutory Compliance</span>
+            </div>
+          ) : isFm ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="font-bold tracking-wide">OfficeX FM</span>
+              <span className="text-amber-300">·</span>
+              <span className="text-amber-800">Facilities Services Marketplace Onboarding</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-900 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-bold tracking-wide">OfficeX Marketplace</span>
+              <span className="text-blue-300">·</span>
+              <span className="text-blue-800">Commercial Space &amp; Leasing Registration</span>
+            </div>
+          )}
         </div>
 
         {/* Main Card Container */}
@@ -542,18 +675,34 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
           {/* Header Title */}
           <div className="mb-5">
             <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-              {step === 1 && "Create Your Account"}
+              {step === 1 && (
+                isRentRoll
+                  ? "Create Your Landlord Account"
+                  : isOperate
+                  ? "Create Operations Account"
+                  : isFm
+                  ? "Create FM Contractor Account"
+                  : "Create Marketplace Account"
+              )}
               {step === 2 && "Verify Email & Mobile"}
-              {step === 3 && "Establish Your Business Entity"}
-              {step === 4 && (selectedRole === "owner" ? "Commercial Asset & Rent Roll Setup" : "Role Business Profile")}
+              {step === 3 && (isRentRoll ? "Establish Landlord Legal Entity" : "Establish Your Business Entity")}
+              {step === 4 && (selectedRole === "owner" ? (isRentRoll ? "Commercial Asset & Rent Roll Setup" : "Commercial Property Portfolio") : "Role Business Profile")}
               {step === 5 && "Review & Complete Onboarding"}
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1.5 font-normal leading-relaxed">
-              {step === 1 && "Join India's unified commercial real estate and facilities management platform."}
+              {step === 1 && (
+                isRentRoll
+                  ? "Initialize your commercial building's live rent roll ledger, active lease schedule, and automated CAM billing."
+                  : isOperate
+                  ? "Join the OfficeX Operate FM Operations platform for preventive maintenance, compliance, and asset management."
+                  : isFm
+                  ? "Register your facility management firm to bid on contracts and manage building work orders."
+                  : "Discover commercial office spaces across India, list vacant properties, or connect as a leasing broker."
+              )}
               {step === 2 && `We've sent a real 6-digit verification code to ${email || "your work email"}.`}
-              {step === 3 && "Create your organization master to link commercial properties, leases, and contracts."}
+              {step === 3 && (isRentRoll ? "Set up your commercial asset ownership entity to link properties, active leases, and collections." : "Create your organization master to link commercial properties, leases, and contracts.")}
               {step === 4 && (selectedRole === "owner" 
-                ? "Configure your primary building parameters to initialize your live Rent Roll." 
+                ? "Configure your primary building parameters to initialize your workspace." 
                 : "Set up your operational business attributes.")}
               {step === 5 && "Review your submitted entity details and activate your verified commercial workspace."}
             </p>
@@ -582,7 +731,43 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               STEP 1: S02 CREATE ACCOUNT CREDENTIALS
               ================================================================= */}
           {step === 1 && (
-            <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
+            <div className="space-y-4">
+              {/* Google OAuth Button */}
+              <button
+                type="button"
+                onClick={() => handleOAuthSignUp("google")}
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-center gap-3 shadow-2xs transition-all cursor-pointer disabled:opacity-60"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              <div className="relative flex items-center justify-center my-3">
+                <div className="border-t border-slate-200 w-full" />
+                <span className="bg-white px-2.5 text-[10px] uppercase font-bold tracking-wider text-slate-400 absolute">
+                  or register with work credentials
+                </span>
+              </div>
+
+              <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
               {/* Full Legal Name */}
               <div>
                 <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
@@ -750,7 +935,8 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
                 )}
               </button>
             </form>
-          )}
+          </div>
+        )}
 
           {/* =================================================================
               STEP 2: S03 CONTACT VERIFICATION (OTP)
@@ -865,39 +1051,68 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
               </div>
 
               {/* Entity Category / Focus */}
-              <div>
-                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  SELECT BUSINESS ENTITY TYPE *
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "owner", label: "Property Owner / Landlord", badge: "Commercial Asset Portfolio & Leases", icon: Building },
-                    { id: "broker", label: "Broker / Advisory Partner", badge: "Commercial Leasing & Deals", icon: Handshake },
-                    { id: "vendor", label: "FM & Service Contractor", badge: "FM Contracts & Operations", icon: Truck },
-                    { id: "tenant", label: "Corporate Tenant / Occupier", badge: "Workplace & Leased Office Space", icon: Users }
-                  ].map((r) => {
-                    const isSelected = selectedRole === r.id;
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => setSelectedRole(r.id)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600 shadow-2xs"
-                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 font-medium"
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <r.icon size={14} className={isSelected ? "text-blue-600" : "text-slate-400"} />
-                          <span className="text-xs font-bold leading-tight">{r.label}</span>
-                        </div>
-                        <span className="text-[9.5px] text-blue-700 font-semibold block mt-1">{r.badge}</span>
-                      </button>
-                    );
-                  })}
+              {isRentRoll ? (
+                <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 text-xs text-teal-900 flex items-center gap-2.5">
+                  <Building size={18} className="text-[#0D7B6C] shrink-0" />
+                  <div>
+                    <div className="font-bold text-slate-900">Entity Category: Commercial Property Owner &amp; Landlord</div>
+                    <div className="text-[11px] text-slate-600 mt-0.5">Initializing your commercial property portfolio, live rent roll, and tenant lease schedules.</div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    SELECT BUSINESS ENTITY TYPE *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {(isMarketplace
+                      ? [
+                          { id: "tenant", label: "Space Seeker / Tenant", badge: "Find & Lease Commercial Space", icon: Users },
+                          { id: "owner", label: "Commercial Property Owner", badge: "List Properties for Lease", icon: Building },
+                          { id: "broker", label: "Commercial Broker / Partner", badge: "Leasing Advisory & Deals", icon: Handshake }
+                        ]
+                      : isFm
+                      ? [
+                          { id: "vendor", label: "FM & Service Contractor", badge: "FM Contracts, Bids & Jobs", icon: Truck },
+                          { id: "pm", label: "Facility / Site Manager", badge: "Site Operations & Compliance", icon: Settings },
+                          { id: "owner", label: "Commercial Property Owner", badge: "Procure FM & Site Services", icon: Building }
+                        ]
+                      : isOperate
+                      ? [
+                          { id: "owner", label: "Property Owner / Landlord", badge: "Portfolio Operations & Assets", icon: Building },
+                          { id: "pm", label: "Facility / Operations Manager", badge: "Preventive Maintenance & FM", icon: Settings },
+                          { id: "tenant", label: "Corporate Tenant Occupier", badge: "Workplace Helpdesk & Access", icon: Users }
+                        ]
+                      : [
+                          { id: "owner", label: "Property Owner / Landlord", badge: "Commercial Asset Portfolio", icon: Building },
+                          { id: "broker", label: "Broker / Advisory Partner", badge: "Commercial Leasing & Deals", icon: Handshake },
+                          { id: "vendor", label: "FM & Service Contractor", badge: "FM Contracts & Operations", icon: Truck },
+                          { id: "tenant", label: "Corporate Tenant / Occupier", badge: "Workplace Leases & Space", icon: Users }
+                        ]
+                    ).map((r) => {
+                      const isSelected = selectedRole === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setSelectedRole(r.id)}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            isSelected
+                              ? "bg-blue-50 border-blue-600 text-blue-900 font-bold ring-1 ring-blue-600 shadow-2xs"
+                              : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 font-medium"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <r.icon size={14} className={isSelected ? "text-blue-600" : "text-slate-400"} />
+                            <span className="text-xs font-bold leading-tight">{r.label}</span>
+                          </div>
+                          <span className="text-[9.5px] text-blue-700 font-semibold block mt-1">{r.badge}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Legal Entity Name */}
               <div>
@@ -1540,7 +1755,14 @@ export default function SignupForm({ initialRole, initialIntent }: SignupFormPro
           {/* Link to Login */}
           <div className="pt-4 border-t border-slate-200 text-center text-xs text-slate-600 mt-4">
             Already have an account?{" "}
-            <Link href="/login" className="text-blue-600 font-bold hover:underline">
+            <Link
+              href={`/login${
+                typeof window !== "undefined" && window.location.search
+                  ? window.location.search
+                  : `?context=${isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "marketplace"}&redirect=${encodeURIComponent(initialRedirect || (isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"))}`
+              }`}
+              className="text-blue-600 font-bold hover:underline"
+            >
               Sign In
             </Link>
           </div>

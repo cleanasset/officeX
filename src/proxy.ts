@@ -84,16 +84,38 @@ export function proxy(request: NextRequest) {
       c.name.startsWith('sb-')
   );
 
+  const requestHeaders = new Headers(request.headers);
+  const fullTarget = search ? `${pathname}${search}` : pathname;
+  requestHeaders.set('x-pathname', pathname);
+  requestHeaders.set('x-search', search);
+  requestHeaders.set('x-url', fullTarget);
+
   if (!hasAuth) {
     const loginUrl = new URL('/login', request.url);
-    // Sanitize redirect target including query params to ensure it is an internal relative path
-    const fullTarget = search ? `${pathname}${search}` : pathname;
     const safeRedirect = validateRedirect(fullTarget, '/properties');
     loginUrl.searchParams.set('redirect', safeRedirect);
+
+    // Automatically infer and attach the domain login context
+    if (pathname.startsWith('/properties/rent-roll') || safeRedirect.includes('rent-roll')) {
+      loginUrl.searchParams.set('context', 'rent-roll');
+    } else if (pathname.startsWith('/ops') || pathname.startsWith('/operations') || safeRedirect.includes('operate')) {
+      loginUrl.searchParams.set('context', 'operate');
+    } else if (pathname.startsWith('/vendor') || safeRedirect.includes('fm')) {
+      loginUrl.searchParams.set('context', 'fm');
+    } else if (pathname.startsWith('/leasing') || pathname.startsWith('/marketplace') || safeRedirect.includes('marketplace')) {
+      loginUrl.searchParams.set('context', 'marketplace');
+    } else if (pathname.startsWith('/properties')) {
+      loginUrl.searchParams.set('context', 'properties');
+    }
+
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

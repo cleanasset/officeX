@@ -849,7 +849,7 @@ export default function LandingPage() {
 
         {/* Right: Actions */}
         <div className="hidden md:flex items-center justify-end gap-3 shrink-0">
-          <HeaderAuthButton />
+          <HeaderAuthButton loginContext="marketplace" />
           <button 
             type="button"
             onClick={() => openEnquiry()}
@@ -903,7 +903,7 @@ export default function LandingPage() {
           <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Contact Us</Link>
           <hr className="border-slate-200 my-2" />
           <div className="py-1">
-            <HeaderAuthButton />
+            <HeaderAuthButton loginContext="marketplace" />
           </div>
           <button 
             type="button"

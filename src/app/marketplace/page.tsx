@@ -953,7 +953,7 @@ export default function PropertyMarketplacePage() {
             </div>
             <div className="flex items-center gap-3 pt-6 mt-4 border-t border-amber-200/60">
               <Link
-                href="/signup?role=leasing_broker"
+                href="/signup?context=marketplace&role=broker&redirect=/leasing"
                 className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-all"
               >
                 Join as Broker Partner

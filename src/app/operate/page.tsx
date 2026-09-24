@@ -130,7 +130,7 @@ export default function OperatePage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] antialiased selection:bg-[#0D7B6C] selection:text-white flex flex-col font-sans">
-      <MarketingHeader />
+      <MarketingHeader activePath="/operate" />
 
       {/* ═══════════════════════════════════════════════════════════
           1. HERO SECTION — Sunlit High-Tech SaaS Operations Command Center

@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -39,11 +39,14 @@ export default async function PortalLayout({
 }) {
   // Server-side auth gate: check for session cookies
   const cookieStore = await cookies();
+  const headerList = await headers();
+  const fullUrl = headerList.get("x-url") || headerList.get("x-invoke-path") || "/properties";
   const hasAuth = cookieStore.get("officex_auth")?.value === "1" ||
                   cookieStore.get("officex_session_active")?.value === "1";
   
   if (!hasAuth) {
-    redirect("/login?redirect=/properties");
+    const isRentRoll = fullUrl.includes("rent-roll");
+    redirect(`/login?context=${isRentRoll ? "rent-roll" : "properties"}&redirect=${encodeURIComponent(fullUrl)}`);
   }
 
   return (

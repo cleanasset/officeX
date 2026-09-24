@@ -55,7 +55,34 @@ export default function SignInForm({
   initialRole,
   initialContext
 }: SignInFormProps) {
-  const safeRedirect = validateRedirect(initialRedirect, "/");
+  const isRentRollContext =
+    initialContext === "rent-roll" ||
+    (initialRedirect ? initialRedirect.includes("rent-roll") : false) ||
+    (typeof window !== "undefined" && window.location.search.includes("rent-roll"));
+
+  const isOperateContext =
+    !isRentRollContext && (
+      initialContext === "operate" ||
+      (initialRedirect ? initialRedirect.includes("operate") : false) ||
+      (typeof window !== "undefined" && window.location.search.includes("operate"))
+    );
+
+  const isFmContext =
+    initialContext === "fm" ||
+    (initialRedirect ? initialRedirect.includes("fm") : false) ||
+    (typeof window !== "undefined" && window.location.search.includes("fm"));
+
+  const isMarketplaceContext = !isRentRollContext && !isOperateContext && !isFmContext;
+
+  const defaultRedirect = isRentRollContext
+    ? "/properties/rent-roll"
+    : isOperateContext
+    ? "/operate"
+    : isFmContext
+    ? "/fm-marketplace"
+    : "/marketplace";
+
+  const safeRedirect = validateRedirect(initialRedirect, defaultRedirect);
 
   // Locale state: English or Hindi
   const [lang, setLang] = useState<Lang>("en");
@@ -595,21 +622,28 @@ export default function SignInForm({
       return;
     }
 
-    // Client Spec Section 17 & Table 54:
-    // 0 active memberships → Show "No Workspace Yet" screen!
+    // 0 active memberships → Route to canonical /signup with context
     if (memList.length === 0) {
       const savedOrg = typeof window !== "undefined" ? localStorage.getItem("officex_active_org") : null;
       if (savedOrg) {
         let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "";
         if (!destination || destination === "/") {
-          const lowerRole = (localStorage.getItem("officex_user_role") || roleName || initialRole || "owner").toLowerCase();
-          destination = lowerRole.includes("broker")
-            ? "/leasing"
-            : lowerRole.includes("vendor") || lowerRole.includes("fm")
-            ? "/vendor"
-            : lowerRole.includes("tenant")
-            ? "/tenant"
-            : "/properties";
+          if (isRentRollContext) {
+            destination = "/properties/rent-roll";
+          } else if (isOperateContext) {
+            destination = "/operate";
+          } else if (isFmContext) {
+            destination = "/fm-marketplace";
+          } else {
+            const lowerRole = (localStorage.getItem("officex_user_role") || roleName || initialRole || "tenant").toLowerCase();
+            destination = lowerRole.includes("broker")
+              ? "/leasing"
+              : lowerRole.includes("owner")
+              ? "/properties/add"
+              : lowerRole.includes("vendor") || lowerRole.includes("fm")
+              ? "/vendor"
+              : "/marketplace";
+          }
         }
         setStep("signed_in_success");
         setTimeout(() => {
@@ -618,7 +652,15 @@ export default function SignInForm({
         return;
       }
 
-      setStep("no_workspace");
+      const targetSignupUrl = isRentRollContext
+        ? `/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent(safeRedirect)}`
+        : isOperateContext
+        ? `/signup?context=operate&redirect=${encodeURIComponent(safeRedirect)}`
+        : isFmContext
+        ? `/signup?context=fm&redirect=${encodeURIComponent(safeRedirect)}`
+        : `/signup?context=marketplace&redirect=${encodeURIComponent(safeRedirect)}`;
+
+      window.location.href = targetSignupUrl;
       return;
     }
 
@@ -630,14 +672,22 @@ export default function SignInForm({
     // Determine target destination (preserves redirects like /properties/rent-roll)
     let destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : "";
     if (!destination || destination === "/") {
-      const lowerRole = (roleName || initialRole || "owner").toLowerCase();
-      destination = lowerRole.includes("broker")
-        ? "/leasing"
-        : lowerRole.includes("vendor") || lowerRole.includes("fm")
-        ? "/vendor"
-        : lowerRole.includes("tenant")
-        ? "/tenant"
-        : "/properties";
+      if (isRentRollContext) {
+        destination = "/properties/rent-roll";
+      } else if (isOperateContext) {
+        destination = "/operate";
+      } else if (isFmContext) {
+        destination = "/fm-marketplace";
+      } else {
+        const lowerRole = (roleName || initialRole || "tenant").toLowerCase();
+        destination = lowerRole.includes("broker")
+          ? "/leasing"
+          : lowerRole.includes("owner")
+          ? "/properties/add"
+          : lowerRole.includes("vendor") || lowerRole.includes("fm")
+          ? "/vendor"
+          : "/marketplace";
+      }
     }
 
     setStep("signed_in_success");
@@ -784,8 +834,11 @@ export default function SignInForm({
     setInfoMessage(lang === "hi" ? "Google से जुड़ रहा है..." : "Connecting to Google...");
 
     try {
+      const searchStr = typeof window !== "undefined" && window.location.search
+        ? window.location.search
+        : `?context=${isRentRollContext ? "rent-roll" : isOperateContext ? "operate" : isFmContext ? "fm" : "marketplace"}&redirect=${encodeURIComponent(safeRedirect)}`;
       const redirectUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/login`
+        ? `${window.location.origin}/login${searchStr}`
         : "http://localhost:3000/login";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -1066,12 +1119,45 @@ export default function SignInForm({
                 =============================================================== */}
             {step === "identifier" && (
               <div>
+                {isRentRollContext ? (
+                  <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs animate-fadeIn">
+                    <Building2 size={14} className="text-[#0D7B6C]" />
+                    <span>Commercial Landlord Desk · Live Rent Roll</span>
+                  </div>
+                ) : isOperateContext ? (
+                  <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs animate-fadeIn">
+                    <Layers size={14} className="text-[#0D7B6C]" />
+                    <span>OfficeX Operate · Institutional CRE &amp; FM Suite</span>
+                  </div>
+                ) : isFmContext ? (
+                  <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0F8B7D] shadow-2xs animate-fadeIn">
+                    <ShieldCheck size={14} className="text-[#0F8B7D]" />
+                    <span>OfficeX FM Marketplace · Facilities &amp; Trades</span>
+                  </div>
+                ) : (
+                  <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 shadow-2xs animate-fadeIn">
+                    <Building2 size={14} className="text-blue-600" />
+                    <span>OfficeX Marketplace · Commercial Real Estate</span>
+                  </div>
+                )}
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-                    {t.title}
+                    {isRentRollContext
+                      ? "Sign in to Rent Roll"
+                      : isOperateContext
+                      ? "Sign in to OfficeX Operate"
+                      : isFmContext
+                      ? "Sign in to FM Marketplace"
+                      : "Sign in to OfficeX"}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-600 mt-1.5 font-normal leading-relaxed">
-                    {t.subtitle}
+                    {isRentRollContext
+                      ? "Sign in as Property Owner to manage commercial leases, automated escalations, collections, and property cash flows."
+                      : isOperateContext
+                      ? "Manage tower compliance, 52-week maintenance calendars, visitor speed-gates, and tenant helpdesk."
+                      : isFmContext
+                      ? "Hire pre-vetted facility vendors or manage work order bids and facility AMCs."
+                      : "Search Grade-A commercial office spaces, list properties for lease, or manage brokerage client mandates."}
                   </p>
                 </div>
 
@@ -1150,8 +1236,6 @@ export default function SignInForm({
                     </button>
                   </div>
 
-
-
                   {/* Recovery & Sign-up Links */}
                   <div className="pt-4 border-t border-slate-200 space-y-2 text-center text-xs">
                     <div>
@@ -1169,10 +1253,24 @@ export default function SignInForm({
                     <div>
                       <span className="text-slate-500">{t.newToOfficeX} </span>
                       <Link
-                        href="/signup"
+                        href={
+                          isRentRollContext
+                            ? `/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent(safeRedirect)}`
+                            : isOperateContext
+                            ? `/signup?context=operate&redirect=${encodeURIComponent(safeRedirect)}`
+                            : isFmContext
+                            ? `/signup?context=fm&redirect=${encodeURIComponent(safeRedirect)}`
+                            : `/signup?context=marketplace&redirect=${encodeURIComponent(safeRedirect)}`
+                        }
                         className="text-blue-600 hover:text-blue-700 font-bold hover:underline transition-colors"
                       >
-                        {t.requestAccess} →
+                        {isRentRollContext
+                          ? "New Property Owner? Set up Rent Roll →"
+                          : isOperateContext
+                          ? "New to OfficeX Operate? Request Access →"
+                          : isFmContext
+                          ? "Join as Vendor or Client? Register →"
+                          : "New to OfficeX? Register for Marketplace →"}
                       </Link>
                     </div>
                   </div>

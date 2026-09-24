@@ -17,7 +17,7 @@ import {
 interface HeaderAuthButtonProps {
   className?: string;
   /** Context key passed to /login?context=... for contextual portal filtering */
-  loginContext?: "marketplace" | "fm" | "operate" | "properties" | "";
+  loginContext?: "marketplace" | "fm" | "operate" | "properties" | "rent-roll" | "";
 }
 
 export default function HeaderAuthButton({ className = "", loginContext = "" }: HeaderAuthButtonProps) {
@@ -106,7 +106,17 @@ export default function HeaderAuthButton({ className = "", loginContext = "" }: 
     window.location.reload();
   };
 
-  const loginHref = loginContext ? `/login?context=${loginContext}` : "/login";
+  const loginHref = loginContext === "rent-roll"
+    ? "/login?context=rent-roll&redirect=/properties/rent-roll"
+    : loginContext === "marketplace"
+    ? "/login?context=marketplace&redirect=/marketplace"
+    : loginContext === "fm"
+    ? "/login?context=fm&redirect=/fm-marketplace"
+    : loginContext === "operate"
+    ? "/login?context=operate&redirect=/operate"
+    : loginContext === "properties"
+    ? "/login?context=properties&redirect=/properties"
+    : "/login?context=marketplace&redirect=/marketplace";
 
   if (!mounted) {
     return (

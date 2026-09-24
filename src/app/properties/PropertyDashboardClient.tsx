@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
 import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
+import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
 
 interface PropertyDashboardClientProps {
   initialProperties: any[];
@@ -543,7 +544,7 @@ export default function PropertyDashboardClient({
             </div>
           </div>
           <Link
-            href="/onboarding?role=owner&redirect=/properties"
+            href="/signup?context=rent-roll&role=owner&module=rent-roll&redirect=/properties"
             className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-teal-950 font-black text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer hover:scale-[1.02]"
           >
             <span>Launch Onboarding Form</span>
@@ -1405,224 +1406,16 @@ export default function PropertyDashboardClient({
         </div>
       )}
 
-      {/* Add Existing Tenant Modal */}
-      {showAddTenantModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-                  <UserPlus size={22} />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900">Add Existing Tenant & Active Lease</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Onboard an existing occupant into your commercial rent roll & collections</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddTenantModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddTenantSubmit} className="space-y-4 text-xs">
-              {/* Target Property */}
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                  Select Commercial Property *
-                </label>
-                <select
-                  value={newTenantData.propertyId || displayedProperties[0]?.id || ""}
-                  onChange={(e) => setNewTenantData({ ...newTenantData, propertyId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
-                >
-                  {displayedProperties.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.city || "Commercial Hub"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Business / Tenant Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                    Tenant Trade / Brand Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Acme Tech Labs Pvt Ltd"
-                    value={newTenantData.tradeName}
-                    onChange={(e) => setNewTenantData({ ...newTenantData, tradeName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                    Contact Person
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rajesh Mehta (Admin Head)"
-                    value={newTenantData.contactPerson}
-                    onChange={(e) => setNewTenantData({ ...newTenantData, contactPerson: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                    Billing Email Address
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="billing@tenantcompany.in"
-                    value={newTenantData.contactEmail}
-                    onChange={(e) => setNewTenantData({ ...newTenantData, contactEmail: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                    Mobile / WhatsApp (for Invoices)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="+91 98200 12345"
-                    value={newTenantData.contactPhone}
-                    onChange={(e) => setNewTenantData({ ...newTenantData, contactPhone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
-                  />
-                </div>
-              </div>
-
-              {/* Space & Rent Details */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">
-                  SPACE ALLOCATION & FINANCIAL TERMS
-                </span>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Unit / Suite #</label>
-                    <input
-                      type="text"
-                      placeholder="Suite 401"
-                      value={newTenantData.unitNumber}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, unitNumber: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Floor #</label>
-                    <input
-                      type="number"
-                      placeholder="4"
-                      value={newTenantData.floorNumber}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, floorNumber: Number(e.target.value) })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Area (Sq. Ft)</label>
-                    <input
-                      type="number"
-                      placeholder="5000"
-                      value={newTenantData.chargeableArea}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, chargeableArea: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Escalation %</label>
-                    <input
-                      type="text"
-                      placeholder="5%"
-                      value={newTenantData.escalationPct}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, escalationPct: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Monthly Base Rent (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="250000"
-                      value={newTenantData.monthlyRent}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, monthlyRent: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-extrabold text-emerald-700 text-sm"
-                    />
-                    <span className="text-[10px] text-slate-500 font-bold mt-0.5 block">
-                      ₹{Math.round((Number(newTenantData.monthlyRent) || 0) / (Number(newTenantData.chargeableArea) || 1))}/sq.ft per month
-                    </span>
-                  </div>
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Security Deposit Paid (₹)</label>
-                    <input
-                      type="number"
-                      placeholder="750000"
-                      value={newTenantData.securityDeposit}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, securityDeposit: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Lease Commencement Date</label>
-                    <input
-                      type="date"
-                      value={newTenantData.leaseStartDate}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, leaseStartDate: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Lease Expiry Date</label>
-                    <input
-                      type="date"
-                      value={newTenantData.leaseEndDate}
-                      onChange={(e) => setNewTenantData({ ...newTenantData, leaseEndDate: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-100 pt-4 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddTenantModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingTenant}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <UserPlus size={14} />
-                  {isSubmittingTenant ? "Registering Tenant..." : "Register Tenant & Active Lease"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* Unified Add Tenant & Active Lease Modal */}
+      <AddTenantModal
+        isOpen={showAddTenantModal}
+        onClose={() => setShowAddTenantModal(false)}
+        onSuccess={() => {
+          showToast("🎉 Tenant & active lease registered successfully!");
+          loadLeasesAndDashboard();
+        }}
+        properties={displayedProperties}
+      />
       {/* Tenant Invitation Modal */}
       {inviteModalProp && (
         <TenantInviteModal
