@@ -64,6 +64,11 @@ export interface EnrichedLease {
   notes?: string;
   totalOutstanding: number;
   hasOverdue: boolean;
+  billingModel?: "area" | "seat" | "hybrid";
+  seatsCount?: number;
+  billingEntityName?: string;
+  probabilityPct?: number;
+  isDealPipeline?: boolean;
   computed?: {
     depositShortfall: number;
     depositCompliancePct: number;
@@ -80,6 +85,8 @@ interface MasterGridTabProps {
   onOpenApplyEscalation: (lease: EnrichedLease) => void;
   onOpenServeNotice: (lease: EnrichedLease) => void;
   onOpenRecordPayment: (lease: EnrichedLease) => void;
+  viewMode?: "current" | "contracted" | "forecast";
+  onViewModeChange?: (mode: "current" | "contracted" | "forecast") => void;
 }
 
 export const MasterGridTab: React.FC<MasterGridTabProps> = ({
@@ -88,6 +95,8 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   onOpenApplyEscalation,
   onOpenServeNotice,
   onOpenRecordPayment,
+  viewMode = "current",
+  onViewModeChange,
 }) => {
   const [sortField, setSortField] = useState<keyof EnrichedLease>("monthlyRent");
   const [sortAsc, setSortAsc] = useState(false);
@@ -146,23 +155,65 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   return (
     <div className="space-y-4">
       {/* Table Action & Information Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
-        <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
-          <span className="font-black text-gray-900">{sortedLeases.length}</span> Master Leases Loaded
-          <span className="text-gray-300">|</span>
-          <span className="text-gray-500">Click any row to open full 360° Commercial Drawer</span>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+            <span className="font-black text-gray-900">{sortedLeases.length}</span> Master Leases
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">360° Commercial Lease Registry</span>
+          </div>
+
+          {/* 3-Way Rent Roll View Mode Toggle (RR-VW-03) */}
+          {onViewModeChange && (
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs">
+              <button
+                onClick={() => onViewModeChange("current")}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  viewMode === "current"
+                    ? "bg-white text-gray-900 shadow-2xs border border-gray-200"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+                title="Executed active leases at current active contracted rates"
+              >
+                Current Active
+              </button>
+              <button
+                onClick={() => onViewModeChange("contracted")}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  viewMode === "contracted"
+                    ? "bg-[#0F8B7D] text-white shadow-2xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+                title="Current active + signed future leases + scheduled stepped rent increases"
+              >
+                Contracted (+Future)
+              </button>
+              <button
+                onClick={() => onViewModeChange("forecast")}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  viewMode === "forecast"
+                    ? "bg-indigo-600 text-white shadow-2xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+                title="Contracted + leasing pipeline deals weighted by close probability"
+              >
+                Forecast (+Deals)
+              </button>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-3 text-xs font-bold">
-          <span className="flex items-center gap-1.5 text-teal-700 bg-teal-50 px-2 py-1 rounded-lg border border-teal-200">
+
+        <div className="flex items-center gap-2.5 text-xs font-bold flex-wrap">
+          <span className="flex items-center gap-1.5 text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
             <span className="w-2 h-2 rounded-full bg-teal-600"></span> Active (
             {leases.filter((l) => l.status === "active").length})
           </span>
-          <span className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+          <span className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span> Notice (
             {leases.filter((l) => l.status === "under_notice").length})
           </span>
-          <span className="flex items-center gap-1.5 text-rose-700 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
-            <span className="w-2 h-2 rounded-full bg-rose-500"></span> Overdue Arrears (
+          <span className="flex items-center gap-1.5 text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+            <span className="w-2 h-2 rounded-full bg-rose-500"></span> Overdue (
             {leases.filter((l) => l.totalOutstanding > 0).length})
           </span>
         </div>
@@ -269,9 +320,16 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                 >
                   {/* Sticky Tenant Name */}
                   <td className="p-3.5 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-200 font-bold text-gray-900 flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#0F8B7D] shrink-0"></div>
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${lease.isDealPipeline ? "bg-indigo-500 animate-pulse" : "bg-[#0F8B7D]"}`}></div>
                     <div>
-                      <div className="font-black text-gray-950">{lease.tenantName}</div>
+                      <div className="font-black text-gray-950 flex items-center gap-1.5">
+                        <span>{lease.tenantName}</span>
+                        {lease.isDealPipeline && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Deal ({lease.probabilityPct || 60}%)
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-gray-400 font-normal">{lease.tenantId}</div>
                     </div>
                   </td>
@@ -287,10 +345,19 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                     <div className="text-[11px] text-gray-500">{lease.unitNumber} (Flr {lease.floorNumber})</div>
                   </td>
 
-                  {/* Area */}
+                  {/* Area / Desk Capacity (RR-FLX-01) */}
                   <td className="p-3.5 text-right font-mono text-gray-700 font-semibold">
-                    {lease.chargeableArea?.toLocaleString() || "0"}
-                    <span className="text-[10px] text-gray-400 block font-normal">Carpet: {lease.carpetArea?.toLocaleString() || "0"}</span>
+                    {lease.billingModel === "seat" || (lease.seatsCount && lease.seatsCount > 0) ? (
+                      <div>
+                        <span className="font-bold text-indigo-700">{lease.seatsCount || 10} Desks</span>
+                        <span className="text-[10px] text-indigo-500 block font-normal">Flex Billing</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <span>{lease.chargeableArea?.toLocaleString() || "0"}</span>
+                        <span className="text-[10px] text-gray-400 block font-normal">Carpet: {lease.carpetArea?.toLocaleString() || "0"}</span>
+                      </div>
+                    )}
                   </td>
 
                   {/* Base Rent */}
@@ -320,12 +387,17 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                     <span className="text-[10px] text-amber-700 block font-normal">incl. 18% GST</span>
                   </td>
 
-                  {/* Security Deposit */}
+                  {/* Security Deposit (RR-CON-07) */}
                   <td className="p-3.5 text-right font-mono text-gray-700">
                     <div className="font-bold text-gray-900">{formatINR(lease.securityDepositPaid)}</div>
                     <div className="text-[10px] text-gray-400 font-normal">
                       Req: {formatINR(lease.securityDepositAmount || 0)} ({lease.securityDepositMonths || 6}m)
                     </div>
+                    {lease.computed && lease.computed.depositShortfall > 0 && (
+                      <div className="text-[10px] text-amber-600 font-bold">
+                        Shortfall: {formatINR(lease.computed.depositShortfall)}
+                      </div>
+                    )}
                   </td>
 
                   {/* Escalation % */}

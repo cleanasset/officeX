@@ -49,50 +49,32 @@ import { ApplyEscalationModal } from "@/components/rent-roll/ApplyEscalationModa
 import { ManagePropertiesModal } from "@/components/rent-roll/ManagePropertiesModal";
 import { DeletePropertyModal } from "@/components/rent-roll/DeletePropertyModal";
 import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal";
+import { OwnerStatementsModal } from "@/components/rent-roll/OwnerStatementsModal";
+import { DealsModal } from "@/components/rent-roll/DealsModal";
+import { BillingRunModal } from "@/components/rent-roll/BillingRunModal";
+import { AdjustmentNoteModal } from "@/components/rent-roll/AdjustmentNoteModal";
 
-const SEED_PROP_IDS = new Set([
-  "prop-1",
-  "prop-2",
-  "prop-3",
-  "401f394a-6d27-4c23-9a21-411baa7eef3b",
-  "cfa13505-71a5-4a43-be33-37497f416fdc",
-  "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
-  "PROP-8841",
-  "PROP-FORTUNE-SKY",
-  "PROP-001",
-  "PROP-1790239048961"
-]);
-
-const SEED_PROP_NAMES = new Set([
+const DEPRECATED_PROP_NAMES = new Set([
   "fortune sky",
   "apex horizon tower",
   "signature tower b",
   "eka club",
   "business hub",
-  "shivalik shilp",
-  "apex business tower",
-  "apex commercial tower",
-  "meridian tech park",
-  "nexus hub",
-  "maker maxity",
-  "godrej bkc horizon"
+  "shivalik shilp"
 ]);
 
-const isSeedProperty = (p: any) => {
+const isDeprecatedMockProperty = (p: any) => {
   if (!p) return true;
-  if (SEED_PROP_IDS.has(p.id)) return true;
   const name = (p.name || p.propertyName || "").trim().toLowerCase();
-  if (SEED_PROP_NAMES.has(name)) return true;
-  if (name.includes("fortune sky") || name.includes("apex horizon") || name.includes("signature tower b")) return true;
+  if (DEPRECATED_PROP_NAMES.has(name)) return true;
+  if (name.includes("fortune sky") || name.includes("signature tower b") || name.includes("eka club")) return true;
   return false;
 };
 
-const isSeedLeaseItem = (l: any) => {
+const isDeprecatedMockLease = (l: any) => {
   if (!l) return true;
   const propName = (l.propertyName || l.buildingName || "").toLowerCase();
-  const tenant = (l.tenantName || "").toLowerCase();
-  if (propName.includes("fortune sky") || propName.includes("apex horizon") || propName.includes("signature tower b")) return true;
-  if (tenant.includes("nexus enterprise") || tenant.includes("tata consultancy") || tenant.includes("hdfc bank corporate")) return true;
+  if (propName.includes("fortune sky") || propName.includes("signature tower b") || propName.includes("eka club")) return true;
   return false;
 };
 
@@ -145,9 +127,14 @@ function RentRollPageInner() {
   const [selectedProperty, setSelectedProperty] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedClientAccount, setSelectedClientAccount] = useState<string>("ALL");
+  const [selectedBillingEntity, setSelectedBillingEntity] = useState<string>("ALL");
+  const [viewMode, setViewMode] = useState<"current" | "contracted" | "forecast">("current");
 
   // Data Store State
   const [properties, setProperties] = useState<any[]>([]);
+  const [clientAccounts, setClientAccounts] = useState<any[]>([]);
+  const [billingEntities, setBillingEntities] = useState<any[]>([]);
   const [leases, setLeases] = useState<EnrichedLease[]>([]);
   const [dashboardData, setDashboardData] = useState<any | null>(null);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
@@ -176,6 +163,11 @@ function RentRollPageInner() {
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
   const [isAddTenantOpen, setIsAddTenantOpen] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
+  const [isOwnerStatementsOpen, setIsOwnerStatementsOpen] = useState<boolean>(false);
+  const [isDealsModalOpen, setIsDealsModalOpen] = useState<boolean>(false);
+  const [isBillingRunModalOpen, setIsBillingRunModalOpen] = useState<boolean>(false);
+  const [isAdjustmentNoteOpen, setIsAdjustmentNoteOpen] = useState<boolean>(false);
+  const [selectedInvoiceForAdjustment, setSelectedInvoiceForAdjustment] = useState<InvoiceItem | null>(null);
 
   // Logged-in Landlord identity state
   const [userInfo, setUserInfo] = useState({
@@ -257,6 +249,9 @@ function RentRollPageInner() {
       const propParam = selectedProperty !== "ALL" ? `propertyId=${encodeURIComponent(selectedProperty)}` : "";
       const statusParam = selectedStatus !== "ALL" ? `status=${encodeURIComponent(selectedStatus)}` : "";
       const searchParam = searchQuery ? `search=${encodeURIComponent(searchQuery)}` : "";
+      const clientAccountParam = selectedClientAccount !== "ALL" ? `clientAccountId=${encodeURIComponent(selectedClientAccount)}` : "";
+      const billingEntityParam = selectedBillingEntity !== "ALL" ? `billingEntityId=${encodeURIComponent(selectedBillingEntity)}` : "";
+      const viewModeParam = `viewMode=${encodeURIComponent(viewMode)}`;
 
       const makeQuery = (extra: string[] = []) => {
         const parts = [emailParam, ...extra].filter(Boolean);
@@ -276,22 +271,33 @@ function RentRollPageInner() {
         pnlRes,
         tntRes,
         auditRes,
-        alertRes
+        alertRes,
+        clientAccRes,
+        billingEntRes
       ] = await Promise.all([
-        fetch(`/api/rent-roll/properties${makeQuery()}`),
-        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam])}`),
-        fetch(`/api/rent-roll/dashboard${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/invoices${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/collections${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/escalations${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/aging${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/occupancy${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/forecast${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/pnl${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/properties${makeQuery([clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam, clientAccountParam, billingEntityParam, viewModeParam])}`),
+        fetch(`/api/rent-roll/dashboard${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/invoices${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/collections${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/escalations${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/aging${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/occupancy${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/forecast${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
+        fetch(`/api/rent-roll/pnl${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
         fetch(`/api/rent-roll/tenants${makeQuery()}`),
         fetch(`/api/rent-roll/audit${makeQuery()}`),
-        fetch(`/api/rent-roll/alerts${makeQuery()}`)
+        fetch(`/api/rent-roll/alerts${makeQuery()}`),
+        fetch(`/api/rent-roll/client-accounts`),
+        fetch(`/api/rent-roll/billing-entities${makeQuery([clientAccountParam])}`)
       ]);
+
+      if (clientAccRes.ok) {
+        setClientAccounts(await clientAccRes.json());
+      }
+      if (billingEntRes.ok) {
+        setBillingEntities(await billingEntRes.json());
+      }
 
       if (propRes.ok) {
         const serverProps = await propRes.json();
@@ -301,10 +307,10 @@ function RentRollPageInner() {
         } catch {}
         const mergedMap = new Map();
         serverProps.forEach((p: any) => {
-          if (!isSeedProperty(p)) mergedMap.set(p.id, p);
+          if (!isDeprecatedMockProperty(p)) mergedMap.set(p.id, p);
         });
         localProps.forEach((p: any) => {
-          if (!isSeedProperty(p) && (!p.ownerEmail || (email && p.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+          if (!isDeprecatedMockProperty(p) && (!p.ownerEmail || (email && p.ownerEmail.toLowerCase() === email.toLowerCase()))) {
             mergedMap.set(p.id, p);
           }
         });
@@ -318,10 +324,10 @@ function RentRollPageInner() {
         } catch {}
         const mergedMap = new Map();
         serverLeases.forEach((l: any) => {
-          if (!isSeedLeaseItem(l)) mergedMap.set(l.id || l.tenantName, l);
+          if (!isDeprecatedMockLease(l)) mergedMap.set(l.id || l.tenantName, l);
         });
         localLeases.forEach((l: any) => {
-          if (!isSeedLeaseItem(l) && (!l.ownerEmail || (email && l.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+          if (!isDeprecatedMockLease(l) && (!l.ownerEmail || (email && l.ownerEmail.toLowerCase() === email.toLowerCase()))) {
             mergedMap.set(l.id || l.tenantName, l);
           }
         });
@@ -343,7 +349,7 @@ function RentRollPageInner() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedProperty, selectedStatus, searchQuery]);
+  }, [selectedProperty, selectedStatus, searchQuery, selectedClientAccount, selectedBillingEntity, viewMode]);
 
   useEffect(() => {
     fetchAllData();
@@ -354,21 +360,9 @@ function RentRollPageInner() {
     window.open(`/api/rent-roll/export?type=${type}`, "_blank");
   };
 
-  // Handle Generate Invoices Batch
-  const handleGenerateInvoicesBatch = async () => {
-    try {
-      const res = await fetch("/api/rent-roll/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billingMonth: "October 2026" })
-      });
-      if (res.ok) {
-        fetchAllData();
-        handleTabChange("invoices");
-      }
-    } catch (e) {
-      console.error("Failed to generate invoices:", e);
-    }
+  // Handle Generate Invoices Batch (RR-BIL-01)
+  const handleGenerateInvoicesBatch = () => {
+    setIsBillingRunModalOpen(true);
   };
 
   // Handle Apply Escalation
@@ -451,6 +445,14 @@ function RentRollPageInner() {
         onSelectStatus={setSelectedStatus}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        clientAccounts={clientAccounts}
+        selectedClientAccount={selectedClientAccount}
+        onSelectClientAccount={setSelectedClientAccount}
+        billingEntities={billingEntities}
+        selectedBillingEntity={selectedBillingEntity}
+        onSelectBillingEntity={setSelectedBillingEntity}
+        onOpenOwnerStatements={() => setIsOwnerStatementsOpen(true)}
+        onOpenDeals={() => setIsDealsModalOpen(true)}
         onOpenAddLease={() => setIsAddLeaseOpen(true)}
         onOpenRecordPayment={() => {
           setPreSelectedInvoiceForPayment(null);
@@ -511,6 +513,8 @@ function RentRollPageInner() {
         {activeTab === "rentroll" && (
           <MasterGridTab
             leases={leases}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
             onSelectLease={setSelectedLeaseForDrawer}
             onOpenApplyEscalation={(l) => {
               setLeaseForEscalation(l);
@@ -537,6 +541,10 @@ function RentRollPageInner() {
               setIsRecordPaymentOpen(true);
             }}
             onOpenGenerateInvoices={handleGenerateInvoicesBatch}
+            onOpenAdjustmentNote={(inv) => {
+              setSelectedInvoiceForAdjustment(inv);
+              setIsAdjustmentNoteOpen(true);
+            }}
           />
         )}
 
@@ -736,6 +744,43 @@ function RentRollPageInner() {
           await handleRemoveProperty(id);
           setPropertyToDelete(null);
         }}
+      />
+
+      {/* Multi-Client Owner Statements Modal (Section 11) */}
+      <OwnerStatementsModal
+        isOpen={isOwnerStatementsOpen}
+        onClose={() => setIsOwnerStatementsOpen(false)}
+        clientAccounts={clientAccounts}
+      />
+
+      {/* Leasing Deals & Pipeline Modal (Section 7) */}
+      <DealsModal
+        isOpen={isDealsModalOpen}
+        onClose={() => setIsDealsModalOpen(false)}
+        onSuccess={fetchAllData}
+        properties={properties}
+      />
+
+      {/* Automated Billing Run Modal (Section 8 · RR-BIL-01) */}
+      <BillingRunModal
+        isOpen={isBillingRunModalOpen}
+        onClose={() => setIsBillingRunModalOpen(false)}
+        onSuccess={() => {
+          fetchAllData();
+          handleTabChange("invoices");
+        }}
+        activeLeasesCount={leases.filter((l) => l.status === "active" || l.status === "under_notice").length}
+      />
+
+      {/* Statutory Adjustment Note Modal (Section 8 · RR-BIL-08) */}
+      <AdjustmentNoteModal
+        isOpen={isAdjustmentNoteOpen}
+        invoice={selectedInvoiceForAdjustment}
+        onClose={() => {
+          setIsAdjustmentNoteOpen(false);
+          setSelectedInvoiceForAdjustment(null);
+        }}
+        onSuccess={fetchAllData}
       />
     </div>
   );

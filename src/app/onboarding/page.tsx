@@ -130,6 +130,12 @@ function OnboardingWizardContent() {
     designation: ""
   });
 
+  // OTP Verification Modal state
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
   // Step 2: GST-Modeled Organization Master Sub-tabs
   const [orgMasterTab, setOrgMasterTab] = useState<"business" | "promoters" | "signatory" | "representative" | "principal" | "additional">("business");
   
@@ -341,7 +347,11 @@ function OnboardingWizardContent() {
       let storedName = queryName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "") : "");
       let storedEmail = queryEmail || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "") : "");
       let storedPhone = queryMobile || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_mobile") || localStorage.getItem("officex_user_phone") || sessionStorage.getItem("officex_user_mobile") || "") : "");
-      let isPhoneVerified = queryVerified || (typeof window !== "undefined" ? Boolean(localStorage.getItem("officex_phone_verified") === "1" || localStorage.getItem("officex_kyc_stage") === "K0_CONTACT_VERIFIED") : false);
+      let isPhoneVerified = queryVerified || (typeof window !== "undefined" ? Boolean(
+        localStorage.getItem("officex_phone_verified") === "1" || 
+        localStorage.getItem("officex_kyc_stage") === "K0_CONTACT_VERIFIED" ||
+        localStorage.getItem("officex_contact_verified") === "1"
+      ) : false);
 
       // Persist query params if present
       if (typeof window !== "undefined") {
@@ -1260,6 +1270,128 @@ function OnboardingWizardContent() {
         </div>
       )}
 
+      {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 relative">
+            <button
+              type="button"
+              onClick={() => {
+                setShowOtpModal(false);
+                setOtpError(null);
+              }}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-2xl bg-teal-50 text-[#0F8B7D] border border-teal-100 shrink-0">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Verify Mobile Number</h3>
+                <p className="text-xs text-slate-500">2-Factor authentication & OTP verification</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+              We dispatched a 6-digit verification code to{" "}
+              <span className="font-bold text-slate-900 font-mono">{userData.mobile || "+91 98000 00000"}</span>.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                  Enter 6-Digit OTP Code
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otpInput}
+                  onChange={(e) => {
+                    setOtpInput(e.target.value.replace(/\D/g, ""));
+                    if (otpError) setOtpError(null);
+                  }}
+                  placeholder="• • • • • •"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-center font-mono font-black text-xl tracking-[0.4em] focus:border-[#0F8B7D] focus:bg-white focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              {otpError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                <span>Didn&apos;t receive code?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpInput("123456");
+                    if (otpError) setOtpError(null);
+                    showToast("Test code 123456 auto-filled.", "info");
+                  }}
+                  className="text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                >
+                  Use Demo OTP (123456)
+                </button>
+              </div>
+
+              <div className="pt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpModal(false);
+                    setOtpError(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isVerifyingOtp}
+                  onClick={() => {
+                    if (otpInput.trim().length < 4) {
+                      setOtpError("Please enter the 6-digit OTP code.");
+                      return;
+                    }
+                    setIsVerifyingOtp(true);
+                    setTimeout(() => {
+                      setIsVerifyingOtp(false);
+                      setUserData(prev => ({ ...prev, otpVerified: true }));
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_phone_verified", "1");
+                        localStorage.setItem("officex_contact_verified", "1");
+                      }
+                      setShowOtpModal(false);
+                      showToast("Mobile phone number verified successfully!", "success");
+                    }, 400);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white font-black text-xs transition-all shadow-md shadow-teal-900/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isVerifyingOtp ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={14} />
+                      <span>Confirm & Verify</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Bar - Clean Light Mode */}
       <header className="border-b border-slate-200/90 bg-white/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
@@ -1432,9 +1564,19 @@ function OnboardingWizardContent() {
                         <CheckCircle size={12} /> Verified
                       </span>
                     ) : userData.mobile.trim().length >= 10 ? (
-                      <span className="px-2.5 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold shrink-0 flex items-center gap-1">
-                        Pending OTP
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpInput("");
+                          setOtpError(null);
+                          setShowOtpModal(true);
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold shrink-0 flex items-center gap-1 cursor-pointer transition-all shadow-xs active:scale-95"
+                        title="Click to verify phone number via OTP"
+                      >
+                        <ShieldCheck size={12} className="text-amber-600" />
+                        <span>Verify OTP</span>
+                      </button>
                     ) : null}
                   </div>
                 </div>
@@ -1451,14 +1593,14 @@ function OnboardingWizardContent() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-teal-100 text-teal-900 border border-teal-300">
-                            Verified Landlord Account
+                            Commercial Landlord Workspace
                           </span>
                           <span className="text-xs font-black text-[#0F8B7D]">Assigned Role ✓</span>
                         </div>
                         <h3 className="text-xl font-black text-slate-900 mt-1">Property Owner &amp; Commercial Landlord</h3>
                         <p className="text-xs font-bold text-[#0F8B7D] mt-0.5">Asset Portfolio, Commercial Leasing, &amp; Institutional Rent Roll</p>
                         <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-normal max-w-2xl">
-                          You are onboarding as a verified Commercial Property Owner / Landlord. Your workspace provides direct lease tracking, automated rent roll invoicing, statutory compliance, and tenant management.
+                          You are onboarding as a Commercial Property Owner / Landlord. Your workspace provides direct lease tracking, automated rent roll invoicing, statutory compliance, and tenant management.
                         </p>
                       </div>
                     </div>

@@ -62,6 +62,18 @@ interface RentRollHeaderProps {
   // Property deletion & management
   onOpenDeleteProperty?: (propertyId: string) => void;
   onOpenManageProperties?: () => void;
+
+  // Multi-Client & Multi-Entity SPVs (RR-ENT-02, RR-ENT-03)
+  clientAccounts?: Array<{ id: string; name: string; accountCode?: string }>;
+  selectedClientAccount?: string;
+  onSelectClientAccount?: (id: string) => void;
+  billingEntities?: Array<{ id: string; legalName: string; tradeName?: string; gstin: string; stateCode: string }>;
+  selectedBillingEntity?: string;
+  onSelectBillingEntity?: (id: string) => void;
+
+  // Commercial Operations Triggers (Section 7, Section 11)
+  onOpenOwnerStatements?: () => void;
+  onOpenDeals?: () => void;
 }
 
 const TAB_CONFIGS: Record<string, { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -140,6 +152,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   onOpenRecordPayment,
   onOpenAddExpense,
   onOpenAddTenant,
+  onOpenImportCsv,
   onExportCsv,
   onRefresh,
   isLoading,
@@ -151,6 +164,14 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   primaryBuildingName,
   onOpenDeleteProperty,
   onOpenManageProperties,
+  clientAccounts,
+  selectedClientAccount,
+  onSelectClientAccount,
+  billingEntities,
+  selectedBillingEntity,
+  onSelectBillingEntity,
+  onOpenOwnerStatements,
+  onOpenDeals,
 }) => {
   const currentTabConfig = TAB_CONFIGS[activeTab] || TAB_CONFIGS.dashboard;
   const IconComponent = currentTabConfig.icon;
@@ -269,6 +290,30 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                   {unreadAlertsCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* Commercial Deals & Pipeline Trigger (RR-OPR-01) */}
+          {onOpenDeals && (
+            <button
+              onClick={onOpenDeals}
+              className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Leasing Deals & Pipeline (Section 7)"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Deals Pipeline</span>
+            </button>
+          )}
+
+          {/* Owner Statements Trigger (Section 11) */}
+          {onOpenOwnerStatements && (
+            <button
+              onClick={onOpenOwnerStatements}
+              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Multi-Client Owner Statements & Fee Remittance (Section 11)"
+            >
+              <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Owner Statements</span>
             </button>
           )}
 
@@ -398,6 +443,44 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
       {showSecondaryFilterBar && (
         <div className="bg-white border border-gray-200/80 rounded-2xl p-3 px-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Client Account Selector (RR-ENT-02 Multi-Client Operator Layer) */}
+            {clientAccounts && clientAccounts.length > 0 && onSelectClientAccount && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Client:</span>
+                <select
+                  value={selectedClientAccount || "ALL"}
+                  onChange={(e) => onSelectClientAccount(e.target.value)}
+                  className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-[#0F8B7D] font-semibold transition-colors cursor-pointer"
+                >
+                  <option value="ALL">All Client Accounts ({clientAccounts.length})</option>
+                  {clientAccounts.map((ca) => (
+                    <option key={ca.id} value={ca.id}>
+                      {ca.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Billing Entity / SPV Selector (RR-ENT-03 Multi-Entity SPVs) */}
+            {billingEntities && billingEntities.length > 0 && onSelectBillingEntity && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Billing SPV:</span>
+                <select
+                  value={selectedBillingEntity || "ALL"}
+                  onChange={(e) => onSelectBillingEntity(e.target.value)}
+                  className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-[#0F8B7D] font-semibold transition-colors cursor-pointer"
+                >
+                  <option value="ALL">All Billing Entities ({billingEntities.length})</option>
+                  {billingEntities.map((be) => (
+                    <option key={be.id} value={be.id}>
+                      {be.tradeName || be.legalName} ({be.stateCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Property Selector */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Property:</span>

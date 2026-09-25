@@ -686,3 +686,212 @@ export function computeFullLeaseSummary(input: LeaseCalculationInput) {
     requiresNotice: expiryAnalysis.requiresNotice,
   };
 }
+
+// ==========================================
+// BR-21: GST Place of Supply Engine (§4.8, §4.5)
+// ==========================================
+export interface TaxBreakdown {
+  isInterState: boolean;
+  cgstRate: number;
+  cgstAmount: number;
+  sgstRate: number;
+  sgstAmount: number;
+  igstRate: number;
+  igstAmount: number;
+  totalGstAmount: number;
+}
+
+export function calculatePlaceOfSupplyTax(
+  taxableAmount: number,
+  supplierStateCode: string,
+  recipientStateCode: string,
+  gstRate: number = 18
+): TaxBreakdown {
+  const isInterState = supplierStateCode && recipientStateCode && supplierStateCode.trim() !== recipientStateCode.trim();
+  if (isInterState) {
+    const igstAmount = round2((taxableAmount * gstRate) / 100);
+    return {
+      isInterState: true,
+      cgstRate: 0,
+      cgstAmount: 0,
+      sgstRate: 0,
+      sgstAmount: 0,
+      igstRate: gstRate,
+      igstAmount,
+      totalGstAmount: igstAmount
+    };
+  } else {
+    const halfRate = gstRate / 2;
+    const cgstAmount = round2((taxableAmount * halfRate) / 100);
+    const sgstAmount = round2((taxableAmount * halfRate) / 100);
+    return {
+      isInterState: false,
+      cgstRate: halfRate,
+      cgstAmount,
+      sgstRate: halfRate,
+      sgstAmount,
+      igstRate: 0,
+      igstAmount: 0,
+      totalGstAmount: round2(cgstAmount + sgstAmount)
+    };
+  }
+}
+
+// ==========================================
+// BR-22: Stepped Rent Escalation Generator (§4.7, RR-ESC-01)
+// ==========================================
+export interface ComputedRentStep {
+  stepNumber: number;
+  effectiveDate: string;
+  baseRatePsf: number;
+  monthlyBaseRent: number;
+  escalationPct: number;
+  status: "scheduled" | "applied";
+}
+
+export function generateContractRentSteps(
+  startDateStr: string,
+  endDateStr: string,
+  initialBaseRatePsf: number,
+  chargeableArea: number,
+  escalationPct: number = 15,
+  frequencyMonths: number = 36
+): ComputedRentStep[] {
+  const steps: ComputedRentStep[] = [];
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  const totalMonths = diffInMonths(end, start);
+
+  let currentRate = initialBaseRatePsf;
+  let currentRent = round2(currentRate * chargeableArea);
+  let stepNum = 1;
+
+  steps.push({
+    stepNumber: stepNum,
+    effectiveDate: start.toISOString().split("T")[0],
+    baseRatePsf: currentRate,
+    monthlyBaseRent: currentRent,
+    escalationPct: 0,
+    status: "applied"
+  });
+
+  let nextStepMonth = frequencyMonths;
+  while (nextStepMonth < totalMonths) {
+    stepNum++;
+    const stepDate = addMonthsToDate(start, nextStepMonth);
+    if (stepDate >= end) break;
+
+    currentRate = round2(currentRate * (1 + escalationPct / 100));
+    currentRent = round2(currentRate * chargeableArea);
+
+    steps.push({
+      stepNumber: stepNum,
+      effectiveDate: stepDate.toISOString().split("T")[0],
+      baseRatePsf: currentRate,
+      monthlyBaseRent: currentRent,
+      escalationPct,
+      status: stepDate <= new Date() ? "applied" : "scheduled"
+    });
+
+    nextStepMonth += frequencyMonths;
+  }
+
+  return steps;
+}
+
+// ==========================================
+// BR-23: Payment Sub-ledger Allocation Engine (RR-PAY-04)
+// Priority: Taxes -> Base Rent -> CAM -> Other
+// ==========================================
+export interface AllocationResult {
+  allocatedBaseRent: number;
+  allocatedCam: number;
+  allocatedGst: number;
+  allocatedOther: number;
+  totalAllocated: number;
+  unallocatedRemaining: number;
+}
+
+export function allocatePaymentToInvoice(
+  amountReceived: number,
+  invoice: {
+    baseRent: number;
+    camCharges: number;
+    gstAmount: number;
+    otherCharges: number;
+    balanceDue: number;
+  }
+): AllocationResult {
+  let remaining = Math.min(amountReceived, invoice.balanceDue);
+  const unallocatedRemaining = Math.max(0, amountReceived - invoice.balanceDue);
+
+  // 1. Allocate GST first
+  const allocatedGst = Math.min(remaining, invoice.gstAmount);
+  remaining -= allocatedGst;
+
+  // 2. Allocate Base Rent
+  const allocatedBaseRent = Math.min(remaining, invoice.baseRent);
+  remaining -= allocatedBaseRent;
+
+  // 3. Allocate CAM
+  const allocatedCam = Math.min(remaining, invoice.camCharges);
+  remaining -= allocatedCam;
+
+  // 4. Allocate Other
+  const allocatedOther = Math.min(remaining, invoice.otherCharges);
+  remaining -= allocatedOther;
+
+  const totalAllocated = round2(allocatedGst + allocatedBaseRent + allocatedCam + allocatedOther);
+
+  return {
+    allocatedBaseRent,
+    allocatedCam,
+    allocatedGst,
+    allocatedOther,
+    totalAllocated,
+    unallocatedRemaining: round2(unallocatedRemaining)
+  };
+}
+
+// ==========================================
+// BR-24: Monthly Owner Statement Calculation (RR-OPR-01)
+// ==========================================
+export interface OwnerStatementResult {
+  grossBilled: number;
+  totalCollected: number;
+  totalArrears: number;
+  operatorManagementFee: number;
+  reimbursableExpenses: number;
+  netRemittanceAmount: number;
+}
+
+export function calculateOwnerStatement(
+  grossBilled: number,
+  totalCollected: number,
+  totalArrears: number,
+  feeModel: "pct_collections" | "flat_monthly" | "per_sqft",
+  feeRate: number,
+  totalArea: number = 0,
+  reimbursableExpenses: number = 0
+): OwnerStatementResult {
+  let operatorManagementFee = 0;
+  if (feeModel === "pct_collections") {
+    operatorManagementFee = round2((totalCollected * feeRate) / 100);
+  } else if (feeModel === "per_sqft") {
+    operatorManagementFee = round2(totalArea * feeRate);
+  } else {
+    operatorManagementFee = round2(feeRate);
+  }
+
+  const netRemittanceAmount = round2(Math.max(0, totalCollected - operatorManagementFee - reimbursableExpenses));
+
+  return {
+    grossBilled,
+    totalCollected,
+    totalArrears,
+    operatorManagementFee,
+    reimbursableExpenses,
+    netRemittanceAmount
+  };
+}
+

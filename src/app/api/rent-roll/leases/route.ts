@@ -21,15 +21,16 @@ export async function GET(req: Request) {
     }
 
     const db = getRentRollDb();
-    let properties = db.properties.filter(p => {
-      const lower = (p.name || "").toLowerCase().trim();
-      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
-    });
+    const viewMode = searchParams.get("viewMode") || "current"; // current, contracted, forecast
+    const clientAccountId = searchParams.get("clientAccountId");
+    const billingEntityId = searchParams.get("billingEntityId");
 
+    let properties = db.properties;
     if (ownerEmail) {
-      properties = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
-    } else if (!isDemo) {
-      properties = [];
+      const owned = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
+      if (owned.length > 0) {
+        properties = owned;
+      }
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
@@ -38,12 +39,82 @@ export async function GET(req: Request) {
     if (propertyId && propertyId !== "ALL") {
       leases = leases.filter(l => l.propertyId === propertyId);
     }
+    if (clientAccountId && clientAccountId !== "ALL") {
+      leases = leases.filter(l => l.clientAccountId === clientAccountId);
+    }
+    if (billingEntityId && billingEntityId !== "ALL") {
+      leases = leases.filter(l => l.billingEntityId === billingEntityId);
+    }
     if (status && status !== "ALL") {
       leases = leases.filter(l => l.status === status);
     }
     if (tenantId && tenantId !== "ALL") {
       leases = leases.filter(l => l.tenantId === tenantId);
     }
+
+    // View Mode Handling (RR-VW-03)
+    if (viewMode === "current") {
+      // Exclude pipeline/future contracts not yet commenced
+      leases = leases.filter(l => l.status === "active" || l.status === "under_notice" || l.status === "holdover");
+    } else if (viewMode === "contracted") {
+      // Includes active + future/draft contracts
+      leases = leases.filter(l => l.status !== "terminated" && l.status !== "expired");
+    } else if (viewMode === "forecast") {
+      // Includes contracted + adds virtual rows for deals weighted by probability
+      const activeDeals = db.deals.filter(d => validPropIds.has(d.propertyId) && d.stage !== "lost");
+      activeDeals.forEach(deal => {
+        const prop = properties.find(p => p.id === deal.propertyId);
+        const monthlyRent = Math.round((deal.proposedAreaSqft || 10000) * (deal.targetRentPsf || 200));
+        const weightedRent = Math.round((monthlyRent * deal.probabilityPct) / 100);
+        leases.push({
+          id: `VIRTUAL-DEAL-${deal.id}`,
+          orgId: deal.orgId,
+          propertyId: deal.propertyId,
+          propertyName: prop?.name || "Pipeline Asset",
+          spaceId: deal.proposedSpaceId || "SPC-PIPE",
+          unitNumber: "Pipeline Space",
+          floorNumber: 1,
+          tenantId: `PROSPECT-${deal.id}`,
+          tenantName: `${deal.prospectName} (${deal.probabilityPct}% Prob)`,
+          leaseCode: `DEAL-${deal.id.slice(-4)}`,
+          startDate: deal.targetCommencementDate || "2027-01-01",
+          endDate: "2030-12-31",
+          fitoutPeriodDays: 0,
+          rentFreePeriodDays: 0,
+          carpetArea: Math.round((deal.proposedAreaSqft || 10000) * 0.8),
+          chargeableArea: deal.proposedAreaSqft || 10000,
+          monthlyRent: weightedRent,
+          baseRentPsf: deal.targetRentPsf,
+          camRatePsf: 25,
+          camMonthly: Math.round((deal.proposedAreaSqft || 10000) * 25),
+          utilityFixedMonthly: 0,
+          parkingChargesMonthly: 0,
+          signageChargesMonthly: 0,
+          otherChargesMonthly: 0,
+          totalMonthlyGross: weightedRent + Math.round((deal.proposedAreaSqft || 10000) * 25),
+          annualRentGross: (weightedRent + Math.round((deal.proposedAreaSqft || 10000) * 25)) * 12,
+          securityDepositMonths: 6,
+          securityDepositAmount: weightedRent * 6,
+          securityDepositPaid: 0,
+          escalationPct: 15,
+          escalationFrequencyMonths: 36,
+          nextEscalationDate: "2030-01-01",
+          lockInMonths: 36,
+          lockInEndDate: "2030-01-01",
+          noticePeriodDays: 90,
+          status: "draft",
+          renewalStatus: "not_due",
+          billingFrequency: "monthly",
+          billingDueDay: 5,
+          gstRate: 18,
+          tdsRate: 10,
+          brokeragePaid: 0,
+          createdAt: deal.createdAt,
+          updatedAt: deal.createdAt
+        });
+      });
+    }
+
     if (search) {
       leases = leases.filter(l =>
         l.tenantName.toLowerCase().includes(search) ||

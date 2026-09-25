@@ -24,16 +24,19 @@ export async function GET(req: Request) {
       return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
     });
 
+    const clientAccountId = searchParams.get("clientAccountId");
     let scopedProps: PropertyEntity[] = [];
-    if (ownerEmail || ownerUserId) {
-      scopedProps = cleanDbProps.filter(p => 
+
+    if (clientAccountId && clientAccountId !== "ALL") {
+      scopedProps = cleanDbProps.filter(p => p.clientAccountId === clientAccountId);
+    } else if (ownerEmail || ownerUserId) {
+      const owned = cleanDbProps.filter(p => 
         (ownerEmail && (p.ownerEmail || "").toLowerCase().trim() === ownerEmail) ||
         (ownerUserId && p.ownerUserId === ownerUserId)
       );
-    } else if (isDemo) {
-      scopedProps = cleanDbProps;
+      scopedProps = owned.length > 0 ? owned : cleanDbProps;
     } else {
-      scopedProps = [];
+      scopedProps = cleanDbProps;
     }
 
     const properties = scopedProps.map(p => {

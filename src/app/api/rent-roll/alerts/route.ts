@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
-    const alerts = (db.alerts || []).filter(a => a.propertyId && validPropIds.has(a.propertyId));
+    const alerts = (db.alerts || []).filter(a => !a.propertyId || validPropIds.has(a.propertyId));
 
     return NextResponse.json(alerts);
   } catch (error: any) {

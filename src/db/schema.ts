@@ -947,4 +947,272 @@ export const auditFindings = pgTable("audit_findings", {
   closureStatus: varchar("closure_status", { length: 50 }).default("open").notNull()
 });
 
+// =========================================================================
+// SECTION 4 CANONICAL RENT ROLL & STANDALONE SAAS TABLES (V2.1 SPECIFICATION)
+// =========================================================================
+
+// Entitlements Master
+export const entitlements = pgTable("entitlements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  productCode: varchar("product_code", { length: 50 }).default("RR").notNull(), // RR, CAFM, LEASING_CRM
+  edition: varchar("edition", { length: 50 }).default("professional").notNull(), // essentials, professional, enterprise
+  addons: jsonb("addons").default([]).notNull(), // ["multi_client_operator", "flex_seats", "integrations"]
+  status: varchar("status", { length: 50 }).default("active").notNull(),
+  validUntil: timestamp("valid_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Client Accounts (Multi-client operator layer: Owners whose portfolios a subscriber manages)
+export const clientAccounts = pgTable("client_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  accountCode: varchar("account_code", { length: 50 }).unique().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  contactPerson: varchar("contact_person", { length: 150 }).notNull(),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  contactPhone: varchar("contact_phone", { length: 50 }).notNull(),
+  portalAccessEnabled: boolean("portal_access_enabled").default(false).notNull(),
+  status: varchar("status", { length: 50 }).default("active").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Billing Entities (One per SPV / state GSTIN)
+export const billingEntities = pgTable("billing_entities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  clientAccountId: uuid("client_account_id").references(() => clientAccounts.id, { onDelete: "set null" }),
+  legalName: varchar("legal_name", { length: 255 }).notNull(),
+  tradeName: varchar("trade_name", { length: 255 }),
+  pan: varchar("pan", { length: 10 }).notNull(),
+  gstin: varchar("gstin", { length: 15 }).notNull(),
+  stateCode: varchar("state_code", { length: 5 }).notNull(), // e.g. "27" for MH
+  registeredAddress: text("registered_address").notNull(),
+  bankName: varchar("bank_name", { length: 150 }),
+  bankAccountNumber: varchar("bank_account_number", { length: 50 }),
+  bankIfsc: varchar("bank_ifsc", { length: 20 }),
+  bankBranch: varchar("bank_branch", { length: 100 }),
+  invoicePrefix: varchar("invoice_prefix", { length: 20 }).default("INV-2026").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Management Mandates (Operator fee rules & collection terms)
+export const managementMandates = pgTable("management_mandates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  clientAccountId: uuid("client_account_id").references(() => clientAccounts.id, { onDelete: "cascade" }).notNull(),
+  mandateName: varchar("mandate_name", { length: 255 }).notNull(),
+  feeModel: varchar("fee_model", { length: 50 }).default("pct_collections").notNull(), // pct_collections, flat_monthly, per_sqft
+  feeRate: decimal("fee_rate", { precision: 10, scale: 2 }).notNull(),
+  settlementType: varchar("settlement_type", { length: 50 }).default("direct_to_owner").notNull(), // direct_to_owner, operator_escrow
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  status: varchar("status", { length: 50 }).default("active").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Pricing Plans Master (For Managed Office & Flex Segments)
+export const pricingPlans = pgTable("pricing_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  planName: varchar("plan_name", { length: 150 }).notNull(),
+  seatType: varchar("seat_type", { length: 50 }).notNull(), // hot_desk, dedicated_desk, private_cabin, enterprise_suite
+  ratePerMonth: decimal("rate_per_month", { precision: 12, scale: 2 }).notNull(),
+  inclusions: jsonb("inclusions"), // ["high_speed_wifi", "meeting_room_credits", "tea_coffee", "housekeeping"]
+  securityDepositMonths: integer("security_deposit_months").default(2).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Seat Inventory (For Flex Centres)
+export const seatInventories = pgTable("seat_inventories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "cascade" }).notNull(),
+  seatType: varchar("seat_type", { length: 50 }).notNull(),
+  totalSeats: integer("total_seats").notNull(),
+  occupiedSeats: integer("occupied_seats").default(0).notNull(),
+  reservedSeats: integer("reserved_seats").default(0).notNull(),
+  availableSeats: integer("available_seats").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Deals / Pipeline Register (§4.7A)
+export const deals = pgTable("deals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }).notNull(),
+  prospectName: varchar("prospect_name", { length: 255 }).notNull(),
+  industry: varchar("industry", { length: 100 }),
+  contactPerson: varchar("contact_person", { length: 150 }),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  proposedSpaceId: uuid("proposed_space_id").references(() => spaces.id),
+  proposedAreaSqft: decimal("proposed_area_sqft", { precision: 12, scale: 2 }),
+  proposedSeats: integer("proposed_seats"),
+  targetRentPsf: decimal("target_rent_psf", { precision: 10, scale: 2 }),
+  targetCommencementDate: date("target_commencement_date"),
+  stage: varchar("stage", { length: 50 }).default("qualified").notNull(), // enquiry, qualified, viewing, proposal_sent, term_sheet, won, lost
+  probabilityPct: integer("probability_pct").default(50).notNull(),
+  brokerId: uuid("broker_id").references(() => users.id),
+  convertedContractId: uuid("converted_contract_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+});
+
+// Multi-Charge Lines per Contract (§4.8)
+export const contractCharges = pgTable("contract_charges", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  chargeType: varchar("charge_type", { length: 50 }).notNull(), // base_rent, cam, electricity, parking, dg_backup, signage, internet, housekeeping
+  billingModel: varchar("billing_model", { length: 50 }).default("area").notNull(), // area, seat, fixed, meter, formula
+  rate: decimal("rate", { precision: 12, scale: 2 }).notNull(),
+  unit: varchar("unit", { length: 20 }).default("psf_month").notNull(), // psf_month, per_seat_month, fixed_month, per_kwh
+  monthlyAmount: decimal("monthly_amount", { precision: 14, scale: 2 }).notNull(),
+  gstRate: decimal("gst_rate", { precision: 5, scale: 2 }).default("18.00").notNull(),
+  hsnSacCode: varchar("hsn_sac_code", { length: 20 }).default("997212").notNull(),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Pre-computed Stepped Escalation Steps (§4.7, RR-ESC-01)
+export const rentSteps = pgTable("rent_steps", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  stepNumber: integer("step_number").notNull(),
+  effectiveDate: date("effective_date").notNull(),
+  baseRatePsf: decimal("base_rate_psf", { precision: 10, scale: 2 }).notNull(),
+  monthlyBaseRent: decimal("monthly_base_rent", { precision: 14, scale: 2 }).notNull(),
+  escalationPct: decimal("escalation_pct", { precision: 5, scale: 2 }).notNull(),
+  stepType: varchar("step_type", { length: 50 }).default("fixed_pct").notNull(), // fixed_pct, cpi_linked, market_review
+  status: varchar("status", { length: 50 }).default("scheduled").notNull(), // scheduled, applied, skipped, disputed
+  appliedAt: timestamp("applied_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Contract Documents Repository with Versioning (§4.9)
+export const contractDocuments = pgTable("contract_documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  documentType: varchar("document_type", { length: 50 }).notNull(), // term_sheet, loi, agreement, amendment, notice, side_letter
+  title: varchar("title", { length: 255 }).notNull(),
+  versionNumber: integer("version_number").default(1).notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSizeBytes: integer("file_size_bytes"),
+  status: varchar("status", { length: 50 }).default("executed").notNull(), // draft, under_review, executed, superseded
+  isExecuted: boolean("is_executed").default(true).notNull(),
+  executionDate: date("execution_date"),
+  uploadedBy: uuid("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Billing Runs (§4.2, RR-BIL-01)
+export const billingRuns = pgTable("billing_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  billingEntityId: uuid("billing_entity_id").references(() => billingEntities.id),
+  periodMonth: varchar("period_month", { length: 7 }).notNull(), // "2026-10"
+  totalContracts: integer("total_contracts").notNull(),
+  totalInvoicesGenerated: integer("total_invoices_generated").notNull(),
+  grossBilledAmount: decimal("gross_billed_amount", { precision: 16, scale: 2 }).notNull(),
+  totalGstAmount: decimal("total_gst_amount", { precision: 14, scale: 2 }).notNull(),
+  status: varchar("status", { length: 50 }).default("completed").notNull(), // draft, approved, issued
+  runBy: uuid("run_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Payment Allocations Sub-ledger (Matches Collections to Invoices, RR-PAY-04)
+export const paymentAllocations = pgTable("payment_allocations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  paymentId: uuid("payment_id").references(() => collections.id, { onDelete: "cascade" }).notNull(),
+  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
+  allocatedBaseRent: decimal("allocated_base_rent", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  allocatedCam: decimal("allocated_cam", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  allocatedGst: decimal("allocated_gst", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  allocatedOther: decimal("allocated_other", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  totalAllocated: decimal("total_allocated", { precision: 14, scale: 2 }).notNull(),
+  allocatedAt: timestamp("allocated_at", { withTimezone: true }).defaultNow()
+});
+
+// Adjustment Notes (Credit & Debit Notes, RR-BIL-08)
+export const adjustmentNotes = pgTable("adjustment_notes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
+  noteType: varchar("note_type", { length: 20 }).notNull(), // credit_note, debit_note
+  noteNumber: varchar("note_number", { length: 100 }).unique().notNull(),
+  reason: varchar("reason", { length: 100 }).notNull(), // cam_reconciliation, billing_correction, commercial_waiver
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  gstAmount: decimal("gst_amount", { precision: 14, scale: 2 }).notNull(),
+  totalAdjustment: decimal("total_adjustment", { precision: 14, scale: 2 }).notNull(),
+  issuedDate: date("issued_date").notNull(),
+  status: varchar("status", { length: 50 }).default("applied").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Monthly Owner Statements (Multi-Client Operator Layer, RR-OPR-01)
+export const ownerStatements = pgTable("owner_statements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  clientAccountId: uuid("client_account_id").references(() => clientAccounts.id, { onDelete: "cascade" }).notNull(),
+  statementNumber: varchar("statement_number", { length: 100 }).unique().notNull(),
+  periodMonth: varchar("period_month", { length: 7 }).notNull(),
+  grossBilled: decimal("gross_billed", { precision: 16, scale: 2 }).notNull(),
+  totalCollected: decimal("total_collected", { precision: 16, scale: 2 }).notNull(),
+  totalArrears: decimal("total_arrears", { precision: 16, scale: 2 }).notNull(),
+  operatorManagementFee: decimal("operator_mgmt_fee", { precision: 14, scale: 2 }).notNull(),
+  reimbursableExpenses: decimal("reimbursable_expenses", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  netRemittanceAmount: decimal("net_remittance_amount", { precision: 16, scale: 2 }).notNull(),
+  remittanceStatus: varchar("remittance_status", { length: 50 }).default("pending").notNull(), // pending, remitted, acknowledged
+  remittanceDate: date("remittance_date"),
+  remittanceUtr: varchar("remittance_utr", { length: 100 }),
+  issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow()
+});
+
+// Import Pipeline & Staging Tables (§5.5, RR-ING)
+export const importBatches = pgTable("import_batches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  billingModel: varchar("billing_model", { length: 50 }).default("area").notNull(),
+  totalRows: integer("total_rows").notNull(),
+  validRows: integer("valid_rows").notNull(),
+  warningRows: integer("warning_rows").default(0).notNull(),
+  errorRows: integer("error_rows").default(0).notNull(),
+  controlTotalArea: decimal("control_total_area", { precision: 14, scale: 2 }).default("0.00"),
+  controlTotalRent: decimal("control_total_rent", { precision: 16, scale: 2 }).default("0.00"),
+  status: varchar("status", { length: 50 }).default("staged").notNull(), // staged, validated, committed, rolled_back
+  preparerId: uuid("preparer_id").references(() => users.id),
+  committedAt: timestamp("committed_at", { withTimezone: true }),
+  rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+export const importRows = pgTable("import_rows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  batchId: uuid("batch_id").references(() => importBatches.id, { onDelete: "cascade" }).notNull(),
+  rowNumber: integer("row_number").notNull(),
+  rawPayload: jsonb("raw_payload").notNull(),
+  normalizedPayload: jsonb("normalized_payload"),
+  validationStatus: varchar("validation_status", { length: 50 }).default("passed").notNull(), // passed, warning, failed
+  ruleCodes: jsonb("rule_codes").default([]),
+  errorDetails: text("error_details"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+export const mappingTemplates = pgTable("mapping_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, { onDelete: "cascade" }).notNull(),
+  templateName: varchar("template_name", { length: 150 }).notNull(),
+  sourceSystem: varchar("source_system", { length: 100 }), // Yardi, MRI, Excel_Custom
+  columnMappings: jsonb("column_mappings").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+
 

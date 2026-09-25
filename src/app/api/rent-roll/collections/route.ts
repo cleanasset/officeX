@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getRentRollDb, saveRentRollDb, recordAuditLog, CollectionEntity } from "@/lib/rent-roll-store";
-import { round2 } from "@/lib/rent-roll-engine";
+import { getRentRollDb, saveRentRollDb, recordAuditLog, CollectionEntity, PaymentAllocationEntity } from "@/lib/rent-roll-store";
+import { round2, allocatePaymentToInvoice } from "@/lib/rent-roll-engine";
 
 export async function GET(req: Request) {
   try {
@@ -11,7 +11,6 @@ export async function GET(req: Request) {
     const leaseId = searchParams.get("leaseId");
     const search = searchParams.get("search")?.toLowerCase();
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
-    const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
     if (!ownerEmail) {
       try {
@@ -27,9 +26,8 @@ export async function GET(req: Request) {
     });
 
     if (ownerEmail) {
-      properties = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
-    } else if (!isDemo) {
-      properties = [];
+      const owned = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
+      if (owned.length > 0) properties = owned;
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
@@ -100,8 +98,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Associated lease not found" }, { status: 404 });
     }
 
-    // Update invoice if specified
+    const uniqueSuffix = `${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
+    const receiptNum = `REC-2026-${uniqueSuffix}`;
+    const newPaymentId = `REC-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    // Calculate sub-ledger allocation hierarchy (RR-PAY-04)
+    let allocationRecord: PaymentAllocationEntity | null = null;
+
     if (invoice) {
+      const alloc = allocatePaymentToInvoice(amt, {
+        baseRent: invoice.baseRent,
+        camCharges: invoice.camCharges,
+        gstAmount: invoice.gstAmount,
+        otherCharges: invoice.otherCharges || 0,
+        balanceDue: invoice.balanceDue
+      });
+
+      allocationRecord = {
+        id: `ALLOC-${Date.now()}`,
+        paymentId: newPaymentId,
+        invoiceId: invoice.id,
+        allocatedGst: alloc.allocatedGst,
+        allocatedBaseRent: alloc.allocatedBaseRent,
+        allocatedCam: alloc.allocatedCam,
+        allocatedOther: alloc.allocatedOther,
+        totalAllocated: alloc.totalAllocated,
+        allocatedAt: new Date().toISOString()
+      };
+
+      if (!db.paymentAllocations) db.paymentAllocations = [];
+      db.paymentAllocations.unshift(allocationRecord);
+
       invoice.amountPaid = round2((invoice.amountPaid || 0) + amt);
       invoice.tdsDeducted = round2((invoice.tdsDeducted || 0) + tds);
       invoice.balanceDue = round2(Math.max(0, invoice.netPayable - invoice.amountPaid));
@@ -116,10 +143,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const uniqueSuffix = `${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
-    const receiptNum = `REC-2026-${uniqueSuffix}`;
     const newReceipt: CollectionEntity = {
-      id: `REC-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: newPaymentId,
       orgId: db.organization.id,
       invoiceId: invoice?.id,
       invoiceNumber: invoice?.invoiceNumber,
@@ -157,6 +182,7 @@ export async function POST(req: Request) {
       success: true,
       message: `Payment receipt ${receiptNum} recorded successfully`,
       receipt: newReceipt,
+      allocation: allocationRecord,
       updatedInvoice: invoice
     }, { status: 201 });
   } catch (error: any) {

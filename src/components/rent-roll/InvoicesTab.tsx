@@ -44,6 +44,7 @@ export interface InvoiceItem {
   paidDate?: string;
   paymentMode?: string;
   referenceNumber?: string;
+  invoiceType?: "rent" | "cam" | "consolidated";
 }
 
 interface InvoicesTabProps {
@@ -51,6 +52,7 @@ interface InvoicesTabProps {
   onOpenTaxInvoice: (invoice: InvoiceItem) => void;
   onOpenRecordPayment: (invoice: InvoiceItem) => void;
   onOpenGenerateInvoices: () => void;
+  onOpenAdjustmentNote?: (invoice: InvoiceItem) => void;
 }
 
 export const InvoicesTab: React.FC<InvoicesTabProps> = ({
@@ -58,6 +60,7 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
   onOpenTaxInvoice,
   onOpenRecordPayment,
   onOpenGenerateInvoices,
+  onOpenAdjustmentNote,
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [search, setSearch] = useState<string>("");
@@ -215,7 +218,7 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
                   key={inv.id}
                   className="hover:bg-gray-50/80 transition-colors"
                 >
-                  {/* Invoice # */}
+                  {/* Invoice # & Type */}
                   <td className="p-3.5 font-mono font-bold text-indigo-700">
                     <button
                       onClick={() => onOpenTaxInvoice(inv)}
@@ -224,7 +227,19 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
                       <FileText className="w-3.5 h-3.5 text-indigo-600" />
                       <span>{inv.invoiceNumber}</span>
                     </button>
-                    <span className="text-[10px] text-gray-400 font-normal block">{inv.leaseCode}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] text-gray-400 font-normal">{inv.leaseCode}</span>
+                      {inv.invoiceType === "rent" && (
+                        <span className="text-[9px] font-bold bg-teal-50 text-teal-700 px-1.5 py-0.2 rounded border border-teal-200">
+                          Base Rent
+                        </span>
+                      )}
+                      {inv.invoiceType === "cam" && (
+                        <span className="text-[9px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.2 rounded border border-blue-200">
+                          CAM Recovery
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Tenant & Property */}
@@ -299,6 +314,17 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
                         <Eye className="w-3 h-3 text-[#0F8B7D]" />
                         <span>View</span>
                       </button>
+
+                      {onOpenAdjustmentNote && (
+                        <button
+                          onClick={() => onOpenAdjustmentNote(inv)}
+                          className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Issue Credit Note / Debit Note (RR-BIL-08)"
+                        >
+                          <FileText className="w-3 h-3 text-amber-600" />
+                          <span>Adj Note</span>
+                        </button>
+                      )}
 
                       {inv.balanceDue > 0 && (
                         <button
