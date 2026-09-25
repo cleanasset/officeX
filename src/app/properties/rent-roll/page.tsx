@@ -36,6 +36,8 @@ import { PnlTab } from "@/components/rent-roll/PnlTab";
 import { TenantsTab, TenantSummary } from "@/components/rent-roll/TenantsTab";
 import { AuditTab, AuditLogItem } from "@/components/rent-roll/AuditTab";
 import { DictionaryTab } from "@/components/rent-roll/DictionaryTab";
+import { FlexCentreTab } from "@/components/rent-roll/FlexCentreTab";
+import { CamPoolsTab } from "@/components/rent-roll/CamPoolsTab";
 
 import { LeaseDetailDrawer } from "@/components/rent-roll/LeaseDetailDrawer";
 import { TaxInvoiceDrawer } from "@/components/rent-roll/TaxInvoiceDrawer";
@@ -423,6 +425,8 @@ function RentRollPageInner() {
     { id: "occupancy", label: "Stacking & Occupancy", icon: PieChart },
     { id: "forecast", label: "12-Mo Forecast", icon: Calendar },
     { id: "pnl", label: "NOI & Property P&L", icon: DollarSign },
+    { id: "flex-centre", label: "Centre P&L (Flex)", icon: Layers },
+    { id: "cam-pools", label: "CAM Pools & True-Up", icon: Sparkles },
     { id: "tenants", label: "Tenant Directory & Leases", icon: Users },
     { id: "dictionary", label: "Financial Terms Dictionary", icon: BookOpen },
     { id: "audit", label: "Audit & Config", icon: ShieldCheck },
@@ -476,6 +480,28 @@ function RentRollPageInner() {
         }}
         onOpenManageProperties={() => setIsManagePropertiesOpen(true)}
       />
+
+      {/* ──── HORIZONTAL TAB NAVIGATION STRIP ──── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-gray-200/80 no-scrollbar">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
+                isActive
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-white hover:bg-gray-100 text-gray-600 hover:text-gray-900 border border-gray-200/80"
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-teal-300" : "text-gray-500"}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Action Feedback Banner */}
       {actionFeedback && (
@@ -589,6 +615,14 @@ function RentRollPageInner() {
             pnlData={pnlData}
             onOpenAddExpense={() => setIsAddExpenseOpen(true)}
           />
+        )}
+
+        {activeTab === "flex-centre" && (
+          <FlexCentreTab />
+        )}
+
+        {activeTab === "cam-pools" && (
+          <CamPoolsTab selectedProperty={selectedProperty} />
         )}
 
         {activeTab === "tenants" && (

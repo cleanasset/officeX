@@ -18,7 +18,7 @@ import { formatINR } from "./DashboardTab";
 interface TaxInvoiceDrawerProps {
   invoice: InvoiceItem | null;
   onClose: () => void;
-  onOpenRecordPayment: (invoice: InvoiceItem) => void;
+  onOpenRecordPayment?: (invoice: InvoiceItem) => void;
 }
 
 export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
@@ -338,7 +338,7 @@ export const TaxInvoiceDrawer: React.FC<TaxInvoiceDrawerProps> = ({
         </div>
 
         {/* Bottom Settle Button */}
-        {invoice.balanceDue > 0 && (
+        {invoice.balanceDue > 0 && onOpenRecordPayment && (
           <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3">
             <button
               onClick={() => onOpenRecordPayment(invoice)}

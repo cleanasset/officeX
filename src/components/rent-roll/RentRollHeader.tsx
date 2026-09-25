@@ -22,7 +22,9 @@ import {
   FileSpreadsheet,
   Trash2,
   CheckCircle2,
-  UploadCloud
+  UploadCloud,
+  Layers,
+  ExternalLink
 } from "lucide-react";
 
 interface RentRollHeaderProps {
@@ -136,6 +138,16 @@ const TAB_CONFIGS: Record<string, { title: string; subtitle: string; icon: React
     title: "System Audit Trail & Compliance",
     subtitle: "Immutable operational logs, transaction timestamps & regulatory governance.",
     icon: ShieldCheck,
+  },
+  "flex-centre": {
+    title: "Centre P&L & Head Leases (Flex & Seats)",
+    subtitle: "Managed office & co-working centre contribution margin (F-23), head lease payables & break-even occupancy (F-24).",
+    icon: Layers,
+  },
+  "cam-pools": {
+    title: "CAM Pools & Year-End True-Up",
+    subtitle: "Common Area Maintenance annual budgeting, quarterly actuals reconciliation & tenant true-up notes (Formula F-22).",
+    icon: Sparkles,
   },
 };
 
@@ -317,6 +329,18 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
             </button>
           )}
 
+          {/* Occupant / Tenant Billing Portal (RR-PRT-01, UAT-24) */}
+          <a
+            href="/portal/billing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            title="Open Occupant / Tenant Billing Portal (RR-PRT-01, UAT-24)"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-teal-400" />
+            <span>Occupant Portal</span>
+          </a>
+
           {/* Import CSV Trigger */}
           {onOpenImportCsv && (
             <button
@@ -343,7 +367,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
 
             {isExportOpen && (
               <div 
-                className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-xl border border-gray-200 p-1.5 z-50 text-xs animate-in zoom-in-95 duration-100"
+                className="absolute right-0 mt-1.5 w-60 bg-white rounded-2xl shadow-xl border border-gray-200 p-1.5 z-50 text-xs animate-in zoom-in-95 duration-100"
                 onClick={() => setIsExportOpen(false)}
               >
                 <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -384,6 +408,17 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                   <span>Escalation Schedule</span>
                   <span className="text-[10px] bg-teal-100/70 text-teal-800 font-mono px-1.5 py-0.5 rounded">CSV</span>
                 </button>
+                
+                {/* Tally Prime XML Export (RR-INT-01, OI-5) */}
+                <div className="border-t border-gray-100 my-1"></div>
+                <a
+                  href="/api/rent-roll/export/tally"
+                  download
+                  className="w-full text-left px-2.5 py-2 hover:bg-indigo-50 text-indigo-950 rounded-xl font-bold flex items-center justify-between cursor-pointer"
+                >
+                  <span>Tally Prime XML (Vouchers)</span>
+                  <span className="text-[10px] bg-indigo-100 text-indigo-800 font-mono px-1.5 py-0.5 rounded font-black">XML</span>
+                </a>
               </div>
             )}
           </div>

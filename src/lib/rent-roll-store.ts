@@ -320,7 +320,12 @@ export interface InvoiceEntity {
   netPayable: number;
   amountPaid: number;
   balanceDue: number;
-  status: "draft" | "issued" | "partially_paid" | "paid" | "overdue" | "cancelled";
+  status: "draft" | "issued" | "partially_paid" | "paid" | "overdue" | "cancelled" | "disputed";
+  isDisputed?: boolean;
+  disputeReason?: string;
+  disputeAmount?: number;
+  disputeRemark?: string;
+  disputedAt?: string;
   paidDate?: string;
   paymentMode?: string;
   referenceNumber?: string;
@@ -497,6 +502,71 @@ export interface MappingTemplateEntity {
   createdAt: string;
 }
 
+// Managed Office & Flex Centre P&L (§4.8, §5.10, §13.7, RR-FLX-08..10)
+export interface FlexMemberAllocation {
+  id: string;
+  memberName: string;
+  planName: string;
+  billingBasis: "contracted" | "occupied" | "minimum_commitment" | "hybrid";
+  contractedSeats: number;
+  minimumSeats?: number;
+  occupiedSeats: number;
+  ratePerSeat: number;
+  billableSeats: number;
+  monthlyAmount: number;
+}
+
+export interface FlexCentreEntity {
+  id: string;
+  orgId: string;
+  centreName: string;
+  propertyId: string;
+  propertyName: string;
+  totalAreaSqft: number;
+  seatCapacity: number;
+  headLeaseCode: string;
+  headLeaseMonthlyRent: number;
+  headLeaseCamMonthly: number;
+  landlordName: string;
+  directOpexMonthly: number;
+  directOpexBreakdown: {
+    staffPayroll: number;
+    utilitiesPower: number;
+    housekeepingSupplies: number;
+    highSpeedInternet: number;
+  };
+  meetingRoomHourlyRate: number;
+  meetingRoomHoursBilled: number;
+  parkingSlotRate: number;
+  parkingSlotsBilled: number;
+  members: FlexMemberAllocation[];
+  createdAt: string;
+}
+
+// CAM Pool Budgeting & True-Up (§5.12, §13, RR-FMC-04..06, Formula F-22)
+export interface CamPoolCategory {
+  category: "security" | "housekeeping" | "mep_hvac" | "common_electricity" | "lifts" | "water_sanitation" | "landscaping" | "other";
+  categoryName: string;
+  annualBudget: number;
+  actualCostYtd: number;
+}
+
+export interface CamPoolEntity {
+  id: string;
+  orgId: string;
+  propertyId: string;
+  propertyName: string;
+  fyYear: string;
+  totalBuildingArea: number;
+  provisionalRatePsfMonth: number;
+  annualBudgetTotal: number;
+  actualCostTotal: number;
+  categories: CamPoolCategory[];
+  trueUpStatus: "draft" | "executed";
+  lastTrueUpDate?: string;
+  createdAt: string;
+}
+
 export interface RentRollDatabase {
   organization: OrgEntity;
   clientAccounts: ClientAccountEntity[];
@@ -520,6 +590,8 @@ export interface RentRollDatabase {
   auditLogs: AuditLogEntity[];
   importBatches: ImportBatchEntity[];
   mappingTemplates: MappingTemplateEntity[];
+  flexCentres: FlexCentreEntity[];
+  camPools: CamPoolEntity[];
   config: {
     leaseExpiryAlertDays: number;
     escalationAlertDays: number;
@@ -1630,6 +1702,140 @@ export function getInitialSeedDatabase(): RentRollDatabase {
     }
   ];
 
+  const flexCentres: FlexCentreEntity[] = [
+    {
+      id: "FLX-BRIGHTSPACE-01",
+      orgId: org.id,
+      centreName: "Brightspace Flex, Sector 44",
+      propertyId: "PROP-MTP",
+      propertyName: "Meridian Tech Park",
+      totalAreaSqft: 18000,
+      seatCapacity: 240,
+      headLeaseCode: "HL-BRIGHTSPACE-01",
+      headLeaseMonthlyRent: 1710000, // 18,000 sq ft @ ₹95/sqft (Section 13.7)
+      headLeaseCamMonthly: 270000,  // 18,000 sq ft @ ₹15/sqft
+      landlordName: "Meridian Cyber Parks Development LLP",
+      directOpexMonthly: 600000, // staff, utilities, housekeeping, internet
+      directOpexBreakdown: {
+        staffPayroll: 250000,
+        utilitiesPower: 180000,
+        housekeepingSupplies: 100000,
+        highSpeedInternet: 70000
+      },
+      meetingRoomHourlyRate: 800,
+      meetingRoomHoursBilled: 42, // ₹33,600
+      parkingSlotRate: 4000,
+      parkingSlotsBilled: 12, // ₹48,000
+      members: [
+        {
+          id: "MBR-01",
+          memberName: "Brightpath Analytics Pvt Ltd",
+          planName: "Enterprise Cabin",
+          billingBasis: "minimum_commitment",
+          contractedSeats: 100,
+          minimumSeats: 80,
+          occupiedSeats: 82,
+          ratePerSeat: 15000,
+          billableSeats: 82,
+          monthlyAmount: 1230000
+        },
+        {
+          id: "MBR-02",
+          memberName: "Nimbus Labs Pvt Ltd",
+          planName: "Premium Dedicated Seat",
+          billingBasis: "contracted",
+          contractedSeats: 60,
+          minimumSeats: 0,
+          occupiedSeats: 55,
+          ratePerSeat: 11500,
+          billableSeats: 60,
+          monthlyAmount: 690000
+        },
+        {
+          id: "MBR-03",
+          memberName: "Hot Desk Dedicated Pool (14 Members)",
+          planName: "Hot Desk",
+          billingBasis: "occupied",
+          contractedSeats: 40,
+          minimumSeats: 0,
+          occupiedSeats: 30,
+          ratePerSeat: 7500,
+          billableSeats: 30,
+          monthlyAmount: 225000
+        },
+        {
+          id: "MBR-04",
+          memberName: "Veritas Legal LLP",
+          planName: "Team Room (Hybrid)",
+          billingBasis: "hybrid",
+          contractedSeats: 35,
+          minimumSeats: 25,
+          occupiedSeats: 35,
+          ratePerSeat: 12000,
+          billableSeats: 35,
+          monthlyAmount: 420000 // Base ₹3,00,000 + 10 extra @ ₹12,000
+        },
+        {
+          id: "MBR-05",
+          memberName: "Virtual Office Pool (30 Clients)",
+          planName: "Virtual Office",
+          billingBasis: "contracted",
+          contractedSeats: 30,
+          minimumSeats: 0,
+          occupiedSeats: 0,
+          ratePerSeat: 2500,
+          billableSeats: 30,
+          monthlyAmount: 75000
+        }
+      ],
+      createdAt: "2026-04-01T00:00:00Z"
+    }
+  ];
+
+  const camPools: CamPoolEntity[] = [
+    {
+      id: "POOL-APX-2026",
+      orgId: org.id,
+      propertyId: "PROP-APX",
+      propertyName: "Apex Business Tower",
+      fyYear: "2026-27",
+      totalBuildingArea: 125000,
+      provisionalRatePsfMonth: 28,
+      annualBudgetTotal: 42000000,
+      actualCostTotal: 43500000,
+      categories: [
+        { category: "security", categoryName: "Round-the-Clock Physical & Electronic Security", annualBudget: 11000000, actualCostYtd: 11500000 },
+        { category: "mep_hvac", categoryName: "Central Chillers & MEP Maintenance", annualBudget: 12000000, actualCostYtd: 12800000 },
+        { category: "common_electricity", categoryName: "Common Area & Basement HT Electricity", annualBudget: 9000000, actualCostYtd: 9100000 },
+        { category: "housekeeping", categoryName: "Facade Cleaning & Janitorial Operations", annualBudget: 5000000, actualCostYtd: 4900000 },
+        { category: "lifts", categoryName: "Otis High-Speed Lifts AMC & Inspection", annualBudget: 3000000, actualCostYtd: 3100000 },
+        { category: "water_sanitation", categoryName: "STP Plant, Water Supply & Fire Safety AMC", annualBudget: 2000000, actualCostYtd: 2100000 }
+      ],
+      trueUpStatus: "draft",
+      createdAt: "2026-04-01T00:00:00Z"
+    },
+    {
+      id: "POOL-MTP-2026",
+      orgId: org.id,
+      propertyId: "PROP-MTP",
+      propertyName: "Meridian Tech Park",
+      fyYear: "2026-27",
+      totalBuildingArea: 250000,
+      provisionalRatePsfMonth: 14,
+      annualBudgetTotal: 42000000,
+      actualCostTotal: 41200000,
+      categories: [
+        { category: "security", categoryName: "Campus Gate & Perimeter Security", annualBudget: 12000000, actualCostYtd: 11800000 },
+        { category: "mep_hvac", categoryName: "HVAC Plant & Substation AMC", annualBudget: 15000000, actualCostYtd: 14700000 },
+        { category: "common_electricity", categoryName: "Campus Lighting & Pump Rooms", annualBudget: 7000000, actualCostYtd: 6900000 },
+        { category: "housekeeping", categoryName: "Campus Roadways & Atrium Housekeeping", annualBudget: 5000000, actualCostYtd: 4900000 },
+        { category: "landscaping", categoryName: "Horticulture & Green Zone Maintenance", annualBudget: 3000000, actualCostYtd: 2900000 }
+      ],
+      trueUpStatus: "draft",
+      createdAt: "2026-04-01T00:00:00Z"
+    }
+  ];
+
   return {
     organization: org,
     clientAccounts,
@@ -1653,6 +1859,8 @@ export function getInitialSeedDatabase(): RentRollDatabase {
     auditLogs,
     importBatches,
     mappingTemplates,
+    flexCentres,
+    camPools,
     config: {
       leaseExpiryAlertDays: 90,
       escalationAlertDays: 30,
@@ -1700,6 +1908,8 @@ export function getEmptyRentRollDb(): RentRollDatabase {
     auditLogs: [],
     importBatches: [],
     mappingTemplates: [],
+    flexCentres: [],
+    camPools: [],
     config: {
       leaseExpiryAlertDays: 90,
       escalationAlertDays: 30,
@@ -1735,6 +1945,8 @@ export function getRentRollDb(): RentRollDatabase {
     if (!parsed.ownerStatements) parsed.ownerStatements = [];
     if (!parsed.importBatches) parsed.importBatches = [];
     if (!parsed.mappingTemplates) parsed.mappingTemplates = [];
+    if (!parsed.flexCentres) parsed.flexCentres = [];
+    if (!parsed.camPools) parsed.camPools = [];
 
     // If properties empty or has old placeholder data, populate Section 13 fixtures
     if (!parsed.properties || parsed.properties.length === 0) {
@@ -1756,6 +1968,18 @@ export function getRentRollDb(): RentRollDatabase {
       parsed.expenses = initial.expenses;
       parsed.notices = initial.notices;
       parsed.alerts = initial.alerts;
+      parsed.flexCentres = initial.flexCentres;
+      parsed.camPools = initial.camPools;
+      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+    }
+
+    if (!parsed.flexCentres || parsed.flexCentres.length === 0) {
+      parsed.flexCentres = getInitialSeedDatabase().flexCentres;
+      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+    }
+
+    if (!parsed.camPools || parsed.camPools.length === 0) {
+      parsed.camPools = getInitialSeedDatabase().camPools;
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
     }
 
@@ -1767,6 +1991,220 @@ export function getRentRollDb(): RentRollDatabase {
     return initial;
   }
 }
+
+// Flex Centre Store Methods
+export function getFlexCentres(): FlexCentreEntity[] {
+  const db = getRentRollDb();
+  return db.flexCentres || [];
+}
+
+export function updateFlexCentre(id: string, patch: Partial<FlexCentreEntity>): FlexCentreEntity | null {
+  const db = getRentRollDb();
+  const index = (db.flexCentres || []).findIndex(fc => fc.id === id);
+  if (index === -1) return null;
+  db.flexCentres[index] = { ...db.flexCentres[index], ...patch };
+  saveRentRollDb(db);
+  return db.flexCentres[index];
+}
+
+// CAM Pools Store Methods
+export function getCamPools(propertyId?: string): CamPoolEntity[] {
+  const db = getRentRollDb();
+  if (propertyId && propertyId !== "ALL") {
+    return (db.camPools || []).filter(cp => cp.propertyId === propertyId);
+  }
+  return db.camPools || [];
+}
+
+export function executeCamTrueUpInStore(poolId: string): { summary: any; adjustmentNotes: AdjustmentNoteEntity[] } {
+  const db = getRentRollDb();
+  const pool = (db.camPools || []).find(p => p.id === poolId);
+  if (!pool) throw new Error("CAM Pool not found");
+
+  // Get active leases in this property
+  const activeLeases = (db.leases || []).filter(l => l.propertyId === pool.propertyId && l.status === "active");
+  const tenantsInput = activeLeases.map(l => ({
+    tenantId: l.tenantId,
+    tenantName: l.tenantName,
+    unitNumber: l.unitNumber,
+    chargeableArea: l.chargeableArea,
+    advanceCamBilled: round2((l.camMonthly || 0) * 12)
+  }));
+
+  const { calculateCamPoolTrueUp } = require('./rent-roll-engine');
+  const summary = calculateCamPoolTrueUp(
+    pool.propertyId,
+    pool.propertyName,
+    pool.fyYear,
+    pool.totalBuildingArea,
+    pool.actualCostTotal,
+    tenantsInput
+  );
+
+  const createdNotes: AdjustmentNoteEntity[] = [];
+
+  summary.tenantResults.forEach((tr: any) => {
+    if (tr.action !== "SETTLED" && tr.noteAmount > 0) {
+      const noteType = tr.action === "DEBIT_NOTE" ? "debit_note" : "credit_note";
+      const gstAmount = round2(tr.noteAmount * 0.18);
+      const totalAdjustment = round2(tr.noteAmount + gstAmount);
+      const noteNumber = `${tr.action === "DEBIT_NOTE" ? "DN" : "CN"}-${pool.fyYear}-${Date.now().toString().slice(-4)}`;
+      
+      const newNote: AdjustmentNoteEntity = {
+        id: `ADJ-CAM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        orgId: db.organization.id,
+        invoiceId: `CAM-TRUEUP-${pool.id}`,
+        noteType,
+        noteNumber,
+        reason: `CAM Year-End True-Up FY ${pool.fyYear} (${tr.tenantName} - Unit ${tr.unitNumber})`,
+        amount: tr.noteAmount,
+        gstAmount,
+        totalAdjustment,
+        issuedDate: new Date().toISOString().split("T")[0],
+        status: "applied",
+        createdAt: new Date().toISOString()
+      };
+
+      db.adjustmentNotes.unshift(newNote);
+      createdNotes.push(newNote);
+    }
+  });
+
+  pool.trueUpStatus = "executed";
+  pool.lastTrueUpDate = new Date().toISOString().split("T")[0];
+  saveRentRollDb(db);
+
+  return { summary, adjustmentNotes: createdNotes };
+}
+
+// Dispute Invoice
+export function disputeInvoiceInStore(
+  invoiceId: string,
+  reason: string,
+  disputeAmount: number,
+  disputeRemark: string
+): InvoiceEntity {
+  const db = getRentRollDb();
+  const invoice = (db.invoices || []).find(i => i.id === invoiceId);
+  if (!invoice) throw new Error("Invoice not found");
+
+  invoice.status = "disputed";
+  invoice.isDisputed = true;
+  invoice.disputeReason = reason;
+  invoice.disputeAmount = disputeAmount;
+  invoice.disputeRemark = disputeRemark;
+  invoice.disputedAt = new Date().toISOString();
+
+  // Create alert
+  db.alerts.unshift({
+    id: `ALT-DISP-${Date.now()}`,
+    orgId: db.organization.id,
+    alertType: "invoice_dispute",
+    title: `Invoice Disputed by ${invoice.tenantName}`,
+    message: `Tenant raised dispute on ${invoice.invoiceNumber} (₹${disputeAmount.toLocaleString('en-IN')}). Reason: ${reason}`,
+    entityType: "invoice",
+    entityId: invoice.id,
+    severity: "warning",
+    isRead: false,
+    triggerDate: new Date().toISOString().split("T")[0],
+    createdAt: new Date().toISOString()
+  });
+
+  saveRentRollDb(db);
+  return invoice;
+}
+
+// Razorpay Payment Simulation & Sub-ledger Allocation
+export function processRazorpayCheckoutInStore(params: {
+  invoiceIds: string[];
+  tenantId: string;
+  tenantName: string;
+  amountPaid: number;
+  paymentMode: "neft_rtgs" | "upi" | "cheque" | "ach" | "credit_card";
+  paymentReference?: string;
+}): { receipt: CollectionEntity; allocations: PaymentAllocationEntity[]; updatedInvoices: InvoiceEntity[] } {
+  const db = getRentRollDb();
+  const { allocatePaymentToInvoice } = require('./rent-roll-engine');
+
+  const refNumber = params.paymentReference || `RZP_${Date.now().toString().slice(-8)}`;
+  const receiptNumber = `REC-RZP-${Date.now().toString().slice(-6)}`;
+  const paymentDate = new Date().toISOString().split("T")[0];
+
+  const receipt: CollectionEntity = {
+    id: `COL-RZP-${Date.now()}`,
+    orgId: db.organization.id,
+    invoiceId: params.invoiceIds[0] || "",
+    invoiceNumber: params.invoiceIds.join(", "),
+    leaseId: "",
+    leaseCode: "",
+    tenantId: params.tenantId,
+    tenantName: params.tenantName,
+    propertyName: "Apex Business Tower",
+    receiptNumber,
+    paymentDate,
+    paymentMode: params.paymentMode,
+    referenceNumber: refNumber,
+    amountReceived: params.amountPaid,
+    tdsDeducted: 0,
+    bankCharges: 0,
+    netCredited: params.amountPaid,
+    bankAccount: "HDFC Escrow A/c - Razorpay Gateway",
+    notes: `Online Checkout settlement via ${params.paymentMode}`,
+    createdAt: new Date().toISOString()
+  };
+
+  db.collections.unshift(receipt);
+
+  let unallocated = params.amountPaid;
+  const allocations: PaymentAllocationEntity[] = [];
+  const updatedInvoices: InvoiceEntity[] = [];
+
+  for (const invId of params.invoiceIds) {
+    if (unallocated <= 0) break;
+    const inv = db.invoices.find(i => i.id === invId);
+    if (!inv || inv.balanceDue <= 0) continue;
+
+    receipt.leaseId = inv.leaseId;
+    receipt.leaseCode = inv.leaseCode;
+    receipt.propertyName = inv.propertyName;
+
+    const allocation = allocatePaymentToInvoice(unallocated, {
+      baseRent: inv.baseRent,
+      camCharges: inv.camCharges,
+      gstAmount: inv.gstAmount,
+      otherCharges: inv.otherCharges,
+      balanceDue: inv.balanceDue
+    });
+
+    const allocEntity: PaymentAllocationEntity = {
+      id: `ALLOC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      paymentId: receipt.id,
+      invoiceId: inv.id,
+      allocatedBaseRent: allocation.allocatedBaseRent,
+      allocatedCam: allocation.allocatedCam,
+      allocatedGst: allocation.allocatedGst,
+      allocatedOther: allocation.allocatedOther,
+      totalAllocated: allocation.totalAllocated,
+      allocatedAt: new Date().toISOString()
+    };
+    db.paymentAllocations.unshift(allocEntity);
+    allocations.push(allocEntity);
+
+    inv.amountPaid = round2(inv.amountPaid + allocation.totalAllocated);
+    inv.balanceDue = round2(Math.max(0, inv.balanceDue - allocation.totalAllocated));
+    inv.status = inv.balanceDue === 0 ? "paid" : "partially_paid";
+    inv.paidDate = paymentDate;
+    inv.paymentMode = params.paymentMode;
+    inv.referenceNumber = refNumber;
+    updatedInvoices.push(inv);
+
+    unallocated -= allocation.totalAllocated;
+  }
+
+  saveRentRollDb(db);
+  return { receipt, allocations, updatedInvoices };
+}
+
 
 // Save database
 export function saveRentRollDb(db: RentRollDatabase): void {

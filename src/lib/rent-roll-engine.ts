@@ -895,3 +895,394 @@ export function calculateOwnerStatement(
   };
 }
 
+// ==========================================
+// BR-25: Flex Centre Contribution & Break-even P&L (RR-FLX-08..10, F-16, F-23, F-24)
+// ==========================================
+export interface FlexMemberInput {
+  memberName: string;
+  planName: string;
+  billingBasis: "contracted" | "occupied" | "minimum_commitment" | "hybrid";
+  contractedSeats: number;
+  minimumSeats?: number;
+  occupiedSeats: number;
+  ratePerSeat: number;
+  billableSeats: number;
+  monthlyAmount: number;
+}
+
+export interface FlexCentrePnLResult {
+  totalMemberRevenue: number;
+  seatRevenue: number;
+  extrasRevenue: number;
+  headLeaseRentPayable: number;
+  landlordCamPayable: number;
+  totalDirectOpex: number;
+  centreContributionMargin: number; // Formula F-23
+  contributionMarginPct: number;
+  seatCapacity: number;
+  totalOccupiedSeats: number;
+  seatOccupancyPct: number; // Formula F-16
+  revPAS: number; // Revenue per occupied seat
+  breakEvenOccupancyPct: number; // Formula F-24
+}
+
+export function calculateFlexCentrePnL(
+  members: FlexMemberInput[],
+  extrasRevenue: number, // meeting rooms + parking
+  headLeaseRentPayable: number,
+  landlordCamPayable: number,
+  directOpex: number,
+  seatCapacity: number
+): FlexCentrePnLResult {
+  const seatRevenue = round2(members.reduce((acc, m) => acc + (m.monthlyAmount || 0), 0));
+  const totalMemberRevenue = round2(seatRevenue + extrasRevenue);
+  const totalDirectCosts = round2(headLeaseRentPayable + landlordCamPayable + directOpex);
+  
+  // Formula F-23: Centre Contribution = Member Revenue - Head-Lease Rent - CAM/Utilities Payable - Centre Opex
+  const centreContributionMargin = round2(totalMemberRevenue - totalDirectCosts);
+  const contributionMarginPct = totalMemberRevenue > 0 ? round2((centreContributionMargin / totalMemberRevenue) * 100) : 0;
+  
+  const totalOccupiedSeats = members.reduce((acc, m) => acc + (m.occupiedSeats || 0), 0);
+  // Formula F-16: Seat Occupancy = Occupied Seats / Total Seat Capacity
+  const seatOccupancyPct = seatCapacity > 0 ? round2((totalOccupiedSeats / seatCapacity) * 100) : 0;
+  
+  const revPAS = totalOccupiedSeats > 0 ? round2(totalMemberRevenue / totalOccupiedSeats) : 0;
+  
+  // Formula F-24: Break-even seat occupancy = (Head-Lease Rent + Payables + Opex) / (Average Revenue per Occupied Seat * Seat Capacity)
+  const breakEvenOccupancyPct = (revPAS > 0 && seatCapacity > 0)
+    ? round2((totalDirectCosts / (revPAS * seatCapacity)) * 100)
+    : 0;
+
+  return {
+    totalMemberRevenue,
+    seatRevenue,
+    extrasRevenue,
+    headLeaseRentPayable,
+    landlordCamPayable,
+    totalDirectOpex: directOpex,
+    centreContributionMargin,
+    contributionMarginPct,
+    seatCapacity,
+    totalOccupiedSeats,
+    seatOccupancyPct,
+    revPAS,
+    breakEvenOccupancyPct
+  };
+}
+
+// ==========================================
+// BR-26: CAM Pool Annual True-Up Engine (RR-FMC-04..06, Formula F-22)
+// Formula F-22: Occupant Share of Actual CAM - CAM Billed to Occupant = Debit (+) or Credit (-) note
+// ==========================================
+export interface CamTenantTrueUpInput {
+  tenantId: string;
+  tenantName: string;
+  unitNumber: string;
+  chargeableArea: number;
+  advanceCamBilled: number;
+}
+
+export interface CamTenantTrueUpResult {
+  tenantId: string;
+  tenantName: string;
+  unitNumber: string;
+  chargeableArea: number;
+  areaSharePct: number;
+  proportionalActualCost: number;
+  advanceCamBilled: number;
+  varianceAmount: number; // positive = under-billed (Debit note), negative = over-billed (Credit note)
+  action: "DEBIT_NOTE" | "CREDIT_NOTE" | "SETTLED";
+  noteAmount: number;
+}
+
+export interface CamPoolTrueUpSummary {
+  propertyId: string;
+  propertyName: string;
+  fyYear: string;
+  totalBuildingArea: number;
+  totalActualCamCost: number;
+  totalAdvanceCamBilled: number;
+  netTrueUpVariance: number;
+  totalDebitNotesAmount: number;
+  totalCreditNotesAmount: number;
+  tenantResults: CamTenantTrueUpResult[];
+}
+
+export function calculateCamPoolTrueUp(
+  propertyId: string,
+  propertyName: string,
+  fyYear: string,
+  totalBuildingArea: number,
+  totalActualCamCost: number,
+  tenants: CamTenantTrueUpInput[]
+): CamPoolTrueUpSummary {
+  let totalAdvanceCamBilled = 0;
+  let totalDebitNotesAmount = 0;
+  let totalCreditNotesAmount = 0;
+
+  const tenantResults: CamTenantTrueUpResult[] = tenants.map((t) => {
+    totalAdvanceCamBilled += (t.advanceCamBilled || 0);
+    const areaSharePct = totalBuildingArea > 0 ? (t.chargeableArea / totalBuildingArea) : 0;
+    const proportionalActualCost = round2(totalActualCamCost * areaSharePct);
+    const varianceAmount = round2(proportionalActualCost - t.advanceCamBilled);
+
+    let action: "DEBIT_NOTE" | "CREDIT_NOTE" | "SETTLED" = "SETTLED";
+    let noteAmount = 0;
+
+    if (varianceAmount > 0.5) {
+      action = "DEBIT_NOTE";
+      noteAmount = varianceAmount;
+      totalDebitNotesAmount += noteAmount;
+    } else if (varianceAmount < -0.5) {
+      action = "CREDIT_NOTE";
+      noteAmount = Math.abs(varianceAmount);
+      totalCreditNotesAmount += noteAmount;
+    }
+
+    return {
+      tenantId: t.tenantId,
+      tenantName: t.tenantName,
+      unitNumber: t.unitNumber,
+      chargeableArea: t.chargeableArea,
+      areaSharePct: round2(areaSharePct * 100),
+      proportionalActualCost,
+      advanceCamBilled: t.advanceCamBilled,
+      varianceAmount,
+      action,
+      noteAmount: round2(noteAmount)
+    };
+  });
+
+  const netTrueUpVariance = round2(totalActualCamCost - totalAdvanceCamBilled);
+
+  return {
+    propertyId,
+    propertyName,
+    fyYear,
+    totalBuildingArea,
+    totalActualCamCost: round2(totalActualCamCost),
+    totalAdvanceCamBilled: round2(totalAdvanceCamBilled),
+    netTrueUpVariance,
+    totalDebitNotesAmount: round2(totalDebitNotesAmount),
+    totalCreditNotesAmount: round2(totalCreditNotesAmount),
+    tenantResults
+  };
+}
+
+// ==========================================
+// BR-27: Tally Prime XML Voucher Generator (RR-INT-01, OI-5)
+// Generates standard Tally.ERP9 / Tally Prime <ENVELOPE> XML
+// ==========================================
+export function generateTallyPrimeXml(data: {
+  companyName: string;
+  invoices: Array<{
+    invoiceNumber: string;
+    invoiceDate: string;
+    tenantName: string;
+    baseRent: number;
+    camCharges: number;
+    gstAmount: number;
+    grossTotal: number;
+    placeOfSupply?: string;
+  }>;
+  collections?: Array<{
+    receiptNumber: string;
+    paymentDate: string;
+    tenantName: string;
+    amountReceived: number;
+    tdsDeducted: number;
+    paymentMode: string;
+    referenceNumber: string;
+    bankAccount: string;
+  }>;
+  adjustmentNotes?: Array<{
+    noteNumber: string;
+    noteType: string;
+    issuedDate: string;
+    tenantName?: string;
+    invoiceNumber?: string;
+    amount: number;
+    gstAmount: number;
+    totalAdjustment: number;
+    reason: string;
+  }>;
+}): string {
+  const formatTallyDate = (dStr: string) => {
+    const d = new Date(dStr);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}${mm}${dd}`;
+  };
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+  <HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+  </HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>Vouchers</REPORTNAME>
+        <STATICVARIABLES>
+          <SVCURRENTCOMPANY>${data.companyName || "OFFICEX Commercial Asset SPV"}</SVCURRENTCOMPANY>
+        </STATICVARIABLES>
+      </REQUESTDESC>
+      <REQUESTDATA>
+`;
+
+  // 1. Sales Vouchers for Tax Invoices
+  data.invoices.forEach((inv) => {
+    const tallyDate = formatTallyDate(inv.invoiceDate);
+    const halfGst = round2(inv.gstAmount / 2);
+
+    xml += `        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+          <VOUCHER VCHTYPE="Sales" ACTION="Create" OBJVIEW="Accounting Voucher View">
+            <DATE>${tallyDate}</DATE>
+            <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+            <VOUCHERNUMBER>${inv.invoiceNumber}</VOUCHERNUMBER>
+            <REFERENCE>${inv.invoiceNumber}</REFERENCE>
+            <PARTYLEDGERNAME>${inv.tenantName}</PARTYLEDGERNAME>
+            <NARRATION>OFFICEX Commercial Rent Roll billing for ${inv.tenantName} - Inv #${inv.invoiceNumber}</NARRATION>
+            
+            <!-- Debit Sundry Debtors (Gross Amount) -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>${inv.tenantName}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-${inv.grossTotal.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+            
+            <!-- Credit Base Rental Income -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Commercial Rental Income</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>${inv.baseRent.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+
+    if (inv.camCharges > 0) {
+      xml += `            <!-- Credit CAM Recoveries -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>CAM Recoveries</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>${inv.camCharges.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+    }
+
+    if (inv.gstAmount > 0) {
+      xml += `            <!-- Credit Output CGST 9% -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Output CGST @ 9%</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>${halfGst.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+            <!-- Credit Output SGST 9% -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Output SGST @ 9%</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>${halfGst.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+    }
+
+    xml += `          </VOUCHER>
+        </TALLYMESSAGE>
+`;
+  });
+
+  // 2. Receipt Vouchers for Bank Collections
+  if (data.collections) {
+    data.collections.forEach((col) => {
+      const tallyDate = formatTallyDate(col.paymentDate);
+      xml += `        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+          <VOUCHER VCHTYPE="Receipt" ACTION="Create" OBJVIEW="Accounting Voucher View">
+            <DATE>${tallyDate}</DATE>
+            <VOUCHERTYPENAME>Receipt</VOUCHERTYPENAME>
+            <VOUCHERNUMBER>${col.receiptNumber}</VOUCHERNUMBER>
+            <PARTYLEDGERNAME>${col.tenantName}</PARTYLEDGERNAME>
+            <NARRATION>Payment received via ${col.paymentMode} Ref UTR: ${col.referenceNumber}</NARRATION>
+            
+            <!-- Debit Bank Escrow Ledger -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>${col.bankAccount || "HDFC Bank Escrow A/c"}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-${col.amountReceived.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+
+      if (col.tdsDeducted > 0) {
+        xml += `            <!-- Debit TDS Receivable u/s 194-I -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>TDS Receivable u/s 194-I</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-${col.tdsDeducted.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+      }
+
+      const totalTenantCredit = col.amountReceived + (col.tdsDeducted || 0);
+      xml += `            <!-- Credit Sundry Debtors -->
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>${col.tenantName}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>${totalTenantCredit.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+          </VOUCHER>
+        </TALLYMESSAGE>
+`;
+    });
+  }
+
+  // 3. Credit / Debit Notes
+  if (data.adjustmentNotes) {
+    data.adjustmentNotes.forEach((note) => {
+      const tallyDate = formatTallyDate(note.issuedDate);
+      const isCredit = note.noteType === "credit_note";
+      const vchType = isCredit ? "Credit Note" : "Debit Note";
+      const party = note.tenantName || "Commercial Tenant";
+      const halfGst = round2(note.gstAmount / 2);
+
+      xml += `        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+          <VOUCHER VCHTYPE="${vchType}" ACTION="Create" OBJVIEW="Accounting Voucher View">
+            <DATE>${tallyDate}</DATE>
+            <VOUCHERTYPENAME>${vchType}</VOUCHERTYPENAME>
+            <VOUCHERNUMBER>${note.noteNumber}</VOUCHERNUMBER>
+            <PARTYLEDGERNAME>${party}</PARTYLEDGERNAME>
+            <NARRATION>${note.reason} - Ref: ${note.invoiceNumber || "General"}</NARRATION>
+            
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>${party}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>${isCredit ? "No" : "Yes"}</ISDEEMEDPOSITIVE>
+              <AMOUNT>${isCredit ? note.totalAdjustment.toFixed(2) : `-${note.totalAdjustment.toFixed(2)}`}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+            
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>Rent Roll Adjustments</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>${isCredit ? "Yes" : "No"}</ISDEEMEDPOSITIVE>
+              <AMOUNT>${isCredit ? `-${note.amount.toFixed(2)}` : note.amount.toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+      if (note.gstAmount > 0) {
+        xml += `            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>GST Adjustment</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>${isCredit ? "Yes" : "No"}</ISDEEMEDPOSITIVE>
+              <AMOUNT>${isCredit ? `-${(halfGst * 2).toFixed(2)}` : (halfGst * 2).toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>
+`;
+      }
+      xml += `          </VOUCHER>
+        </TALLYMESSAGE>
+`;
+    });
+  }
+
+  xml += `      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`;
+
+  return xml;
+}
+
+
