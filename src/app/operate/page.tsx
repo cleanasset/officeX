@@ -17,6 +17,17 @@ import {
   Headphones,
   Lock,
   ArrowUpRight,
+  Activity,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Zap,
+  TrendingUp,
+  DollarSign,
+  Layers,
+  Cpu,
+  BarChart3,
+  ExternalLink
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -33,6 +44,37 @@ export default function OperatePage() {
     setEnquiryPrefill({ modules: [mod] });
     setSlideInOpen(true);
   };
+
+  /* ──────── HERO BANNER SHOWCASE OPTIONS (Authentic Operate / CMMS / FM) ──────── */
+  const BANNER_OPTIONS = {
+    ops_control: {
+      id: "ops_control",
+      name: "Facility Ops Control",
+      src: "/images/operate_ops_control.jpg",
+      title: "Facility Operations Control & 52-Week PPM Command Center",
+      subtitle: "Live Building Telemetry, CMMS Work Orders, 52-Week Matrices & Statutory Governance",
+      badge: "CMMS Operations Center"
+    },
+    noc_center: {
+      id: "noc_center",
+      name: "BMS Engineering NOC",
+      src: "/images/operate_noc_center.jpg",
+      title: "Central Building Management System (BMS) & MEP Telemetry",
+      subtitle: "HVAC Chiller Monitoring, Energy Consumption & Guaranteed SLA Resolution Clocks",
+      badge: "BMS & NOC Center"
+    },
+    mep_inspection: {
+      id: "mep_inspection",
+      name: "Plant Room & Chiller PPM",
+      src: "/images/operate_mep_inspection.jpg",
+      title: "On-Ground Preventive Maintenance (PPM) & Asset QR Passports",
+      subtitle: "Certified Technicians Servicing Industrial Chillers, Pumps & Electrical Panels",
+      badge: "On-Ground Plant PPM"
+    }
+  } as const;
+
+  type BannerKey = keyof typeof BANNER_OPTIONS;
+  const [selectedBanner, setSelectedBanner] = useState<BannerKey>("ops_control");
 
   /* ──────── 6 SAAS PRODUCTS DATA (Clean, Minimal & Uncluttered) ──────── */
   const productTabs = [
@@ -133,63 +175,63 @@ export default function OperatePage() {
       <MarketingHeader activePath="/operate" />
 
       {/* ═══════════════════════════════════════════════════════════
-          1. HERO SECTION — Sunlit High-Tech SaaS Operations Command Center
+          1. HERO SECTION — Ultra-Clean Institutional SaaS Operations Command Center
           ═══════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-[600px] sm:min-h-[640px] lg:min-h-[680px] w-full max-w-full overflow-hidden flex flex-col justify-center pt-10 sm:pt-14 pb-10 sm:pb-14 bg-[#F8FAFC] border-b border-slate-200/80">
-        {/* Background Banner Image — Displays All 6 SaaS Modules on Holographic Glass Displays */}
-        <div className="absolute inset-0 z-0 pointer-events-none select-none">
-          <Image
-            src="/images/officex_all_saas_modules_banner.jpg"
-            alt="OfficeX Operate CAFM, Rent Roll, PPM & Smart Commercial SaaS Suite"
-            fill
-            priority
-            unoptimized
-            className="object-cover object-center"
-          />
+      <section className="relative w-full overflow-hidden pt-12 sm:pt-16 pb-16 lg:pb-24 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 border-b border-slate-200/80">
+        {/* Subtle Architectural Dot Grid & Ambient Glow (No dirty raster images) */}
+        <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[360px] bg-gradient-to-tr from-teal-500/12 via-[#0D7B6C]/10 to-emerald-400/12 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute top-1/2 -left-48 w-96 h-96 bg-teal-500/5 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-1/2 -right-48 w-96 h-96 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
 
-          {/* Clean Optical Clarity Scrim: Enhances text readability across the center frosted partition while keeping all 6 SaaS screens 100% sharp and readable */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_75%_at_50%_50%,rgba(255,255,255,0.90)_0%,rgba(255,255,255,0.60)_55%,transparent_100%)] pointer-events-none" />
-        </div>
-
-        {/* Hero Content — Centered Perfectly Between the 6 SaaS Displays */}
-        <div className="relative z-10 max-w-2xl lg:max-w-[700px] mx-auto w-full px-4 sm:px-6 text-center flex flex-col items-center">
+        {/* Hero Content Container */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
           {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-teal-200/90 text-[#0D7B6C] text-xs sm:text-sm font-extrabold tracking-wide mb-4 shadow-xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-teal-200/90 text-[#0D7B6C] text-xs sm:text-sm font-black tracking-wide mb-5 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-[#0D7B6C] animate-pulse shrink-0" />
-            <span>ENTERPRISE FACILITY MANAGEMENT &amp; CMMS</span>
+            <span>ENTERPRISE FACILITY MANAGEMENT &amp; CMMS · LIVE ENGINE</span>
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-black text-slate-950 tracking-tight leading-[1.12] mb-4 text-center">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.08] mb-5 text-center max-w-4xl">
             The Modern Operating System for{" "}
-            <span className="text-[#0D7B6C] block sm:inline">Commercial Workspaces</span>
+            <span className="block sm:inline bg-gradient-to-r from-slate-950 via-[#0D7B6C] to-emerald-700 bg-clip-text text-transparent">
+              Commercial Workspaces
+            </span>
           </h1>
 
           {/* Subheadline */}
-          <p className="max-w-xl mx-auto text-xs sm:text-sm md:text-base text-slate-700 font-semibold leading-relaxed mb-6">
+          <p className="max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-slate-600 font-medium leading-relaxed mb-8 text-center">
             One unified institutional platform for 52-week automated PPM, tenant rent roll,
-            turnstile speed-gates, lease dealflow, and statutory compliance.
+            optical speed-gates, commercial leasing, and statutory compliance across 15M+ sq.ft.
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-6">
+          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-5">
             <a
               href="#saas-modules"
-              className="px-6 py-3 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg inline-flex items-center gap-2 group cursor-pointer"
+              className="px-7 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-xl hover:-translate-y-0.5 inline-flex items-center gap-2 group cursor-pointer"
             >
               <span>Explore SaaS Modules</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </a>
             <button
               onClick={() => openEnquiry("General Platform")}
-              className="px-6 py-3 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl text-xs sm:text-sm border border-slate-300 shadow-xs transition-all cursor-pointer"
+              className="px-7 py-3.5 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl text-xs sm:text-sm border border-slate-300 shadow-xs hover:shadow-md transition-all cursor-pointer"
             >
               Request Walkthrough
             </button>
           </div>
 
-          {/* SaaS Modules Quick Navigation — Icons & Names */}
-          <div className="w-full mb-6">
+          {/* Trust Chips */}
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-500 mb-9">
+            <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Zero ERP Re-Keying</span>
+            <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> ISO 27001 &amp; SOC2 Type II</span>
+            <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-indigo-600" /> 100% Statutory Compliance</span>
+          </div>
+
+          {/* SaaS Modules Quick Navigation — Elegant Pill Ribbon */}
+          <div className="w-full max-w-4xl mb-10">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
               {productTabs.map((product) => {
                 const Icon = product.icon;
@@ -201,9 +243,9 @@ export default function OperatePage() {
                       e.preventDefault();
                       document.getElementById(product.id)?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/90 hover:bg-white border border-slate-200/90 hover:border-[#0D7B6C] shadow-2xs hover:shadow-md text-slate-800 hover:text-[#0D7B6C] text-xs font-bold transition-all duration-200 backdrop-blur-md group cursor-pointer"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-teal-50/60 border border-slate-200/90 hover:border-[#0D7B6C] shadow-2xs hover:shadow-sm text-slate-700 hover:text-[#0D7B6C] text-xs font-bold transition-all cursor-pointer group"
                   >
-                    <div className="w-5 h-5 rounded-md bg-teal-50 group-hover:bg-[#0D7B6C] text-[#0D7B6C] group-hover:text-white flex items-center justify-center transition-all duration-200 shrink-0">
+                    <div className="w-5 h-5 rounded-md bg-teal-50 group-hover:bg-[#0D7B6C] text-[#0D7B6C] group-hover:text-white flex items-center justify-center transition-all shrink-0">
                       <Icon size={12} className="stroke-[2.5]" />
                     </div>
                     <span className="whitespace-nowrap">{product.name}</span>
@@ -213,22 +255,88 @@ export default function OperatePage() {
             </div>
           </div>
 
+          {/* ═══════════════════════════════════════════════════════════
+              INSTITUTIONAL GRADE-A SHOWCASE BANNER IMAGE
+              ═══════════════════════════════════════════════════════════ */}
+          <div className="w-full max-w-5xl mb-12">
+            {/* Banner Switcher Pills */}
+            <div className="flex items-center justify-between mb-3 px-1 text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">
+                Institutional Asset View
+              </span>
+              <div className="inline-flex items-center p-1 rounded-xl bg-slate-100/90 border border-slate-200/80 mx-auto sm:mx-0 shadow-2xs">
+                {(Object.keys(BANNER_OPTIONS) as BannerKey[]).map((key) => {
+                  const item = BANNER_OPTIONS[key];
+                  const isActive = selectedBanner === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedBanner(key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-white text-[#0D7B6C] shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      {item.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Banner Image Frame */}
+            <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl shadow-slate-300/30 bg-slate-100 group">
+              <Image
+                src={BANNER_OPTIONS[selectedBanner].src}
+                alt={BANNER_OPTIONS[selectedBanner].title}
+                fill
+                priority
+                className="object-cover object-center group-hover:scale-[1.015] transition-transform duration-700"
+              />
+              {/* Subtle Bottom Scrim for Title Legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent pointer-events-none" />
+
+              {/* Banner Footer Caption */}
+              <div className="absolute bottom-4 left-5 sm:bottom-6 sm:left-7 right-5 sm:right-7 flex items-end justify-between pointer-events-none">
+                <div className="text-left text-white drop-shadow-sm">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold mb-1.5 backdrop-blur-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{BANNER_OPTIONS[selectedBanner].badge}</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                    {BANNER_OPTIONS[selectedBanner].title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-200 font-medium hidden sm:block mt-0.5">
+                    {BANNER_OPTIONS[selectedBanner].subtitle}
+                  </p>
+                </div>
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold border border-white/30 shrink-0">
+                  <Building2 className="w-3.5 h-3.5 text-teal-300" />
+                  <span>Apex Business Tower</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Enterprise Client Trust Badge */}
           <div className="w-full text-center">
-            <div className="inline-flex flex-col items-center px-5 sm:px-7 py-2.5 sm:py-3 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-2xs">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-1.5">
+            <div className="inline-flex flex-col items-center px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
                 TRUSTED BY ASSET MANAGERS &amp; OPERATORS ACROSS 15M+ SQ.FT
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-x-3.5 sm:gap-x-5 gap-y-1 text-[11px] sm:text-xs font-black tracking-wider text-slate-700">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 sm:gap-x-6 gap-y-1.5 text-xs font-black tracking-wider text-slate-700">
                 <span className="hover:text-[#0D7B6C] transition-colors">PRESTIGE GROUP</span>
                 <span className="text-slate-300 select-none">•</span>
                 <span className="hover:text-[#0D7B6C] transition-colors">BRIGADE TECH</span>
                 <span className="text-slate-300 select-none">•</span>
-                <span className="hover:text-[#0D7B6C] transition-colors">EMBASSY PARKS</span>
+                <span className="hover:text-[#0D7B6C] transition-colors">EMBASSY PARKS REIT</span>
                 <span className="text-slate-300 select-none">•</span>
                 <span className="hover:text-[#0D7B6C] transition-colors">BROOKFIELD</span>
                 <span className="text-slate-300 select-none">•</span>
                 <span className="hover:text-[#0D7B6C] transition-colors">MINDSPACE REIT</span>
+                <span className="text-slate-300 select-none">•</span>
+                <span className="hover:text-[#0D7B6C] transition-colors">DLF COMMERCIAL</span>
               </div>
             </div>
           </div>
