@@ -45,37 +45,6 @@ export default function OperatePage() {
     setSlideInOpen(true);
   };
 
-  /* ──────── HERO BANNER SHOWCASE OPTIONS (Authentic Operate / CMMS / FM) ──────── */
-  const BANNER_OPTIONS = {
-    ops_control: {
-      id: "ops_control",
-      name: "Facility Ops Control",
-      src: "/images/operate_ops_control.jpg",
-      title: "Facility Operations Control & 52-Week PPM Command Center",
-      subtitle: "Live Building Telemetry, CMMS Work Orders, 52-Week Matrices & Statutory Governance",
-      badge: "CMMS Operations Center"
-    },
-    noc_center: {
-      id: "noc_center",
-      name: "BMS Engineering NOC",
-      src: "/images/operate_noc_center.jpg",
-      title: "Central Building Management System (BMS) & MEP Telemetry",
-      subtitle: "HVAC Chiller Monitoring, Energy Consumption & Guaranteed SLA Resolution Clocks",
-      badge: "BMS & NOC Center"
-    },
-    mep_inspection: {
-      id: "mep_inspection",
-      name: "Plant Room & Chiller PPM",
-      src: "/images/operate_mep_inspection.jpg",
-      title: "On-Ground Preventive Maintenance (PPM) & Asset QR Passports",
-      subtitle: "Certified Technicians Servicing Industrial Chillers, Pumps & Electrical Panels",
-      badge: "On-Ground Plant PPM"
-    }
-  } as const;
-
-  type BannerKey = keyof typeof BANNER_OPTIONS;
-  const [selectedBanner, setSelectedBanner] = useState<BannerKey>("ops_control");
-
   /* ──────── 6 SAAS PRODUCTS DATA (Clean, Minimal & Uncluttered) ──────── */
   const productTabs = [
     {
@@ -252,70 +221,6 @@ export default function OperatePage() {
                   </a>
                 );
               })}
-            </div>
-          </div>
-
-          {/* ═══════════════════════════════════════════════════════════
-              INSTITUTIONAL GRADE-A SHOWCASE BANNER IMAGE
-              ═══════════════════════════════════════════════════════════ */}
-          <div className="w-full max-w-5xl mb-12">
-            {/* Banner Switcher Pills */}
-            <div className="flex items-center justify-between mb-3 px-1 text-xs">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">
-                Institutional Asset View
-              </span>
-              <div className="inline-flex items-center p-1 rounded-xl bg-slate-100/90 border border-slate-200/80 mx-auto sm:mx-0 shadow-2xs">
-                {(Object.keys(BANNER_OPTIONS) as BannerKey[]).map((key) => {
-                  const item = BANNER_OPTIONS[key];
-                  const isActive = selectedBanner === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedBanner(key)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-white text-[#0D7B6C] shadow-xs"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      {item.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Banner Image Frame */}
-            <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl shadow-slate-300/30 bg-slate-100 group">
-              <Image
-                src={BANNER_OPTIONS[selectedBanner].src}
-                alt={BANNER_OPTIONS[selectedBanner].title}
-                fill
-                priority
-                className="object-cover object-center group-hover:scale-[1.015] transition-transform duration-700"
-              />
-              {/* Subtle Bottom Scrim for Title Legibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent pointer-events-none" />
-
-              {/* Banner Footer Caption */}
-              <div className="absolute bottom-4 left-5 sm:bottom-6 sm:left-7 right-5 sm:right-7 flex items-end justify-between pointer-events-none">
-                <div className="text-left text-white drop-shadow-sm">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold mb-1.5 backdrop-blur-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{BANNER_OPTIONS[selectedBanner].badge}</span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
-                    {BANNER_OPTIONS[selectedBanner].title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-200 font-medium hidden sm:block mt-0.5">
-                    {BANNER_OPTIONS[selectedBanner].subtitle}
-                  </p>
-                </div>
-                <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold border border-white/30 shrink-0">
-                  <Building2 className="w-3.5 h-3.5 text-teal-300" />
-                  <span>Apex Business Tower</span>
-                </div>
-              </div>
             </div>
           </div>
 
