@@ -438,7 +438,7 @@ function RentRollPageInner() {
   }
 
   return (
-    <div className="flex flex-col gap-5 font-sans relative w-full">
+    <div className="flex flex-col gap-3 font-sans relative w-full">
       {/* ──── TOP GLOBAL HEADER & CONTROLS ──── */}
       <RentRollHeader
         activeTab={activeTab}
@@ -481,27 +481,19 @@ function RentRollPageInner() {
         onOpenManageProperties={() => setIsManagePropertiesOpen(true)}
       />
 
-      {/* ──── HORIZONTAL TAB NAVIGATION STRIP ──── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-gray-200/80 no-scrollbar">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-white hover:bg-gray-100 text-gray-600 hover:text-gray-900 border border-gray-200/80"
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-teal-300" : "text-gray-500"}`} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* ──── COMPACT TAB INDICATOR (sidebar handles full navigation) ──── */}
+      {(() => {
+        const currentTab = tabs.find(t => t.id === activeTab);
+        const Icon = currentTab?.icon || Building2;
+        return (
+          <div className="flex items-center gap-2 px-1 text-xs text-gray-500">
+            <Icon className="w-3.5 h-3.5 text-[#0F8B7D]" />
+            <span className="font-bold text-gray-900">{currentTab?.label || "Dashboard"}</span>
+            <span className="text-gray-300">·</span>
+            <span className="text-gray-400">FY 2026-27</span>
+          </div>
+        );
+      })()}
 
       {/* Action Feedback Banner */}
       {actionFeedback && (
