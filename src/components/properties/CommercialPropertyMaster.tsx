@@ -15,6 +15,7 @@ import {
   Trash2,
   Sparkles,
   AlertCircle,
+  AlertTriangle,
   FileText,
   DollarSign,
   HelpCircle,
@@ -399,10 +400,41 @@ export default function CommercialPropertyMaster() {
   };
 
   const handleRemoveUnit = (id: string) => {
-    setUnits(units.filter(u => u.id !== id));
+    const nextUnits = units.filter(u => u.id !== id);
+    setUnits(nextUnits);
     if (editingUnitId === id) {
       setEditingUnitId(null);
     }
+    const sumChg = nextUnits.reduce((a, b) => a + b.chargeableArea, 0);
+    const sumCpt = nextUnits.reduce((a, b) => a + b.carpetArea, 0);
+    setTotalChargeableArea(sumChg);
+    setTotalCarpetArea(sumCpt);
+  };
+
+  const handleCreateSingleBuildingUnit = () => {
+    const bldgCode = towers[0]?.code || "T1";
+    const propPrefix = propertyCode ? propertyCode.split("-")[0] : "SP";
+    const area = totalChargeableArea > 0 ? totalChargeableArea : 10000;
+    const carpet = totalCarpetArea > 0 && totalCarpetArea <= area ? totalCarpetArea : Math.round(area * 0.75);
+
+    const fullUnit: LeasableSpaceUnit = {
+      id: `u-${Date.now()}`,
+      spaceCode: `${propPrefix}-${bldgCode}-01-01`,
+      suiteNumber: `${assetName ? assetName.trim() : "Main Building"} (Entire Premise)`,
+      buildingCode: bldgCode,
+      floorNumber: 1,
+      spaceType: "office",
+      chargeableArea: area,
+      carpetArea: carpet,
+      askingRate: targetRentPsf || 150,
+      seatCapacity: 0,
+      fitoutCondition: "warm_shell",
+      status: "vacant"
+    };
+
+    setUnits([fullUnit]);
+    setTotalChargeableArea(area);
+    setTotalCarpetArea(carpet);
   };
 
   const handleBulkImportUnits = (importedUnits: LeasableSpaceUnit[]) => {
@@ -411,12 +443,8 @@ export default function CommercialPropertyMaster() {
     setUnits(nextUnits);
     const sumChg = nextUnits.reduce((a, b) => a + b.chargeableArea, 0);
     const sumCpt = nextUnits.reduce((a, b) => a + b.carpetArea, 0);
-    if (totalChargeableArea === 0 || totalChargeableArea < sumChg) {
-      setTotalChargeableArea(sumChg);
-    }
-    if (sumCpt > 0) {
-      setTotalCarpetArea(sumCpt);
-    }
+    setTotalChargeableArea(sumChg);
+    setTotalCarpetArea(sumCpt);
     setShowBulkImport(false);
   };
 
@@ -444,8 +472,9 @@ export default function CommercialPropertyMaster() {
     setUploadedDocs(prev => prev.filter(d => d.id !== id));
   };
 
-  // Loading Ratio Calculation
-  const loadingPct = totalChargeableArea > 0 && totalCarpetArea > 0
+  // Loading Ratio Calculation with invalid negative prevention
+  const hasCarpetExceedsSuper = totalChargeableArea > 0 && totalCarpetArea > totalChargeableArea;
+  const loadingPct = totalChargeableArea > 0 && totalCarpetArea > 0 && !hasCarpetExceedsSuper
     ? Math.round(((totalChargeableArea - totalCarpetArea) / totalCarpetArea) * 100)
     : 0;
 
@@ -1451,118 +1480,177 @@ export default function CommercialPropertyMaster() {
               </p>
             </div>
 
-            {/* Benchmark Rates & Area Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600">Chargeable Super Area *</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="e.g. 50,000"
-                    value={totalChargeableArea || ""}
-                    onChange={(e) => setTotalChargeableArea(Number(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                  />
-                  <span className="text-[10px] text-slate-400 font-bold">{areaLabel}</span>
+            {/* 1. Building Commercial Benchmarks & Total Portfolio Area */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/70 pb-3">
+                <div>
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building size={14} className="text-[#0F8B7D]" />
+                    Building Master Commercial Rates &amp; Area Totals
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {units.length > 0
+                      ? `Leasable areas are automatically summed from your ${units.length} unit(s) below.`
+                      : "Set baseline rent rates and add leasable units below (or use the whole-building shortcut)."}
+                  </p>
                 </div>
+
+                {units.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={handleCreateSingleBuildingUnit}
+                    className="px-3 py-1.5 rounded-xl border border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shadow-2xs"
+                  >
+                    <Sparkles size={13} className="text-[#0F8B7D]" />
+                    <span>Single Unit: Lease Entire Building as 1 Suite</span>
+                  </button>
+                )}
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600">Carpet / Usable Area *</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="e.g. 35,000"
-                    value={totalCarpetArea || ""}
-                    onChange={(e) => setTotalCarpetArea(Number(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                  />
-                  <span className="text-[10px] text-slate-400 font-bold">{areaLabel}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600">Target Rent Rate</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="e.g. 150"
-                    value={targetRentPsf || ""}
-                    onChange={(e) => setTargetRentPsf(Number(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                  />
-                  <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}/{areaUnit === "sqm" ? "sqm" : "sqft"}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600">Standard CAM Rate</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="e.g. 22"
-                    value={standardCamPsf || ""}
-                    onChange={(e) => setStandardCamPsf(Number(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                  />
-                  <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}/{areaUnit === "sqm" ? "sqm" : "sqft"}</span>
-                </div>
-              </div>
-
-              {/* Computed Loading Ratio (Rule R-07 range 20% - 60%) */}
-              <div className="col-span-2 sm:col-span-4 flex items-center justify-between pt-2 border-t border-slate-200/80 text-xs">
-                <span className="text-slate-500">
-                  Computed Loading Ratio: <strong className="text-slate-900 font-mono">{loadingPct}%</strong>
-                </span>
-                <span className={`text-[11px] font-bold ${loadingPct >= 20 && loadingPct <= 60 ? "text-emerald-700" : "text-amber-700"}`}>
-                  {loadingPct > 0 ? (loadingPct >= 20 && loadingPct <= 60 ? "✓ Optimal institutional ratio (20%–60%)" : `⚠ Loading ratio (${loadingPct}%) outside standard 20%–60% benchmark`) : "Calculated from super vs carpet areas above"}
-                </span>
-              </div>
-
-              {/* Rule R-03 Area Reconciliation */}
-              {units.length > 0 && totalChargeableArea > 0 && (
-                <div className={`col-span-2 sm:col-span-4 p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
-                  Math.abs(units.reduce((s, u) => s + u.chargeableArea, 0) - totalChargeableArea) / totalChargeableArea <= 0.005
-                    ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
-                    : "bg-amber-50/80 border-amber-200 text-amber-900"
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={15} className={Math.abs(units.reduce((s, u) => s + u.chargeableArea, 0) - totalChargeableArea) / totalChargeableArea <= 0.005 ? "text-emerald-600" : "text-amber-600"} />
-                    <span>
-                      <strong>Rule R-03 Area Reconciliation:</strong> Units sum = <strong>{units.reduce((s, u) => s + u.chargeableArea, 0).toLocaleString()} {areaLabel}</strong> vs Property Total = <strong>{totalChargeableArea.toLocaleString()} {areaLabel}</strong>.
-                      {Math.abs(units.reduce((s, u) => s + u.chargeableArea, 0) - totalChargeableArea) / totalChargeableArea <= 0.005
-                        ? " (100% Reconciled within ±0.5% tolerance)"
-                        : ` (Variance: ${Math.abs(units.reduce((s, u) => s + u.chargeableArea, 0) - totalChargeableArea).toLocaleString()} ${areaLabel} • ${((Math.abs(units.reduce((s, u) => s + u.chargeableArea, 0) - totalChargeableArea) / totalChargeableArea) * 100).toFixed(1)}%)`}
-                    </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {/* Total Chargeable Area */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">Total Leasable Area *</label>
+                    {units.length > 0 && (
+                      <span className="text-[9px] font-bold text-teal-700 bg-teal-100/70 px-1.5 py-0.5 rounded">
+                        Auto-Summed
+                      </span>
+                    )}
                   </div>
-                  {Math.abs(units.reduce((s, u) => s + u.chargeableArea, 0) - totalChargeableArea) / totalChargeableArea > 0.005 && (
-                    <button
-                      type="button"
-                      onClick={() => setTotalChargeableArea(units.reduce((s, u) => s + u.chargeableArea, 0))}
-                      className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] whitespace-nowrap self-start sm:self-auto cursor-pointer"
-                    >
-                      Sync Total Area
-                    </button>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      placeholder={units.length > 0 ? String(totalChargeableArea) : "e.g. 50,000"}
+                      value={totalChargeableArea || ""}
+                      onChange={(e) => setTotalChargeableArea(Number(e.target.value) || 0)}
+                      readOnly={units.length > 0}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold ${
+                        units.length > 0
+                          ? "border-teal-200 bg-teal-50/50 text-teal-950 focus:outline-none"
+                          : "border-slate-200 bg-white text-slate-900"
+                      }`}
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold">{areaLabel}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    {units.length > 0 ? `Total of ${units.length} suite(s) below` : "Building super built-up area"}
+                  </p>
+                </div>
+
+                {/* Total Carpet / Usable Area */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">Total Carpet Area *</label>
+                    {units.length > 0 && (
+                      <span className="text-[9px] font-bold text-teal-700 bg-teal-100/70 px-1.5 py-0.5 rounded">
+                        Auto-Summed
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      placeholder={units.length > 0 ? String(totalCarpetArea) : "e.g. 37,500"}
+                      value={totalCarpetArea || ""}
+                      onChange={(e) => setTotalCarpetArea(Number(e.target.value) || 0)}
+                      readOnly={units.length > 0}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold ${
+                        units.length > 0
+                          ? "border-teal-200 bg-teal-50/50 text-teal-950 focus:outline-none"
+                          : "border-slate-200 bg-white text-slate-900"
+                      }`}
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold">{areaLabel}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    {units.length > 0 ? `Sum of internal usable areas` : "Internal usable area"}
+                  </p>
+                </div>
+
+                {/* Target Rent Rate */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700">Baseline Target Rent</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      placeholder="e.g. 150"
+                      value={targetRentPsf || ""}
+                      onChange={(e) => setTargetRentPsf(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}/{areaUnit === "sqm" ? "sqm" : "sqft"}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Default asking rate for suites</p>
+                </div>
+
+                {/* Standard CAM Rate */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700">Standard CAM Rate</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      placeholder="e.g. 22"
+                      value={standardCamPsf || ""}
+                      onChange={(e) => setStandardCamPsf(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}/{areaUnit === "sqm" ? "sqm" : "sqft"}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Common Area Maintenance</p>
+                </div>
+              </div>
+
+              {/* Computed Loading Ratio Bar & Validation */}
+              <div className="pt-2 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-medium">Computed Loading Ratio:</span>
+                  <span className="text-sm font-black font-mono text-slate-900">
+                    {hasCarpetExceedsSuper ? "Invalid" : `${loadingPct}%`}
+                  </span>
+                </div>
+
+                <div>
+                  {hasCarpetExceedsSuper ? (
+                    <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                      <AlertTriangle size={13} />
+                      Carpet Area ({totalCarpetArea.toLocaleString()}) cannot be greater than Super Area ({totalChargeableArea.toLocaleString()})
+                    </span>
+                  ) : loadingPct > 0 ? (
+                    <span className={`text-[11px] font-bold ${loadingPct >= 15 && loadingPct <= 50 ? "text-emerald-700" : "text-amber-700"}`}>
+                      {loadingPct >= 15 && loadingPct <= 50
+                        ? `✓ Standard institutional loading (${loadingPct}%)`
+                        : `ℹ Loading factor ${loadingPct}% (Typical institutional range is 20%–40%)`}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-slate-400">
+                      Calculated automatically from (Super Area − Carpet Area) ÷ Carpet Area
+                    </span>
                   )}
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="space-y-5">
-              {/* 1. UPPER SIDE: ADD / EDIT SPACE UNIT FORM */}
-              <div className="p-5 rounded-2xl border border-teal-200 bg-teal-50/40 space-y-3">
+              {/* 2. LEASABLE SUITES & FLOOR INVENTORY */}
+              <div className="p-5 rounded-2xl border border-teal-200 bg-teal-50/30 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-teal-900 flex items-center gap-1.5 uppercase tracking-wider">
-                    {editingUnitId ? (
-                      <>
-                        <Edit3 size={15} className="text-[#0F8B7D]" /> Editing Unit: {newUnit.suiteNumber}
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={15} className="text-[#0F8B7D]" /> Add Space Unit / Suite
-                      </>
-                    )}
-                  </span>
+                  <div>
+                    <span className="text-xs font-black text-teal-900 flex items-center gap-1.5 uppercase tracking-wider">
+                      {editingUnitId ? (
+                        <>
+                          <Edit3 size={15} className="text-[#0F8B7D]" /> Editing Leasable Unit: {newUnit.suiteNumber}
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={15} className="text-[#0F8B7D]" /> Add Leasable Suite / Demised Unit
+                        </>
+                      )}
+                    </span>
+                    <p className="text-[11px] text-teal-700 mt-0.5">
+                      Enter each demised suite or floor. Each unit&apos;s area automatically adds to the building&apos;s total leasable area above.
+                    </p>
+                  </div>
                   <div className="flex items-center gap-2">
                     {editingUnitId ? (
                       <button
@@ -1581,9 +1669,6 @@ export default function CommercialPropertyMaster() {
                         <FileUp size={12} /> Bulk Import (CSV)
                       </button>
                     )}
-                    <span className="text-[11px] text-teal-700 font-medium hidden sm:inline">
-                      Add individual suites or floors to your leasable inventory below
-                    </span>
                   </div>
                 </div>
 
@@ -1649,7 +1734,7 @@ export default function CommercialPropertyMaster() {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Chargeable Super Area ({areaLabel}) *</label>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Unit Super Area ({areaLabel}) *</label>
                     <input
                       type="number"
                       placeholder="e.g. 5000"
