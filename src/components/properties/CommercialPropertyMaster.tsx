@@ -168,6 +168,20 @@ export default function CommercialPropertyMaster() {
     setTowers(towers.filter(t => t.id !== id));
   };
 
+  // Smart CIN validation: accepts standard 21-character MCA CINs, 20-character legacy CINs, FCRN, and LLPIN
+  const isCinValid = (raw: string): boolean => {
+    const c = (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!c) return false;
+    // 1. Standard 21-character or legacy 20-character MCA CIN:
+    // Starts with a letter (L, U, F, etc.) followed by 19-20 alphanumeric characters
+    if ((c.length === 21 || c.length === 20) && /^[A-Z][0-9A-Z]{19,20}$/.test(c)) return true;
+    // 2. Foreign Company Registration Number (FCRN): starts with F + 4-8 alphanumeric chars
+    if (/^F[0-9A-Z]{4,8}$/.test(c)) return true;
+    // 3. LLPIN (7-8 alphanumeric chars, e.g. AAA-1234 or AAB5678)
+    if (/^[A-Z0-9]{7,8}$/.test(c)) return true;
+    return false;
+  };
+
   // ──── STEP 1 VALIDATION & ADVANCE TO STEP 2 ────
   const handleStep1Next = () => {
     if (!assetName.trim()) {
@@ -182,18 +196,17 @@ export default function CommercialPropertyMaster() {
     // Strict Statutory Identification Validation based on Entity Constitution
     // 1. CIN / LLPIN Validation
     if (entityType === "pvt_ltd" || entityType === "public_ltd") {
-      const cleanCin = cinNumber.trim().toUpperCase();
+      const cleanCin = cinNumber.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (!cleanCin) {
-        alert("Corporate Identification Number (CIN) is compulsory for Private Limited and Public Limited companies. Please provide a valid 21-digit MCA CIN.");
+        alert("Corporate Identification Number (CIN) is compulsory for Private Limited and Public Limited companies. Please provide a valid MCA CIN.");
         return;
       }
-      const cinRegex = /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
-      if (!cinRegex.test(cleanCin)) {
-        alert(`Invalid CIN "${cleanCin}". Corporate Identification Number must be a valid 21-digit alphanumeric code registered with MCA (e.g. U70102MH2018PTC123456).`);
+      if (!isCinValid(cleanCin)) {
+        alert(`Invalid Corporate Identification Number "${cinNumber}". Please provide a valid 21-digit MCA CIN (or registration code).`);
         return;
       }
     } else if (entityType === "llp") {
-      const cleanLlpin = llpinNumber.trim().toUpperCase();
+      const cleanLlpin = llpinNumber.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (!cleanLlpin) {
         alert("LLPIN (Limited Liability Partnership Identification Number) is compulsory for LLPs. Please provide the 7-character LLPIN (e.g. AAA-1234).");
         return;
@@ -201,19 +214,19 @@ export default function CommercialPropertyMaster() {
     }
 
     // 2. PAN Validation (Compulsory for ALL entities under Section 194I)
-    const cleanPan = panNumber.trim().toUpperCase();
+    const cleanPan = panNumber.toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!cleanPan) {
       alert("Income Tax PAN is compulsory for all commercial property landlords under Section 194-I of the Income Tax Act.");
       return;
     }
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
     if (!panRegex.test(cleanPan)) {
-      alert(`Invalid Income Tax PAN "${cleanPan}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
+      alert(`Invalid Income Tax PAN "${panNumber}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
       return;
     }
 
     // 3. GSTIN Validation (Compulsory for corporate entities unless exempted; optional for sole proprietors & individuals)
-    const cleanGst = propertyGstin.trim().toUpperCase();
+    const cleanGst = propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const isCorporate = entityType === "pvt_ltd" || entityType === "public_ltd" || entityType === "llp" || entityType === "trust_reit";
     if (isCorporate && !gstExempted) {
       if (!cleanGst) {
@@ -222,7 +235,7 @@ export default function CommercialPropertyMaster() {
       }
       const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
       if (!gstRegex.test(cleanGst)) {
-        alert(`Invalid GSTIN "${cleanGst}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5).`);
+        alert(`Invalid GSTIN "${propertyGstin}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5).`);
         return;
       }
       if (!cleanGst.includes(cleanPan)) {
@@ -232,7 +245,7 @@ export default function CommercialPropertyMaster() {
     } else if (!gstExempted && cleanGst) {
       const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
       if (!gstRegex.test(cleanGst)) {
-        alert(`Invalid GSTIN "${cleanGst}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5), or leave blank if unregistered.`);
+        alert(`Invalid GSTIN "${propertyGstin}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5), or leave blank if unregistered.`);
         return;
       }
       if (!cleanGst.includes(cleanPan)) {
@@ -618,10 +631,10 @@ export default function CommercialPropertyMaster() {
         longitude: geoLng.trim() ? parseFloat(geoLng) : undefined,
         status: operationalStatus,
         entityType,
-        cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase() : undefined,
+        cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") : undefined,
         llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
-        panNumber: panNumber.trim().toUpperCase() || undefined,
-        gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase() || customSpvGstin.trim().toUpperCase() || undefined),
+        panNumber: panNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || undefined,
+        gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || customSpvGstin.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || undefined),
         ownerCompany,
         ownerName: ownerCompany,
         ownerEmail,
@@ -687,10 +700,10 @@ export default function CommercialPropertyMaster() {
             geoLng: geoLng.trim(),
             status: operationalStatus,
             entityType,
-            cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase() : undefined,
+            cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") : undefined,
             llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
-            panNumber: panNumber.trim().toUpperCase() || undefined,
-            gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase() || customSpvGstin.trim().toUpperCase() || undefined),
+            panNumber: panNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || undefined,
+            gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || customSpvGstin.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || undefined),
             totalArea: totalChargeableArea,
             chargeableArea: totalChargeableArea,
             carpetArea: totalCarpetArea,
@@ -984,19 +997,22 @@ export default function CommercialPropertyMaster() {
                     <div className="relative">
                       <input
                         type="text"
-                        maxLength={21}
+                        maxLength={28}
                         value={cinNumber}
-                        onChange={(e) => setCinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+                          setCinNumber(val);
+                        }}
                         placeholder="e.g. U70102MH2018PTC123456"
                         className={`w-full px-3 py-2 rounded-lg border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none transition-colors ${
-                          cinNumber.length === 21 && /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(cinNumber)
+                          isCinValid(cinNumber)
                             ? "border-emerald-500 ring-1 ring-emerald-500"
-                            : cinNumber.length > 0
+                            : cinNumber.trim().length > 0
                             ? "border-amber-400"
                             : "border-slate-200 focus:border-[#0F8B7D]"
                         }`}
                       />
-                      {cinNumber.length === 21 && /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(cinNumber) && (
+                      {isCinValid(cinNumber) && (
                         <span className="absolute right-2.5 top-2 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
                           <Check size={12} strokeWidth={3} /> Valid
                         </span>
@@ -1008,9 +1024,9 @@ export default function CommercialPropertyMaster() {
                     <div className="relative">
                       <input
                         type="text"
-                        maxLength={8}
+                        maxLength={12}
                         value={llpinNumber}
-                        onChange={(e) => setLlpinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                        onChange={(e) => setLlpinNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
                         placeholder="e.g. AAA-1234"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                       />
@@ -1039,7 +1055,7 @@ export default function CommercialPropertyMaster() {
                       {entityType === "llp"
                         ? "LLP Act 2008 registration"
                         : (entityType === "pvt_ltd" || entityType === "public_ltd")
-                        ? "21-digit MCA registration"
+                        ? "MCA 21-digit registration"
                         : "Title held under deed / firm"}
                     </span>
                     {(entityType === "pvt_ltd" || entityType === "public_ltd") && (
@@ -1078,19 +1094,22 @@ export default function CommercialPropertyMaster() {
                   <div className="relative">
                     <input
                       type="text"
-                      maxLength={10}
+                      maxLength={14}
                       value={panNumber}
-                      onChange={(e) => setPanNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+                        setPanNumber(val);
+                      }}
                       placeholder="e.g. ABCDE1234F"
                       className={`w-full px-3 py-2 rounded-lg border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none transition-colors ${
-                        panNumber.length === 10 && /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)
+                        /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.toUpperCase().replace(/[^A-Z0-9]/g, ""))
                           ? "border-emerald-500 ring-1 ring-emerald-500"
-                          : panNumber.length > 0
+                          : panNumber.trim().length > 0
                           ? "border-amber-400"
                           : "border-slate-200 focus:border-[#0F8B7D]"
                       }`}
                     />
-                    {panNumber.length === 10 && /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber) && (
+                    {/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.toUpperCase().replace(/[^A-Z0-9]/g, "")) && (
                       <span className="absolute right-2.5 top-2 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
                         <Check size={12} strokeWidth={3} /> Valid
                       </span>
@@ -1134,10 +1153,10 @@ export default function CommercialPropertyMaster() {
                     <div className="relative">
                       <input
                         type="text"
-                        maxLength={15}
+                        maxLength={20}
                         value={propertyGstin}
                         onChange={(e) => {
-                          const val = e.target.value.toUpperCase().replace(/\s/g, "");
+                          const val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
                           setPropertyGstin(val);
                           if (!customSpvGstin || customSpvGstin === propertyGstin) {
                             setCustomSpvGstin(val);
@@ -1145,14 +1164,14 @@ export default function CommercialPropertyMaster() {
                         }}
                         placeholder="e.g. 27ABCDE1234F1Z5"
                         className={`w-full px-3 py-2 rounded-lg border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none transition-colors ${
-                          propertyGstin.length === 15 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(propertyGstin)
+                          propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, "").length === 15 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, ""))
                             ? "border-emerald-500 ring-1 ring-emerald-500"
-                            : propertyGstin.length > 0
+                            : propertyGstin.trim().length > 0
                             ? "border-amber-400"
                             : "border-slate-200 focus:border-[#0F8B7D]"
                         }`}
                       />
-                      {propertyGstin.length === 15 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(propertyGstin) && (
+                      {propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, "").length === 15 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, "")) && (
                         <span className="absolute right-2.5 top-2 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
                           <Check size={12} strokeWidth={3} /> Valid
                         </span>
