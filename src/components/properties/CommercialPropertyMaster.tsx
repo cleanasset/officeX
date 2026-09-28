@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/LocationInputs";
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SPECIFICATION SECTION 4.5 & UAT-01: PROPERTY, BUILDING & SPACE MASTER
+// COMMERCIAL PROPERTY, BUILDING & SPACE MASTER
 // Canonical data model for institutional commercial real estate
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -47,15 +47,17 @@ interface TowerBuilding {
 
 interface LeasableSpaceUnit {
   id: string;
+  spaceCode: string;
   suiteNumber: string;
   buildingCode: string;
   floorNumber: number;
-  spaceType: "office" | "retail" | "flex_floor" | "storage" | "other";
+  spaceType: "office" | "retail" | "food_court" | "storage" | "parking_block" | "terrace" | "antenna_site" | "flex_floor" | "cabin" | "meeting_room" | "other";
   chargeableArea: number;
   carpetArea: number;
   askingRate: number;
+  seatCapacity: number;
   fitoutCondition: "bare_shell" | "warm_shell" | "fully_fitted" | "plug_and_play";
-  status: "vacant" | "occupied";
+  status: "vacant" | "occupied" | "reserved" | "under_fitout" | "not_leasable";
 }
 
 interface BillingSpvOption {
@@ -80,14 +82,17 @@ export default function CommercialPropertyMaster() {
   const [assetName, setAssetName] = useState("");
   const [propertyCode, setPropertyCode] = useState("");
   const [propertyType, setPropertyType] = useState<string>("office");
-  const [grade, setGrade] = useState<"A+" | "A" | "B+" | "B">("A");
+  const [grade, setGrade] = useState<"A+" | "A" | "B+" | "B" | "C">("A");
   const [address, setAddress] = useState("");
-  const [city, setCity] = useState("Mumbai");
-  const [state, setState] = useState("Maharashtra");
-  const [microMarket, setMicroMarket] = useState("BKC");
-  const [pincode, setPincode] = useState("400051");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [microMarket, setMicroMarket] = useState("");
+  const [pincode, setPincode] = useState("");
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
-  const [operationalStatus, setOperationalStatus] = useState<"operational" | "under_fitout" | "under_construction">("operational");
+  const [areaUnit, setAreaUnit] = useState<"sqft" | "sqm">("sqft");
+  const [geoLat, setGeoLat] = useState<string>("");
+  const [geoLng, setGeoLng] = useState<string>("");
+  const [operationalStatus, setOperationalStatus] = useState<"operational" | "under_fitout" | "under_construction" | "under_refurbishment" | "disposed">("operational");
 
   // SPV / Billing Entity Link (default billing entity)
   const [spvs, setSpvs] = useState<BillingSpvOption[]>([]);
@@ -113,16 +118,7 @@ export default function CommercialPropertyMaster() {
   };
 
   // ──── 2. BUILDING & TOWERS MASTER (Building Master) ────
-  const [towers, setTowers] = useState<TowerBuilding[]>([
-    {
-      id: "T1",
-      name: "Tower 1",
-      code: "T1",
-      floorsAbove: 1,
-      floorsBelow: 0,
-      chargeableArea: 0
-    }
-  ]);
+  const [towers, setTowers] = useState<TowerBuilding[]>([]);
 
   const handleAddTower = () => {
     const nextIdx = towers.length + 1;
@@ -156,12 +152,13 @@ export default function CommercialPropertyMaster() {
 
   const [newUnit, setNewUnit] = useState<Partial<LeasableSpaceUnit>>({
     suiteNumber: "",
-    buildingCode: "T1",
+    buildingCode: towers[0]?.code || "",
     floorNumber: 1,
     spaceType: "office",
     chargeableArea: 0,
     carpetArea: 0,
     askingRate: 0,
+    seatCapacity: 0,
     fitoutCondition: "warm_shell",
     status: "vacant"
   });
@@ -177,15 +174,23 @@ export default function CommercialPropertyMaster() {
       return;
     }
 
+    // Auto-generate space code: PROPCODE-BLDGCODE-FLOOR (e.g. OBKC-T1-03)
+    const bldgCode = newUnit.buildingCode || towers[0]?.code || "T1";
+    const floorNum = Number(newUnit.floorNumber) || 1;
+    const propPrefix = propertyCode ? propertyCode.split("-")[0] : "SP";
+    const spaceCode = `${propPrefix}-${bldgCode}-${String(floorNum).padStart(2, "0")}-${String(units.length + 1).padStart(2, "0")}`;
+
     const created: LeasableSpaceUnit = {
       id: `u-${Date.now()}`,
+      spaceCode,
       suiteNumber: newUnit.suiteNumber.trim(),
-      buildingCode: newUnit.buildingCode || towers[0]?.code || "T1",
-      floorNumber: Number(newUnit.floorNumber) || 1,
+      buildingCode: bldgCode,
+      floorNumber: floorNum,
       spaceType: (newUnit.spaceType as any) || "office",
       chargeableArea: unitArea,
-      carpetArea: Number(newUnit.carpetArea) || Math.round(unitArea * 0.7),
+      carpetArea: Number(newUnit.carpetArea) || 0,
       askingRate: Number(newUnit.askingRate) || targetRentPsf || 0,
+      seatCapacity: Number(newUnit.seatCapacity) || 0,
       fitoutCondition: (newUnit.fitoutCondition as any) || "warm_shell",
       status: (newUnit.status as any) || "vacant"
     };
@@ -195,20 +200,24 @@ export default function CommercialPropertyMaster() {
 
     // Auto-update totalChargeableArea if not manually typed
     const sumUnitsArea = nextUnits.reduce((acc, u) => acc + u.chargeableArea, 0);
+    const sumCarpetArea = nextUnits.reduce((acc, u) => acc + u.carpetArea, 0);
     if (totalChargeableArea === 0 || totalChargeableArea < sumUnitsArea) {
       setTotalChargeableArea(sumUnitsArea);
-      setTotalCarpetArea(Math.round(sumUnitsArea * 0.7));
+    }
+    if (sumCarpetArea > 0) {
+      setTotalCarpetArea(sumCarpetArea);
     }
 
     // Reset adder form for the next unit
     setNewUnit({
       suiteNumber: "",
-      buildingCode: towers[0]?.code || "T1",
-      floorNumber: (Number(newUnit.floorNumber) || 1) + 1,
+      buildingCode: bldgCode,
+      floorNumber: floorNum + 1,
       spaceType: "office",
       chargeableArea: 0,
       carpetArea: 0,
       askingRate: targetRentPsf || 0,
+      seatCapacity: 0,
       fitoutCondition: "warm_shell",
       status: "vacant"
     });
@@ -219,6 +228,7 @@ export default function CommercialPropertyMaster() {
   };
 
   // Loading Ratio Calculation
+  const areaLabel = areaUnit === "sqm" ? "sq. m." : "sq. ft.";
   const loadingPct = totalChargeableArea > 0 && totalCarpetArea > 0
     ? Math.round(((totalChargeableArea - totalCarpetArea) / totalCarpetArea) * 100)
     : 0;
@@ -263,7 +273,6 @@ export default function CommercialPropertyMaster() {
     const sumTowers = towers.reduce((acc, t) => acc + (t.chargeableArea || 0), 0);
     if (sumTowers > 0 && sumTowers !== totalChargeableArea) {
       setTotalChargeableArea(sumTowers);
-      setTotalCarpetArea(Math.round(sumTowers * 0.7));
     }
   }, [towers]);
 
@@ -527,7 +536,8 @@ export default function CommercialPropertyMaster() {
                   <option value="retail">Commercial Retail & High Street Mall</option>
                   <option value="mixed_use">Mixed-Use Commercial & Retail</option>
                   <option value="flex_centre">Managed Office & Coworking Centre</option>
-                  <option value="industrial">Industrial & Logistics Warehouse</option>
+                  <option value="industrial">Industrial & Logistics Park</option>
+                  <option value="warehouse">Warehouse & Distribution Centre</option>
                   <option value="sez_ifsc">SEZ / IFSC International Financial Centre</option>
                 </select>
               </div>
@@ -535,8 +545,8 @@ export default function CommercialPropertyMaster() {
               {/* Building Grade */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Institutional Grade *</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(["A+", "A", "B+", "B"] as const).map((g) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {(["A+", "A", "B+", "B", "C"] as const).map((g) => (
                     <button
                       key={g}
                       type="button"
@@ -695,6 +705,66 @@ export default function CommercialPropertyMaster() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Area Unit, Geo Coordinates, Operational Status */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Area Measurement Unit *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["sqft", "sqm"] as const).map((unit) => (
+                    <button
+                      key={unit}
+                      type="button"
+                      onClick={() => setAreaUnit(unit)}
+                      className={`py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                        areaUnit === unit
+                          ? "border-[#0F8B7D] bg-teal-50 text-[#0F8B7D] shadow-2xs"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {unit === "sqft" ? "Sq. Ft." : "Sq. M."}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Operational Status *</label>
+                <select
+                  value={operationalStatus}
+                  onChange={(e) => setOperationalStatus(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                >
+                  <option value="operational">Operational</option>
+                  <option value="under_construction">Under Construction</option>
+                  <option value="under_fitout">Under Fitout</option>
+                  <option value="under_refurbishment">Under Refurbishment</option>
+                  <option value="disposed">Disposed / Sold</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Latitude</label>
+                <input
+                  type="text"
+                  value={geoLat}
+                  onChange={(e) => setGeoLat(e.target.value)}
+                  placeholder="e.g. 19.066110"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Longitude</label>
+                <input
+                  type="text"
+                  value={geoLng}
+                  onChange={(e) => setGeoLng(e.target.value)}
+                  placeholder="e.g. 72.867520"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900"
+                />
               </div>
             </div>
 
