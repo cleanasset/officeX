@@ -1029,21 +1029,23 @@ export default function SignInForm({
       <div>
           {/* Header Branding (Logo Centered, Language Toggle on Right) */}
           <div className="relative flex items-center justify-center mb-6">
-            <Link href="/" className="inline-flex items-center gap-3 group">
+            <Link href="/" className="inline-flex items-center gap-2.5 group">
               <Image
                 src="/logo-removebg-preview.png"
                 alt="OfficeX Logo"
-                width={48}
-                height={48}
-                className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
+                width={40}
+                height={40}
+                className="h-7.5 w-auto object-contain group-hover:scale-105 transition-transform"
+                style={{ height: "30px" }}
                 priority
               />
               <Image
                 src="/name-removebg-preview.png"
                 alt="OfficeX"
-                width={140}
-                height={36}
-                className="h-8 w-auto object-contain"
+                width={125}
+                height={30}
+                className="h-6.5 w-auto object-contain"
+                style={{ height: "26px" }}
                 priority
               />
             </Link>

@@ -11,22 +11,22 @@ export default function AboutPage() {
     <div className="min-h-screen bg-white text-gray-900 font-sans flex flex-col justify-between">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-2.5">
           <Image
             src="/logo-removebg-preview.png"
             alt="OfficeX Logo"
-            width={60}
-            height={60}
+            width={40}
+            height={40}
             className="object-contain"
-            style={{ width: "auto", height: "44px" }}
+            style={{ width: "auto", height: "29px" }}
           />
           <Image
             src="/name-removebg-preview.png"
             alt="OfficeX"
-            width={180}
-            height={44}
+            width={130}
+            height={30}
             className="object-contain"
-            style={{ width: "auto", height: "44px" }}
+            style={{ width: "auto", height: "25px" }}
           />
         </Link>
         <div className="flex items-center gap-4 text-xs font-bold">

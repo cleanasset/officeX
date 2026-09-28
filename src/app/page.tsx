@@ -672,25 +672,25 @@ export default function LandingPage() {
           : "bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200/80"
       }`}>
         {/* Left: Brand Logo & Wordmark */}
-        <div className="flex items-center shrink-0 lg:w-[250px]">
-          <Link href="/" className="flex items-center gap-3.5 group">
+        <div className="flex items-center shrink-0 lg:w-[220px]">
+          <Link href="/" className="flex items-center gap-2 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={60} 
-              height={60} 
+              width={38} 
+              height={38} 
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "46px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={200} 
-              height={46} 
+              width={130} 
+              height={28} 
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "46px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </Link>
         </div>
@@ -868,22 +868,22 @@ export default function LandingPage() {
       {/* Mobile Nav Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-4 md:hidden text-slate-900 shadow-2xl animate-fadeIn overflow-y-auto pb-10">
-          <div className="flex items-center gap-3.5 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={50} 
-              height={50} 
+              width={38} 
+              height={38} 
               className="object-contain"
-              style={{ width: "auto", height: "40px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={160} 
-              height={40} 
+              width={130} 
+              height={28} 
               className="object-contain"
-              style={{ width: "auto", height: "40px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </div>
           <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Office Spaces</Link>

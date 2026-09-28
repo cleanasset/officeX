@@ -39,16 +39,16 @@ export default function VendorRegistrationWizard() {
 
       {/* Top Navbar */}
       <div className="px-12 py-5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-2.5">
           <img 
             src="/logo-removebg-preview.png" 
             alt="OfficeX Logo" 
-            className="h-9 w-auto object-contain"
+            className="h-7 w-auto object-contain"
           />
           <img 
             src="/name-removebg-preview.png" 
             alt="OfficeX" 
-            className="h-9 w-auto object-contain"
+            className="h-6 w-auto object-contain"
           />
         </Link>
 

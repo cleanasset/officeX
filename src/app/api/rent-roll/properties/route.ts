@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getRentRollDb, saveRentRollDb, PropertyEntity, SpaceEntity } from "@/lib/rent-roll-store";
+import { getRentRollDb, saveRentRollDb, PropertyEntity, SpaceEntity, LeaseEntity, TenantEntity, EscalationEntity } from "@/lib/rent-roll-store";
+import { computeFullLeaseSummary } from "@/lib/rent-roll-engine";
 
 export async function GET(req: Request) {
   try {
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
     };
     db.properties.push(newProp);
 
-    // Sync leasable units into db.spaces for immediate platform-wide lease contracting
+    // Sync leasable units into db.spaces and active commercial leases into db.leases
     if (Array.isArray(units) && units.length > 0) {
       for (let i = 0; i < units.length; i++) {
         const u = units[i];
@@ -174,16 +175,174 @@ export async function POST(req: Request) {
           carpetArea: Number(u.carpetArea) || 0,
           chargeableArea: Number(u.chargeableArea) || 0,
           seatCapacity: Number(u.seatCapacity) || undefined,
-          standardRatePsf: Number(u.askingRate) || 0,
-          standardCamPsf: Number(body.standardCamPsf) || 0,
+          standardRatePsf: Number(u.contractedRentPsf) || Number(u.askingRate) || 0,
+          standardCamPsf: Number(u.camRatePsf) || Number(body.standardCamPsf) || 0,
           status: (u.status as any) || "vacant"
         };
+
+        // If unit is marked occupied with commercial lease terms, sync directly to live Rent Roll
+        if (u.status === "occupied" && (u.tenantName || u.contractedRentPsf)) {
+          const tenantName = (u.tenantName || "Corporate Tenant").trim();
+          let tenantObj = db.tenants.find(t => t.tradeName.toLowerCase() === tenantName.toLowerCase());
+          if (!tenantObj) {
+            const newTenantId = `TEN-${Date.now()}-${i + 1}`;
+            tenantObj = {
+              id: newTenantId,
+              orgId: newProp.orgId,
+              tenantCode: `TNT-${Math.floor(100 + Math.random() * 900)}`,
+              tradeName: tenantName,
+              legalName: tenantName,
+              industry: "Commercial Occupant",
+              pan: newProp.panNumber || "AAACR1234F",
+              gstin: newProp.gstin && newProp.gstin !== "UNREGISTERED" ? newProp.gstin : "27AAACR1234F1Z5",
+              contactPerson: "Authorized Representative",
+              contactEmail: `leasing@${tenantName.toLowerCase().replace(/[^a-z0-9]/g, "") || "tenant"}.com`,
+              contactPhone: "+91 98000 00000",
+              billingAddress: newProp.address,
+              billingCity: newProp.city,
+              billingState: newProp.state,
+              billingPincode: newProp.pincode,
+              status: "active",
+              creditLimit: (Number(u.contractedRentPsf) || 150) * spaceRow.chargeableArea * 12,
+              paymentTermsDays: 15,
+              createdAt: new Date().toISOString().split("T")[0]
+            };
+            db.tenants.push(tenantObj);
+          }
+
+          const numChargeable = spaceRow.chargeableArea;
+          const numCarpet = spaceRow.carpetArea;
+          const contractedRatePsf = Number(u.contractedRentPsf) || Number(u.askingRate) || 150;
+          const numMonthlyRent = Math.round(numChargeable * contractedRatePsf);
+          const camRate = Number(u.camRatePsf) || Number(body.standardCamPsf) || 0;
+          const startDate = u.leaseStartDate || new Date().toISOString().split("T")[0];
+          let endDate = u.leaseExpiryDate;
+          if (!endDate) {
+            const expDate = new Date(startDate);
+            expDate.setFullYear(expDate.getFullYear() + 3);
+            endDate = expDate.toISOString().split("T")[0];
+          }
+
+          const escPct = Number(u.escalationPct) || 15;
+          const escFreqYears = Number(u.escalationFrequencyYears) || 3;
+          const escFreqMonths = escFreqYears * 12;
+          const depMonths = Number(u.securityDepositMonths) || 6;
+          const depPaid = numMonthlyRent * depMonths;
+
+          const leaseSummary = computeFullLeaseSummary({
+            chargeableArea: numChargeable,
+            carpetArea: numCarpet,
+            monthlyRent: numMonthlyRent,
+            camRatePsf: camRate,
+            startDate,
+            endDate,
+            escalationPct: escPct,
+            escalationFrequencyMonths: escFreqMonths,
+            securityDepositMonths: depMonths,
+            securityDepositPaid: depPaid,
+            lockInMonths: 36
+          });
+
+          const newLeaseId = `LEASE-${Date.now()}-${i + 1}`;
+          const leaseCode = `LSE-${newProp.propertyCode}-${spaceRow.unitNumber.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+          const newLease: LeaseEntity = {
+            id: newLeaseId,
+            orgId: newProp.orgId,
+            clientAccountId: newProp.clientAccountId,
+            billingEntityId: newProp.billingEntityId,
+            propertyId: newProp.id,
+            propertyName: newProp.name,
+            spaceId: spaceRow.id,
+            unitNumber: spaceRow.unitNumber,
+            floorNumber: spaceRow.floorNumber,
+            tenantId: tenantObj.id,
+            tenantName: tenantObj.tradeName,
+            leaseCode,
+            startDate,
+            endDate,
+            fitoutPeriodDays: 0,
+            rentFreePeriodDays: 0,
+            carpetArea: numCarpet,
+            chargeableArea: numChargeable,
+            monthlyRent: numMonthlyRent,
+            baseRentPsf: contractedRatePsf,
+            camRatePsf: camRate,
+            camMonthly: leaseSummary.camMonthly,
+            utilityFixedMonthly: 0,
+            parkingChargesMonthly: 0,
+            signageChargesMonthly: 0,
+            otherChargesMonthly: 0,
+            totalMonthlyGross: leaseSummary.totalMonthlyGross,
+            annualRentGross: leaseSummary.annualRentGross,
+            securityDepositMonths: depMonths,
+            securityDepositAmount: leaseSummary.securityDepositRequired,
+            securityDepositPaid: depPaid,
+            securityDepositBank: "Corporate Escrow Bank Guarantee",
+            securityDepositBgReference: `BG-${newProp.propertyCode}-${i + 1}`,
+            escalationPct: escPct,
+            escalationFrequencyMonths: escFreqMonths,
+            nextEscalationDate: leaseSummary.nextEscalationDate.toISOString().split("T")[0],
+            lockInMonths: 36,
+            lockInEndDate: leaseSummary.lockInEndDate.toISOString().split("T")[0],
+            noticePeriodDays: 90,
+            status: "active",
+            renewalStatus: "not_due",
+            billingFrequency: "monthly",
+            billingDueDay: 5,
+            gstRate: 18,
+            tdsRate: 10,
+            brokerName: "Direct Institutional Lease",
+            brokeragePaid: 0,
+            notes: "Contracted commercial lease registered via Property Master",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          spaceRow.currentLeaseId = newLeaseId;
+          spaceRow.status = "occupied";
+          db.leases.unshift(newLease);
+
+          // Add scheduled escalation
+          db.escalations.push({
+            id: `ESC-${Date.now()}-${i + 1}`,
+            leaseId: newLease.id,
+            leaseCode: newLease.leaseCode,
+            tenantName: newLease.tenantName,
+            propertyName: newLease.propertyName,
+            escalationDate: newLease.nextEscalationDate,
+            previousRent: newLease.monthlyRent,
+            newRent: leaseSummary.nextEscalatedRent,
+            escalationPct: newLease.escalationPct,
+            calculatedIncrease: leaseSummary.nextEscalatedRent - newLease.monthlyRent,
+            status: "pending",
+            notes: "Auto-scheduled escalation from commercial property master registration"
+          });
+        }
+
         db.spaces.push(spaceRow);
       }
     }
 
+    // Compute enriched property metrics for immediate UI reflection
+    const propLeases = db.leases.filter(l => l.propertyId === propId && (l.status === "active" || l.status === "under_notice"));
+    const occupiedArea = propLeases.reduce((sum, l) => sum + l.chargeableArea, 0);
+    const occupancyPct = newProp.totalArea > 0 ? Math.round((occupiedArea / newProp.totalArea) * 1000) / 10 : 0;
+    const totalMonthlyRent = propLeases.reduce((sum, l) => sum + l.monthlyRent, 0);
+    const totalBilling = propLeases.reduce((sum, l) => sum + l.totalMonthlyGross, 0);
+
+    const enrichedProp = {
+      ...newProp,
+      activeLeasesCount: propLeases.length,
+      occupiedArea,
+      vacantArea: Math.max(0, newProp.totalArea - occupiedArea),
+      occupancyPct,
+      totalMonthlyRent,
+      totalBilling,
+    };
+
     saveRentRollDb(db);
-    return NextResponse.json(newProp);
+    return NextResponse.json(enrichedProp);
   } catch (error: any) {
     console.error("POST /api/rent-roll/properties error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

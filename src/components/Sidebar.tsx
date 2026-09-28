@@ -312,14 +312,14 @@ export default function Sidebar() {
         
         {/* Top Brand Logo & Active Workspace Card */}
         <div className="p-4 flex flex-col gap-3 border-b border-gray-100 bg-slate-50/50 shrink-0">
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
               width={38} 
               height={38} 
               className="object-contain group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "32px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
@@ -327,7 +327,7 @@ export default function Sidebar() {
               width={125} 
               height={30} 
               className="object-contain"
-              style={{ width: "auto", height: "30px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </Link>
           

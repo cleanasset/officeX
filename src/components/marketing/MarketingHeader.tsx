@@ -50,32 +50,32 @@ export default function MarketingHeader({
   return (
     <>
       <header
-        className={`sticky top-0 z-50 w-full transition-all duration-300 px-4 sm:px-8 lg:px-12 py-3.5 flex items-center justify-between border-b ${
+        className={`sticky top-0 z-50 w-full transition-all duration-300 px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3 flex items-center justify-between border-b ${
           transparentAtTop && !isScrolled
             ? "bg-white/95 backdrop-blur-md text-slate-900 border-slate-200/80"
             : "bg-white/95 backdrop-blur-md text-slate-900 border-slate-200/80 shadow-xs"
         }`}
       >
         {/* Left: Brand Logo & Wordmark */}
-        <div className="flex items-center shrink-0 gap-2.5">
-          <Link href="/" className="flex items-center gap-3 group">
+        <div className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center gap-2 group">
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={60}
-              height={60}
+              width={38}
+              height={38}
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "44px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image
               src="/name-removebg-preview.png"
               alt="OfficeX"
-              width={180}
-              height={44}
+              width={130}
+              height={28}
               priority
               className="object-contain transition-all"
-              style={{ width: "auto", height: "44px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </Link>
         </div>
@@ -396,22 +396,22 @@ export default function MarketingHeader({
       {/* Mobile Nav Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-4 md:hidden text-slate-900 shadow-2xl animate-fadeIn overflow-y-auto pb-10">
-          <div className="flex items-center gap-3.5 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={50}
-              height={50}
+              width={38}
+              height={38}
               className="object-contain"
-              style={{ width: "auto", height: "38px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image
               src="/name-removebg-preview.png"
               alt="OfficeX"
-              width={160}
-              height={40}
+              width={130}
+              height={28}
               className="object-contain"
-              style={{ width: "auto", height: "38px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </div>
 

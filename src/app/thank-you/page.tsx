@@ -82,22 +82,22 @@ export default function ThankYouPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 font-sans flex flex-col justify-between">
       <header className="bg-white border-b border-gray-200 px-4 sm:px-8 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-2.5">
           <Image
             src="/logo-removebg-preview.png"
             alt="OfficeX Logo"
-            width={60}
-            height={60}
+            width={40}
+            height={40}
             className="object-contain"
-            style={{ width: "auto", height: "42px" }}
+            style={{ width: "auto", height: "29px" }}
           />
           <Image
             src="/name-removebg-preview.png"
             alt="OfficeX"
-            width={170}
-            height={42}
+            width={130}
+            height={30}
             className="object-contain"
-            style={{ width: "auto", height: "42px" }}
+            style={{ width: "auto", height: "25px" }}
           />
         </Link>
         <Link href="/" className="text-xs font-bold text-gray-600 hover:text-[#0F8B7D]">

@@ -287,21 +287,23 @@ function TenantJoinContent() {
       <div className="w-full max-w-[520px] mx-auto relative z-10">
         {/* Brand Lockup */}
         <div className="flex items-center justify-center mb-5">
-          <Link href="/" className="inline-flex items-center gap-3 group">
+          <Link href="/" className="inline-flex items-center gap-2.5 group">
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={44}
-              height={44}
-              className="h-9 w-auto object-contain"
+              width={36}
+              height={36}
+              className="h-7.5 w-auto object-contain"
+              style={{ height: "29px" }}
               priority
             />
             <Image
               src="/name-removebg-preview.png"
               alt="OfficeX"
-              width={130}
-              height={32}
-              className="h-7 w-auto object-contain"
+              width={120}
+              height={28}
+              className="h-6.5 w-auto object-contain"
+              style={{ height: "25px" }}
               priority
             />
           </Link>

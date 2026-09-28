@@ -15,26 +15,26 @@ export default function DiscoverPage() {
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans text-slate-900">
       
       {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between transition-all shadow-2xs relative">
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3 flex items-center justify-between transition-all shadow-2xs relative">
         <div className="flex items-center shrink-0 lg:w-[250px]">
-          <Link href="/" className="flex items-center gap-3.5 group">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={60} 
-              height={60} 
+              width={40} 
+              height={40} 
               priority
               className="object-contain"
-              style={{ width: "auto", height: "48px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={200} 
-              height={48} 
+              width={130} 
+              height={30} 
               priority
               className="object-contain"
-              style={{ width: "auto", height: "48px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </Link>
         </div>

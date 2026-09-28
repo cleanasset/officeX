@@ -17,27 +17,27 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-4 flex items-center justify-between transition-all shadow-2xs relative">
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3 flex items-center justify-between transition-all shadow-2xs relative">
         {/* Left: Brand Logo & Wordmark */}
         <div className="flex items-center shrink-0">
-          <Link href="/" className="flex items-center gap-3.5 group">
+          <Link href="/" className="flex items-center gap-2 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={60} 
-              height={60} 
+              width={38} 
+              height={38} 
               priority 
               className="object-contain" 
-              style={{ width: "auto", height: "44px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX Name" 
-              width={180} 
-              height={44} 
+              width={130} 
+              height={28} 
               priority 
               className="object-contain" 
-              style={{ width: "auto", height: "44px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </Link>
         </div>
@@ -107,22 +107,22 @@ export default function ServiceNavbar({ activePage }: ServiceNavbarProps) {
       {/* Mobile Nav Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-20 px-6 flex flex-col gap-5 md:hidden text-slate-900 shadow-2xl animate-fadeIn">
-          <div className="flex items-center gap-3.5 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={50} 
-              height={50} 
+              width={38} 
+              height={38} 
               className="object-contain"
-              style={{ width: "auto", height: "40px" }}
+              style={{ width: "auto", height: "29px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={160} 
-              height={40} 
+              width={130} 
+              height={28} 
               className="object-contain"
-              style={{ width: "auto", height: "40px" }}
+              style={{ width: "auto", height: "25px" }}
             />
           </div>
           <Link 

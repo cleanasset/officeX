@@ -25,22 +25,22 @@ export default function Footer() {
         
         {/* 1. Brand Column */}
         <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
-          <Link href="/" className="flex items-center gap-3.5 group">
+          <Link href="/" className="flex items-center gap-2 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={80} 
-              height={80} 
+              width={42} 
+              height={42} 
               className="object-contain group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "56px" }}
+              style={{ width: "auto", height: "32px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={250} 
-              height={60} 
+              width={140} 
+              height={30} 
               className="object-contain group-hover:opacity-90 transition-opacity"
-              style={{ width: "auto", height: "56px" }}
+              style={{ width: "auto", height: "27px" }}
             />
           </Link>
           <p className="text-xs text-slate-400 leading-relaxed mt-1 font-medium">
