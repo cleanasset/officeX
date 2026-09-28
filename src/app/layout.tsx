@@ -14,6 +14,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "OfficeX — The Modern CRE & FM Ecosystem",
   description: "The integrated platform for commercial real estate, facility management, workplace operations, and intelligent property services.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {

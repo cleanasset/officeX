@@ -85,13 +85,21 @@ export default function RentRollLandingPage() {
       {/* ──── TOP GLOBAL NAVIGATION ──── */}
       <header className="h-18 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2.5">
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={120}
+              width={34}
               height={34}
               className="h-8 w-auto object-contain"
+              priority
+            />
+            <Image
+              src="/name-removebg-preview.png"
+              alt="OfficeX"
+              width={125}
+              height={30}
+              className="h-7 w-auto object-contain brightness-0 invert"
               priority
             />
           </Link>
@@ -456,13 +464,22 @@ export default function RentRollLandingPage() {
       <footer className="mt-auto bg-slate-950 border-t border-slate-800 py-12 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-500">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo-removebg-preview.png"
-              alt="OfficeX"
-              width={100}
-              height={28}
-              className="h-6 w-auto object-contain opacity-90"
-            />
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/logo-removebg-preview.png"
+                alt="OfficeX"
+                width={28}
+                height={28}
+                className="h-6 w-auto object-contain opacity-90"
+              />
+              <Image
+                src="/name-removebg-preview.png"
+                alt="OfficeX"
+                width={100}
+                height={24}
+                className="h-5 w-auto object-contain opacity-90 brightness-0 invert"
+              />
+            </Link>
             <span>· Enterprise Lease &amp; Revenue Operations Platform</span>
           </div>
 

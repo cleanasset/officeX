@@ -630,13 +630,21 @@ function OnboardingContent() {
       {/* ──── TOP GLOBAL NAVIGATION HEADER ──── */}
       <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <Link href="/rent-roll" className="flex items-center gap-2">
+          <Link href="/rent-roll" className="flex items-center gap-2.5">
             <Image
               src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
-              width={110}
-              height={32}
+              width={34}
+              height={34}
               className="h-7 w-auto object-contain"
+              priority
+            />
+            <Image
+              src="/name-removebg-preview.png"
+              alt="OfficeX"
+              width={120}
+              height={28}
+              className="h-6 w-auto object-contain"
               priority
             />
           </Link>
