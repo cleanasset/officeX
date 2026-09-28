@@ -35,6 +35,7 @@ import {
   CityAutocomplete,
   StateAutocomplete
 } from "@/components/ui/LocationInputs";
+import { BulkImportSpaceModal } from "./BulkImportSpaceModal";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COMMERCIAL PROPERTY, BUILDING & SPACE MASTER
@@ -247,7 +248,6 @@ export default function CommercialPropertyMaster() {
 
   // Bulk import state
   const [showBulkImport, setShowBulkImport] = useState(false);
-  const [bulkImportText, setBulkImportText] = useState("");
 
   // Document uploads for compliance & legal records
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDocument[]>([]);
@@ -405,62 +405,19 @@ export default function CommercialPropertyMaster() {
     }
   };
 
-  const handleBulkImport = () => {
-    if (!bulkImportText.trim()) return;
-    const lines = bulkImportText.trim().split("\n");
-    const newUnitsList: LeasableSpaceUnit[] = [];
-    const bldgFallback = towers[0]?.code || "T1";
-    const propPrefix = propertyCode ? propertyCode.split("-")[0] : "SP";
-
-    lines.forEach((line, idx) => {
-      const parts = line.split(",").map(p => p.trim());
-      if (parts.length >= 2) {
-        const suite = parts[0];
-        const tower = parts[1] || bldgFallback;
-        const floor = parseInt(parts[2], 10) || 1;
-        const type = (parts[3] as any) || "office";
-        const chargeable = parseFloat(parts[4]) || 0;
-        const carpet = parseFloat(parts[5]) || Math.round(chargeable * 0.75);
-        const rate = parseFloat(parts[6]) || targetRentPsf || 0;
-        const stat = (parts[7] as any) || "vacant";
-        const fitout = (parts[8] as any) || "warm_shell";
-        const seats = parseInt(parts[9], 10) || 0;
-
-        if (suite && chargeable > 0) {
-          newUnitsList.push({
-            id: `u-${Date.now()}-${idx}`,
-            spaceCode: `${propPrefix}-${tower}-${String(floor).padStart(2, "0")}-${String(units.length + newUnitsList.length + 1).padStart(2, "0")}`,
-            suiteNumber: suite,
-            buildingCode: tower,
-            floorNumber: floor,
-            spaceType: type,
-            chargeableArea: chargeable,
-            carpetArea: carpet,
-            askingRate: rate,
-            seatCapacity: seats,
-            fitoutCondition: fitout,
-            status: stat
-          });
-        }
-      }
-    });
-
-    if (newUnitsList.length > 0) {
-      const nextUnits = [...units, ...newUnitsList];
-      setUnits(nextUnits);
-      const sumChg = nextUnits.reduce((a, b) => a + b.chargeableArea, 0);
-      const sumCpt = nextUnits.reduce((a, b) => a + b.carpetArea, 0);
-      if (totalChargeableArea === 0 || totalChargeableArea < sumChg) {
-        setTotalChargeableArea(sumChg);
-      }
-      if (sumCpt > 0) {
-        setTotalCarpetArea(sumCpt);
-      }
-      setBulkImportText("");
-      setShowBulkImport(false);
-    } else {
-      alert("Could not parse any valid units. Format: Suite, Tower, Floor, Type, ChargeableArea, CarpetArea, AskingRate");
+  const handleBulkImportUnits = (importedUnits: LeasableSpaceUnit[]) => {
+    if (!importedUnits || importedUnits.length === 0) return;
+    const nextUnits = [...units, ...importedUnits];
+    setUnits(nextUnits);
+    const sumChg = nextUnits.reduce((a, b) => a + b.chargeableArea, 0);
+    const sumCpt = nextUnits.reduce((a, b) => a + b.carpetArea, 0);
+    if (totalChargeableArea === 0 || totalChargeableArea < sumChg) {
+      setTotalChargeableArea(sumChg);
     }
+    if (sumCpt > 0) {
+      setTotalCarpetArea(sumCpt);
+    }
+    setShowBulkImport(false);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1602,7 +1559,7 @@ export default function CommercialPropertyMaster() {
                       </>
                     ) : (
                       <>
-                        <Plus size={15} className="text-[#0F8B7D]" /> + Add Space Unit / Suite
+                        <Plus size={15} className="text-[#0F8B7D]" /> Add Space Unit / Suite
                       </>
                     )}
                   </span>
@@ -2159,75 +2116,18 @@ export default function CommercialPropertyMaster() {
           </div>
         )}
 
-        {/* ── BULK IMPORT MODAL (CSV / EXCEL) ── */}
-        {showBulkImport && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center">
-                    <FileUp size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">Bulk Import Space Units</h3>
-                    <p className="text-[11px] text-slate-500">Paste comma-separated floor or suite inventory from Excel / CSV</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowBulkImport(false)}
-                  className="text-slate-400 hover:text-slate-600 p-1"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-slate-600">Expected Format (CSV):</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sample = `Suite 101, ${towers[0]?.code || "T1"}, 1, office, 5000, 3750, 150, vacant, warm_shell, 0\nSuite 102, ${towers[0]?.code || "T1"}, 1, retail, 2500, 2000, 220, vacant, bare_shell, 0\nSuite 201, ${towers[0]?.code || "T1"}, 2, office, 10000, 7500, 155, vacant, warm_shell, 0\nFloor 3, ${towers[0]?.code || "T1"}, 3, flex_floor, 8000, 6000, 160, vacant, fully_fitted, 60`;
-                      setBulkImportText(sample);
-                    }}
-                    className="text-[#0F8B7D] hover:underline font-bold cursor-pointer"
-                  >
-                    + Insert Sample Template Rows
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  Suite, TowerCode, FloorNumber, SpaceType, ChargeableArea, CarpetArea, AskingRate, Status, Fitout, Seats
-                </p>
-
-                <textarea
-                  rows={6}
-                  value={bulkImportText}
-                  onChange={(e) => setBulkImportText(e.target.value)}
-                  placeholder={`Suite 101, T1, 1, office, 5000, 3750, 150, vacant, warm_shell, 0\nSuite 102, T1, 1, retail, 2500, 2000, 220, vacant, bare_shell, 0`}
-                  className="w-full p-3 rounded-xl border border-slate-200 text-xs font-mono font-medium text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#0F8B7D]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowBulkImport(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBulkImport}
-                  className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-black transition-colors shadow-xs cursor-pointer"
-                >
-                  Parse &amp; Import Units
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ── BULK IMPORT MODAL (CSV / EXCEL / MAPPING / TEMPLATE) ── */}
+        <BulkImportSpaceModal
+          isOpen={showBulkImport}
+          onClose={() => setShowBulkImport(false)}
+          onImport={handleBulkImportUnits}
+          towers={towers}
+          defaultTowerCode={towers[0]?.code || "T1"}
+          defaultTargetRent={targetRentPsf}
+          propertyCode={propertyCode}
+          areaLabel={areaLabel}
+          currentUnitCount={units.length}
+        />
 
         {/* ── SUCCESS MODAL / REDIRECT ── */}
         {successProperty && (
