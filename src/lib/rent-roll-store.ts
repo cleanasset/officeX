@@ -89,28 +89,40 @@ export interface PropertyEntity {
   grade: "A" | "B" | "C" | "A+" | "B+";
   totalArea: number;
   chargeableArea: number;
+  carpetArea?: number;
   occupancyTargetPct: number;
   imageUrl?: string;
   assetValue?: number; // for Cap Rate calculation
   operatingCurrency?: string;
+  areaUnit?: "sqft" | "sqm";
+  geoLat?: string;
+  geoLng?: string;
+  status?: "operational" | "under_fitout" | "under_construction" | "under_refurbishment" | "disposed" | string;
+  towers?: any[];
+  units?: any[];
+  compliance?: any;
   ownerEmail?: string;
   ownerUserId?: string;
   ownerName?: string;
+  sourceSystem?: string;
+  version?: number;
+  dataQualityStatus?: string;
 }
 
 export interface SpaceEntity {
   id: string;
   propertyId: string;
+  spaceCode?: string;
   buildingName: string;
   floorNumber: number;
   unitNumber: string;
-  spaceType: "office" | "retail" | "food_court" | "warehouse" | "storage" | "flex_desk";
+  spaceType: "office" | "retail" | "food_court" | "warehouse" | "storage" | "flex_desk" | "flex_floor" | "parking_block" | "terrace" | "antenna_site" | "cabin" | "meeting_room" | "other";
   carpetArea: number;
   chargeableArea: number;
   seatCapacity?: number;
   standardRatePsf: number;
   standardCamPsf: number;
-  status: "available" | "leased" | "in_negotiation" | "under_fitout";
+  status: "available" | "leased" | "in_negotiation" | "under_fitout" | "vacant" | "occupied" | "reserved" | "not_leasable";
   currentLeaseId?: string;
 }
 

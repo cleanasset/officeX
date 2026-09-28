@@ -228,6 +228,7 @@ export default function Topbar() {
         <div className="relative" ref={profileMenuRef}>
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className="w-9 h-9 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-blue-100"
           >
@@ -238,7 +239,7 @@ export default function Topbar() {
           {isProfileMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
               <div className="p-3 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-900 block truncate">{userName || userEmail}</span>
+                <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">{userName || userEmail}</span>
                 {userName && <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>}
                 <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>

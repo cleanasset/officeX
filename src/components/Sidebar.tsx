@@ -184,6 +184,7 @@ export default function Sidebar() {
   const searchParams = useSearchParams();
   const activeTabParam = searchParams.get("tab") || "rentroll";
 
+  const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("properties");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -206,6 +207,7 @@ export default function Sidebar() {
   const currentPortalKey = matchedFromPath || selectedRole || "properties";
 
   useEffect(() => {
+    setIsMounted(true);
     if (typeof window !== "undefined") {
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
       if (storedName) setUserName(storedName);
@@ -260,38 +262,41 @@ export default function Sidebar() {
     }
   };
 
-
-
-  // Strictly extract the name by which the user signed in (e.g. "Jiya Patel")
+  // Strictly extract the name from state without accessing localStorage directly in render
   const getSignedInName = () => {
-    let name = (userName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name")) : "") || "").trim();
-    if (!name) {
-      const email = userEmail || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email")) : "") || "";
-      if (email) {
-        name = email.split("@")[0].replace(/[._-]/g, " ");
-      }
+    let name = (userName || "").trim();
+    if (!name && userEmail) {
+      name = userEmail.split("@")[0].replace(/[._-]/g, " ");
     }
     // Clean any accidental company suffix attached to the user name
     name = name.replace(/\s+(Commercial Holdings|Holdings|Pvt Ltd|Private Limited|LLC|LLP|Inc).*$/i, "").trim();
-    if (!name) return "Jiya Patel";
+    if (!name) return "";
     return name
       .split(/\s+/)
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
   };
 
-  const signedInName = getSignedInName();
-  const portfolioTitle = orgDisplayName || (signedInName ? `${signedInName}'s Portfolio` : "Commercial Portfolio");
-  const portfolioSubtitle = orgCity ? `${orgCity} Portfolio` : "Commercial Real Estate";
+  const signedInName = isMounted ? getSignedInName() : "";
+  const portfolioTitle = isMounted
+    ? (orgDisplayName || (signedInName ? `${signedInName}'s Portfolio` : "Commercial Portfolio"))
+    : "Commercial Portfolio";
+  const portfolioSubtitle = isMounted && orgCity ? `${orgCity} Portfolio` : "Commercial Real Estate";
   
-  const initials = (orgDisplayName || signedInName || "OX")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map(n => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "OX";
+  const initials = isMounted
+    ? ((orgDisplayName || signedInName || "OX")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(n => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "OX")
+    : "OX";
+
+  const userInitial = isMounted ? (signedInName || userEmail || "U")[0].toUpperCase() : "U";
+  const displayName = isMounted ? (signedInName || "Commercial Portfolio") : "Commercial Portfolio";
+  const displayEmail = isMounted ? (userEmail || "portfolio@officex.in") : "portfolio@officex.in";
 
   return (
     <>
@@ -341,14 +346,23 @@ export default function Sidebar() {
               className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs hover:border-teal-300 transition-colors group cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase">
+                <div 
+                  suppressHydrationWarning
+                  className="w-7 h-7 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase"
+                >
                   {initials}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-black text-gray-900 truncate leading-tight group-hover:text-teal-800 transition-colors">
+                  <span 
+                    suppressHydrationWarning
+                    className="text-xs font-black text-gray-900 truncate leading-tight group-hover:text-teal-800 transition-colors"
+                  >
                     {portfolioTitle}
                   </span>
-                  <span className="text-[10px] text-teal-700 font-semibold truncate">
+                  <span 
+                    suppressHydrationWarning
+                    className="text-[10px] text-teal-700 font-semibold truncate"
+                  >
                     {portfolioSubtitle}
                   </span>
                 </div>
@@ -454,15 +468,24 @@ export default function Sidebar() {
         {/* Bottom User Profile Section */}
         <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-slate-50/80">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
-              {(signedInName || userEmail || "U")[0].toUpperCase()}
+            <div 
+              suppressHydrationWarning
+              className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0"
+            >
+              {userInitial}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-extrabold text-gray-900 leading-none truncate">
-                {signedInName}
+              <span 
+                suppressHydrationWarning
+                className="text-xs font-extrabold text-gray-900 leading-none truncate"
+              >
+                {displayName}
               </span>
-              <span className="text-[10px] text-gray-400 mt-1 leading-none font-mono truncate">
-                {userEmail || "portfolio@officex.in"}
+              <span 
+                suppressHydrationWarning
+                className="text-[10px] text-gray-400 mt-1 leading-none font-mono truncate"
+              >
+                {displayEmail}
               </span>
             </div>
           </div>

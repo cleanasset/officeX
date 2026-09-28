@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getRentRollDb, saveRentRollDb, PropertyEntity } from "@/lib/rent-roll-store";
+import { getRentRollDb, saveRentRollDb, PropertyEntity, SpaceEntity } from "@/lib/rent-roll-store";
 
 export async function GET(req: Request) {
   try {
@@ -69,6 +69,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       name,
+      propertyCode,
       type,
       address,
       city,
@@ -78,10 +79,25 @@ export async function POST(req: Request) {
       grade,
       totalArea,
       chargeableArea,
+      carpetArea,
+      currency,
+      operatingCurrency,
+      areaUnit,
+      geoLat,
+      geoLng,
+      status,
       assetValue,
       ownerEmail,
       ownerUserId,
-      ownerName
+      ownerName,
+      clientAccountId,
+      billingEntityId,
+      towers,
+      units,
+      compliance,
+      sourceSystem,
+      version,
+      dataQualityStatus
     } = body;
     if (!name) {
       return NextResponse.json({ error: "Property name is required" }, { status: 400 });
@@ -96,26 +112,66 @@ export async function POST(req: Request) {
     }
 
     const db = getRentRollDb();
+    const propId = `PROP-${Date.now()}`;
     const newProp: PropertyEntity = {
-      id: `PROP-${Date.now()}`,
-      orgId: db.organization.id,
-      name,
+      id: propId,
+      orgId: body.orgId || db.organization.id,
+      propertyCode: propertyCode || `PRP-${Date.now().toString().slice(-4)}`,
+      clientAccountId: clientAccountId || "CLI-DEFAULT",
+      billingEntityId: billingEntityId || undefined,
+      name: name.trim(),
       type: type || "Commercial Office",
-      address: address || "Commercial Business District",
-      city: city || "Mumbai",
-      state: state || "Maharashtra",
-      microMarket: microMarket || city || "CBD",
-      pincode: pincode || "400001",
-      grade: grade || "A",
-      totalArea: Number(totalArea) || 50000,
-      chargeableArea: Number(chargeableArea) || Number(totalArea) || 50000,
+      address: address || "",
+      city: city || "",
+      state: state || "",
+      microMarket: microMarket || city || "",
+      pincode: pincode || "",
+      grade: (grade as any) || "A",
+      totalArea: Number(totalArea) || Number(chargeableArea) || 0,
+      chargeableArea: Number(chargeableArea) || Number(totalArea) || 0,
+      carpetArea: Number(carpetArea) || 0,
       occupancyTargetPct: 95,
       assetValue: Number(assetValue) || 0,
+      operatingCurrency: currency || operatingCurrency || "INR",
+      areaUnit: areaUnit || "sqft",
+      geoLat: geoLat || "",
+      geoLng: geoLng || "",
+      status: status || "operational",
+      towers: Array.isArray(towers) ? towers : [],
+      units: Array.isArray(units) ? units : [],
+      compliance: compliance || {},
       ownerEmail: effectiveEmail,
       ownerUserId: ownerUserId || "",
       ownerName: ownerName || "",
+      sourceSystem: sourceSystem || "manual",
+      version: Number(version) || 1,
+      dataQualityStatus: dataQualityStatus || "passed"
     };
     db.properties.push(newProp);
+
+    // Sync leasable units into db.spaces for immediate platform-wide lease contracting
+    if (Array.isArray(units) && units.length > 0) {
+      for (let i = 0; i < units.length; i++) {
+        const u = units[i];
+        const spaceRow: SpaceEntity = {
+          id: u.id || `SPC-${Date.now()}-${i + 1}`,
+          propertyId: propId,
+          spaceCode: u.spaceCode || `${newProp.propertyCode}-${u.buildingCode || 'T1'}-${String(u.floorNumber || 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`,
+          buildingName: u.buildingCode || (towers && towers[0]?.name) || "Tower 1",
+          floorNumber: Number(u.floorNumber) || 1,
+          unitNumber: u.suiteNumber || `Suite ${u.floorNumber}0${i + 1}`,
+          spaceType: (u.spaceType as any) || "office",
+          carpetArea: Number(u.carpetArea) || 0,
+          chargeableArea: Number(u.chargeableArea) || 0,
+          seatCapacity: Number(u.seatCapacity) || undefined,
+          standardRatePsf: Number(u.askingRate) || 0,
+          standardCamPsf: Number(body.standardCamPsf) || 0,
+          status: (u.status as any) || "vacant"
+        };
+        db.spaces.push(spaceRow);
+      }
+    }
+
     saveRentRollDb(db);
     return NextResponse.json(newProp);
   } catch (error: any) {
