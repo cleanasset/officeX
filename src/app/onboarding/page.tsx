@@ -592,6 +592,11 @@ function OnboardingContent() {
         localStorage.setItem("officex_session_active", "1");
         sessionStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_active_org", orgData.legalName);
+        localStorage.setItem("officex_org_name", orgData.legalName);
+        localStorage.setItem("officex_org_id", "ORG-" + Date.now());
+        localStorage.setItem("officex_contact_verified", "1");
+        localStorage.setItem("officex_phone_verified", "1");
+        localStorage.setItem("officex_kyc_status", "VERIFIED");
         localStorage.setItem("officex_user_role", "Portfolio Executive");
         document.cookie = "officex_onboarding_completed=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=31536000; SameSite=Lax";

@@ -1,14 +1,9 @@
 "use client";
 
 import React from "react";
-import PropertyListingEngine from "@/components/PropertyListingEngine";
+import CommercialPropertyMaster from "@/components/properties/CommercialPropertyMaster";
 
 export default function OwnerPropertyBuilderPage() {
-  return (
-    <PropertyListingEngine
-      portalRole="owner"
-      redirectPath="/properties"
-      defaultListedBy="owner"
-    />
-  );
+  return <CommercialPropertyMaster />;
 }
+

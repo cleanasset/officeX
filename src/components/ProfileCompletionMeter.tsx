@@ -80,8 +80,15 @@ export default function ProfileCompletionMeter({
     fetchCompletion();
   }, [role]);
 
-  if (data.isFullyVerified) {
-    return null; // When 100% verified, hide banner to save space
+  const isCompletedSession = typeof window !== "undefined" && Boolean(
+    localStorage.getItem("officex_onboarding_completed") === "1" ||
+    sessionStorage.getItem("officex_onboarding_completed") === "1" ||
+    localStorage.getItem("officex_session_active") === "1" ||
+    sessionStorage.getItem("officex_session_active") === "1"
+  );
+
+  if (data.isFullyVerified || isCompletedSession) {
+    return null; // When onboarded or session active, hide banner completely
   }
 
   return (

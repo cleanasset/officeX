@@ -25,7 +25,6 @@ import {
   Share2
 } from "lucide-react";
 import Link from "next/link";
-import ProfileCompletionMeter from "@/components/ProfileCompletionMeter";
 import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
 
@@ -277,9 +276,6 @@ export default function PropertyDashboardClient({
           </Link>
         </div>
       )}
-
-      {/* Profile Completion & Progressive KYC Meter */}
-      <ProfileCompletionMeter role="owner" />
 
       {/* Time-Sensitive Statutory Renewal Alert Strip (Only when real expired certs exist) */}
       {expiredCertsCount > 0 && propertiesCount > 0 && (
