@@ -98,6 +98,11 @@ export interface PropertyEntity {
   geoLat?: string;
   geoLng?: string;
   status?: "operational" | "under_fitout" | "under_construction" | "under_refurbishment" | "disposed" | string;
+  entityType?: "pvt_ltd" | "public_ltd" | "llp" | "proprietorship" | "partnership" | "individual" | "trust_reit" | string;
+  cinNumber?: string;
+  llpinNumber?: string;
+  panNumber?: string;
+  gstin?: string;
   towers?: any[];
   units?: any[];
   compliance?: any;

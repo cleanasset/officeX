@@ -83,11 +83,10 @@ interface BillingSpvOption {
 export default function CommercialPropertyMaster() {
   const router = useRouter();
 
-  // Step 1: Asset & SPV Master
-  // Step 2: Towers & Stacking Plan
-  // Step 3: Leasable Units & Area Breakdown
-  // Step 4: Statutory Asset Clearances & Final Review
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  // Step 1: Asset & Legal Master (Identity, Entity Constitution, CIN/PAN & Towers)
+  // Step 2: Area & Space Inventory (Chargeable vs Carpet & Units)
+  // Step 3: Statutory Clearances & Final Review
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successProperty, setSuccessProperty] = useState<any | null>(null);
 
@@ -106,6 +105,15 @@ export default function CommercialPropertyMaster() {
   const [geoLat, setGeoLat] = useState<string>("");
   const [geoLng, setGeoLng] = useState<string>("");
   const [operationalStatus, setOperationalStatus] = useState<"operational" | "under_fitout" | "under_construction" | "under_refurbishment" | "disposed">("operational");
+
+  // ──── STATUTORY CONSTITUTION & TAX IDENTIFIERS ────
+  const [entityType, setEntityType] = useState<
+    "pvt_ltd" | "public_ltd" | "llp" | "proprietorship" | "partnership" | "individual" | "trust_reit"
+  >("pvt_ltd");
+  const [cinNumber, setCinNumber] = useState<string>("");
+  const [llpinNumber, setLlpinNumber] = useState<string>("");
+  const [panNumber, setPanNumber] = useState<string>("");
+  const [hasMultipleTowers, setHasMultipleTowers] = useState<boolean>(false);
 
   // SPV / Billing Entity Link (default billing entity)
   const [spvs, setSpvs] = useState<BillingSpvOption[]>([]);
@@ -130,7 +138,7 @@ export default function CommercialPropertyMaster() {
     }
   };
 
-  // ──── 2. BUILDING & TOWERS MASTER (Building Master) ────
+  // ──── BUILDING & TOWERS MASTER (Embedded Inline in Step 1) ────
   const [towers, setTowers] = useState<TowerBuilding[]>([]);
 
   const handleAddTower = () => {
@@ -152,6 +160,76 @@ export default function CommercialPropertyMaster() {
       return;
     }
     setTowers(towers.filter(t => t.id !== id));
+  };
+
+  // ──── STEP 1 VALIDATION & ADVANCE TO STEP 2 ────
+  const handleStep1Next = () => {
+    if (!assetName.trim()) {
+      alert("Commercial Asset / Property Name is required.");
+      return;
+    }
+    if (!address.trim() || !city.trim() || !state.trim()) {
+      alert("Complete registered property address, City, and State are mandatory for GST Place of Supply.");
+      return;
+    }
+
+    // Strict Statutory Identification Validation based on Entity Constitution
+    if (entityType === "pvt_ltd" || entityType === "public_ltd") {
+      const cleanCin = cinNumber.trim().toUpperCase();
+      if (!cleanCin) {
+        alert("Corporate Identification Number (CIN) is compulsory for Private Limited and Public Limited companies. Please provide a valid 21-digit MCA CIN.");
+        return;
+      }
+      const cinRegex = /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
+      if (!cinRegex.test(cleanCin)) {
+        alert(`Invalid CIN "${cleanCin}". Corporate Identification Number must be a valid 21-digit alphanumeric code registered with MCA (e.g. U70102MH2018PTC123456).`);
+        return;
+      }
+    } else if (entityType === "llp") {
+      const cleanLlpin = llpinNumber.trim().toUpperCase();
+      if (!cleanLlpin) {
+        alert("LLPIN (Limited Liability Partnership Identification Number) is compulsory for LLPs. Please provide the 7-character LLPIN (e.g. AAA-1234).");
+        return;
+      }
+    } else if (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") {
+      const cleanPan = panNumber.trim().toUpperCase();
+      if (!cleanPan) {
+        alert(`Income Tax PAN is compulsory for ${entityType === "proprietorship" ? "Sole Proprietorships" : entityType === "partnership" ? "Partnership Firms" : "Individual Property Owners"}.`);
+        return;
+      }
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(cleanPan)) {
+        alert(`Invalid Income Tax PAN "${cleanPan}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
+        return;
+      }
+    }
+
+    // Towers configuration:
+    if (hasMultipleTowers) {
+      if (towers.length === 0) {
+        setTowers([
+          { id: "T1", name: `${assetName.trim() || "Tower 1"} (Tower A)`, code: "T1", floorsAbove: 1, floorsBelow: 0, chargeableArea: 0 },
+          { id: "T2", name: "Tower 2 (Tower B)", code: "T2", floorsAbove: 1, floorsBelow: 0, chargeableArea: 0 }
+        ]);
+      } else {
+        const invalid = towers.find(t => !t.name.trim() || !t.code.trim());
+        if (invalid) {
+          alert("Please ensure all configured towers have a valid name and code.");
+          return;
+        }
+      }
+    } else {
+      setTowers([{
+        id: "T1",
+        name: assetName ? `${assetName.trim()} (Main Building)` : "Main Building",
+        code: "T1",
+        floorsAbove: 1,
+        floorsBelow: 0,
+        chargeableArea: totalChargeableArea || 0
+      }]);
+    }
+
+    setCurrentStep(2);
   };
 
   // ──── 3. LEASABLE SPACE & INVENTORY (Space Master) ────
@@ -435,17 +513,34 @@ export default function CommercialPropertyMaster() {
         }
       } catch {}
 
-      // Fallback default SPV from user org
-      const orgName = localStorage.getItem("officex_user_org") || "Apex Commercial Holdings SPV";
-      const orgGstin = localStorage.getItem("officex_user_gstin") || "27AABCA1234M1Z5";
-      const fallbackSpv: BillingSpvOption = {
-        id: "SPV-DEFAULT",
-        spvName: orgName,
-        gstin: orgGstin,
-        state: "Maharashtra"
-      };
-      setSpvs([fallbackSpv]);
-      setSelectedSpvId("SPV-DEFAULT");
+      // Check real user organization identity from onboarding / session
+      const realOrgName = (
+        localStorage.getItem("officex_active_org") ||
+        localStorage.getItem("officex_org_name") ||
+        localStorage.getItem("officex_user_org") ||
+        ""
+      ).trim();
+      const realOrgGstin = (
+        localStorage.getItem("officex_org_gstin") ||
+        localStorage.getItem("officex_user_gstin") ||
+        ""
+      ).trim();
+
+      // Only add to SPV list if it is a real user organization (no dummy fallback)
+      if (realOrgName && !realOrgName.toLowerCase().includes("apex commercial")) {
+        const userSpv: BillingSpvOption = {
+          id: "SPV-PRIMARY",
+          spvName: realOrgName,
+          gstin: realOrgGstin || "Unregistered",
+          state: localStorage.getItem("officex_org_state") || "Maharashtra"
+        };
+        setSpvs([userSpv]);
+        setSelectedSpvId("SPV-PRIMARY");
+      } else {
+        // Zero dummy pre-feeded data: default to custom empty entry
+        setSpvs([]);
+        setSelectedSpvId("custom");
+      }
     }
   }, []);
 
@@ -501,6 +596,10 @@ export default function CommercialPropertyMaster() {
         latitude: geoLat.trim() ? parseFloat(geoLat) : undefined,
         longitude: geoLng.trim() ? parseFloat(geoLng) : undefined,
         status: operationalStatus,
+        entityType,
+        cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase() : undefined,
+        llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
+        panNumber: (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") ? panNumber.trim().toUpperCase() : undefined,
         ownerCompany,
         ownerName: ownerCompany,
         ownerEmail,
@@ -565,6 +664,10 @@ export default function CommercialPropertyMaster() {
             geoLat: geoLat.trim(),
             geoLng: geoLng.trim(),
             status: operationalStatus,
+            entityType,
+            cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase() : undefined,
+            llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
+            panNumber: (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") ? panNumber.trim().toUpperCase() : undefined,
             totalArea: totalChargeableArea,
             chargeableArea: totalChargeableArea,
             carpetArea: totalCarpetArea,
@@ -636,14 +739,13 @@ export default function CommercialPropertyMaster() {
           </Link>
         </div>
 
-        {/* ── 4-STEP WIZARD PROGRESS RIBBON ── */}
+        {/* ── 3-STEP WIZARD PROGRESS RIBBON ── */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              { num: 1, title: "Asset & SPV Master", subtitle: "Identity, Tax & Location" },
-              { num: 2, title: "Towers & Stacking", subtitle: "Building Structures" },
-              { num: 3, title: "Area & Space Inventory", subtitle: "Chargeable vs Carpet" },
-              { num: 4, title: "Statutory & Review", subtitle: "Compliance & Confirmation" },
+              { num: 1, title: "Asset & Legal Master", subtitle: "Identity, CIN/PAN & Towers" },
+              { num: 2, title: "Area & Space Inventory", subtitle: "Chargeable vs Carpet Units" },
+              { num: 3, title: "Statutory & Review", subtitle: "Clearances & Master Registration" },
             ].map((step) => {
               const isActive = currentStep === step.num;
               const isDone = currentStep > step.num;
@@ -651,8 +753,20 @@ export default function CommercialPropertyMaster() {
                 <button
                   key={step.num}
                   type="button"
-                  onClick={() => setCurrentStep(step.num as any)}
-                  className={`text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                  onClick={() => {
+                    if (step.num === 1) {
+                      setCurrentStep(1);
+                    } else if (step.num === 2) {
+                      handleStep1Next();
+                    } else if (step.num === 3) {
+                      if (!assetName.trim() || !address.trim()) {
+                        handleStep1Next();
+                      } else {
+                        setCurrentStep(3);
+                      }
+                    }
+                  }}
+                  className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
                     isActive
                       ? "border-[#0F8B7D] bg-teal-50/50 shadow-xs ring-1 ring-[#0F8B7D]"
                       : isDone
@@ -685,16 +799,16 @@ export default function CommercialPropertyMaster() {
           </div>
         </div>
 
-        {/* ── STEP 1: ASSET & SPV MASTER (Standard Model) ── */}
+        {/* ── STEP 1: ASSET IDENTITY, LEGAL ENTITY & TOWERS ── */}
         {currentStep === 1 && (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Briefcase size={18} className="text-[#0F8B7D]" />
-                1. Asset Identity & Invoicing Entity
+                1. Asset Identity, Legal Constitution &amp; Building Structure
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Establish the legal identity, building grade, and associated tax entity for automated GST place-of-supply billing.
+                Establish asset legal identity, corporate statutory registration (CIN / LLPIN / PAN), place-of-supply billing entity, and optional multi-tower configuration.
               </p>
             </div>
 
@@ -773,6 +887,162 @@ export default function CommercialPropertyMaster() {
               </div>
             </div>
 
+            {/* ── Statutory Ownership Constitution & Tax Identification ── */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                    <ShieldCheck size={15} className="text-[#0F8B7D]" />
+                    Ownership Constitution &amp; Statutory Identification
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Mandatory statutory identifiers drive legal title, lease deeds, TDS under Sec 194I, and MCA compliance.
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 self-start sm:self-auto">
+                  Statutory Registry
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Entity Constitution Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>Entity Constitution / Ownership Structure *</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Legal Title Holder</span>
+                  </label>
+                  <select
+                    value={entityType}
+                    onChange={(e) => setEntityType(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                  >
+                    <option value="pvt_ltd">Private Limited Company (Pvt Ltd) — CIN Mandatory</option>
+                    <option value="public_ltd">Public Limited Company (Ltd / PLC) — CIN Mandatory</option>
+                    <option value="llp">Limited Liability Partnership (LLP) — LLPIN Mandatory</option>
+                    <option value="proprietorship">Sole Proprietorship — PAN &amp; Trade Name</option>
+                    <option value="partnership">Partnership Firm (Partnership Act 1932) — Firm PAN</option>
+                    <option value="individual">Individual / Joint HNI Owner — Personal PAN</option>
+                    <option value="trust_reit">Trust / Real Estate Investment Trust (REIT) — Trust Reg / PAN</option>
+                  </select>
+                </div>
+
+                {/* Dynamic Field Based on Constitution */}
+                {(entityType === "pvt_ltd" || entityType === "public_ltd") && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span>Corporate Identification Number (CIN) *</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          Compulsory
+                        </span>
+                      </label>
+                      <a
+                        href="https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-[#0F8B7D] font-bold hover:underline"
+                      >
+                        Verify on MCA Portal ↗
+                      </a>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={21}
+                        value={cinNumber}
+                        onChange={(e) => setCinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                        placeholder="e.g. U70102MH2018PTC123456"
+                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none ${
+                          cinNumber.length === 21 && /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(cinNumber)
+                            ? "border-emerald-500 focus:border-emerald-600 ring-1 ring-emerald-500"
+                            : cinNumber.length > 0
+                            ? "border-amber-400 focus:border-amber-500"
+                            : "border-slate-200 focus:border-[#0F8B7D]"
+                        }`}
+                      />
+                      {cinNumber.length === 21 && /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(cinNumber) && (
+                        <span className="absolute right-3 top-2.5 text-emerald-600 text-[11px] font-bold flex items-center gap-1">
+                          <Check size={14} strokeWidth={3} /> Valid 21-digit MCA Format
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      Official 21-digit alphanumeric CIN issued by Registrar of Companies (ROC), Ministry of Corporate Affairs.
+                    </p>
+                  </div>
+                )}
+
+                {entityType === "llp" && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <span>LLP Identification Number (LLPIN) *</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                        Compulsory
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={8}
+                      value={llpinNumber}
+                      onChange={(e) => setLlpinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                      placeholder="e.g. AAA-1234 or ABB-5678"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      LLPs in India are issued an LLPIN under the LLP Act 2008 (rather than a 21-digit CIN).
+                    </p>
+                  </div>
+                )}
+
+                {(entityType === "proprietorship" || entityType === "partnership" || entityType === "individual" || entityType === "trust_reit") && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <span>
+                        {entityType === "proprietorship" ? "Proprietor Income Tax PAN *" : entityType === "partnership" ? "Firm Income Tax PAN *" : entityType === "individual" ? "Owner Income Tax PAN *" : "Trust / REIT PAN *"}
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                        Compulsory
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={10}
+                      value={panNumber}
+                      onChange={(e) => setPanNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                      placeholder="e.g. ABCDE1234F"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      {entityType === "proprietorship" 
+                        ? "Sole Proprietorships do not have an MCA CIN. Income Tax PAN is the primary statutory identifier."
+                        : entityType === "partnership"
+                        ? "Registered under Partnership Act, 1932. Firm PAN drives 194I TDS compliance."
+                        : "Personal PAN of the commercial title deed holder for TDS credit and registration."}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Informative Statutory Notice */}
+              {entityType === "proprietorship" && (
+                <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
+                  <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">Proprietorship Clarification:</strong> Sole proprietorships are not incorporated corporate bodies and legally do not possess an MCA Corporate Identification Number (CIN). OfficeX validates your ownership using the Proprietor&apos;s Permanent Account Number (PAN) and GSTIN.
+                  </div>
+                </div>
+              )}
+
+              {entityType === "llp" && (
+                <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 text-[11px] text-teal-900 flex items-start gap-2">
+                  <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">LLP Holding SPV:</strong> Limited Liability Partnerships are governed by the LLP Act, 2008 and hold a 7-character LLPIN instead of a 21-digit CIN.
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Statutory Billing SPV Link */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
@@ -787,69 +1057,95 @@ export default function CommercialPropertyMaster() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {spvs.map((s) => (
-                  <label
-                    key={s.id}
-                    onClick={() => setSelectedSpvId(s.id)}
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      selectedSpvId === s.id
-                        ? "border-[#0F8B7D] bg-white ring-1 ring-[#0F8B7D]"
-                        : "border-slate-200 bg-white hover:border-slate-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="spvSelection"
-                      checked={selectedSpvId === s.id}
-                      onChange={() => setSelectedSpvId(s.id)}
-                      className="mt-0.5 text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                    />
-                    <div className="text-xs">
-                      <span className="font-bold text-slate-900 block">{s.spvName}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">GSTIN: {s.gstin}</span>
-                    </div>
-                  </label>
-                ))}
+              {spvs.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {spvs.map((s) => (
+                      <label
+                        key={s.id}
+                        onClick={() => setSelectedSpvId(s.id)}
+                        className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                          selectedSpvId === s.id
+                            ? "border-[#0F8B7D] bg-white ring-1 ring-[#0F8B7D]"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="spvSelection"
+                          checked={selectedSpvId === s.id}
+                          onChange={() => setSelectedSpvId(s.id)}
+                          className="mt-0.5 text-[#0F8B7D] focus:ring-[#0F8B7D]"
+                        />
+                        <div className="text-xs">
+                          <span className="font-bold text-slate-900 block">{s.spvName}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">GSTIN: {s.gstin}</span>
+                        </div>
+                      </label>
+                    ))}
 
-                <label
-                  onClick={() => setSelectedSpvId("custom")}
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    selectedSpvId === "custom"
-                      ? "border-[#0F8B7D] bg-white ring-1 ring-[#0F8B7D]"
-                      : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="spvSelection"
-                    checked={selectedSpvId === "custom"}
-                    onChange={() => setSelectedSpvId("custom")}
-                    className="mt-0.5 text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                  />
-                  <div className="text-xs">
-                    <span className="font-bold text-slate-900 block">+ Add Distinct Billing SPV</span>
-                    <span className="text-[10px] text-slate-500">Enter custom entity for this asset</span>
+                    <label
+                      onClick={() => setSelectedSpvId("custom")}
+                      className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
+                        selectedSpvId === "custom"
+                          ? "border-[#0F8B7D] bg-white ring-1 ring-[#0F8B7D]"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="spvSelection"
+                        checked={selectedSpvId === "custom"}
+                        onChange={() => setSelectedSpvId("custom")}
+                        className="mt-0.5 text-[#0F8B7D] focus:ring-[#0F8B7D]"
+                      />
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900 block">+ Add Distinct Billing SPV</span>
+                        <span className="text-[10px] text-slate-500">Enter custom entity for this asset</span>
+                      </div>
+                    </label>
                   </div>
-                </label>
-              </div>
 
-              {selectedSpvId === "custom" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                  <input
-                    type="text"
-                    placeholder="Legal SPV Entity Name"
-                    value={customSpvName}
-                    onChange={(e) => setCustomSpvName(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
-                  />
-                  <input
-                    type="text"
-                    placeholder="15-digit GSTIN (e.g. 27AABCA1234M1Z5)"
-                    value={customSpvGstin}
-                    onChange={(e) => setCustomSpvGstin(e.target.value.toUpperCase())}
-                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                  />
+                  {selectedSpvId === "custom" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+                      <input
+                        type="text"
+                        placeholder="Legal SPV Entity Name"
+                        value={customSpvName}
+                        onChange={(e) => setCustomSpvName(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                      <input
+                        type="text"
+                        placeholder="15-digit GSTIN (optional if unregistered)"
+                        value={customSpvGstin}
+                        onChange={(e) => setCustomSpvGstin(e.target.value.toUpperCase())}
+                        className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-2 pt-1">
+                  <p className="text-[11px] text-slate-500">
+                    Specify the owning entity / SPV for issuing monthly rent GST invoices and receiving lease payments:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Legal SPV / Owning Entity Name (e.g. Skyline Realty Pvt Ltd)"
+                      value={customSpvName}
+                      onChange={(e) => setCustomSpvName(e.target.value)}
+                      className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                    <input
+                      type="text"
+                      placeholder="15-digit GSTIN (optional if unregistered)"
+                      value={customSpvGstin}
+                      onChange={(e) => setCustomSpvGstin(e.target.value.toUpperCase())}
+                      className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -977,231 +1273,221 @@ export default function CommercialPropertyMaster() {
               </div>
             </div>
 
-            {/* Footer Navigation */}
-            <div className="flex justify-end pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!assetName.trim()) {
-                    alert("Please specify the Property / Asset Name.");
-                    return;
-                  }
-                  if (!address.trim()) {
-                    alert("Please provide the physical address.");
-                    return;
-                  }
-                  setCurrentStep(2);
-                }}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-              >
-                <span>Continue to Towers & Stacking</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 2: TOWERS & STACKING PLAN (Building Master) ── */}
-        {currentStep === 2 && (
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
-            <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                  <Building size={18} className="text-[#0F8B7D]" />
-                  2. Building Towers & Stacking Structure
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Define the individual tower blocks, floors above/below ground, and super built-up allocations.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleAddTower}
-                className="px-3.5 py-1.5 rounded-xl border border-teal-200 bg-teal-50 text-teal-800 text-xs font-bold flex items-center gap-1.5 hover:bg-teal-100 transition-colors cursor-pointer"
-              >
-                <Plus size={14} /> Add Another Tower
-              </button>
-            </div>
-
-            {towers.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mx-auto">
-                  <Building size={22} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800">No Building Towers Configured</h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                    Add the primary building tower or individual blocks (e.g. Tower A, North Wing, Podium) to configure floor stacking and super built-up allocations.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddTower}
-                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-bold transition-colors cursor-pointer shadow-xs inline-flex items-center gap-1.5"
-                >
-                  <Plus size={14} /> Add First Tower / Block
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {towers.map((tower, idx) => (
-                  <div
-                    key={tower.id}
-                    className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-4 relative"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center text-[11px] font-black">
-                          {tower.code || `T${idx+1}`}
-                        </span>
-                        Tower / Block {idx + 1}
+            {/* ── Building Towers & Wings Structure (Optional Inline in Step 1) ── */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    id="multiTowerCheckbox"
+                    type="checkbox"
+                    checked={hasMultipleTowers}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setHasMultipleTowers(checked);
+                      if (checked && towers.length <= 1) {
+                        setTowers([
+                          { id: "T1", name: `${assetName.trim() || 'Tower 1'} (Tower A)`, code: "T1", floorsAbove: 1, floorsBelow: 0, chargeableArea: 0 },
+                          { id: "T2", name: "Tower 2 (Tower B)", code: "T2", floorsAbove: 1, floorsBelow: 0, chargeableArea: 0 }
+                        ]);
+                      } else if (!checked) {
+                        setTowers([{
+                          id: "T1",
+                          name: assetName ? `${assetName.trim()} (Main Building)` : "Main Building",
+                          code: "T1",
+                          floorsAbove: 1,
+                          floorsBelow: 0,
+                          chargeableArea: totalChargeableArea || 0
+                        }]);
+                      }
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded text-[#0F8B7D] focus:ring-[#0F8B7D] cursor-pointer"
+                  />
+                  <label htmlFor="multiTowerCheckbox" className="cursor-pointer select-none">
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-2">
+                      <span>This commercial property has multiple towers or wings</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                        Optional
                       </span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Leave unchecked if this is a single standalone commercial building. Enable only for multi-building tech parks, business hubs, or campus properties.
+                    </span>
+                  </label>
+                </div>
 
-                      {towers.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTower(tower.id)}
-                          className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                {hasMultipleTowers && (
+                  <button
+                    type="button"
+                    onClick={handleAddTower}
+                    className="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50 text-teal-800 text-xs font-bold flex items-center gap-1.5 hover:bg-teal-100 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                  >
+                    <Plus size={14} /> Add Another Tower
+                  </button>
+                )}
+              </div>
+
+              {!hasMultipleTowers ? (
+                <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center font-bold">
+                      <Building size={16} />
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                      <div className="sm:col-span-2 space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Tower / Block Name *</label>
-                        <input
-                          type="text"
-                          value={tower.name}
-                          onChange={(e) => {
-                            const updated = towers.map(t => t.id === tower.id ? { ...t, name: e.target.value } : t);
-                            setTowers(updated);
-                          }}
-                          placeholder="e.g. Tower 1 (North Block)"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Tower Code *</label>
-                        <input
-                          type="text"
-                          value={tower.code}
-                          onChange={(e) => {
-                            const updated = towers.map(t => t.id === tower.id ? { ...t, code: e.target.value.toUpperCase() } : t);
-                            setTowers(updated);
-                          }}
-                          placeholder="e.g. T1"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Chargeable Area ({areaLabel}) *</label>
-                        <input
-                          type="number"
-                          value={tower.chargeableArea || ""}
-                          onChange={(e) => {
-                            const val = Number(e.target.value) || 0;
-                            const updated = towers.map(t => t.id === tower.id ? { ...t, chargeableArea: val } : t);
-                            setTowers(updated);
-                          }}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Floors Above Ground</label>
-                        <input
-                          type="number"
-                          value={tower.floorsAbove}
-                          onChange={(e) => {
-                            const val = Number(e.target.value) || 1;
-                            const updated = towers.map(t => t.id === tower.id ? { ...t, floorsAbove: val } : t);
-                            setTowers(updated);
-                          }}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Basements / Below Ground</label>
-                        <input
-                          type="number"
-                          value={tower.floorsBelow}
-                          onChange={(e) => {
-                            const val = Number(e.target.value) || 0;
-                            const updated = towers.map(t => t.id === tower.id ? { ...t, floorsBelow: val } : t);
-                            setTowers(updated);
-                          }}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Stacking Plan Height:</span>
-                        <strong className="text-slate-900 font-mono">
-                          {tower.floorsAbove} Upper + {tower.floorsBelow} Basements = {tower.floorsAbove + tower.floorsBelow} Levels
-                        </strong>
-                      </div>
+                    <div>
+                      <span className="font-bold text-slate-800 block">Single Standalone Building Asset (Default)</span>
+                      <span className="text-[11px] text-slate-500">
+                        All suites and floors defined in Step 2 will belong to this building ({assetName || "Main Building"}).
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+                    T1 (Main)
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-2">
+                  {towers.map((tower, idx) => (
+                    <div
+                      key={tower.id}
+                      className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 relative shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-[#0F8B7D] text-white flex items-center justify-center text-[10px] font-black">
+                            {tower.code || `T${idx+1}`}
+                          </span>
+                          Tower / Block {idx + 1}
+                        </span>
 
-            {/* Total Stacking Summary */}
-            {towers.length > 0 && (
-              <div className="p-4 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between text-xs">
-                <span className="font-bold text-teal-900">Total Asset Chargeable Area Across All Towers:</span>
-                <span className="font-mono font-black text-sm text-teal-900">
-                  {towers.reduce((sum, t) => sum + (t.chargeableArea || 0), 0).toLocaleString()} {areaLabel}
-                </span>
-              </div>
-            )}
+                        {towers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTower(tower.id)}
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                            title="Remove Tower"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">Tower / Block Name *</label>
+                          <input
+                            type="text"
+                            value={tower.name}
+                            onChange={(e) => {
+                              const updated = towers.map(t => t.id === tower.id ? { ...t, name: e.target.value } : t);
+                              setTowers(updated);
+                            }}
+                            placeholder="e.g. Tower 1 (North Block)"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">Tower Code *</label>
+                          <input
+                            type="text"
+                            value={tower.code}
+                            onChange={(e) => {
+                              const updated = towers.map(t => t.id === tower.id ? { ...t, code: e.target.value.toUpperCase() } : t);
+                              setTowers(updated);
+                            }}
+                            placeholder="e.g. T1"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">Chargeable Area ({areaLabel})</label>
+                          <input
+                            type="number"
+                            value={tower.chargeableArea || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              const updated = towers.map(t => t.id === tower.id ? { ...t, chargeableArea: val } : t);
+                              setTowers(updated);
+                            }}
+                            placeholder="e.g. 50000"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">Floors Above Ground</label>
+                          <input
+                            type="number"
+                            value={tower.floorsAbove}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 1;
+                              const updated = towers.map(t => t.id === tower.id ? { ...t, floorsAbove: val } : t);
+                              setTowers(updated);
+                            }}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">Basements</label>
+                          <input
+                            type="number"
+                            value={tower.floorsBelow}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              const updated = towers.map(t => t.id === tower.id ? { ...t, floorsBelow: val } : t);
+                              setTowers(updated);
+                            }}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Stacking Plan:</span>
+                          <strong className="text-slate-900 font-mono text-[11px]">
+                            {tower.floorsAbove} Above Ground + {tower.floorsBelow} Basements = {tower.floorsAbove + tower.floorsBelow} Levels
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {towers.length > 0 && (
+                    <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between text-xs">
+                      <span className="font-bold text-teal-900">Configured Towers: {towers.length}</span>
+                      <span className="font-mono font-black text-xs text-teal-900">
+                        Sum Tower Area: {towers.reduce((sum, t) => sum + (t.chargeableArea || 0), 0).toLocaleString()} {areaLabel}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Footer Navigation */}
-            <div className="flex justify-between pt-4 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <span className="text-xs text-slate-500 font-medium">
+                {!hasMultipleTowers ? "Single-building asset (Default)." : `${towers.length} building towers configured.`}
+              </span>
               <button
                 type="button"
-                onClick={() => setCurrentStep(1)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                onClick={handleStep1Next}
+                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
-                <ArrowLeft size={14} className="inline mr-1" /> Back
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (towers.length === 0) {
-                    alert("Please add at least one tower or building block before proceeding.");
-                    return;
-                  }
-                  const invalid = towers.find(t => !t.name.trim() || !t.code.trim());
-                  if (invalid) {
-                    alert("Please ensure all towers have a name and code.");
-                    return;
-                  }
-                  setCurrentStep(3);
-                }}
-                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-              >
-                <span>Continue to Area & Leasable Spaces</span>
+                <span>Continue to Step 2: Area &amp; Space Inventory</span>
                 <ArrowRight size={14} />
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: AREA & LEASABLE INVENTORY (Space Master) ── */}
-        {currentStep === 3 && (
+        {/* ── STEP 2: AREA & LEASABLE INVENTORY (Space Master) ── */}
+        {currentStep === 2 && (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Layers size={18} className="text-[#0F8B7D]" />
-                3. Area Metrics & Leasable Floor Inventory
+                2. Area Metrics &amp; Leasable Floor Inventory
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 Establish Chargeable Area, Carpet Area, Loading Factor, and individual leasable suites ready for tenant lease contracting.
@@ -1611,31 +1897,36 @@ export default function CommercialPropertyMaster() {
             <div className="flex justify-between pt-4 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setCurrentStep(2)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                onClick={() => setCurrentStep(1)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                <ArrowLeft size={14} className="inline mr-1" /> Back
+                <ArrowLeft size={14} className="inline mr-1" /> Back to Asset &amp; Towers
               </button>
 
               <button
                 type="button"
-                onClick={() => setCurrentStep(4)}
+                onClick={() => {
+                  if (totalChargeableArea <= 0 && units.length > 0) {
+                    setTotalChargeableArea(units.reduce((s, u) => s + u.chargeableArea, 0));
+                  }
+                  setCurrentStep(3);
+                }}
                 className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
-                <span>Continue to Statutory Clearances & Review</span>
+                <span>Continue to Statutory Clearances &amp; Review</span>
                 <ArrowRight size={14} />
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 4: STATUTORY ASSET COMPLIANCE & REVIEW ── */}
-        {currentStep === 4 && (
+        {/* ── STEP 3: STATUTORY ASSET COMPLIANCE & REVIEW ── */}
+        {currentStep === 3 && (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <ShieldCheck size={18} className="text-emerald-600" />
-                4. Statutory Building Clearances & Master Review
+                3. Statutory Building Clearances &amp; Master Review
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 Record building statutory NOCs and confirm institutional master registration.
@@ -1781,7 +2072,9 @@ export default function CommercialPropertyMaster() {
 
                 <div>
                   <span className="text-slate-500 block text-[10px]">Towers &amp; Stacking</span>
-                  <strong className="text-slate-900 text-xs font-mono">{towers.length} Towers / Blocks</strong>
+                  <strong className="text-slate-900 text-xs font-mono">
+                    {!hasMultipleTowers ? "Single Building (Main)" : `${towers.length} Towers / Wings`}
+                  </strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Inventory Defined</span>
@@ -1797,12 +2090,28 @@ export default function CommercialPropertyMaster() {
                 </div>
 
                 <div className="col-span-2">
+                  <span className="text-slate-500 block text-[10px]">Entity Constitution &amp; Statutory ID</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold uppercase">
+                      {entityType.replace("_", " ")}
+                    </span>
+                    <strong className="text-slate-900 text-xs font-mono">
+                      {(entityType === "pvt_ltd" || entityType === "public_ltd")
+                        ? `CIN: ${cinNumber || "—"}`
+                        : entityType === "llp"
+                        ? `LLPIN: ${llpinNumber || "—"}`
+                        : `PAN: ${panNumber || "—"}`}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="col-span-2">
                   <span className="text-slate-500 block text-[10px]">GST Jurisdiction &amp; Location</span>
                   <span className="text-slate-800 font-semibold">
                     {address ? `${address}, ` : ""}{city}, {state} ({pincode})
                   </span>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-2 sm:col-span-4">
                   <span className="text-slate-500 block text-[10px]">Invoicing SPV Entity</span>
                   <span className="text-slate-800 font-semibold">
                     {selectedSpvId === "custom" ? customSpvName || "Custom SPV" : spvs.find(s => s.id === selectedSpvId)?.spvName || "Default Entity"}
@@ -1825,10 +2134,10 @@ export default function CommercialPropertyMaster() {
             <div className="flex justify-between pt-4 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setCurrentStep(3)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                onClick={() => setCurrentStep(2)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                <ArrowLeft size={14} className="inline mr-1" /> Back
+                <ArrowLeft size={14} className="inline mr-1" /> Back to Area &amp; Space Inventory
               </button>
 
               <button
