@@ -124,28 +124,34 @@ export async function POST(req: Request) {
       esc.appliedBy = "Property Manager";
       esc.notes = notes || `Escalation applied. New monthly base rent: ₹${newRentValue.toLocaleString('en-IN')}`;
 
-      // Schedule next escalation
-      db.escalations.push({
-        id: `ESC-${Date.now()}`,
-        leaseId: lease.id,
-        leaseCode: lease.leaseCode,
-        tenantName: lease.tenantName,
-        propertyName: lease.propertyName,
-        escalationDate: lease.nextEscalationDate,
-        previousRent: lease.monthlyRent,
-        newRent: summary.nextEscalatedRent,
-        escalationPct: lease.escalationPct,
-        calculatedIncrease: summary.nextEscalatedRent - lease.monthlyRent,
-        status: "pending",
-        notes: "Auto-scheduled next cycle escalation"
-      });
+      // Security Deposit Auto-Top-Up (RR-ESC-03)
+      const depositRequiredNew = summary.securityDepositRequired;
+      const depositShortfall = Math.max(0, depositRequiredNew - (lease.securityDepositPaid || 0));
+      lease.securityDepositAmount = depositRequiredNew;
+
+      if (depositShortfall > 0) {
+        db.alerts.unshift({
+          id: `ALT-${Date.now()}-DEP`,
+          orgId: db.organization.id,
+          propertyId: lease.propertyId,
+          alertType: "deposit_shortfall",
+          title: `Security Deposit Top-Up Demand: ${lease.tenantName}`,
+          message: `Post-escalation monthly rent ₹${newRentValue.toLocaleString('en-IN')} requires ₹${depositRequiredNew.toLocaleString('en-IN')} deposit (${lease.securityDepositMonths} mos). Top-up shortfall of ₹${depositShortfall.toLocaleString('en-IN')} demanded.`,
+          entityType: "lease",
+          entityId: lease.id,
+          severity: "warning",
+          isRead: false,
+          triggerDate: new Date().toISOString().split("T")[0],
+          createdAt: new Date().toISOString()
+        });
+      }
 
       recordAuditLog({
         leaseId: lease.id,
         entityName: "Escalation",
         action: "APPLY_ESCALATION",
-        oldValues: { monthlyRent: oldRent },
-        newValues: { monthlyRent: newRentValue, escalationPct: lease.escalationPct },
+        oldValues: { monthlyRent: oldRent, securityDepositAmount: lease.securityDepositPaid },
+        newValues: { monthlyRent: newRentValue, escalationPct: lease.escalationPct, newDepositRequired: depositRequiredNew, depositShortfall },
         changedBy: "Property Manager"
       });
     } else if (action === "waive") {

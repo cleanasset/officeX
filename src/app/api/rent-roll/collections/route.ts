@@ -102,7 +102,95 @@ export async function POST(req: Request) {
     const receiptNum = `REC-2026-${uniqueSuffix}`;
     const newPaymentId = `REC-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-    // Calculate sub-ledger allocation hierarchy (RR-PAY-04)
+    // Multi-invoice or Oldest-First Allocation (RR-PAY-03)
+    if (body.action === "allocate_oldest_first" || Array.isArray(body.invoiceIds)) {
+      let candidateInvoices = db.invoices.filter(i => 
+        i.leaseId === lease.id && (i.status === "issued" || i.status === "overdue" || i.status === "partially_paid")
+      );
+
+      if (Array.isArray(body.invoiceIds) && body.invoiceIds.length > 0) {
+        candidateInvoices = candidateInvoices.filter(i => body.invoiceIds.includes(i.id));
+      }
+
+      // Sort chronological (oldest due date first)
+      candidateInvoices.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+      let remainingToAllocate = amt;
+      const allocatedInvoices: any[] = [];
+
+      for (const inv of candidateInvoices) {
+        if (remainingToAllocate <= 0) break;
+        const due = inv.balanceDue;
+        const allocAmt = Math.min(remainingToAllocate, due);
+
+        const alloc = allocatePaymentToInvoice(allocAmt, {
+          baseRent: inv.baseRent,
+          camCharges: inv.camCharges,
+          gstAmount: inv.gstAmount,
+          otherCharges: inv.otherCharges || 0,
+          balanceDue: inv.balanceDue
+        });
+
+        const allocRec: PaymentAllocationEntity = {
+          id: `ALLOC-${Date.now()}-${inv.id.slice(-4)}`,
+          paymentId: newPaymentId,
+          invoiceId: inv.id,
+          allocatedGst: alloc.allocatedGst,
+          allocatedBaseRent: alloc.allocatedBaseRent,
+          allocatedCam: alloc.allocatedCam,
+          allocatedOther: alloc.allocatedOther,
+          totalAllocated: alloc.totalAllocated,
+          allocatedAt: new Date().toISOString()
+        };
+
+        if (!db.paymentAllocations) db.paymentAllocations = [];
+        db.paymentAllocations.unshift(allocRec);
+
+        inv.amountPaid = round2((inv.amountPaid || 0) + allocAmt);
+        inv.balanceDue = round2(Math.max(0, inv.netPayable - inv.amountPaid));
+        inv.paidDate = payDate;
+        inv.paymentMode = paymentMode || "neft_rtgs";
+        inv.referenceNumber = referenceNumber;
+        inv.status = inv.balanceDue <= 0.01 ? "paid" : "partially_paid";
+
+        allocatedInvoices.push({ invoiceNumber: inv.invoiceNumber, allocated: allocAmt, newStatus: inv.status });
+        remainingToAllocate = round2(remainingToAllocate - allocAmt);
+      }
+
+      const multiReceipt: CollectionEntity = {
+        id: newPaymentId,
+        orgId: db.organization.id,
+        invoiceNumber: allocatedInvoices.map(a => a.invoiceNumber).join(", "),
+        leaseId: lease.id,
+        leaseCode: lease.leaseCode,
+        tenantId: lease.tenantId,
+        tenantName: lease.tenantName,
+        propertyName: lease.propertyName,
+        receiptNumber: receiptNum,
+        paymentDate: payDate,
+        paymentMode: paymentMode || "neft_rtgs",
+        referenceNumber: referenceNumber,
+        amountReceived: amt,
+        tdsDeducted: tds,
+        bankCharges: charges,
+        netCredited,
+        bankAccount: bankAccount || "HDFC Bank Corporate Account",
+        notes: notes || `Oldest-first allocation across ${allocatedInvoices.length} invoices.`,
+        createdAt: new Date().toISOString()
+      };
+
+      db.collections.unshift(multiReceipt);
+      saveRentRollDb(db);
+
+      return NextResponse.json({
+        success: true,
+        message: `Allocated ₹${amt.toLocaleString('en-IN')} across ${allocatedInvoices.length} invoices (Oldest-First)`,
+        receipt: multiReceipt,
+        allocatedInvoices
+      }, { status: 201 });
+    }
+
+    // Calculate sub-ledger allocation hierarchy for single invoice (RR-PAY-04)
     let allocationRecord: PaymentAllocationEntity | null = null;
 
     if (invoice) {

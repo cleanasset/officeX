@@ -48,20 +48,29 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [bankAccount, setBankAccount] = useState<string>("HDFC Bank A/C 50200088991204 - OfficeX Escrow");
   const [notes, setNotes] = useState<string>("Automated settlement reconciled against bank statement.");
+  const [allocationMode, setAllocationMode] = useState<"single" | "waterfall">("single");
+  const [selectedLeaseId, setSelectedLeaseId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   const openInvoices = invoices.filter((i) => i.balanceDue > 0);
 
+  // Group by tenant/lease
+  const tenantLeases = Array.from(
+    new Set(openInvoices.map(i => JSON.stringify({ leaseId: i.leaseId, tenantName: i.tenantName, leaseCode: i.leaseCode })))
+  ).map(s => JSON.parse(s));
+
   useEffect(() => {
     if (preSelectedInvoice) {
       setSelectedInvoiceId(preSelectedInvoice.id);
+      setSelectedLeaseId(preSelectedInvoice.leaseId);
       setAmountReceived(preSelectedInvoice.balanceDue || preSelectedInvoice.netPayable || 0);
       setTdsDeducted(preSelectedInvoice.tdsDeducted || 0);
       setReferenceNumber(`HDFCR5${Date.now().toString().slice(-10)}`);
     } else if (openInvoices.length > 0) {
       const first = openInvoices[0];
       setSelectedInvoiceId(first.id);
+      setSelectedLeaseId(first.leaseId);
       setAmountReceived(first.balanceDue);
       setTdsDeducted(first.tdsDeducted || 0);
       setReferenceNumber(`HDFCR5${Date.now().toString().slice(-10)}`);
@@ -72,6 +81,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     setSelectedInvoiceId(id);
     const target = invoices.find((i) => i.id === id);
     if (target) {
+      setSelectedLeaseId(target.leaseId);
       setAmountReceived(target.balanceDue);
       setTdsDeducted(target.tdsDeducted || 0);
     }
@@ -81,27 +91,52 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
   const currentInvoice = invoices.find((i) => i.id === selectedInvoiceId);
 
+  // Waterfall preview calculation for selected lease
+  const targetLeaseInvoices = openInvoices
+    .filter(i => (selectedLeaseId ? i.leaseId === selectedLeaseId : true))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  let tempRem = amountReceived;
+  const waterfallPreview = targetLeaseInvoices.map(inv => {
+    const alloc = Math.min(tempRem, inv.balanceDue);
+    tempRem = Math.max(0, tempRem - alloc);
+    return {
+      ...inv,
+      allocated: alloc,
+      remBalance: Math.max(0, inv.balanceDue - alloc),
+      willBePaid: alloc >= inv.balanceDue
+    };
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMsg("");
 
     try {
+      const payload: any = {
+        amountReceived,
+        tdsDeducted: allocationMode === "single" ? tdsDeducted : 0,
+        bankCharges: 0,
+        paymentMode,
+        referenceNumber,
+        paymentDate,
+        bankAccount,
+        notes,
+      };
+
+      if (allocationMode === "waterfall") {
+        payload.action = "allocate_oldest_first";
+        payload.leaseId = selectedLeaseId || targetLeaseInvoices[0]?.leaseId;
+      } else {
+        payload.invoiceId = selectedInvoiceId;
+        payload.leaseId = currentInvoice?.leaseId;
+      }
+
       const res = await fetch("/api/rent-roll/collections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          invoiceId: selectedInvoiceId,
-          leaseId: currentInvoice?.leaseId,
-          amountReceived,
-          tdsDeducted,
-          bankCharges: 0,
-          paymentMode,
-          referenceNumber,
-          paymentDate,
-          bankAccount,
-          notes,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -149,37 +184,109 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             </div>
           )}
 
-          {/* Invoice Selection */}
-          <div>
-            <label className="block text-gray-700 font-bold mb-1">Select Open Invoice to Settle *</label>
-            <select
-              value={selectedInvoiceId}
-              onChange={(e) => handleInvoiceChange(e.target.value)}
-              className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-medium shadow-2xs cursor-pointer"
-              required
+          {/* Allocation Mode Switcher */}
+          <div className="flex bg-gray-100 p-1 rounded-xl text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setAllocationMode("single")}
+              className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                allocationMode === "single"
+                  ? "bg-white text-emerald-800 shadow-2xs"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
             >
-              {openInvoices.map((inv) => (
-                <option key={inv.id} value={inv.id}>
-                  {inv.invoiceNumber} — {inv.tenantName} ({inv.propertyName}) — Balance: {formatINR(inv.balanceDue)}
-                </option>
-              ))}
-            </select>
+              Single Invoice Settlement
+            </button>
+            <button
+              type="button"
+              onClick={() => setAllocationMode("waterfall")}
+              className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                allocationMode === "waterfall"
+                  ? "bg-[#0F8B7D] text-white shadow-2xs"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              Multi-Invoice Waterfall (Oldest First)
+            </button>
           </div>
 
-          {/* Invoice Quick Summary */}
-          {currentInvoice && (
-            <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200 grid grid-cols-3 gap-2 text-center">
+          {allocationMode === "single" ? (
+            <>
+              {/* Invoice Selection */}
               <div>
-                <span className="text-[10px] text-gray-500 uppercase font-bold">Invoice Value</span>
-                <p className="font-black text-gray-900 font-mono mt-0.5">{formatINR(currentInvoice.netPayable)}</p>
+                <label className="block text-gray-700 font-bold mb-1">Select Open Invoice to Settle *</label>
+                <select
+                  value={selectedInvoiceId}
+                  onChange={(e) => handleInvoiceChange(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-medium shadow-2xs cursor-pointer"
+                  required
+                >
+                  {openInvoices.map((inv) => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.invoiceNumber} — {inv.tenantName} ({inv.propertyName}) — Balance: {formatINR(inv.balanceDue)}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Invoice Quick Summary */}
+              {currentInvoice && (
+                <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">Invoice Value</span>
+                    <p className="font-black text-gray-900 font-mono mt-0.5">{formatINR(currentInvoice.netPayable)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">TDS Deducted</span>
+                    <p className="font-bold text-gray-700 font-mono mt-0.5">{formatINR(currentInvoice.tdsDeducted)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-rose-700 uppercase font-bold">Balance Due</span>
+                    <p className="font-black text-rose-600 font-mono mt-0.5">{formatINR(currentInvoice.balanceDue)}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-3">
               <div>
-                <span className="text-[10px] text-gray-500 uppercase font-bold">TDS Deducted</span>
-                <p className="font-bold text-gray-700 font-mono mt-0.5">{formatINR(currentInvoice.tdsDeducted)}</p>
+                <label className="block text-gray-700 font-bold mb-1">Select Tenant Lease Account *</label>
+                <select
+                  value={selectedLeaseId}
+                  onChange={(e) => setSelectedLeaseId(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 font-medium shadow-2xs"
+                  required
+                >
+                  {tenantLeases.map((t: any) => (
+                    <option key={t.leaseId} value={t.leaseId}>
+                      {t.tenantName} ({t.leaseCode})
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <span className="text-[10px] text-rose-700 uppercase font-bold">Balance Due</span>
-                <p className="font-black text-rose-600 font-mono mt-0.5">{formatINR(currentInvoice.balanceDue)}</p>
+
+              {/* Waterfall Cascade Preview */}
+              <div className="p-3 bg-teal-50/60 border border-teal-200 rounded-2xl space-y-2">
+                <div className="font-extrabold text-teal-950 text-xs flex items-center justify-between">
+                  <span>Waterfall Cascade Preview (Oldest Due Date First)</span>
+                  <span className="text-[10px] font-mono text-teal-700">{targetLeaseInvoices.length} Invoices</span>
+                </div>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {waterfallPreview.map((item: any) => (
+                    <div key={item.id} className="p-2 bg-white border border-teal-100 rounded-xl flex items-center justify-between text-[11px]">
+                      <div>
+                        <span className="font-mono font-bold text-gray-900">{item.invoiceNumber}</span>
+                        <span className="text-gray-400 ml-1.5">Due: {item.dueDate}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[#0F8B7D] font-bold">Allocated: {formatINR(item.allocated)}</span>
+                        <span className="text-gray-400 text-[10px] ml-1.5">
+                          {item.willBePaid ? "→ Fully Settled" : `→ Rem: ${formatINR(item.remBalance)}`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

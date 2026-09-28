@@ -36,9 +36,44 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
   onOpenServeNotice,
   onOpenRecordPayment,
 }) => {
-  const [activeTab, setActiveTab] = useState<"commercials" | "escalations" | "invoices" | "legal">("commercials");
+  const [activeTab, setActiveTab] = useState<"commercials" | "escalations" | "legal" | "documents">("commercials");
+  const [docUploadTitle, setDocUploadTitle] = useState("");
+  const [docUploadType, setDocUploadType] = useState("amendment");
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [docSuccess, setDocSuccess] = useState("");
 
   if (!lease) return null;
+
+  const handleUploadDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docUploadTitle) return;
+    setIsUploadingDoc(true);
+    try {
+      const res = await fetch("/api/rent-roll/leases", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leaseId: lease.id,
+          action: "add_document",
+          document: {
+            title: docUploadTitle,
+            documentType: docUploadType,
+            fileName: `${lease.leaseCode}_${docUploadTitle.replace(/\s+/g, "_")}.pdf`,
+            fileUrl: "/sample-agreements/contract-doc.pdf"
+          }
+        })
+      });
+      if (res.ok) {
+        setDocSuccess("Document vaulted successfully!");
+        setDocUploadTitle("");
+        setTimeout(() => setDocSuccess(""), 3500);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-gray-950/40 backdrop-blur-xs flex justify-end animate-fadeIn">
@@ -54,9 +89,11 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                   lease.status === "active"
                     ? "bg-teal-50 text-teal-700 border border-teal-200"
-                    : "bg-amber-50 text-amber-800 border border-amber-200"
+                    : lease.status === "pending_approval"
+                    ? "bg-amber-50 text-amber-800 border border-amber-300 animate-pulse"
+                    : "bg-gray-100 text-gray-800 border border-gray-200"
                 }`}>
-                  {lease.status === "active" ? "Active Lease" : "Under Notice"}
+                  {lease.status === "active" ? "Active Lease" : lease.status === "pending_approval" ? "Pending Checker Approval" : "Under Notice"}
                 </span>
               </div>
               <h2 className="text-xl font-black text-gray-950 tracking-tight">{lease.tenantName}</h2>
@@ -79,6 +116,7 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
               { id: "commercials", label: "Commercial Terms" },
               { id: "escalations", label: "Escalation Schedule" },
               { id: "legal", label: "Lock-in & Security Deposit" },
+              { id: "documents", label: "Documents Vault" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -252,6 +290,123 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === "documents" && (
+              <div className="space-y-4">
+                {docSuccess && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-semibold text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>{docSuccess}</span>
+                  </div>
+                )}
+
+                {/* Document List */}
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                    <span>Contract Documents Vault</span>
+                    <span className="text-[10px] text-gray-400 font-semibold">Statutory Compliance (§4.9)</span>
+                  </div>
+
+                  {((lease.documents && lease.documents.length > 0) ? lease.documents : [
+                    {
+                      id: "DOC-DEF-1",
+                      title: "Signed Commercial Lease Deed",
+                      documentType: "agreement",
+                      fileName: `${lease.leaseCode}_Executed_Lease_Deed.pdf`,
+                      status: "executed",
+                      executionDate: lease.startDate,
+                      uploadedBy: "Legal & Leasing Team"
+                    },
+                    {
+                      id: "DOC-DEF-2",
+                      title: "Letter of Intent (LOI) & Term Sheet",
+                      documentType: "term_sheet",
+                      fileName: `${lease.leaseCode}_Binding_Term_Sheet.pdf`,
+                      status: "executed",
+                      executionDate: lease.startDate,
+                      uploadedBy: "Commercial Broker"
+                    },
+                    {
+                      id: "DOC-DEF-3",
+                      title: "Bank Guarantee Receipt (Security Deposit)",
+                      documentType: "deposit_receipt",
+                      fileName: `BG_${lease.leaseCode}_Security_Deposit.pdf`,
+                      status: "executed",
+                      executionDate: lease.startDate,
+                      uploadedBy: "Finance Ops"
+                    }
+                  ]).map((doc: any) => (
+                    <div key={doc.id} className="p-3.5 bg-gray-50/80 hover:bg-gray-100/70 border border-gray-200 rounded-2xl flex items-center justify-between transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-gray-900 text-xs">{doc.title}</div>
+                          <div className="text-[11px] text-gray-500 font-mono mt-0.5">
+                            {doc.fileName} • {doc.uploadedBy}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200">
+                          {doc.status || "Verified"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => alert(`Downloading verified contract document: ${doc.fileName}`)}
+                          className="p-1.5 bg-white hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                          title="Download Document"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Upload New Document Form */}
+                <form onSubmit={handleUploadDoc} className="p-4 bg-teal-50/50 border border-teal-200 rounded-2xl space-y-3">
+                  <div className="font-bold text-teal-950 text-xs">Vault New Contract Document / Addendum</div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-semibold text-teal-900">Document Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. First Escalation Addendum"
+                        value={docUploadTitle}
+                        onChange={e => setDocUploadTitle(e.target.value)}
+                        className="w-full mt-1 p-2 bg-white border border-teal-200 rounded-xl text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-teal-900">Document Type</label>
+                      <select
+                        value={docUploadType}
+                        onChange={e => setDocUploadType(e.target.value)}
+                        className="w-full mt-1 p-2 bg-white border border-teal-200 rounded-xl text-xs"
+                      >
+                        <option value="agreement">Lease Agreement</option>
+                        <option value="amendment">Escalation / Rate Amendment</option>
+                        <option value="term_sheet">LOI / Term Sheet</option>
+                        <option value="deposit_bg">Security Deposit BG</option>
+                        <option value="handover">Fit-out Handover Certificate</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isUploadingDoc}
+                    className="w-full py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploadingDoc ? "Vaulting..." : "+ Upload & Vault Document"}
+                  </button>
+                </form>
               </div>
             )}
           </div>

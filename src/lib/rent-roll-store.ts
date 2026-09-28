@@ -249,7 +249,7 @@ export interface LeaseEntity {
   lockInMonths: number;
   lockInEndDate: string;
   noticePeriodDays: number;
-  status: "draft" | "active" | "under_notice" | "expired" | "terminated" | "holdover";
+  status: "draft" | "pending_approval" | "active" | "under_notice" | "expired" | "terminated" | "holdover";
   renewalStatus: "not_due" | "approaching" | "under_negotiation" | "renewed" | "vacating";
   billingFrequency: "monthly" | "quarterly" | "annual";
   billingModel?: "area" | "seat" | "hybrid" | "fixed" | "charges_only";
@@ -567,6 +567,44 @@ export interface CamPoolEntity {
   createdAt: string;
 }
 
+// Meter Readings for Utility & EB/DG billing (RR-BIL-05, RR-CAM)
+export interface MeterReadingEntity {
+  id: string;
+  orgId: string;
+  propertyId: string;
+  propertyName: string;
+  spaceId: string;
+  unitNumber: string;
+  tenantId: string;
+  tenantName: string;
+  meterType: "electricity_grid" | "electricity_dg" | "water" | "hvac_btu";
+  meterNumber: string;
+  readingDate: string;
+  periodMonth: string; // "2026-10"
+  previousReading: number;
+  currentReading: number;
+  multiplier: number;
+  consumption: number; // (current - previous) * multiplier
+  tariffPerUnit: number; // e.g. ₹11.50 per kWh or ₹32.00 for DG
+  totalCharge: number;
+  status: "draft" | "approved" | "billed";
+  createdAt: string;
+}
+
+export interface ChargeMasterItem {
+  id: string;
+  chargeName: string;
+  chargeCode: string;
+  chargeType: "rent" | "cam" | "utility" | "parking" | "statutory" | "other";
+  billingBasis: "psf_monthly" | "fixed_monthly" | "metered" | "per_seat";
+  defaultRate: number;
+  gstRate: number;
+  tdsApplicable: boolean;
+  tdsRate: number;
+  hsnSacCode: string;
+  description: string;
+}
+
 export interface RentRollDatabase {
   organization: OrgEntity;
   clientAccounts: ClientAccountEntity[];
@@ -592,6 +630,8 @@ export interface RentRollDatabase {
   mappingTemplates: MappingTemplateEntity[];
   flexCentres: FlexCentreEntity[];
   camPools: CamPoolEntity[];
+  meterReadings: MeterReadingEntity[];
+  chargeMaster?: ChargeMasterItem[];
   config: {
     leaseExpiryAlertDays: number;
     escalationAlertDays: number;
@@ -599,6 +639,56 @@ export interface RentRollDatabase {
     defaultPaymentDueDays: number;
     currency: string;
     asOfDate: string;
+    makerCheckerEnabled?: boolean;
+    makerCheckerLease?: boolean;
+    makerCheckerBilling?: boolean;
+    taxProfiles?: {
+      baseRentGst: number;
+      camGst: number;
+      isIfscTaxExempt: boolean;
+      electricityGst: number;
+      waterGst: number;
+      parkingGst: number;
+      notes?: string;
+    };
+    branding?: {
+      logoUrl?: string;
+      brandColor?: string;
+      portfolioDisplayName?: string;
+      invoiceHeaderMemo?: string;
+    };
+    domainConfig?: {
+      emailSenderDomain?: string;
+      isSenderDomainVerified?: boolean;
+      subdomain?: string;
+      customDomain?: string;
+      isCustomDomainActive?: boolean;
+    };
+    users?: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: "org_admin" | "finance_manager" | "property_manager" | "leasing_manager" | "occupant";
+      makerCheckerRole?: "maker" | "checker" | "approver";
+      status: "active" | "invited";
+    }>;
+    chargeTypesList?: Array<{
+      id: string;
+      name: string;
+      category: "rent" | "cam" | "utility" | "service" | "amenity";
+      enabled: boolean;
+      rate: number;
+      unit: "psf_month" | "kwh" | "kl" | "slot_month" | "fixed_month" | "per_seat";
+      isInclusion: boolean;
+      description?: string;
+    }>;
+    goLiveChecklist?: {
+      dataQualityVerified: boolean;
+      userTrainingCompleted: boolean;
+      testBillingRunCompleted: boolean;
+      parallelRunAgreed: boolean;
+      occupantCommunicationSent: boolean;
+    };
   };
 }
 
@@ -1861,6 +1951,141 @@ export function getInitialSeedDatabase(): RentRollDatabase {
     mappingTemplates,
     flexCentres,
     camPools,
+    meterReadings: [
+      {
+        id: "MTR-APX-01",
+        orgId: org.id,
+        propertyId: "PROP-APX",
+        propertyName: "Apex Business Tower",
+        spaceId: "SPACE-APX-401",
+        unitNumber: "Unit 401",
+        tenantId: "TEN-001",
+        tenantName: "Apex Financial Advisors LLP",
+        meterType: "electricity_grid",
+        meterNumber: "EB-MUM-401-A",
+        readingDate: "2026-09-30",
+        periodMonth: "2026-09",
+        previousReading: 48200,
+        currentReading: 51450,
+        multiplier: 1,
+        consumption: 3250,
+        tariffPerUnit: 11.50,
+        totalCharge: 37375,
+        status: "approved",
+        createdAt: "2026-09-30T10:00:00Z"
+      },
+      {
+        id: "MTR-APX-02",
+        orgId: org.id,
+        propertyId: "PROP-APX",
+        propertyName: "Apex Business Tower",
+        spaceId: "SPACE-APX-401",
+        unitNumber: "Unit 401",
+        tenantId: "TEN-001",
+        tenantName: "Apex Financial Advisors LLP",
+        meterType: "electricity_dg",
+        meterNumber: "DG-MUM-401-B",
+        readingDate: "2026-09-30",
+        periodMonth: "2026-09",
+        previousReading: 1240,
+        currentReading: 1420,
+        multiplier: 1,
+        consumption: 180,
+        tariffPerUnit: 32.00,
+        totalCharge: 5760,
+        status: "approved",
+        createdAt: "2026-09-30T10:00:00Z"
+      },
+      {
+        id: "MTR-MTP-01",
+        orgId: org.id,
+        propertyId: "PROP-MTP",
+        propertyName: "Meridian Tech Park",
+        spaceId: "SPACE-MTP-201",
+        unitNumber: "Suite 201",
+        tenantId: "TEN-002",
+        tenantName: "Innovate Corp Technologies",
+        meterType: "electricity_grid",
+        meterNumber: "EB-DEL-201-A",
+        readingDate: "2026-09-30",
+        periodMonth: "2026-09",
+        previousReading: 89100,
+        currentReading: 94600,
+        multiplier: 1,
+        consumption: 5500,
+        tariffPerUnit: 10.80,
+        totalCharge: 59400,
+        status: "approved",
+        createdAt: "2026-09-30T10:00:00Z"
+      }
+    ],
+    chargeMaster: [
+      {
+        id: "CHG-RENT",
+        chargeName: "Monthly Base Rent",
+        chargeCode: "BASE_RENT",
+        chargeType: "rent",
+        billingBasis: "psf_monthly",
+        defaultRate: 150,
+        gstRate: 18,
+        tdsApplicable: true,
+        tdsRate: 10,
+        hsnSacCode: "997212",
+        description: "Standard commercial office space lease base rental"
+      },
+      {
+        id: "CHG-CAM",
+        chargeName: "Common Area Maintenance (CAM)",
+        chargeCode: "CAM_PROVISIONAL",
+        chargeType: "cam",
+        billingBasis: "psf_monthly",
+        defaultRate: 28,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "998599",
+        description: "Comprehensive facility, security, HVAC, lifts and upkeep maintenance"
+      },
+      {
+        id: "CHG-EB-GRID",
+        chargeName: "Grid Power Consumption",
+        chargeCode: "EB_GRID",
+        chargeType: "utility",
+        billingBasis: "metered",
+        defaultRate: 11.50,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "998631",
+        description: "State utility HT electricity meter consumption charge"
+      },
+      {
+        id: "CHG-EB-DG",
+        chargeName: "DG Backup Power Consumption",
+        chargeCode: "EB_DG",
+        chargeType: "utility",
+        billingBasis: "metered",
+        defaultRate: 32.00,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "998631",
+        description: "Diesel Generator captive backup power supply charge per kWh"
+      },
+      {
+        id: "CHG-PARKING",
+        chargeName: "Reserved Basement Car Parking",
+        chargeCode: "PARKING_RESERVED",
+        chargeType: "parking",
+        billingBasis: "fixed_monthly",
+        defaultRate: 4500,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "996729",
+        description: "Allotted reserved basement / stilt vehicular parking slots"
+      }
+    ],
     config: {
       leaseExpiryAlertDays: 90,
       escalationAlertDays: 30,
@@ -1868,6 +2093,7 @@ export function getInitialSeedDatabase(): RentRollDatabase {
       defaultPaymentDueDays: 15,
       currency: "INR",
       asOfDate: "2026-09-25",
+      makerCheckerEnabled: true,
     }
   };
 }
@@ -1910,6 +2136,8 @@ export function getEmptyRentRollDb(): RentRollDatabase {
     mappingTemplates: [],
     flexCentres: [],
     camPools: [],
+    meterReadings: [],
+    chargeMaster: [],
     config: {
       leaseExpiryAlertDays: 90,
       escalationAlertDays: 30,
@@ -1978,9 +2206,20 @@ export function getRentRollDb(): RentRollDatabase {
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
     }
 
-    if (!parsed.camPools || parsed.camPools.length === 0) {
-      parsed.camPools = getInitialSeedDatabase().camPools;
+    if (!parsed.meterReadings || parsed.meterReadings.length === 0) {
+      parsed.meterReadings = getInitialSeedDatabase().meterReadings;
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+    }
+
+    if (!parsed.chargeMaster || parsed.chargeMaster.length === 0) {
+      parsed.chargeMaster = getInitialSeedDatabase().chargeMaster;
+      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+    }
+
+    if (!parsed.config) {
+      parsed.config = getInitialSeedDatabase().config;
+    } else if (parsed.config.makerCheckerEnabled === undefined) {
+      parsed.config.makerCheckerEnabled = true;
     }
 
     return parsed;

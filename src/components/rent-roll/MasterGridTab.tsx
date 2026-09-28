@@ -55,7 +55,7 @@ export interface EnrichedLease {
   lockInMonths: number;
   lockInEndDate: string;
   noticePeriodDays: number;
-  status: "draft" | "active" | "under_notice" | "expired" | "terminated" | "holdover";
+  status: "draft" | "pending_approval" | "active" | "under_notice" | "expired" | "terminated" | "holdover";
   renewalStatus: "not_due" | "approaching" | "under_negotiation" | "renewed" | "vacating";
   billingFrequency: string;
   billingDueDay: number;
@@ -69,6 +69,9 @@ export interface EnrichedLease {
   billingEntityName?: string;
   probabilityPct?: number;
   isDealPipeline?: boolean;
+  documents?: any[];
+  rentSteps?: any[];
+  charges?: any[];
   computed?: {
     depositShortfall: number;
     depositCompliancePct: number;
@@ -87,6 +90,7 @@ interface MasterGridTabProps {
   onOpenRecordPayment: (lease: EnrichedLease) => void;
   viewMode?: "current" | "contracted" | "forecast";
   onViewModeChange?: (mode: "current" | "contracted" | "forecast") => void;
+  onRefresh?: () => void;
 }
 
 export const MasterGridTab: React.FC<MasterGridTabProps> = ({
@@ -97,9 +101,47 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   onOpenRecordPayment,
   viewMode = "current",
   onViewModeChange,
+  onRefresh,
 }) => {
   const [sortField, setSortField] = useState<keyof EnrichedLease>("monthlyRent");
   const [sortAsc, setSortAsc] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  const handleApproveLease = async (leaseId: string) => {
+    setApprovingId(leaseId);
+    try {
+      const res = await fetch("/api/rent-roll/leases", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leaseId, action: "approve" })
+      });
+      if (res.ok && onRefresh) {
+        onRefresh();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectLease = async (leaseId: string) => {
+    setApprovingId(leaseId);
+    try {
+      const res = await fetch("/api/rent-roll/leases", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leaseId, action: "reject" })
+      });
+      if (res.ok && onRefresh) {
+        onRefresh();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const handleSort = (field: keyof EnrichedLease) => {
     if (sortField === field) {
@@ -127,6 +169,13 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
     switch (status) {
       case "active":
         return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200">Active</span>;
+      case "pending_approval":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            Pending Checker
+          </span>
+        );
       case "under_notice":
         return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">Under Notice</span>;
       case "expired":
@@ -455,6 +504,28 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center justify-center gap-1.5">
+                      {lease.status === "pending_approval" && (
+                        <div className="flex items-center gap-1 bg-amber-50 p-0.5 rounded-lg border border-amber-200">
+                          <button
+                            onClick={() => handleApproveLease(lease.id)}
+                            disabled={approvingId === lease.id}
+                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-extrabold flex items-center gap-0.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+                            title="Approve Lease (Checker Sign-off)"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => handleRejectLease(lease.id)}
+                            disabled={approvingId === lease.id}
+                            className="px-1.5 py-1 bg-gray-200 hover:bg-rose-100 text-gray-700 hover:text-rose-700 rounded text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                            title="Reject / Return to Draft"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
                       <button
                         onClick={() => onSelectLease(lease)}
                         className="p-1.5 hover:bg-gray-100 text-gray-600 hover:text-gray-900 rounded-lg transition-colors cursor-pointer"

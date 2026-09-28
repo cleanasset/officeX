@@ -1,0 +1,600 @@
+UAT Scenarios & Definition of Done
+Acceptance evidence required before sign-off
+10
+Success Metrics & KPIs
+Posthog / Metabase instrumentation
+11
+Risks & Mitigations
+Weekly risk review
+12
+Scalezix Development Rules
+Non-negotiable engineering rules
+13
+Appendix — Samples, Worked Examples, ERD, Glossary
+Test fixtures and known-answer tests
+14
+Priority Action Plan & Verdict
+What to do first; go-live conditions
+SECTION
+0
+How to Use, What Changed, Current State & Open Items
+Read first — conventions, merge decisions and items requiring written confirmation
+0.1 Conventions
+Requirement IDs follow RR-<AREA>-<NN> (e.g. RR-PAY-04) and UAT IDs follow UAT-<NN>. Use them as ticket keys and test-case keys so every line of code traces back to this document.
+Priority is MoSCoW: Must (blocks the phase exit), Should (required before general availability), Could (schedule if capacity allows).
+Phase refers to §7: PD Discovery & Design · P0 Foundation & Product Shell · P1 Lease & Rent Roll · P2 Billing · P3 Payments & Collections · P4 Managed Office, Flex & Multi-Client Operator · P5 Analytics, MIS & Ecosystem Integrations · P6 Intelligence (Year 2+).
+Terminology: "Subscriber" = the organisation that buys OFFICEX Rent Roll. "Client account" = a property owner whose portfolio a subscriber manages. "Occupant" = tenant, licensee or co-working member. "Contract" = the generic record for a lease, leave & licence, managed-office agreement, co-working membership, service-charge agreement or head lease.
+Amounts in INR (₹) and area in sq ft unless stated. Field names are snake_case and are the exact names for Drizzle schema definitions.
+0.2 What Changed in This Final Version
+All three earlier documents were reviewed line by line. Everything in them is retained unless listed below as resolved differently. The main addition is the requirement that OFFICEX Rent Roll is sold as a separate SaaS product to five customer segments without requiring the CAFM suite.
+Topic
+Earlier position(s)
+Final position in V2.0
+Product scope & packaging
+Both documents treated Rent Roll as a module inside the OFFICEX SaaS suite
+Standalone subscribable product with editions, add-ons and entitlements; CAFM, Leasing CRM and Marketplace are optional (§2)
+"Do not build as a standalone application" rule
+Spec V1.0 rule 1
+Retained and clarified: standalone product, single platform. No separate database or code base; no hard dependency on any other product having data (§2.4, §12)
+Customer types
+Owners / landlords, plus managed office and co-working billing
+Five segments incl. property management companies, FM companies and managed service providers managing multiple client owners (§2.1, §4.3)
+Multi-client operation
+Not covered
+Client accounts, billing entities, management mandates, owner statements, management-fee calculation, collections on behalf of owners (§4.3, §5.10)
+Flex operator cost side
+Not covered
+Head leases (payable contracts) and centre P&L so operators can manage what they pay as well as what they bill (§4.8, §5.9)
+FM companies billing charges only
+CAM covered as a charge type
+Charges-only contracts, CAM pool budgeting and year-end reconciliation; manual/CSV meter readings when CAFM is not subscribed (§5.11)
+Data model naming
+INS-001 used lease / unit; Spec V1.0 used Contract / Space / Building
+Final: contract, space, building (Spec V1.0 naming) with the INS-001 field-level detail; UI labels vary by contract type
+Invoice storage
+INS-001: invoices as rows in the unified tasks table (open item); Spec V1.0: Invoice as own entity
+Dedicated invoice / invoice_line / payment / payment_allocation tables; each invoice linked to a task for approval, dispute and follow-up workflow (OI-4)
+Phasing
+INS-001: P0–P4; Spec V1.0: Phases 1–6; Instruction Doc V1.0: Discovery, 0–5 plus Pilot & Rollout
+Unified PD + P0–P6 with pilot and rollout gates (§7). Deterministic forecast, P&L and MIS in P5; AI document extraction in P6 (Year 2+), consistent with OFFICEX AI positioning
+MVP boundary and seat billing
+Instruction Doc V1.0 put area and seat billing, invoicing and ageing in the MVP; V2.0 had seat billing in P4
+Core seat billing moved into P2 so managed office / co-working operators can subscribe at standalone launch (P3 exit); operator and head-lease features stay in P4
+Pipeline deals
+INS-001 / V2.0: status = pipeline on contract; Instruction Doc V1.0: separate Deal/Prospect entity
+Separate deal entity with compatible terms; converts to contract without re-keying; shared with Leasing CRM when subscribed (§4.7A)
+Tax configuration
+GST rate as field on charge
+Configurable tax profiles referenced by charges; finance/CA validation before production billing
+Import controls
+Validation and diff
+Adds data profiling, unmapped-column preservation, error-file download, exception queue and import versioning/void
+Performance & availability
+Different targets per document
+Stricter target retained in each case; validation of 10k rows ≤ 30 s; availability ≥ 99.5% (§6.5)
+Onboarding SOP
+Two different SOPs
+Merged 10-step SOP with profiling, UAT, parallel run, legacy freeze and 2–4 week hypercare (§8.3)
+Management sign-off
+Instruction Doc V1.0 listed 8 decisions for OFFICEX management
+Listed in §0.5 with a proposed answer for each
+Alert lead times
+Three different sets of defaults
+Expiry 12/6/3/1 months; escalation 90/60/30 days; overdue 1/7/30/60/90+ days; document expiry 90/30/7 days; all configurable (§5.15)
+Roles
+Two different role lists
+Merged into 12 roles incl. Client Principal (owner viewing a managed portfolio), Facility Manager, Occupant and Platform Support (§5.14)
+UAT and Definition of Done
+Spec V1.0: UAT-01 to UAT-40; Instruction Doc V1.0: separate Definition of Done
+UAT-01 to UAT-40 retained verbatim; UAT-41 to UAT-66 added; both Definitions of Done merged (§9)
+0.3 Current State on the Live Platform
+Observation (Aug 2026 review)
+Implication
+Addressed in
+All 5 seeded properties show identical base rent ₹185/sqft
+Placeholder data; no lease/rent schedule model underneath
+§4, R-30, P0
+/properties/rent-roll reachable but display-only
+Canonical schema and workflows needed
+§4, §5
+Tenant "Pay Now" not wired to Razorpay; no rent ledger
+Rent roll must generate invoices that payments settle
+RR-BIL, RR-PAY, P2–P3
+Collections page shows broker contracts, not receivables
+Collections driven by invoices and allocations
+RR-COL, P3
+Sidebar navigation ignores active workspace
+Standalone product needs navigation built from entitlements and role
+RR-ENT-04, P0
+Leasing CRM has no LOI flow
+Contracts must be creatable without CRM; CRM link is optional
+RR-INT-03, P5
+0.4 Open Items Requiring Written Confirmation
+FLAGGED — Scalezix to reply to each item: Confirmed / Change Request / Alternative Proposed
+Items OI-1 to OI-7 block sprint planning for the phases shown. OI-8 and OI-9 are OFFICEX decisions recorded here for transparency.
+#
+Open item
+OFFICEX position
+Needed by
+OI-1
+Scope under WO-OFFICEX-SCL-001. Standalone packaging (entitlements, self-serve sign-up, white-label, multi-client operator, flex engine) was not in the original work order
+Treat standalone packaging as a change request; Scalezix to estimate separately from P0–P3 core
+Before Sprint 1
+OI-2
+Commission auto-calculation engine (pending): contract activation writes brokerage entry to commission_ledger
+Critical infrastructure; DB trigger
+Before P5
+OI-3
+SaaS subscription billing module (pending). Now essential: standalone Rent Roll subscriptions need editions, usage metering and invoicing
+Must be ready before first paying standalone subscriber
+Before P2 exit
+OI-4
+Invoices as dedicated financial tables (invoice, invoice_line, payment, payment_allocation, adjustment_note) linked to tasks for workflow — a refinement of the TDD's unified tasks table
+Dedicated tables; tasks keep workflow only
+Before P2
+OI-5
+Accounting integration approach: Tally Prime XML/CSV export first; Zoho Books API next
+File-based export in P5
+Before P5
+OI-6
+Collections on behalf of third-party owners (PM/MSP segments): settle directly to the owner's account (e.g. Razorpay Route linked accounts or one gateway account per billing entity) rather than the operator holding client money
+Direct-to-owner settlement preferred; OFFICEX to confirm with CA/legal
+Before P4
+OI-7
+GST e-invoicing (IRN) for subscribers above the notified turnover threshold: GSP/IRP integration provider
+Configurable per billing entity; provider to be proposed by Scalezix
+Before P2 exit
+OI-8
+Edition pricing and pricing metric (OFFICEX commercial decision)
+Structure in §2.3; price points set by OFFICEX
+Before GA
+OI-9
+AI-assisted lease extraction
+Year 2+ (P6); human verification before any extracted term affects billing
+Acknowledge
+0.5 Management Decisions Required Before Full Build
+These eight decisions must be approved by OFFICEX management during Discovery (PD). A proposed answer, consistent with the rest of this document, is given for each.
+#
+Decision
+Proposed answer for approval
+MD-1
+Canonical definitions of area and occupancy
+Billing area = chargeable (super built-up); carpet disclosed. Occupancy by area (F-15), by seats (F-16) and economic (F-17); holding-over counts as occupied
+MD-2
+Contract and billing models supported at launch
+Area, seat (contracted/occupied/minimum), hybrid, fixed, charges-only, usage and bundled at P3 exit; revenue share and turnover rent in P5
+MD-3
+Billing and accounting ownership boundary
+Rent Roll is the billing and AR sub-ledger (invoices, receipts, allocations, ageing); the customer's accounting system remains the general ledger, fed by export/sync
+MD-4
+Tax configuration responsibility
+OFFICEX supplies standard tax profiles; each subscriber's finance team/CA validates and owns its configuration before production billing
+MD-5
+Payment gateway and ERP priorities
+Razorpay first (incl. linked-account settlement, OI-6); Tally Prime export, then Zoho Books, then others
+MD-6
+Portfolio / property permission model
+Organisation → client account → property scoping with roles per Table 5.14a; enforced by RLS
+MD-7
+Pilot customer / property selection
+3 OFFICEX Managed Services buildings (P1–P3); one flex operator (P2–P3); one property management company (P4)
+MD-8
+Official KPI and reporting definitions
+Formulas F-01 to F-25 and KPIs in §10 become the official OFFICEX metric definitions
+SECTION
+1
+Executive Summary
+Purpose, problems solved and value
+1.1 Purpose
+OFFICEX Rent Roll is a Lease-to-Cash SaaS product: the single source of truth for who occupies which space, on what contractual terms, what they have been billed, what they have paid and what is still owed — across conventional leases, managed offices and co-working. It is not a digital copy of an Excel rent roll; it is a transactional data model with a rent roll view on top.
+The Lease-to-Cash chain
+Property → Building → Space → Occupant → Contract → Rent Roll → Billing → Invoice → Payment → Allocation → Ageing → Forecast → MIS → (Year 2+) Intelligence
+It is sold on its own. A landlord, a property management company, an FM company, a managed service provider or a flex-workspace operator can subscribe to OFFICEX Rent Roll without buying the OFFICEX CAFM suite. When they later add CAFM, Leasing CRM or Marketplace, the same records are reused — no migration, no duplicate masters.
+1.2 Business Problems Solved
+Problem in Indian CRE and flex workspace today
+How OFFICEX Rent Roll solves it
+Rent rolls in inconsistent Excel files, one per building or per client owner
+Canonical schema, guided import, reusable mapping templates
+Escalations (e.g. 15% every 3 years) missed, leaking revenue
+Rent schedule engine with 90/60/30-day alerts and approval to apply
+Lock-in, notice and renewal deadlines noticed too late
+Dated clause model driving 365/180/90-day expiry pipeline and alerts
+Separate invoices for rent, CAM, electricity, water, parking — but no single view of what a tenant owes
+Multi-invoice billing with Pay All / Pay Selected / Pay Individual / partial payments and an allocation engine
+Managed office and co-working billed by seats, with CAM/electricity bundled — spreadsheet-driven and error-prone
+Seat-based billing models (contracted / occupied / minimum commitment / hybrid) with inclusion rules preventing double billing
+PM and FM companies manage many owners' portfolios with no clean owner-level statements
+Client accounts, billing entities, management mandates, owner statements and fee calculation
+Flex operators cannot see centre profitability (member revenue vs. head-lease rent)
+Head leases as payable contracts and centre P&L / break-even occupancy
+Investor, lender and board reporting takes days
+Month-end snapshots and automated MIS
+1.3 Value Proposition
+For subscribers: stop revenue leakage, collect faster, see expiry and vacancy risk a year ahead, close the month with reconciled figures, and give owners and occupants a professional branded experience.
+For OFFICEX: a low-friction entry product that any CRE or workspace business can buy on its own — widening the addressable market beyond CAFM buyers, creating the natural path to CAFM, Leasing CRM and Marketplace attachment, and building the normalised lease and payment dataset that the Year 2+ intelligence layer depends on.
+Consistency with OFFICEX sequencing: Managed Services clients remain the first users (their data is loaded by the OFFICEX team); standalone subscriptions follow once the product is proven on those portfolios. AI capabilities are presented as Year 2+ roadmap only.
+SECTION
+2
+Standalone SaaS Product
+Customer segments, packaging, independence from CAFM, and upgrade path
+2.1 Customer Segments
+Segment
+Who they are
+What they need from Rent Roll
+Segment-specific capabilities
+A. Property owner / landlord
+Individual owners, family offices, developers, REIT/fund SPVs holding office, IT park or retail assets
+Portfolio rent roll, billing, collections, expiry/escalation control, MIS
+Core product; multiple billing entities (one GSTIN per SPV/state)
+B. Property management company
+Firms managing leasing, billing and collections for many owners
+Separate books per owner, owner statements, fee calculation, owner self-service view
+Multi-client operator: client accounts, mandates, owner statements, collection on behalf of owner, white-label
+C. Facility management company
+IFM / FM firms billing CAM, utilities and service charges to occupants on behalf of owners or associations
+Charges-only billing, CAM budget vs. actual, year-end CAM reconciliation, meter-based utility billing
+Charges-only contracts, CAM pools, meter readings via manual/CSV/API (no CAFM needed)
+D. Managed service provider
+Firms (including OFFICEX Managed Services) operating portfolios end-to-end for corporate or institutional owners
+All of B and C, plus portfolio MIS for the client's management
+Multi-client operator, delegated access, client-branded MIS
+E. Managed office / co-working operator
+Flex operators running centres on leased or revenue-share buildings
+Seat/desk/cabin billing, pricing plans, contracted vs. occupied seats, member billing, centre P&L
+Flex & Seats engine, head leases (payable), centre P&L and break-even, member portal
+A single subscriber can combine roles — for example an operator that owns one building (A) and runs flex centres in leased buildings (E). The data model supports this without separate accounts.
+2.2 Standalone Principle
+Instruction to Scalezix
+Standalone product, single platform. OFFICEX Rent Roll must be fully usable by a subscriber that has no other OFFICEX product. It is built on the OFFICEX Platform Core (same database, same code base, same masters) and is switched on by entitlements. It must not depend on data, screens or workflows that belong to CAFM, Leasing CRM or Marketplace.
+Where Rent Roll benefits from another product (e.g. meter readings from CAFM), it must work equally well with a manual, CSV or API alternative, and pick up the other product's data automatically when that product is added.
+2.3 Editions & Add-ons (structure — price points per OI-8)
+Package
+Includes
+Typical segment
+Essentials
+Platform Core masters (organisation, users, properties, buildings, spaces, occupants); contract master; rent roll register and viewer; documents with versioning; escalation and expiry engine and alerts; import wizard; occupancy, WALE, rollover; exports; audit
+Small landlords starting from Excel
+Professional
+Essentials + billing centre, multi-invoice, GST invoices, credit/debit notes, payments (Pay All / Selected / Individual / partial), allocation, reconciliation, receipts, ageing, occupant billing portal, 12-month forecast, property P&L, automated monthly MIS, exception centre
+Landlords, FM companies
+Enterprise
+Professional + advanced approvals, custom roles, API access, SSO, custom domain, sandbox, priority support, data-retention controls
+Large portfolios, institutional owners
+Add-on: Multi-Client Operator
+Client accounts, management mandates, owner statements, fee calculation, collections on behalf of owners, client-principal portal, white-label per client
+PM companies, MSPs, FM companies
+Add-on: Flex & Seats
+Seat/desk/cabin inventory, pricing plan master, seat billing models, inclusions, head leases (payable), centre P&L, member portal branding
+Managed office / co-working operators
+Add-on: Integrations
+Tally/Zoho/QuickBooks exports and sync, e-invoicing, SFTP/ERP feeds, webhooks
+Any segment
+Pricing metric (recommended, for OFFICEX decision): area-based subscribers billed per sq ft of area under management per month; flex operators billed per seat of capacity per month; a minimum monthly fee per subscriber; add-ons as fixed monthly fees. Usage is metered nightly by the platform (RR-ENT-06) and billed by the SaaS subscription billing module (OI-3).
+2.4 Dependency Matrix — Rent Roll With and Without Other OFFICEX Products
+Capability
+Rent Roll standalone
+If CAFM / FM Ops also subscribed
+If Leasing CRM / Marketplace subscribed
+Properties, buildings, spaces, occupants, users
+Included (Platform Core masters come with Rent Roll)
+Same records reused by FM
+Same records reused
+Electricity / DG / water meter readings
+Manual entry, CSV upload or API
+Auto-sourced from FM energy readings
+—
+CAM actual costs for reconciliation
+Manual entry or import from accounting
+Auto-sourced from FM work orders and contracts
+Marketplace work-order costs included
+Occupant experience
+Occupant billing portal: invoices, pay, receipts, documents, disputes, notices
+Full Tenant Portal adds helpdesk, visitors, bookings
+—
+New contract creation
+Manual or import
+—
+LOI in Leasing CRM creates pipeline contract automatically
+Vacant space
+Vacancy list and export
+—
+Optional publishing to Marketplace listings
+MIS
+Revenue, billing, collections, ageing, occupancy, expiry, escalation, P&L sections
+Adds SLA, PPM, energy sections
+Adds leasing pipeline section
+Navigation
+Only Rent Roll menus visible
+FM menus added
+CRM / Marketplace menus added
+2.5 Upgrade and Downgrade Path
+Upgrade: adding CAFM, Leasing CRM or Marketplace is an entitlement change. No data migration, no re-import, no duplicate occupants or spaces.
+Downgrade or cancellation: subscriber can export all Rent Roll data (Excel/CSV bundle + documents) at any time (RR-ENT-08). Data from a removed product is retained read-only for the contractual retention period, then deleted per policy.
+Moving from Managed Services to self-operated: an OFFICEX Managed Services client can take over operation of its own Rent Roll subscription by transferring the organisation's ownership role; the history remains intact.
+2.6 White-Label & Branding
+PM companies, FM companies, MSPs and flex operators present Rent Roll to their own clients and occupants. Branding is therefore a product requirement, not a cosmetic one.
+Logo, colours and invoice/receipt/statement templates per subscriber, and per client account for the Multi-Client Operator add-on.
+Branded email sender (verified domain via Resend) and WhatsApp templates in the subscriber's name.
+Subdomain (subscriber.officex.pro) on all paid editions; custom domain on Enterprise.
+"Powered by OFFICEX" shown in the footer by default; removable on Enterprise.
+SECTION
+3
+Concept, Use Cases, Personas & Billing Models
+What a rent roll is, who uses it, and how it is billed
+3.1 What Is a Rent Roll?
+A rent roll is a schedule, stated as of a specific date, listing every leasable space in a property or portfolio with its occupant, contract dates, area or seats, current rent, recoveries, deposits and status. Vacant spaces appear too, so occupied + vacant always equals the leasable total. In facility management the same records drive service charges (CAM, DG backup, HVAC extended hours, parking). In managed offices and co-working, the rent roll is expressed in seats as well as area.
+Three properties guide the design:
+As-of-date: the rent roll for 31 March must be reproducible later, even after contracts change — hence versioning and month-end snapshots.
+Complete: every space appears exactly once; occupied + vacant = total leasable area (and seats, for flex centres).
+Reconciled: billed amounts equal the schedule for the period, with every difference explained (concession, proration, credit note).
+3.2 Primary Use Cases
+Use case
+Key questions answered
+Segments
+Phase
+Portfolio revenue overview
+Contracted monthly/annual revenue by property, client owner and component
+All
+P1
+Property occupancy and income
+Which spaces/seats are vacant, occupied, reserved? Income per floor/centre?
+All
+P1
+Expiry and rollover
+What income expires in each year? WALE? Which lock-ins and notice windows open?
+A, B, D, E
+P1
+Billing and collections
+What to invoice this month? Who owes what, how old?
+All
+P2–P3
+Seat-based billing
+How many seats are billable under each member contract this month?
+E
+P4
+Owner statements and fees
+What was collected for each owner, what fee is due, what is remitted?
+B, D
+P4
+CAM budgeting and reconciliation
+What CAM was billed vs. actually spent, and what true-up is due?
+C, D, A
+P4
+Centre profitability
+Member revenue minus head-lease rent and opex; break-even occupancy?
+E
+P4
+Forecasting, P&L and MIS
+12-month forecast, NOI and monthly MIS
+All
+P5
+Accounting integration
+Post invoices and receipts to Tally/Zoho without re-entry
+All
+P5
+3.3 Personas
+Persona
+Goals
+Key screens
+Organisation Admin
+Configure the subscription, users, roles, branding, charge types, numbering
+Settings, users, entitlements, templates
+Owner / Client Principal
+See own portfolio income, occupancy, arrears; approve key changes; receive statements
+Owner dashboard, statements, MIS
+Management
+Read portfolio performance
+Executive dashboard, P&L, MIS, forecast
+Asset Manager
+Maximise NOI, manage rollover, forecast
+Portfolio rent roll, WALE, rollover, forecast, P&L
+Property / Centre Manager
+Keep space and contract data accurate; occupant relations; seat counts
+Property rent roll, contract detail, occupancy, alerts
+Leasing Manager
+Fill vacancies, renew expiring contracts
+Vacancy list, expiry pipeline, deals
+Finance / AR Manager
+Bill correctly, collect on time, reconcile GST/TDS, remit to owners
+Billing centre, payment centre, allocation, ageing, owner statements
+Facility Manager
+Bill CAM/utility/service charges; manage CAM pools; no rent changes
+Charges, meter readings, CAM pools
+Occupant (tenant / member)
+See and pay invoices, download documents and receipts, raise disputes
+Occupant billing portal
+Auditor
+Verify figures and evidence
+Snapshots, audit trail, exports
+Admin / Operations (incl. OFFICEX Managed Services)
+Onboard data and fix quality issues
+Import wizard, mapping templates, data-quality queue
+3.4 Billing Models
+billing_model is a mandatory field on every contract. The billing engine selects its calculation rules from this field — no billing logic may be hard-coded by segment.
+Billing model
+Primary billing unit
+CAM / electricity
+Typical segment
+area
+₹ / sq ft × chargeable area
+Separate or included, per contract
+A, B, D
+seat
+₹ / seat, desk or cabin × billable seats
+Usually included in seat price; configurable
+E
+hybrid
+Base commitment + seat and/or usage components
+Configurable
+E
+fixed
+Fixed amount per period (e.g. antenna site, signage, kiosk)
+Configurable
+A, B
+revenue_share
+Minimum guarantee + % of turnover above breakpoint
+Separate
+A (retail)
+charges_only
+No rent; CAM, utilities and services only
+The whole contract
+C, D
+usage (charge level)
+Meter or usage × agreed rate (e.g. 5,800 kWh × ₹12)
+calc_basis = metered / per_use
+All
+bundled (charge level)
+Component included in the primary price
+is_included = true; never invoiced separately
+E, some A
+Every contract also has a direction: receivable (the subscriber bills the occupant — the default) or payable (the subscriber pays a landlord — a head lease held by a flex operator or MSP). Payable contracts share the same schedule, escalation and alert engine but generate payables and feed P&L instead of invoices.
+SECTION
+4
+Canonical Data Structure & Business Rules
+One schema absorbing every source format and serving every segment
+4.1 Design Principles
+Contract-centric and time-aware. Rent is never a single number on the contract; it is dated charge lines and rent steps, so the rent roll can be computed for any date.
+Contractual terms are separate from monthly transactions. Contracts and charges define obligations; invoices, payments and allocations record what happened.
+Components and models are configuration. Charge types, billing models, tax rates, escalation types and numbering schemes live in configuration tables — never in code.
+Area and seats are explicit. Every area carries its basis (chargeable vs. carpet) and unit; seat quantities carry their seat type.
+Multi-tenant and multi-client. Every row has org_id; managed-portfolio rows also carry client_account_id. Row Level Security enforces both.
+Source-traceable and versioned. Every record knows its import batch and source row; every change is versioned and audited.
+4.2 Entity Overview and Relationships
+Group
+Entities (tables)
+Key relationships
+Subscription & tenancy
+organization, org_subscription, entitlement, usage_meter
+organization 1→many subscriptions; entitlements derived from subscriptions
+Operator layer
+client_account, billing_entity, management_mandate
+organization 1→many client accounts; client account 1→many billing entities and properties; mandate links operator to client with fee rules
+Space masters
+property, building, space, seat_inventory, pricing_plan
+property 1→many buildings 1→many spaces; flex spaces 1→many seat inventory rows
+Parties
+occupant (tenant/member), contact
+occupant 1→many contracts; optional guarantor occupant
+Pipeline
+deal
+deal → occupant (prospect); converts to contract (deal_id)
+Contract
+contract, contract_space, contract_charge, rent_step, concession, deposit, deposit_transaction, contract_clause, contract_document
+contract 1→many of each; contract many↔many space via contract_space; parent_contract_id for renewals/amendments
+Billing & cash
+billing_run, invoice, invoice_line, adjustment_note, payment, payment_allocation, owner_statement, payable
+invoice 1→many lines; payment 1→many allocations to invoices; invoice 0..1→1 task for workflow
+Operations inputs
+meter, meter_reading, cam_pool, cam_pool_cost
+meter belongs to space; cam_pool belongs to property and year
+Configuration
+charge_type, tax_profile, billing_model rules, numbering, alert_rule
+Referenced by charges and invoices; nothing hard-coded
+Reporting
+rent_roll_snapshot, rent_roll_snapshot_line, alert, exception
+snapshot per org + period, frozen
+Onboarding
+import_batch, import_row, mapping_template
+batch 1→many rows; template reused per source layout
+4.3 Common Audit & System Fields (on every table)
+Field
+Type
+Example
+Req
+Description
+id
+uuid (PK)
+7f3c…a91e
+Y
+Server-generated (gen_random_uuid()).
+org_id
+uuid (FK)
+org_brightspace
+Y
+Subscriber organisation. RLS anchor.
+client_account_id
+uuid (FK)
+ca_sharma_trust
+Y*
+Owner whose portfolio this belongs to. *For single-owner subscribers a default "self" client account is created automatically, so the column is never null.
+external_ref
+text
+APX-L-0042
+Subscriber's own identifier; unique per org + table when present.
+source_system
+enum
+excel_import
+Y
+manual | excel_import | csv_import | api | leasing_crm | cafm | erp_sync | migration.
+import_batch_id
+uuid (FK)
+b-2026-09-0007
+Batch that created/last updated the record.
+data_quality_status / notes
+enum / jsonb
+passed / []
+Y
+passed | warning | failed | overridden, with rule codes.
+version
+integer
+3
+Y
+Optimistic locking; incremented on update.
+valid_from / valid_to
+timestamptz
+2026-04-01 / null
+Y
+Temporal validity for history-bearing tables.
+created_at/by, updated_at/by
+timestamptz / uuid
+2026-09-20 10:14 IST
+Y
+Stored UTC; displayed in user time zone (default Asia/Kolkata).
+deleted_at
+timestamptz
+null
+Soft delete only. Financial records and executed documents are never hard-deleted.
+4.4 Subscription, Operator & Billing-Entity Layer
+organization (Platform Core — additional fields)
+Field
+Type
+Example
+Req
+Description
+org_type
+enum[]
+[property_manager]
+Y
+owner | property_manager | facility_manager | managed_service_provider | flex_operator. Multiple allowed. Drives onboarding templates and default roles only — never hard-coded logic.
+reporting_currency
+char(3)
+INR
+Y
+For portfolio totals.
+financial_year_start
+smallint
+4
+Y
+Month number; April for Indian FY.
+branding
+jsonb
+{logo, colours, sender}
+White-label settings (§2.6).
+subdomain / custom_domain
+text
+brightspace / rent.brightspace.in
+Custom domain Enterprise only.
+org_subscription and entitlement
+Field
+Type
+Example
+Req
+Description
+product_code
+enum
+RR
+Y
+RR (Rent Roll) | CAFM | LEASING_CRM | MARKETPLACE | … Each subscribable independently.
+edition
+enum
+professional

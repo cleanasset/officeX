@@ -20,13 +20,16 @@ import {
   Bell,
   CheckCircle2,
   Plus,
-  BookOpen
+  BookOpen,
+  Zap,
+  Sliders
 } from "lucide-react";
 
 import { RentRollHeader } from "@/components/rent-roll/RentRollHeader";
 import { DashboardTab } from "@/components/rent-roll/DashboardTab";
 import { MasterGridTab, EnrichedLease } from "@/components/rent-roll/MasterGridTab";
 import { InvoicesTab, InvoiceItem } from "@/components/rent-roll/InvoicesTab";
+import { MeterReadingsTab } from "@/components/rent-roll/MeterReadingsTab";
 import { CollectionsTab, CollectionReceipt } from "@/components/rent-roll/CollectionsTab";
 import { AgingTab } from "@/components/rent-roll/AgingTab";
 import { EscalationsTab, EscalationRecord } from "@/components/rent-roll/EscalationsTab";
@@ -38,6 +41,8 @@ import { AuditTab, AuditLogItem } from "@/components/rent-roll/AuditTab";
 import { DictionaryTab } from "@/components/rent-roll/DictionaryTab";
 import { FlexCentreTab } from "@/components/rent-roll/FlexCentreTab";
 import { CamPoolsTab } from "@/components/rent-roll/CamPoolsTab";
+
+import { RentRollConfigWizardModal } from "@/components/rent-roll/RentRollConfigWizardModal";
 
 import { LeaseDetailDrawer } from "@/components/rent-roll/LeaseDetailDrawer";
 import { TaxInvoiceDrawer } from "@/components/rent-roll/TaxInvoiceDrawer";
@@ -170,6 +175,7 @@ function RentRollPageInner() {
   const [isBillingRunModalOpen, setIsBillingRunModalOpen] = useState<boolean>(false);
   const [isAdjustmentNoteOpen, setIsAdjustmentNoteOpen] = useState<boolean>(false);
   const [selectedInvoiceForAdjustment, setSelectedInvoiceForAdjustment] = useState<InvoiceItem | null>(null);
+  const [isConfigWizardOpen, setIsConfigWizardOpen] = useState<boolean>(false);
 
   // Logged-in Landlord identity state
   const [userInfo, setUserInfo] = useState({
@@ -419,6 +425,7 @@ function RentRollPageInner() {
     { id: "dashboard", label: "Executive Dashboard", icon: Building2 },
     { id: "rentroll", label: "Active Rent Roll Master", icon: TrendingUp },
     { id: "invoices", label: "Monthly Billing & Invoices", icon: Receipt },
+    { id: "meter-readings", label: "Meter Readings & Utilities", icon: Zap },
     { id: "collections", label: "Collections & Receipts", icon: FileCheck2 },
     { id: "aging", label: "Arrears & Aging Ledger", icon: Clock },
     { id: "escalations", label: "Escalation & Expiries", icon: ArrowUpRight },
@@ -457,6 +464,7 @@ function RentRollPageInner() {
         onSelectBillingEntity={setSelectedBillingEntity}
         onOpenOwnerStatements={() => setIsOwnerStatementsOpen(true)}
         onOpenDeals={() => setIsDealsModalOpen(true)}
+        onOpenConfigWizard={() => setIsConfigWizardOpen(true)}
         onOpenAddLease={() => setIsAddLeaseOpen(true)}
         onOpenRecordPayment={() => {
           setPreSelectedInvoiceForPayment(null);
@@ -547,6 +555,7 @@ function RentRollPageInner() {
               setPreSelectedInvoiceForPayment(inv || { leaseId: l.id, balanceDue: l.totalOutstanding, netPayable: l.totalMonthlyGross });
               setIsRecordPaymentOpen(true);
             }}
+            onRefresh={fetchAllData}
           />
         )}
 
@@ -563,6 +572,13 @@ function RentRollPageInner() {
               setSelectedInvoiceForAdjustment(inv);
               setIsAdjustmentNoteOpen(true);
             }}
+          />
+        )}
+
+        {activeTab === "meter-readings" && (
+          <MeterReadingsTab
+            properties={properties}
+            selectedProperty={selectedProperty}
           />
         )}
 
@@ -806,6 +822,17 @@ function RentRollPageInner() {
           setIsAdjustmentNoteOpen(false);
           setSelectedInvoiceForAdjustment(null);
         }}
+        onSuccess={() => {
+          fetchAllData();
+          setIsAdjustmentNoteOpen(false);
+          setSelectedInvoiceForAdjustment(null);
+        }}
+      />
+
+      {/* Dedicated 4-Section Rent Roll Setup Wizard (RR-ONB-01) */}
+      <RentRollConfigWizardModal
+        isOpen={isConfigWizardOpen}
+        onClose={() => setIsConfigWizardOpen(false)}
         onSuccess={fetchAllData}
       />
     </div>

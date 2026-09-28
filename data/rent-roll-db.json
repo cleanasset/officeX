@@ -1,7 +1,7 @@
 {
   "organization": {
     "id": "org-officex-001",
-    "name": "Apex Asset Management India Pvt Ltd",
+    "name": "Apex Commercial Realty Pvt Ltd",
     "pan": "AAFCO1234F",
     "gstin": "27AAFCO1234F1Z5",
     "address": "Level 14, Tower 2, One International Center, Senapati Bapat Marg, Prabhadevi",
@@ -1675,6 +1675,31 @@
   ],
   "auditLogs": [
     {
+      "id": "AUD-1790557390269-828",
+      "entityName": "BillingEntity",
+      "action": "CREATE_BILLING_ENTITY",
+      "newValues": {
+        "legalName": "Apex Test SPV",
+        "gstin": "27AAFCO1234F1Z5",
+        "invoicePrefix": "TST-INV"
+      },
+      "changedBy": "Org Finance Admin",
+      "timestamp": "2026-09-28T01:03:10.269Z"
+    },
+    {
+      "id": "AUD-1790557381803-711",
+      "entityName": "OrganizationConfig",
+      "action": "UPDATE_ONBOARDING_CONFIG",
+      "newValues": {
+        "orgName": "Apex Commercial Realty Pvt Ltd",
+        "billingEntitiesCount": 3,
+        "hasBranding": true,
+        "hasTaxProfiles": true
+      },
+      "changedBy": "Org Super Admin",
+      "timestamp": "2026-09-28T01:03:01.803Z"
+    },
+    {
       "id": "AUD-001",
       "leaseId": "LEASE-APX-01",
       "entityName": "Escalation",
@@ -1914,6 +1939,159 @@
     "defaultGstPct": 18,
     "defaultPaymentDueDays": 15,
     "currency": "INR",
-    "asOfDate": "2026-09-25"
-  }
+    "asOfDate": "2026-09-25",
+    "makerCheckerEnabled": true,
+    "taxProfiles": {
+      "baseRentGst": 18,
+      "camGst": 18,
+      "isIfscTaxExempt": false,
+      "electricityGst": 18,
+      "waterGst": 18,
+      "parkingGst": 18
+    },
+    "branding": {
+      "portfolioDisplayName": "Apex Commercial Towers",
+      "brandColor": "#0F8B7D"
+    },
+    "domainConfig": {
+      "emailSenderDomain": "rent@apexassets.in",
+      "isSenderDomainVerified": true,
+      "subdomain": "apexassets"
+    }
+  },
+  "meterReadings": [
+    {
+      "id": "MTR-APX-01",
+      "orgId": "org-officex-001",
+      "propertyId": "PROP-APX",
+      "propertyName": "Apex Business Tower",
+      "spaceId": "SPACE-APX-401",
+      "unitNumber": "Unit 401",
+      "tenantId": "TEN-001",
+      "tenantName": "Apex Financial Advisors LLP",
+      "meterType": "electricity_grid",
+      "meterNumber": "EB-MUM-401-A",
+      "readingDate": "2026-09-30",
+      "periodMonth": "2026-09",
+      "previousReading": 48200,
+      "currentReading": 51450,
+      "multiplier": 1,
+      "consumption": 3250,
+      "tariffPerUnit": 11.5,
+      "totalCharge": 37375,
+      "status": "approved",
+      "createdAt": "2026-09-30T10:00:00Z"
+    },
+    {
+      "id": "MTR-APX-02",
+      "orgId": "org-officex-001",
+      "propertyId": "PROP-APX",
+      "propertyName": "Apex Business Tower",
+      "spaceId": "SPACE-APX-401",
+      "unitNumber": "Unit 401",
+      "tenantId": "TEN-001",
+      "tenantName": "Apex Financial Advisors LLP",
+      "meterType": "electricity_dg",
+      "meterNumber": "DG-MUM-401-B",
+      "readingDate": "2026-09-30",
+      "periodMonth": "2026-09",
+      "previousReading": 1240,
+      "currentReading": 1420,
+      "multiplier": 1,
+      "consumption": 180,
+      "tariffPerUnit": 32,
+      "totalCharge": 5760,
+      "status": "approved",
+      "createdAt": "2026-09-30T10:00:00Z"
+    },
+    {
+      "id": "MTR-MTP-01",
+      "orgId": "org-officex-001",
+      "propertyId": "PROP-MTP",
+      "propertyName": "Meridian Tech Park",
+      "spaceId": "SPACE-MTP-201",
+      "unitNumber": "Suite 201",
+      "tenantId": "TEN-002",
+      "tenantName": "Innovate Corp Technologies",
+      "meterType": "electricity_grid",
+      "meterNumber": "EB-DEL-201-A",
+      "readingDate": "2026-09-30",
+      "periodMonth": "2026-09",
+      "previousReading": 89100,
+      "currentReading": 94600,
+      "multiplier": 1,
+      "consumption": 5500,
+      "tariffPerUnit": 10.8,
+      "totalCharge": 59400,
+      "status": "approved",
+      "createdAt": "2026-09-30T10:00:00Z"
+    }
+  ],
+  "chargeMaster": [
+    {
+      "id": "CHG-RENT",
+      "chargeName": "Monthly Base Rent",
+      "chargeCode": "BASE_RENT",
+      "chargeType": "rent",
+      "billingBasis": "psf_monthly",
+      "defaultRate": 150,
+      "gstRate": 18,
+      "tdsApplicable": true,
+      "tdsRate": 10,
+      "hsnSacCode": "997212",
+      "description": "Standard commercial office space lease base rental"
+    },
+    {
+      "id": "CHG-CAM",
+      "chargeName": "Common Area Maintenance (CAM)",
+      "chargeCode": "CAM_PROVISIONAL",
+      "chargeType": "cam",
+      "billingBasis": "psf_monthly",
+      "defaultRate": 28,
+      "gstRate": 18,
+      "tdsApplicable": false,
+      "tdsRate": 0,
+      "hsnSacCode": "998599",
+      "description": "Comprehensive facility, security, HVAC, lifts and upkeep maintenance"
+    },
+    {
+      "id": "CHG-EB-GRID",
+      "chargeName": "Grid Power Consumption",
+      "chargeCode": "EB_GRID",
+      "chargeType": "utility",
+      "billingBasis": "metered",
+      "defaultRate": 11.5,
+      "gstRate": 18,
+      "tdsApplicable": false,
+      "tdsRate": 0,
+      "hsnSacCode": "998631",
+      "description": "State utility HT electricity meter consumption charge"
+    },
+    {
+      "id": "CHG-EB-DG",
+      "chargeName": "DG Backup Power Consumption",
+      "chargeCode": "EB_DG",
+      "chargeType": "utility",
+      "billingBasis": "metered",
+      "defaultRate": 32,
+      "gstRate": 18,
+      "tdsApplicable": false,
+      "tdsRate": 0,
+      "hsnSacCode": "998631",
+      "description": "Diesel Generator captive backup power supply charge per kWh"
+    },
+    {
+      "id": "CHG-PARKING",
+      "chargeName": "Reserved Basement Car Parking",
+      "chargeCode": "PARKING_RESERVED",
+      "chargeType": "parking",
+      "billingBasis": "fixed_monthly",
+      "defaultRate": 4500,
+      "gstRate": 18,
+      "tdsApplicable": false,
+      "tdsRate": 0,
+      "hsnSacCode": "996729",
+      "description": "Allotted reserved basement / stilt vehicular parking slots"
+    }
+  ]
 }

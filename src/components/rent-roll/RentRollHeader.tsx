@@ -27,6 +27,7 @@ import {
   ExternalLink,
   MoreHorizontal,
   ChevronDown,
+  Sliders,
 } from "lucide-react";
 
 interface RentRollHeaderProps {
@@ -78,6 +79,7 @@ interface RentRollHeaderProps {
   // Commercial Operations Triggers (Section 7, Section 11)
   onOpenOwnerStatements?: () => void;
   onOpenDeals?: () => void;
+  onOpenConfigWizard?: () => void;
 }
 
 export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
@@ -113,6 +115,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   onSelectBillingEntity,
   onOpenOwnerStatements,
   onOpenDeals,
+  onOpenConfigWizard,
 }) => {
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -251,6 +254,16 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                 <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Actions
                 </div>
+
+                {onOpenConfigWizard && (
+                  <button
+                    onClick={() => { onOpenConfigWizard(); setIsActionsOpen(false); }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-[#0F8B7D] rounded-lg font-bold flex items-center gap-2 cursor-pointer border-b border-gray-100"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-[#0F8B7D]" />
+                    Setup Wizard (4 Sections)
+                  </button>
+                )}
 
                 {onOpenImportCsv && (
                   <button

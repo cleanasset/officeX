@@ -1,0 +1,320 @@
+13.1 Sample Rent Roll — Area-Based Contracts (as of 30-Sep-2026)
+Client account "self" (landlord segment A). Properties: Apex Business Tower (BKC, Mumbai), Meridian Tech Park (Gurugram), Nexus Hub (Noida), a GIFT City IFSC suite. Company names are fictional. Area in sq ft chargeable; rates per sq ft per month.
+#
+Property
+Space
+Occupant / industry
+Area
+Base rate
+Monthly base rent
+CAM rate
+Start
+Expiry
+Lock-in end
+Escalation
+SD (mo)
+Status
+Flags / alerts
+1
+APX-BKC
+APX-05A
+TechNova Solutions Pvt Ltd
+IT services
+8,500
+₹285.20
+₹24,24,200
+₹28
+01-Apr-23
+31-Mar-32
+31-Mar-26
+15% / 3 yrs
+6
+Active
+Deposit top-up due
+2
+APX-BKC
+APX-07
+Global Logistics India Ltd
+Logistics
+12,000
+₹290
+₹34,80,000
+₹28
+01-Jan-27
+31-Dec-35
+31-Dec-29
+15% / 3 yrs
+6
+Pipeline 60%
+LOI pending
+3
+APX-BKC
+APX-08
+Apex Financial Advisors LLP
+BFSI
+10,200
+₹275
+₹28,05,000
+₹28
+15-Jul-21
+14-Jul-27
+14-Jul-24
+5% p.a.
+10
+Active
+Expiry < 12 m; critical
+4
+APX-BKC
+APX-09
+— Vacant —
+10,200
+₹290
+—
+₹28
+—
+—
+—
+—
+—
+Vacant
+Asking ₹290
+5
+MTP-GGN
+MTP-T1-03
+Innovate Corp Technologies Pvt Ltd
+IT services
+22,000
+₹95
+₹20,90,000
+₹14
+01-Nov-23
+31-Oct-32
+31-Oct-26
+15% / 3 yrs
+6
+Active
+Escalation 01-Nov-26
+6
+MTP-GGN
+MTP-T1-04
+NextGen Retail Services Pvt Ltd
+Retail tech
+22,000
+₹92
+₹20,24,000
+₹14
+01-Jan-20
+31-Dec-25
+31-Dec-22
+15% / 3 yrs
+6
+Holding over
+Arrears 62 days
+7
+MTP-GGN
+MTP-T2-01
+Zenith Pharma Research Pvt Ltd
+Pharma
+18,500
+₹98
+₹18,13,000
+₹14
+01-Jun-24
+31-May-33
+31-May-27
+4.5% p.a.
+6
+Active
+3 m rent-free (2024)
+8
+MTP-GGN
+MTP-T2-02
+— Reserved —
+18,500
+₹100
+—
+₹14
+—
+—
+—
+—
+—
+Reserved
+Asking ₹100
+9
+NXH-NDA
+NXH-G01
+FreshMart Retail Pvt Ltd
+Grocery retail
+2,400
+₹160
+₹3,84,000
+₹18
+01-Aug-26
+31-Jul-35
+31-Jul-29
+5% p.a.
+6
+Active
+MG + 8% turnover
+10
+NXH-NDA
+NXH-03
+Orbit Edutech Pvt Ltd
+Education
+15,000
+₹72
+₹10,80,000
+₹12
+01-Mar-22
+28-Feb-27
+28-Feb-25
+5% p.a.
+6
+Notice served
+Exit 28-Feb-27
+11
+NXH-NDA
+NXH-04
+Kestrel Engineering Services Ltd
+Engineering
+15,000
+₹70
+₹10,50,000
+₹12
+01-Apr-25
+31-Mar-34
+31-Mar-28
+15% / 3 yrs
+6
+Active
+—
+12
+NXH-NDA
+NXH-05
+— Vacant —
+15,000
+₹75
+—
+₹12
+—
+—
+—
+—
+—
+Vacant
+Asking ₹75
+13
+GFT-IFSC
+GFT-11A
+Aurum Global Fund Services IFSC Pvt Ltd
+Fund admin
+6,000
+$1.25
+USD 7,500
+$0.15
+01-Oct-25
+30-Sept-31
+30-Sept-28
+5% p.a.
+3
+Active
+USD; GST 0% (IFSC)
+Totals (USD at illustrative ₹84): total area 1,75,300 sq ft; occupied 1,19,600 sq ft; current monthly base rent ₹1,43,00,200 (annualised ₹17,16,02,400); pipeline 12,000 sq ft.
+13.2 Sample Rent Roll — Mixed Area, Managed Office and Flex (carried over from Instruction Document V1.0)
+Illustrative portfolio mixing conventional leases and seat-based contracts. CAM and electricity are included in all seat prices (no separate CAM/electricity invoices — R-40). DEAL-021 is a pipeline deal (§4.7A), not a contract; LEASE-009 is a future contract excluded from billing until 01-Dec-2026.
+Property
+Building
+Space
+Occupant
+Contract
+Billing model
+Area / seats
+Rate
+Monthly base
+CAM
+Escal.
+Next esc.
+Expiry
+Status
+PROP-001
+Orion Tower
+8A
+ABC Technologies
+LEASE-001
+Area
+18,500 sqft
+₹125/sqft
+₹23,12,500
+CAM ₹15/sqft
+15%
+01-Feb-27
+31-Jan-31
+Active
+PROP-001
+Orion Tower
+9A
+Delta Consulting
+LEASE-002
+Area
+12,000 sqft
+₹110/sqft
+₹13,20,000
+CAM ₹14/sqft
+10%
+01-Apr-27
+31-Mar-30
+Active
+PROP-001
+Orion Tower
+10A
+Nova Systems
+LEASE-003
+Area
+9,500 sqft
+₹105/sqft
+₹9,97,500
+CAM ₹14/sqft
+12%
+01-Jun-27
+31-May-31
+Active
+PROP-001
+Orion Tower
+11A
+— Vacant —
+—
+—
+15,000 sqft
+—
+—
+—
+—
+—
+—
+Vacant
+PROP-002
+Tech Park A
+3F-01
+Zenith Labs
+LEASE-004
+Seat (managed)
+100 seats
+₹18,000/seat
+₹18,00,000
+Included
+10%
+01-Jan-27
+31-Dec-28
+Active
+PROP-002
+Tech Park A
+3F-02
+Vertex AI
+LEASE-005
+Seat (managed)
+60 seats
+₹19,500/seat
+₹11,70,000
+Included
+8%

@@ -286,6 +286,7 @@ export async function POST(req: Request) {
 
     const newLeaseId = `LEASE-${Math.floor(100 + Math.random() * 900)}`;
     const generatedLeaseCode = leaseCode || `LSE-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const initialStatus = body.status || (db.config.makerCheckerEnabled ? "pending_approval" : "active");
 
     const newLease: LeaseEntity = {
       id: newLeaseId,
@@ -325,7 +326,7 @@ export async function POST(req: Request) {
       lockInMonths: Number(lockInMonths || 36),
       lockInEndDate: summary.lockInEndDate.toISOString().split('T')[0],
       noticePeriodDays: Number(noticePeriodDays || 90),
-      status: "active",
+      status: initialStatus as any,
       renewalStatus: "not_due",
       billingFrequency: billingFrequency || "monthly",
       billingDueDay: Number(billingDueDay || 5),
@@ -334,6 +335,22 @@ export async function POST(req: Request) {
       brokerName: brokerName || "Direct / Internal",
       brokeragePaid: 0,
       notes: notes || "Standard Commercial Agreement",
+      documents: [
+        {
+          id: `DOC-${Date.now()}-1`,
+          contractId: newLeaseId,
+          documentType: "agreement",
+          title: "Executed Commercial Lease Agreement",
+          fileName: `${generatedLeaseCode}_Executed_Lease.pdf`,
+          fileUrl: "/sample-agreements/lease-signed.pdf",
+          versionNumber: 1,
+          status: initialStatus === "active" ? "executed" : "under_review",
+          isExecuted: initialStatus === "active",
+          executionDate: startDate,
+          uploadedBy: "Leasing Manager",
+          createdAt: new Date().toISOString()
+        }
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -359,9 +376,9 @@ export async function POST(req: Request) {
     recordAuditLog({
       leaseId: newLease.id,
       entityName: "Lease",
-      action: "CREATE_LEASE",
-      newValues: { leaseCode: newLease.leaseCode, tenantName: newLease.tenantName, monthlyRent: newLease.monthlyRent },
-      changedBy: "Property Manager"
+      action: initialStatus === "pending_approval" ? "SUBMIT_FOR_APPROVAL" : "CREATE_LEASE",
+      newValues: { leaseCode: newLease.leaseCode, tenantName: newLease.tenantName, monthlyRent: newLease.monthlyRent, status: initialStatus },
+      changedBy: "Leasing Manager (Maker)"
     });
 
     saveRentRollDb(db);
@@ -369,6 +386,99 @@ export async function POST(req: Request) {
     return NextResponse.json(newLease, { status: 201 });
   } catch (error: any) {
     console.error("POST /api/rent-roll/leases error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// PATCH: Approve / Reject Lease (Maker-Checker RR-REG-05) or Add Document Vault files
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { leaseId, action, reviewerName = "Finance Director (Checker)", document } = body;
+
+    if (!leaseId) {
+      return NextResponse.json({ error: "leaseId is required" }, { status: 400 });
+    }
+
+    const db = getRentRollDb();
+    const lease = db.leases.find(l => l.id === leaseId);
+    if (!lease) {
+      return NextResponse.json({ error: "Lease not found" }, { status: 404 });
+    }
+
+    if (action === "approve") {
+      lease.status = "active";
+      lease.updatedAt = new Date().toISOString();
+
+      recordAuditLog({
+        leaseId: lease.id,
+        entityName: "Lease",
+        action: "MAKER_CHECKER_APPROVE",
+        oldValues: { status: "pending_approval" },
+        newValues: { status: "active" },
+        changedBy: reviewerName
+      });
+
+      db.alerts.unshift({
+        id: `ALT-${Date.now()}`,
+        orgId: db.organization.id,
+        propertyId: lease.propertyId,
+        alertType: "lease_approved",
+        title: `Lease Approved: ${lease.tenantName}`,
+        message: `Contract ${lease.leaseCode} has been verified and committed to production by ${reviewerName}.`,
+        entityType: "lease",
+        entityId: lease.id,
+        severity: "info",
+        isRead: false,
+        triggerDate: new Date().toISOString().split("T")[0],
+        createdAt: new Date().toISOString()
+      });
+
+      saveRentRollDb(db);
+      return NextResponse.json({ success: true, message: "Lease approved and active", lease });
+    }
+
+    if (action === "reject") {
+      lease.status = "draft";
+      lease.updatedAt = new Date().toISOString();
+
+      recordAuditLog({
+        leaseId: lease.id,
+        entityName: "Lease",
+        action: "MAKER_CHECKER_REJECT",
+        oldValues: { status: "pending_approval" },
+        newValues: { status: "draft", reason: body.reason || "Returned for revision" },
+        changedBy: reviewerName
+      });
+
+      saveRentRollDb(db);
+      return NextResponse.json({ success: true, message: "Lease returned to draft", lease });
+    }
+
+    if (action === "add_document") {
+      if (!lease.documents) lease.documents = [];
+      const newDoc = {
+        id: `DOC-${Date.now()}`,
+        contractId: lease.id,
+        documentType: document?.documentType || "amendment",
+        title: document?.title || "Contract Document",
+        fileName: document?.fileName || "Document.pdf",
+        fileUrl: document?.fileUrl || "/sample-agreements/contract-doc.pdf",
+        versionNumber: (lease.documents.length || 0) + 1,
+        status: "executed",
+        isExecuted: true,
+        executionDate: document?.executionDate || new Date().toISOString().split("T")[0],
+        uploadedBy: reviewerName,
+        createdAt: new Date().toISOString()
+      };
+      lease.documents.push(newDoc as any);
+      saveRentRollDb(db);
+      return NextResponse.json({ success: true, message: "Document added to vault", document: newDoc });
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (error: any) {
+    console.error("PATCH /api/rent-roll/leases error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
