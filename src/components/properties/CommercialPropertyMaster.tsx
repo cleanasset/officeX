@@ -76,7 +76,7 @@ export default function CommercialPropertyMaster() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successProperty, setSuccessProperty] = useState<any | null>(null);
 
-  // ──── 1. ASSET MASTER (Property Entity - §4.5) ────
+  // ──── 1. ASSET MASTER (Property Entity - Standard Model) ────
   const [assetName, setAssetName] = useState("");
   const [propertyCode, setPropertyCode] = useState("");
   const [propertyType, setPropertyType] = useState<string>("office");
@@ -89,7 +89,7 @@ export default function CommercialPropertyMaster() {
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
   const [operationalStatus, setOperationalStatus] = useState<"operational" | "under_fitout" | "under_construction">("operational");
 
-  // SPV / Billing Entity Link (§4.5 default_billing_entity_id)
+  // SPV / Billing Entity Link (default billing entity)
   const [spvs, setSpvs] = useState<BillingSpvOption[]>([]);
   const [selectedSpvId, setSelectedSpvId] = useState<string>("");
   const [customSpvName, setCustomSpvName] = useState("");
@@ -112,15 +112,15 @@ export default function CommercialPropertyMaster() {
     }
   };
 
-  // ──── 2. BUILDING & TOWERS MASTER (§4.5 Building) ────
+  // ──── 2. BUILDING & TOWERS MASTER (Building Master) ────
   const [towers, setTowers] = useState<TowerBuilding[]>([
     {
       id: "T1",
-      name: "Tower 1 (Main Tower)",
+      name: "Tower 1",
       code: "T1",
-      floorsAbove: 12,
-      floorsBelow: 2,
-      chargeableArea: 120000
+      floorsAbove: 1,
+      floorsBelow: 0,
+      chargeableArea: 0
     }
   ]);
 
@@ -130,9 +130,9 @@ export default function CommercialPropertyMaster() {
       id: `T${nextIdx}`,
       name: `Tower ${nextIdx}`,
       code: `T${nextIdx}`,
-      floorsAbove: 10,
-      floorsBelow: 2,
-      chargeableArea: 80000
+      floorsAbove: 1,
+      floorsBelow: 0,
+      chargeableArea: 0
     };
     setTowers([...towers, newTower]);
   };
@@ -145,78 +145,70 @@ export default function CommercialPropertyMaster() {
     setTowers(towers.filter(t => t.id !== id));
   };
 
-  // ──── 3. LEASABLE SPACE & INVENTORY (§4.5 Space) ────
-  const [totalChargeableArea, setTotalChargeableArea] = useState<number>(120000);
-  const [totalCarpetArea, setTotalCarpetArea] = useState<number>(84000);
-  const [targetRentPsf, setTargetRentPsf] = useState<number>(150);
-  const [standardCamPsf, setStandardCamPsf] = useState<number>(22);
+  // ──── 3. LEASABLE SPACE & INVENTORY (Space Master) ────
+  const [totalChargeableArea, setTotalChargeableArea] = useState<number>(0);
+  const [totalCarpetArea, setTotalCarpetArea] = useState<number>(0);
+  const [targetRentPsf, setTargetRentPsf] = useState<number>(0);
+  const [standardCamPsf, setStandardCamPsf] = useState<number>(0);
 
-  // Initial unit breakdown
-  const [units, setUnits] = useState<LeasableSpaceUnit[]>([
-    {
-      id: "u-1",
-      suiteNumber: "Floor 1 - Wing A",
-      buildingCode: "T1",
-      floorNumber: 1,
-      spaceType: "office",
-      chargeableArea: 10000,
-      carpetArea: 7000,
-      askingRate: 150,
-      fitoutCondition: "warm_shell",
-      status: "vacant"
-    },
-    {
-      id: "u-2",
-      suiteNumber: "Floor 2 - Whole Floor",
-      buildingCode: "T1",
-      floorNumber: 2,
-      spaceType: "office",
-      chargeableArea: 10000,
-      carpetArea: 7000,
-      askingRate: 150,
-      fitoutCondition: "fully_fitted",
-      status: "vacant"
-    }
-  ]);
+  // Initial unit breakdown starts completely empty (no mock data)
+  const [units, setUnits] = useState<LeasableSpaceUnit[]>([]);
 
   const [newUnit, setNewUnit] = useState<Partial<LeasableSpaceUnit>>({
     suiteNumber: "",
     buildingCode: "T1",
-    floorNumber: 3,
+    floorNumber: 1,
     spaceType: "office",
-    chargeableArea: 10000,
-    carpetArea: 7000,
-    askingRate: 150,
+    chargeableArea: 0,
+    carpetArea: 0,
+    askingRate: 0,
     fitoutCondition: "warm_shell",
     status: "vacant"
   });
 
   const handleAddUnit = () => {
-    if (!newUnit.suiteNumber) {
-      alert("Please specify the Suite / Floor unit identifier.");
+    if (!newUnit.suiteNumber || !newUnit.suiteNumber.trim()) {
+      alert("Please specify the Suite / Floor unit identifier (e.g. Suite 101 or Floor 2).");
       return;
     }
+    const unitArea = Number(newUnit.chargeableArea) || 0;
+    if (unitArea <= 0) {
+      alert("Please enter the leasable area (sq. ft.) for this unit.");
+      return;
+    }
+
     const created: LeasableSpaceUnit = {
       id: `u-${Date.now()}`,
-      suiteNumber: newUnit.suiteNumber,
+      suiteNumber: newUnit.suiteNumber.trim(),
       buildingCode: newUnit.buildingCode || towers[0]?.code || "T1",
       floorNumber: Number(newUnit.floorNumber) || 1,
       spaceType: (newUnit.spaceType as any) || "office",
-      chargeableArea: Number(newUnit.chargeableArea) || 5000,
-      carpetArea: Number(newUnit.carpetArea) || Math.round((Number(newUnit.chargeableArea) || 5000) * 0.7),
-      askingRate: Number(newUnit.askingRate) || targetRentPsf,
+      chargeableArea: unitArea,
+      carpetArea: Number(newUnit.carpetArea) || Math.round(unitArea * 0.7),
+      askingRate: Number(newUnit.askingRate) || targetRentPsf || 0,
       fitoutCondition: (newUnit.fitoutCondition as any) || "warm_shell",
       status: (newUnit.status as any) || "vacant"
     };
-    setUnits([...units, created]);
+
+    const nextUnits = [...units, created];
+    setUnits(nextUnits);
+
+    // Auto-update totalChargeableArea if not manually typed
+    const sumUnitsArea = nextUnits.reduce((acc, u) => acc + u.chargeableArea, 0);
+    if (totalChargeableArea === 0 || totalChargeableArea < sumUnitsArea) {
+      setTotalChargeableArea(sumUnitsArea);
+      setTotalCarpetArea(Math.round(sumUnitsArea * 0.7));
+    }
+
+    // Reset adder form for the next unit
     setNewUnit({
       suiteNumber: "",
       buildingCode: towers[0]?.code || "T1",
       floorNumber: (Number(newUnit.floorNumber) || 1) + 1,
       spaceType: "office",
-      chargeableArea: 10000,
-      carpetArea: 7000,
-      askingRate: targetRentPsf,
+      chargeableArea: 0,
+      carpetArea: 0,
+      askingRate: targetRentPsf || 0,
       fitoutCondition: "warm_shell",
       status: "vacant"
     });
@@ -231,10 +223,10 @@ export default function CommercialPropertyMaster() {
     ? Math.round(((totalChargeableArea - totalCarpetArea) / totalCarpetArea) * 100)
     : 0;
 
-  // ──── 4. STATUTORY CLEARANCES & SYNDICATION (§4.5 & §2.4) ────
+  // ──── 4. STATUTORY CLEARANCES & SYNDICATION (Statutory Clearances) ────
   const [occupancyCertStatus, setOccupancyCertStatus] = useState<"issued" | "in_progress" | "provisional">("issued");
-  const [fireNocValidUntil, setFireNocValidUntil] = useState<string>("2028-12-31");
-  const [sanctionedPlanRef, setSanctionedPlanRef] = useState<string>("MCGM/BP/2024/774");
+  const [fireNocValidUntil, setFireNocValidUntil] = useState<string>("");
+  const [sanctionedPlanRef, setSanctionedPlanRef] = useState<string>("");
   const [syndicateToMarketplace, setSyndicateToMarketplace] = useState<boolean>(false);
 
   // Load configured SPVs from onboarding / localStorage
@@ -406,7 +398,7 @@ export default function CommercialPropertyMaster() {
               <span>/</span>
               <span className="text-[#0F8B7D] font-bold">Register Commercial Asset</span>
               <span className="px-2 py-0.5 rounded-full bg-teal-50 text-[10px] font-bold text-teal-800 border border-teal-200">
-                Rent Roll Core • §4.5
+                Commercial Asset Portfolio
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -475,13 +467,13 @@ export default function CommercialPropertyMaster() {
           </div>
         </div>
 
-        {/* ── STEP 1: ASSET & SPV MASTER (§4.5) ── */}
+        {/* ── STEP 1: ASSET & SPV MASTER (Standard Model) ── */}
         {currentStep === 1 && (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Briefcase size={18} className="text-[#0F8B7D]" />
-                1. Asset Identity & Statutory Billing SPV (§4.5 Property Master)
+                1. Asset Identity & Invoicing Entity
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 Establish the legal identity, building grade, and associated tax entity for automated GST place-of-supply billing.
@@ -508,7 +500,7 @@ export default function CommercialPropertyMaster() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
                   <span>Asset / Property Code *</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Unique Code (§4.5 property_code)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Unique Asset Identifier</span>
                 </label>
                 <input
                   type="text"
@@ -568,7 +560,7 @@ export default function CommercialPropertyMaster() {
                 <div>
                   <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                     <ShieldCheck size={14} className="text-emerald-600" />
-                    Default Invoicing SPV / Legal Entity (§4.5 default_billing_entity_id)
+                    Default Invoicing SPV / Legal Entity
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     Tenant leases in this property will inherit this SPV for rent GST invoices and escrow bank accounts.
@@ -730,14 +722,14 @@ export default function CommercialPropertyMaster() {
           </div>
         )}
 
-        {/* ── STEP 2: TOWERS & STACKING PLAN (§4.5 Building) ── */}
+        {/* ── STEP 2: TOWERS & STACKING PLAN (Building Master) ── */}
         {currentStep === 2 && (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                   <Building size={18} className="text-[#0F8B7D]" />
-                  2. Building Towers & Stacking Structure (§4.5 Building Master)
+                  2. Building Towers & Stacking Structure
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
                   Define the individual tower blocks, floors above/below ground, and super built-up allocations.
@@ -890,13 +882,13 @@ export default function CommercialPropertyMaster() {
           </div>
         )}
 
-        {/* ── STEP 3: AREA & LEASABLE INVENTORY (§4.5 Space) ── */}
+        {/* ── STEP 3: AREA & LEASABLE INVENTORY (Space Master) ── */}
         {currentStep === 3 && (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Layers size={18} className="text-[#0F8B7D]" />
-                3. Area Metrics & Leasable Floor Inventory (§4.5 Space Master)
+                3. Area Metrics & Leasable Floor Inventory
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 Establish Chargeable Area, Carpet Area, Loading Factor, and individual leasable suites ready for tenant lease contracting.
@@ -910,6 +902,7 @@ export default function CommercialPropertyMaster() {
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
+                    placeholder="e.g. 50,000"
                     value={totalChargeableArea || ""}
                     onChange={(e) => setTotalChargeableArea(Number(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
@@ -923,6 +916,7 @@ export default function CommercialPropertyMaster() {
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
+                    placeholder="e.g. 35,000"
                     value={totalCarpetArea || ""}
                     onChange={(e) => setTotalCarpetArea(Number(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
@@ -936,6 +930,7 @@ export default function CommercialPropertyMaster() {
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
+                    placeholder="e.g. 150"
                     value={targetRentPsf || ""}
                     onChange={(e) => setTargetRentPsf(Number(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
@@ -949,6 +944,7 @@ export default function CommercialPropertyMaster() {
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
+                    placeholder="e.g. 22"
                     value={standardCamPsf || ""}
                     onChange={(e) => setStandardCamPsf(Number(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
@@ -961,94 +957,42 @@ export default function CommercialPropertyMaster() {
                 <span className="text-slate-500">
                   Computed Loading Ratio: <strong className="text-slate-900 font-mono">{loadingPct}%</strong>
                 </span>
-                <span className={`text-[11px] font-bold ${loadingPct >= 20 && loadingPct <= 50 ? "text-emerald-700" : "text-amber-600"}`}>
-                  {loadingPct >= 20 && loadingPct <= 50 ? "✓ Optimal institutional ratio (20%–50%)" : "⚠ Outside standard 20-50% range"}
+                <span className={`text-[11px] font-bold ${loadingPct >= 20 && loadingPct <= 50 ? "text-emerald-700" : "text-slate-500"}`}>
+                  {loadingPct > 0 ? (loadingPct >= 20 && loadingPct <= 50 ? "✓ Optimal institutional ratio (20%–50%)" : "⚠ Outside standard 20-50% range") : "Calculated from areas above"}
                 </span>
               </div>
             </div>
 
-            {/* Individual Leasable Units Table */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                  Initial Leasable Units & Floors ({units.length} defined)
-                </h3>
-                <span className="text-[10px] text-slate-500">
-                  You can also bulk-import additional spaces via Rent Roll Excel
-                </span>
-              </div>
-
-              {units.length > 0 ? (
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
-                      <tr>
-                        <th className="py-2.5 px-3">Unit / Floor Identifier</th>
-                        <th className="py-2.5 px-3">Tower</th>
-                        <th className="py-2.5 px-3">Floor #</th>
-                        <th className="py-2.5 px-3">Type</th>
-                        <th className="py-2.5 px-3 text-right">Chargeable (sq.ft.)</th>
-                        <th className="py-2.5 px-3">Fitout</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
-                        <th className="py-2.5 px-3 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
-                      {units.map((u) => (
-                        <tr key={u.id} className="hover:bg-slate-50/50">
-                          <td className="py-2.5 px-3 font-bold text-slate-900">{u.suiteNumber}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{u.buildingCode}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{u.floorNumber}</td>
-                          <td className="py-2.5 px-3 text-slate-600 capitalize">{u.spaceType}</td>
-                          <td className="py-2.5 px-3 text-right font-bold text-slate-900">{u.chargeableArea.toLocaleString()}</td>
-                          <td className="py-2.5 px-3 text-slate-600 capitalize">{u.fitoutCondition.replace("_", " ")}</td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                              {u.status}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveUnit(u.id)}
-                              className="text-slate-400 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <div className="space-y-5">
+              {/* 1. UPPER SIDE: ADD SPACE UNIT FORM */}
+              <div className="p-5 rounded-2xl border border-teal-200 bg-teal-50/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-teal-900 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Plus size={15} className="text-[#0F8B7D]" /> + Add Space Unit / Suite
+                  </span>
+                  <span className="text-[11px] text-teal-700 font-medium">
+                    Add individual suites or floors to your leasable inventory below
+                  </span>
                 </div>
-              ) : (
-                <div className="p-6 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
-                  No individual units added yet. You can add one below or import later via Excel.
-                </div>
-              )}
 
-              {/* Fast Unit Adder Form */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Plus size={14} className="text-[#0F8B7D]" /> Add Space Unit / Suite
-                </span>
-
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 pt-1">
                   <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Suite / Floor Identifier *</label>
                     <input
                       type="text"
-                      placeholder="e.g. Floor 3 - Wing B"
+                      placeholder="e.g. Suite 101, Floor 2"
                       value={newUnit.suiteNumber || ""}
                       onChange={(e) => setNewUnit({ ...newUnit, suiteNumber: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                     />
                   </div>
 
                   <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Tower / Block</label>
                     <select
                       value={newUnit.buildingCode}
                       onChange={(e) => setNewUnit({ ...newUnit, buildingCode: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white"
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
                     >
                       {towers.map(t => (
                         <option key={t.id} value={t.code}>{t.name}</option>
@@ -1057,35 +1001,105 @@ export default function CommercialPropertyMaster() {
                   </div>
 
                   <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Floor #</label>
                     <input
                       type="number"
-                      placeholder="Floor #"
+                      placeholder="e.g. 1"
                       value={newUnit.floorNumber || ""}
                       onChange={(e) => setNewUnit({ ...newUnit, floorNumber: Number(e.target.value) || 1 })}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                     />
                   </div>
 
                   <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Area (sq. ft.) *</label>
                     <input
                       type="number"
-                      placeholder="Area (sqft)"
+                      placeholder="e.g. 5000"
                       value={newUnit.chargeableArea || ""}
                       onChange={(e) => setNewUnit({ ...newUnit, chargeableArea: Number(e.target.value) || 0 })}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                     />
                   </div>
 
-                  <div>
+                  <div className="flex items-end">
                     <button
                       type="button"
                       onClick={handleAddUnit}
-                      className="w-full py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-bold transition-colors cursor-pointer"
+                      className="w-full py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-black transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1"
                     >
-                      Add Unit
+                      <Plus size={14} /> Add Unit
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* 2. LOWER SIDE: ADDED LEASABLE UNITS TABLE */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span>Leasable Units &amp; Floors</span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-700">
+                      {units.length} Units Defined
+                    </span>
+                  </h3>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Total Unit Area: {units.reduce((acc, u) => acc + u.chargeableArea, 0).toLocaleString()} sq. ft.
+                  </span>
+                </div>
+
+                {units.length > 0 ? (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3">Unit / Floor Identifier</th>
+                          <th className="py-2.5 px-3">Tower</th>
+                          <th className="py-2.5 px-3">Floor #</th>
+                          <th className="py-2.5 px-3">Type</th>
+                          <th className="py-2.5 px-3 text-right">Chargeable (sq.ft.)</th>
+                          <th className="py-2.5 px-3">Fitout</th>
+                          <th className="py-2.5 px-3 text-center">Status</th>
+                          <th className="py-2.5 px-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                        {units.map((u) => (
+                          <tr key={u.id} className="hover:bg-slate-50/50">
+                            <td className="py-2.5 px-3 font-bold text-slate-900">{u.suiteNumber}</td>
+                            <td className="py-2.5 px-3 text-slate-600">{u.buildingCode}</td>
+                            <td className="py-2.5 px-3 text-slate-600">{u.floorNumber}</td>
+                            <td className="py-2.5 px-3 text-slate-600 capitalize">{u.spaceType}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900">{u.chargeableArea.toLocaleString()}</td>
+                            <td className="py-2.5 px-3 text-slate-600 capitalize">{u.fitoutCondition.replace("_", " ")}</td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                                {u.status}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUnit(u.id)}
+                                className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                                title="Remove Unit"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/40 text-xs text-slate-400 space-y-1">
+                    <p className="font-semibold text-slate-600">No leasable units defined yet.</p>
+                    <p className="text-[11px]">
+                      Enter a unit/suite identifier above and click <strong>&ldquo;+ Add Unit&rdquo;</strong> to build this property inventory, or import later via Excel.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1161,7 +1175,7 @@ export default function CommercialPropertyMaster() {
               </div>
             </div>
 
-            {/* Optional Marketplace Syndication Toggle (§2.4) */}
+            {/* Optional Marketplace Syndication Toggle (Marketplace Addon) */}
             <div className="p-4 rounded-2xl border border-slate-200 bg-teal-50/30 flex items-start gap-3">
               <input
                 id="syndicateToggle"
@@ -1172,7 +1186,7 @@ export default function CommercialPropertyMaster() {
               />
               <label htmlFor="syndicateToggle" className="cursor-pointer text-xs">
                 <span className="font-bold text-slate-900 block">
-                  Optional: Syndicate Vacant Spaces to OFFICEX Marketplace (§2.4)
+                  Optional: Syndicate Vacant Spaces to OFFICEX Marketplace
                 </span>
                 <span className="text-slate-500 block mt-0.5">
                   Check this box if you wish to receive leasing broker inquiries for your vacant inventory. Leave unchecked for private internal rent roll operation.
