@@ -5,6 +5,8 @@ import {
   X,
   Users,
   Building,
+  Building2,
+  Plus,
   Mail,
   Phone,
   CheckCircle2,
@@ -15,6 +17,7 @@ import {
   Loader2,
   AlertCircle
 } from "lucide-react";
+import Link from "next/link";
 
 export interface AddTenantModalProps {
   isOpen: boolean;
@@ -240,28 +243,56 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
           </div>
         )}
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto text-xs font-medium text-slate-700">
-          {/* Target Commercial Building */}
-          <div>
-            <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-              Select Commercial Property *
-            </label>
-            <div className="relative">
-              <Building size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-              <select
-                value={selectedPropId}
-                onChange={(e) => setSelectedPropId(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 text-xs font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
+        {/* Form Body or Property-First Guard */}
+        {availableProps.length === 0 ? (
+          <div className="p-8 text-center flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mb-4">
+              <Building2 size={32} />
+            </div>
+            <h4 className="text-base font-black text-slate-900">Add a Commercial Property First</h4>
+            <p className="text-xs text-slate-500 mt-2 max-w-md leading-relaxed">
+              In commercial real estate, every corporate tenant must be allocated to a specific building and unit. Your portfolio currently has no registered properties.
+            </p>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                {availableProps.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.city ? `(${p.city})` : ""}
-                  </option>
-                ))}
-              </select>
+                Cancel
+              </button>
+              <Link
+                href="/properties/add"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <Plus size={15} />
+                <span>Register Commercial Property</span>
+              </Link>
             </div>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto text-xs font-medium text-slate-700">
+            {/* Target Commercial Building */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                Select Commercial Property *
+              </label>
+              <div className="relative">
+                <Building size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                <select
+                  value={selectedPropId}
+                  onChange={(e) => setSelectedPropId(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 text-xs font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
+                >
+                  {availableProps.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.city ? `(${p.city})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
           {/* Section 1: Tenant Identity */}
           <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3.5">
@@ -348,9 +379,15 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                 <input
                   type="text"
                   maxLength={15}
-                  placeholder="27AABCT1234D1Z2"
+                  placeholder="e.g. 27ABCDE1234F1Z5"
                   value={gstin}
-                  onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+                    setGstin(cleaned);
+                    if (cleaned.length >= 12 && !pan) {
+                      setPan(cleaned.substring(2, 12));
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
                 />
               </div>
@@ -361,9 +398,9 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                 <input
                   type="text"
                   maxLength={10}
-                  placeholder="AABCT1234D"
+                  placeholder="e.g. ABCDE1234F"
                   value={pan}
-                  onChange={(e) => setPan(e.target.value.toUpperCase())}
+                  onChange={(e) => setPan(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
                 />
               </div>
@@ -516,33 +553,34 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-[#0D7B6C]/25 transition-all disabled:opacity-50 cursor-pointer"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  <span>Onboarding Tenant &amp; Adding to Rent Roll...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={15} />
-                  <span>Save Tenant &amp; Activate Lease</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-[#0D7B6C]/25 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Onboarding Tenant &amp; Adding to Rent Roll...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Save Tenant &amp; Activate Lease</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

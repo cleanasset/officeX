@@ -138,7 +138,7 @@ export const DealsModal: React.FC<DealsModalProps> = ({
             <div>
               <h3 className="text-base font-black text-gray-900">Leasing Pipeline &amp; Deals Register</h3>
               <p className="text-xs text-gray-500">
-                Track prospects, probability-weighted revenue &amp; convert won deals to draft contracts (§4.7A, RR-CON-07)
+                Track commercial prospects, probability-weighted revenue &amp; convert won deals to active contracts
               </p>
             </div>
           </div>

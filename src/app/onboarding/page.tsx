@@ -41,9 +41,16 @@ import {
   FileCheck,
   Percent,
   Play,
-  Share2
+  Share2,
+  Pencil,
+  Headphones
 } from "lucide-react";
 import { formatINR } from "@/components/rent-roll/DashboardTab";
+import {
+  AddressAutocomplete,
+  CityAutocomplete,
+  StateAutocomplete,
+} from "@/components/ui/LocationInputs";
 
 interface BillingEntityItem {
   id: string;
@@ -87,16 +94,16 @@ function OnboardingContent() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isCommitted, setIsCommitted] = useState<boolean>(false);
 
-  // ──── STEP 1: ORGANIZATION & 5 CUSTOMER SEGMENTS (Slide 3) ────
+  // ──── STEP 1: ORGANIZATION & BUSINESS SEGMENTS ────
   const [orgData, setOrgData] = useState({
-    legalName: "Apex Commercial Realty Private Limited",
-    tradeName: "Apex Business Towers",
+    legalName: "",
+    tradeName: "",
     segments: (initialSegmentParam ? [initialSegmentParam] : ["commercial_owner"]) as string[],
-    city: "Mumbai",
-    state: "Maharashtra",
-    pan: "AAFCO1234F",
-    gstin: "27AAFCO1234F1Z5",
-    primaryAddress: "Level 14, Tower 2, One International Center, Senapati Bapat Marg, Prabhadevi"
+    city: "",
+    state: "",
+    pan: "",
+    gstin: "",
+    primaryAddress: ""
   });
 
   const toggleSegment = (segId: string) => {
@@ -111,46 +118,23 @@ function OnboardingContent() {
     });
   };
 
-  // ──── STEP 2: SECTION A — FINANCIAL & LEGAL (Slide 4) ────
-  // 1. Multiple Billing Entities (SPVs & States)
-  const [billingEntities, setBillingEntities] = useState<BillingEntityItem[]>([
-    {
-      id: "BE-01",
-      spvName: "Apex Infratech SPV-1 Private Limited",
-      gstin: "27AAFCO1234F1Z5",
-      pan: "AAFCO1234F",
-      invoicePrefix: "APX-INV",
-      bankName: "HDFC Bank Limited",
-      accountNumber: "50200088991204",
-      ifscCode: "HDFC0000060",
-      stateCode: "27 - Maharashtra",
-      isDefault: true
-    },
-    {
-      id: "BE-02",
-      spvName: "Apex Realty Karnataka SPV-2 Pvt Ltd",
-      gstin: "29AAFCO1234F1Z7",
-      pan: "AAFCO1234F",
-      invoicePrefix: "KA-INV",
-      bankName: "ICICI Bank Limited",
-      accountNumber: "000405012345",
-      ifscCode: "ICIC0000004",
-      stateCode: "29 - Karnataka",
-      isDefault: false
-    }
-  ]);
+  // ──── STEP 2: FINANCIAL ENTITIES & TAX PROFILES ────
+  // Multiple Billing Entities (SPVs & States)
+  const [billingEntities, setBillingEntities] = useState<BillingEntityItem[]>([]);
 
   const [isAddingEntity, setIsAddingEntity] = useState(false);
+  const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
+  const [editEntity, setEditEntity] = useState<BillingEntityItem | null>(null);
   const [newEntity, setNewEntity] = useState<BillingEntityItem>({
     id: "",
     spvName: "",
     gstin: "",
-    pan: "AAFCO1234F",
-    invoicePrefix: "DL-INV",
-    bankName: "HDFC Bank Limited",
+    pan: "",
+    invoicePrefix: "INV-",
+    bankName: "",
     accountNumber: "",
-    ifscCode: "HDFC0000060",
-    stateCode: "07 - Delhi",
+    ifscCode: "",
+    stateCode: "",
     isDefault: false
   });
 
@@ -171,23 +155,19 @@ function OnboardingContent() {
       id: "",
       spvName: "",
       gstin: "",
-      pan: "AAFCO1234F",
-      invoicePrefix: "INV-2026",
-      bankName: "HDFC Bank Limited",
+      pan: orgData.pan || "",
+      invoicePrefix: "INV-",
+      bankName: "",
       accountNumber: "",
-      ifscCode: "HDFC0000060",
-      stateCode: "24 - Gujarat",
+      ifscCode: "",
+      stateCode: orgData.state || "",
       isDefault: false
     });
   };
 
   const handleRemoveEntity = (id: string) => {
-    if (billingEntities.length <= 1) {
-      alert("At least one statutory billing entity is required.");
-      return;
-    }
     const filtered = billingEntities.filter(b => b.id !== id);
-    if (!filtered.some(b => b.isDefault)) {
+    if (filtered.length > 0 && !filtered.some(b => b.isDefault)) {
       filtered[0].isDefault = true;
     }
     setBillingEntities(filtered);
@@ -198,6 +178,29 @@ function OnboardingContent() {
       ...b,
       isDefault: b.id === id
     })));
+  };
+
+  const handleStartEditEntity = (be: BillingEntityItem) => {
+    setEditingEntityId(be.id);
+    setEditEntity({ ...be });
+    setIsAddingEntity(false);
+  };
+
+  const handleSaveEditEntity = () => {
+    if (!editEntity || !editEntity.spvName || !editEntity.gstin) {
+      alert("Please provide at least the Legal SPV Name and 15-digit GSTIN.");
+      return;
+    }
+    setBillingEntities(billingEntities.map(b =>
+      b.id === editEntity.id ? { ...editEntity, pan: editEntity.pan || editEntity.gstin.substring(2, 12) } : b
+    ));
+    setEditingEntityId(null);
+    setEditEntity(null);
+  };
+
+  const handleCancelEditEntity = () => {
+    setEditingEntityId(null);
+    setEditEntity(null);
   };
 
   // 2. Tax Profiles per Charge Type (Slide 4)
@@ -268,30 +271,57 @@ function OnboardingContent() {
     setChargeList(chargeList.map(c => c.id === id ? { ...c, isInclusion: !c.isInclusion } : c));
   };
 
-  // ──── STEP 4: SECTION C & D — BRANDING, DOMAINS & USERS (Slide 4) ────
+  // ──── STEP 4: VISUAL BRANDING, CUSTOM DOMAINS & USERS ────
   const [branding, setBranding] = useState({
-    portfolioDisplayName: "Apex Commercial Portfolio",
+    portfolioDisplayName: "",
     invoiceHeaderMemo: "Official Tax Invoice issued under Section 31 of CGST Act, 2017",
     brandColor: "#0F8B7D",
-    logoPreset: "apex", // "apex" | "horizon" | "prime" | "techhub"
+    logoPreview: "" as string, // data URL of uploaded logo, or empty for text initials
     previewTab: "invoice" as "invoice" | "email" | "portal"
   });
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.match(/^image\/(png|jpe?g|svg\+xml|webp)$/)) {
+      alert("Please upload a PNG, JPG, SVG, or WebP image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Logo file must be under 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setBranding(prev => ({ ...prev, logoPreview: ev.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setBranding(prev => ({ ...prev, logoPreview: "" }));
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
+
+  // Generate text initials from company name for fallback
+  const logoInitials = (branding.portfolioDisplayName || orgData.tradeName || orgData.legalName || "CO")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0])
+    .join("")
+    .toUpperCase() || "CO";
 
   const [domains, setDomains] = useState({
-    senderBillingEmail: "rent@apexassets.in",
-    isDomainVerified: true,
-    subdomain: "apexassets",
+    senderBillingEmail: "",
+    isDomainVerified: false,
+    subdomain: "",
     enableCustomDomain: false,
-    customDomain: "rent.apexassets.in"
+    customDomain: ""
   });
 
-  const [userList, setUserList] = useState<UserRoleItem[]>([
-    { id: "USR-01", name: "Rajesh Sharma", email: "rajesh.s@apexassets.in", role: "org_admin", makerCheckerRole: "approver" },
-    { id: "USR-02", name: "Priya Nair", email: "priya.n@apexassets.in", role: "finance_manager", makerCheckerRole: "maker" },
-    { id: "USR-03", name: "Vikram Mehta", email: "vikram.m@apexassets.in", role: "property_manager", makerCheckerRole: "maker" },
-    { id: "USR-04", name: "Ananya Kapoor", email: "ananya.k@apexassets.in", role: "leasing_manager", makerCheckerRole: "maker" },
-    { id: "USR-05", name: "Ananya Deshmukh", email: "ananya.d@technova.com", role: "occupant", makerCheckerRole: "maker" }
-  ]);
+  const [userList, setUserList] = useState<UserRoleItem[]>([]);
 
   const [newUser, setNewUser] = useState<UserRoleItem>({
     id: "",
@@ -325,12 +355,24 @@ function OnboardingContent() {
     makerCheckerBilling: true
   });
 
-  // ──── STEP 5: ONBOARDING ROUTE & DATA INGESTION (Slide 5) ────
-  const [onboardingRoute, setOnboardingRoute] = useState<"managed" | "assisted" | "self_serve">("self_serve");
-  const [ingestionChoice, setIngestionChoice] = useState<"benchmark" | "custom_file">("benchmark");
-  const [uploadedFileName, setUploadedFileName] = useState<string>("rent_roll_q3_benchmark.csv");
+  // ──── STEP 5: IMPORT WORKFLOW (9-STEP SUITE — Section 8.3 & Slides 6 & 7) ────
+  const [uploadedFileName, setUploadedFileName] = useState<string>("");
+  const rentRollFileInputRef = useRef<HTMLInputElement>(null);
 
-  // ──── STEP 6: IMPORT WORKFLOW (9-STEP SUITE — Slides 6 & 7) ────
+  const handleRentRollFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadedFileName(file.name);
+    setProfilingReport(prev => ({
+      ...prev,
+      totalRows: 12,
+      duplicatesDetected: 0,
+      missingValuesCount: 0,
+      dateConsistencyPct: 100,
+      qualityScore: 99.4
+    }));
+  };
+
   const [importWorkflowStep, setImportWorkflowStep] = useState<number>(1);
   const [profilingReport, setProfilingReport] = useState({
     totalRows: 12,
@@ -376,6 +418,95 @@ function OnboardingContent() {
     matchConfirmed: true
   });
 
+  // Sync real user context / localStorage on mount
+  useEffect(() => {
+    try {
+      const storedOrg = localStorage.getItem("officex_user_org") || localStorage.getItem("officex_org_name") || "";
+      const storedCity = localStorage.getItem("officex_user_city") || localStorage.getItem("officex_property_city") || "";
+      const storedEmail = localStorage.getItem("officex_user_email") || "";
+      const storedName = localStorage.getItem("officex_user_name") || "";
+
+      if (storedOrg || storedCity) {
+        setOrgData(prev => ({
+          ...prev,
+          legalName: prev.legalName || storedOrg,
+          tradeName: prev.tradeName || storedOrg,
+          city: prev.city || storedCity,
+        }));
+      }
+
+      if (storedEmail) {
+        setUserList([
+          {
+            id: `USR-${Date.now()}`,
+            name: storedName || "Org Administrator",
+            email: storedEmail,
+            role: "org_admin",
+            makerCheckerRole: "approver"
+          }
+        ]);
+        const domain = storedEmail.includes("@") ? storedEmail.split("@")[1] : "";
+        if (domain && domain !== "gmail.com" && domain !== "yahoo.com" && domain !== "outlook.com") {
+          setDomains(prev => ({
+            ...prev,
+            senderBillingEmail: `rent@${domain}`
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("Storage sync failed:", e);
+    }
+  }, []);
+
+  // Smart Step Progression & Auto-Generation of Primary Billing Entity
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (!orgData.legalName.trim()) {
+        alert("Please enter your Organization Legal Name to proceed.");
+        return;
+      }
+      // If billing entities are currently empty, auto-create the primary billing entity from orgData!
+      if (billingEntities.length === 0) {
+        const cleanPrefix = (orgData.tradeName || orgData.legalName || "INV")
+          .replace(/[^A-Za-z]/g, "")
+          .substring(0, 3)
+          .toUpperCase() || "INV";
+
+        setBillingEntities([
+          {
+            id: `BE-${Date.now()}`,
+            spvName: orgData.legalName,
+            gstin: orgData.gstin || "",
+            pan: orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : ""),
+            invoicePrefix: `${cleanPrefix}-INV`,
+            bankName: "",
+            accountNumber: "",
+            ifscCode: "",
+            stateCode: orgData.state || "27 - Maharashtra",
+            isDefault: true
+          }
+        ]);
+      }
+      // Auto-suggest branding and domains if empty
+      if (!branding.portfolioDisplayName) {
+        setBranding(prev => ({
+          ...prev,
+          portfolioDisplayName: orgData.tradeName || orgData.legalName
+        }));
+      }
+      if (!domains.subdomain) {
+        const cleanSub = (orgData.tradeName || orgData.legalName)
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        setDomains(prev => ({
+          ...prev,
+          subdomain: cleanSub
+        }));
+      }
+    }
+    setCurrentStep((prev) => Math.min(6, prev + 1));
+  };
+
   // Handle Download Templates
   const handleDownloadSample = (model: "area" | "seat") => {
     let headers = "";
@@ -384,11 +515,11 @@ function OnboardingContent() {
 
     if (model === "seat") {
       headers = "Member Trade Name,Member Legal Name,Building Name,Cabin Suite ID,Contracted Seats,Occupied Seats,Rate Per Seat Monthly,Start Date (YYYY-MM-DD),End Date (YYYY-MM-DD),Deposit Months,Notice Days";
-      row = "Nimbus Labs Pvt Ltd,Nimbus Laboratories India Pvt Ltd,Meridian Tech Park,Suite 201,50,48,15000,2026-04-01,2028-03-31,2,60";
+      row = "Example Tech Solutions,Example Tech India Pvt Ltd,Tower A,Suite 201,50,48,15000,2026-04-01,2028-03-31,2,60";
       filename = "officex_flex_seats_template.csv";
     } else {
       headers = "Tenant Trade Name,Tenant Legal Name,Building Name,Unit Number,Floor Number,Chargeable Area SqFt,Carpet Area SqFt,Monthly Base Rent INR,CAM Rate PSF,Utility Fixed Monthly,Start Date (YYYY-MM-DD),End Date (YYYY-MM-DD),Escalation Pct,Escalation Frequency Months,Security Deposit Months,Lock In Months";
-      row = "TechNova Solutions Pvt Ltd,TechNova Cloud Solutions India Private Limited,Apex Business Tower,APX-05A,5,8500,6800,2424200,28,35000,2026-04-01,2035-03-31,15,36,6,36";
+      row = "Example Corporate Tenant,Example Enterprises India Pvt Ltd,Tower A,Unit 101,1,5000,4000,250000,25,15000,2026-04-01,2029-03-31,15,36,6,36";
       filename = "officex_rent_roll_area_template.csv";
     }
 
@@ -403,7 +534,7 @@ function OnboardingContent() {
     document.body.removeChild(link);
   };
 
-  // Final Commit to Production (§8.3 & Slide 6.8)
+  // Final Commit to Production (Live Rollout Engine)
   const handleFinalCommit = async () => {
     setIsSubmitting(true);
     try {
@@ -425,7 +556,7 @@ function OnboardingContent() {
             portfolioDisplayName: branding.portfolioDisplayName,
             invoiceHeaderMemo: branding.invoiceHeaderMemo,
             brandColor: branding.brandColor,
-            logoUrl: branding.logoPreset
+            logoUrl: branding.logoPreview
           },
           domainConfig: {
             emailSenderDomain: domains.senderBillingEmail,
@@ -461,7 +592,7 @@ function OnboardingContent() {
         localStorage.setItem("officex_session_active", "1");
         sessionStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_active_org", orgData.legalName);
-        localStorage.setItem("officex_user_role", "Org Super Admin");
+        localStorage.setItem("officex_user_role", "Portfolio Executive");
         document.cookie = "officex_onboarding_completed=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_auth=1; path=/; max-age=31536000; SameSite=Lax";
@@ -482,12 +613,11 @@ function OnboardingContent() {
 
   const steps = [
     { num: 1, title: "1. Organization", subtitle: "Entity & Segments" },
-    { num: 2, title: "2. Section A: Legal", subtitle: "Multi-SPV & Taxes" },
-    { num: 3, title: "3. Section B: Charges", subtitle: "11 Charges & Tariffs" },
-    { num: 4, title: "4. Section C & D", subtitle: "Branding & Users" },
-    { num: 5, title: "5. Route Choice", subtitle: "Managed vs Self" },
-    { num: 6, title: "6. Import Engine", subtitle: "9-Step Ingestion" },
-    { num: 7, title: "7. Go-Live", subtitle: "Production Launch" }
+    { num: 2, title: "2. Financial Entities", subtitle: "Multi-SPV & Taxes" },
+    { num: 3, title: "3. Charge Master", subtitle: "Billing Rules & Tariffs" },
+    { num: 4, title: "4. Visual Branding", subtitle: "Branding & Roles" },
+    { num: 5, title: "5. Data Ingestion", subtitle: "Import Rent Roll" },
+    { num: 6, title: "6. Go-Live", subtitle: "Production Launch" }
   ];
 
   return (
@@ -497,7 +627,7 @@ function OnboardingContent() {
         <div className="flex items-center gap-3">
           <Link href="/rent-roll" className="flex items-center gap-2">
             <Image
-              src="/logo.png"
+              src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
               width={110}
               height={32}
@@ -506,7 +636,7 @@ function OnboardingContent() {
             />
           </Link>
           <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200 text-xs font-bold">
-            Full 7-Step Onboarding Engine · V2.1 Spec
+            Enterprise Setup Wizard
           </span>
         </div>
 
@@ -516,7 +646,7 @@ function OnboardingContent() {
             <span>Statutory Multi-Entity Encrypted Vault</span>
           </div>
           <Link href="/login?context=rent-roll" className="text-slate-600 hover:text-slate-900 font-bold transition-colors">
-            Exit to Sign In
+            Sign In
           </Link>
         </div>
       </header>
@@ -526,7 +656,7 @@ function OnboardingContent() {
         <div className="space-y-6">
           {/* Top Step Breadcrumbs Indicator */}
           <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-            <div className="grid grid-cols-7 gap-1.5 text-center text-xs">
+            <div className="grid grid-cols-6 gap-1.5 text-center text-xs">
               {steps.map((st) => (
                 <div
                   key={st.num}
@@ -563,7 +693,7 @@ function OnboardingContent() {
                   <div className="space-y-5 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 1 of 7 · Client Spec §2.1 &amp; Slide 3
+                        Step 1 of 6 · Organization &amp; Business Segments
                       </span>
                       <h2 className="text-xl font-black text-slate-900 mt-2">Create Organization &amp; Select Segment</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -615,7 +745,7 @@ function OnboardingContent() {
                       <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
                         <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <span>
-                          <strong>Tip (Slide 3):</strong> You can select multiple types if your business does more than one thing. For example, if you own one building and operate flex spaces in leased buildings, select both <em>&quot;Property Owner&quot;</em> and <em>&quot;Flex Operator&quot;</em>.
+                          <strong>Pro Tip:</strong> You can select multiple operating models if your business spans multiple verticals (e.g. both commercial asset ownership and co-working operations).
                         </span>
                       </div>
                     </div>
@@ -626,9 +756,10 @@ function OnboardingContent() {
                           <label className="block text-xs font-bold text-slate-700 mb-1">Organization Legal Name *</label>
                           <input
                             type="text"
+                            placeholder="e.g. Acme Commercial Estates Pvt Ltd"
                             value={orgData.legalName}
                             onChange={(e) => setOrgData({ ...orgData, legalName: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white"
+                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
                             required
                           />
                         </div>
@@ -636,67 +767,112 @@ function OnboardingContent() {
                           <label className="block text-xs font-bold text-slate-700 mb-1">Trade / Portfolio Name</label>
                           <input
                             type="text"
+                            placeholder="e.g. Acme Realty Horizon"
                             value={orgData.tradeName}
                             onChange={(e) => setOrgData({ ...orgData, tradeName: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">PAN Number (10-Digit) *</label>
-                          <input
-                            type="text"
-                            value={orgData.pan}
-                            onChange={(e) => setOrgData({ ...orgData, pan: e.target.value.toUpperCase() })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">Primary State *</label>
-                          <input
-                            type="text"
-                            value={orgData.state}
-                            onChange={(e) => setOrgData({ ...orgData, state: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">Primary City *</label>
-                          <input
-                            type="text"
-                            value={orgData.city}
-                            onChange={(e) => setOrgData({ ...orgData, city: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                            required
+                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Corporate Registered Address</label>
-                        <input
-                          type="text"
+                        <AddressAutocomplete
+                          label="Corporate Registered Address (Google Maps Search)"
                           value={orgData.primaryAddress}
-                          onChange={(e) => setOrgData({ ...orgData, primaryAddress: e.target.value })}
-                          className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                          onChange={(val) => setOrgData((prev) => ({ ...prev, primaryAddress: val }))}
+                          onSelectLocation={(loc) => {
+                            setOrgData((prev) => ({
+                              ...prev,
+                              primaryAddress: loc.fullAddress || loc.displayName,
+                              city: loc.city || prev.city,
+                              state: loc.state || prev.state,
+                            }));
+                          }}
+                          placeholder="Type building, commercial park, road, or full address..."
                         />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-slate-700">PAN Number *</label>
+                            <span className={`text-[10px] font-mono font-bold ${orgData.pan.length === 10 ? "text-emerald-600" : "text-slate-400"}`}>
+                              {orgData.pan.length}/10
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            maxLength={10}
+                            placeholder="ABCDE1234F"
+                            value={orgData.pan}
+                            onChange={(e) => {
+                              const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+                              setOrgData({ ...orgData, pan: cleaned });
+                            }}
+                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold tracking-wider uppercase focus:bg-white focus:border-[#0F8B7D]"
+                            required
+                          />
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">Format: 5 letters, 4 digits, 1 letter</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-slate-700">Primary GSTIN</label>
+                            <span className={`text-[10px] font-mono font-bold ${orgData.gstin.length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
+                              {orgData.gstin.length}/15
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            maxLength={15}
+                            placeholder="27ABCDE1234F1Z5"
+                            value={orgData.gstin}
+                            onChange={(e) => {
+                              const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+                              const autoPan = cleaned.length >= 12 ? cleaned.substring(2, 12) : orgData.pan;
+                              setOrgData({ ...orgData, gstin: cleaned, pan: autoPan || orgData.pan });
+                            }}
+                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold tracking-wider uppercase focus:bg-white focus:border-[#0F8B7D]"
+                          />
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">Format: 2 state + 10 PAN + 3 entity</span>
+                        </div>
+                        <div>
+                          <CityAutocomplete
+                            label="Primary City"
+                            required
+                            value={orgData.city}
+                            onChange={(city) => setOrgData((prev) => ({ ...prev, city }))}
+                            onSelectCityAndState={(city, state) => {
+                              setOrgData((prev) => ({
+                                ...prev,
+                                city,
+                                state: state || prev.state,
+                              }));
+                            }}
+                            placeholder="Type to search all Indian cities..."
+                          />
+                        </div>
+                        <div>
+                          <StateAutocomplete
+                            label="Primary State"
+                            required
+                            value={orgData.state}
+                            onChange={(state) => setOrgData((prev) => ({ ...prev, state }))}
+                            placeholder="Type to search all 36 States/UTs..."
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* ════════ STEP 2: SECTION A — FINANCIAL & LEGAL (Slide 4) ════════ */}
+                {/* ════════ STEP 2: FINANCIAL ENTITIES & TAX PROFILES ════════ */}
                 {currentStep === 2 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 2 of 7 · Section A (Slide 4)
+                        Step 2 of 6 · Financial Entities &amp; Tax Profiles
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Section A: Financial &amp; Legal Setup</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Financial Entities &amp; Statutory Setup</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Configure multiple statutory billing entities (SPVs/States) and standard Tax Profiles per charge type.
                       </p>
@@ -711,7 +887,7 @@ function OnboardingContent() {
                             <span>Billing Entities (SPVs &amp; State Jurisdictions)</span>
                           </h3>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            <em>&quot;If you have multiple legal entities or operate in multiple states, create one per each.&quot; (Slide 4)</em>
+                            <em>Create a distinct billing profile for each legal entity, state GSTIN, or SPV structure.</em>
                           </p>
                         </div>
                         <button
@@ -724,51 +900,223 @@ function OnboardingContent() {
                       </div>
 
                       {/* List of Created Billing Entities */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {billingEntities.map((be) => (
-                          <div
-                            key={be.id}
-                            className={`p-4 rounded-2xl border transition-all ${
-                              be.isDefault
-                                ? "bg-teal-50/70 border-teal-300 ring-1 ring-teal-400/40"
-                                : "bg-slate-50 border-slate-200"
-                            }`}
+                      {billingEntities.length === 0 ? (
+                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                          <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                          <p className="text-xs font-bold text-slate-700">No Billing Entities Configured Yet</p>
+                          <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1">
+                            {orgData.legalName
+                              ? `Click below to create your primary billing entity for "${orgData.legalName}".`
+                              : "Add your legal SPVs or state billing entities to generate statutory GST invoices."}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (orgData.legalName) {
+                                const cleanPrefix = (orgData.tradeName || orgData.legalName)
+                                  .replace(/[^A-Za-z]/g, "")
+                                  .substring(0, 3)
+                                  .toUpperCase() || "INV";
+                                setBillingEntities([
+                                  {
+                                    id: `BE-${Date.now()}`,
+                                    spvName: orgData.legalName,
+                                    gstin: orgData.gstin || "",
+                                    pan: orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : ""),
+                                    invoicePrefix: `${cleanPrefix}-INV`,
+                                    bankName: "",
+                                    accountNumber: "",
+                                    ifscCode: "",
+                                    stateCode: orgData.state || "27 - Maharashtra",
+                                    isDefault: true
+                                  }
+                                ]);
+                              } else {
+                                setIsAddingEntity(true);
+                              }
+                            }}
+                            className="mt-3 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                           >
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-extrabold text-xs text-slate-900">{be.spvName}</span>
-                                  {be.isDefault && (
-                                    <span className="px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold">
-                                      Default Primary
+                            <Plus size={14} /> {orgData.legalName ? `Generate Entity from "${orgData.legalName}"` : "Add Billing Entity"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {billingEntities.map((be) => (
+                            <div
+                              key={be.id}
+                              className={`p-4 rounded-2xl border transition-all ${
+                                be.isDefault
+                                  ? "bg-teal-50/70 border-teal-300 ring-1 ring-teal-400/40"
+                                  : "bg-slate-50 border-slate-200"
+                              }`}
+                            >
+                              {editingEntityId === be.id && editEntity ? (
+                                /* ── Inline Edit Form ── */
+                                <div className="space-y-3 animate-fadeIn">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-xs text-teal-950 flex items-center gap-1.5">
+                                      <Pencil size={13} className="text-[#0F8B7D]" /> Edit Billing Entity
+                                      {be.isDefault && (
+                                        <span className="px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold ml-1">
+                                          Default Primary
+                                        </span>
+                                      )}
                                     </span>
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelEditEntity}
+                                      className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                                    <div>
+                                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">SPV Legal Entity Name *</label>
+                                      <input
+                                        type="text"
+                                        value={editEntity.spvName}
+                                        onChange={(e) => setEditEntity({ ...editEntity, spvName: e.target.value })}
+                                        className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
+                                      />
+                                    </div>
+                                    <div>
+                                      <StateAutocomplete
+                                        label="State Code / Jurisdiction"
+                                        required
+                                        returnCodeFormat={true}
+                                        value={editEntity.stateCode}
+                                        onChange={(val) => setEditEntity({ ...editEntity, stateCode: val })}
+                                        placeholder="e.g. 07 - Delhi, 27 - Maharashtra..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <label className="block text-[11px] font-bold text-slate-700">15-Digit GSTIN *</label>
+                                        <span className={`text-[10px] font-mono font-bold ${editEntity.gstin.length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
+                                          {editEntity.gstin.length}/15
+                                        </span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        maxLength={15}
+                                        placeholder="27ABCDE1234F1Z5"
+                                        value={editEntity.gstin}
+                                        onChange={(e) => {
+                                          const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+                                          const autoPan = cleaned.length >= 12 ? cleaned.substring(2, 12) : editEntity.pan;
+                                          setEditEntity({ ...editEntity, gstin: cleaned, pan: autoPan });
+                                        }}
+                                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold tracking-wider uppercase focus:border-[#0F8B7D]"
+                                      />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <label className="block text-[11px] font-bold text-slate-700">Invoice Numbering Prefix *</label>
+                                        <span className="text-[10px] text-slate-400 font-mono">Max 8 Chars</span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        maxLength={8}
+                                        value={editEntity.invoicePrefix}
+                                        onChange={(e) => setEditEntity({ ...editEntity, invoicePrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 8) })}
+                                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-teal-700 uppercase focus:border-[#0F8B7D]"
+                                      />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <label className="block text-[11px] font-bold text-slate-700">Bank Account for Collections</label>
+                                        <span className="text-[10px] text-slate-400 font-mono">Digits Only</span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        maxLength={18}
+                                        placeholder="e.g. 50200012345678"
+                                        value={editEntity.accountNumber}
+                                        onChange={(e) => setEditEntity({ ...editEntity, accountNumber: e.target.value.replace(/[^0-9]/g, "").slice(0, 18) })}
+                                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
+                                      />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <label className="block text-[11px] font-bold text-slate-700">IFSC Code (11 Chars)</label>
+                                        <span className={`text-[10px] font-mono font-bold ${editEntity.ifscCode.length === 11 ? "text-emerald-600" : "text-slate-400"}`}>
+                                          {editEntity.ifscCode.length}/11
+                                        </span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        maxLength={11}
+                                        placeholder="e.g. HDFC0001234"
+                                        value={editEntity.ifscCode}
+                                        onChange={(e) => setEditEntity({ ...editEntity, ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) })}
+                                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono uppercase focus:border-[#0F8B7D]"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-2 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelEditEntity}
+                                      className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer"
+                                    >
+                                      Discard
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleSaveEditEntity}
+                                      className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer"
+                                    >
+                                      Save Changes
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ── Read-only Card ── */
+                                <>
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-xs text-slate-900">{be.spvName}</span>
+                                    {be.isDefault && (
+                                      <span className="px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold">
+                                        Default Primary
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                                    Jurisdiction: {be.stateCode}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {!be.isDefault && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetDefaultEntity(be.id)}
+                                      className="text-[10px] text-teal-700 hover:underline font-bold px-1.5 py-0.5 cursor-pointer"
+                                    >
+                                      Set Default
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditEntity(be)}
+                                    className="p-1 text-slate-400 hover:text-[#0F8B7D] cursor-pointer" title="Edit Entity"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                  {billingEntities.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveEntity(be.id)}
+                                      className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
                                   )}
                                 </div>
-                                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
-                                  Jurisdiction: {be.stateCode}
-                                </span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                {!be.isDefault && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSetDefaultEntity(be.id)}
-                                    className="text-[10px] text-teal-700 hover:underline font-bold px-1.5 py-0.5 cursor-pointer"
-                                  >
-                                    Set Default
-                                  </button>
-                                )}
-                                {billingEntities.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveEntity(be.id)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
 
                             <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200/80 text-[11px]">
                               <div>
@@ -788,9 +1136,12 @@ function OnboardingContent() {
                                 <span className="font-mono text-slate-700 truncate block">{be.accountNumber || "—"} ({be.ifscCode})</span>
                               </div>
                             </div>
+                                </>
+                              )}
                           </div>
                         ))}
                       </div>
+                    )}
 
                       {/* Modal/Inline Form to Add Entity */}
                       {isAddingEntity && (
@@ -810,61 +1161,89 @@ function OnboardingContent() {
                               <label className="block text-[11px] font-bold text-slate-700 mb-0.5">SPV Legal Entity Name *</label>
                               <input
                                 type="text"
-                                placeholder="e.g. Apex Tech Park Delhi SPV-3 Ltd"
+                                placeholder="e.g. Skyline Commercial Assets SPV-1 Pvt Ltd"
                                 value={newEntity.spvName}
                                 onChange={(e) => setNewEntity({ ...newEntity, spvName: e.target.value })}
-                                className="w-full p-2 bg-white border border-slate-200 rounded-xl"
+                                className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
                               />
                             </div>
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">State Code / Jurisdiction *</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. 07 - Delhi"
+                              <StateAutocomplete
+                                label="State Code / Jurisdiction"
+                                required
+                                returnCodeFormat={true}
                                 value={newEntity.stateCode}
-                                onChange={(e) => setNewEntity({ ...newEntity, stateCode: e.target.value })}
-                                className="w-full p-2 bg-white border border-slate-200 rounded-xl"
+                                onChange={(val) => setNewEntity({ ...newEntity, stateCode: val })}
+                                placeholder="e.g. 07 - Delhi, 27 - Maharashtra..."
                               />
                             </div>
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">15-Digit GSTIN *</label>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <label className="block text-[11px] font-bold text-slate-700">15-Digit GSTIN *</label>
+                                <span className={`text-[10px] font-mono font-bold ${newEntity.gstin.length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
+                                  {newEntity.gstin.length}/15
+                                </span>
+                              </div>
                               <input
                                 type="text"
-                                placeholder="e.g. 07AAFCO1234F1Z8"
+                                maxLength={15}
+                                placeholder="27ABCDE1234F1Z5"
                                 value={newEntity.gstin}
-                                onChange={(e) => setNewEntity({ ...newEntity, gstin: e.target.value.toUpperCase() })}
-                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold"
+                                onChange={(e) => {
+                                  const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+                                  const autoPan = cleaned.length >= 12 ? cleaned.substring(2, 12) : newEntity.pan;
+                                  setNewEntity({ ...newEntity, gstin: cleaned, pan: autoPan });
+                                }}
+                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold tracking-wider uppercase focus:border-[#0F8B7D]"
                               />
+                              <span className="text-[10px] text-slate-400 block mt-0.5">Format: 2 state + 10 PAN + 3 entity</span>
                             </div>
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Invoice Numbering Prefix *</label>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <label className="block text-[11px] font-bold text-slate-700">Invoice Numbering Prefix *</label>
+                                <span className="text-[10px] text-slate-400 font-mono">Max 8 Chars</span>
+                              </div>
                               <input
                                 type="text"
-                                placeholder="e.g. DL-INV-"
+                                maxLength={8}
+                                placeholder="e.g. INV-"
                                 value={newEntity.invoicePrefix}
-                                onChange={(e) => setNewEntity({ ...newEntity, invoicePrefix: e.target.value.toUpperCase() })}
-                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-teal-700"
+                                onChange={(e) => setNewEntity({ ...newEntity, invoicePrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 8) })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-teal-700 uppercase focus:border-[#0F8B7D]"
                               />
+                              <span className="text-[10px] text-slate-400 block mt-0.5">Used for invoice serial numbering</span>
                             </div>
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Bank Account for Collections</label>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <label className="block text-[11px] font-bold text-slate-700">Bank Account for Collections</label>
+                                <span className="text-[10px] text-slate-400 font-mono">Digits Only</span>
+                              </div>
                               <input
                                 type="text"
-                                placeholder="Account Number"
+                                maxLength={18}
+                                placeholder="e.g. 50200012345678"
                                 value={newEntity.accountNumber}
-                                onChange={(e) => setNewEntity({ ...newEntity, accountNumber: e.target.value })}
-                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono"
+                                onChange={(e) => setNewEntity({ ...newEntity, accountNumber: e.target.value.replace(/[^0-9]/g, "").slice(0, 18) })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
                               />
+                              <span className="text-[10px] text-slate-400 block mt-0.5">9 to 18 digits bank account number</span>
                             </div>
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">IFSC Code</label>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <label className="block text-[11px] font-bold text-slate-700">IFSC Code (11 Chars)</label>
+                                <span className={`text-[10px] font-mono font-bold ${newEntity.ifscCode.length === 11 ? "text-emerald-600" : "text-slate-400"}`}>
+                                  {newEntity.ifscCode.length}/11
+                                </span>
+                              </div>
                               <input
                                 type="text"
-                                placeholder="e.g. HDFC0000060"
+                                maxLength={11}
+                                placeholder="e.g. HDFC0001234"
                                 value={newEntity.ifscCode}
-                                onChange={(e) => setNewEntity({ ...newEntity, ifscCode: e.target.value.toUpperCase() })}
-                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono"
+                                onChange={(e) => setNewEntity({ ...newEntity, ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono uppercase focus:border-[#0F8B7D]"
                               />
+                              <span className="text-[10px] text-slate-400 block mt-0.5">Format: 4 letters + 0 + 6 alphanumeric</span>
                             </div>
                           </div>
                           <div className="flex justify-end pt-1">
@@ -889,7 +1268,7 @@ function OnboardingContent() {
                             <span>Tax Profiles — Standard GST Rates per Charge Type</span>
                           </h3>
                           <p className="text-[11px] text-slate-500">
-                            <em>&quot;Base Rent: 18% GST, CAM: 18% GST, IFSC SEZ Properties: 0% GST (tax-exempt)&quot; (Slide 4)</em>
+                            <em>Standard commercial rates default to 18% GST; SEZ and IFSC properties default to 0% GST (tax-exempt).</em>
                           </p>
                         </div>
 
@@ -1002,11 +1381,11 @@ function OnboardingContent() {
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 3 of 7 · Section B (Slide 4)
+                        Step 3 of 6 · Operational Settings &amp; Charge Master
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Section B: Operational Settings &amp; Charge Master</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Operational Settings &amp; Charge Master</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Select which charges you bill for, configure individual rates, and enforce the client&apos;s Inclusions Rule.
+                        Select which charges you bill for, configure individual rates, and enforce the portfolio Inclusions Rule.
                       </p>
                     </div>
 
@@ -1049,7 +1428,7 @@ function OnboardingContent() {
                       </div>
                     </div>
 
-                    {/* Charge Types Selectable Checklist (Slide 4) */}
+                    {/* Charge Types Selectable Checklist */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
@@ -1057,7 +1436,7 @@ function OnboardingContent() {
                             Charge Types Checklist: Select Which Charges You Bill For
                           </h3>
                           <p className="text-[11px] text-slate-500">
-                            Check items active in your portfolio. Toggle &quot;Included in Base Rent&quot; to prevent double billing (Slide 10).
+                            Check items active in your portfolio. Toggle &quot;Included in Base Rent&quot; to prevent double billing.
                           </p>
                         </div>
                         <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full">
@@ -1133,11 +1512,11 @@ function OnboardingContent() {
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 4 of 7 · Section C &amp; D (Slide 4)
+                        Step 4 of 6 · Visual Branding, Custom Domains &amp; Users
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Section C &amp; D: Visual Branding, Custom Domains &amp; Users</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Visual Branding, Custom Domains &amp; Users</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Set logo &amp; brand colours with live preview, configure sender domain, and assign the 5 canonical user roles.
+                        Set logo &amp; brand colours with live preview, configure sender domain, and assign standard user roles.
                       </p>
                     </div>
 
@@ -1180,38 +1559,82 @@ function OnboardingContent() {
                             <label className="block text-[11px] font-bold text-slate-700 mb-1">Company / Portfolio Display Name</label>
                             <input
                               type="text"
+                              placeholder="e.g. Acme Commercial Portfolio"
                               value={branding.portfolioDisplayName}
                               onChange={(e) => setBranding({ ...branding, portfolioDisplayName: e.target.value })}
-                              className="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"
+                              className="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-[#0F8B7D]"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1">Select Preset Logo / Symbol</label>
-                            <div className="grid grid-cols-4 gap-2">
-                              {[
-                                { id: "apex", label: "Apex Tower", color: "bg-teal-700 text-white" },
-                                { id: "horizon", label: "Horizon", color: "bg-indigo-700 text-white" },
-                                { id: "prime", label: "Prime SEZ", color: "bg-emerald-700 text-white" },
-                                { id: "techhub", label: "TechHub", color: "bg-purple-700 text-white" }
-                              ].map(l => (
-                                <button
-                                  key={l.id}
-                                  type="button"
-                                  onClick={() => setBranding({ ...branding, logoPreset: l.id })}
-                                  className={`p-2 rounded-xl text-center border cursor-pointer transition-all ${
-                                    branding.logoPreset === l.id
-                                      ? "border-[#0F8B7D] ring-2 ring-[#0F8B7D]/30"
-                                      : "border-slate-200 hover:border-slate-300"
-                                  }`}
+                            <label className="block text-[11px] font-bold text-slate-700 mb-1">Company Logo (Appears on Invoices, Emails & Portal)</label>
+                            <p className="text-[10px] text-slate-400 mb-2">Upload your company logo (PNG, JPG, SVG or WebP · Max 2 MB). If not uploaded, your company initials will be used.</p>
+
+                            {branding.logoPreview ? (
+                              /* Logo uploaded — show preview with remove option */
+                              <div className="flex items-center gap-3 p-3 bg-white border border-teal-200 rounded-xl">
+                                <div className="w-14 h-14 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  <img
+                                    src={branding.logoPreview}
+                                    alt="Company Logo"
+                                    className="max-w-full max-h-full object-contain"
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                                    <Check size={12} /> Logo Uploaded
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 block">This will appear on all invoices, emails & tenant portal.</span>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => logoInputRef.current?.click()}
+                                    className="px-2 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+                                  >
+                                    Replace
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleRemoveLogo}
+                                    className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* No logo — show upload dropzone */
+                              <button
+                                type="button"
+                                onClick={() => logoInputRef.current?.click()}
+                                className="w-full p-4 border-2 border-dashed border-slate-300 hover:border-[#0F8B7D] rounded-xl bg-slate-50/50 hover:bg-teal-50/30 transition-all cursor-pointer group"
+                              >
+                                <div className="flex flex-col items-center gap-1.5">
+                                  <UploadCloud className="w-7 h-7 text-slate-300 group-hover:text-[#0F8B7D] transition-colors" />
+                                  <span className="text-[11px] font-bold text-slate-600 group-hover:text-[#0F8B7D]">Click to upload your company logo</span>
+                                  <span className="text-[10px] text-slate-400">PNG, JPG, SVG or WebP · Max 2 MB</span>
+                                </div>
+                              </button>
+                            )}
+                            <input
+                              ref={logoInputRef}
+                              type="file"
+                              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                              onChange={handleLogoUpload}
+                              className="hidden"
+                            />
+                            {!branding.logoPreview && (
+                              <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-400">
+                                <div
+                                  className="w-6 h-6 rounded-md flex items-center justify-center font-black text-[9px] text-white flex-shrink-0"
+                                  style={{ backgroundColor: branding.brandColor }}
                                 >
-                                  <div className={`w-8 h-8 rounded-lg mx-auto flex items-center justify-center font-black text-xs ${l.color}`}>
-                                    {l.label.substring(0, 2).toUpperCase()}
-                                  </div>
-                                  <span className="text-[10px] font-bold text-slate-700 block mt-1 truncate">{l.label}</span>
-                                </button>
-                              ))}
-                            </div>
+                                  {logoInitials}
+                                </div>
+                                <span>Fallback: Your company initials <strong>"{logoInitials}"</strong> will be used if no logo is uploaded.</span>
+                              </div>
+                            )}
                           </div>
 
                           <div>
@@ -1238,8 +1661,10 @@ function OnboardingContent() {
                               ))}
                               <input
                                 type="text"
+                                maxLength={7}
+                                placeholder="#0F8B7D"
                                 value={branding.brandColor}
-                                onChange={(e) => setBranding({ ...branding, brandColor: e.target.value })}
+                                onChange={(e) => setBranding({ ...branding, brandColor: e.target.value.slice(0, 7) })}
                                 className="w-20 p-1 text-xs font-mono font-bold border border-slate-200 rounded text-center ml-2"
                               />
                             </div>
@@ -1249,9 +1674,10 @@ function OnboardingContent() {
                             <label className="block text-[11px] font-bold text-slate-700 mb-1">Statutory Invoice Memo (Section 31 CGST)</label>
                             <input
                               type="text"
+                              placeholder="e.g. Tax invoice under Rule 46 of CGST Rules 2017"
                               value={branding.invoiceHeaderMemo}
                               onChange={(e) => setBranding({ ...branding, invoiceHeaderMemo: e.target.value })}
-                              className="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl"
+                              className="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
                             />
                           </div>
                         </div>
@@ -1269,8 +1695,12 @@ function OnboardingContent() {
                                 style={{ backgroundColor: branding.brandColor }}
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center font-black text-xs">
-                                    {branding.logoPreset.substring(0, 2).toUpperCase()}
+                                  <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center overflow-hidden">
+                                    {branding.logoPreview ? (
+                                      <img src={branding.logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                    ) : (
+                                      <span className="font-black text-xs">{logoInitials}</span>
+                                    )}
                                   </div>
                                   <span className="font-extrabold text-xs">{branding.portfolioDisplayName}</span>
                                 </div>
@@ -1337,14 +1767,15 @@ function OnboardingContent() {
                           <span>Custom Email Sender Domain</span>
                         </h3>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          <em>&quot;If you want invoices to come from rent@yourdomain.com, configure here.&quot; (Slide 4)</em>
+                          <em>Deliver invoices and rent demands from your corporate email domain with automated SPF/DKIM verification.</em>
                         </p>
                         <div className="mt-2 flex items-center gap-2">
                           <input
                             type="email"
+                            placeholder="e.g. billing@acmecommercial.com"
                             value={domains.senderBillingEmail}
                             onChange={(e) => setDomains({ ...domains, senderBillingEmail: e.target.value })}
-                            className="flex-1 text-xs p-2 bg-white border border-slate-200 rounded-xl font-mono"
+                            className="flex-1 text-xs p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
                           />
                           <span className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-1 shrink-0">
                             <CheckCircle2 size={12} className="text-emerald-600" /> SPF / DKIM Verified
@@ -1358,14 +1789,16 @@ function OnboardingContent() {
                           <span>Branded Subdomain / Custom Domain</span>
                         </h3>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          <em>&quot;Your occupants access a branded portal at yourcompany.officex.pro&quot; (Slide 4)</em>
+                          <em>Your occupants and tenants access their self-service tenant portal via your dedicated subdomain.</em>
                         </p>
                         <div className="mt-2 flex items-center gap-1.5">
                           <input
                             type="text"
+                            maxLength={20}
+                            placeholder="e.g. acme"
                             value={domains.subdomain}
-                            onChange={(e) => setDomains({ ...domains, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
-                            className="w-36 text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold font-mono text-teal-700"
+                            onChange={(e) => setDomains({ ...domains, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 20) })}
+                            className="w-36 text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold font-mono text-teal-700 focus:border-[#0F8B7D]"
                           />
                           <span className="text-xs text-slate-500 font-bold">.officex.pro</span>
                           <span className="px-2 py-1 rounded-xl bg-slate-200 text-slate-700 text-[10px] font-bold ml-auto">
@@ -1375,16 +1808,16 @@ function OnboardingContent() {
                       </div>
                     </div>
 
-                    {/* Section D: Users & Roles Assignment Table (Slide 4) */}
+                    {/* Users & Roles Assignment Table */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
                             <Users className="w-4 h-4 text-[#0F8B7D]" />
-                            <span>Section D: Users &amp; Roles Assignment Table</span>
+                            <span>Users &amp; Roles Assignment Table</span>
                           </h3>
                           <p className="text-[11px] text-slate-500">
-                            <em>&quot;You create the first set of users and assign roles (5 canonical role types)&quot; (Slide 4)</em>
+                            <em>Configure initial administrators and assign role-based access permissions.</em>
                           </p>
                         </div>
                         <button
@@ -1408,31 +1841,41 @@ function OnboardingContent() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {userList.map((usr) => (
-                              <tr key={usr.id} className="hover:bg-slate-50/50">
-                                <td className="p-3 font-bold text-slate-900">{usr.name}</td>
-                                <td className="p-3 font-mono text-slate-600 text-[11px]">{usr.email}</td>
-                                <td className="p-3">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    usr.role === "org_admin" ? "bg-purple-100 text-purple-900" :
-                                    usr.role === "finance_manager" ? "bg-blue-100 text-blue-900" :
-                                    usr.role === "property_manager" ? "bg-teal-100 text-teal-900" :
-                                    usr.role === "leasing_manager" ? "bg-amber-100 text-amber-900" :
-                                    "bg-slate-100 text-slate-800"
-                                  }`}>
-                                    {usr.role === "org_admin" ? "Organisation Admin" :
-                                     usr.role === "finance_manager" ? "Finance / AR Manager" :
-                                     usr.role === "property_manager" ? "Property Manager" :
-                                     usr.role === "leasing_manager" ? "Leasing Manager" : "Occupant (Tenant)"}
-                                  </span>
+                            {userList.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="p-8 text-center text-slate-500">
+                                  <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                  <p className="font-bold text-xs text-slate-700">No Team Members Added Yet</p>
+                                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-0.5">
+                                    Click &ldquo;Add User&rdquo; above to invite your administrators, finance team, or property managers.
+                                  </p>
                                 </td>
-                                <td className="p-3">
-                                  <span className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
-                                    {usr.makerCheckerRole.toUpperCase()}
-                                  </span>
-                                </td>
-                                <td className="p-3 text-right">
-                                  {userList.length > 1 && (
+                              </tr>
+                            ) : (
+                              userList.map((usr) => (
+                                <tr key={usr.id} className="hover:bg-slate-50/50">
+                                  <td className="p-3 font-bold text-slate-900">{usr.name}</td>
+                                  <td className="p-3 font-mono text-slate-600 text-[11px]">{usr.email}</td>
+                                  <td className="p-3">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      usr.role === "org_admin" ? "bg-purple-100 text-purple-900" :
+                                      usr.role === "finance_manager" ? "bg-blue-100 text-blue-900" :
+                                      usr.role === "property_manager" ? "bg-teal-100 text-teal-900" :
+                                      usr.role === "leasing_manager" ? "bg-amber-100 text-amber-900" :
+                                      "bg-slate-100 text-slate-800"
+                                    }`}>
+                                      {usr.role === "org_admin" ? "Organisation Admin" :
+                                       usr.role === "finance_manager" ? "Finance / AR Manager" :
+                                       usr.role === "property_manager" ? "Property Manager" :
+                                       usr.role === "leasing_manager" ? "Leasing Manager" : "Occupant (Tenant)"}
+                                    </span>
+                                  </td>
+                                  <td className="p-3">
+                                    <span className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
+                                      {usr.makerCheckerRole.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-right">
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveUser(usr.id)}
@@ -1440,10 +1883,10 @@ function OnboardingContent() {
                                     >
                                       <Trash2 size={13} />
                                     </button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -1455,24 +1898,24 @@ function OnboardingContent() {
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
                             <input
                               type="text"
-                              placeholder="Full Name"
+                              placeholder="e.g. Rahul Sharma"
                               value={newUser.name}
                               onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                              className="p-2 bg-white border border-slate-200 rounded-xl"
+                              className="p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
                             />
                             <input
                               type="email"
-                              placeholder="user@yourcompany.com"
+                              placeholder="e.g. rahul.sharma@acme.com"
                               value={newUser.email}
                               onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                              className="p-2 bg-white border border-slate-200 rounded-xl font-mono"
+                              className="p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
                             />
                             <select
                               value={newUser.role}
                               onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })}
                               className="p-2 bg-white border border-slate-200 rounded-xl font-semibold"
                             >
-                              <option value="org_admin">Organisation Admin (Super Admin)</option>
+                              <option value="org_admin">Organisation Administrator</option>
                               <option value="finance_manager">Finance / AR Manager (Invoices &amp; Ageing)</option>
                               <option value="property_manager">Property Manager (Spaces &amp; Notices)</option>
                               <option value="leasing_manager">Leasing Manager (Deals &amp; Vacancy)</option>
@@ -1506,7 +1949,7 @@ function OnboardingContent() {
                           <ShieldCheck className="w-5 h-5 text-purple-700 shrink-0" />
                           <div>
                             <div className="font-extrabold text-xs text-purple-950">Dual-Control Governance (Maker-Checker Policy)</div>
-                            <div className="text-[11px] text-purple-800">Person entering data cannot approve their own entry (Slide 4)</div>
+                            <div className="text-[11px] text-purple-800">Person entering contract data cannot approve their own entry (Segregation of duties)</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-bold text-purple-900">
@@ -1534,89 +1977,14 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 5: ONBOARDING ROUTE CHOICE (Slide 5) ════════ */}
+                {/* ════════ STEP 5: DATA IMPORT & INGESTION (9-STEP SUITE) ════════ */}
                 {currentStep === 5 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 5 of 7 · Client Spec §8.1 &amp; Slide 5
+                        Step 5 of 6 · Rent Roll Import &amp; Ingestion Engine
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Choose Your Data Onboarding Route</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Select how your existing commercial leases, floor schedules, and financial terms will be ingested.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {[
-                        { id: "managed", title: "Option A: Managed Services (White-Glove)", badge: "100+ Contracts", desc: "Scalezix team abstracts executed lease PDFs, reconciles, and supervises parallel run" },
-                        { id: "assisted", title: "Option B: Assisted Onboarding", badge: "20–100 Contracts", desc: "Subscriber uploads; support validates mapping and control totals with joint sign-off" },
-                        { id: "self_serve", title: "Option C: Self-Serve Ingestion", badge: "<20 Contracts", desc: "Direct drag-and-drop CSV upload or instant benchmark portfolio sandbox" }
-                      ].map((rt) => (
-                        <div
-                          key={rt.id}
-                          onClick={() => setOnboardingRoute(rt.id as any)}
-                          className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                            onboardingRoute === rt.id
-                              ? "bg-teal-50/70 border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20"
-                              : "bg-slate-50/60 border-slate-200 hover:border-slate-300"
-                          }`}
-                        >
-                          <div>
-                            <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">
-                              {rt.badge}
-                            </span>
-                            <div className="font-extrabold text-xs text-slate-900 mt-2">{rt.title}</div>
-                            <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">{rt.desc}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Download Blank Templates (Area vs Seat) */}
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                      <div className="text-xs font-bold text-slate-800">Standard Import Templates</div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
-                          <div>
-                            <div className="font-bold text-xs text-slate-900">Area-Based Lease Template</div>
-                            <div className="text-[11px] text-slate-500">16 standard columns with stepped escalations &amp; CAM</div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadSample("area")}
-                            className="px-3 py-1.5 bg-teal-50 text-[#0F8B7D] hover:bg-teal-100 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <Download size={13} /> Download .CSV
-                          </button>
-                        </div>
-
-                        <div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
-                          <div>
-                            <div className="font-bold text-xs text-slate-900">Seat-Based Flex Space Template</div>
-                            <div className="text-[11px] text-slate-500">Co-working desk commitments &amp; private enterprise cabins</div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadSample("seat")}
-                            className="px-3 py-1.5 bg-teal-50 text-[#0F8B7D] hover:bg-teal-100 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <Download size={13} /> Download .CSV
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ════════ STEP 6: IMPORT WORKFLOW (9-STEP SUITE — Slides 6 & 7) ════════ */}
-                {currentStep === 6 && (
-                  <div className="space-y-6 animate-fadeIn">
-                    <div>
-                      <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 6 of 7 · Import Workflow (Slides 6 &amp; 7)
-                      </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Data Import &amp; Ingestion Engine</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Rent Roll Import &amp; Ingestion Engine</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Follow the canonical 9-step ingestion pipeline from file profiling through reconciliation, two-step signoff, and 7-day rollback.
                       </p>
@@ -1625,15 +1993,15 @@ function OnboardingContent() {
                     {/* 9 Mini Steps Sub-tabs */}
                     <div className="grid grid-cols-3 sm:grid-cols-9 gap-1 text-center text-[10px] font-bold">
                       {[
-                        { num: 1, label: "6.1 Upload" },
-                        { num: 2, label: "6.2 Profile" },
-                        { num: 3, label: "6.3 Mapping" },
-                        { num: 4, label: "6.4 Validate" },
-                        { num: 5, label: "6.5 Control" },
-                        { num: 6, label: "6.6 Exceptions" },
-                        { num: 7, label: "6.7 2-Step Sign" },
-                        { num: 8, label: "6.8 Commit" },
-                        { num: 9, label: "6.9 Rollback" }
+                        { num: 1, label: "5.1 Upload" },
+                        { num: 2, label: "5.2 Profile" },
+                        { num: 3, label: "5.3 Mapping" },
+                        { num: 4, label: "5.4 Validate" },
+                        { num: 5, label: "5.5 Control" },
+                        { num: 6, label: "5.6 Exceptions" },
+                        { num: 7, label: "5.7 2-Step Sign" },
+                        { num: 8, label: "5.8 Commit" },
+                        { num: 9, label: "5.9 Rollback" }
                       ].map(s => (
                         <div
                           key={s.num}
@@ -1649,35 +2017,121 @@ function OnboardingContent() {
                       ))}
                     </div>
 
-                    {/* Step 6.1: Upload file */}
+                    {/* Step 5.1: Upload file & Templates */}
                     {importWorkflowStep === 1 && (
-                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 6.1: Upload Rent Roll File (.xlsx / .csv, Max 20 MB)</h3>
-                            <p className="text-[11px] text-slate-500">Multi-sheet Excel files supported (one property per tab).</p>
+                      <div className="space-y-4">
+                        {/* White-Glove Advisory Banner */}
+                        <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                          <div className="flex items-start sm:items-center gap-2.5">
+                            <Headphones className="w-4 h-4 text-[#0F8B7D] shrink-0 mt-0.5 sm:mt-0" />
+                            <div>
+                              <span className="font-extrabold text-teal-950 block">Need White-Glove Onboarding Assistance?</span>
+                              <span className="text-[11px] text-teal-800">
+                                For portfolios with 100+ executed lease deeds or complex multi-tier SPVs, our advisory team abstracts contracts and supervises parallel runs.
+                              </span>
+                            </div>
                           </div>
-                          <span className="px-2.5 py-1 rounded bg-teal-50 text-teal-800 text-[10px] font-mono font-bold">
-                            Max 20 MB
-                          </span>
+                          <a
+                            href="mailto:onboarding@officex.pro?subject=White-Glove%20Onboarding%20Inquiry"
+                            className="px-3.5 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl font-bold text-[11px] shrink-0 transition-colors inline-flex items-center justify-center gap-1 shadow-2xs"
+                          >
+                            Request Advisory Support
+                          </a>
                         </div>
 
-                        <div className="p-8 bg-white border border-dashed border-slate-300 rounded-2xl text-center space-y-3">
-                          <UploadCloud className="w-10 h-10 text-[#0F8B7D] mx-auto animate-pulse" />
-                          <div className="text-xs font-bold text-slate-800">
-                            Current Ingestion Dataset: <span className="text-[#0F8B7D] font-mono">{uploadedFileName}</span>
+                        {/* Clean File Upload Box */}
+                        <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-sm font-extrabold text-slate-900">Upload Your Rent Roll File (.xlsx / .csv)</h3>
+                              <p className="text-[11px] text-slate-500 mt-0.5">Upload your existing lease spreadsheet or tenant roster. Multi-sheet Excel files supported.</p>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 text-[10px] font-mono font-bold border border-teal-200">
+                              Max 20 MB
+                            </span>
                           </div>
-                          <div className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                            Apex Business Tower &amp; Meridian Tech Park canonical portfolio preloaded for validation.
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setImportWorkflowStep(2)}
-                            className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 mx-auto"
+
+                          <input
+                            ref={rentRollFileInputRef}
+                            type="file"
+                            accept=".csv,.xlsx,.xls"
+                            onChange={handleRentRollFileUpload}
+                            className="hidden"
+                          />
+
+                          <div
+                            onClick={() => rentRollFileInputRef.current?.click()}
+                            className="p-10 bg-white border-2 border-dashed border-slate-300 hover:border-[#0F8B7D] rounded-2xl text-center space-y-3 cursor-pointer group transition-all"
                           >
-                            <span>Proceed to 6.2 Data Profiling</span>
-                            <ArrowRight size={13} />
-                          </button>
+                            <UploadCloud className="w-12 h-12 text-[#0F8B7D] mx-auto group-hover:scale-110 transition-transform" />
+                            {uploadedFileName ? (
+                              <div className="space-y-1">
+                                <div className="text-xs font-extrabold text-slate-900 flex items-center justify-center gap-1.5">
+                                  <FileCheck size={16} className="text-emerald-600" />
+                                  <span>Selected File: <span className="text-[#0F8B7D] font-mono">{uploadedFileName}</span></span>
+                                </div>
+                                <p className="text-[11px] text-slate-500">Click to replace file, or click Proceed below to start data profiling.</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="text-xs font-bold text-slate-800">
+                                  Drag &amp; drop your rent roll file here, or <span className="text-[#0F8B7D] underline">Browse your computer</span>
+                                </div>
+                                <p className="text-[11px] text-slate-400">Supports Microsoft Excel (.xlsx, .xls) and standard CSV files</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Buttons: Skip vs Proceed */}
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setCurrentStep(6)}
+                              className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer"
+                            >
+                              Skip for now — I&apos;ll add leases later from Dashboard →
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                              {!uploadedFileName && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUploadedFileName("sample_commercial_portfolio.csv");
+                                    setProfilingReport(prev => ({ ...prev, totalRows: 12, qualityScore: 99.4 }));
+                                  }}
+                                  className="text-xs text-[#0F8B7D] hover:underline font-bold px-3 py-2 cursor-pointer"
+                                >
+                                  Load Demo Data
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!uploadedFileName) {
+                                    setUploadedFileName("sample_commercial_portfolio.csv");
+                                  }
+                                  setImportWorkflowStep(2);
+                                }}
+                                className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-2xs transition-all"
+                              >
+                                <span>Proceed to 5.2 Data Profiling</span>
+                                <ArrowRight size={13} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Subtle Helper Link */}
+                          <div className="pt-2 border-t border-slate-200/80 text-[11px] text-slate-500 flex items-center justify-between">
+                            <span>Don&apos;t have a formatted spreadsheet yet?</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadSample("area")}
+                              className="text-[#0F8B7D] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Download size={11} /> Download Sample Excel Template (.CSV)
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1687,7 +2141,7 @@ function OnboardingContent() {
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 6.2: Automated Data Profiling &amp; Quality Scan</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 5.2: Automated Data Profiling &amp; Quality Scan</h3>
                             <p className="text-[11px] text-slate-500">Scans for duplicate GSTINs, missing rents, and inconsistent date ranges.</p>
                           </div>
                           <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
@@ -1720,7 +2174,7 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(3)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 6.3 Column Mapping →
+                            Next: 5.3 Column Mapping →
                           </button>
                         </div>
                       </div>
@@ -1731,7 +2185,7 @@ function OnboardingContent() {
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 6.3: Smart Column Mapping Engine</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 5.3: Smart Column Mapping Engine</h3>
                             <p className="text-[11px] text-slate-500">Auto-matches source column headers with canonical schema.</p>
                           </div>
                           <button
@@ -1783,7 +2237,7 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(4)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 6.4 Validation Engine →
+                            Next: 5.4 Validation Engine →
                           </button>
                         </div>
                       </div>
@@ -1794,7 +2248,7 @@ function OnboardingContent() {
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 6.4: Canonical 44-Rule Validation Engine</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 5.4: Canonical 44-Rule Validation Engine</h3>
                             <p className="text-[11px] text-slate-500">Runs rules R-01 to R-44 with contextual fix hints.</p>
                           </div>
                           <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
@@ -1834,7 +2288,7 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(5)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 6.5 Control Totals →
+                            Next: 5.5 Control Totals →
                           </button>
                         </div>
                       </div>
@@ -1844,9 +2298,9 @@ function OnboardingContent() {
                     {importWorkflowStep === 5 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div>
-                          <h3 className="text-xs font-bold text-slate-900">Step 6.5: Control Totals &amp; Variance Reconciler</h3>
+                          <h3 className="text-xs font-bold text-slate-900">Step 5.5: Control Totals &amp; Variance Reconciler</h3>
                           <p className="text-[11px] text-slate-500">
-                            <em>&quot;If variance is &gt;0.5%, you must explain or fix it. No guessing allowed.&quot; (Slide 6)</em>
+                            <em>Any variance exceeding 0.5% between source sheets and system totals requires supervisor reconciliation.</em>
                           </p>
                         </div>
 
@@ -1890,7 +2344,7 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(6)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 6.6 Exception Queue →
+                            Next: 5.6 Exception Queue →
                           </button>
                         </div>
                       </div>
@@ -1901,7 +2355,7 @@ function OnboardingContent() {
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 6.6: Exception Queue &amp; Inline Resolution</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 5.6: Exception Queue &amp; Inline Resolution</h3>
                             <p className="text-[11px] text-slate-500">Fix rows inline, download error file, or mark overridden with audit notes.</p>
                           </div>
                           <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
@@ -1921,7 +2375,7 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(7)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 6.7 Two-Step Approval →
+                            Next: 5.7 Two-Step Approval →
                           </button>
                         </div>
                       </div>
@@ -1931,7 +2385,7 @@ function OnboardingContent() {
                     {importWorkflowStep === 7 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div>
-                          <h3 className="text-xs font-bold text-slate-900">Step 6.7: Dual-Control Two-Step Approval</h3>
+                          <h3 className="text-xs font-bold text-slate-900">Step 5.7: Dual-Control Two-Step Approval</h3>
                           <p className="text-[11px] text-slate-500">
                             1. Preparer (Finance) reviews and submits → 2. Approver (Org Admin) commits to production.
                           </p>
@@ -1955,7 +2409,7 @@ function OnboardingContent() {
                           </div>
 
                           <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
-                            <span className="font-extrabold text-slate-900 block">Step 2: Approver Commit (Org Super Admin)</span>
+                            <span className="font-extrabold text-slate-900 block">Step 2: Approver Commit &amp; Publish</span>
                             <p className="text-[11px] text-slate-500">
                               Authorizes system to write records to live database and publish production rent roll.
                             </p>
@@ -1984,7 +2438,7 @@ function OnboardingContent() {
                         <div className="flex items-center gap-3">
                           <CheckCircle2 size={24} className="text-teal-700" />
                           <div>
-                            <h3 className="text-xs font-bold text-teal-950">Step 6.8: Commit to Production Executed</h3>
+                            <h3 className="text-xs font-bold text-teal-950">Step 5.8: Commit to Production Executed</h3>
                             <p className="text-[11px] text-teal-800">Opening snapshot created, WALE calculated (3.86 Years), and stepped rent reviews primed.</p>
                           </div>
                         </div>
@@ -2014,27 +2468,27 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(9)}
                             className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            View 6.9 Rollback Policy
+                            View 5.9 Rollback Policy
                           </button>
                           <button
                             type="button"
-                            onClick={() => setCurrentStep(7)}
+                            onClick={() => setCurrentStep(6)}
                             className="px-6 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Proceed to Step 7: Go-Live Checklist →
+                            Proceed to Step 6: Go-Live Checklist →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 6.9: Rollback (within 7 days) */}
+                    {/* Step 5.9: Rollback (within 7 days) */}
                     {importWorkflowStep === 9 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 6.9: 7-Day Rollback Safety Policy</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 5.9: 7-Day Rollback Safety Policy</h3>
                             <p className="text-[11px] text-slate-500">
-                              <em>&quot;If you discover an issue in the first 7 days, you can roll back to the previous state.&quot; (Slide 6)</em>
+                              <em>Full 7-day snapshot rollback window available to revert data state if errors are discovered post-go-live.</em>
                             </p>
                           </div>
                           <span className="px-2.5 py-1 rounded bg-amber-100 text-amber-800 text-xs font-bold">
@@ -2063,12 +2517,12 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 7: GO-LIVE CHECKLIST (Slide 7 & 8) ════════ */}
-                {currentStep === 7 && (
+                {/* ════════ STEP 6: GO-LIVE CHECKLIST ════════ */}
+                {currentStep === 6 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 7 of 7 · Go-Live Checklist (Slides 7 &amp; 8)
+                        Step 6 of 6 · Production Go-Live Verification
                       </span>
                       <h2 className="text-xl font-black text-slate-900 mt-2">Production Go-Live Readiness Verification</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -2180,10 +2634,10 @@ function OnboardingContent() {
               <ArrowLeft className="w-4 h-4" /> Previous Step
             </button>
 
-            {currentStep < 7 ? (
+            {currentStep < 6 ? (
               <button
                 type="button"
-                onClick={() => setCurrentStep((prev) => Math.min(7, prev + 1))}
+                onClick={handleNextStep}
                 className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl font-bold text-xs cursor-pointer flex items-center gap-2 shadow-2xs transition-all"
               >
                 <span>Continue to Step {currentStep + 1}</span>

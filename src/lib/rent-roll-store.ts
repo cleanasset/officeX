@@ -690,6 +690,7 @@ export interface RentRollDatabase {
       occupantCommunicationSent: boolean;
     };
   };
+  isCleanPortfolio?: boolean;
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -700,6 +701,126 @@ function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+}
+
+// Pristine Clean Database Builder (Zero Fake Data)
+export function getEmptyDatabase(): RentRollDatabase {
+  return {
+    organization: {
+      id: "org-officex-001",
+      name: "",
+      pan: "",
+      gstin: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      fyStartMonth: 4,
+      invoicePrefix: "INV-2026",
+      currency: "INR",
+    },
+    clientAccounts: [],
+    billingEntities: [],
+    managementMandates: [],
+    properties: [],
+    spaces: [],
+    tenants: [],
+    deals: [],
+    leases: [],
+    escalations: [],
+    invoices: [],
+    billingRuns: [],
+    collections: [],
+    paymentAllocations: [],
+    adjustmentNotes: [],
+    ownerStatements: [],
+    expenses: [],
+    notices: [],
+    alerts: [],
+    auditLogs: [],
+    importBatches: [],
+    mappingTemplates: [],
+    flexCentres: [],
+    camPools: [],
+    meterReadings: [],
+    chargeMaster: [
+      {
+        id: "CHG-RENT",
+        chargeName: "Monthly Base Rent",
+        chargeCode: "BASE_RENT",
+        chargeType: "rent",
+        billingBasis: "psf_monthly",
+        defaultRate: 150,
+        gstRate: 18,
+        tdsApplicable: true,
+        tdsRate: 10,
+        hsnSacCode: "997212",
+        description: "Standard commercial office space lease base rental"
+      },
+      {
+        id: "CHG-CAM",
+        chargeName: "Common Area Maintenance (CAM)",
+        chargeCode: "CAM_PROVISIONAL",
+        chargeType: "cam",
+        billingBasis: "psf_monthly",
+        defaultRate: 28,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "998599",
+        description: "Comprehensive facility, security, HVAC, lifts and upkeep maintenance"
+      },
+      {
+        id: "CHG-EB-GRID",
+        chargeName: "Grid Power Consumption",
+        chargeCode: "EB_GRID",
+        chargeType: "utility",
+        billingBasis: "metered",
+        defaultRate: 11.50,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "998631",
+        description: "State utility HT electricity meter consumption charge"
+      },
+      {
+        id: "CHG-EB-DG",
+        chargeName: "DG Backup Power Consumption",
+        chargeCode: "EB_DG",
+        chargeType: "utility",
+        billingBasis: "metered",
+        defaultRate: 32.00,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "998631",
+        description: "Diesel Generator captive backup power supply charge per kWh"
+      },
+      {
+        id: "CHG-PARKING",
+        chargeName: "Reserved Basement Car Parking",
+        chargeCode: "PARKING_RESERVED",
+        chargeType: "parking",
+        billingBasis: "fixed_monthly",
+        defaultRate: 4500,
+        gstRate: 18,
+        tdsApplicable: false,
+        tdsRate: 0,
+        hsnSacCode: "996729",
+        description: "Allotted reserved basement / stilt vehicular parking slots"
+      }
+    ],
+    config: {
+      leaseExpiryAlertDays: 90,
+      escalationAlertDays: 30,
+      defaultGstPct: 18,
+      defaultPaymentDueDays: 15,
+      currency: "INR",
+      asOfDate: new Date().toISOString().split("T")[0],
+      makerCheckerEnabled: true,
+    },
+    isCleanPortfolio: true,
+  };
 }
 
 // Canonical Section 13 Seed Database Builder
@@ -2175,9 +2296,11 @@ export function getRentRollDb(): RentRollDatabase {
     if (!parsed.mappingTemplates) parsed.mappingTemplates = [];
     if (!parsed.flexCentres) parsed.flexCentres = [];
     if (!parsed.camPools) parsed.camPools = [];
+    if (!parsed.meterReadings) parsed.meterReadings = [];
+    if (!parsed.auditLogs) parsed.auditLogs = [];
 
-    // If properties empty or has old placeholder data, populate Section 13 fixtures
-    if (!parsed.properties || parsed.properties.length === 0) {
+    // Only populate Section 13 fixtures if NOT marked as clean portfolio AND explicitly empty on initial bootstrap
+    if (!parsed.isCleanPortfolio && (!parsed.properties || parsed.properties.length === 0)) {
       const initial = getInitialSeedDatabase();
       parsed.clientAccounts = initial.clientAccounts;
       parsed.billingEntities = initial.billingEntities;
@@ -2201,23 +2324,13 @@ export function getRentRollDb(): RentRollDatabase {
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
     }
 
-    if (!parsed.flexCentres || parsed.flexCentres.length === 0) {
-      parsed.flexCentres = getInitialSeedDatabase().flexCentres;
-      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
-    }
-
-    if (!parsed.meterReadings || parsed.meterReadings.length === 0) {
-      parsed.meterReadings = getInitialSeedDatabase().meterReadings;
-      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
-    }
-
     if (!parsed.chargeMaster || parsed.chargeMaster.length === 0) {
-      parsed.chargeMaster = getInitialSeedDatabase().chargeMaster;
+      parsed.chargeMaster = getEmptyDatabase().chargeMaster;
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
     }
 
     if (!parsed.config) {
-      parsed.config = getInitialSeedDatabase().config;
+      parsed.config = getEmptyDatabase().config;
     } else if (parsed.config.makerCheckerEnabled === undefined) {
       parsed.config.makerCheckerEnabled = true;
     }
@@ -2229,6 +2342,14 @@ export function getRentRollDb(): RentRollDatabase {
     fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
     return initial;
   }
+}
+
+// Reset DB to clean empty state or reload seed fixtures
+export function resetRentRollDb(mode: "clean" | "fixtures" = "clean"): RentRollDatabase {
+  ensureDataDir();
+  const db = mode === "clean" ? getEmptyDatabase() : getInitialSeedDatabase();
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+  return db;
 }
 
 // Flex Centre Store Methods

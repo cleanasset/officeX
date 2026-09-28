@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Building2,
@@ -25,6 +23,7 @@ import {
   Palette,
   Percent
 } from "lucide-react";
+import { StateAutocomplete } from "@/components/ui/LocationInputs";
 
 interface RentRollConfigWizardModalProps {
   isOpen: boolean;
@@ -63,44 +62,19 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
   // Section A: Financial & Legal Setup (Multiple Billing Entities)
-  const [billingEntities, setBillingEntities] = useState<BillingEntityItem[]>([
-    {
-      id: "BE-01",
-      spvName: "Apex Asset Management India Pvt Ltd",
-      gstin: "27AAFCO1234F1Z5",
-      pan: "AAFCO1234F",
-      invoicePrefix: "APX-INV",
-      bankName: "HDFC Bank Ltd",
-      accountNumber: "50200088991122",
-      ifscCode: "HDFC0000060",
-      stateCode: "27 - Maharashtra",
-      isDefault: true
-    },
-    {
-      id: "BE-02",
-      spvName: "Apex Infratech Karnataka SPV-2 Ltd",
-      gstin: "29AAFCO1234F1Z7",
-      pan: "AAFCO1234F",
-      invoicePrefix: "KA-INV",
-      bankName: "ICICI Bank Ltd",
-      accountNumber: "000405012345",
-      ifscCode: "ICIC0000004",
-      stateCode: "29 - Karnataka",
-      isDefault: false
-    }
-  ]);
+  const [billingEntities, setBillingEntities] = useState<BillingEntityItem[]>([]);
 
   const [isAddingEntity, setIsAddingEntity] = useState(false);
   const [newEntity, setNewEntity] = useState<BillingEntityItem>({
     id: "",
     spvName: "",
     gstin: "",
-    pan: "AAFCO1234F",
-    invoicePrefix: "DL-INV",
-    bankName: "HDFC Bank Ltd",
+    pan: "",
+    invoicePrefix: "INV-",
+    bankName: "",
     accountNumber: "",
-    ifscCode: "HDFC0000060",
-    stateCode: "07 - Delhi",
+    ifscCode: "",
+    stateCode: "",
     isDefault: false
   });
 
@@ -161,29 +135,73 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
 
   // Section C: Branding & Communication
   const [branding, setBranding] = useState({
-    companyDisplayName: "Apex Commercial Towers",
+    companyDisplayName: "",
     brandColor: "#0F8B7D",
     invoiceHeaderMemo: "Official Tax Invoice issued under Section 31 of CGST Act, 2017",
-    senderBillingEmail: "rent@apexassets.in",
-    isDomainVerified: true,
-    subdomain: "apexassets",
+    senderBillingEmail: "",
+    isDomainVerified: false,
+    subdomain: "",
     enableCustomDomain: false,
-    customDomain: "rent.apexassets.in"
+    customDomain: ""
   });
 
   // Section D: Users, Roles & Maker-Checker Policy
-  const [userList, setUserList] = useState<UserRoleItem[]>([
-    { id: "USR-01", name: "Rajesh Sharma", email: "rajesh.s@apexassets.in", role: "org_admin", makerCheckerRole: "approver" },
-    { id: "USR-02", name: "Priya Nair", email: "priya.n@apexassets.in", role: "finance_manager", makerCheckerRole: "maker" },
-    { id: "USR-03", name: "Vikram Mehta", email: "vikram.m@apexassets.in", role: "property_manager", makerCheckerRole: "maker" },
-    { id: "USR-04", name: "Ananya Kapoor", email: "ananya.k@apexassets.in", role: "leasing_manager", makerCheckerRole: "maker" },
-    { id: "USR-05", name: "Ananya Deshmukh", email: "ananya.d@technova.com", role: "occupant", makerCheckerRole: "maker" }
-  ]);
+  const [userList, setUserList] = useState<UserRoleItem[]>([]);
 
   const [governance, setGovernance] = useState({
     makerCheckerLease: true,
     makerCheckerBilling: true
   });
+
+  // Load saved organization settings when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    const loadOrg = async () => {
+      try {
+        const res = await fetch("/api/rent-roll/organization");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.billingEntities && data.billingEntities.length > 0) {
+            setBillingEntities(data.billingEntities.map((b: any) => ({
+              id: b.id || `BE-${Date.now()}`,
+              spvName: b.legalName || b.spvName || "",
+              gstin: b.gstin || "",
+              pan: b.pan || "",
+              invoicePrefix: b.invoicePrefix || "INV-",
+              bankName: b.bankName || "",
+              accountNumber: b.bankAccountNumber || b.accountNumber || "",
+              ifscCode: b.bankIfsc || b.ifscCode || "",
+              stateCode: b.stateCode || "",
+              isDefault: !!b.isDefault
+            })));
+          }
+          if (data.config?.branding) {
+            setBranding(prev => ({
+              ...prev,
+              companyDisplayName: data.config.branding.portfolioDisplayName || prev.companyDisplayName,
+              brandColor: data.config.branding.brandColor || prev.brandColor,
+              invoiceHeaderMemo: data.config.branding.invoiceHeaderMemo || prev.invoiceHeaderMemo
+            }));
+          }
+          if (data.config?.domainConfig) {
+            setBranding(prev => ({
+              ...prev,
+              senderBillingEmail: data.config.domainConfig.emailSenderDomain || prev.senderBillingEmail,
+              isDomainVerified: !!data.config.domainConfig.isSenderDomainVerified,
+              subdomain: data.config.domainConfig.subdomain || prev.subdomain,
+              customDomain: data.config.domainConfig.customDomain || prev.customDomain
+            }));
+          }
+          if (data.config?.users && data.config.users.length > 0) {
+            setUserList(data.config.users);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to load organization settings:", e);
+      }
+    };
+    loadOrg();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -258,7 +276,7 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
             <div>
               <h3 className="text-base font-extrabold tracking-tight">Rent Roll Configuration Engine</h3>
               <p className="text-xs text-slate-300 font-medium">
-                Canonical 4-Section Setup Wizard (Slide 4 · Scalezix V2.1 Spec)
+                Enterprise Setup &amp; Governance Master
               </p>
             </div>
           </div>
@@ -322,26 +340,43 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {billingEntities.map((be) => (
-                        <div
-                          key={be.id}
-                          className={`p-3 rounded-xl border ${be.isDefault ? "bg-teal-50/70 border-teal-300" : "bg-slate-50 border-slate-200"}`}
+                    {billingEntities.length === 0 ? (
+                      <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                        <Building2 className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
+                        <p className="text-xs font-bold text-slate-700">No Billing Entities Configured</p>
+                        <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-0.5">
+                          Add a legal SPV or state entity to generate statutory GST invoices.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingEntity(true)}
+                          className="mt-2.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                         >
-                          <div className="flex justify-between items-start">
-                            <span className="font-bold text-slate-900 truncate block">{be.spvName}</span>
-                            {be.isDefault && (
-                              <span className="px-1.5 py-0.5 rounded bg-teal-600 text-white text-[9px] font-bold">Default</span>
-                            )}
+                          <Plus size={12} /> Add First Entity
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {billingEntities.map((be) => (
+                          <div
+                            key={be.id}
+                            className={`p-3 rounded-xl border ${be.isDefault ? "bg-teal-50/70 border-teal-300" : "bg-slate-50 border-slate-200"}`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <span className="font-bold text-slate-900 truncate block">{be.spvName}</span>
+                              {be.isDefault && (
+                                <span className="px-1.5 py-0.5 rounded bg-teal-600 text-white text-[9px] font-bold">Default</span>
+                              )}
+                            </div>
+                            <div className="mt-2 text-[10px] text-slate-500 space-y-0.5">
+                              <div>GSTIN: <span className="font-mono font-bold text-slate-700">{be.gstin}</span></div>
+                              <div>Prefix: <span className="font-mono font-bold text-teal-700">{be.invoicePrefix}</span></div>
+                              <div>Bank: {be.bankName || "—"} ({be.ifscCode || "—"})</div>
+                            </div>
                           </div>
-                          <div className="mt-2 text-[10px] text-slate-500 space-y-0.5">
-                            <div>GSTIN: <span className="font-mono font-bold text-slate-700">{be.gstin}</span></div>
-                            <div>Prefix: <span className="font-mono font-bold text-teal-700">{be.invoicePrefix}</span></div>
-                            <div>Bank: {be.bankName} ({be.ifscCode})</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
 
                     {isAddingEntity && (
                       <div className="p-3 bg-teal-50/50 border border-teal-200 rounded-xl space-y-2">
@@ -349,31 +384,36 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
                         <div className="grid grid-cols-2 gap-2">
                           <input
                             type="text"
-                            placeholder="SPV Legal Name"
+                            placeholder="e.g. Skyline Commercial Assets SPV-1"
                             value={newEntity.spvName}
                             onChange={(e) => setNewEntity({ ...newEntity, spvName: e.target.value })}
                             className="p-1.5 bg-white border border-slate-200 rounded text-xs"
                           />
-                          <input
-                            type="text"
-                            placeholder="State (e.g. 07 - Delhi)"
+                          <StateAutocomplete
+                            returnCodeFormat={true}
+                            placeholder="State (e.g. 27 - Maharashtra)"
                             value={newEntity.stateCode}
-                            onChange={(e) => setNewEntity({ ...newEntity, stateCode: e.target.value })}
-                            className="p-1.5 bg-white border border-slate-200 rounded text-xs"
+                            onChange={(val) => setNewEntity({ ...newEntity, stateCode: val })}
+                            className="!p-1.5 !rounded text-xs"
                           />
                           <input
                             type="text"
-                            placeholder="15-Digit GSTIN"
+                            maxLength={15}
+                            placeholder="e.g. 27ABCDE1234F1Z5"
                             value={newEntity.gstin}
-                            onChange={(e) => setNewEntity({ ...newEntity, gstin: e.target.value.toUpperCase() })}
-                            className="p-1.5 bg-white border border-slate-200 rounded text-xs font-mono"
+                            onChange={(e) => {
+                              const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+                              setNewEntity({ ...newEntity, gstin: cleaned });
+                            }}
+                            className="p-1.5 bg-white border border-slate-200 rounded text-xs font-mono font-bold uppercase"
                           />
                           <input
                             type="text"
-                            placeholder="Invoice Prefix"
+                            maxLength={8}
+                            placeholder="e.g. INV-"
                             value={newEntity.invoicePrefix}
-                            onChange={(e) => setNewEntity({ ...newEntity, invoicePrefix: e.target.value.toUpperCase() })}
-                            className="p-1.5 bg-white border border-slate-200 rounded text-xs font-mono font-bold text-teal-700"
+                            onChange={(e) => setNewEntity({ ...newEntity, invoicePrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 8) })}
+                            className="p-1.5 bg-white border border-slate-200 rounded text-xs font-mono font-bold text-teal-700 uppercase"
                           />
                         </div>
                         <div className="flex justify-end gap-2 pt-1">
@@ -574,14 +614,22 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-[11px]">
-                        {userList.map(u => (
-                          <tr key={u.id}>
-                            <td className="p-2 font-bold">{u.name}</td>
-                            <td className="p-2 font-mono text-slate-500">{u.email}</td>
-                            <td className="p-2 font-semibold capitalize text-teal-800">{u.role.replace("_", " ")}</td>
-                            <td className="p-2 font-mono uppercase text-slate-600">{u.makerCheckerRole}</td>
+                        {userList.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="p-4 text-center text-slate-400">
+                              No team members assigned yet. Users sync automatically from your organization directory.
+                            </td>
                           </tr>
-                        ))}
+                        ) : (
+                          userList.map(u => (
+                            <tr key={u.id}>
+                              <td className="p-2 font-bold">{u.name}</td>
+                              <td className="p-2 font-mono text-slate-500">{u.email}</td>
+                              <td className="p-2 font-semibold capitalize text-teal-800">{u.role.replace("_", " ")}</td>
+                              <td className="p-2 font-mono uppercase text-slate-600">{u.makerCheckerRole}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>

@@ -96,10 +96,10 @@ function OccupantBillingPortalInner() {
   }, []);
 
   const activeTenant = tenants.find(t => t.id === selectedTenantId) || tenants[0] || {
-    id: "TEN-TECHNOVA",
-    legalName: "TechNova Solutions Pvt Ltd",
-    tradeName: "TechNova",
-    contactEmail: "finance@technova.com"
+    id: "TEN-CURRENT",
+    legalName: "Occupant Commercial Tenant",
+    tradeName: "Occupant",
+    contactEmail: ""
   };
 
   // Filter invoices and collections for this specific tenant (RR-PRT-02 isolation)
@@ -221,7 +221,7 @@ function OccupantBillingPortalInner() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-black text-gray-900 tracking-tight">
-                  Apex Business Tower
+                  Commercial Asset Portal
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200">
                   Occupant Billing Portal (RR-PRT-01)
@@ -609,7 +609,7 @@ function OccupantBillingPortalInner() {
                 </button>
               </div>
               <div className="mt-3">
-                <span className="text-xs text-blue-100">Paying To: Apex Business Tower Escrow</span>
+                <span className="text-xs text-blue-100">Paying To: Designated Property Escrow</span>
                 <div className="text-3xl font-black mt-1 text-white">{formatINR(paymentCustomAmount)}</div>
               </div>
             </div>

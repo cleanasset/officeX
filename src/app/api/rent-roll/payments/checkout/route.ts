@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
 
     const result = processRazorpayCheckoutInStore({
       invoiceIds,
-      tenantId: tenantId || "TEN-TECHNOVA",
-      tenantName: tenantName || "TechNova Solutions Pvt Ltd",
+      tenantId: tenantId || "TEN-ONLINE",
+      tenantName: tenantName || "Commercial Occupant",
       amountPaid,
       paymentMode: paymentMode || "upi",
       paymentReference

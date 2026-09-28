@@ -309,7 +309,7 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
             <div>
               <h3 className="text-base font-black text-gray-900">Rent Roll Ingestion &amp; Staging Centre</h3>
               <p className="text-xs text-gray-500">
-                Bulk ingestion pipeline: Data profiling, synonym mapping, validation rules &amp; 7-day rollback (§5.5, RR-ING)
+                Bulk ingestion pipeline: Data profiling, synonym mapping, 44 validation rules &amp; 7-day rollback protection
               </p>
             </div>
           </div>

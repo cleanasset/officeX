@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Prepare data payload for Tally Prime
     const company = db.billingEntities.find(be => be.id === billingEntityId) || db.billingEntities[0] || {
-      legalName: db.organization.name || "Apex Asset Management India Pvt Ltd"
+      legalName: db.organization.name || "Commercial Asset Management Entity"
     };
 
     const xmlContent = generateTallyPrimeXml({

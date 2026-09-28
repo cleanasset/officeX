@@ -46,6 +46,11 @@ import {
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import PropertyTitleAutocomplete from "@/components/PropertyTitleAutocomplete";
 import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
+import {
+  AddressAutocomplete,
+  CityAutocomplete,
+  StateAutocomplete
+} from "@/components/ui/LocationInputs";
 
 const MapPinPicker = dynamic(() => import("@/components/MapPinPicker"), {
   ssr: false,
@@ -1122,28 +1127,28 @@ export default function PropertyListingEngine({
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
-                    CITY *
-                  </label>
-                  <input
-                    type="text"
+                  <CityAutocomplete
+                    label="CITY"
+                    required
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    onChange={(city) => setFormData((prev) => ({ ...prev, city }))}
+                    onSelectCityAndState={(city, state) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        city,
+                        state: state || prev.state
+                      }));
+                    }}
                     placeholder="e.g. Mumbai"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
-                    STATE
-                  </label>
-                  <input
-                    type="text"
+                  <StateAutocomplete
+                    label="STATE"
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    onChange={(state) => setFormData((prev) => ({ ...prev, state }))}
                     placeholder="e.g. Maharashtra"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900"
                   />
                 </div>
 
@@ -1163,15 +1168,23 @@ export default function PropertyListingEngine({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div className="sm:col-span-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
-                    FULL PHYSICAL ADDRESS
-                  </label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
+                    label="FULL PHYSICAL ADDRESS (GOOGLE MAPS PLACES AUTOCOMPLETE)"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(address) => setFormData((prev) => ({ ...prev, address }))}
+                    onSelectLocation={(loc) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        address: loc.fullAddress || loc.displayName,
+                        city: loc.city || prev.city,
+                        state: loc.state || prev.state,
+                        pincode: loc.pincode || prev.pincode,
+                        microMarket: loc.area || loc.buildingName || prev.microMarket,
+                        latitude: loc.latitude !== null && loc.latitude !== undefined ? loc.latitude : prev.latitude,
+                        longitude: loc.longitude !== null && loc.longitude !== undefined ? loc.longitude : prev.longitude,
+                      }));
+                    }}
                     placeholder="e.g. Plot C-59, G-Block, Bandra Kurla Complex, Bandra East, Mumbai 400051"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900"
                   />
                 </div>
 

@@ -306,7 +306,7 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
                     <span>Contract Documents Vault</span>
-                    <span className="text-[10px] text-gray-400 font-semibold">Statutory Compliance (§4.9)</span>
+                    <span className="text-[10px] text-gray-400 font-semibold">Statutory &amp; Legal Repository</span>
                   </div>
 
                   {((lease.documents && lease.documents.length > 0) ? lease.documents : [

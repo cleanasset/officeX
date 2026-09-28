@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Building2, ChevronLeft, ChevronRight, Share2, Sparkles, KeyRound } from "lucide-react";
+import { Plus, Search, Building2, ChevronLeft, ChevronRight, Share2, Sparkles, KeyRound, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
+import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal";
 
 interface PropertyItem {
   id: string;
@@ -51,6 +52,7 @@ export default function PropertyMasterRegistry() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [inviteModalProp, setInviteModalProp] = useState<PropertyItem | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadProperties() {
@@ -133,12 +135,23 @@ export default function PropertyMasterRegistry() {
             <h1 className="text-2xl font-black text-gray-900">Property Registry</h1>
             <p className="text-sm text-gray-500 mt-1">Master catalog of all managed real estate assets.</p>
           </div>
-          <Link
-            href="/properties/add"
-            className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors"
-          >
-            <Plus size={14} /> Add Property
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl border border-teal-200 hover:border-teal-300 bg-teal-50/70 hover:bg-teal-100/60 text-teal-800 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+              title="Bulk upload multiple properties, units, and tenant rosters from Excel/CSV"
+            >
+              <UploadCloud size={14} className="text-[#0F8B7D]" />
+              <span>Bulk Import Portfolio</span>
+            </button>
+            <Link
+              href="/properties/add"
+              className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus size={14} /> Add Property
+            </Link>
+          </div>
         </div>
 
         {/* Search */}
@@ -162,12 +175,21 @@ export default function PropertyMasterRegistry() {
             <p className="text-xs text-gray-500 mt-1.5 max-w-sm leading-relaxed">
               Your property catalog is currently empty. Click below to register your commercial building asset and instantly get a tenant invitation link.
             </p>
-            <Link
-              href="/properties/add"
-              className="mt-5 px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
-            >
-              <Plus size={14} /> Register Commercial Asset
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-5">
+              <Link
+                href="/properties/add"
+                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+              >
+                <Plus size={14} /> Register Commercial Asset
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl border border-teal-200 hover:border-teal-300 bg-teal-50/60 hover:bg-teal-50 text-teal-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <UploadCloud size={14} className="text-[#0F8B7D]" /> Bulk Import Portfolio (Excel / CSV)
+              </button>
+            </div>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -281,6 +303,19 @@ export default function PropertyMasterRegistry() {
           isOpen={Boolean(inviteModalProp)}
           onClose={() => setInviteModalProp(null)}
           property={inviteModalProp}
+        />
+      )}
+
+      {/* Bulk Import Portfolio & Tenant Modal */}
+      {isImportModalOpen && (
+        <ImportRentRollModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={() => {
+            setIsImportModalOpen(false);
+            window.location.reload();
+          }}
+          properties={properties.map((p) => ({ id: p.id, name: p.name, city: p.location || "Commercial" }))}
         />
       )}
     </div>

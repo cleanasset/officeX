@@ -73,11 +73,16 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Check for demo bypass
+  const isDemo = search.includes("demo=1") || search.includes("fixtures=1") || search.includes("preview=true");
+
   // Check for authentication in cookies
   const allCookies = request.cookies.getAll();
-  const hasAuth = allCookies.some(
+  const hasAuth = isDemo || allCookies.some(
     (c) =>
       c.name === 'officex_auth' ||
+      c.name === 'officex_session_active' ||
+      c.name === 'officex_user_email' ||
       c.name === 'sb-access-token' ||
       c.name === 'sb-refresh-token' ||
       c.name.includes('-auth-token') ||
@@ -111,11 +116,29 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next({
+  // 14-Day Trial Tracking
+  const response = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
+
+  let trialStart = request.cookies.get("officex_trial_start")?.value;
+  if (!trialStart) {
+    trialStart = new Date().toISOString();
+    response.cookies.set("officex_trial_start", trialStart, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 14,
+      sameSite: "lax",
+    });
+  }
+
+  const startTime = new Date(trialStart).getTime();
+  const elapsedDays = Math.floor((Date.now() - startTime) / (1000 * 60 * 60 * 24));
+  const daysRemaining = Math.max(0, 14 - elapsedDays);
+  response.headers.set("x-officex-trial-days-remaining", String(daysRemaining));
+
+  return response;
 }
 
 export const config = {

@@ -87,18 +87,18 @@ export default function RentRollLandingPage() {
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/logo.png"
+              src="/logo-removebg-preview.png"
               alt="OfficeX Logo"
               width={120}
               height={34}
-              className="h-8 w-auto object-contain brightness-0 invert"
+              className="h-8 w-auto object-contain"
               priority
             />
           </Link>
           <div className="h-4 w-px bg-slate-700 hidden sm:block" />
           <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-            OFFICEX Rent Roll · Standalone SaaS
+            OFFICEX Rent Roll · Commercial SaaS
           </span>
         </div>
 
@@ -347,7 +347,7 @@ export default function RentRollLandingPage() {
                   </div>
                   <h3 className="text-xl font-black text-white mt-2">Assisted &amp; White-Glove Onboarding Route</h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Our Scalezix / OFFICEX lease abstraction team collects executed lease deeds, audits key terms, reconciles numbers, and oversees parallel billing run.
+                    Our dedicated OfficeX lease abstraction team collects executed lease deeds, audits key terms, reconciles control totals, and oversees parallel billing runs.
                   </p>
                 </div>
                 <Link
@@ -384,7 +384,7 @@ export default function RentRollLandingPage() {
                 <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1.5">
                   <div className="font-extrabold text-purple-300">4. Parallel Run &amp; Hypercare</div>
                   <div className="text-slate-400 text-[11px]">
-                    1 billing cycle run in parallel with legacy spreadsheet. Scalezix stays on 24/7 hypercare for 2–6 weeks.
+                    1 billing cycle run in parallel with legacy spreadsheets. Dedicated 24/7 hypercare for 2–6 weeks.
                   </div>
                 </div>
               </div>
@@ -393,11 +393,11 @@ export default function RentRollLandingPage() {
         </div>
       </section>
 
-      {/* ──── CUSTOMER SEGMENT MATRIX (§2.1 & SLIDE 3) ──── */}
+      {/* ──── CUSTOMER SEGMENT MATRIX ──── */}
       <section className="py-16 px-4 sm:px-8 max-w-6xl mx-auto w-full space-y-8">
         <div className="text-center space-y-2">
           <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
-            Slide 3 · 5 Customer Segments
+            Target Operating Segments
           </span>
           <h2 className="text-2xl sm:text-3xl font-black text-white">
             Configured for Every Commercial Real Estate Operator
@@ -457,11 +457,11 @@ export default function RentRollLandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-500">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/logo-removebg-preview.png"
               alt="OfficeX"
               width={100}
               height={28}
-              className="h-6 w-auto object-contain brightness-0 invert opacity-70"
+              className="h-6 w-auto object-contain opacity-90"
             />
             <span>· Enterprise Lease &amp; Revenue Operations Platform</span>
           </div>

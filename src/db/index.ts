@@ -1,10 +1,15 @@
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
 
-const connStr = process.env.DATABASE_URL?.includes('officeX@18129001')
-  ? process.env.DATABASE_URL.replace('officeX@18129001', 'officeX%4018129001')
-  : process.env.DATABASE_URL;
+const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
+const connStr = rawUrl.includes('officeX@18129001')
+  ? rawUrl.replace('officeX@18129001', 'officeX%4018129001')
+  : rawUrl;
 
 const pool = new Pool({
   connectionString: connStr,

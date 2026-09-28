@@ -144,10 +144,11 @@ export default function PaymentModal({
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">GSTIN (Optional)</label>
                 <input
                   type="text"
+                  maxLength={15}
                   value={gstin}
-                  onChange={(e) => setGstin(e.target.value)}
-                  placeholder="27ABCDE1234F1Z5"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] font-medium uppercase"
+                  onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
+                  placeholder="e.g. 27ABCDE1234F1Z5"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] font-mono font-bold uppercase"
                 />
               </div>
             </div>

@@ -54,7 +54,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   properties: [
     { name: "Portfolio Overview", href: "/properties", icon: Layers },
     { name: "Property Registry", href: "/properties/registry", icon: Building },
-    { name: "List New Property", href: "/properties/add", icon: Sparkles },
+    { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
     { 
       name: "Rent Roll Master", 
       href: "/properties/rent-roll?tab=dashboard", 
@@ -136,9 +136,9 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Sign In / Register", href: "/login", icon: Users }
   ],
 
-  // SUPER ADMIN
+  // EXECUTIVE CONTROL / GOVERNANCE
   admin: [
-    { name: "Super Admin Home", href: "/admin", icon: Shield },
+    { name: "Governance Console", href: "/admin", icon: Shield },
     { name: "KYC & Vetting", href: "/admin/kyc", icon: ShieldCheck },
     { name: "Razorpay Escrow Control", href: "/admin/escrow", icon: DollarSign },
     { name: "Platform Users", href: "/admin/users", icon: Users },
@@ -155,15 +155,15 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 };
 
 const roleHomes: Record<string, { label: string; roleName: string; route: string; email: string }> = {
-  properties: { label: "Commercial Portfolio", roleName: "Property Owner", route: "/properties", email: "owner@officex.in" },
-  ops: { label: "Facility Management", roleName: "Facility Manager", route: "/ops", email: "facilitymanager@officex.in" },
-  tenant: { label: "Corporate Workplace", roleName: "Tenant Admin", route: "/tenant", email: "tenant@officex.in" },
-  vendor: { label: "Facility Services", roleName: "Service Vendor", route: "/vendor", email: "vendor@officex.in" },
-  leasing: { label: "Commercial Leasing", roleName: "Leasing Broker", route: "/leasing", email: "broker@officex.in" },
-  marketplace: { label: "FM Procurement", roleName: "Procurement Lead", route: "/marketplace", email: "procurement@officex.in" },
-  admin: { label: "Executive Control", roleName: "Super Admin", route: "/admin", email: "admin@officex.in" },
-  reporting: { label: "Workplace Analytics", roleName: "Auditor / Analyst", route: "/reporting", email: "auditor@officex.in" },
-  public: { label: "Commercial Discovery", roleName: "Public Discovery", route: "/public/search", email: "guest@officex.in" }
+  properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/properties", email: "owner@officex.in" },
+  ops: { label: "Facility Management", roleName: "Facility Management", route: "/ops", email: "facilitymanager@officex.in" },
+  tenant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/tenant", email: "tenant@officex.in" },
+  vendor: { label: "Facility Services", roleName: "Facility Services", route: "/vendor", email: "vendor@officex.in" },
+  leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/leasing", email: "broker@officex.in" },
+  marketplace: { label: "FM Procurement", roleName: "FM Procurement", route: "/marketplace", email: "procurement@officex.in" },
+  admin: { label: "Executive Control", roleName: "Executive Control", route: "/admin", email: "admin@officex.in" },
+  reporting: { label: "Workplace Analytics", roleName: "Workplace Analytics", route: "/reporting", email: "auditor@officex.in" },
+  public: { label: "Commercial Discovery", roleName: "Commercial Discovery", route: "/public/search", email: "guest@officex.in" }
 };
 
 // Mapping alias paths to corresponding portal keys
@@ -260,6 +260,8 @@ export default function Sidebar() {
     }
   };
 
+
+
   // Strictly extract the name by which the user signed in (e.g. "Jiya Patel")
   const getSignedInName = () => {
     let name = (userName || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name")) : "") || "").trim();
@@ -279,13 +281,17 @@ export default function Sidebar() {
   };
 
   const signedInName = getSignedInName();
-  const initials = signedInName
+  const portfolioTitle = orgDisplayName || (signedInName ? `${signedInName}'s Portfolio` : "Commercial Portfolio");
+  const portfolioSubtitle = orgCity ? `${orgCity} Portfolio` : "Commercial Real Estate";
+  
+  const initials = (orgDisplayName || signedInName || "OX")
+    .trim()
     .split(/\s+/)
     .filter(Boolean)
     .map(n => n[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase() || "JP";
+    .toUpperCase() || "OX";
 
   return (
     <>
@@ -299,29 +305,29 @@ export default function Sidebar() {
 
       <div className={`w-[260px] h-screen bg-white/95 backdrop-blur-md border-r border-gray-200/80 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0 transition-transform duration-200 shadow-sm md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
         
-        {/* Top Brand Logo & Workspace Context Switcher */}
-        <div className="p-5 flex flex-col gap-3.5 border-b border-gray-100 bg-slate-50/50">
+        {/* Top Brand Logo & Active Workspace Card */}
+        <div className="p-4 flex flex-col gap-3 border-b border-gray-100 bg-slate-50/50 shrink-0">
           <Link href="/" className="flex items-center gap-3 group">
             <Image 
               src="/logo-removebg-preview.png" 
               alt="OfficeX Logo" 
-              width={45} 
-              height={45} 
+              width={38} 
+              height={38} 
               className="object-contain group-hover:scale-105 transition-transform"
-              style={{ width: "auto", height: "36px" }}
+              style={{ width: "auto", height: "32px" }}
             />
             <Image 
               src="/name-removebg-preview.png" 
               alt="OfficeX" 
-              width={140} 
-              height={36} 
+              width={125} 
+              height={30} 
               className="object-contain"
-              style={{ width: "auto", height: "36px" }}
+              style={{ width: "auto", height: "30px" }}
             />
           </Link>
           
-          {/* Active Workspace Identity Card (Locked to Authenticated Role) */}
-          <div className="flex flex-col gap-1.5 mt-1">
+          {/* Active Workspace Identity Card (Clean, Institutional, No Role Text) */}
+          <div className="flex flex-col gap-1.5 mt-0.5">
             <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-between">
               <span>Active Workspace</span>
               <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
@@ -330,29 +336,32 @@ export default function Sidebar() {
               </span>
             </div>
             
-            <div className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs">
+            <Link 
+              href="/properties"
+              className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs hover:border-teal-300 transition-colors group cursor-pointer"
+            >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase">
                   {initials}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-black text-gray-900 truncate leading-tight">
-                    {signedInName}
+                  <span className="text-xs font-black text-gray-900 truncate leading-tight group-hover:text-teal-800 transition-colors">
+                    {portfolioTitle}
                   </span>
                   <span className="text-[10px] text-teal-700 font-semibold truncate">
-                    {activeRole.roleName}
+                    {portfolioSubtitle}
                   </span>
                 </div>
               </div>
               <ShieldCheck className="w-4 h-4 text-[#0F8B7D] shrink-0" />
-            </div>
+            </Link>
           </div>
         </div>
 
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1.5 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <nav className="flex-1 px-3 py-3.5 flex flex-col gap-1.5 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-wider">
-            {activeRole.roleName} Portal
+            Navigation
           </div>
 
           {activeMenu.map((item) => {
@@ -446,14 +455,14 @@ export default function Sidebar() {
         <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-slate-50/80">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
-              {(userName || userEmail || activeRole.roleName)[0].toUpperCase()}
+              {(signedInName || userEmail || "U")[0].toUpperCase()}
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-extrabold text-gray-900 leading-none truncate">
-                {userName || activeRole.roleName}
+                {signedInName}
               </span>
               <span className="text-[10px] text-gray-400 mt-1 leading-none font-mono truncate">
-                {userEmail || activeRole.email}
+                {userEmail || "portfolio@officex.in"}
               </span>
             </div>
           </div>

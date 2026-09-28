@@ -79,8 +79,8 @@ export async function POST(req: Request) {
     const newReading: MeterReadingEntity = {
       id: `MTR-${Date.now()}`,
       orgId: db.organization.id,
-      propertyId: propertyId || db.properties[0]?.id || "PROP-APX",
-      propertyName: propertyName || db.properties[0]?.name || "Apex Business Tower",
+      propertyId: propertyId || db.properties[0]?.id || "PROP-DEFAULT",
+      propertyName: propertyName || db.properties[0]?.name || "Commercial Building",
       spaceId: spaceId || "SPACE-DEF",
       unitNumber: unitNumber || "Unit General",
       tenantId: tenantId || "TEN-GEN",

@@ -13,14 +13,10 @@ import {
   Menu,
   Settings,
   FileText,
-  ChevronDown,
   Layers,
   LogOut,
-  Check,
-  ShieldCheck,
   Building2
 } from "lucide-react";
-import { WorkspaceMembership, MOCK_USERS } from "@/lib/auth-utils";
 
 export default function Topbar() {
   const pathname = usePathname();
@@ -31,17 +27,10 @@ export default function Topbar() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Workspace Switcher State
-  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
+  // Profile Menu State
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [activeOrg, setActiveOrg] = useState("");
-  const [activeRole, setActiveRole] = useState("Property Owner");
   const [userEmail, setUserEmail] = useState("owner@officex.in");
   const [userName, setUserName] = useState("");
-  const [memberships, setMemberships] = useState<WorkspaceMembership[]>(
-    MOCK_USERS["owner@officex.in"].memberships
-  );
-  const workspaceMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // Generate breadcrumbs from pathname
@@ -68,24 +57,9 @@ export default function Topbar() {
     if (typeof window !== "undefined") {
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
-      const storedRole = localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role");
-      const storedOrg = localStorage.getItem("officex_active_org") || sessionStorage.getItem("officex_active_org");
 
       if (storedName) setUserName(storedName);
       if (storedEmail) setUserEmail(storedEmail);
-      if (storedRole) setActiveRole(storedRole);
-      if (storedOrg) {
-        setActiveOrg(storedOrg);
-      } else {
-        // Fallback: try org_name or property_name from onboarding
-        const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_property_name");
-        if (orgName) setActiveOrg(orgName);
-      }
-
-      // Load matching memberships if available
-      if (storedEmail && MOCK_USERS[storedEmail]) {
-        setMemberships(MOCK_USERS[storedEmail].memberships);
-      }
     }
   }, [pathname]);
 
@@ -110,9 +84,6 @@ export default function Topbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
-      if (workspaceMenuRef.current && !workspaceMenuRef.current.contains(event.target as Node)) {
-        setIsWorkspaceMenuOpen(false);
-      }
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setIsProfileMenuOpen(false);
       }
@@ -132,44 +103,6 @@ export default function Topbar() {
     setSearchQuery(name);
     setIsDropdownOpen(false);
     router.push(`/public/search?q=${encodeURIComponent(name)}`);
-  };
-
-  // Switch Workspace context from Topbar
-  const handleSwitchWorkspace = async (mem: WorkspaceMembership) => {
-    setIsWorkspaceMenuOpen(false);
-    setIsProfileMenuOpen(false);
-
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("officex_user_role", mem.role);
-      sessionStorage.setItem("officex_dashboard", mem.workspaceUrl);
-      sessionStorage.setItem("officex_active_portal", mem.workspaceUrl.replace("/", ""));
-      sessionStorage.setItem("officex_active_org", mem.orgName);
-
-      localStorage.setItem("officex_user_role", mem.role);
-      localStorage.setItem("officex_dashboard", mem.workspaceUrl);
-      localStorage.setItem("officex_active_portal", mem.workspaceUrl.replace("/", ""));
-      localStorage.setItem("officex_active_org", mem.orgName);
-
-      document.cookie = `officex_user_role=${encodeURIComponent(mem.role)}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `officex_dashboard=${encodeURIComponent(mem.workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
-    }
-
-    try {
-      await fetch("/api/session/context", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          membership_id: mem.id,
-          workspace_url: mem.workspaceUrl,
-          role: mem.role,
-          org_name: mem.orgName
-        })
-      });
-    } catch (e) {
-      // Non-blocking
-    }
-
-    window.location.href = mem.workspaceUrl;
   };
 
   // Sign out handler
@@ -199,7 +132,7 @@ export default function Topbar() {
 
   return (
     <header className="h-[60px] bg-white border-b border-slate-200 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-4 md:px-8 flex items-center justify-between shadow-xs">
-      {/* Left: Mobile Toggle & Breadcrumbs / Active Workspace Switcher */}
+      {/* Left: Mobile Toggle & Institutional Breadcrumbs */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("officex-toggle-sidebar"))}
@@ -209,82 +142,13 @@ export default function Topbar() {
           <Menu size={18} />
         </button>
 
-        {/* Workspace Context Switcher Pill (Section 06 & 14) */}
-        <div className="relative" ref={workspaceMenuRef}>
-          <button
-            type="button"
-            onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 transition-all text-left cursor-pointer group"
-          >
-            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-900 group-hover:text-blue-700 leading-tight truncate max-w-[160px] sm:max-w-[220px]">
-                {activeOrg || "My Organization"}
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium leading-none">
-                {activeRole}
-              </span>
-            </div>
-            <ChevronDown size={14} className="text-slate-400 group-hover:text-blue-600 transition-transform ml-1" />
-          </button>
-
-          {/* Workspace Switcher Dropdown */}
-          {isWorkspaceMenuOpen && (
-            <div className="absolute left-0 mt-2 w-80 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50 animate-fadeIn">
-              <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">Switch Workspace</span>
-                  <span className="text-[10px] text-slate-500">Connected memberships</span>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                  {memberships.length} available
-                </span>
-              </div>
-
-              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
-                {memberships.map((mem) => {
-                  const isActive = activeRole === mem.role;
-                  return (
-                    <button
-                      key={mem.id}
-                      type="button"
-                      onClick={() => handleSwitchWorkspace(mem)}
-                      className={`w-full p-2.5 rounded-xl text-left transition-all flex items-start justify-between cursor-pointer ${
-                        isActive
-                          ? "bg-blue-50 border border-blue-200 text-blue-900"
-                          : "hover:bg-slate-50 border border-transparent text-slate-700"
-                      }`}
-                    >
-                      <div className="space-y-0.5 pr-2">
-                        <div className="text-xs font-bold flex items-center gap-1.5">
-                          <span>{mem.orgName}</span>
-                        </div>
-                        <div className="text-[11px] font-medium text-slate-600">
-                          {mem.workspaceTitle}
-                        </div>
-                        <div className="text-[10px] text-slate-400">{mem.propertyScope}</div>
-                      </div>
-                      {isActive && (
-                        <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-1">
-                          <Check size={12} strokeWidth={3} />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
-                <Link
-                  href="/login"
-                  onClick={() => setIsWorkspaceMenuOpen(false)}
-                  className="text-blue-600 hover:underline font-bold text-[11px]"
-                >
-                  Manage Organizations →
-                </Link>
-              </div>
-            </div>
-          )}
+        {/* Clean Breadcrumb Hierarchy */}
+        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <span className="text-slate-400 font-bold uppercase tracking-wider text-[11px]">OFFICEX</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-800 font-bold capitalize">
+            {formattedBreadcrumb || "Commercial Portfolio"}
+          </span>
         </div>
       </div>
 
@@ -376,21 +240,21 @@ export default function Topbar() {
               <div className="p-3 border-b border-slate-100">
                 <span className="text-xs font-bold text-slate-900 block truncate">{userName || userEmail}</span>
                 {userName && <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>}
-                <span className="text-[10px] text-blue-600 font-semibold">{activeRole}</span>
+                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Verified Commercial Account
+                </span>
               </div>
 
               <div className="py-1 space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileMenuOpen(false);
-                    setIsWorkspaceMenuOpen(true);
-                  }}
+                <Link
+                  href="/properties"
+                  onClick={() => setIsProfileMenuOpen(false)}
                   className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
                 >
                   <Layers size={14} className="text-blue-600" />
-                  <span>Switch Workspace</span>
-                </button>
+                  <span>Portfolio Overview</span>
+                </Link>
 
                 <Link
                   href="/onboarding"
