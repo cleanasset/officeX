@@ -28,8 +28,10 @@ import {
   Edit3,
   UploadCloud,
   X,
-  Download,
-  FileUp
+  FileUp,
+  ExternalLink,
+  Receipt,
+  Info
 } from "lucide-react";
 import {
   AddressAutocomplete,
@@ -115,6 +117,8 @@ export default function CommercialPropertyMaster() {
   const [cinNumber, setCinNumber] = useState<string>("");
   const [llpinNumber, setLlpinNumber] = useState<string>("");
   const [panNumber, setPanNumber] = useState<string>("");
+  const [propertyGstin, setPropertyGstin] = useState<string>("");
+  const [gstExempted, setGstExempted] = useState<boolean>(false);
   const [hasMultipleTowers, setHasMultipleTowers] = useState<boolean>(false);
 
   // SPV / Billing Entity Link (default billing entity)
@@ -176,6 +180,7 @@ export default function CommercialPropertyMaster() {
     }
 
     // Strict Statutory Identification Validation based on Entity Constitution
+    // 1. CIN / LLPIN Validation
     if (entityType === "pvt_ltd" || entityType === "public_ltd") {
       const cleanCin = cinNumber.trim().toUpperCase();
       if (!cleanCin) {
@@ -193,15 +198,45 @@ export default function CommercialPropertyMaster() {
         alert("LLPIN (Limited Liability Partnership Identification Number) is compulsory for LLPs. Please provide the 7-character LLPIN (e.g. AAA-1234).");
         return;
       }
-    } else if (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") {
-      const cleanPan = panNumber.trim().toUpperCase();
-      if (!cleanPan) {
-        alert(`Income Tax PAN is compulsory for ${entityType === "proprietorship" ? "Sole Proprietorships" : entityType === "partnership" ? "Partnership Firms" : "Individual Property Owners"}.`);
+    }
+
+    // 2. PAN Validation (Compulsory for ALL entities under Section 194I)
+    const cleanPan = panNumber.trim().toUpperCase();
+    if (!cleanPan) {
+      alert("Income Tax PAN is compulsory for all commercial property landlords under Section 194-I of the Income Tax Act.");
+      return;
+    }
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(cleanPan)) {
+      alert(`Invalid Income Tax PAN "${cleanPan}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
+      return;
+    }
+
+    // 3. GSTIN Validation (Compulsory for corporate entities unless exempted; optional for sole proprietors & individuals)
+    const cleanGst = propertyGstin.trim().toUpperCase();
+    const isCorporate = entityType === "pvt_ltd" || entityType === "public_ltd" || entityType === "llp" || entityType === "trust_reit";
+    if (isCorporate && !gstExempted) {
+      if (!cleanGst) {
+        alert(`15-digit GSTIN is compulsory for ${entityType === "llp" ? "LLPs" : "incorporated companies"} leasing commercial real estate. If turnover is under threshold, mark as GST Exempt.`);
         return;
       }
-      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-      if (!panRegex.test(cleanPan)) {
-        alert(`Invalid Income Tax PAN "${cleanPan}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(cleanGst)) {
+        alert(`Invalid GSTIN "${cleanGst}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5).`);
+        return;
+      }
+      if (!cleanGst.includes(cleanPan)) {
+        alert(`GSTIN "${cleanGst}" does not match Income Tax PAN "${cleanPan}". In India, characters 3 to 12 of the GSTIN must match the entity's 10-digit PAN.`);
+        return;
+      }
+    } else if (!gstExempted && cleanGst) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(cleanGst)) {
+        alert(`Invalid GSTIN "${cleanGst}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5), or leave blank if unregistered.`);
+        return;
+      }
+      if (!cleanGst.includes(cleanPan)) {
+        alert(`GSTIN "${cleanGst}" does not match Income Tax PAN "${cleanPan}".`);
         return;
       }
     }
@@ -585,7 +620,8 @@ export default function CommercialPropertyMaster() {
         entityType,
         cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase() : undefined,
         llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
-        panNumber: (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") ? panNumber.trim().toUpperCase() : undefined,
+        panNumber: panNumber.trim().toUpperCase() || undefined,
+        gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase() || customSpvGstin.trim().toUpperCase() || undefined),
         ownerCompany,
         ownerName: ownerCompany,
         ownerEmail,
@@ -653,7 +689,8 @@ export default function CommercialPropertyMaster() {
             entityType,
             cinNumber: (entityType === "pvt_ltd" || entityType === "public_ltd") ? cinNumber.trim().toUpperCase() : undefined,
             llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
-            panNumber: (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") ? panNumber.trim().toUpperCase() : undefined,
+            panNumber: panNumber.trim().toUpperCase() || undefined,
+            gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase() || customSpvGstin.trim().toUpperCase() || undefined),
             totalArea: totalChargeableArea,
             chargeableArea: totalChargeableArea,
             carpetArea: totalCarpetArea,
@@ -874,63 +911,76 @@ export default function CommercialPropertyMaster() {
             </div>
 
             {/* ── Statutory Ownership Constitution & Tax Identification ── */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
-                    <ShieldCheck size={15} className="text-[#0F8B7D]" />
-                    Ownership Constitution &amp; Statutory Identification
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Mandatory statutory identifiers drive legal title, lease deeds, TDS under Sec 194I, and MCA compliance.
-                  </p>
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center border border-teal-100/60">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Ownership Constitution &amp; Statutory Identifiers
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Mandatory statutory registry data for lease deed execution, Section 194-I TDS credit, and GST compliance.
+                    </p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 self-start sm:self-auto">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-600 self-start sm:self-auto">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0F8B7D]"></span>
                   Statutory Registry
-                </span>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Entity Constitution Dropdown */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                    <span>Entity Constitution / Ownership Structure *</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Legal Title Holder</span>
-                  </label>
-                  <select
-                    value={entityType}
-                    onChange={(e) => setEntityType(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                  >
-                    <option value="pvt_ltd">Private Limited Company (Pvt Ltd) — CIN Mandatory</option>
-                    <option value="public_ltd">Public Limited Company (Ltd / PLC) — CIN Mandatory</option>
-                    <option value="llp">Limited Liability Partnership (LLP) — LLPIN Mandatory</option>
-                    <option value="proprietorship">Sole Proprietorship — PAN &amp; Trade Name</option>
-                    <option value="partnership">Partnership Firm (Partnership Act 1932) — Firm PAN</option>
-                    <option value="individual">Individual / Joint HNI Owner — Personal PAN</option>
-                    <option value="trust_reit">Trust / Real Estate Investment Trust (REIT) — Trust Reg / PAN</option>
-                  </select>
-                </div>
+              {/* Entity Constitution Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>Entity Constitution / Ownership Structure *</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Legal Title Holder</span>
+                </label>
+                <select
+                  value={entityType}
+                  onChange={(e) => setEntityType(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D] transition-colors cursor-pointer shadow-2xs"
+                >
+                  <option value="pvt_ltd">Private Limited Company (Pvt Ltd)</option>
+                  <option value="public_ltd">Public Limited Company (Ltd / PLC)</option>
+                  <option value="llp">Limited Liability Partnership (LLP)</option>
+                  <option value="proprietorship">Sole Proprietorship</option>
+                  <option value="partnership">Partnership Firm (Indian Partnership Act 1932)</option>
+                  <option value="individual">Individual / Joint HNI Owner</option>
+                  <option value="trust_reit">Trust / Real Estate Investment Trust (REIT)</option>
+                </select>
+              </div>
 
-                {/* Dynamic Field Based on Constitution */}
-                {(entityType === "pvt_ltd" || entityType === "public_ltd") && (
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <span>Corporate Identification Number (CIN) *</span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                          Compulsory
-                        </span>
-                      </label>
-                      <a
-                        href="https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-[#0F8B7D] font-bold hover:underline"
-                      >
-                        Verify on MCA Portal ↗
-                      </a>
+              {/* 3 Credential Cards: CIN/LLPIN + PAN + GSTIN */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+                
+                {/* 1. CORPORATE IDENTIFIER (CIN / LLPIN / EXEMPT) */}
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between space-y-2.5 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Building2 size={13} className="text-slate-400" />
+                      <span className="text-xs font-bold text-slate-800">
+                        {entityType === "llp" ? "LLPIN Identifier" : "Corporate ID (CIN)"}
+                      </span>
                     </div>
+                    {(entityType === "pvt_ltd" || entityType === "public_ltd" || entityType === "llp") ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                        Compulsory
+                      </span>
+                    ) : entityType === "trust_reit" ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                        Optional
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
+                        Exempt
+                      </span>
+                    )}
+                  </div>
+
+                  {(entityType === "pvt_ltd" || entityType === "public_ltd") && (
                     <div className="relative">
                       <input
                         type="text"
@@ -938,95 +988,208 @@ export default function CommercialPropertyMaster() {
                         value={cinNumber}
                         onChange={(e) => setCinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
                         placeholder="e.g. U70102MH2018PTC123456"
-                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none ${
+                        className={`w-full px-3 py-2 rounded-lg border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none transition-colors ${
                           cinNumber.length === 21 && /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(cinNumber)
-                            ? "border-emerald-500 focus:border-emerald-600 ring-1 ring-emerald-500"
+                            ? "border-emerald-500 ring-1 ring-emerald-500"
                             : cinNumber.length > 0
-                            ? "border-amber-400 focus:border-amber-500"
+                            ? "border-amber-400"
                             : "border-slate-200 focus:border-[#0F8B7D]"
                         }`}
                       />
                       {cinNumber.length === 21 && /^[UL][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(cinNumber) && (
-                        <span className="absolute right-3 top-2.5 text-emerald-600 text-[11px] font-bold flex items-center gap-1">
-                          <Check size={14} strokeWidth={3} /> Valid 21-digit MCA Format
+                        <span className="absolute right-2.5 top-2 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
+                          <Check size={12} strokeWidth={3} /> Valid
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400">
-                      Official 21-digit alphanumeric CIN issued by Registrar of Companies (ROC), Ministry of Corporate Affairs.
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                {entityType === "llp" && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <span>LLP Identification Number (LLPIN) *</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                        Compulsory
-                      </span>
-                    </label>
+                  {entityType === "llp" && (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={8}
+                        value={llpinNumber}
+                        onChange={(e) => setLlpinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                        placeholder="e.g. AAA-1234"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+                  )}
+
+                  {entityType === "trust_reit" && (
                     <input
                       type="text"
-                      maxLength={8}
-                      value={llpinNumber}
-                      onChange={(e) => setLlpinNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
-                      placeholder="e.g. AAA-1234 or ABB-5678"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                      value={cinNumber}
+                      onChange={(e) => setCinNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g. SEBI Reg / Trust Deed"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                     />
-                    <p className="text-[10px] text-slate-400">
-                      LLPs in India are issued an LLPIN under the LLP Act 2008 (rather than a 21-digit CIN).
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                {(entityType === "proprietorship" || entityType === "partnership" || entityType === "individual" || entityType === "trust_reit") && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <span>
-                        {entityType === "proprietorship" ? "Proprietor Income Tax PAN *" : entityType === "partnership" ? "Firm Income Tax PAN *" : entityType === "individual" ? "Owner Income Tax PAN *" : "Trust / REIT PAN *"}
+                  {(entityType === "proprietorship" || entityType === "partnership" || entityType === "individual") && (
+                    <div className="px-3 py-2 rounded-lg bg-slate-100/80 border border-slate-200 text-slate-400 text-xs font-medium italic flex items-center justify-between">
+                      <span>Exempt (No MCA CIN)</span>
+                      <span className="text-[10px] not-italic font-bold text-slate-400 uppercase">Non-Corporate</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                    <span>
+                      {entityType === "llp"
+                        ? "LLP Act 2008 registration"
+                        : (entityType === "pvt_ltd" || entityType === "public_ltd")
+                        ? "21-digit MCA registration"
+                        : "Title held under deed / firm"}
+                    </span>
+                    {(entityType === "pvt_ltd" || entityType === "public_ltd") && (
+                      <a
+                        href="https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-0.5"
+                      >
+                        MCA Portal <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. INCOME TAX PAN (COMPULSORY FOR ALL) */}
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between space-y-2.5 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <FileText size={13} className="text-slate-400" />
+                      <span className="text-xs font-bold text-slate-800">
+                        {entityType === "proprietorship"
+                          ? "Proprietor PAN"
+                          : entityType === "partnership"
+                          ? "Firm PAN"
+                          : entityType === "individual"
+                          ? "Owner PAN"
+                          : "Income Tax PAN"}
                       </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                        Compulsory
-                      </span>
-                    </label>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                      Compulsory
+                    </span>
+                  </div>
+
+                  <div className="relative">
                     <input
                       type="text"
                       maxLength={10}
                       value={panNumber}
                       onChange={(e) => setPanNumber(e.target.value.toUpperCase().replace(/\s/g, ""))}
                       placeholder="e.g. ABCDE1234F"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                      className={`w-full px-3 py-2 rounded-lg border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none transition-colors ${
+                        panNumber.length === 10 && /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)
+                          ? "border-emerald-500 ring-1 ring-emerald-500"
+                          : panNumber.length > 0
+                          ? "border-amber-400"
+                          : "border-slate-200 focus:border-[#0F8B7D]"
+                      }`}
                     />
-                    <p className="text-[10px] text-slate-400">
-                      {entityType === "proprietorship" 
-                        ? "Sole Proprietorships do not have an MCA CIN. Income Tax PAN is the primary statutory identifier."
-                        : entityType === "partnership"
-                        ? "Registered under Partnership Act, 1932. Firm PAN drives 194I TDS compliance."
-                        : "Personal PAN of the commercial title deed holder for TDS credit and registration."}
-                    </p>
+                    {panNumber.length === 10 && /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber) && (
+                      <span className="absolute right-2.5 top-2 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
+                        <Check size={12} strokeWidth={3} /> Valid
+                      </span>
+                    )}
                   </div>
-                )}
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                    <span>Sec 194-I TDS credit</span>
+                    <span className="font-semibold text-slate-500">10% TDS rate</span>
+                  </div>
+                </div>
+
+                {/* 3. GOODS & SERVICES TAX (GSTIN) */}
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col justify-between space-y-2.5 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Receipt size={13} className="text-slate-400" />
+                      <span className="text-xs font-bold text-slate-800">GSTIN Identifier</span>
+                    </div>
+                    {(entityType === "pvt_ltd" || entityType === "public_ltd" || entityType === "llp" || entityType === "trust_reit") && !gstExempted ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                        Compulsory
+                      </span>
+                    ) : gstExempted ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                        Unregistered (RCM)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                        Optional (&lt;₹20L)
+                      </span>
+                    )}
+                  </div>
+
+                  {gstExempted ? (
+                    <div className="px-3 py-2 rounded-lg bg-slate-100/80 border border-slate-200 text-slate-500 text-xs font-medium italic flex items-center justify-between">
+                      <span>Unregistered under GST</span>
+                      <span className="text-[10px] not-italic font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">RCM Mode</span>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={15}
+                        value={propertyGstin}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase().replace(/\s/g, "");
+                          setPropertyGstin(val);
+                          if (!customSpvGstin || customSpvGstin === propertyGstin) {
+                            setCustomSpvGstin(val);
+                          }
+                        }}
+                        placeholder="e.g. 27ABCDE1234F1Z5"
+                        className={`w-full px-3 py-2 rounded-lg border text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none transition-colors ${
+                          propertyGstin.length === 15 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(propertyGstin)
+                            ? "border-emerald-500 ring-1 ring-emerald-500"
+                            : propertyGstin.length > 0
+                            ? "border-amber-400"
+                            : "border-slate-200 focus:border-[#0F8B7D]"
+                        }`}
+                      />
+                      {propertyGstin.length === 15 && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(propertyGstin) && (
+                        <span className="absolute right-2.5 top-2 text-emerald-600 text-[10px] font-bold flex items-center gap-0.5">
+                          <Check size={12} strokeWidth={3} /> Valid
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 pt-0.5">
+                    <label className="flex items-center justify-between cursor-pointer select-none text-[10px] text-slate-600 hover:text-slate-900">
+                      <span>Turnover &lt; ₹20L (Exempt / RCM)</span>
+                      <input
+                        type="checkbox"
+                        checked={gstExempted}
+                        onChange={(e) => {
+                          setGstExempted(e.target.checked);
+                          if (e.target.checked) {
+                            setPropertyGstin("");
+                          }
+                        }}
+                        className="rounded text-[#0F8B7D] focus:ring-[#0F8B7D] h-3.5 w-3.5 cursor-pointer"
+                      />
+                    </label>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>18% commercial rate</span>
+                      <a
+                        href="https://services.gst.gov.in/services/searchtp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-0.5"
+                      >
+                        GST Portal <ExternalLink size={10} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-
-              {/* Informative Statutory Notice */}
-              {entityType === "proprietorship" && (
-                <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
-                  <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-bold">Proprietorship Clarification:</strong> Sole proprietorships are not incorporated corporate bodies and legally do not possess an MCA Corporate Identification Number (CIN). OfficeX validates your ownership using the Proprietor&apos;s Permanent Account Number (PAN) and GSTIN.
-                  </div>
-                </div>
-              )}
-
-              {entityType === "llp" && (
-                <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 text-[11px] text-teal-900 flex items-start gap-2">
-                  <CheckCircle2 size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-bold">LLP Holding SPV:</strong> Limited Liability Partnerships are governed by the LLP Act, 2008 and hold a 7-character LLPIN instead of a 21-digit CIN.
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Statutory Billing SPV Link */}
@@ -2131,19 +2294,55 @@ export default function CommercialPropertyMaster() {
                   <span className="text-slate-800 font-mono text-[11px]">{geoLat && geoLng ? `${geoLat}, ${geoLng}` : "Not pinned"}</span>
                 </div>
 
-                <div className="col-span-2">
-                  <span className="text-slate-500 block text-[10px]">Entity Constitution &amp; Statutory ID</span>
-                  <div className="flex items-center gap-2 mt-0.5">
+                <div className="col-span-2 sm:col-span-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck size={14} className="text-[#0F8B7D]" />
+                      Ownership Constitution &amp; Statutory Credentials
+                    </span>
                     <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold uppercase">
                       {entityType.replace("_", " ")}
                     </span>
-                    <strong className="text-slate-900 text-xs font-mono">
-                      {(entityType === "pvt_ltd" || entityType === "public_ltd")
-                        ? `CIN: ${cinNumber || "—"}`
-                        : entityType === "llp"
-                        ? `LLPIN: ${llpinNumber || "—"}`
-                        : `PAN: ${panNumber || "—"}`}
-                    </strong>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    {/* 1. Corporate Identification */}
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                      <span className="text-slate-400 block text-[10px] font-medium">
+                        {(entityType === "pvt_ltd" || entityType === "public_ltd")
+                          ? "Corporate ID (CIN)"
+                          : entityType === "llp"
+                          ? "LLPIN Identifier"
+                          : "MCA Corporate Status"}
+                      </span>
+                      <strong className="text-slate-900 text-xs font-mono block truncate">
+                        {(entityType === "pvt_ltd" || entityType === "public_ltd")
+                          ? (cinNumber || "—")
+                          : entityType === "llp"
+                          ? (llpinNumber || "—")
+                          : entityType === "trust_reit"
+                          ? (cinNumber || "Trust Registered")
+                          : "Exempt (No MCA CIN)"}
+                      </strong>
+                    </div>
+
+                    {/* 2. Income Tax PAN */}
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                      <span className="text-slate-400 block text-[10px] font-medium">Income Tax PAN (Sec 194-I)</span>
+                      <strong className="text-slate-900 text-xs font-mono block">
+                        {panNumber || "—"}
+                      </strong>
+                    </div>
+
+                    {/* 3. GSTIN */}
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                      <span className="text-slate-400 block text-[10px] font-medium">GSTIN (18% Commercial)</span>
+                      <strong className="text-slate-900 text-xs font-mono block truncate">
+                        {gstExempted || (!propertyGstin && (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual"))
+                          ? "Unregistered (Tenant RCM Applies)"
+                          : propertyGstin || "—"}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 
