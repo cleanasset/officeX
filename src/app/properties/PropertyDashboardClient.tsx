@@ -35,6 +35,41 @@ interface PropertyDashboardClientProps {
   initialLogs: any[];
 }
 
+const SEED_PROP_IDS = new Set([
+  "357554cc-221d-4c7f-9465-32afcec7a8e7",
+  "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
+  "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
+  "401f394a-6d27-4c23-9a21-411baa7eef3b",
+  "cfa13505-71a5-4a43-be33-37497f416fdc",
+  "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
+  "PROP-FORTUNE-SKY",
+  "PROP-001",
+  "PROP-002",
+  "PROP-APX",
+  "PROP-MTP",
+  "PROP-NXN",
+  "PROP-1790239048961",
+  "PROP-1790659297701"
+]);
+
+const SEED_PROP_NAMES = new Set([
+  "apex business tower",
+  "nexus hub",
+  "meridian tech park",
+  "shivalik shilp",
+  "business hub",
+  "test commercial tower",
+  "fortune sky",
+  "signature tower b"
+]);
+
+const isSeedOrMockProp = (p: any) => {
+  if (!p) return true;
+  const id = p.id || "";
+  const name = (p.name || p.propertyName || "").toLowerCase().trim();
+  return SEED_PROP_IDS.has(id) || SEED_PROP_NAMES.has(name);
+};
+
 export default function PropertyDashboardClient({
   initialProperties,
   initialTickets,
@@ -43,7 +78,9 @@ export default function PropertyDashboardClient({
 }: PropertyDashboardClientProps) {
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [properties, setProperties] = useState<any[]>(initialProperties || []);
+  const [properties, setProperties] = useState<any[]>(
+    (initialProperties || []).filter(p => !isSeedOrMockProp(p))
+  );
   const [activeLeases, setActiveLeases] = useState<any[]>([]);
   const [rentRollData, setRentRollData] = useState<any>(null);
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(true);
@@ -82,8 +119,8 @@ export default function PropertyDashboardClient({
         const propsData = await propsRes.json();
         if (Array.isArray(propsData)) {
           for (const p of propsData) {
+            if (isSeedOrMockProp(p)) continue;
             const cleanName = (p?.name || "").toLowerCase().trim();
-            if (cleanName === "fortune sky" || cleanName === "signature tower b") continue;
             loadedProps.push(p);
             if (p.id) seenIds.add(p.id);
             if (cleanName) seenNames.add(cleanName);
@@ -96,8 +133,8 @@ export default function PropertyDashboardClient({
         const genData = await genPropsRes.json();
         if (Array.isArray(genData)) {
           for (const p of genData) {
+            if (isSeedOrMockProp(p)) continue;
             const cleanName = (p?.name || "").toLowerCase().trim();
-            if (cleanName === "fortune sky" || cleanName === "signature tower b") continue;
             if (!seenIds.has(p.id) && !seenNames.has(cleanName)) {
               loadedProps.push({
                 ...p,
@@ -120,8 +157,8 @@ export default function PropertyDashboardClient({
           const cached = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
           if (Array.isArray(cached)) {
             for (const c of cached) {
+              if (isSeedOrMockProp(c)) continue;
               const cleanName = (c?.name || "").toLowerCase().trim();
-              if (cleanName === "fortune sky" || cleanName === "signature tower b") continue;
               if (!seenIds.has(c.id) && !seenNames.has(cleanName)) {
                 loadedProps.push(c);
                 seenIds.add(c.id);
@@ -132,19 +169,24 @@ export default function PropertyDashboardClient({
         } catch {}
       }
 
-      if (loadedProps.length > 0) {
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem("officex_user_properties", JSON.stringify(loadedProps));
-          } catch {}
-        }
-        setProperties(loadedProps);
+      // Sync cleaned properties to state and localStorage (cleans out any lingering seed items)
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("officex_user_properties", JSON.stringify(loadedProps));
+        } catch {}
       }
+      setProperties(loadedProps);
+
+      const validIds = new Set(loadedProps.map(p => p.id));
+      const validNames = new Set(loadedProps.map(p => (p.name || "").toLowerCase().trim()));
 
       if (leasesRes.ok) {
         const leasesData = await leasesRes.json();
         if (Array.isArray(leasesData)) {
-          setActiveLeases(leasesData);
+          const userLeases = leasesData.filter(l => 
+            validIds.has(l.propertyId) || validNames.has((l.propertyName || "").toLowerCase().trim())
+          );
+          setActiveLeases(userLeases);
         }
       }
 
@@ -221,30 +263,29 @@ export default function PropertyDashboardClient({
   const totalPortfolioArea = properties.reduce((sum, p) => sum + (Number(p.totalArea) || 0), 0);
   const totalLeasedArea = activeLeases.reduce((sum, l) => sum + (Number(l.chargeableArea) || 0), 0);
 
-  const occupancyPctCalculated = totalPortfolioArea > 0 
+  const occupancyPctCalculated = totalPortfolioArea > 0 && activeLeases.length > 0
     ? Math.min(100, Math.round((totalLeasedArea / totalPortfolioArea) * 100))
-    : (activeLeases.length > 0 ? 100 : 0);
+    : 0;
 
-  const occupancyDisplay = propertiesCount > 0 
+  const activeLeasesCount = propertiesCount > 0 ? activeLeases.length : 0;
+
+  const occupancyDisplay = propertiesCount > 0 && activeLeasesCount > 0
     ? (rentRollData?.occupancy?.occupancyPct !== undefined ? `${rentRollData.occupancy.occupancyPct}%` : `${occupancyPctCalculated}%`)
     : "0.0%";
 
   const expiredCertsCount = propertiesCount === 0 ? 0 : initialCerts.filter(c => c.status === "expired").length;
-  const activeLeasesCount = propertiesCount > 0 
-    ? (rentRollData?.summary?.activeLeasesCount ?? activeLeases.length)
-    : 0;
 
-  const totalMonthlyGrossCr = propertiesCount > 0 && rentRollData?.summary?.totalMonthlyRent 
-    ? (rentRollData.summary.totalMonthlyRent / 10000000).toFixed(2) 
-    : (activeLeases.length > 0 ? (activeLeases.reduce((sum, l) => sum + Number(l.monthlyRent || l.totalMonthlyGross || 0), 0) / 10000000).toFixed(2) : "0.00");
+  const totalMonthlyGrossCr = activeLeasesCount > 0
+    ? (activeLeases.reduce((sum, l) => sum + Number(l.monthlyRent || l.totalMonthlyGross || 0), 0) / 10000000).toFixed(2)
+    : "0.00";
 
-  const totalOutstandingCr = propertiesCount > 0 && rentRollData?.summary?.totalOutstanding 
+  const totalOutstandingCr = propertiesCount > 0 && activeLeasesCount > 0 && rentRollData?.summary?.totalOutstanding 
     ? (rentRollData.summary.totalOutstanding / 10000000).toFixed(2) 
     : "0.00";
 
-  const waltDisplay = propertiesCount > 0 && rentRollData?.walt?.waltByRentMonths 
+  const waltDisplay = propertiesCount > 0 && activeLeasesCount > 0 && rentRollData?.walt?.waltByRentMonths 
     ? `${(rentRollData.walt.waltByRentMonths / 12).toFixed(1)} Yrs` 
-    : (activeLeases.length > 0 ? "3.0 Yrs" : "0.0 Yrs");
+    : "0.0 Yrs";
 
   return (
     <div className="flex flex-col gap-8 font-sans relative">

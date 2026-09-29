@@ -70,10 +70,21 @@ const SEED_PROP_IDS = new Set([
   "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
   "PROP-FORTUNE-SKY",
   "PROP-001",
-  "PROP-1790239048961"
+  "PROP-002",
+  "PROP-APX",
+  "PROP-MTP",
+  "PROP-NXN",
+  "PROP-1790239048961",
+  "PROP-1790659297701"
 ]);
 
 const SEED_PROP_NAMES = new Set([
+  "apex business tower",
+  "nexus hub",
+  "meridian tech park",
+  "shivalik shilp",
+  "business hub",
+  "test commercial tower",
   "fortune sky",
   "signature tower b"
 ]);

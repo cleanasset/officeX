@@ -20,6 +20,34 @@ export async function GET(req: Request) {
 
     const db = getRentRollDb();
 
+    const SEED_PROP_IDS = new Set([
+      "357554cc-221d-4c7f-9465-32afcec7a8e7",
+      "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
+      "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
+      "401f394a-6d27-4c23-9a21-411baa7eef3b",
+      "cfa13505-71a5-4a43-be33-37497f416fdc",
+      "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
+      "PROP-FORTUNE-SKY",
+      "PROP-001",
+      "PROP-002",
+      "PROP-APX",
+      "PROP-MTP",
+      "PROP-NXN",
+      "PROP-1790239048961",
+      "PROP-1790659297701"
+    ]);
+
+    const SEED_PROP_NAMES = new Set([
+      "apex business tower",
+      "nexus hub",
+      "meridian tech park",
+      "shivalik shilp",
+      "business hub",
+      "test commercial tower",
+      "fortune sky",
+      "signature tower b"
+    ]);
+
     // Auto-sync any properties registered in Postgres/Supabase that aren't yet in rent-roll store
     try {
       const client = supabaseAdmin || supabase;
@@ -30,7 +58,8 @@ export async function GET(req: Request) {
         let hasNew = false;
         for (const dp of dbProps) {
           const cleanName = (dp.name || "").toLowerCase().trim();
-          if (cleanName && !existingNames.has(cleanName) && cleanName !== "fortune sky" && cleanName !== "signature tower b") {
+          if (SEED_PROP_IDS.has(dp.id) || SEED_PROP_NAMES.has(cleanName)) continue;
+          if (cleanName && !existingNames.has(cleanName)) {
             db.properties.push({
               id: dp.id,
               orgId: db.organization.id,
@@ -70,8 +99,9 @@ export async function GET(req: Request) {
 
     // Exclude any legacy dummy properties if ever present
     const cleanDbProps = db.properties.filter(p => {
+      const id = p?.id || "";
       const lower = (p.name || "").toLowerCase().trim();
-      return lower !== "fortune sky" && lower !== "signature tower b";
+      return !SEED_PROP_IDS.has(id) && !SEED_PROP_NAMES.has(lower);
     });
 
     const clientAccountId = searchParams.get("clientAccountId");

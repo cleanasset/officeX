@@ -99,12 +99,41 @@ export default async function PropertyDashboard() {
     };
   }
 
-  // Only filter out legacy dummy template placeholders, NEVER real commercial property names
-  const LEGACY_DUMMY_IDS = new Set(["PROP-001", "PROP-002", "PROP-FORTUNE-SKY"]);
+  // Filter out public seed/sample marketplace properties so only real user properties are displayed
+  const SEED_PROP_IDS = new Set([
+    "357554cc-221d-4c7f-9465-32afcec7a8e7",
+    "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
+    "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
+    "401f394a-6d27-4c23-9a21-411baa7eef3b",
+    "cfa13505-71a5-4a43-be33-37497f416fdc",
+    "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
+    "PROP-FORTUNE-SKY",
+    "PROP-001",
+    "PROP-002",
+    "PROP-APX",
+    "PROP-MTP",
+    "PROP-NXN",
+    "PROP-1790239048961",
+    "PROP-1790659297701"
+  ]);
+
+  const SEED_PROP_NAMES = new Set([
+    "apex business tower",
+    "nexus hub",
+    "meridian tech park",
+    "shivalik shilp",
+    "business hub",
+    "test commercial tower",
+    "fortune sky",
+    "signature tower b"
+  ]);
+
   allProperties = allProperties.filter((p: any) => {
-    if (LEGACY_DUMMY_IDS.has(p?.id)) return false;
+    const id = p?.id || "";
     const name = (p?.name || "").toLowerCase().trim();
-    return name !== "fortune sky" && name !== "signature tower b";
+    if (SEED_PROP_IDS.has(id)) return false;
+    if (SEED_PROP_NAMES.has(name)) return false;
+    return true;
   });
 
   return (
