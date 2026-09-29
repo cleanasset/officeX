@@ -199,9 +199,14 @@ export default function OperatePage() {
             <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-indigo-600" /> 100% Statutory Compliance</span>
           </div>
 
-          {/* SaaS Modules Quick Navigation — Elegant Pill Ribbon */}
-          <div className="w-full max-w-4xl mb-10">
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+          {/* SaaS Modules Quick Navigation — Prominent High-Impact Interactive Cards */}
+          <div className="w-full max-w-5xl mb-12">
+            <div className="text-center mb-3">
+              <span className="text-[11px] font-black uppercase tracking-widest text-[#0D7B6C] bg-teal-50 px-3 py-1 rounded-full border border-teal-200/80">
+                Core Built-In SaaS Modules
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 text-left">
               {productTabs.map((product) => {
                 const Icon = product.icon;
                 return (
@@ -212,12 +217,26 @@ export default function OperatePage() {
                       e.preventDefault();
                       document.getElementById(product.id)?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-teal-50/60 border border-slate-200/90 hover:border-[#0D7B6C] shadow-2xs hover:shadow-sm text-slate-700 hover:text-[#0D7B6C] text-xs font-bold transition-all cursor-pointer group"
+                    className="p-4 sm:p-5 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-teal-50/40 border border-slate-200/90 hover:border-[#0D7B6C] shadow-xs hover:shadow-lg transition-all duration-200 cursor-pointer group flex items-start gap-4"
                   >
-                    <div className="w-5 h-5 rounded-md bg-teal-50 group-hover:bg-[#0D7B6C] text-[#0D7B6C] group-hover:text-white flex items-center justify-center transition-all shrink-0">
-                      <Icon size={12} className="stroke-[2.5]" />
+                    <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 group-hover:bg-[#0D7B6C] text-[#0D7B6C] group-hover:text-white flex items-center justify-center transition-all shrink-0 shadow-2xs group-hover:scale-105">
+                      <Icon size={22} className="stroke-[2.2]" />
                     </div>
-                    <span className="whitespace-nowrap">{product.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-[#0D7B6C] transition-colors truncate">
+                          {product.name}
+                        </h3>
+                        <ArrowUpRight size={15} className="text-slate-400 group-hover:text-[#0D7B6C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium line-clamp-1 leading-snug">
+                        {product.title}
+                      </p>
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-[#0D7B6C] opacity-80 group-hover:opacity-100">
+                        <span>Open module</span>
+                        <ArrowRight size={11} className="transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
                   </a>
                 );
               })}

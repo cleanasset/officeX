@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { CheckCircle2, Loader2, Send, Calendar } from "lucide-react";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 export interface EnquiryFormProps {
   prefill?: {
@@ -214,15 +215,11 @@ export default function EnquiryForm({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Mobile Number <span className="text-gray-400 font-normal">(Optional)</span>
-            </label>
-            <input
-              type="tel"
+            <CountryPhoneInput
+              label="Mobile Number (Optional)"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 98765 43210"
-              className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#0F8B7D] focus:bg-white text-gray-900 transition-colors"
+              onChange={(val) => setPhone(val)}
+              placeholder="98765 43210"
             />
           </div>
         </div>

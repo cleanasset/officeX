@@ -275,3 +275,27 @@ export function getStateForCity(cityName: string): IndianState | undefined {
 
   return undefined;
 }
+
+// Helper function to get cities strictly belonging to a specific state or GST code
+export function getCitiesForState(stateNameOrCode: string): IndianCity[] {
+  if (!stateNameOrCode) return [];
+  const clean = stateNameOrCode.trim().toLowerCase();
+
+  // Try matching by stateCode or name (e.g. "27", "Maharashtra", "27 - Maharashtra")
+  const stateObj = INDIAN_STATES.find(
+    (s) =>
+      s.code === clean ||
+      s.name.toLowerCase() === clean ||
+      clean.includes(s.name.toLowerCase()) ||
+      clean.startsWith(s.code)
+  );
+
+  const targetCode = stateObj?.code;
+  const targetName = stateObj?.name.toLowerCase();
+
+  return ALL_INDIAN_CITIES_DETAILED.filter((c) => {
+    if (targetCode && c.stateCode === targetCode) return true;
+    if (targetName && c.state.toLowerCase() === targetName) return true;
+    return c.state.toLowerCase() === clean || clean.includes(c.state.toLowerCase());
+  });
+}

@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Loader2
 } from "lucide-react";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 interface TenantInviteModalProps {
   isOpen: boolean;
@@ -388,15 +389,11 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      Contact Mobile (India +91)
-                    </label>
-                    <input
-                      type="tel"
+                    <CountryPhoneInput
+                      label="Contact Mobile"
                       value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
+                      onChange={(val) => setContactPhone(val)}
                       placeholder="98200 12345"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>

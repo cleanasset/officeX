@@ -51,6 +51,7 @@ import {
   CityAutocomplete,
   StateAutocomplete
 } from "@/components/ui/LocationInputs";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 const MapPinPicker = dynamic(() => import("@/components/MapPinPicker"), {
   ssr: false,
@@ -930,15 +931,12 @@ export default function PropertyListingEngine({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                    PHONE NUMBER *
-                  </label>
-                  <input
-                    type="tel"
+                  <CountryPhoneInput
+                    label="PHONE NUMBER *"
+                    required
                     value={formData.contactPhone}
-                    onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                    placeholder="e.g. 9820012345"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
+                    onChange={(val) => setFormData({ ...formData, contactPhone: val })}
+                    placeholder="98200 12345"
                   />
                 </div>
 
@@ -1127,9 +1125,27 @@ export default function PropertyListingEngine({
                 </div>
 
                 <div>
+                  <StateAutocomplete
+                    label="STATE"
+                    value={formData.state}
+                    onChange={(state) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        state,
+                        // Clear city if state changes
+                        city: ""
+                      }));
+                    }}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </div>
+
+                <div>
                   <CityAutocomplete
                     label="CITY"
                     required
+                    selectedState={formData.state}
+                    requireStateFirst={true}
                     value={formData.city}
                     onChange={(city) => setFormData((prev) => ({ ...prev, city }))}
                     onSelectCityAndState={(city, state) => {
@@ -1139,16 +1155,7 @@ export default function PropertyListingEngine({
                         state: state || prev.state
                       }));
                     }}
-                    placeholder="e.g. Mumbai"
-                  />
-                </div>
-
-                <div>
-                  <StateAutocomplete
-                    label="STATE"
-                    value={formData.state}
-                    onChange={(state) => setFormData((prev) => ({ ...prev, state }))}
-                    placeholder="e.g. Maharashtra"
+                    placeholder={formData.state ? `e.g. City in ${formData.state}` : "Select State first"}
                   />
                 </div>
 

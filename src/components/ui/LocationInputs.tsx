@@ -7,6 +7,7 @@ import {
   ALL_INDIAN_CITIES_DETAILED,
   MAJOR_METROS,
   getStateForCity,
+  getCitiesForState,
   IndianState,
   IndianCity
 } from "@/lib/location-data";
@@ -267,6 +268,8 @@ interface CityAutocompleteProps {
   value: string;
   onChange: (city: string) => void;
   onSelectCityAndState?: (city: string, state: string, stateCode: string) => void;
+  selectedState?: string;       // When provided, strictly limits cities to this state
+  requireStateFirst?: boolean;  // When true, displays prompt if state is empty
   placeholder?: string;
   className?: string;
   label?: string;
@@ -278,7 +281,9 @@ export function CityAutocomplete({
   value,
   onChange,
   onSelectCityAndState,
-  placeholder = "e.g. Mumbai, Bengaluru, Delhi...",
+  selectedState,
+  requireStateFirst = false,
+  placeholder,
   className = "",
   label,
   required = false,
@@ -303,15 +308,23 @@ export function CityAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter cities based on query
+  // Filter cities based on query and selectedState
   const cleanQ = query.trim().toLowerCase();
+  const stateScopedPool = selectedState
+    ? getCitiesForState(selectedState)
+    : ALL_INDIAN_CITIES_DETAILED;
+
   const filteredCities = cleanQ
-    ? ALL_INDIAN_CITIES_DETAILED.filter(
+    ? stateScopedPool.filter(
         (c) =>
           c.name.toLowerCase().includes(cleanQ) ||
-          c.state.toLowerCase().includes(cleanQ)
-      ).slice(0, 15)
+          (!selectedState && c.state.toLowerCase().includes(cleanQ))
+      ).slice(0, 20)
+    : selectedState
+    ? stateScopedPool.slice(0, 25)
     : ALL_INDIAN_CITIES_DETAILED.filter((c) => c.isMajorHub).slice(0, 12);
+
+  const isStateMissing = Boolean(requireStateFirst && !selectedState);
 
   const handleSelect = (item: IndianCity) => {
     setQuery(item.name);
@@ -362,12 +375,18 @@ export function CityAutocomplete({
             setIsOpen(true);
             setActiveIndex(-1);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            if (!isStateMissing) setIsOpen(true);
+          }}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
+          placeholder={
+            isStateMissing
+              ? "Select State first..."
+              : placeholder || (selectedState ? `Select city in ${selectedState}...` : "e.g. Mumbai, Bengaluru, Delhi...")
+          }
+          disabled={disabled || isStateMissing}
           required={required}
-          className={`w-full pl-8 pr-7 text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-all ${className}`}
+          className={`w-full pl-8 pr-7 text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed ${className}`}
         />
 
         <div className="absolute right-2.5 text-slate-400 pointer-events-none">
@@ -375,11 +394,19 @@ export function CityAutocomplete({
         </div>
       </div>
 
-      {isOpen && (
+      {isOpen && !isStateMissing && (
         <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-in fade-in-50 slide-in-from-top-1 max-h-64 overflow-y-auto">
           <div className="px-3 py-1.5 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-            <span>{cleanQ ? `Cities Matching "${query}"` : "Major Real Estate Hubs"}</span>
-            <span className="text-[9px] text-slate-400 font-normal">All India Options</span>
+            <span>
+              {selectedState
+                ? `Cities in ${selectedState} (${filteredCities.length})`
+                : cleanQ
+                ? `Cities Matching "${query}"`
+                : "Major Real Estate Hubs"}
+            </span>
+            <span className="text-[9px] text-slate-400 font-normal">
+              {selectedState ? "Filtered by State" : "All India Options"}
+            </span>
           </div>
 
           <div className="divide-y divide-slate-100">
@@ -405,7 +432,9 @@ export function CityAutocomplete({
               })
             ) : (
               <div className="px-3.5 py-3 text-xs text-slate-500">
-                <p>No exact match for &ldquo;{query}&rdquo;.</p>
+                <p>
+                  No preset cities found in {selectedState || "selection"} for &ldquo;{query}&rdquo;.
+                </p>
                 <p className="text-[11px] text-teal-600 mt-1">
                   You can keep &ldquo;{query}&rdquo; as a custom city.
                 </p>
@@ -566,6 +595,82 @@ export function StateAutocomplete({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. STATE-FIRST UNIFIED SELECTOR (State First, Then City strictly scoped to State)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface StateCitySelectorProps {
+  stateValue: string;
+  cityValue: string;
+  onStateChange: (state: string, stateCode?: string) => void;
+  onCityChange: (city: string) => void;
+  stateLabel?: string;
+  cityLabel?: string;
+  statePlaceholder?: string;
+  cityPlaceholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+  gridClassName?: string;
+}
+
+export function StateCitySelector({
+  stateValue,
+  cityValue,
+  onStateChange,
+  onCityChange,
+  stateLabel = "State (GST) *",
+  cityLabel = "City *",
+  statePlaceholder = "Select State...",
+  cityPlaceholder,
+  required = true,
+  disabled = false,
+  className = "",
+  gridClassName = "grid grid-cols-1 sm:grid-cols-2 gap-3"
+}: StateCitySelectorProps) {
+  return (
+    <div className={`${gridClassName} ${className}`}>
+      {/* 1. STATE FIRST */}
+      <div>
+        <StateAutocomplete
+          label={stateLabel}
+          required={required}
+          disabled={disabled}
+          value={stateValue}
+          placeholder={statePlaceholder}
+          onChange={(newState) => {
+            onStateChange(newState);
+            // If state changes, verify if existing city belongs to the new state; if not, clear it
+            if (cityValue && newState) {
+              const validCities = getCitiesForState(newState).map((c) => c.name.toLowerCase());
+              if (!validCities.includes(cityValue.toLowerCase())) {
+                onCityChange("");
+              }
+            }
+          }}
+        />
+      </div>
+
+      {/* 2. CITY SECOND (Strictly scoped to the selected state) */}
+      <div>
+        <CityAutocomplete
+          label={cityLabel}
+          required={required}
+          disabled={disabled || !stateValue}
+          selectedState={stateValue}
+          requireStateFirst={true}
+          value={cityValue}
+          placeholder={
+            cityPlaceholder ||
+            (stateValue ? `Select city in ${stateValue}...` : "Select State first")
+          }
+          onChange={(newCity) => onCityChange(newCity)}
+        />
+      </div>
     </div>
   );
 }

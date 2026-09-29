@@ -225,6 +225,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Property not found" }, { status: 404 });
     }
 
+    // Invariant check: Occupied + Vacant = Total Leasable Area (§4.1, Table 4.1)
+    const existingLeases = db.leases.filter(l => l.propertyId === prop.id && (l.status === "active" || l.status === "under_notice"));
+    const currentOccupied = existingLeases.reduce((sum, l) => sum + (Number(l.chargeableArea) || 0), 0);
+    const propTotal = Number(prop.totalArea) || 0;
+    const availableVacant = Math.max(0, propTotal - currentOccupied);
+
+    if (propTotal > 0 && Number(chargeableArea) > availableVacant) {
+      return NextResponse.json({
+        error: `Space Over-Allocation Error: Cannot allocate ${Number(chargeableArea).toLocaleString()} sq.ft. The property "${prop.name}" only has ${availableVacant.toLocaleString()} sq.ft of vacant space remaining (Total Leasable: ${propTotal.toLocaleString()} sq.ft, Currently Leased: ${currentOccupied.toLocaleString()} sq.ft).`
+      }, { status: 400 });
+    }
+
     // Tenant lookup or creation
     let tenantObj = db.tenants.find(t => t.id === tenantId || t.tradeName.toLowerCase() === tenantName.toLowerCase());
     if (!tenantObj) {
@@ -356,6 +368,30 @@ export async function POST(req: Request) {
     };
 
     db.leases.unshift(newLease);
+
+    // Update or register space record to occupied status (§4.3, Table 4.3)
+    if (!db.spaces) db.spaces = [];
+    const matchedSpace = db.spaces.find(s => s.propertyId === prop.id && (s.id === spaceId || s.unitNumber.toLowerCase() === (unitNumber || "").toLowerCase()));
+    if (matchedSpace) {
+      matchedSpace.status = "occupied";
+      matchedSpace.currentLeaseId = newLease.id;
+    } else {
+      db.spaces.push({
+        id: spaceId || `SPC-${newLease.id}`,
+        propertyId: prop.id,
+        spaceCode: `SPC-${(unitNumber || 'UNIT').replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`,
+        buildingName: prop.name,
+        floorNumber: Number(floorNumber || 1),
+        unitNumber: unitNumber || "Suite Commercial",
+        spaceType: "office",
+        carpetArea: numCarpet,
+        chargeableArea: numChargeable,
+        standardRatePsf: summary.baseRentPsf,
+        standardCamPsf: numCamPsf,
+        status: "occupied",
+        currentLeaseId: newLease.id
+      });
+    }
 
     // Also schedule next escalation
     db.escalations.push({

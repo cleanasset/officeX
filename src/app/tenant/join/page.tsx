@@ -20,6 +20,7 @@ import {
   Check,
   Building
 } from "lucide-react";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 interface PropertyPreview {
   id: string;
@@ -512,6 +513,17 @@ function TenantJoinContent() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* WhatsApp Mobile */}
+                  <div>
+                    <CountryPhoneInput
+                      label="YOUR MOBILE NUMBER *"
+                      required
+                      value={mobile}
+                      onChange={(val) => setMobile(val)}
+                      placeholder="98200 12345"
+                    />
                   </div>
 
                   {/* Leased Space / Unit */}

@@ -73,6 +73,7 @@ import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import AudienceTile from "@/components/marketing/AudienceTile";
 import HeaderAuthButton from "@/components/marketing/HeaderAuthButton";
 import MarketplaceDualShowcase from "@/components/marketing/MarketplaceDualShowcase";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 // Single Full-Width Panoramic Hero Scenes (Rotating: Luxury Office -> FM Technicians -> Campus Atrium -> Security -> Hospitality)
 const HERO_SCENES = [
@@ -2075,14 +2076,12 @@ export default function LandingPage() {
                     />
                   </div>
                   
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Phone Number</label>
-                    <input 
-                      type="tel" 
+                  <div>
+                    <CountryPhoneInput
+                      label="Phone Number"
                       value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      placeholder="+91..." 
-                      className="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-[#0F8B7D] font-semibold"
+                      onChange={(val) => setContactPhone(val)}
+                      placeholder="98200 12345"
                     />
                   </div>
                 </div>

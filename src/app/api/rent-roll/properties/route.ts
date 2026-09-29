@@ -126,6 +126,8 @@ export async function GET(req: Request) {
       const totalMonthlyRent = propLeases.reduce((sum, l) => sum + l.monthlyRent, 0);
       const totalBilling = propLeases.reduce((sum, l) => sum + l.totalMonthlyGross, 0);
 
+      const propSpaces = (db.spaces || []).filter(s => s.propertyId === p.id);
+
       return {
         ...p,
         activeLeasesCount: propLeases.length,
@@ -134,6 +136,7 @@ export async function GET(req: Request) {
         occupancyPct,
         totalMonthlyRent,
         totalBilling,
+        spaces: propSpaces,
       };
     });
 

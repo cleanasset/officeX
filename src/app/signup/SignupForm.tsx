@@ -32,6 +32,7 @@ import {
   Sparkles,
   Layers
 } from "lucide-react";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 // Primary roles defined in Section 1.2 & Table 0 of Registration Specification
 const ROLE_OPTIONS = [
@@ -244,9 +245,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       return;
     }
 
-    const cleanMobile = mobileNumber.replace(/\D/g, "");
-    if (cleanMobile.length !== 10) {
-      setError("Please enter a valid 10-digit Indian mobile number.");
+    const cleanMobile = mobileNumber.trim();
+    const cleanDigits = cleanMobile.replace(/\D/g, "");
+    if (cleanDigits.length < 8) {
+      setError("Please enter a valid mobile number.");
       return;
     }
 
@@ -766,28 +768,15 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                 </div>
               </div>
 
-              {/* Mobile Number */}
+              {/* Mobile Number with Country Selector */}
               <div>
-                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  MOBILE NUMBER * (INDIA +91)
-                </label>
-                <div className="flex gap-2">
-                  <div className="w-16 px-3 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-600 font-bold text-xs flex items-center justify-center">
-                    +91
-                  </div>
-                  <div className="relative flex-1">
-                    <Phone size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    <input
-                      type="tel"
-                      required
-                      maxLength={10}
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ""))}
-                      placeholder="98200 12345"
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
-                    />
-                  </div>
-                </div>
+                <CountryPhoneInput
+                  label="MOBILE NUMBER *"
+                  required
+                  value={mobileNumber}
+                  onChange={(val) => setMobileNumber(val)}
+                  placeholder="98200 12345"
+                />
               </div>
 
               {/* Password Fields */}
@@ -911,7 +900,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                 </span>
                 <p className="text-[11px] text-slate-600">
                   Dispatched via SMTP to <strong className="text-blue-900">{email}</strong> and{" "}
-                  <strong className="text-blue-900">+91 {mobileNumber}</strong>
+                  <strong className="text-blue-900">{mobileNumber.startsWith("+") ? mobileNumber : `+91 ${mobileNumber}`}</strong>
                 </p>
               </div>
 

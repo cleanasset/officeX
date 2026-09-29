@@ -86,6 +86,7 @@ export default function PropertyDashboardClient({
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(true);
   const [inviteModalProp, setInviteModalProp] = useState<any | null>(null);
   const [showAddTenantModal, setShowAddTenantModal] = useState(false);
+  const [selectedTenantPropId, setSelectedTenantPropId] = useState<string>("");
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -310,7 +311,10 @@ export default function PropertyDashboardClient({
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setShowAddTenantModal(true)}
+            onClick={() => {
+              setSelectedTenantPropId(properties[0]?.id || "");
+              setShowAddTenantModal(true);
+            }}
             className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <UserPlus size={14} className="text-[#0F8B7D]" />
@@ -787,7 +791,10 @@ export default function PropertyDashboardClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowAddTenantModal(true)}
+                      onClick={() => {
+                        setSelectedTenantPropId(p.id);
+                        setShowAddTenantModal(true);
+                      }}
                       className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
                       title="Add Existing Tenant to this property"
                     >
@@ -825,7 +832,10 @@ export default function PropertyDashboardClient({
             </span>
             <button
               type="button"
-              onClick={() => setShowAddTenantModal(true)}
+              onClick={() => {
+                setSelectedTenantPropId(properties[0]?.id || "");
+                setShowAddTenantModal(true);
+              }}
               className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
             >
               <UserPlus size={13} /> Add Tenant
@@ -1074,6 +1084,7 @@ export default function PropertyDashboardClient({
           await loadDashboardData();
         }}
         properties={properties}
+        defaultPropertyId={selectedTenantPropId}
       />
 
       {/* Tenant Invitation Modal */}

@@ -1571,20 +1571,31 @@ export default function CommercialPropertyMaster() {
                 />
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* 1. STATE FIRST */}
+                  <StateAutocomplete
+                    label="State (GST) *"
+                    value={state}
+                    onChange={(val) => {
+                      setState(val);
+                      // Clear city if it doesn't belong to the newly selected state
+                      if (city && val) {
+                        setCity("");
+                      }
+                    }}
+                  />
+
+                  {/* 2. CITY SECOND (Strictly scoped to selected state) */}
                   <CityAutocomplete
                     label="City *"
                     value={city}
+                    selectedState={state}
+                    requireStateFirst={true}
+                    placeholder={state ? `City in ${state}...` : "Select State first"}
                     onChange={(val) => setCity(val)}
                     onSelectCityAndState={(cityName, stateName) => {
                       setCity(cityName);
                       if (stateName) setState(stateName);
                     }}
-                  />
-
-                  <StateAutocomplete
-                    label="State (GST) *"
-                    value={state}
-                    onChange={(val) => setState(val)}
                   />
 
                   <div className="space-y-1">
