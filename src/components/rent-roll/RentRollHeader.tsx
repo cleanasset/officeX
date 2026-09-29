@@ -28,10 +28,14 @@ import {
   MoreHorizontal,
   ChevronDown,
   Sliders,
+  CreditCard,
+  Zap,
 } from "lucide-react";
 
 interface RentRollHeaderProps {
   activeTab?: string;
+  onOpenProfileBanking?: () => void;
+  onOpenIntegrations?: () => void;
   properties: Array<{
     id: string;
     name: string;
@@ -137,6 +141,8 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   onOpenOwnerStatements,
   onOpenDeals,
   onOpenConfigWizard,
+  onOpenProfileBanking,
+  onOpenIntegrations,
   onFreezeSnapshot,
   onOpenSnapshots,
   isFreezingSnapshot,
@@ -178,22 +184,28 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
     <div className="flex flex-col gap-2.5 w-full">
       {/* ──── ROW 1: COMPACT IDENTITY + PRIMARY ACTIONS ──── */}
       <div className="bg-white border border-gray-200/80 rounded-2xl px-4 py-2.5 shadow-2xs flex items-center justify-between gap-3">
-        {/* Left: User & Organization identity */}
-        <div className="flex items-center gap-3 min-w-0">
+        {/* Left: User & Organization identity (Clickable to edit Profile & Banking) */}
+        <div
+          onClick={onOpenProfileBanking}
+          className={`flex items-center gap-3 min-w-0 ${
+            onOpenProfileBanking ? "cursor-pointer hover:bg-slate-50/80 -m-1.5 p-1.5 rounded-xl transition-all group" : ""
+          }`}
+          title={onOpenProfileBanking ? "Click to view & edit Organization, Profile & Bank Details" : undefined}
+        >
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={orgName || "Company Logo"}
-              className="w-8 h-8 rounded-lg object-contain border border-slate-200 bg-white p-0.5 shadow-xs shrink-0"
+              className="w-8 h-8 rounded-lg object-contain border border-slate-200 bg-white p-0.5 shadow-xs shrink-0 group-hover:border-teal-400 transition-colors"
             />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0F8B7D] to-teal-600 text-white font-black text-xs flex items-center justify-center shadow-sm shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0F8B7D] to-teal-600 text-white font-black text-xs flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
               {(orgName || userName || userEmail || "O")[0]?.toUpperCase() || "O"}
             </div>
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-extrabold text-gray-900 truncate">
+              <span className="text-sm font-extrabold text-gray-900 truncate group-hover:text-teal-900 transition-colors">
                 {orgName || userName || "Commercial Asset Portfolio"}
               </span>
               {orgTradeName && orgTradeName !== orgName && (
@@ -219,6 +231,18 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
 
         {/* Right: Primary action buttons */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Profile & Banking quick action */}
+          {onOpenProfileBanking && (
+            <button
+              type="button"
+              onClick={onOpenProfileBanking}
+              className="px-3 py-1.5 bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-slate-700 hover:text-teal-900 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+              title="View & Edit Entity Profile, PAN, GSTIN & Settlement Bank Accounts"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-teal-600" />
+              <span className="hidden md:inline">Profile &amp; Banking</span>
+            </button>
+          )}
           {/* Alerts button */}
           {showAlerts && (
             <button
@@ -291,6 +315,26 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                 <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Actions
                 </div>
+
+                {onOpenProfileBanking && (
+                  <button
+                    onClick={() => { onOpenProfileBanking(); setIsActionsOpen(false); }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-teal-50 text-slate-900 rounded-lg font-bold flex items-center gap-2 cursor-pointer border-b border-gray-100"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-teal-600" />
+                    Profile &amp; Bank Accounts
+                  </button>
+                )}
+
+                {onOpenIntegrations && (
+                  <button
+                    onClick={() => { onOpenIntegrations(); setIsActionsOpen(false); }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-indigo-50 text-indigo-900 rounded-lg font-bold flex items-center gap-2 cursor-pointer border-b border-gray-100"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-indigo-600" />
+                    Accounting &amp; ERP Hub (Tally/Zoho/SAP)
+                  </button>
+                )}
 
                 {onOpenConfigWizard && (
                   <button

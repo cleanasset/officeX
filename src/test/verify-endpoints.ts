@@ -18,7 +18,7 @@ async function testAllEndpoints() {
     { name: "Tenants Master Registry", path: "/api/rent-roll/tenants" },
     { name: "Commercial Audit Logs", path: "/api/rent-roll/audit" },
     { name: "Management Alerts", path: "/api/rent-roll/alerts" },
-    { name: "Single Lease 360 View (LEASE-001)", path: "/api/rent-roll/leases/LEASE-001" },
+    { name: "Single Lease 360 View (LEASE-APX-01)", path: "/api/rent-roll/leases/LEASE-APX-01" },
     { name: "CSV Export (Rent Roll)", path: "/api/rent-roll/export?type=rentroll" },
   ];
 

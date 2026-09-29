@@ -29,7 +29,8 @@ import {
   SlidersHorizontal,
   Bookmark,
   CheckSquare,
-  Square
+  Square,
+  FileSpreadsheet
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -851,6 +852,18 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
               </div>
             )}
           </div>
+
+          {/* Tally Prime XML Export (RR-INT-01 / OI-5) */}
+          <a
+            href="/api/rent-roll/export/tally"
+            download
+            className="px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 transition-colors shadow-2xs cursor-pointer"
+            title="Export Rent Roll Sales & Receipt Vouchers to Tally Prime XML"
+          >
+            <FileSpreadsheet size={13} className="text-indigo-600" />
+            <span className="hidden md:inline">Tally Vouchers (XML)</span>
+            <span className="md:hidden">Tally XML</span>
+          </a>
 
           {onViewModeChange && (
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">

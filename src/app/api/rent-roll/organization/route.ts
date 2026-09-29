@@ -4,9 +4,26 @@ import { getRentRollDb, saveRentRollDb, recordAuditLog } from "@/lib/rent-roll-s
 export async function GET() {
   try {
     const db = getRentRollDb();
-    return NextResponse.json({
+    const primaryBe = (db.billingEntities || []).find((b: any) => b.isDefault) || db.billingEntities?.[0] || {};
+    const orgWithFallbacks = {
       ...db.organization,
-      organization: db.organization,
+      tradeName: db.organization.tradeName || primaryBe.tradeName || db.organization.name,
+      pan: db.organization.pan || primaryBe.pan || "",
+      gstin: db.organization.gstin || primaryBe.gstin || "",
+      bankName: db.organization.bankName || primaryBe.bankName || "HDFC Bank Ltd",
+      bankAccountNumber: db.organization.bankAccountNumber || primaryBe.bankAccountNumber || "",
+      bankIfsc: db.organization.bankIfsc || primaryBe.bankIfsc || "",
+      bankBranch: db.organization.bankBranch || primaryBe.bankBranch || "",
+      accountType: db.organization.accountType || "Current Account",
+      escrowNodalVerified: db.organization.escrowNodalVerified ?? true,
+      address: db.organization.address || primaryBe.registeredAddress || "",
+      city: db.organization.city || "",
+      state: db.organization.state || "",
+      currency: db.organization.currency || "INR"
+    };
+    return NextResponse.json({
+      ...orgWithFallbacks,
+      organization: orgWithFallbacks,
       config: db.config,
       billingEntities: db.billingEntities || [],
       chargeMaster: db.chargeMaster || []
@@ -26,13 +43,23 @@ export async function POST(req: Request) {
     db.organization = {
       ...db.organization,
       name: body.name || body.legalName || db.organization.name || "",
-      pan: body.pan || db.organization.pan || "",
-      gstin: body.gstin || db.organization.gstin || "",
+      tradeName: body.tradeName || db.organization.tradeName || "",
+      pan: (body.pan || db.organization.pan || "").toUpperCase().trim(),
+      gstin: (body.gstin || db.organization.gstin || "").toUpperCase().trim(),
       address: body.address || body.primaryAddress || db.organization.address || "",
       city: body.city || db.organization.city || "",
       state: body.state || db.organization.state || "",
       pincode: body.pincode || db.organization.pincode || "",
-      currency: body.currency || db.organization.currency || "INR"
+      currency: body.currency || db.organization.currency || "INR",
+      bankName: body.bankName || db.organization.bankName || "",
+      bankAccountNumber: body.bankAccountNumber || db.organization.bankAccountNumber || "",
+      bankIfsc: (body.bankIfsc || db.organization.bankIfsc || "").toUpperCase().trim(),
+      bankBranch: body.bankBranch || db.organization.bankBranch || "",
+      accountType: body.accountType || db.organization.accountType || "Current Account",
+      escrowNodalVerified: body.escrowNodalVerified ?? db.organization.escrowNodalVerified ?? true,
+      contactPerson: body.contactPerson || db.organization.contactPerson || "",
+      contactEmail: body.contactEmail || db.organization.contactEmail || "",
+      contactPhone: body.contactPhone || db.organization.contactPhone || ""
     };
 
     // 2. Update Extended Configuration

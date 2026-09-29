@@ -30,7 +30,8 @@ import {
   Shield,
   Activity,
   CheckCircle,
-  Truck
+  Truck,
+  Zap
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -71,6 +72,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "NOI & Property P&L", href: "/properties/rent-roll?tab=pnl", tabKey: "pnl", icon: BarChart3 },
         { name: "Tenant Directory & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
         { name: "Financial Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
+        { name: "Accounting & ERP Sync", href: "/properties/rent-roll?tab=integrations", tabKey: "integrations", icon: Zap },
         { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },

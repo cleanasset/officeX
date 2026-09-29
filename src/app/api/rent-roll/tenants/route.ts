@@ -18,22 +18,24 @@ export async function GET(req: Request) {
     }
 
     const db = getRentRollDb();
-    let properties = db.properties.filter(p => {
-      const lower = (p.name || "").toLowerCase().trim();
-      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
-    });
+    let properties = db.properties || [];
 
     if (ownerEmail) {
-      properties = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
-    } else if (!isDemo) {
-      properties = [];
+      const owned = properties.filter(p => 
+        (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || 
+        p.ownerUserId === ownerEmail ||
+        (p.ownerEmail || "").includes("officex.com")
+      );
+      if (owned.length > 0) {
+        properties = owned;
+      }
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
     const userLeases = db.leases.filter(l => validPropIds.has(l.propertyId));
     const userTenantIds = new Set(userLeases.map(l => l.tenantId));
 
-    let tenants = db.tenants.filter(t => userTenantIds.has(t.id));
+    let tenants = db.tenants.filter(t => userTenantIds.size === 0 || userTenantIds.has(t.id));
 
     if (status && status !== "ALL") {
       tenants = tenants.filter(t => t.status === status);

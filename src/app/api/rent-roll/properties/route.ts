@@ -20,52 +20,55 @@ export async function GET(req: Request) {
 
     const db = getRentRollDb();
 
-    // Auto-sync any properties registered in Postgres/Supabase that aren't yet in rent-roll store
-    try {
-      const client = supabaseAdmin || supabase;
-      if (client) {
-        const { data: dbProps } = await client.from('properties').select('*').order('created_at', { ascending: false });
-        if (dbProps && dbProps.length > 0) {
-          const existingNames = new Set(db.properties.map(p => (p.name || "").toLowerCase().trim()));
-          let hasNew = false;
-          for (const dp of dbProps) {
-            const cleanName = (dp.name || "").toLowerCase().trim();
-            if (cleanName && !existingNames.has(cleanName)) {
-              db.properties.push({
-                id: dp.id,
-                orgId: db.organization.id,
-                propertyCode: `PRP-${(dp.name || 'PROP').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`,
-                name: dp.name,
-                type: dp.type || "Commercial Office",
-                address: dp.address || "",
-                city: dp.city || "",
-                state: dp.state || "",
-                microMarket: dp.micro_market || dp.city || "",
-                pincode: dp.pincode || "",
-                grade: dp.grade || "A",
-                totalArea: Number(dp.total_area) || 0,
-                chargeableArea: Number(dp.total_area) || 0,
-                carpetArea: Number(dp.total_area) * 0.8,
-                occupancyTargetPct: 95,
-                ownerName: dp.owner_name || dp.owner_company,
-                ownerUserId: dp.owner_user_id || "",
-                ownerEmail: ownerEmail || "owner@officex.com",
-                sourceSystem: "postgres_sync",
-                version: 1,
-                dataQualityStatus: "passed",
-                status: "operational"
-              });
-              existingNames.add(cleanName);
-              hasNew = true;
+    // Auto-sync from Postgres only if explicitly requested via ?sync=1
+    const shouldSync = searchParams.get("sync") === "1";
+    if (shouldSync) {
+      try {
+        const client = supabaseAdmin || supabase;
+        if (client) {
+          const { data: dbProps } = await client.from('properties').select('*').order('created_at', { ascending: false });
+          if (dbProps && dbProps.length > 0) {
+            const existingNames = new Set(db.properties.map(p => (p.name || "").toLowerCase().trim()));
+            let hasNew = false;
+            for (const dp of dbProps) {
+              const cleanName = (dp.name || "").toLowerCase().trim();
+              if (cleanName && !existingNames.has(cleanName)) {
+                db.properties.push({
+                  id: dp.id,
+                  orgId: db.organization.id,
+                  propertyCode: `PRP-${(dp.name || 'PROP').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`,
+                  name: dp.name,
+                  type: dp.type || "Commercial Office",
+                  address: dp.address || "",
+                  city: dp.city || "",
+                  state: dp.state || "",
+                  microMarket: dp.micro_market || dp.city || "",
+                  pincode: dp.pincode || "",
+                  grade: dp.grade || "A",
+                  totalArea: Number(dp.total_area) || 0,
+                  chargeableArea: Number(dp.total_area) || 0,
+                  carpetArea: Number(dp.total_area) * 0.8,
+                  occupancyTargetPct: 95,
+                  ownerName: dp.owner_name || dp.owner_company,
+                  ownerUserId: dp.owner_user_id || "",
+                  ownerEmail: ownerEmail || "owner@officex.com",
+                  sourceSystem: "postgres_sync",
+                  version: 1,
+                  dataQualityStatus: "passed",
+                  status: "operational"
+                });
+                existingNames.add(cleanName);
+                hasNew = true;
+              }
+            }
+            if (hasNew) {
+              saveRentRollDb(db);
             }
           }
-          if (hasNew) {
-            saveRentRollDb(db);
-          }
         }
+      } catch (syncErr) {
+        console.warn("Postgres to rent-roll sync warning:", syncErr);
       }
-    } catch (syncErr) {
-      console.warn("Postgres to rent-roll sync warning:", syncErr);
     }
 
     const allDbProps = db.properties || [];

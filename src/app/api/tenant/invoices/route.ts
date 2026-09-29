@@ -21,6 +21,9 @@ export async function GET(req: Request) {
         (t) => t.tradeName?.toLowerCase() === requestedName.toLowerCase() ||
                t.legalName?.toLowerCase() === requestedName.toLowerCase()
       );
+    } else {
+      // Fallback to the first tenant with an active lease for default tenant portal view
+      activeTenant = db.tenants.find((t) => db.leases.some((l) => l.tenantId === t.id)) || db.tenants[0] || null;
     }
 
     if (!activeTenant) {

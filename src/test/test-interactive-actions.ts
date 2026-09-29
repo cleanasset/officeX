@@ -22,7 +22,7 @@ async function testInteractiveMutations() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      propertyId: "PROP-001",
+      propertyId: "PROP-APX",
       tenantName: "Anthropic Research India",
       unitNumber: "Suite 901",
       floorNumber: 9,
@@ -40,7 +40,8 @@ async function testInteractiveMutations() {
     })
   });
   const createdLease = await leaseRes.json();
-  assert("WF-01: Onboard New Lease (20k sqft, 50L/mo)", leaseRes.ok && createdLease.baseRentPsf === 250);
+  const psf = createdLease.lease?.baseRentPsf || createdLease.baseRentPsf;
+  assert("WF-01: Onboard New Lease (20k sqft, 50L/mo)", leaseRes.ok && psf === 250);
 
   // 2. Generate Invoices Batch
   const invGenRes = await fetch(`${baseUrl}/api/rent-roll/invoices`, {
@@ -61,7 +62,7 @@ async function testInteractiveMutations() {
       amountReceived: invToPay.netPayable,
       tdsDeducted: invToPay.tdsDeducted,
       paymentMode: "neft_rtgs",
-      referenceNumber: "HDFCR520261001009912",
+      referenceNumber: `HDFCR520261001_${Date.now()}`,
       paymentDate: "2026-10-02"
     })
   });
@@ -86,7 +87,7 @@ async function testInteractiveMutations() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      leaseId: "LEASE-003",
+      leaseId: "LEASE-APX-02",
       noticeDate: "2026-09-15",
       effectiveDate: "2026-12-14",
       noticeReason: "relocation",

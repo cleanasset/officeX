@@ -12,7 +12,8 @@ import {
   Download,
   Eye,
   Plus,
-  ArrowUpRight
+  ArrowUpRight,
+  FileSpreadsheet
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -229,6 +230,16 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
               className="w-full bg-white border border-gray-200 text-gray-900 text-xs rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0F8B7D] shadow-2xs"
             />
           </div>
+
+          <a
+            href="/api/rent-roll/export/tally"
+            download
+            className="px-3.5 py-1.5 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-800 hover:text-indigo-900 rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-colors shadow-2xs cursor-pointer"
+            title="Download Tally Prime XML Sales Vouchers for these Invoices"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Sync to Tally (XML)</span>
+          </a>
 
           <button
             onClick={onOpenGenerateInvoices}

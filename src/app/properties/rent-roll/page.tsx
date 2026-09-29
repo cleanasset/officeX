@@ -41,8 +41,11 @@ import { AuditTab, AuditLogItem } from "@/components/rent-roll/AuditTab";
 import { DictionaryTab } from "@/components/rent-roll/DictionaryTab";
 import { FlexCentreTab } from "@/components/rent-roll/FlexCentreTab";
 import { CamPoolsTab } from "@/components/rent-roll/CamPoolsTab";
+import { IntegrationsTab } from "@/components/rent-roll/IntegrationsTab";
 
 import { RentRollConfigWizardModal } from "@/components/rent-roll/RentRollConfigWizardModal";
+import { ProfileAndBankingModal } from "@/components/rent-roll/ProfileAndBankingModal";
+import { AccountingIntegrationsModal } from "@/components/rent-roll/AccountingIntegrationsModal";
 
 import { LeaseDetailDrawer } from "@/components/rent-roll/LeaseDetailDrawer";
 import { TaxInvoiceDrawer } from "@/components/rent-roll/TaxInvoiceDrawer";
@@ -156,10 +159,28 @@ function RentRollPageInner() {
   const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [orgBranding, setOrgBranding] = useState<{
     name?: string;
+    legalName?: string;
     tradeName?: string;
+    pan?: string;
+    gstin?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    currency?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankIfsc?: string;
+    bankBranch?: string;
+    accountType?: string;
+    escrowNodalVerified?: boolean;
+    contactPerson?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     logoUrl?: string;
     brandColor?: string;
   }>({});
+  const [isProfileBankingOpen, setIsProfileBankingOpen] = useState<boolean>(false);
   const [preSelectedSpaceForLease, setPreSelectedSpaceForLease] = useState<any | null>(null);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [collections, setCollections] = useState<CollectionReceipt[]>([]);
@@ -193,6 +214,7 @@ function RentRollPageInner() {
   const [isAdjustmentNoteOpen, setIsAdjustmentNoteOpen] = useState<boolean>(false);
   const [selectedInvoiceForAdjustment, setSelectedInvoiceForAdjustment] = useState<InvoiceItem | null>(null);
   const [isConfigWizardOpen, setIsConfigWizardOpen] = useState<boolean>(false);
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState<boolean>(false);
 
   // Month-End Snapshots (RR-AUD-03)
   const [isFreezingSnapshot, setIsFreezingSnapshot] = useState<boolean>(false);
@@ -400,11 +422,29 @@ function RentRollPageInner() {
       if (orgRes.ok) {
         const orgData = await orgRes.json();
         if (orgData) {
+          const org = orgData.organization || orgData;
           setOrgBranding({
-            name: orgData.name || orgData.legalName,
-            tradeName: orgData.tradeName,
-            logoUrl: orgData.branding?.logoUrl || orgData.branding?.logoPreview,
-            brandColor: orgData.branding?.brandColor
+            name: org.name || org.legalName || orgData.name,
+            legalName: org.legalName || org.name,
+            tradeName: org.tradeName || orgData.tradeName,
+            pan: org.pan || orgData.pan,
+            gstin: org.gstin || orgData.gstin,
+            address: org.address || orgData.address,
+            city: org.city || orgData.city,
+            state: org.state || orgData.state,
+            pincode: org.pincode || orgData.pincode,
+            currency: org.currency || orgData.currency || "INR",
+            bankName: org.bankName || orgData.bankName,
+            bankAccountNumber: org.bankAccountNumber || orgData.bankAccountNumber,
+            bankIfsc: org.bankIfsc || orgData.bankIfsc,
+            bankBranch: org.bankBranch || orgData.bankBranch,
+            accountType: org.accountType || orgData.accountType,
+            escrowNodalVerified: org.escrowNodalVerified ?? orgData.escrowNodalVerified,
+            contactPerson: org.contactPerson || orgData.contactPerson,
+            contactEmail: org.contactEmail || orgData.contactEmail,
+            contactPhone: org.contactPhone || orgData.contactPhone,
+            logoUrl: orgData.branding?.logoUrl || orgData.branding?.logoPreview || org.logoUrl,
+            brandColor: orgData.branding?.brandColor || org.brandColor
           });
         }
       }
@@ -552,6 +592,7 @@ function RentRollPageInner() {
     { id: "cam-pools", label: "CAM Pools & True-Up", icon: Sparkles },
     { id: "tenants", label: "Tenant Directory & Leases", icon: Users },
     { id: "dictionary", label: "Financial Terms Dictionary", icon: BookOpen },
+    { id: "integrations", label: "Accounting & ERP Sync", icon: Zap },
     { id: "audit", label: "Audit & Config", icon: ShieldCheck },
   ];
 
@@ -581,6 +622,8 @@ function RentRollPageInner() {
         onOpenOwnerStatements={() => setIsOwnerStatementsOpen(true)}
         onOpenDeals={() => setIsDealsModalOpen(true)}
         onOpenConfigWizard={() => setIsConfigWizardOpen(true)}
+        onOpenProfileBanking={() => setIsProfileBankingOpen(true)}
+        onOpenIntegrations={() => setIsIntegrationsOpen(true)}
         onOpenAddLease={() => setIsAddLeaseOpen(true)}
         onOpenRecordPayment={() => {
           setPreSelectedInvoiceForPayment(null);
@@ -658,6 +701,9 @@ function RentRollPageInner() {
             propertiesCount={properties.length}
             onOpenAddProperty={() => router.push("/properties/add")}
             onOpenImportCsv={() => setIsImportModalOpen(true)}
+            onOpenProfileSettings={() => setIsProfileBankingOpen(true)}
+            organizationData={orgBranding}
+            billingEntities={billingEntities}
           />
         )}
 
@@ -781,6 +827,13 @@ function RentRollPageInner() {
 
         {activeTab === "dictionary" && (
           <DictionaryTab />
+        )}
+
+        {activeTab === "integrations" && (
+          <IntegrationsTab
+            organizationName={orgBranding.name}
+            onRefresh={fetchAllData}
+          />
         )}
 
         {activeTab === "audit" && (
@@ -1095,6 +1148,20 @@ function RentRollPageInner() {
           </div>
         </div>
       )}
+
+      {/* ──── PROFILE & BANKING MODAL ──── */}
+      <ProfileAndBankingModal
+        isOpen={isProfileBankingOpen}
+        onClose={() => setIsProfileBankingOpen(false)}
+        onSuccess={fetchAllData}
+      />
+
+      {/* ──── ACCOUNTING & ERP INTEGRATIONS HUB ──── */}
+      <AccountingIntegrationsModal
+        isOpen={isIntegrationsOpen}
+        onClose={() => setIsIntegrationsOpen(false)}
+        orgName={orgBranding.name}
+      />
     </div>
   );
 }
