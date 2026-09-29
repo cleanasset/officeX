@@ -55,11 +55,12 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   const propIdClean = property?.id.replace(/\D/g, "").slice(-4) || "8841";
   const code = property?.inviteCode || `OX-${propIdClean.padStart(4, "7")}`;
 
-  // Always use official production domain https://www.officex.pro
-  const baseUrl = "https://www.officex.pro";
+  // Dynamic origin for local testing & production
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://www.officex.pro";
+  const propertyIdParam = property?.id ? `&propertyId=${encodeURIComponent(property.id)}` : "";
   const ownerParam = property?.ownerName ? `&owner=${encodeURIComponent(property.ownerName)}` : "";
   const locationParam = property?.location ? `&location=${encodeURIComponent(property.location)}` : "";
-  const inviteUrl = property ? `${baseUrl}/tenant/join?code=${encodeURIComponent(code)}&building=${encodeURIComponent(property.name)}${ownerParam}${locationParam}` : "";
+  const inviteUrl = property ? `${baseUrl}/tenant/join?code=${encodeURIComponent(code)}&building=${encodeURIComponent(property.name)}${propertyIdParam}${ownerParam}${locationParam}` : "";
 
   React.useEffect(() => {
     if (typeof window !== "undefined" && property) {

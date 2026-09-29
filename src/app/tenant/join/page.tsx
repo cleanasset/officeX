@@ -36,6 +36,7 @@ function TenantJoinContent() {
   const searchParams = useSearchParams();
 
   const codeParam = searchParams?.get("code") || "";
+  const propertyIdParam = searchParams?.get("propertyId") || "";
   const buildingParam = searchParams?.get("building") || searchParams?.get("property") || "";
   const ownerParam = searchParams?.get("owner") || searchParams?.get("ownerName") || "";
   const locationParam = searchParams?.get("location") || "";
@@ -58,7 +59,7 @@ function TenantJoinContent() {
   // Verification helper: resolve building & property owner preview
   const verifyCode = useCallback(async (codeToTest: string) => {
     const cleanCode = codeToTest.trim().toUpperCase();
-    if (!cleanCode || cleanCode.length < 4) {
+    if (!cleanCode && !propertyIdParam && !buildingParam) {
       setPreviewProperty(null);
       return;
     }
@@ -66,11 +67,75 @@ function TenantJoinContent() {
     setIsVerifying(true);
     setError(null);
 
-    // 1. If building details are passed in URL search parameters
-    if (buildingParam) {
+    // 1. First attempt API verification with propertyId & building
+    try {
+      const qParams = new URLSearchParams();
+      if (cleanCode) qParams.set("code", cleanCode);
+      if (propertyIdParam) qParams.set("propertyId", propertyIdParam);
+      if (buildingParam) qParams.set("building", buildingParam);
+
+      const res = await fetch(`/api/tenant/verify-code?${qParams.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.property) {
+          setPreviewProperty({
+            id: propertyIdParam || data.property.id,
+            name: data.property.name || buildingParam,
+            ownerName: data.property.ownerName || ownerParam || "Commercial Property Owner",
+            location: data.property.location || locationParam || "Commercial Corridor",
+            grade: data.property.grade || "Grade A",
+            totalArea: data.property.totalArea || "50,000 sqft",
+            inviteCode: cleanCode || data.property.inviteCode
+          });
+          setIsVerifying(false);
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn("API code verification note:", apiErr);
+    }
+
+    // 2. Check local stored building invites
+    if (typeof window !== "undefined") {
+      try {
+        const storedInvites = JSON.parse(localStorage.getItem("officex_building_invites") || "{}");
+        if (cleanCode && storedInvites[cleanCode]) {
+          setPreviewProperty(storedInvites[cleanCode]);
+          setIsVerifying(false);
+          return;
+        }
+
+        // Check user properties stored in browser
+        const userProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        const match = userProps.find((p: any) =>
+          (propertyIdParam && p.id === propertyIdParam) ||
+          (buildingParam && p.name?.toLowerCase() === buildingParam.toLowerCase()) ||
+          (p.inviteCode && p.inviteCode.toUpperCase() === cleanCode) ||
+          (cleanCode && cleanCode.includes(p.id?.replace(/\D/g, "").slice(-4)))
+        );
+        if (match) {
+          setPreviewProperty({
+            id: match.id,
+            name: match.name,
+            ownerName: match.ownerName || match.ownerCompany || localStorage.getItem("officex_user_name") || "Commercial Asset Management",
+            location: `${match.city || "Maninagar"}, ${match.state || "Gujarat"}`,
+            grade: match.grade || "Grade A",
+            totalArea: `${Number(match.totalArea || 50000).toLocaleString()} sqft`,
+            inviteCode: cleanCode || match.inviteCode
+          });
+          setIsVerifying(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Local invite lookup:", e);
+      }
+    }
+
+    // 3. Fallback with URL search parameters
+    if (buildingParam || propertyIdParam) {
       setPreviewProperty({
-        id: `prop-${cleanCode.replace(/\D/g, "") || "101"}`,
-        name: buildingParam,
+        id: propertyIdParam || `prop-${cleanCode.replace(/\D/g, "") || "101"}`,
+        name: buildingParam || "Commercial Business Hub",
         ownerName: ownerParam || "Commercial Property Owner / Management",
         location: locationParam || "Prime Commercial District",
         grade: "Grade A",
@@ -81,56 +146,7 @@ function TenantJoinContent() {
       return;
     }
 
-    // 2. Check local stored building invites
-    if (typeof window !== "undefined") {
-      try {
-        const storedInvites = JSON.parse(localStorage.getItem("officex_building_invites") || "{}");
-        if (storedInvites[cleanCode]) {
-          setPreviewProperty(storedInvites[cleanCode]);
-          setIsVerifying(false);
-          return;
-        }
-
-        // Check user properties stored in browser
-        const userProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
-        const match = userProps.find((p: any) =>
-          (p.inviteCode && p.inviteCode.toUpperCase() === cleanCode) ||
-          (cleanCode.includes(p.id?.replace(/\D/g, "").slice(-4)))
-        );
-        if (match) {
-          setPreviewProperty({
-            id: match.id,
-            name: match.name,
-            ownerName: match.ownerName || localStorage.getItem("officex_user_name") || "Commercial Asset Management",
-            location: `${match.city || "Mumbai"}, ${match.state || "Maharashtra"}`,
-            grade: match.grade || "Grade A",
-            totalArea: `${Number(match.totalArea || 50000).toLocaleString()} sqft`,
-            inviteCode: cleanCode
-          });
-          setIsVerifying(false);
-          return;
-        }
-      } catch (e) {
-        console.warn("Local invite lookup:", e);
-      }
-    }
-
-    // 3. API verification
-    try {
-      const res = await fetch(`/api/tenant/verify-code?code=${encodeURIComponent(cleanCode)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.property) {
-          setPreviewProperty(data.property);
-          setIsVerifying(false);
-          return;
-        }
-      }
-    } catch (apiErr) {
-      console.warn("API code verification note:", apiErr);
-    }
-
-    // Fallback: Verified preview representation
+    // 4. Default generic preview
     setPreviewProperty({
       id: `prop-${cleanCode.replace(/\D/g, "") || "101"}`,
       name: "Commercial Business Hub",
@@ -141,7 +157,7 @@ function TenantJoinContent() {
       inviteCode: cleanCode
     });
     setIsVerifying(false);
-  }, [buildingParam, ownerParam, locationParam]);
+  }, [buildingParam, propertyIdParam, ownerParam, locationParam]);
 
   // Initial load check
   useEffect(() => {
@@ -208,13 +224,13 @@ function TenantJoinContent() {
 
       // 2. Attach active lease to this building's Rent Roll
       try {
-        await fetch("/api/rent-roll/leases", {
+        const leaseRes = await fetch("/api/rent-roll/leases", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             propertyId: previewProperty.id,
             propertyName: previewProperty.name,
-            tenantName: companyName.trim(),
+            tenantName: effectiveTenantName,
             unitNumber: unitNumber || "Suite 401",
             floorNumber: 4,
             chargeableArea: 5000,
@@ -222,12 +238,37 @@ function TenantJoinContent() {
             monthlyRent: 250000,
             camMonthly: 45000,
             securityDepositAmount: 750000,
-            startDate: "2025-04-01",
-            endDate: "2028-03-31",
+            startDate: new Date().toISOString().split("T")[0],
+            endDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
             escalationPct: 5,
             status: "active"
           })
         });
+
+        if (leaseRes.ok) {
+          const leaseData = await leaseRes.json();
+          if (typeof window !== "undefined") {
+            try {
+              const localLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
+              localLeases.unshift({
+                id: leaseData.id || `LEASE-${Date.now()}`,
+                propertyId: previewProperty.id,
+                propertyName: previewProperty.name,
+                tenantName: effectiveTenantName,
+                unitNumber: unitNumber || "Suite 401",
+                chargeableArea: 5000,
+                monthlyRent: 250000,
+                camMonthly: 45000,
+                totalMonthlyGross: 295000,
+                status: "active",
+                leaseStartDate: new Date().toISOString().split("T")[0],
+                leaseEndDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+              });
+              localStorage.setItem("officex_active_leases", JSON.stringify(localLeases));
+              window.dispatchEvent(new CustomEvent("officex-property-added"));
+            } catch {}
+          }
+        }
       } catch (lErr) {
         console.warn("Lease attachment note:", lErr);
       }

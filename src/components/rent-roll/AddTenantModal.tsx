@@ -83,9 +83,10 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
     fetch("/api/rent-roll/properties")
       .then((res) => res.json())
       .then((data) => {
-        if (data.properties && data.properties.length > 0) {
-          setAvailableProps(data.properties);
-          setSelectedPropId(data.properties[0].id);
+        const propList = Array.isArray(data) ? data : (data.properties || []);
+        if (propList.length > 0) {
+          setAvailableProps(propList);
+          setSelectedPropId(propList[0].id);
         }
       })
       .catch((err) => console.warn("Could not load properties:", err));

@@ -8,10 +8,8 @@ import { eq, ilike } from "drizzle-orm";
 export async function GET(req: NextRequest) {
   try {
     const code = req.nextUrl.searchParams.get("code")?.trim().toUpperCase() || "";
-
-    if (!code || code.length < 3) {
-      return NextResponse.json({ success: false, message: "Valid invite code required" }, { status: 400 });
-    }
+    const propIdParam = req.nextUrl.searchParams.get("propertyId")?.trim() || "";
+    const buildingParam = req.nextUrl.searchParams.get("building")?.trim().toLowerCase() || "";
 
     const codeDigits = code.replace(/\D/g, "");
 
@@ -20,8 +18,10 @@ export async function GET(req: NextRequest) {
       const rrDb = getRentRollDb();
       if (rrDb.properties && rrDb.properties.length > 0) {
         const found = rrDb.properties.find(p => 
+          (propIdParam && p.id === propIdParam) ||
+          (buildingParam && p.name.toLowerCase() === buildingParam) ||
           (p.id && codeDigits && p.id.includes(codeDigits)) ||
-          p.name.toLowerCase().includes(code.toLowerCase())
+          (code && p.name.toLowerCase().includes(code.toLowerCase()))
         );
         if (found) {
           return NextResponse.json({
