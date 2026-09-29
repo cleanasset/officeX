@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ArrowUpDown,
@@ -25,9 +25,76 @@ import {
   FileCheck2,
   Check,
   X,
-  Filter
+  Filter,
+  SlidersHorizontal,
+  Bookmark,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
+
+// RR-VW-05: Saved View Presets & Column Configurations
+export interface SavedViewConfig {
+  id: string;
+  name: string;
+  description: string;
+  visibleColumns: string[];
+  defaultFilter: "all" | "occupied" | "vacant" | "payable" | "pending_approval";
+}
+
+export const SAVED_VIEWS: SavedViewConfig[] = [
+  {
+    id: "all",
+    name: "Standard Demised Spaces",
+    description: "Baseline view showing all demised commercial spaces, units and active leases",
+    visibleColumns: ["unit", "tenant", "code", "type", "area", "ratePsf", "rent", "cam", "gross", "escalation", "tenure", "lockIn", "deposit", "status", "actions"],
+    defaultFilter: "all"
+  },
+  {
+    id: "financial",
+    name: "Financial & Commercial Terms",
+    description: "Focused view on Base Rent PSF, monthly gross, security deposits & escalations",
+    visibleColumns: ["unit", "tenant", "area", "ratePsf", "rent", "cam", "gross", "deposit", "escalation", "status", "actions"],
+    defaultFilter: "occupied"
+  },
+  {
+    id: "statutory",
+    name: "Statutory & Tax Compliance",
+    description: "Audit view displaying contract codes, agreement status, lock-in & maker-checker sign-off",
+    visibleColumns: ["unit", "tenant", "code", "type", "area", "lockIn", "deposit", "status", "actions"],
+    defaultFilter: "all"
+  },
+  {
+    id: "flex",
+    name: "Flex & Coworking Seats",
+    description: "Turnkey office cabins, seats capacity, and flex billing basis",
+    visibleColumns: ["unit", "tenant", "type", "area", "ratePsf", "rent", "gross", "status", "actions"],
+    defaultFilter: "occupied"
+  },
+  {
+    id: "expiry",
+    name: "Lease Expiry & Notice Pipeline",
+    description: "Expiring leases, remaining lock-in tenure, and notice periods",
+    visibleColumns: ["unit", "tenant", "code", "area", "rent", "tenure", "lockIn", "status", "actions"],
+    defaultFilter: "occupied"
+  }
+];
+
+export const ALL_COLUMNS = [
+  { id: "tenant", label: "Occupant / Tenant" },
+  { id: "code", label: "Contract Code" },
+  { id: "type", label: "Type & Direction" },
+  { id: "area", label: "Chargeable Area" },
+  { id: "ratePsf", label: "Base Rent PSF" },
+  { id: "rent", label: "Monthly Base Rent" },
+  { id: "cam", label: "CAM Rate PSF" },
+  { id: "gross", label: "Total Monthly Gross" },
+  { id: "escalation", label: "Escalation %" },
+  { id: "tenure", label: "Term (Start – End)" },
+  { id: "lockIn", label: "Lock-In Period" },
+  { id: "deposit", label: "Security Deposit" },
+  { id: "status", label: "Status / Approval" }
+];
 
 export interface EnrichedLease {
   id: string;
@@ -208,9 +275,65 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   onRefresh,
 }) => {
   const [filterMode, setFilterMode] = useState<"all" | "occupied" | "vacant" | "payable" | "pending_approval">("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortField, setSortField] = useState<keyof RentRollGridRow>("monthlyRent");
   const [sortAsc, setSortAsc] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // RR-VW-05: Saved Views & Column Chooser Persistence
+  const [activeSavedView, setActiveSavedView] = useState<string>("all");
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set(["unit", "tenant", "code", "type", "area", "ratePsf", "rent", "cam", "gross", "escalation", "tenure", "lockIn", "deposit", "status", "actions"])
+  );
+  const [showColumnChooser, setShowColumnChooser] = useState<boolean>(false);
+  const [showSavedViewsMenu, setShowSavedViewsMenu] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const savedViewId = localStorage.getItem("officex_rentroll_saved_view");
+      if (savedViewId) {
+        const found = SAVED_VIEWS.find((v) => v.id === savedViewId);
+        if (found) {
+          setActiveSavedView(found.id);
+          setVisibleColumns(new Set(found.visibleColumns));
+          setFilterMode(found.defaultFilter);
+        }
+      }
+      const savedCols = localStorage.getItem("officex_rentroll_columns");
+      if (savedCols) {
+        const parsed = JSON.parse(savedCols);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setVisibleColumns(new Set(parsed));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load saved views", e);
+    }
+  }, []);
+
+  const handleSelectSavedView = (view: SavedViewConfig) => {
+    setActiveSavedView(view.id);
+    setVisibleColumns(new Set(view.visibleColumns));
+    setFilterMode(view.defaultFilter);
+    setShowSavedViewsMenu(false);
+    try {
+      localStorage.setItem("officex_rentroll_saved_view", view.id);
+      localStorage.setItem("officex_rentroll_columns", JSON.stringify(view.visibleColumns));
+    } catch (e) {}
+  };
+
+  const handleToggleColumn = (colId: string) => {
+    const updated = new Set(visibleColumns);
+    if (updated.has(colId)) {
+      if (updated.size > 2) updated.delete(colId);
+    } else {
+      updated.add(colId);
+    }
+    setVisibleColumns(updated);
+    try {
+      localStorage.setItem("officex_rentroll_columns", JSON.stringify(Array.from(updated)));
+    } catch (e) {}
+  };
 
   // Maker-Checker Approval Handler
   const handleApproveContract = async (e: React.MouseEvent, leaseId: string) => {
@@ -429,13 +552,24 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   // Filtering
   const filteredRows = useMemo(() => {
     return unifiedRows.filter((r) => {
+      // Search filter (RR-VW-04)
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase().trim();
+        const matches =
+          r.unitNumber.toLowerCase().includes(q) ||
+          r.tenantName.toLowerCase().includes(q) ||
+          r.leaseCode.toLowerCase().includes(q) ||
+          r.propertyName.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
       if (filterMode === "occupied") return !r.isVacant;
       if (filterMode === "vacant") return r.isVacant;
       if (filterMode === "payable") return r.direction === "payable";
       if (filterMode === "pending_approval") return r.approvalStatus === "submitted" || r.status === "pending_approval";
       return true;
     });
-  }, [unifiedRows, filterMode]);
+  }, [unifiedRows, filterMode, searchTerm]);
 
   // Sorting
   const sortedRows = useMemo(() => {
@@ -621,8 +755,103 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
           </button>
         </div>
 
-        {/* View Mode & Add Action */}
-        <div className="flex items-center gap-2">
+        {/* View Mode & Add Action & Saved Views & Column Chooser */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search Bar (RR-VW-04) */}
+          <div className="relative min-w-[200px]">
+            <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search unit, occupant, code..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F8B7D] focus:bg-white"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Saved Views Picker (RR-VW-05) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowSavedViewsMenu(!showSavedViewsMenu)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <Bookmark size={13} className="text-[#0F8B7D]" />
+              <span className="hidden sm:inline">View:</span>
+              <span>{SAVED_VIEWS.find((v) => v.id === activeSavedView)?.name.slice(0, 14) || "Standard"}...</span>
+            </button>
+            {showSavedViewsMenu && (
+              <div className="absolute right-0 sm:left-0 mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400">Canonical Saved Views (RR-VW-05)</div>
+                {SAVED_VIEWS.map((view) => (
+                  <button
+                    key={view.id}
+                    onClick={() => handleSelectSavedView(view)}
+                    className={`w-full text-left p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                      activeSavedView === view.id ? "bg-teal-50 text-[#0F8B7D] font-bold" : "hover:bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{view.name}</span>
+                      {activeSavedView === view.id && <Check size={12} className="text-[#0F8B7D]" />}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-normal mt-0.5">{view.description}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Column Chooser (RR-VW-05) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowColumnChooser(!showColumnChooser)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <SlidersHorizontal size={13} className="text-slate-600" />
+              <span>Columns</span>
+            </button>
+            {showColumnChooser && (
+              <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 max-h-80 overflow-y-auto">
+                <div className="text-[10px] font-bold uppercase text-slate-400 pb-1 border-b border-slate-100 flex items-center justify-between">
+                  <span>Toggle Columns</span>
+                  <button
+                    onClick={() => setVisibleColumns(new Set(ALL_COLUMNS.map((c) => c.id).concat(["unit", "actions"])))}
+                    className="text-[#0F8B7D] font-bold hover:underline lowercase text-[10px]"
+                  >
+                    Reset all
+                  </button>
+                </div>
+                {ALL_COLUMNS.map((col) => {
+                  const isChecked = visibleColumns.has(col.id);
+                  return (
+                    <label
+                      key={col.id}
+                      className="flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900 cursor-pointer select-none py-0.5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleColumn(col.id)}
+                        className="rounded border-slate-300 text-[#0F8B7D] focus:ring-[#0F8B7D]"
+                      />
+                      <span>{col.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {onViewModeChange && (
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
               <button
@@ -678,34 +907,40 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
             <thead className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 border-b border-slate-200">
               <tr>
                 <th className="p-3.5 sticky left-0 z-30 bg-slate-50 border-r border-slate-200">Space &amp; Unit</th>
-                <th className="p-3.5">Occupant / Tenant</th>
-                <th className="p-3.5">Contract Code</th>
-                <th className="p-3.5">Type &amp; Direction</th>
-                <th onClick={() => handleSort("chargeableArea")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
-                  <div className="flex items-center justify-end gap-1">
-                    <span>Chargeable Sq Ft</span>
-                    <ArrowUpDown size={11} />
-                  </div>
-                </th>
-                <th onClick={() => handleSort("baseRentPsf")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
-                  <div className="flex items-center justify-end gap-1">
-                    <span>Base Rent PSF</span>
-                    <ArrowUpDown size={11} />
-                  </div>
-                </th>
-                <th onClick={() => handleSort("monthlyRent")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
-                  <div className="flex items-center justify-end gap-1">
-                    <span>Monthly Rent</span>
-                    <ArrowUpDown size={11} />
-                  </div>
-                </th>
-                <th className="p-3.5 text-right">CAM Rate PSF</th>
-                <th className="p-3.5 text-right bg-amber-50/50 font-black text-amber-900">Total Monthly Gross</th>
-                <th className="p-3.5 text-center">Escalation</th>
-                <th className="p-3.5 text-center">Term (Start – End)</th>
-                <th className="p-3.5 text-center">Lock-In</th>
-                <th className="p-3.5 text-right">Security Deposit</th>
-                <th className="p-3.5 text-center">Status / Approval</th>
+                {visibleColumns.has("tenant") && <th className="p-3.5">Occupant / Tenant</th>}
+                {visibleColumns.has("code") && <th className="p-3.5">Contract Code</th>}
+                {visibleColumns.has("type") && <th className="p-3.5">Type &amp; Direction</th>}
+                {visibleColumns.has("area") && (
+                  <th onClick={() => handleSort("chargeableArea")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Chargeable Sq Ft</span>
+                      <ArrowUpDown size={11} />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.has("ratePsf") && (
+                  <th onClick={() => handleSort("baseRentPsf")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Base Rent PSF</span>
+                      <ArrowUpDown size={11} />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.has("rent") && (
+                  <th onClick={() => handleSort("monthlyRent")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Monthly Rent</span>
+                      <ArrowUpDown size={11} />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.has("cam") && <th className="p-3.5 text-right">CAM Rate PSF</th>}
+                {visibleColumns.has("gross") && <th className="p-3.5 text-right bg-amber-50/50 font-black text-amber-900">Total Monthly Gross</th>}
+                {visibleColumns.has("escalation") && <th className="p-3.5 text-center">Escalation</th>}
+                {visibleColumns.has("tenure") && <th className="p-3.5 text-center">Term (Start – End)</th>}
+                {visibleColumns.has("lockIn") && <th className="p-3.5 text-center">Lock-In</th>}
+                {visibleColumns.has("deposit") && <th className="p-3.5 text-right">Security Deposit</th>}
+                {visibleColumns.has("status") && <th className="p-3.5 text-center">Status / Approval</th>}
                 <th className="p-3.5 text-center sticky right-0 z-30 bg-slate-50 border-l border-slate-200">Actions</th>
               </tr>
             </thead>
@@ -713,7 +948,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
             <tbody className="divide-y divide-slate-100 font-medium">
               {sortedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={15} className="py-20 text-center text-slate-500">
+                  <td colSpan={visibleColumns.size + 2} className="py-20 text-center text-slate-500">
                     <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="text-sm font-bold text-slate-800">No spaces found matching filter</p>
                     <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
@@ -753,134 +988,160 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                     </td>
 
                     {/* Occupant / Tenant */}
-                    <td className="p-3.5">
-                      {row.isVacant ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-amber-800 font-extrabold italic">— Vacant Space —</span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                            Available
-                          </span>
-                        </div>
-                      ) : (
-                        <div>
-                          <span className="font-extrabold text-slate-900 block">{row.tenantName}</span>
-                          <span className="text-[10px] text-slate-400 font-normal">{row.propertyName}</span>
-                        </div>
-                      )}
-                    </td>
+                    {visibleColumns.has("tenant") && (
+                      <td className="p-3.5">
+                        {row.isVacant ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-amber-800 font-extrabold italic">— Vacant Space —</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              Available
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="font-extrabold text-slate-900 block">{row.tenantName}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{row.propertyName}</span>
+                          </div>
+                        )}
+                      </td>
+                    )}
 
                     {/* Contract Code */}
-                    <td className="p-3.5 font-mono text-[11px] font-bold text-slate-700">
-                      {row.isVacant ? "—" : row.leaseCode}
-                    </td>
+                    {visibleColumns.has("code") && (
+                      <td className="p-3.5 font-mono text-[11px] font-bold text-slate-700">
+                        {row.isVacant ? "—" : row.leaseCode}
+                      </td>
+                    )}
 
                     {/* Contract Type & Direction */}
-                    <td className="p-3.5">
-                      {row.isVacant ? (
-                        <span className="text-[11px] text-slate-400 font-normal">Ready to Market</span>
-                      ) : (
-                        <div className="space-y-0.5">
-                          {getContractTypeBadge(row.contractType, row.direction)}
-                          <span className="block text-[9px] font-mono text-slate-400 uppercase">
-                            {row.billingModel} model · {row.direction}
-                          </span>
-                        </div>
-                      )}
-                    </td>
+                    {visibleColumns.has("type") && (
+                      <td className="p-3.5">
+                        {row.isVacant ? (
+                          <span className="text-[11px] text-slate-400 font-normal">Ready to Market</span>
+                        ) : (
+                          <div className="space-y-0.5">
+                            {getContractTypeBadge(row.contractType, row.direction)}
+                            <span className="block text-[9px] font-mono text-slate-400 uppercase">
+                              {row.billingModel} model · {row.direction}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    )}
 
                     {/* Chargeable Area */}
-                    <td className="p-3.5 text-right font-mono font-bold text-slate-900">
-                      {row.chargeableArea.toLocaleString()} sq ft
-                      <span className="text-[10px] text-slate-400 block font-normal">
-                        Carpet: {row.carpetArea.toLocaleString()}
-                      </span>
-                    </td>
+                    {visibleColumns.has("area") && (
+                      <td className="p-3.5 text-right font-mono font-bold text-slate-900">
+                        {row.chargeableArea.toLocaleString()} sq ft
+                        <span className="text-[10px] text-slate-400 block font-normal">
+                          Carpet: {row.carpetArea.toLocaleString()}
+                        </span>
+                      </td>
+                    )}
 
                     {/* Base Rent PSF */}
-                    <td className="p-3.5 text-right font-mono font-bold text-slate-800">
-                      ₹{row.baseRentPsf}
-                      {row.isVacant && <span className="text-[9px] text-amber-700 block font-normal">Market Rate</span>}
-                    </td>
+                    {visibleColumns.has("ratePsf") && (
+                      <td className="p-3.5 text-right font-mono font-bold text-slate-800">
+                        ₹{row.baseRentPsf}
+                        {row.isVacant && <span className="text-[9px] text-amber-700 block font-normal">Market Rate</span>}
+                      </td>
+                    )}
 
                     {/* Monthly Base Rent */}
-                    <td className="p-3.5 text-right font-mono font-extrabold text-[#0F8B7D]">
-                      {row.isVacant ? (
-                        <span className="text-slate-400 font-normal">₹0</span>
-                      ) : (
-                        formatINR(row.monthlyRent)
-                      )}
-                      {row.isVacant && (
-                        <span className="text-[10px] text-amber-700 font-bold block">
-                          Pot: {formatINR(row.potentialMonthlyRent)}
-                        </span>
-                      )}
-                    </td>
+                    {visibleColumns.has("rent") && (
+                      <td className="p-3.5 text-right font-mono font-extrabold text-[#0F8B7D]">
+                        {row.isVacant ? (
+                          <span className="text-slate-400 font-normal">₹0</span>
+                        ) : (
+                          formatINR(row.monthlyRent)
+                        )}
+                        {row.isVacant && (
+                          <span className="text-[10px] text-amber-700 font-bold block">
+                            Pot: {formatINR(row.potentialMonthlyRent)}
+                          </span>
+                        )}
+                      </td>
+                    )}
 
                     {/* CAM Rate */}
-                    <td className="p-3.5 text-right font-mono text-slate-600">
-                      ₹{row.camRatePsf} PSF
-                      {!row.isVacant && row.camMonthly > 0 && (
-                        <span className="text-[10px] text-slate-400 block font-normal">{formatINR(row.camMonthly)}</span>
-                      )}
-                    </td>
+                    {visibleColumns.has("cam") && (
+                      <td className="p-3.5 text-right font-mono text-slate-600">
+                        ₹{row.camRatePsf} PSF
+                        {!row.isVacant && row.camMonthly > 0 && (
+                          <span className="text-[10px] text-slate-400 block font-normal">{formatINR(row.camMonthly)}</span>
+                        )}
+                      </td>
+                    )}
 
                     {/* Total Monthly Gross */}
-                    <td className="p-3.5 text-right font-mono font-black text-amber-950 bg-amber-50/40">
-                      {row.isVacant ? "—" : formatINR(row.totalMonthlyGross)}
-                      {!row.isVacant && <span className="text-[9px] text-amber-700 block font-normal">incl. GST</span>}
-                    </td>
+                    {visibleColumns.has("gross") && (
+                      <td className="p-3.5 text-right font-mono font-black text-amber-950 bg-amber-50/40">
+                        {row.isVacant ? "—" : formatINR(row.totalMonthlyGross)}
+                        {!row.isVacant && <span className="text-[9px] text-amber-700 block font-normal">incl. GST</span>}
+                      </td>
+                    )}
 
                     {/* Escalation */}
-                    <td className="p-3.5 text-center font-mono text-[11px] text-slate-700">
-                      {row.isVacant ? (
-                        "—"
-                      ) : (
-                        <div>
-                          <span className="font-bold text-teal-800">+{row.escalationPct}%</span>
-                          <span className="text-[10px] text-slate-400 block font-normal">per {row.escalationFrequencyMonths}m</span>
-                        </div>
-                      )}
-                    </td>
+                    {visibleColumns.has("escalation") && (
+                      <td className="p-3.5 text-center font-mono text-[11px] text-slate-700">
+                        {row.isVacant ? (
+                          "—"
+                        ) : (
+                          <div>
+                            <span className="font-bold text-teal-800">+{row.escalationPct}%</span>
+                            <span className="text-[10px] text-slate-400 block font-normal">per {row.escalationFrequencyMonths}m</span>
+                          </div>
+                        )}
+                      </td>
+                    )}
 
                     {/* Tenure */}
-                    <td className="p-3.5 text-center text-[11px] text-slate-700">
-                      {row.isVacant ? (
-                        <span className="text-amber-800 text-[10px] font-bold">{row.daysVacant} Days Vacant</span>
-                      ) : (
-                        <div>
-                          <span className="font-bold text-slate-800">{row.startDate?.slice(0, 7)} – {row.endDate?.slice(0, 7)}</span>
-                          <span className="text-[10px] text-slate-400 block font-normal">{row.endDate}</span>
-                        </div>
-                      )}
-                    </td>
+                    {visibleColumns.has("tenure") && (
+                      <td className="p-3.5 text-center text-[11px] text-slate-700">
+                        {row.isVacant ? (
+                          <span className="text-amber-800 text-[10px] font-bold">{row.daysVacant} Days Vacant</span>
+                        ) : (
+                          <div>
+                            <span className="font-bold text-slate-800">{row.startDate?.slice(0, 7)} – {row.endDate?.slice(0, 7)}</span>
+                            <span className="text-[10px] text-slate-400 block font-normal">{row.endDate}</span>
+                          </div>
+                        )}
+                      </td>
+                    )}
 
                     {/* Lock-In */}
-                    <td className="p-3.5 text-center text-[11px]">
-                      {row.isVacant ? (
-                        "—"
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
-                          {row.lockInEndDate || "36 Months"}
-                        </span>
-                      )}
-                    </td>
+                    {visibleColumns.has("lockIn") && (
+                      <td className="p-3.5 text-center text-[11px]">
+                        {row.isVacant ? (
+                          "—"
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
+                            {row.lockInEndDate || "36 Months"}
+                          </span>
+                        )}
+                      </td>
+                    )}
 
                     {/* Security Deposit */}
-                    <td className="p-3.5 text-right font-mono text-slate-700">
-                      {row.isVacant ? (
-                        "—"
-                      ) : (
-                        <div>
-                          <span className="font-bold text-slate-900">{formatINR(row.securityDepositPaid)}</span>
-                          <span className="text-[10px] text-slate-400 block font-normal">{row.securityDepositMonths} Months</span>
-                        </div>
-                      )}
-                    </td>
+                    {visibleColumns.has("deposit") && (
+                      <td className="p-3.5 text-right font-mono text-slate-700">
+                        {row.isVacant ? (
+                          "—"
+                        ) : (
+                          <div>
+                            <span className="font-bold text-slate-900">{formatINR(row.securityDepositPaid)}</span>
+                            <span className="text-[10px] text-slate-400 block font-normal">{row.securityDepositMonths} Months</span>
+                          </div>
+                        )}
+                      </td>
+                    )}
 
                     {/* Status / Approval */}
-                    <td className="p-3.5 text-center">
-                      {getApprovalBadge(row)}
-                    </td>
+                    {visibleColumns.has("status") && (
+                      <td className="p-3.5 text-center">
+                        {getApprovalBadge(row)}
+                      </td>
+                    )}
 
                     {/* Actions (Sticky Right Column) */}
                     <td className="p-3.5 text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-200">

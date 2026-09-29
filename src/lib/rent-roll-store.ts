@@ -300,6 +300,7 @@ export interface LeaseEntity {
   charges?: ContractChargeEntity[];
   rentSteps?: RentStepEntity[];
   documents?: ContractDocumentEntity[];
+  importBatchId?: string;
   createdAt: string;
   updatedAt: string;
 }

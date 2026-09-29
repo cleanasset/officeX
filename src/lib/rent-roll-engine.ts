@@ -1,8 +1,10 @@
 /**
  * OFFICEX Rent Roll Calculation Engine
- * Implements all 20 Business Rules (BR-01 through BR-20) from the Functional Specification.
+ * Implements all Canonical Formulas (F-01 through F-25) & Rules (R-01 through R-44) from Document V2.1.
  * High precision, zero external dependencies, server & client compatible.
  */
+
+export * from "./rent-roll-rules";
 
 export interface LeaseCalculationInput {
   carpetArea?: number | null;

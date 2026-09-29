@@ -1214,5 +1214,58 @@ export const mappingTemplates = pgTable("mapping_templates", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
+// Multi-Space Demised Join Table (§4.1, Table 25 / Table 76)
+export const contractSpaces = pgTable("contract_spaces", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "cascade" }).notNull(),
+  allocatedArea: decimal("allocated_area", { precision: 12, scale: 2 }).notNull(),
+  allocatedRentAmount: decimal("allocated_rent_amount", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  isPrimarySpace: boolean("is_primary_space").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Contract Concessions & Rent-Free Schedules (§4.3, RR-BIL-01)
+export const contractConcessions = pgTable("contract_concessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  concessionType: varchar("concession_type", { length: 50 }).notNull(), // rent_free_period, fitout_period, stepped_discount, cash_rebate
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }).default("100.00").notNull(),
+  description: varchar("description", { length: 255 }),
+  approvedBy: uuid("approved_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Security Deposit Ledger & Shortfalls (§4.4, RR-ALR-07)
+export const depositTransactions = pgTable("deposit_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  transactionType: varchar("transaction_type", { length: 50 }).notNull(), // received, topped_up, refunded, forfeited, bg_submitted
+  instrumentType: varchar("instrument_type", { length: 50 }).notNull(), // bank_guarantee, bank_transfer, cheque, demand_draft
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  bankName: varchar("bank_name", { length: 150 }),
+  instrumentReference: varchar("instrument_reference", { length: 100 }),
+  validityDate: date("validity_date"),
+  requiredDepositAmount: decimal("required_deposit_amount", { precision: 14, scale: 2 }),
+  shortfallAmount: decimal("shortfall_amount", { precision: 14, scale: 2 }).default("0.00"),
+  status: varchar("status", { length: 50 }).default("active").notNull(), // active, expired, invoked, returned
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+// Contract Statutory & Commercial Clauses (§4.8, RR-CON-01)
+export const contractClauses = pgTable("contract_clauses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  clauseType: varchar("clause_type", { length: 50 }).notNull(), // lock_in, notice_period, renewal_option, reinstatement, sub_lease_right, insurance_statutory
+  clauseTitle: varchar("clause_title", { length: 150 }).notNull(),
+  clauseText: text("clause_text").notNull(),
+  isStandard: boolean("is_standard").default(true).notNull(),
+  financialImpact: varchar("financial_impact", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+
+
 
 

@@ -232,6 +232,65 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: `Contract ${target.leaseCode} rejected.`, lease: target });
     }
 
+    // Contract Lifecycle Transitions (§4.6, Table 76: POST /contracts/{id}/transition)
+    if (body.action === "transition") {
+      const targetId = body.id || body.leaseId;
+      const target = db.leases.find(l => l.id === targetId || l.leaseCode === targetId);
+      if (!target) {
+        return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+      }
+
+      const transitionType = body.transition; // activate, serve_notice, renew, terminate, cancel
+      const remarks = body.remarks || "";
+
+      switch (transitionType) {
+        case "activate":
+          target.status = "active";
+          target.approvalStatus = "approved";
+          break;
+        case "serve_notice":
+          target.status = "under_notice";
+          target.renewalStatus = "vacating";
+          target.terminationDate = body.effectiveDate || target.endDate;
+          break;
+        case "renew":
+          target.renewalStatus = "renewed";
+          if (body.newEndDate) target.endDate = body.newEndDate;
+          if (body.newMonthlyRent) {
+            target.monthlyRent = Number(body.newMonthlyRent);
+            target.baseRentPsf = Math.round((target.monthlyRent / target.chargeableArea) * 100) / 100;
+          }
+          break;
+        case "terminate":
+          target.status = "terminated";
+          target.terminationDate = body.terminationDate || new Date().toISOString().split('T')[0];
+          target.terminationReason = remarks || "Early Contract Termination";
+          break;
+        case "cancel":
+          target.status = "draft";
+          target.approvalStatus = "draft";
+          break;
+        default:
+          return NextResponse.json({ error: `Unsupported transition: ${transitionType}` }, { status: 400 });
+      }
+
+      target.updatedAt = new Date().toISOString();
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Contract",
+        action: `TRANSITION_${transitionType.toUpperCase()}`,
+        newValues: { contractCode: target.leaseCode, transitionType, remarks },
+        changedBy: body.changedBy || "Commercial Operations"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Contract ${target.leaseCode} transitioned via ${transitionType}.`,
+        lease: target
+      });
+    }
+
     const {
       propertyId,
       spaceId,
