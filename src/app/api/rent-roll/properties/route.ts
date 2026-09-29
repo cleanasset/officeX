@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
-import { getRentRollDb, saveRentRollDb, PropertyEntity, SpaceEntity, LeaseEntity, TenantEntity, EscalationEntity } from "@/lib/rent-roll-store";
+import { getRentRollDb, saveRentRollDb, PropertyEntity, SpaceEntity, LeaseEntity, TenantEntity, EscalationEntity, ensureSpacesAndContractsForProperties } from "@/lib/rent-roll-store";
 import { computeFullLeaseSummary } from "@/lib/rent-roll-engine";
 
 export async function GET(req: Request) {
@@ -20,103 +20,68 @@ export async function GET(req: Request) {
 
     const db = getRentRollDb();
 
-    const SEED_PROP_IDS = new Set([
-      "357554cc-221d-4c7f-9465-32afcec7a8e7",
-      "72b18ad7-0ee0-4ac5-bfc9-156c6dc10625",
-      "8b1b9613-b890-4540-9139-6c2a6bb6cf60",
-      "401f394a-6d27-4c23-9a21-411baa7eef3b",
-      "cfa13505-71a5-4a43-be33-37497f416fdc",
-      "cf5a0b49-c4fd-4762-ae22-40c42ac6332d",
-      "PROP-FORTUNE-SKY",
-      "PROP-001",
-      "PROP-002",
-      "PROP-APX",
-      "PROP-MTP",
-      "PROP-NXN",
-      "PROP-1790239048961",
-      "PROP-1790659297701"
-    ]);
-
-    const SEED_PROP_NAMES = new Set([
-      "apex business tower",
-      "nexus hub",
-      "meridian tech park",
-      "shivalik shilp",
-      "business hub",
-      "test commercial tower",
-      "fortune sky",
-      "signature tower b"
-    ]);
-
     // Auto-sync any properties registered in Postgres/Supabase that aren't yet in rent-roll store
     try {
       const client = supabaseAdmin || supabase;
       if (client) {
         const { data: dbProps } = await client.from('properties').select('*').order('created_at', { ascending: false });
-      if (dbProps && dbProps.length > 0) {
-        const existingNames = new Set(db.properties.map(p => (p.name || "").toLowerCase().trim()));
-        let hasNew = false;
-        for (const dp of dbProps) {
-          const cleanName = (dp.name || "").toLowerCase().trim();
-          if (SEED_PROP_IDS.has(dp.id) || SEED_PROP_NAMES.has(cleanName)) continue;
-          if (cleanName && !existingNames.has(cleanName)) {
-            db.properties.push({
-              id: dp.id,
-              orgId: db.organization.id,
-              propertyCode: `PRP-${(dp.name || 'PROP').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`,
-              name: dp.name,
-              type: dp.type || "Commercial Office",
-              address: dp.address || "",
-              city: dp.city || "",
-              state: dp.state || "",
-              microMarket: dp.micro_market || dp.city || "",
-              pincode: dp.pincode || "",
-              grade: dp.grade || "A",
-              totalArea: Number(dp.total_area) || 0,
-              chargeableArea: Number(dp.total_area) || 0,
-              carpetArea: Number(dp.total_area) * 0.8,
-              occupancyTargetPct: 95,
-              ownerName: dp.owner_name || dp.owner_company,
-              ownerUserId: dp.owner_user_id || "",
-              ownerEmail: ownerEmail || "owner@officex.com",
-              sourceSystem: "postgres_sync",
-              version: 1,
-              dataQualityStatus: "passed",
-              status: "operational"
-            });
-            existingNames.add(cleanName);
-            hasNew = true;
+        if (dbProps && dbProps.length > 0) {
+          const existingNames = new Set(db.properties.map(p => (p.name || "").toLowerCase().trim()));
+          let hasNew = false;
+          for (const dp of dbProps) {
+            const cleanName = (dp.name || "").toLowerCase().trim();
+            if (cleanName && !existingNames.has(cleanName)) {
+              db.properties.push({
+                id: dp.id,
+                orgId: db.organization.id,
+                propertyCode: `PRP-${(dp.name || 'PROP').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()}`,
+                name: dp.name,
+                type: dp.type || "Commercial Office",
+                address: dp.address || "",
+                city: dp.city || "",
+                state: dp.state || "",
+                microMarket: dp.micro_market || dp.city || "",
+                pincode: dp.pincode || "",
+                grade: dp.grade || "A",
+                totalArea: Number(dp.total_area) || 0,
+                chargeableArea: Number(dp.total_area) || 0,
+                carpetArea: Number(dp.total_area) * 0.8,
+                occupancyTargetPct: 95,
+                ownerName: dp.owner_name || dp.owner_company,
+                ownerUserId: dp.owner_user_id || "",
+                ownerEmail: ownerEmail || "owner@officex.com",
+                sourceSystem: "postgres_sync",
+                version: 1,
+                dataQualityStatus: "passed",
+                status: "operational"
+              });
+              existingNames.add(cleanName);
+              hasNew = true;
+            }
+          }
+          if (hasNew) {
+            saveRentRollDb(db);
           }
         }
-        if (hasNew) {
-          saveRentRollDb(db);
-        }
       }
-    }
-  } catch (syncErr) {
+    } catch (syncErr) {
       console.warn("Postgres to rent-roll sync warning:", syncErr);
     }
 
-    // Exclude any legacy dummy properties if ever present
-    const cleanDbProps = db.properties.filter(p => {
-      const id = p?.id || "";
-      const lower = (p.name || "").toLowerCase().trim();
-      return !SEED_PROP_IDS.has(id) && !SEED_PROP_NAMES.has(lower);
-    });
-
+    const allDbProps = db.properties || [];
     const clientAccountId = searchParams.get("clientAccountId");
     let scopedProps: PropertyEntity[] = [];
 
     if (clientAccountId && clientAccountId !== "ALL") {
-      scopedProps = cleanDbProps.filter(p => p.clientAccountId === clientAccountId);
+      scopedProps = allDbProps.filter(p => p.clientAccountId === clientAccountId);
     } else if (ownerEmail || ownerUserId) {
-      const owned = cleanDbProps.filter(p => 
+      const owned = allDbProps.filter(p => 
         (ownerEmail && (p.ownerEmail || "").toLowerCase().trim() === ownerEmail) ||
         (ownerUserId && p.ownerUserId === ownerUserId)
       );
-      scopedProps = owned.length > 0 ? owned : cleanDbProps;
+      scopedProps = owned.length > 0 ? owned : allDbProps;
     } else {
-      scopedProps = cleanDbProps;
+      scopedProps = allDbProps;
     }
 
     const properties = scopedProps.map(p => {
@@ -404,6 +369,8 @@ export async function POST(req: Request) {
 
         db.spaces.push(spaceRow);
       }
+    } else {
+      ensureSpacesAndContractsForProperties(db);
     }
 
     // Compute enriched property metrics for immediate UI reflection

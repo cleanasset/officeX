@@ -20,6 +20,7 @@ import { formatINR } from "./DashboardTab";
 
 interface AddLeaseModalProps {
   properties: Array<{ id: string; name: string; city: string }>;
+  preSelectedSpace?: any | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -28,25 +29,30 @@ interface AddLeaseModalProps {
 
 export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
   properties,
+  preSelectedSpace,
   isOpen,
   onClose,
   onSuccess,
   onOpenAddProperty,
 }) => {
   const router = useRouter();
-  const [propertyId, setPropertyId] = useState(properties[0]?.id || "");
+  const [propertyId, setPropertyId] = useState(preSelectedSpace?.propertyId || properties[0]?.id || "");
   const [tenantName, setTenantName] = useState("");
-  const [unitNumber, setUnitNumber] = useState("");
-  const [floorNumber, setFloorNumber] = useState<number | "">("");
+  const [unitNumber, setUnitNumber] = useState(preSelectedSpace?.unitNumber || "");
+  const [floorNumber, setFloorNumber] = useState<number | "">(preSelectedSpace?.floorNumber !== undefined ? preSelectedSpace.floorNumber : "");
   
+  const [contractType, setContractType] = useState<string>("lease_deed");
+  const [direction, setDirection] = useState<"receivable" | "payable">("receivable");
+  const [approvalStatus, setApprovalStatus] = useState<"active" | "submitted">("active");
+
   const todayStr = new Date().toISOString().split("T")[0];
   const next3YearsStr = new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(next3YearsStr);
-  const [chargeableArea, setChargeableArea] = useState<number | "">("");
-  const [monthlyRent, setMonthlyRent] = useState<number | "">("");
-  const [camRatePsf, setCamRatePsf] = useState<number | "">("");
+  const [chargeableArea, setChargeableArea] = useState<number | "">(preSelectedSpace?.chargeableArea || "");
+  const [monthlyRent, setMonthlyRent] = useState<number | "">(preSelectedSpace?.potentialMonthlyRent || "");
+  const [camRatePsf, setCamRatePsf] = useState<number | "">(preSelectedSpace?.standardCamPsf || 25);
   const [utilityFixedMonthly, setUtilityFixedMonthly] = useState<number | "">("");
   const [escalationPct, setEscalationPct] = useState<number>(5);
   const [escalationFrequencyMonths, setEscalationFrequencyMonths] = useState<number>(24);
@@ -56,6 +62,20 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
   const [brokerName, setBrokerName] = useState("Direct");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Sync preSelectedSpace if opened for a specific unit
+  useEffect(() => {
+    if (preSelectedSpace) {
+      if (preSelectedSpace.propertyId) setPropertyId(preSelectedSpace.propertyId);
+      if (preSelectedSpace.unitNumber) setUnitNumber(preSelectedSpace.unitNumber);
+      if (preSelectedSpace.floorNumber !== undefined) setFloorNumber(preSelectedSpace.floorNumber);
+      if (preSelectedSpace.chargeableArea) setChargeableArea(preSelectedSpace.chargeableArea);
+      const rate = preSelectedSpace.standardMarketRentPsf || preSelectedSpace.standardRatePsf || 150;
+      const rent = preSelectedSpace.potentialMonthlyRent || Math.round(preSelectedSpace.chargeableArea * rate);
+      if (rent) setMonthlyRent(rent);
+      if (preSelectedSpace.standardCamPsf) setCamRatePsf(preSelectedSpace.standardCamPsf);
+    }
+  }, [preSelectedSpace]);
 
   // Sync propertyId when properties list updates
   useEffect(() => {
@@ -123,6 +143,10 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
         body: JSON.stringify({
           propertyId: selectedProp?.id || propertyId,
           propertyName: selectedProp?.name || propertyId,
+          spaceId: preSelectedSpace?.id,
+          direction,
+          contractType,
+          approvalStatus,
           tenantName: tenantName.trim(),
           unitNumber: unitNumber ? String(unitNumber).trim() : "Unit 1",
           floorNumber: typeof floorNumber === "number" ? floorNumber : 1,
@@ -258,12 +282,66 @@ export const AddLeaseModal: React.FC<AddLeaseModalProps> = ({
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs font-medium text-gray-700">
+          {preSelectedSpace && (
+            <div className="p-3 bg-teal-50 border border-teal-200 text-teal-900 rounded-xl text-xs font-bold flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-teal-700 shrink-0" />
+                <span>Leasing Vacant Unit: <strong className="font-mono text-teal-800">{preSelectedSpace.unitNumber}</strong> ({preSelectedSpace.chargeableArea?.toLocaleString()} sq ft)</span>
+              </div>
+              <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded font-mono">Floor {preSelectedSpace.floorNumber}</span>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{errorMsg}</span>
             </div>
           )}
+
+          {/* Canonical Contract Architecture Controls */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Contract Type (§4.7)</label>
+              <select
+                value={contractType}
+                onChange={e => setContractType(e.target.value)}
+                className="w-full bg-white border border-slate-200 text-slate-900 rounded-lg p-2 font-bold focus:border-[#0F8B7D]"
+              >
+                <option value="lease_deed">Lease Deed (Standard)</option>
+                <option value="leave_and_licence">Leave &amp; Licence</option>
+                <option value="managed_office_agreement">Managed Office Agreement</option>
+                <option value="coworking_membership">Coworking Membership</option>
+                <option value="head_lease">Head Lease (Payable)</option>
+                <option value="sublease">Sublease Agreement</option>
+                <option value="revenue_share">Revenue Share Model</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Direction (§4.7)</label>
+              <select
+                value={direction}
+                onChange={e => setDirection(e.target.value as any)}
+                className="w-full bg-white border border-slate-200 text-slate-900 rounded-lg p-2 font-bold focus:border-[#0F8B7D]"
+              >
+                <option value="receivable">Receivable (Occupant Inflow)</option>
+                <option value="payable">Payable (Head Lease Outflow)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Approval Workflow (§13)</label>
+              <select
+                value={approvalStatus}
+                onChange={e => setApprovalStatus(e.target.value as any)}
+                className="w-full bg-white border border-slate-200 text-slate-900 rounded-lg p-2 font-bold focus:border-[#0F8B7D]"
+              >
+                <option value="active">Active Direct Release</option>
+                <option value="submitted">Submit for Checker Approval</option>
+              </select>
+            </div>
+          </div>
 
           {/* Section 1: Property & Tenant */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -136,13 +136,7 @@ export default function TenantDirectoryPage() {
       if (pRes.ok) {
         const pData = await pRes.json();
         if (Array.isArray(pData) && pData.length > 0) {
-          const filtered = isDemoAccount
-            ? pData
-            : pData.filter((p: any) => {
-                const id = p?.id || "";
-                const name = (p?.name || "").toLowerCase().trim();
-                return !SEED_PROP_IDS.has(id) && !SEED_PROP_NAMES.has(name) && !name.includes("commercial portfolio");
-              });
+          const filtered = pData.filter((p: any) => Boolean(p && (p.id || p.name)));
 
           loadedProps = filtered.map((p: any) => ({
             id: p.id,
@@ -160,13 +154,7 @@ export default function TenantDirectoryPage() {
       try {
         const local = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
         if (Array.isArray(local) && local.length > 0) {
-          const validLocal = isDemoAccount
-            ? local
-            : local.filter((p: any) => {
-                const id = p?.id || "";
-                const name = (p?.name || "").toLowerCase().trim();
-                return !SEED_PROP_IDS.has(id) && !SEED_PROP_NAMES.has(name);
-              });
+          const validLocal = local.filter((p: any) => Boolean(p && (p.id || p.name)));
 
           const existingPropIds = new Set(loadedProps.map((p) => p.id));
           for (const lp of validLocal) {
@@ -246,11 +234,7 @@ export default function TenantDirectoryPage() {
         const localLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
         if (Array.isArray(localLeases) && localLeases.length > 0) {
           const mappedFromLocal: TenantRecord[] = localLeases
-            .filter((l: any) => {
-              if (isDemoAccount) return true;
-              const propName = (l.propertyName || "").toLowerCase().trim();
-              return !SEED_PROP_NAMES.has(propName);
-            })
+            .filter((l: any) => Boolean(l && (l.tenantName || l.id)))
             .map((l: any, i: number) => ({
               id: l.id || `LOCAL-T-${i}`,
               tenantCode: `OX-T-${5000 + i}`,

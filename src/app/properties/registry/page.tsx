@@ -68,13 +68,7 @@ export default function PropertyMasterRegistry() {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
-            const filtered = isDemoAccount
-              ? data
-              : data.filter((p: any) => {
-                  const id = p?.id || "";
-                  const name = (p?.name || "").toLowerCase().trim();
-                  return !SEED_PROP_IDS.has(id) && !SEED_PROP_NAMES.has(name) && !name.includes("commercial portfolio");
-                });
+            const filtered = data.filter((p: any) => Boolean(p && (p.id || p.name)));
 
             if (filtered.length > 0) {
               loadedProps = filtered.map((p: any) => {

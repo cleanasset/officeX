@@ -89,23 +89,9 @@ const DEPRECATED_PROP_NAMES = new Set([
   "signature tower b"
 ]);
 
-const isDeprecatedMockProperty = (p: any) => {
-  if (!p) return true;
-  const id = p.id || "";
-  const name = (p.name || p.propertyName || "").trim().toLowerCase();
-  if (DEPRECATED_PROP_IDS.has(id)) return true;
-  if (DEPRECATED_PROP_NAMES.has(name)) return true;
-  return false;
-};
-
-const isDeprecatedMockLease = (l: any) => {
-  if (!l) return true;
-  const propId = l.propertyId || "";
-  const propName = (l.propertyName || l.buildingName || "").toLowerCase();
-  if (DEPRECATED_PROP_IDS.has(propId)) return true;
-  if (DEPRECATED_PROP_NAMES.has(propName)) return true;
-  return false;
-};
+// Active real inventory validator (never filter out user-registered entities)
+const isDeprecatedMockProperty = (p: any) => !p;
+const isDeprecatedMockLease = (l: any) => !l;
 
 function RentRollPageInner() {
   const searchParams = useSearchParams();
@@ -162,10 +148,19 @@ function RentRollPageInner() {
 
   // Data Store State
   const [properties, setProperties] = useState<any[]>([]);
+  const [spaces, setSpaces] = useState<any[]>([]);
   const [clientAccounts, setClientAccounts] = useState<any[]>([]);
   const [billingEntities, setBillingEntities] = useState<any[]>([]);
   const [leases, setLeases] = useState<EnrichedLease[]>([]);
   const [dashboardData, setDashboardData] = useState<any | null>(null);
+  const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [orgBranding, setOrgBranding] = useState<{
+    name?: string;
+    tradeName?: string;
+    logoUrl?: string;
+    brandColor?: string;
+  }>({});
+  const [preSelectedSpaceForLease, setPreSelectedSpaceForLease] = useState<any | null>(null);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [collections, setCollections] = useState<CollectionReceipt[]>([]);
   const [escalations, setEscalations] = useState<EscalationRecord[]>([]);
@@ -199,6 +194,11 @@ function RentRollPageInner() {
   const [selectedInvoiceForAdjustment, setSelectedInvoiceForAdjustment] = useState<InvoiceItem | null>(null);
   const [isConfigWizardOpen, setIsConfigWizardOpen] = useState<boolean>(false);
 
+  // Month-End Snapshots (RR-AUD-03)
+  const [isFreezingSnapshot, setIsFreezingSnapshot] = useState<boolean>(false);
+  const [isSnapshotsModalOpen, setIsSnapshotsModalOpen] = useState<boolean>(false);
+  const [historicalSnapshots, setHistoricalSnapshots] = useState<any[]>([]);
+
   // Logged-in Landlord identity state
   const [userInfo, setUserInfo] = useState({
     name: "",
@@ -206,6 +206,51 @@ function RentRollPageInner() {
     role: "Property Owner & Asset Manager",
     primaryBuilding: ""
   });
+
+  const handleFreezeSnapshot = async () => {
+    const month = asOfDate.slice(0, 7);
+    if (!confirm(`Confirm freeze month-end statutory snapshot for ${month}? This will create an immutable audit record of the current rent roll.`)) {
+      return;
+    }
+    setIsFreezingSnapshot(true);
+    try {
+      const res = await fetch("/api/rent-roll/snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          snapshotMonth: month,
+          asOfDate,
+          propertyId: selectedProperty !== "ALL" ? selectedProperty : undefined,
+          frozenBy: userInfo.name || "Finance Controller"
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionFeedback(data.message || `Month-end rent roll frozen for ${month}.`);
+        setTimeout(() => setActionFeedback(null), 5000);
+      } else {
+        alert(data.error || "Failed to freeze snapshot.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error freezing snapshot.");
+    } finally {
+      setIsFreezingSnapshot(false);
+    }
+  };
+
+  const handleOpenSnapshots = async () => {
+    try {
+      const res = await fetch(`/api/rent-roll/snapshots${selectedProperty !== "ALL" ? `?propertyId=${selectedProperty}` : ""}`);
+      const data = await res.json();
+      if (res.ok) {
+        setHistoricalSnapshots(data.snapshots || []);
+        setIsSnapshotsModalOpen(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -282,6 +327,7 @@ function RentRollPageInner() {
       const clientAccountParam = selectedClientAccount !== "ALL" ? `clientAccountId=${encodeURIComponent(selectedClientAccount)}` : "";
       const billingEntityParam = selectedBillingEntity !== "ALL" ? `billingEntityId=${encodeURIComponent(selectedBillingEntity)}` : "";
       const viewModeParam = `viewMode=${encodeURIComponent(viewMode)}`;
+      const asOfDateParam = asOfDate ? `asOfDate=${encodeURIComponent(asOfDate)}` : "";
 
       const makeQuery = (extra: string[] = []) => {
         const parts = [emailParam, ...extra].filter(Boolean);
@@ -290,6 +336,7 @@ function RentRollPageInner() {
 
       const [
         propRes,
+        spacesRes,
         leasesRes,
         dashRes,
         invRes,
@@ -303,10 +350,12 @@ function RentRollPageInner() {
         auditRes,
         alertRes,
         clientAccRes,
-        billingEntRes
+        billingEntRes,
+        orgRes
       ] = await Promise.all([
         fetch(`/api/rent-roll/properties${makeQuery([clientAccountParam, billingEntityParam])}`),
-        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam, clientAccountParam, billingEntityParam, viewModeParam])}`),
+        fetch(`/api/rent-roll/spaces${makeQuery([propParam])}`),
+        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam, clientAccountParam, billingEntityParam, viewModeParam, asOfDateParam])}`),
         fetch(`/api/rent-roll/dashboard${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
         fetch(`/api/rent-roll/invoices${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
         fetch(`/api/rent-roll/collections${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
@@ -319,8 +368,28 @@ function RentRollPageInner() {
         fetch(`/api/rent-roll/audit${makeQuery()}`),
         fetch(`/api/rent-roll/alerts${makeQuery()}`),
         fetch(`/api/rent-roll/client-accounts`),
-        fetch(`/api/rent-roll/billing-entities${makeQuery([clientAccountParam])}`)
+        fetch(`/api/rent-roll/billing-entities${makeQuery([clientAccountParam])}`),
+        fetch(`/api/rent-roll/organization`)
       ]);
+
+      if (orgRes.ok) {
+        const orgData = await orgRes.json();
+        if (orgData) {
+          setOrgBranding({
+            name: orgData.name || orgData.legalName,
+            tradeName: orgData.tradeName,
+            logoUrl: orgData.branding?.logoUrl || orgData.branding?.logoPreview,
+            brandColor: orgData.branding?.brandColor
+          });
+        }
+      }
+
+      if (spacesRes.ok) {
+        const spacesData = await spacesRes.json();
+        if (Array.isArray(spacesData)) {
+          setSpaces(spacesData);
+        }
+      }
 
       if (clientAccRes.ok) {
         setClientAccounts(await clientAccRes.json());
@@ -337,10 +406,10 @@ function RentRollPageInner() {
         } catch {}
         const mergedMap = new Map();
         serverProps.forEach((p: any) => {
-          if (!isDeprecatedMockProperty(p)) mergedMap.set(p.id, p);
+          if (p) mergedMap.set(p.id, p);
         });
         localProps.forEach((p: any) => {
-          if (!isDeprecatedMockProperty(p) && (!p.ownerEmail || (email && p.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+          if (p && (!p.ownerEmail || (email && p.ownerEmail.toLowerCase() === email.toLowerCase()))) {
             mergedMap.set(p.id, p);
           }
         });
@@ -354,10 +423,10 @@ function RentRollPageInner() {
         } catch {}
         const mergedMap = new Map();
         serverLeases.forEach((l: any) => {
-          if (!isDeprecatedMockLease(l)) mergedMap.set(l.id || l.tenantName, l);
+          if (l) mergedMap.set(l.id || l.tenantName, l);
         });
         localLeases.forEach((l: any) => {
-          if (!isDeprecatedMockLease(l) && (!l.ownerEmail || (email && l.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+          if (l && (!l.ownerEmail || (email && l.ownerEmail.toLowerCase() === email.toLowerCase()))) {
             mergedMap.set(l.id || l.tenantName, l);
           }
         });
@@ -379,7 +448,7 @@ function RentRollPageInner() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedProperty, selectedStatus, searchQuery, selectedClientAccount, selectedBillingEntity, viewMode]);
+  }, [selectedProperty, selectedStatus, searchQuery, selectedClientAccount, selectedBillingEntity, viewMode, asOfDate]);
 
   useEffect(() => {
     fetchAllData();
@@ -504,6 +573,15 @@ function RentRollPageInner() {
         userEmail={userInfo.email}
         userRole={userInfo.role}
         primaryBuildingName={userInfo.primaryBuilding}
+        orgName={orgBranding.name || userInfo.name}
+        orgTradeName={orgBranding.tradeName}
+        logoUrl={orgBranding.logoUrl}
+        brandColor={orgBranding.brandColor}
+        asOfDate={asOfDate}
+        onAsOfDateChange={setAsOfDate}
+        onFreezeSnapshot={handleFreezeSnapshot}
+        onOpenSnapshots={handleOpenSnapshots}
+        isFreezingSnapshot={isFreezingSnapshot}
         onOpenDeleteProperty={(propId) => {
           const p = properties.find((item) => item.id === propId);
           if (p) setPropertyToDelete(p);
@@ -561,6 +639,7 @@ function RentRollPageInner() {
         {activeTab === "rentroll" && (
           <MasterGridTab
             leases={leases}
+            spaces={spaces}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             onSelectLease={setSelectedLeaseForDrawer}
@@ -576,6 +655,14 @@ function RentRollPageInner() {
               const inv = invoices.find(i => i.leaseId === l.id && i.balanceDue > 0);
               setPreSelectedInvoiceForPayment(inv || { leaseId: l.id, balanceDue: l.totalOutstanding, netPayable: l.totalMonthlyGross });
               setIsRecordPaymentOpen(true);
+            }}
+            onOpenAddLeaseForSpace={(sp) => {
+              setPreSelectedSpaceForLease(sp);
+              setIsAddLeaseOpen(true);
+            }}
+            onOpenAddLease={() => {
+              setPreSelectedSpaceForLease(null);
+              setIsAddLeaseOpen(true);
             }}
             onRefresh={fetchAllData}
           />
@@ -680,6 +767,7 @@ function RentRollPageInner() {
         <LeaseDetailDrawer
           lease={selectedLeaseForDrawer}
           onClose={() => setSelectedLeaseForDrawer(null)}
+          onLeaseUpdated={fetchAllData}
           onOpenApplyEscalation={(l) => {
             setLeaseForEscalation(l);
             setIsApplyEscalationOpen(true);
@@ -710,9 +798,17 @@ function RentRollPageInner() {
 
       <AddLeaseModal
         properties={properties}
+        preSelectedSpace={preSelectedSpaceForLease}
         isOpen={isAddLeaseOpen}
-        onClose={() => setIsAddLeaseOpen(false)}
-        onSuccess={fetchAllData}
+        onClose={() => {
+          setIsAddLeaseOpen(false);
+          setPreSelectedSpaceForLease(null);
+        }}
+        onSuccess={() => {
+          fetchAllData();
+          setActionFeedback("Contract successfully created and registered in rent roll.");
+          setTimeout(() => setActionFeedback(null), 5000);
+        }}
         onOpenAddProperty={() => router.push("/properties/add")}
       />
 
@@ -857,6 +953,108 @@ function RentRollPageInner() {
         onClose={() => setIsConfigWizardOpen(false)}
         onSuccess={fetchAllData}
       />
+
+      {/* ──── HISTORICAL MONTH-END SNAPSHOTS MODAL (RR-AUD-03) ──── */}
+      {isSnapshotsModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-gray-200 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-50 text-purple-700 rounded-xl">
+                  <FileCheck2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-900">Historical Month-End Rent Roll Snapshots</h3>
+                  <p className="text-xs text-gray-500">Immutable point-in-time statutory audit freeze records (S4.12)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSnapshotsModalOpen(false)}
+                className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-500 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {historicalSnapshots.length === 0 ? (
+              <div className="p-10 text-center space-y-2 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <Clock className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-700">No historical month-end snapshots frozen yet.</p>
+                <p className="text-[11px] text-slate-500">
+                  Click &ldquo;Freeze Snapshot&rdquo; in the rent roll header to lock the current month-end state for statutory compliance.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {historicalSnapshots.map((snap: any) => (
+                  <div
+                    key={snap.id}
+                    className="p-4 bg-slate-50/80 hover:bg-purple-50/40 border border-slate-200 hover:border-purple-200 rounded-2xl transition-all space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-black font-mono bg-purple-100 text-purple-800">
+                          {snap.snapshotMonth}
+                        </span>
+                        <span className="text-xs font-bold text-gray-800">As of {snap.asOfDate}</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        Frozen by {snap.frozenBy || "Finance Controller"} • {new Date(snap.frozenAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-2 border-t border-slate-200/80">
+                      <div>
+                        <span className="text-[10px] text-gray-400 uppercase font-semibold">Total Area:</span>
+                        <p className="font-bold text-gray-900 font-mono">{(snap.totalArea || snap.totalAreaSqFt)?.toLocaleString()} sqft</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 uppercase font-semibold">Occupied / Vacant:</span>
+                        <p className="font-bold text-teal-700 font-mono">{snap.occupiedSpaces} Occ / {snap.vacantSpaces} Vac</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 uppercase font-semibold">Monthly Base Rent:</span>
+                        <p className="font-bold text-gray-900 font-mono">₹{(snap.totalBaseRent || snap.totalMonthlyRent)?.toLocaleString("en-IN")}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 uppercase font-semibold">Total Gross:</span>
+                        <p className="font-bold text-purple-800 font-mono">₹{snap.totalMonthlyGross?.toLocaleString("en-IN")}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {snap.lines?.length || 0} demised line items locked
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAsOfDate(snap.asOfDate);
+                          setIsSnapshotsModalOpen(false);
+                          setActionFeedback(`Loaded historical rent roll view for as-of date: ${snap.asOfDate}`);
+                        }}
+                        className="text-xs font-bold text-purple-700 hover:text-purple-900 hover:underline cursor-pointer"
+                      >
+                        Inspect As-Of Date →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsSnapshotsModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

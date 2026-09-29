@@ -106,6 +106,19 @@ function OnboardingContent() {
     primaryAddress: ""
   });
 
+  // ──── PRIMARY PROPERTY STATE (Commits directly to live DB & Dashboard) ────
+  const [propertyData, setPropertyData] = useState({
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    microMarket: "",
+    totalArea: 50000,
+    unitsCount: 6,
+    grade: "A",
+    type: "Commercial Office"
+  });
+
   const toggleSegment = (segId: string) => {
     setOrgData(prev => {
       const exists = prev.segments.includes(segId);
@@ -426,12 +439,25 @@ function OnboardingContent() {
       const storedEmail = localStorage.getItem("officex_user_email") || "";
       const storedName = localStorage.getItem("officex_user_name") || "";
 
+      const storedProp = localStorage.getItem("officex_property_name") || sessionStorage.getItem("officex_property_name") || "";
+      const storedPropCity = localStorage.getItem("officex_property_city") || "";
+      const storedArea = localStorage.getItem("officex_property_area");
+
       if (storedOrg || storedCity) {
         setOrgData(prev => ({
           ...prev,
           legalName: prev.legalName || storedOrg,
           tradeName: prev.tradeName || storedOrg,
           city: prev.city || storedCity,
+        }));
+      }
+
+      if (storedProp || storedOrg) {
+        setPropertyData(prev => ({
+          ...prev,
+          name: prev.name || storedProp || (storedOrg ? `${storedOrg} Center` : ""),
+          city: prev.city || storedPropCity || storedCity || "",
+          totalArea: storedArea ? Number(storedArea) : prev.totalArea
         }));
       }
 
@@ -503,6 +529,16 @@ function OnboardingContent() {
           subdomain: cleanSub
         }));
       }
+      // Auto-suggest property defaults if empty
+      if (!propertyData.name) {
+        setPropertyData(prev => ({
+          ...prev,
+          name: orgData.tradeName || `${orgData.legalName} Tower`,
+          city: orgData.city || prev.city,
+          state: orgData.state || prev.state,
+          address: orgData.primaryAddress || prev.address
+        }));
+      }
     }
     setCurrentStep((prev) => Math.min(6, prev + 1));
   };
@@ -538,22 +574,34 @@ function OnboardingContent() {
   const handleFinalCommit = async () => {
     setIsSubmitting(true);
     try {
-      // 1. Commit Organization & Extended Config (Branding, Tax Profiles, Users, Charge Types)
-      await fetch("/api/rent-roll/organization", {
+      // 1. Commit Organization, Property, Branding, and Contracts via Unified Onboarding Commit
+      const commitRes = await fetch("/api/rent-roll/onboarding-commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          legalName: orgData.legalName,
-          tradeName: orgData.tradeName,
-          pan: orgData.pan,
-          gstin: orgData.gstin,
-          city: orgData.city,
-          state: orgData.state,
-          primaryAddress: orgData.primaryAddress,
-          currency: fySettings.currency,
+          organization: {
+            legalName: orgData.legalName,
+            tradeName: orgData.tradeName || orgData.legalName,
+            pan: orgData.pan,
+            gstin: orgData.gstin,
+            city: orgData.city,
+            state: orgData.state,
+            address: orgData.primaryAddress,
+            currency: fySettings.currency || "INR"
+          },
+          property: {
+            name: propertyData.name || orgData.tradeName || `${orgData.legalName} Tower`,
+            address: propertyData.address || orgData.primaryAddress,
+            city: propertyData.city || orgData.city,
+            state: propertyData.state || orgData.state,
+            microMarket: propertyData.microMarket,
+            totalArea: Number(propertyData.totalArea) || 50000,
+            unitsCount: Number(propertyData.unitsCount) || 6,
+            grade: propertyData.grade || "A"
+          },
           taxProfiles,
           branding: {
-            portfolioDisplayName: branding.portfolioDisplayName,
+            portfolioDisplayName: branding.portfolioDisplayName || orgData.tradeName || orgData.legalName,
             invoiceHeaderMemo: branding.invoiceHeaderMemo,
             brandColor: branding.brandColor,
             logoUrl: branding.logoPreview
@@ -572,7 +620,7 @@ function OnboardingContent() {
           goLiveChecklist,
           billingEntities: billingEntities.map(b => ({
             legalName: b.spvName,
-            tradeName: orgData.tradeName,
+            tradeName: orgData.tradeName || orgData.legalName,
             pan: b.pan,
             gstin: b.gstin,
             stateCode: b.stateCode,
@@ -585,7 +633,9 @@ function OnboardingContent() {
         })
       });
 
-      // 2. Set Session & Completed LocalStorage State
+      const commitData = await commitRes.json();
+
+      // 2. Set Session & Completed LocalStorage State with REAL Entities
       if (typeof window !== "undefined") {
         localStorage.setItem("officex_onboarding_completed", "1");
         sessionStorage.setItem("officex_onboarding_completed", "1");
@@ -594,10 +644,36 @@ function OnboardingContent() {
         localStorage.setItem("officex_active_org", orgData.legalName);
         localStorage.setItem("officex_org_name", orgData.legalName);
         localStorage.setItem("officex_org_id", "ORG-" + Date.now());
+        localStorage.setItem("officex_org_brand_color", branding.brandColor || "#0F8B7D");
+        if (branding.logoPreview) {
+          localStorage.setItem("officex_org_logo", branding.logoPreview);
+        }
         localStorage.setItem("officex_contact_verified", "1");
         localStorage.setItem("officex_phone_verified", "1");
         localStorage.setItem("officex_kyc_status", "VERIFIED");
         localStorage.setItem("officex_user_role", "Portfolio Executive");
+
+        if (commitData?.property) {
+          localStorage.setItem("officex_property_name", commitData.property.name);
+          localStorage.setItem("officex_property_id", commitData.property.id);
+          localStorage.setItem("officex_property_city", commitData.property.city || orgData.city);
+          localStorage.setItem("officex_property_area", String(commitData.property.totalArea || 50000));
+          localStorage.setItem("officex_user_properties", JSON.stringify([commitData.property]));
+        } else {
+          const fallbackProp = {
+            id: `PROP-${Date.now()}`,
+            name: propertyData.name || orgData.tradeName || `${orgData.legalName} Tower`,
+            city: propertyData.city || orgData.city,
+            totalArea: Number(propertyData.totalArea) || 50000
+          };
+          localStorage.setItem("officex_property_name", fallbackProp.name);
+          localStorage.setItem("officex_user_properties", JSON.stringify([fallbackProp]));
+        }
+
+        if (commitData?.contracts && Array.isArray(commitData.contracts)) {
+          localStorage.setItem("officex_active_leases", JSON.stringify(commitData.contracts));
+        }
+
         document.cookie = "officex_onboarding_completed=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_auth=1; path=/; max-age=31536000; SameSite=Lax";
@@ -2050,6 +2126,72 @@ function OnboardingContent() {
                           >
                             Request Advisory Support
                           </a>
+                        </div>
+
+                        {/* Primary Property & Inventory Registration Card */}
+                        <div className="p-6 bg-white border border-teal-200/90 rounded-2xl shadow-xs space-y-4">
+                          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-5 h-5 text-[#0F8B7D]" />
+                              <div>
+                                <h3 className="text-sm font-extrabold text-slate-900">Primary Commercial Property &amp; Units</h3>
+                                <p className="text-[11px] text-slate-500">
+                                  Define your anchor asset. This establishes your physical leasable spaces and real rent roll inventory.
+                                </p>
+                              </div>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-full bg-teal-50 text-[#0F8B7D] font-mono text-[10px] font-bold border border-teal-200">
+                              Production Asset
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">Property / Tower Name *</label>
+                              <input
+                                type="text"
+                                value={propertyData.name}
+                                onChange={e => setPropertyData({ ...propertyData, name: e.target.value })}
+                                placeholder="e.g. Eka Club / Horizon Tower"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">City / Micro-Market</label>
+                              <input
+                                type="text"
+                                value={propertyData.city}
+                                onChange={e => setPropertyData({ ...propertyData, city: e.target.value })}
+                                placeholder="e.g. Ahmedabad / Maninagar"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">Total Leasable Area (Sq Ft) *</label>
+                              <input
+                                type="number"
+                                min={1000}
+                                value={propertyData.totalArea}
+                                onChange={e => setPropertyData({ ...propertyData, totalArea: Number(e.target.value) || 0 })}
+                                placeholder="e.g. 50000"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">Number of Physical Units</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={200}
+                                value={propertyData.unitsCount}
+                                onChange={e => setPropertyData({ ...propertyData, unitsCount: Number(e.target.value) || 1 })}
+                                placeholder="e.g. 6"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* Clean File Upload Box */}

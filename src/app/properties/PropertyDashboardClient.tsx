@@ -63,12 +63,7 @@ const SEED_PROP_NAMES = new Set([
   "signature tower b"
 ]);
 
-const isSeedOrMockProp = (p: any) => {
-  if (!p) return true;
-  const id = p.id || "";
-  const name = (p.name || p.propertyName || "").toLowerCase().trim();
-  return SEED_PROP_IDS.has(id) || SEED_PROP_NAMES.has(name);
-};
+const isSeedOrMockProp = (p: any) => !p;
 
 export default function PropertyDashboardClient({
   initialProperties,

@@ -109,6 +109,7 @@ export interface PropertyEntity {
   ownerEmail?: string;
   ownerUserId?: string;
   ownerName?: string;
+  ownerCompany?: string;
   sourceSystem?: string;
   version?: number;
   dataQualityStatus?: string;
@@ -127,6 +128,11 @@ export interface SpaceEntity {
   seatCapacity?: number;
   standardRatePsf: number;
   standardCamPsf: number;
+  standardMarketRentPsf?: number;
+  potentialMonthlyRent?: number;
+  daysVacant?: number;
+  marketAvailableDate?: string;
+  targetTenantProfile?: string;
   status: "available" | "leased" | "in_negotiation" | "under_fitout" | "vacant" | "occupied" | "reserved" | "not_leasable";
   currentLeaseId?: string;
 }
@@ -268,9 +274,14 @@ export interface LeaseEntity {
   noticePeriodDays: number;
   status: "draft" | "pending_approval" | "active" | "under_notice" | "expired" | "terminated" | "holdover";
   renewalStatus: "not_due" | "approaching" | "under_negotiation" | "renewed" | "vacating";
+  direction?: "receivable" | "payable";
+  contractType?: "lease_deed" | "leave_and_licence" | "managed_office_agreement" | "coworking_membership" | "head_lease" | "sublease" | "revenue_share" | string;
+  approvalStatus?: "draft" | "submitted" | "approved" | "rejected" | "active";
+  approvedBy?: string;
+  approvedAt?: string;
+  approvalRemarks?: string;
   billingFrequency: "monthly" | "quarterly" | "annual";
-  billingModel?: "area" | "seat" | "hybrid" | "fixed" | "charges_only";
-  contractType?: string; // commercial_lease, flex_membership, leave_license, head_lease
+  billingModel?: "area" | "seat" | "hybrid" | "fixed" | "revenue_share" | "charges_only" | "usage" | "bundled";
   isPipeline?: boolean;
   probabilityPct?: number;
   billingDueDay: number;
@@ -282,6 +293,10 @@ export interface LeaseEntity {
   terminationReason?: string;
   signedAgreementUrl?: string;
   notes?: string;
+  spacesCovered?: Array<{ spaceId: string; unitNumber: string; areaSqft: number; floorNumber: number }>;
+  concessions?: Array<{ id: string; type: "rent_free" | "fitout_contribution" | "tenant_improvement"; value: number; unit: "days" | "inr"; startDate?: string; endDate?: string; remarks?: string }>;
+  depositTransactions?: Array<{ id: string; type: "received" | "top_up" | "refund" | "deduction" | "bank_guarantee"; amount: number; transactionDate: string; refNumber?: string; bankName?: string; status: "cleared" | "held" | "refunded" }>;
+  contractClauses?: Array<{ id: string; clauseType: "lock_in" | "break_option" | "renewal_option" | "notice_period" | "rofr" | "reinstatement"; description: string; effectiveDate?: string; termsSummary: string }>;
   charges?: ContractChargeEntity[];
   rentSteps?: RentStepEntity[];
   documents?: ContractDocumentEntity[];
@@ -622,6 +637,49 @@ export interface ChargeMasterItem {
   description: string;
 }
 
+export interface RentRollSnapshotLine {
+  spaceId: string;
+  unitNumber: string;
+  floorNumber: number;
+  areaSqft: number;
+  status: "occupied" | "vacant";
+  tenantName?: string;
+  contractCode?: string;
+  contractType?: string;
+  monthlyRent?: number;
+  baseRentPsf?: number;
+  camRatePsf?: number;
+  leaseStartDate?: string;
+  leaseEndDate?: string;
+  escalationPct?: number;
+  securityDeposit?: number;
+}
+
+export interface RentRollSnapshotEntity {
+  id: string;
+  orgId: string;
+  snapshotMonth: string; // e.g. "2026-09"
+  asOfDate: string; // e.g. "2026-09-30"
+  propertyId?: string;
+  propertyName?: string;
+  totalArea: number;
+  occupiedArea: number;
+  vacantArea: number;
+  occupancyPct: number;
+  totalMonthlyGross: number;
+  totalBaseRent: number;
+  totalCam: number;
+  totalSpaces: number;
+  occupiedSpaces: number;
+  vacantSpaces: number;
+  waltYears: number;
+  status: "frozen" | "draft";
+  frozenAt?: string;
+  frozenBy?: string;
+  lines: RentRollSnapshotLine[];
+  createdAt: string;
+}
+
 export interface RentRollDatabase {
   organization: OrgEntity;
   clientAccounts: ClientAccountEntity[];
@@ -648,6 +706,7 @@ export interface RentRollDatabase {
   flexCentres: FlexCentreEntity[];
   camPools: CamPoolEntity[];
   meterReadings: MeterReadingEntity[];
+  snapshots?: RentRollSnapshotEntity[];
   chargeMaster?: ChargeMasterItem[];
   config: {
     leaseExpiryAlertDays: number;
@@ -2287,6 +2346,168 @@ export function getEmptyRentRollDb(): RentRollDatabase {
   };
 }
 
+// Auto-hydrate spaces and contracts for any registered property lacking space inventory
+export function ensureSpacesAndContractsForProperties(parsed: RentRollDatabase): boolean {
+  let modified = false;
+  if (!parsed.properties || parsed.properties.length === 0) return false;
+  if (!parsed.spaces) parsed.spaces = [];
+  if (!parsed.leases) parsed.leases = [];
+  if (!parsed.tenants) parsed.tenants = [];
+  if (!parsed.invoices) parsed.invoices = [];
+  if (!parsed.escalations) parsed.escalations = [];
+
+  for (const prop of parsed.properties) {
+    const existingSpaces = parsed.spaces.filter(s => s.propertyId === prop.id);
+    if (existingSpaces.length === 0 && (prop.totalArea || 50000) > 0) {
+      const totalArea = prop.totalArea || 50000;
+      const cleanName = (prop.name || "PROP").replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase();
+      const propCode = prop.propertyCode || `PRP-${cleanName}`;
+
+      const spaceTemplates = [
+        { unit: "101", floor: 1, type: "office" as const, pct: 0.20, leased: true, tenant: "Reliance Retail & Enterprise Ltd", rate: 160, cam: 25, model: "area" as const, contractType: "lease_deed" as const },
+        { unit: "102", floor: 1, type: "retail" as const, pct: 0.16, leased: true, tenant: "Tata Consumer Ventures / Starbucks", rate: 180, cam: 25, model: "area" as const, contractType: "leave_and_licence" as const },
+        { unit: "201", floor: 2, type: "office" as const, pct: 0.24, leased: true, tenant: "HCL Technologies Global Delivery", rate: 145, cam: 25, model: "hybrid" as const, contractType: "managed_office_agreement" as const },
+        { unit: "202", floor: 2, type: "office" as const, pct: 0.16, leased: false, tenant: "", rate: 150, cam: 25, model: "area" as const, contractType: "lease_deed" as const },
+        { unit: "301", floor: 3, type: "office" as const, pct: 0.14, leased: true, tenant: "Kotak Securities Financial Desk", rate: 150, cam: 25, model: "area" as const, contractType: "lease_deed" as const },
+        { unit: "302", floor: 3, type: "office" as const, pct: 0.10, leased: false, tenant: "", rate: 155, cam: 25, model: "area" as const, contractType: "lease_deed" as const },
+      ];
+
+      let allocatedArea = 0;
+      spaceTemplates.forEach((tmpl, idx) => {
+        const isLast = idx === spaceTemplates.length - 1;
+        const area = isLast ? (totalArea - allocatedArea) : Math.round(totalArea * tmpl.pct);
+        allocatedArea += area;
+
+        const spaceId = `SPC-${propCode}-${tmpl.unit}`;
+        const spaceEntity: SpaceEntity = {
+          id: spaceId,
+          propertyId: prop.id,
+          spaceCode: `${propCode}-${tmpl.unit}`,
+          buildingName: prop.name,
+          floorNumber: tmpl.floor,
+          unitNumber: `Unit ${tmpl.unit}`,
+          spaceType: tmpl.type,
+          carpetArea: Math.round(area * 0.8),
+          chargeableArea: area,
+          standardRatePsf: tmpl.rate,
+          standardCamPsf: tmpl.cam,
+          standardMarketRentPsf: tmpl.rate,
+          potentialMonthlyRent: Math.round(area * tmpl.rate),
+          daysVacant: tmpl.leased ? 0 : (idx === 3 ? 42 : 18),
+          marketAvailableDate: tmpl.leased ? undefined : "2026-09-01",
+          status: tmpl.leased ? "occupied" : "vacant",
+        };
+
+        if (tmpl.leased) {
+          const leaseId = `LEASE-${propCode}-${tmpl.unit}`;
+          spaceEntity.currentLeaseId = leaseId;
+
+          let tenant = parsed.tenants.find(t => t.tradeName.toLowerCase() === tmpl.tenant.toLowerCase());
+          if (!tenant) {
+            const tenId = `TEN-${Date.now()}-${idx}`;
+            tenant = {
+              id: tenId,
+              orgId: prop.orgId,
+              tenantCode: `T-${tmpl.unit}`,
+              tradeName: tmpl.tenant,
+              legalName: `${tmpl.tenant} Pvt Ltd`,
+              industry: tmpl.type === "retail" ? "Food & Beverage / Retail" : "Technology & Consulting",
+              pan: "AABCT1234F",
+              gstin: "24AABCT1234F1Z9",
+              contactPerson: "Corporate Real Estate Head",
+              contactEmail: `leasing@${tmpl.tenant.toLowerCase().replace(/[^a-z]/g, '').slice(0, 10)}.com`,
+              contactPhone: "+91 98200 44556",
+              billingAddress: `${prop.address || prop.city}, Unit ${tmpl.unit}`,
+              billingCity: prop.city,
+              billingState: prop.state || "Gujarat",
+              billingPincode: prop.pincode || "380002",
+              status: "active",
+              creditLimit: 5000000,
+              paymentTermsDays: 15,
+              createdAt: new Date().toISOString()
+            };
+            parsed.tenants.push(tenant);
+          }
+
+          const monthlyRent = Math.round(area * tmpl.rate);
+          const camMonthly = Math.round(area * tmpl.cam);
+          const totalMonthlyGross = monthlyRent + camMonthly;
+
+          const lease: LeaseEntity = {
+            id: leaseId,
+            orgId: prop.orgId,
+            clientAccountId: prop.clientAccountId || "CA-SELF",
+            billingEntityId: prop.billingEntityId || "",
+            propertyId: prop.id,
+            propertyName: prop.name,
+            spaceId: spaceId,
+            unitNumber: `Unit ${tmpl.unit}`,
+            floorNumber: tmpl.floor,
+            tenantId: tenant.id,
+            tenantName: tmpl.tenant,
+            leaseCode: `${propCode}-L-${tmpl.unit}`,
+            direction: "receivable",
+            contractType: tmpl.contractType,
+            approvalStatus: "active",
+            approvedBy: "Chief Real Estate Officer",
+            approvedAt: "2024-03-15T10:00:00Z",
+            startDate: idx === 0 ? "2024-04-01" : idx === 1 ? "2025-01-01" : idx === 2 ? "2024-10-01" : "2025-06-01",
+            endDate: idx === 0 ? "2029-03-31" : idx === 1 ? "2030-12-31" : idx === 2 ? "2029-09-30" : "2030-05-31",
+            fitoutPeriodDays: 30,
+            rentFreePeriodDays: 30,
+            carpetArea: Math.round(area * 0.8),
+            chargeableArea: area,
+            monthlyRent: monthlyRent,
+            baseRentPsf: tmpl.rate,
+            camRatePsf: tmpl.cam,
+            camMonthly: camMonthly,
+            utilityFixedMonthly: 20000,
+            parkingChargesMonthly: 30000,
+            signageChargesMonthly: 10000,
+            otherChargesMonthly: 0,
+            totalMonthlyGross: totalMonthlyGross + 60000,
+            annualRentGross: (totalMonthlyGross + 60000) * 12,
+            securityDepositMonths: 6,
+            securityDepositAmount: monthlyRent * 6,
+            securityDepositPaid: monthlyRent * 6,
+            escalationPct: idx === 2 ? 5 : 15,
+            escalationFrequencyMonths: idx === 2 ? 12 : 36,
+            nextEscalationDate: idx === 2 ? "2026-10-01" : "2027-04-01",
+            lockInMonths: 36,
+            lockInEndDate: "2027-03-31",
+            noticePeriodDays: 90,
+            status: "active",
+            renewalStatus: "not_due",
+            billingFrequency: "monthly",
+            billingModel: tmpl.model,
+            billingDueDay: 5,
+            gstRate: 18,
+            tdsRate: 10,
+            brokeragePaid: monthlyRent,
+            spacesCovered: [{ spaceId, unitNumber: `Unit ${tmpl.unit}`, areaSqft: area, floorNumber: tmpl.floor }],
+            concessions: [{ id: `CON-${tmpl.unit}`, type: "rent_free", value: 30, unit: "days", remarks: "Opening fitout concession" }],
+            depositTransactions: [{ id: `DEP-${tmpl.unit}`, type: "received", amount: monthlyRent * 6, transactionDate: "2024-03-20", refNumber: `UTR-DEP-${tmpl.unit}`, status: "cleared" }],
+            contractClauses: [
+              { id: `CLS-${tmpl.unit}-1`, clauseType: "lock_in", description: "36-month lock in period mandatory", termsSummary: "36 Months" },
+              { id: `CLS-${tmpl.unit}-2`, clauseType: "renewal_option", description: "First right of renewal at prevailing market rate +10%", termsSummary: "5-Year Renewal Option" }
+            ],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          parsed.leases.push(lease);
+        }
+
+        parsed.spaces.push(spaceEntity);
+      });
+
+      modified = true;
+    }
+  }
+
+  return modified;
+}
+
 // Read database
 export function getRentRollDb(): RentRollDatabase {
   ensureDataDir();
@@ -2316,6 +2537,11 @@ export function getRentRollDb(): RentRollDatabase {
     if (!parsed.meterReadings) parsed.meterReadings = [];
     if (!parsed.auditLogs) parsed.auditLogs = [];
 
+    if (!parsed.snapshots) parsed.snapshots = [];
+    if (!parsed.spaces) parsed.spaces = [];
+    if (!parsed.leases) parsed.leases = [];
+    if (!parsed.tenants) parsed.tenants = [];
+
     // Only populate Section 13 fixtures if NOT marked as clean portfolio AND explicitly empty on initial bootstrap
     if (!parsed.isCleanPortfolio && (!parsed.properties || parsed.properties.length === 0)) {
       const initial = getInitialSeedDatabase();
@@ -2338,6 +2564,11 @@ export function getRentRollDb(): RentRollDatabase {
       parsed.alerts = initial.alerts;
       parsed.flexCentres = initial.flexCentres;
       parsed.camPools = initial.camPools;
+      fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+    }
+
+    const spacesHydrated = ensureSpacesAndContractsForProperties(parsed);
+    if (spacesHydrated) {
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
     }
 
@@ -2601,3 +2832,137 @@ export function recordAuditLog(log: Omit<AuditLogEntity, 'id' | 'timestamp'>) {
   if (db.auditLogs.length > 500) db.auditLogs.pop();
   saveRentRollDb(db);
 }
+
+// Snapshot Freezing & Retrieval (§4.12, RR-AUD-03)
+export function getRentRollSnapshots(propertyId?: string): RentRollSnapshotEntity[] {
+  const db = getRentRollDb();
+  const snaps = db.snapshots || [];
+  if (propertyId && propertyId !== "ALL") {
+    return snaps.filter(s => !s.propertyId || s.propertyId === propertyId);
+  }
+  return snaps;
+}
+
+export function freezeMonthEndSnapshot(params: {
+  snapshotMonth: string; // e.g. "2026-09"
+  asOfDate: string; // e.g. "2026-09-30"
+  propertyId?: string;
+  frozenBy?: string;
+}): RentRollSnapshotEntity {
+  const db = getRentRollDb();
+  if (!db.snapshots) db.snapshots = [];
+
+  const targetProp = params.propertyId && params.propertyId !== "ALL"
+    ? db.properties.find(p => p.id === params.propertyId)
+    : undefined;
+
+  const relevantSpaces = targetProp
+    ? db.spaces.filter(s => s.propertyId === targetProp.id)
+    : db.spaces;
+
+  const relevantLeases = targetProp
+    ? db.leases.filter(l => l.propertyId === targetProp.id)
+    : db.leases;
+
+  let totalArea = 0;
+  let occupiedArea = 0;
+  let vacantArea = 0;
+  let totalBaseRent = 0;
+  let totalCam = 0;
+  let occupiedSpaces = 0;
+  let vacantSpaces = 0;
+
+  const lines: RentRollSnapshotLine[] = relevantSpaces.map(sp => {
+    totalArea += sp.chargeableArea;
+    const activeLease = relevantLeases.find(l => 
+      (l.spaceId === sp.id || (l.spacesCovered && l.spacesCovered.some(sc => sc.spaceId === sp.id))) &&
+      l.startDate <= params.asOfDate && l.endDate >= params.asOfDate &&
+      (l.status === "active" || l.status === "under_notice")
+    );
+
+    if (activeLease) {
+      occupiedArea += sp.chargeableArea;
+      totalBaseRent += activeLease.monthlyRent;
+      totalCam += activeLease.camMonthly;
+      occupiedSpaces++;
+
+      return {
+        spaceId: sp.id,
+        unitNumber: sp.unitNumber,
+        floorNumber: sp.floorNumber,
+        areaSqft: sp.chargeableArea,
+        status: "occupied" as const,
+        tenantName: activeLease.tenantName,
+        contractCode: activeLease.leaseCode,
+        contractType: activeLease.contractType || "lease_deed",
+        monthlyRent: activeLease.monthlyRent,
+        baseRentPsf: activeLease.baseRentPsf,
+        camRatePsf: activeLease.camRatePsf,
+        leaseStartDate: activeLease.startDate,
+        leaseEndDate: activeLease.endDate,
+        escalationPct: activeLease.escalationPct,
+        securityDeposit: activeLease.securityDepositAmount
+      };
+    } else {
+      vacantArea += sp.chargeableArea;
+      vacantSpaces++;
+
+      return {
+        spaceId: sp.id,
+        unitNumber: sp.unitNumber,
+        floorNumber: sp.floorNumber,
+        areaSqft: sp.chargeableArea,
+        status: "vacant" as const,
+        baseRentPsf: sp.standardMarketRentPsf || sp.standardRatePsf,
+        camRatePsf: sp.standardCamPsf
+      };
+    }
+  });
+
+  const occupancyPct = totalArea > 0 ? Math.round((occupiedArea / totalArea) * 1000) / 10 : 0;
+  const snapshot: RentRollSnapshotEntity = {
+    id: `SNAP-${params.snapshotMonth}-${targetProp ? targetProp.id.slice(-4) : "ALL"}`,
+    orgId: db.organization.id,
+    snapshotMonth: params.snapshotMonth,
+    asOfDate: params.asOfDate,
+    propertyId: targetProp?.id,
+    propertyName: targetProp?.name || "Consolidated Portfolio",
+    totalArea,
+    occupiedArea,
+    vacantArea,
+    occupancyPct,
+    totalMonthlyGross: totalBaseRent + totalCam,
+    totalBaseRent,
+    totalCam,
+    totalSpaces: relevantSpaces.length,
+    occupiedSpaces,
+    vacantSpaces,
+    waltYears: 3.8,
+    status: "frozen",
+    frozenAt: new Date().toISOString(),
+    frozenBy: params.frozenBy || "Finance Controller",
+    lines,
+    createdAt: new Date().toISOString()
+  };
+
+  // Upsert snapshot for this month & property
+  db.snapshots = db.snapshots.filter(s => s.id !== snapshot.id);
+  db.snapshots.unshift(snapshot);
+  saveRentRollDb(db);
+
+  recordAuditLog({
+    entityName: "RentRollSnapshot",
+    action: "FREEZE_MONTH_END_SNAPSHOT",
+    newValues: {
+      snapshotId: snapshot.id,
+      month: params.snapshotMonth,
+      totalArea,
+      occupancyPct,
+      grossMonthly: snapshot.totalMonthlyGross
+    },
+    changedBy: params.frozenBy || "Finance Controller"
+  });
+
+  return snapshot;
+}
+
