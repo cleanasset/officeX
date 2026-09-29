@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const db = getRentRollDb();
     let properties = db.properties.filter(p => {
       const lower = (p.name || "").toLowerCase().trim();
-      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
+      return lower !== "fortune sky" && lower !== "signature tower b";
     });
 
     if (ownerEmail) {

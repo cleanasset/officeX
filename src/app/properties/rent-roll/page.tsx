@@ -63,25 +63,21 @@ import { AdjustmentNoteModal } from "@/components/rent-roll/AdjustmentNoteModal"
 
 const DEPRECATED_PROP_NAMES = new Set([
   "fortune sky",
-  "apex horizon tower",
-  "signature tower b",
-  "eka club",
-  "business hub",
-  "shivalik shilp"
+  "signature tower b"
 ]);
 
 const isDeprecatedMockProperty = (p: any) => {
   if (!p) return true;
   const name = (p.name || p.propertyName || "").trim().toLowerCase();
   if (DEPRECATED_PROP_NAMES.has(name)) return true;
-  if (name.includes("fortune sky") || name.includes("signature tower b") || name.includes("eka club")) return true;
+  if (name.includes("fortune sky") || name.includes("signature tower b")) return true;
   return false;
 };
 
 const isDeprecatedMockLease = (l: any) => {
   if (!l) return true;
   const propName = (l.propertyName || l.buildingName || "").toLowerCase();
-  if (propName.includes("fortune sky") || propName.includes("signature tower b") || propName.includes("eka club")) return true;
+  if (propName.includes("fortune sky") || propName.includes("signature tower b")) return true;
   return false;
 };
 

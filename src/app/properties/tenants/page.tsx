@@ -75,17 +75,7 @@ const SEED_PROP_IDS = new Set([
 
 const SEED_PROP_NAMES = new Set([
   "fortune sky",
-  "apex horizon tower",
-  "signature tower b",
-  "eka club",
-  "business hub",
-  "shivalik shilp",
-  "apex business tower",
-  "apex commercial tower",
-  "meridian tech park",
-  "nexus hub",
-  "maker maxity",
-  "godrej bkc horizon"
+  "signature tower b"
 ]);
 
 export default function TenantDirectoryPage() {

@@ -93,18 +93,9 @@ export default function TenantHomepage() {
     const o = localStorage.getItem("officex_tenant_owner");
     const u = localStorage.getItem("officex_tenant_unit");
 
-    // Clean out known mock demo seeds if they were stored from old runs without an explicit user invite
     const DEMO_SEEDS = [
-      "eka club",
-      "business hub",
-      "shivalik shilp",
-      "apex business tower",
-      "apex commercial tower",
-      "meridian tech park",
-      "nexus hub",
-      "maker maxity",
-      "godrej bkc horizon",
-      "commercial workplace tower"
+      "fortune sky",
+      "signature tower b"
     ];
 
     if (b && !DEMO_SEEDS.includes(b.trim().toLowerCase())) {

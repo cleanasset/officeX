@@ -3456,7 +3456,7 @@ export default function CommercialPropertyMaster() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => router.push("/operate/rent-roll")}
+                  onClick={() => router.push("/properties/rent-roll")}
                   className="w-full px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <FileSpreadsheet size={15} /> Open Live Rent Roll

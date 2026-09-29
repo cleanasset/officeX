@@ -65,33 +65,80 @@ export default function PropertyDashboardClient({
     const emailQuery = email ? `?ownerEmail=${encodeURIComponent(email)}` : "";
 
     try {
-      const [propsRes, leasesRes, dashRes] = await Promise.all([
+      // Query both rent-roll properties and general properties DB in parallel
+      const [propsRes, genPropsRes, leasesRes, dashRes] = await Promise.all([
         fetch(`/api/rent-roll/properties${emailQuery}`),
+        fetch(`/api/properties`),
         fetch(`/api/rent-roll/leases${emailQuery}`),
         fetch(`/api/rent-roll/dashboard${emailQuery}`)
       ]);
 
+      let loadedProps: any[] = [];
+      const seenIds = new Set<string>();
+      const seenNames = new Set<string>();
+
+      // 1. Ingest rent-roll properties
       if (propsRes.ok) {
         const propsData = await propsRes.json();
         if (Array.isArray(propsData)) {
-          const SEED_PROP_NAMES = new Set([
-            "fortune sky", "apex horizon tower", "signature tower b", "eka club", 
-            "business hub", "shivalik shilp", "apex business tower", "apex commercial tower", 
-            "meridian tech park", "nexus hub", "maker maxity", "godrej bkc horizon"
-          ]);
-          const cleanProps = propsData.filter((p: any) => {
-            const name = (p?.name || "").toLowerCase().trim();
-            return !SEED_PROP_NAMES.has(name) && !name.includes("commercial portfolio");
-          });
-
-          // Synchronize localStorage with backend truth, clearing out any ghost records
-          if (typeof window !== "undefined") {
-            try {
-              localStorage.setItem("officex_user_properties", JSON.stringify(cleanProps));
-            } catch {}
+          for (const p of propsData) {
+            const cleanName = (p?.name || "").toLowerCase().trim();
+            if (cleanName === "fortune sky" || cleanName === "signature tower b") continue;
+            loadedProps.push(p);
+            if (p.id) seenIds.add(p.id);
+            if (cleanName) seenNames.add(cleanName);
           }
-          setProperties(cleanProps);
         }
+      }
+
+      // 2. Ingest general DB properties (e.g. registered in Postgres / Supabase)
+      if (genPropsRes.ok) {
+        const genData = await genPropsRes.json();
+        if (Array.isArray(genData)) {
+          for (const p of genData) {
+            const cleanName = (p?.name || "").toLowerCase().trim();
+            if (cleanName === "fortune sky" || cleanName === "signature tower b") continue;
+            if (!seenIds.has(p.id) && !seenNames.has(cleanName)) {
+              loadedProps.push({
+                ...p,
+                totalArea: p.total_area || p.totalArea,
+                microMarket: p.micro_market || p.microMarket,
+                ownerName: p.owner_name || p.ownerName,
+                ownerCompany: p.owner_company || p.ownerCompany,
+                ownerUserId: p.owner_user_id || p.ownerUserId,
+              });
+              seenIds.add(p.id);
+              seenNames.add(cleanName);
+            }
+          }
+        }
+      }
+
+      // 3. Fallback check from localStorage cache if DB fetch is cold
+      if (typeof window !== "undefined") {
+        try {
+          const cached = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          if (Array.isArray(cached)) {
+            for (const c of cached) {
+              const cleanName = (c?.name || "").toLowerCase().trim();
+              if (cleanName === "fortune sky" || cleanName === "signature tower b") continue;
+              if (!seenIds.has(c.id) && !seenNames.has(cleanName)) {
+                loadedProps.push(c);
+                seenIds.add(c.id);
+                seenNames.add(cleanName);
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (loadedProps.length > 0) {
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("officex_user_properties", JSON.stringify(loadedProps));
+          } catch {}
+        }
+        setProperties(loadedProps);
       }
 
       if (leasesRes.ok) {

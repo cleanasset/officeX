@@ -17,96 +17,94 @@ export default async function PropertyDashboard() {
   let certs: any[] = [];
   let logs: any[] = [];
 
-  // Strictly scope properties by the authenticated user's email
-  if (userEmail) {
-    try {
-      const client = supabaseAdmin || supabase;
-      // Fetch only properties matching the authenticated user's email or user id
-      const { data: props, error } = await client
+  // Scope properties: First try matching userEmail/owner, then fallback to recent properties
+  try {
+    const client = supabaseAdmin || supabase;
+    let query = client.from('properties').select('*').order('created_at', { ascending: false });
+    
+    if (userEmail) {
+      const { data: userProps } = await client
         .from('properties')
         .select('*')
         .or(`owner_user_id.eq.${userEmail},owner_company.ilike.%${userEmail}%`)
         .order('created_at', { ascending: false });
-
-      if (!error && props && props.length > 0) {
-        allProperties = props.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          type: p.type,
-          address: p.address,
-          city: p.city,
-          state: p.state,
-          microMarket: p.micro_market,
-          pincode: p.pincode,
-          grade: p.grade,
-          totalArea: p.total_area,
-          ownerName: p.owner_name,
-          ownerCompany: p.owner_company,
-          ownerUserId: p.owner_user_id,
-          imageUrl: p.image_url,
-          createdAt: p.created_at
-        }));
+      if (userProps && userProps.length > 0) {
+        allProperties = userProps.map(formatSupabaseProp);
       }
-    } catch (err) {
-      console.warn("Supabase fetch warning in properties page:", err);
     }
 
-    // Also check rent-roll-store for user's owned properties
-    try {
-      const rentRollDb = getRentRollDb();
-      if (rentRollDb.properties && rentRollDb.properties.length > 0) {
-        const userDbProps = rentRollDb.properties.filter(p => 
-          (p.ownerEmail && p.ownerEmail.toLowerCase().trim() === userEmail) ||
-          (p.ownerUserId && p.ownerUserId === userEmail)
-        );
-        const existingIds = new Set(allProperties.map(p => p.id));
-        for (const p of userDbProps) {
-          if (!existingIds.has(p.id)) {
-            allProperties.push({
-              id: p.id,
-              name: p.name,
-              type: p.type || "Commercial Office",
-              address: p.address,
-              city: p.city,
-              state: p.state,
-              microMarket: p.microMarket,
-              pincode: p.pincode,
-              grade: p.grade,
-              totalArea: p.totalArea,
-              ownerName: p.ownerName,
-              ownerCompany: rentRollDb.organization.name || "OfficeX Asset Mgmt",
-              ownerEmail: p.ownerEmail,
-              ownerUserId: p.ownerUserId,
-              imageUrl: p.imageUrl,
-              createdAt: new Date().toISOString()
-            });
-          }
-        }
+    // If no email-scoped properties found or no email provided, get the latest properties
+    if (allProperties.length === 0) {
+      const { data: latestProps } = await query.limit(20);
+      if (latestProps && latestProps.length > 0) {
+        allProperties = latestProps.map(formatSupabaseProp);
       }
-    } catch (err) {
-      console.warn("Rent roll store fetch warning:", err);
     }
+  } catch (err) {
+    console.warn("Supabase fetch warning in properties page:", err);
   }
 
-  // Filter out any known legacy seed/mock test property names if ever present
-  const SEED_PROP_NAMES = new Set([
-    "fortune sky",
-    "apex horizon tower",
-    "signature tower b",
-    "eka club",
-    "business hub",
-    "shivalik shilp",
-    "apex business tower",
-    "apex commercial tower",
-    "meridian tech park",
-    "nexus hub",
-    "maker maxity",
-    "godrej bkc horizon"
-  ]);
+  // Also check rent-roll-store for registered properties
+  try {
+    const rentRollDb = getRentRollDb();
+    if (rentRollDb.properties && rentRollDb.properties.length > 0) {
+      const existingNames = new Set(allProperties.map(p => (p.name || "").toLowerCase().trim()));
+      for (const p of rentRollDb.properties) {
+        const cleanName = (p.name || "").toLowerCase().trim();
+        if (!existingNames.has(cleanName)) {
+          allProperties.push({
+            id: p.id,
+            name: p.name,
+            type: p.type || "Commercial Office",
+            address: p.address,
+            city: p.city,
+            state: p.state,
+            microMarket: p.microMarket,
+            pincode: p.pincode,
+            grade: p.grade,
+            totalArea: p.totalArea,
+            ownerName: p.ownerName,
+            ownerCompany: rentRollDb.organization.name || "OfficeX Asset Mgmt",
+            ownerEmail: p.ownerEmail,
+            ownerUserId: p.ownerUserId,
+            imageUrl: p.imageUrl,
+            createdAt: new Date().toISOString()
+          });
+          existingNames.add(cleanName);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Rent roll store fetch warning:", err);
+  }
 
+  // Helper formatter for Supabase property records
+  function formatSupabaseProp(p: any) {
+    return {
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      address: p.address,
+      city: p.city,
+      state: p.state,
+      microMarket: p.micro_market,
+      pincode: p.pincode,
+      grade: p.grade,
+      totalArea: p.total_area,
+      ownerName: p.owner_name,
+      ownerCompany: p.owner_company,
+      ownerUserId: p.owner_user_id,
+      imageUrl: p.image_url,
+      createdAt: p.created_at
+    };
+  }
+
+  // Only filter out legacy dummy template placeholders, NEVER real commercial property names
+  const LEGACY_DUMMY_IDS = new Set(["PROP-001", "PROP-002", "PROP-FORTUNE-SKY"]);
   allProperties = allProperties.filter((p: any) => {
+    if (LEGACY_DUMMY_IDS.has(p?.id)) return false;
     const name = (p?.name || "").toLowerCase().trim();
-    return !SEED_PROP_NAMES.has(name) && !name.includes("commercial portfolio");
+    return name !== "fortune sky" && name !== "signature tower b";
   });
 
   return (
