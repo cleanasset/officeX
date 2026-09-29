@@ -23,6 +23,64 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const db = getRentRollDb();
+
+    // Action: Issue and Freeze Statement (RR-OPR-06, UAT-49, Table 76: POST /owner-statements/{id}/issue)
+    if (body.action === "issue") {
+      const statementId = body.statementId || body.id;
+      const statement = (db.ownerStatements || []).find(s => s.id === statementId || s.statementNumber === statementId);
+      if (!statement) {
+        return NextResponse.json({ error: "Owner statement not found" }, { status: 404 });
+      }
+
+      statement.isFrozen = true;
+      statement.frozenAt = new Date().toISOString();
+      statement.remittanceStatus = "pending";
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "OwnerStatement",
+        action: "ISSUE_AND_FREEZE_STATEMENT",
+        newValues: { statementNumber: statement.statementNumber, netRemittance: statement.netRemittanceAmount },
+        changedBy: body.issuedBy || "Portfolio Principal / Auditor"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Statement ${statement.statementNumber} issued and permanently frozen (RR-OPR-06, UAT-49).`,
+        statement
+      });
+    }
+
+    // Action: Record Remittance (Table 76: POST /remittances)
+    if (body.action === "remit") {
+      const statementId = body.statementId || body.id;
+      const statement = (db.ownerStatements || []).find(s => s.id === statementId || s.statementNumber === statementId);
+      if (!statement) {
+        return NextResponse.json({ error: "Owner statement not found" }, { status: 404 });
+      }
+
+      statement.remittanceStatus = "remitted";
+      statement.remittanceDate = body.remittanceDate || new Date().toISOString().split("T")[0];
+      statement.remittanceUtr = body.remittanceUtr || `UTR-REM-${Date.now().toString().slice(-6)}`;
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "OwnerStatement",
+        action: "RECORD_OWNER_REMITTANCE",
+        newValues: { statementNumber: statement.statementNumber, utr: statement.remittanceUtr, amount: statement.netRemittanceAmount },
+        changedBy: body.remittedBy || "Corporate Treasury Officer"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Owner remittance of ₹${statement.netRemittanceAmount.toLocaleString('en-IN')} recorded (UTR: ${statement.remittanceUtr}).`,
+        statement
+      });
+    }
+
     const {
       clientAccountId,
       periodMonth, // "2026-09"
@@ -33,7 +91,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "clientAccountId and periodMonth are required." }, { status: 400 });
     }
 
-    const db = getRentRollDb();
+    // Check if statement already frozen (UAT-49)
+    const existing = (db.ownerStatements || []).find(s => s.clientAccountId === clientAccountId && s.periodMonth === periodMonth);
+    if (existing && existing.isFrozen) {
+      return NextResponse.json({
+        error: `Statement for ${periodMonth} is already issued and frozen. It is immutable (UAT-49).`,
+        code: "STATEMENT_FROZEN",
+        statement: existing
+      }, { status: 409 });
+    }
+
     const client = db.clientAccounts.find(c => c.id === clientAccountId);
     const mandate = db.managementMandates.find(m => m.clientAccountId === clientAccountId && m.status === "active");
 
@@ -81,9 +148,13 @@ export async function POST(req: Request) {
       reimbursableExpenses: calc.reimbursableExpenses,
       netRemittanceAmount: calc.netRemittanceAmount,
       remittanceStatus: "pending",
+      isFrozen: false,
       issuedAt: new Date().toISOString()
     };
 
+    if (!db.ownerStatements) db.ownerStatements = [];
+    // Remove un-frozen draft if regenerating
+    db.ownerStatements = db.ownerStatements.filter(s => !(s.clientAccountId === clientAccountId && s.periodMonth === periodMonth));
     db.ownerStatements.unshift(statement);
     saveRentRollDb(db);
 
@@ -100,3 +171,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

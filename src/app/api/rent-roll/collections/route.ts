@@ -63,6 +63,101 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const db = getRentRollDb();
+
+    // Action: Refund Payment (Table 76: POST /refunds)
+    if (body.action === "refund") {
+      const { paymentId, receiptNumber: targetReceipt, refundAmount, reason = "Excess payment refund" } = body;
+      const payment = db.collections.find(c => c.id === paymentId || c.receiptNumber === targetReceipt);
+      if (!payment) {
+        return NextResponse.json({ error: "Payment record not found" }, { status: 404 });
+      }
+
+      const refundAmt = Number(refundAmount || payment.amountReceived);
+      payment.notes = `${payment.notes || ""} [REFUNDED ₹${refundAmt} on ${new Date().toISOString().split("T")[0]}: ${reason}]`;
+
+      // If payment was allocated to an invoice, restore invoice balance
+      if (payment.invoiceId || payment.invoiceNumber) {
+        const inv = db.invoices.find(i => i.id === payment.invoiceId || i.invoiceNumber === payment.invoiceNumber);
+        if (inv) {
+          inv.amountPaid = Math.max(0, (inv.amountPaid || 0) - refundAmt);
+          inv.balanceDue = round2(inv.netPayable - inv.amountPaid);
+          inv.status = inv.balanceDue > 0 ? (inv.amountPaid > 0 ? "partially_paid" : "issued") : "paid";
+        }
+      }
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Collection",
+        action: "PROCESS_REFUND",
+        newValues: { receiptNumber: payment.receiptNumber, refundAmt, reason },
+        changedBy: body.refundedBy || "Finance Controller"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Refund of ₹${refundAmt.toLocaleString('en-IN')} processed for ${payment.receiptNumber} (Table 76).`,
+        payment
+      });
+    }
+
+    // Action: Manual Allocation with Audit Trail (RR-PAY-04, UAT-17)
+    if (body.action === "manual_allocation") {
+      const { paymentId, allocations, allocatedBy } = body;
+      if (!Array.isArray(allocations) || allocations.length === 0) {
+        return NextResponse.json({ error: "allocations array is required for manual allocation" }, { status: 400 });
+      }
+
+      const totalManualAllocated = allocations.reduce((sum: number, a: any) => sum + Number(a.allocatedAmount || 0), 0);
+      const allocatedRecords: any[] = [];
+      const newPaymentId = paymentId || `REC-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+      for (const item of allocations) {
+        const inv = db.invoices.find(i => i.id === item.invoiceId || i.invoiceNumber === item.invoiceId);
+        if (inv) {
+          const allocAmt = Number(item.allocatedAmount);
+          inv.amountPaid = round2((inv.amountPaid || 0) + allocAmt);
+          inv.balanceDue = round2(Math.max(0, inv.netPayable - inv.amountPaid));
+          inv.status = inv.balanceDue <= 0.01 ? "paid" : "partially_paid";
+
+          const allocRec: PaymentAllocationEntity = {
+            id: `ALLOC-${Date.now()}-${inv.id.slice(-4)}`,
+            paymentId: newPaymentId,
+            invoiceId: inv.id,
+            allocatedGst: round2(allocAmt * 0.18),
+            allocatedBaseRent: round2(allocAmt * 0.82),
+            allocatedCam: 0,
+            allocatedOther: 0,
+            totalAllocated: allocAmt,
+            allocatedAt: new Date().toISOString()
+          };
+          if (!db.paymentAllocations) db.paymentAllocations = [];
+          db.paymentAllocations.unshift(allocRec);
+          allocatedRecords.push({ invoiceNumber: inv.invoiceNumber, allocated: allocAmt, balanceDue: inv.balanceDue });
+        }
+      }
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "PaymentAllocation",
+        action: "MANUAL_ALLOCATION",
+        newValues: {
+          totalAllocated: totalManualAllocated,
+          invoicesCount: allocations.length,
+          allocatedBy: allocatedBy || "Authorized Finance Specialist"
+        },
+        changedBy: allocatedBy || "Authorized Finance Specialist"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Manual allocation of ₹${totalManualAllocated.toLocaleString('en-IN')} completed with audit trail (UAT-17).`,
+        allocatedRecords
+      });
+    }
+
     const {
       invoiceId,
       leaseId,
@@ -80,7 +175,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required payment settlement fields" }, { status: 400 });
     }
 
-    const db = getRentRollDb();
+    // Duplicate payment reference check (RR-PAY-03, UAT-34: No duplicate allocation)
+    const existingPayment = db.collections.find(c => c.referenceNumber === referenceNumber);
+    if (existingPayment) {
+      return NextResponse.json({
+        success: false,
+        duplicate: true,
+        error: `Duplicate payment detected. Reference ${referenceNumber} has already been allocated to receipt ${existingPayment.receiptNumber} (UAT-34).`,
+        existingReceipt: existingPayment
+      }, { status: 409 });
+    }
+
     const amt = Number(amountReceived);
     const tds = Number(tdsDeducted || 0);
     const charges = Number(bankCharges || 0);

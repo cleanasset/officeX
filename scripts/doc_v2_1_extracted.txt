@@ -1,0 +1,1623 @@
+
+--- TABLE 1 ---
+OFFICEX.PRO  ·  FINAL IMPLEMENTATION DOCUMENT FOR SCALEZIXOFFICEX Rent RollLease, Revenue & Occupancy Management — a standalone SaaS product on the OFFICEX Platform CoreFor property owners · property management companies · FM companies · managed service providers · managed office & co-working operators
+--- END TABLE 1 ---
+
+
+--- TABLE 2 ---
+CUSTOMER SEGMENTS5 | REQUIREMENTS139 | UAT SCENARIOS66 | DELIVERY PHASES8
+--- END TABLE 2 ---
+
+
+--- TABLE 3 ---
+Document control | Value
+Reference | OFFICEX-SCL-RR-IMP-002  ·  Version 2.1 FINAL — Implementation Baseline
+Date | 24 September 2026
+Supersedes | (a) OFFICEX Rent Roll & Lease Revenue Management — Implementation Specification V1.0 (24 Sep 2026); (b) OFFICEX Rent Roll — Rent & Revenue Management Core: Implementation Instruction Document for Scalezix V1.0; (c) OFFICEX-SCL-RR-INS-001 Rent Roll Module Instruction Document V1.0; (d) interim V2.0 of this document. All are withdrawn; this document is the single reference.
+Product | OFFICEX Rent Roll — Lease, Revenue & Occupancy Management (product code RR)
+Commercial model | Sold and subscribed as a standalone SaaS product. Subscription to the OFFICEX CAFM / FM Operations suite or any other OFFICEX module is NOT required.
+Architecture principle | One OFFICEX Platform Core (single database, shared masters) — standalone product, not standalone application. Capabilities are switched on by subscription entitlements.
+Audience | Scalezix Product, UX, Engineering, Data, QA, Project Management and Implementation teams
+Governing documents | Work Order WO-OFFICEX-SCL-001 · Platform Architecture TDD · OFFICEX Business Model · Complete Flow & Functionality Analysis (Aug 2026)
+Status | Final for implementation, subject to Scalezix technical estimation, written confirmation of open items (§0.4) and approved change control
+Confidentiality | Confidential — OFFICEX & Scalezix only
+--- END TABLE 3 ---
+
+
+--- TABLE 4 ---
+Document objectiveDefine the canonical data model, functional scope, workflows, technical direction, migration approach, controls, UAT expectations and phased rollout for OFFICEX Rent Roll as a standalone SaaS product. Scalezix should convert this document directly into epics, stories, API contracts, database migrations, test plans and rollout checklists, using the requirement and UAT IDs as keys.
+--- END TABLE 4 ---
+
+P: Document Map
+
+--- TABLE 5 ---
+§ | Section | Primary use by Scalezix
+0 | How to Use, What Changed, Current State, Open Items & Management Decisions | Start here; confirm open items and decisions in writing
+1 | Executive Summary | Alignment on purpose and the Lease-to-Cash chain
+2 | Standalone SaaS Product: Segments, Packaging & Independence | Entitlements, editions, dependency rules, white-label
+3 | Concept, Use Cases, Personas & Billing Models | Product framing and UX decisions per segment
+4 | Canonical Data Structure & Business Rules | Drizzle migrations, formulas, API contracts
+5 | Functional Requirements & Screen Inventory | Sprint backlog (IDs, acceptance, priority, phase)
+6 | Technical & Architecture Guidelines | Multi-tenancy, entitlements, pipeline, APIs, performance, security
+7 | Phased Implementation Plan | Sprint plan, exit criteria, dependencies
+8 | Onboarding & Data Migration Playbook | Segment-specific onboarding, SOP, training
+9 | UAT Scenarios & Definition of Done | Acceptance evidence required before sign-off
+10 | Success Metrics & KPIs | Posthog / Metabase instrumentation
+11 | Risks & Mitigations | Weekly risk review
+12 | Scalezix Development Rules | Non-negotiable engineering rules
+13 | Appendix — Samples, Worked Examples, ERD, Glossary | Test fixtures and known-answer tests
+14 | Priority Action Plan & Verdict | What to do first; go-live conditions
+--- END TABLE 5 ---
+
+
+--- TABLE 6 ---
+SECTION0 | How to Use, What Changed, Current State & Open ItemsRead first — conventions, merge decisions and items requiring written confirmation
+--- END TABLE 6 ---
+
+P: 0.1 Conventions
+P: Requirement IDs follow RR-<AREA>-<NN> (e.g. RR-PAY-04) and UAT IDs follow UAT-<NN>. Use them as ticket keys and test-case keys so every line of code traces back to this document.
+P: Priority is MoSCoW: Must (blocks the phase exit), Should (required before general availability), Could (schedule if capacity allows).
+P: Phase refers to §7: PD Discovery & Design · P0 Foundation & Product Shell · P1 Lease & Rent Roll · P2 Billing · P3 Payments & Collections · P4 Managed Office, Flex & Multi-Client Operator · P5 Analytics, MIS & Ecosystem Integrations · P6 Intelligence (Year 2+).
+P: Terminology: "Subscriber" = the organisation that buys OFFICEX Rent Roll. "Client account" = a property owner whose portfolio a subscriber manages. "Occupant" = tenant, licensee or co-working member. "Contract" = the generic record for a lease, leave & licence, managed-office agreement, co-working membership, service-charge agreement or head lease.
+P: Amounts in INR (₹) and area in sq ft unless stated. Field names are snake_case and are the exact names for Drizzle schema definitions.
+P: 0.2 What Changed in This Final Version
+P: All three earlier documents were reviewed line by line. Everything in them is retained unless listed below as resolved differently. The main addition is the requirement that OFFICEX Rent Roll is sold as a separate SaaS product to five customer segments without requiring the CAFM suite.
+
+--- TABLE 7 ---
+Topic | Earlier position(s) | Final position in V2.0
+Product scope & packaging | Both documents treated Rent Roll as a module inside the OFFICEX SaaS suite | Standalone subscribable product with editions, add-ons and entitlements; CAFM, Leasing CRM and Marketplace are optional (§2)
+"Do not build as a standalone application" rule | Spec V1.0 rule 1 | Retained and clarified: standalone product, single platform. No separate database or code base; no hard dependency on any other product having data (§2.4, §12)
+Customer types | Owners / landlords, plus managed office and co-working billing | Five segments incl. property management companies, FM companies and managed service providers managing multiple client owners (§2.1, §4.3)
+Multi-client operation | Not covered | Client accounts, billing entities, management mandates, owner statements, management-fee calculation, collections on behalf of owners (§4.3, §5.10)
+Flex operator cost side | Not covered | Head leases (payable contracts) and centre P&L so operators can manage what they pay as well as what they bill (§4.8, §5.9)
+FM companies billing charges only | CAM covered as a charge type | Charges-only contracts, CAM pool budgeting and year-end reconciliation; manual/CSV meter readings when CAFM is not subscribed (§5.11)
+Data model naming | INS-001 used lease / unit; Spec V1.0 used Contract / Space / Building | Final: contract, space, building (Spec V1.0 naming) with the INS-001 field-level detail; UI labels vary by contract type
+Invoice storage | INS-001: invoices as rows in the unified tasks table (open item); Spec V1.0: Invoice as own entity | Dedicated invoice / invoice_line / payment / payment_allocation tables; each invoice linked to a task for approval, dispute and follow-up workflow (OI-4)
+Phasing | INS-001: P0–P4; Spec V1.0: Phases 1–6; Instruction Doc V1.0: Discovery, 0–5 plus Pilot & Rollout | Unified PD + P0–P6 with pilot and rollout gates (§7). Deterministic forecast, P&L and MIS in P5; AI document extraction in P6 (Year 2+), consistent with OFFICEX AI positioning
+MVP boundary and seat billing | Instruction Doc V1.0 put area and seat billing, invoicing and ageing in the MVP; V2.0 had seat billing in P4 | Core seat billing moved into P2 so managed office / co-working operators can subscribe at standalone launch (P3 exit); operator and head-lease features stay in P4
+Pipeline deals | INS-001 / V2.0: status = pipeline on contract; Instruction Doc V1.0: separate Deal/Prospect entity | Separate deal entity with compatible terms; converts to contract without re-keying; shared with Leasing CRM when subscribed (§4.7A)
+Tax configuration | GST rate as field on charge | Configurable tax profiles referenced by charges; finance/CA validation before production billing
+Import controls | Validation and diff | Adds data profiling, unmapped-column preservation, error-file download, exception queue and import versioning/void
+Performance & availability | Different targets per document | Stricter target retained in each case; validation of 10k rows ≤ 30 s; availability ≥ 99.5% (§6.5)
+Onboarding SOP | Two different SOPs | Merged 10-step SOP with profiling, UAT, parallel run, legacy freeze and 2–4 week hypercare (§8.3)
+Management sign-off | Instruction Doc V1.0 listed 8 decisions for OFFICEX management | Listed in §0.5 with a proposed answer for each
+Alert lead times | Three different sets of defaults | Expiry 12/6/3/1 months; escalation 90/60/30 days; overdue 1/7/30/60/90+ days; document expiry 90/30/7 days; all configurable (§5.15)
+Roles | Two different role lists | Merged into 12 roles incl. Client Principal (owner viewing a managed portfolio), Facility Manager, Occupant and Platform Support (§5.14)
+UAT and Definition of Done | Spec V1.0: UAT-01 to UAT-40; Instruction Doc V1.0: separate Definition of Done | UAT-01 to UAT-40 retained verbatim; UAT-41 to UAT-66 added; both Definitions of Done merged (§9)
+--- END TABLE 7 ---
+
+P: 0.3 Current State on the Live Platform
+
+--- TABLE 8 ---
+Observation (Aug 2026 review) | Implication | Addressed in
+All 5 seeded properties show identical base rent ₹185/sqft | Placeholder data; no lease/rent schedule model underneath | §4, R-30, P0
+/properties/rent-roll reachable but display-only | Canonical schema and workflows needed | §4, §5
+Tenant "Pay Now" not wired to Razorpay; no rent ledger | Rent roll must generate invoices that payments settle | RR-BIL, RR-PAY, P2–P3
+Collections page shows broker contracts, not receivables | Collections driven by invoices and allocations | RR-COL, P3
+Sidebar navigation ignores active workspace | Standalone product needs navigation built from entitlements and role | RR-ENT-04, P0
+Leasing CRM has no LOI flow | Contracts must be creatable without CRM; CRM link is optional | RR-INT-03, P5
+--- END TABLE 8 ---
+
+P: 0.4 Open Items Requiring Written Confirmation
+
+--- TABLE 9 ---
+FLAGGED — Scalezix to reply to each item: Confirmed / Change Request / Alternative ProposedItems OI-1 to OI-7 block sprint planning for the phases shown. OI-8 and OI-9 are OFFICEX decisions recorded here for transparency.
+--- END TABLE 9 ---
+
+
+--- TABLE 10 ---
+# | Open item | OFFICEX position | Needed by
+OI-1 | Scope under WO-OFFICEX-SCL-001. Standalone packaging (entitlements, self-serve sign-up, white-label, multi-client operator, flex engine) was not in the original work order | Treat standalone packaging as a change request; Scalezix to estimate separately from P0–P3 core | Before Sprint 1
+OI-2 | Commission auto-calculation engine (pending): contract activation writes brokerage entry to commission_ledger | Critical infrastructure; DB trigger | Before P5
+OI-3 | SaaS subscription billing module (pending). Now essential: standalone Rent Roll subscriptions need editions, usage metering and invoicing | Must be ready before first paying standalone subscriber | Before P2 exit
+OI-4 | Invoices as dedicated financial tables (invoice, invoice_line, payment, payment_allocation, adjustment_note) linked to tasks for workflow — a refinement of the TDD's unified tasks table | Dedicated tables; tasks keep workflow only | Before P2
+OI-5 | Accounting integration approach: Tally Prime XML/CSV export first; Zoho Books API next | File-based export in P5 | Before P5
+OI-6 | Collections on behalf of third-party owners (PM/MSP segments): settle directly to the owner's account (e.g. Razorpay Route linked accounts or one gateway account per billing entity) rather than the operator holding client money | Direct-to-owner settlement preferred; OFFICEX to confirm with CA/legal | Before P4
+OI-7 | GST e-invoicing (IRN) for subscribers above the notified turnover threshold: GSP/IRP integration provider | Configurable per billing entity; provider to be proposed by Scalezix | Before P2 exit
+OI-8 | Edition pricing and pricing metric (OFFICEX commercial decision) | Structure in §2.3; price points set by OFFICEX | Before GA
+OI-9 | AI-assisted lease extraction | Year 2+ (P6); human verification before any extracted term affects billing | Acknowledge
+--- END TABLE 10 ---
+
+P: 0.5 Management Decisions Required Before Full Build
+P: These eight decisions must be approved by OFFICEX management during Discovery (PD). A proposed answer, consistent with the rest of this document, is given for each.
+
+--- TABLE 11 ---
+# | Decision | Proposed answer for approval
+MD-1 | Canonical definitions of area and occupancy | Billing area = chargeable (super built-up); carpet disclosed. Occupancy by area (F-15), by seats (F-16) and economic (F-17); holding-over counts as occupied
+MD-2 | Contract and billing models supported at launch | Area, seat (contracted/occupied/minimum), hybrid, fixed, charges-only, usage and bundled at P3 exit; revenue share and turnover rent in P5
+MD-3 | Billing and accounting ownership boundary | Rent Roll is the billing and AR sub-ledger (invoices, receipts, allocations, ageing); the customer's accounting system remains the general ledger, fed by export/sync
+MD-4 | Tax configuration responsibility | OFFICEX supplies standard tax profiles; each subscriber's finance team/CA validates and owns its configuration before production billing
+MD-5 | Payment gateway and ERP priorities | Razorpay first (incl. linked-account settlement, OI-6); Tally Prime export, then Zoho Books, then others
+MD-6 | Portfolio / property permission model | Organisation → client account → property scoping with roles per Table 5.14a; enforced by RLS
+MD-7 | Pilot customer / property selection | 3 OFFICEX Managed Services buildings (P1–P3); one flex operator (P2–P3); one property management company (P4)
+MD-8 | Official KPI and reporting definitions | Formulas F-01 to F-25 and KPIs in §10 become the official OFFICEX metric definitions
+--- END TABLE 11 ---
+
+
+--- TABLE 12 ---
+SECTION1 | Executive SummaryPurpose, problems solved and value
+--- END TABLE 12 ---
+
+P: 1.1 Purpose
+P: OFFICEX Rent Roll is a Lease-to-Cash SaaS product: the single source of truth for who occupies which space, on what contractual terms, what they have been billed, what they have paid and what is still owed — across conventional leases, managed offices and co-working. It is not a digital copy of an Excel rent roll; it is a transactional data model with a rent roll view on top.
+
+--- TABLE 13 ---
+The Lease-to-Cash chainProperty → Building → Space → Occupant → Contract → Rent Roll → Billing → Invoice → Payment → Allocation → Ageing → Forecast → MIS → (Year 2+) Intelligence
+--- END TABLE 13 ---
+
+P: It is sold on its own. A landlord, a property management company, an FM company, a managed service provider or a flex-workspace operator can subscribe to OFFICEX Rent Roll without buying the OFFICEX CAFM suite. When they later add CAFM, Leasing CRM or Marketplace, the same records are reused — no migration, no duplicate masters.
+P: 1.2 Business Problems Solved
+
+--- TABLE 14 ---
+Problem in Indian CRE and flex workspace today | How OFFICEX Rent Roll solves it
+Rent rolls in inconsistent Excel files, one per building or per client owner | Canonical schema, guided import, reusable mapping templates
+Escalations (e.g. 15% every 3 years) missed, leaking revenue | Rent schedule engine with 90/60/30-day alerts and approval to apply
+Lock-in, notice and renewal deadlines noticed too late | Dated clause model driving 365/180/90-day expiry pipeline and alerts
+Separate invoices for rent, CAM, electricity, water, parking — but no single view of what a tenant owes | Multi-invoice billing with Pay All / Pay Selected / Pay Individual / partial payments and an allocation engine
+Managed office and co-working billed by seats, with CAM/electricity bundled — spreadsheet-driven and error-prone | Seat-based billing models (contracted / occupied / minimum commitment / hybrid) with inclusion rules preventing double billing
+PM and FM companies manage many owners' portfolios with no clean owner-level statements | Client accounts, billing entities, management mandates, owner statements and fee calculation
+Flex operators cannot see centre profitability (member revenue vs. head-lease rent) | Head leases as payable contracts and centre P&L / break-even occupancy
+Investor, lender and board reporting takes days | Month-end snapshots and automated MIS
+--- END TABLE 14 ---
+
+P: 1.3 Value Proposition
+P: For subscribers: stop revenue leakage, collect faster, see expiry and vacancy risk a year ahead, close the month with reconciled figures, and give owners and occupants a professional branded experience.
+P: For OFFICEX: a low-friction entry product that any CRE or workspace business can buy on its own — widening the addressable market beyond CAFM buyers, creating the natural path to CAFM, Leasing CRM and Marketplace attachment, and building the normalised lease and payment dataset that the Year 2+ intelligence layer depends on.
+P: Consistency with OFFICEX sequencing: Managed Services clients remain the first users (their data is loaded by the OFFICEX team); standalone subscriptions follow once the product is proven on those portfolios. AI capabilities are presented as Year 2+ roadmap only.
+
+--- TABLE 15 ---
+SECTION2 | Standalone SaaS ProductCustomer segments, packaging, independence from CAFM, and upgrade path
+--- END TABLE 15 ---
+
+P: 2.1 Customer Segments
+
+--- TABLE 16 ---
+Segment | Who they are | What they need from Rent Roll | Segment-specific capabilities
+A. Property owner / landlord | Individual owners, family offices, developers, REIT/fund SPVs holding office, IT park or retail assets | Portfolio rent roll, billing, collections, expiry/escalation control, MIS | Core product; multiple billing entities (one GSTIN per SPV/state)
+B. Property management company | Firms managing leasing, billing and collections for many owners | Separate books per owner, owner statements, fee calculation, owner self-service view | Multi-client operator: client accounts, mandates, owner statements, collection on behalf of owner, white-label
+C. Facility management company | IFM / FM firms billing CAM, utilities and service charges to occupants on behalf of owners or associations | Charges-only billing, CAM budget vs. actual, year-end CAM reconciliation, meter-based utility billing | Charges-only contracts, CAM pools, meter readings via manual/CSV/API (no CAFM needed)
+D. Managed service provider | Firms (including OFFICEX Managed Services) operating portfolios end-to-end for corporate or institutional owners | All of B and C, plus portfolio MIS for the client's management | Multi-client operator, delegated access, client-branded MIS
+E. Managed office / co-working operator | Flex operators running centres on leased or revenue-share buildings | Seat/desk/cabin billing, pricing plans, contracted vs. occupied seats, member billing, centre P&L | Flex & Seats engine, head leases (payable), centre P&L and break-even, member portal
+--- END TABLE 16 ---
+
+P: A single subscriber can combine roles — for example an operator that owns one building (A) and runs flex centres in leased buildings (E). The data model supports this without separate accounts.
+P: 2.2 Standalone Principle
+
+--- TABLE 17 ---
+Instruction to ScalezixStandalone product, single platform. OFFICEX Rent Roll must be fully usable by a subscriber that has no other OFFICEX product. It is built on the OFFICEX Platform Core (same database, same code base, same masters) and is switched on by entitlements. It must not depend on data, screens or workflows that belong to CAFM, Leasing CRM or Marketplace.Where Rent Roll benefits from another product (e.g. meter readings from CAFM), it must work equally well with a manual, CSV or API alternative, and pick up the other product's data automatically when that product is added.
+--- END TABLE 17 ---
+
+P: 2.3 Editions & Add-ons (structure — price points per OI-8)
+
+--- TABLE 18 ---
+Package | Includes | Typical segment
+Essentials | Platform Core masters (organisation, users, properties, buildings, spaces, occupants); contract master; rent roll register and viewer; documents with versioning; escalation and expiry engine and alerts; import wizard; occupancy, WALE, rollover; exports; audit | Small landlords starting from Excel
+Professional | Essentials + billing centre, multi-invoice, GST invoices, credit/debit notes, payments (Pay All / Selected / Individual / partial), allocation, reconciliation, receipts, ageing, occupant billing portal, 12-month forecast, property P&L, automated monthly MIS, exception centre | Landlords, FM companies
+Enterprise | Professional + advanced approvals, custom roles, API access, SSO, custom domain, sandbox, priority support, data-retention controls | Large portfolios, institutional owners
+Add-on: Multi-Client Operator | Client accounts, management mandates, owner statements, fee calculation, collections on behalf of owners, client-principal portal, white-label per client | PM companies, MSPs, FM companies
+Add-on: Flex & Seats | Seat/desk/cabin inventory, pricing plan master, seat billing models, inclusions, head leases (payable), centre P&L, member portal branding | Managed office / co-working operators
+Add-on: Integrations | Tally/Zoho/QuickBooks exports and sync, e-invoicing, SFTP/ERP feeds, webhooks | Any segment
+--- END TABLE 18 ---
+
+P: Pricing metric (recommended, for OFFICEX decision): area-based subscribers billed per sq ft of area under management per month; flex operators billed per seat of capacity per month; a minimum monthly fee per subscriber; add-ons as fixed monthly fees. Usage is metered nightly by the platform (RR-ENT-06) and billed by the SaaS subscription billing module (OI-3).
+P: 2.4 Dependency Matrix — Rent Roll With and Without Other OFFICEX Products
+
+--- TABLE 19 ---
+Capability | Rent Roll standalone | If CAFM / FM Ops also subscribed | If Leasing CRM / Marketplace subscribed
+Properties, buildings, spaces, occupants, users | Included (Platform Core masters come with Rent Roll) | Same records reused by FM | Same records reused
+Electricity / DG / water meter readings | Manual entry, CSV upload or API | Auto-sourced from FM energy readings | —
+CAM actual costs for reconciliation | Manual entry or import from accounting | Auto-sourced from FM work orders and contracts | Marketplace work-order costs included
+Occupant experience | Occupant billing portal: invoices, pay, receipts, documents, disputes, notices | Full Tenant Portal adds helpdesk, visitors, bookings | —
+New contract creation | Manual or import | — | LOI in Leasing CRM creates pipeline contract automatically
+Vacant space | Vacancy list and export | — | Optional publishing to Marketplace listings
+MIS | Revenue, billing, collections, ageing, occupancy, expiry, escalation, P&L sections | Adds SLA, PPM, energy sections | Adds leasing pipeline section
+Navigation | Only Rent Roll menus visible | FM menus added | CRM / Marketplace menus added
+--- END TABLE 19 ---
+
+P: 2.5 Upgrade and Downgrade Path
+P: Upgrade: adding CAFM, Leasing CRM or Marketplace is an entitlement change. No data migration, no re-import, no duplicate occupants or spaces.
+P: Downgrade or cancellation: subscriber can export all Rent Roll data (Excel/CSV bundle + documents) at any time (RR-ENT-08). Data from a removed product is retained read-only for the contractual retention period, then deleted per policy.
+P: Moving from Managed Services to self-operated: an OFFICEX Managed Services client can take over operation of its own Rent Roll subscription by transferring the organisation's ownership role; the history remains intact.
+P: 2.6 White-Label & Branding
+P: PM companies, FM companies, MSPs and flex operators present Rent Roll to their own clients and occupants. Branding is therefore a product requirement, not a cosmetic one.
+P: Logo, colours and invoice/receipt/statement templates per subscriber, and per client account for the Multi-Client Operator add-on.
+P: Branded email sender (verified domain via Resend) and WhatsApp templates in the subscriber's name.
+P: Subdomain (subscriber.officex.pro) on all paid editions; custom domain on Enterprise.
+P: "Powered by OFFICEX" shown in the footer by default; removable on Enterprise.
+
+--- TABLE 20 ---
+SECTION3 | Concept, Use Cases, Personas & Billing ModelsWhat a rent roll is, who uses it, and how it is billed
+--- END TABLE 20 ---
+
+P: 3.1 What Is a Rent Roll?
+P: A rent roll is a schedule, stated as of a specific date, listing every leasable space in a property or portfolio with its occupant, contract dates, area or seats, current rent, recoveries, deposits and status. Vacant spaces appear too, so occupied + vacant always equals the leasable total. In facility management the same records drive service charges (CAM, DG backup, HVAC extended hours, parking). In managed offices and co-working, the rent roll is expressed in seats as well as area.
+P: Three properties guide the design:
+P: As-of-date: the rent roll for 31 March must be reproducible later, even after contracts change — hence versioning and month-end snapshots.
+P: Complete: every space appears exactly once; occupied + vacant = total leasable area (and seats, for flex centres).
+P: Reconciled: billed amounts equal the schedule for the period, with every difference explained (concession, proration, credit note).
+P: 3.2 Primary Use Cases
+
+--- TABLE 21 ---
+Use case | Key questions answered | Segments | Phase
+Portfolio revenue overview | Contracted monthly/annual revenue by property, client owner and component | All | P1
+Property occupancy and income | Which spaces/seats are vacant, occupied, reserved? Income per floor/centre? | All | P1
+Expiry and rollover | What income expires in each year? WALE? Which lock-ins and notice windows open? | A, B, D, E | P1
+Billing and collections | What to invoice this month? Who owes what, how old? | All | P2–P3
+Seat-based billing | How many seats are billable under each member contract this month? | E | P4
+Owner statements and fees | What was collected for each owner, what fee is due, what is remitted? | B, D | P4
+CAM budgeting and reconciliation | What CAM was billed vs. actually spent, and what true-up is due? | C, D, A | P4
+Centre profitability | Member revenue minus head-lease rent and opex; break-even occupancy? | E | P4
+Forecasting, P&L and MIS | 12-month forecast, NOI and monthly MIS | All | P5
+Accounting integration | Post invoices and receipts to Tally/Zoho without re-entry | All | P5
+--- END TABLE 21 ---
+
+P: 3.3 Personas
+
+--- TABLE 22 ---
+Persona | Goals | Key screens
+Organisation Admin | Configure the subscription, users, roles, branding, charge types, numbering | Settings, users, entitlements, templates
+Owner / Client Principal | See own portfolio income, occupancy, arrears; approve key changes; receive statements | Owner dashboard, statements, MIS
+Management | Read portfolio performance | Executive dashboard, P&L, MIS, forecast
+Asset Manager | Maximise NOI, manage rollover, forecast | Portfolio rent roll, WALE, rollover, forecast, P&L
+Property / Centre Manager | Keep space and contract data accurate; occupant relations; seat counts | Property rent roll, contract detail, occupancy, alerts
+Leasing Manager | Fill vacancies, renew expiring contracts | Vacancy list, expiry pipeline, deals
+Finance / AR Manager | Bill correctly, collect on time, reconcile GST/TDS, remit to owners | Billing centre, payment centre, allocation, ageing, owner statements
+Facility Manager | Bill CAM/utility/service charges; manage CAM pools; no rent changes | Charges, meter readings, CAM pools
+Occupant (tenant / member) | See and pay invoices, download documents and receipts, raise disputes | Occupant billing portal
+Auditor | Verify figures and evidence | Snapshots, audit trail, exports
+Admin / Operations (incl. OFFICEX Managed Services) | Onboard data and fix quality issues | Import wizard, mapping templates, data-quality queue
+--- END TABLE 22 ---
+
+P: 3.4 Billing Models
+P: billing_model is a mandatory field on every contract. The billing engine selects its calculation rules from this field — no billing logic may be hard-coded by segment.
+
+--- TABLE 23 ---
+Billing model | Primary billing unit | CAM / electricity | Typical segment
+area | ₹ / sq ft × chargeable area | Separate or included, per contract | A, B, D
+seat | ₹ / seat, desk or cabin × billable seats | Usually included in seat price; configurable | E
+hybrid | Base commitment + seat and/or usage components | Configurable | E
+fixed | Fixed amount per period (e.g. antenna site, signage, kiosk) | Configurable | A, B
+revenue_share | Minimum guarantee + % of turnover above breakpoint | Separate | A (retail)
+charges_only | No rent; CAM, utilities and services only | The whole contract | C, D
+usage (charge level) | Meter or usage × agreed rate (e.g. 5,800 kWh × ₹12) | calc_basis = metered / per_use | All
+bundled (charge level) | Component included in the primary price | is_included = true; never invoiced separately | E, some A
+--- END TABLE 23 ---
+
+P: Every contract also has a direction: receivable (the subscriber bills the occupant — the default) or payable (the subscriber pays a landlord — a head lease held by a flex operator or MSP). Payable contracts share the same schedule, escalation and alert engine but generate payables and feed P&L instead of invoices.
+
+--- TABLE 24 ---
+SECTION4 | Canonical Data Structure & Business RulesOne schema absorbing every source format and serving every segment
+--- END TABLE 24 ---
+
+P: 4.1 Design Principles
+P: Contract-centric and time-aware. Rent is never a single number on the contract; it is dated charge lines and rent steps, so the rent roll can be computed for any date.
+P: Contractual terms are separate from monthly transactions. Contracts and charges define obligations; invoices, payments and allocations record what happened.
+P: Components and models are configuration. Charge types, billing models, tax rates, escalation types and numbering schemes live in configuration tables — never in code.
+P: Area and seats are explicit. Every area carries its basis (chargeable vs. carpet) and unit; seat quantities carry their seat type.
+P: Multi-tenant and multi-client. Every row has org_id; managed-portfolio rows also carry client_account_id. Row Level Security enforces both.
+P: Source-traceable and versioned. Every record knows its import batch and source row; every change is versioned and audited.
+P: 4.2 Entity Overview and Relationships
+
+--- TABLE 25 ---
+Group | Entities (tables) | Key relationships
+Subscription & tenancy | organization, org_subscription, entitlement, usage_meter | organization 1→many subscriptions; entitlements derived from subscriptions
+Operator layer | client_account, billing_entity, management_mandate | organization 1→many client accounts; client account 1→many billing entities and properties; mandate links operator to client with fee rules
+Space masters | property, building, space, seat_inventory, pricing_plan | property 1→many buildings 1→many spaces; flex spaces 1→many seat inventory rows
+Parties | occupant (tenant/member), contact | occupant 1→many contracts; optional guarantor occupant
+Pipeline | deal | deal → occupant (prospect); converts to contract (deal_id)
+Contract | contract, contract_space, contract_charge, rent_step, concession, deposit, deposit_transaction, contract_clause, contract_document | contract 1→many of each; contract many↔many space via contract_space; parent_contract_id for renewals/amendments
+Billing & cash | billing_run, invoice, invoice_line, adjustment_note, payment, payment_allocation, owner_statement, payable | invoice 1→many lines; payment 1→many allocations to invoices; invoice 0..1→1 task for workflow
+Operations inputs | meter, meter_reading, cam_pool, cam_pool_cost | meter belongs to space; cam_pool belongs to property and year
+Configuration | charge_type, tax_profile, billing_model rules, numbering, alert_rule | Referenced by charges and invoices; nothing hard-coded
+Reporting | rent_roll_snapshot, rent_roll_snapshot_line, alert, exception | snapshot per org + period, frozen
+Onboarding | import_batch, import_row, mapping_template | batch 1→many rows; template reused per source layout
+--- END TABLE 25 ---
+
+P: 4.3 Common Audit & System Fields (on every table)
+
+--- TABLE 26 ---
+Field | Type | Example | Req | Description
+id | uuid (PK) | 7f3c…a91e | Y | Server-generated (gen_random_uuid()).
+org_id | uuid (FK) | org_brightspace | Y | Subscriber organisation. RLS anchor.
+client_account_id | uuid (FK) | ca_sharma_trust | Y* | Owner whose portfolio this belongs to. *For single-owner subscribers a default "self" client account is created automatically, so the column is never null.
+external_ref | text | APX-L-0042 |  | Subscriber's own identifier; unique per org + table when present.
+source_system | enum | excel_import | Y | manual | excel_import | csv_import | api | leasing_crm | cafm | erp_sync | migration.
+import_batch_id | uuid (FK) | b-2026-09-0007 |  | Batch that created/last updated the record.
+data_quality_status / notes | enum / jsonb | passed / [] | Y | passed | warning | failed | overridden, with rule codes.
+version | integer | 3 | Y | Optimistic locking; incremented on update.
+valid_from / valid_to | timestamptz | 2026-04-01 / null | Y | Temporal validity for history-bearing tables.
+created_at/by, updated_at/by | timestamptz / uuid | 2026-09-20 10:14 IST | Y | Stored UTC; displayed in user time zone (default Asia/Kolkata).
+deleted_at | timestamptz | null |  | Soft delete only. Financial records and executed documents are never hard-deleted.
+--- END TABLE 26 ---
+
+P: 4.4 Subscription, Operator & Billing-Entity Layer
+P: organization (Platform Core — additional fields)
+
+--- TABLE 27 ---
+Field | Type | Example | Req | Description
+org_type | enum[] | [property_manager] | Y | owner | property_manager | facility_manager | managed_service_provider | flex_operator. Multiple allowed. Drives onboarding templates and default roles only — never hard-coded logic.
+reporting_currency | char(3) | INR | Y | For portfolio totals.
+financial_year_start | smallint | 4 | Y | Month number; April for Indian FY.
+branding | jsonb | {logo, colours, sender} |  | White-label settings (§2.6).
+subdomain / custom_domain | text | brightspace / rent.brightspace.in |  | Custom domain Enterprise only.
+--- END TABLE 27 ---
+
+P: org_subscription and entitlement
+
+--- TABLE 28 ---
+Field | Type | Example | Req | Description
+product_code | enum | RR | Y | RR (Rent Roll) | CAFM | LEASING_CRM | MARKETPLACE | … Each subscribable independently.
+edition | enum | professional | Y | essentials | professional | enterprise.
+add_ons | text[] | [multi_client, flex_seats] |  | multi_client | flex_seats | integrations.
+status / start / end | enum / date | active / 2026-10-01 / null | Y | trial | active | past_due | suspended | cancelled.
+entitlement.feature_code | text | rr.billing.multi_invoice | Y | Derived table of enabled features per org, recomputed on subscription change; read by API middleware and navigation builder.
+usage_meter (nightly) | numeric | area 2,45,000 sq ft; seats 620 | Y | Area under management, seat capacity, active contracts, client accounts — feeds SaaS billing (OI-3).
+--- END TABLE 28 ---
+
+P: client_account
+
+--- TABLE 29 ---
+Field | Type | Example | Req | Description
+name / legal_name | text | Sharma Family Trust | Y | Owner whose portfolio the subscriber manages. Auto-created as "self" for single-owner subscribers.
+is_self | boolean | false | Y | True for the subscriber's own portfolio.
+pan / primary_contact | char(10) / jsonb | AAATS1234K / {…} |  | For statements and TDS.
+branding_override | jsonb | {logo} |  | Client-branded statements/invoices where the operator bills in the owner's name.
+principal_user_ids | uuid[] | [usr_sharma] |  | Client Principal users with read/approve access to this account only.
+--- END TABLE 29 ---
+
+P: billing_entity
+
+--- TABLE 30 ---
+Field | Type | Example | Req | Description
+client_account_id | uuid (FK) | → Sharma Family Trust | Y | The legal entity that issues invoices. One client account can have many (e.g. one per state GSTIN or SPV).
+legal_name / gstin / pan | text / char(15) / char(10) | Sharma Estates LLP / 06AA… | Y | Printed on invoices; GSTIN state drives place of supply.
+invoice_series | jsonb | {prefix:"SE/26-27/", next:142} | Y | Per entity per FY, gapless.
+e_invoice_enabled | boolean | false | Y | IRN generation via GSP when turnover threshold applies (OI-7).
+settlement_account_ref | text | rzp_route_acc_91… |  | Where collections settle — owner's own account (OI-6). Bank account numbers are stored encrypted and never shown in full.
+--- END TABLE 30 ---
+
+P: management_mandate
+
+--- TABLE 31 ---
+Field | Type | Example | Req | Description
+client_account_id | uuid (FK) | → Sharma Family Trust | Y | Operator ↔ owner agreement.
+services | enum[] | [rent_collection, cam_billing, leasing] | Y | Determines which modules and actions staff may perform for the client.
+fee_rules | jsonb | [{basis:"pct_collections", rate:4}] | Y | pct_collections | pct_billed | fixed_monthly | per_sqft | per_new_lease. Multiple rules allowed.
+fee_gst_rate | numeric | 18.00 | Y | GST on management fee.
+remittance_day / statement_day | smallint | 10 / 7 | Y | Monthly owner statement and remittance schedule.
+start_date / end_date | date | 2026-10-01 / null | Y | Mandate validity; access ends automatically at end.
+--- END TABLE 31 ---
+
+P: 4.5 Property, Building & Space
+P: property
+
+--- TABLE 32 ---
+Field | Type | Example | Req | Description
+property_code / name | text | APX-BKC / Apex Business Tower | Y | Unique per org.
+property_type | enum | office | Y | office | it_park | retail | mixed_use | industrial | warehouse | flex_centre | sez_ifsc.
+grade | enum | A |  | A+ | A | B+ | B | C.
+address, city, micro_market, state, pincode | text | BKC, Mumbai, Maharashtra 400051 | Y | State drives GST place of supply.
+geo_lat / geo_lng | numeric(9,6) | 19.066110 / 72.867520 |  | Map pin.
+total_chargeable_area / total_carpet_area | numeric(12,2) | 98,400 / 68,900 | Y / | Must equal sum of active spaces (R-03).
+area_unit | enum | sqft | Y | sqft | sqm (1 sqm = 10.7639 sqft, display-time conversion).
+default_billing_entity_id | uuid (FK) | → Apex Realty Pvt Ltd | Y | Overridable per contract charge.
+operating_currency | char(3) | INR | Y | USD allowed for IFSC/SEZ.
+status | enum | operational | Y | under_construction | operational | under_refurbishment | disposed.
+--- END TABLE 32 ---
+
+P: building
+
+--- TABLE 33 ---
+Field | Type | Example | Req | Description
+property_id / building_code / name | uuid / text | → MTP-GGN / T1 / Tower 1 | Y | A campus property has many buildings; a single-building property has one default building.
+floors_above / floors_below | smallint | 14 / 3 |  | For stacking plans and heatmaps.
+chargeable_area | numeric(12,2) | 1,10,000 |  | Sum-checked against spaces.
+--- END TABLE 33 ---
+
+P: space
+
+--- TABLE 34 ---
+Field | Type | Example | Req | Description
+building_id / space_code | uuid / text | → T1 / MTP-T1-03 | Y | Unique within property.
+floor / suite_number | integer / text | 3 / 301 | Y / | Ground = 0, basements negative.
+space_type | enum | office | Y | office | retail | food_court | storage | parking_block | terrace | antenna_site | flex_floor | cabin | meeting_room | other.
+chargeable_area / carpet_area | numeric(12,2) | 22,000 / 15,400 | Y / | Loading % computed; warning outside 20–60% (R-07).
+seat_capacity | integer | 0 |  | For flex floors and cabins; sum of seat_inventory.
+status | enum | occupied | Y | vacant | occupied | reserved | under_fitout | not_leasable. Derived nightly; manual override logged.
+asking_rate | numeric(12,2) | 100.00 |  | Per area unit per month (or per seat for flex).
+fitout_condition | enum | warm_shell |  | bare_shell | warm_shell | fully_fitted | plug_and_play.
+--- END TABLE 34 ---
+
+P: seat_inventory and pricing_plan (Flex & Seats add-on)
+
+--- TABLE 35 ---
+Field | Type | Example | Req | Description
+seat_inventory.space_id / seat_type | uuid / enum | → FLX-4F / dedicated_desk | Y | dedicated_desk | hot_desk | cabin_seat | team_room_seat | virtual_office.
+seat_inventory.capacity | integer | 120 | Y | Seats of that type in the space.
+pricing_plan.name / seat_type | text / enum | Premium Dedicated Seat | Y | Reusable plan: Premium Dedicated Seat, Enterprise Cabin, Hot Desk, Team Room, Virtual Office.
+pricing_plan.rate / rate_period | numeric / enum | 15,000 / month | Y | List price; contract can override with approval.
+pricing_plan.inclusions | text[] | [cam, electricity, housekeeping, internet] | Y | Included components are never billed separately (R-40).
+pricing_plan.chargeable_extras | jsonb | [{parking:4000},{meeting_room_hr:800}] |  | Extras billed per use.
+--- END TABLE 35 ---
+
+P: 4.6 Occupant
+
+--- TABLE 36 ---
+Field | Type | Example | Req | Description
+occupant_type | enum | company | Y | company | individual | government | foreign_entity. UI label: Tenant, Licensee or Member by contract type.
+status | enum | active | Y | prospect | active | inactive. Prospects exist for deals and become active on contract activation.
+legal_name / trade_name | text | TechNova Solutions Pvt Ltd / TechNova | Y / | Registered name as on contract.
+industry | enum | it_services |  | Controlled list.
+gstin / pan / cin | char(15) / char(10) / text | 27AABCT1234K1Z2 |  | GSTIN required for B2B invoice (R-15). PAN masked for non-finance roles.
+billing_address | jsonb | {line1, city, state, pincode} | Y | Drives place of supply.
+contacts | jsonb[] | [{role:"finance", email, phone}] | Y | Finance, admin and facilities contacts; invoices go to finance contacts.
+guarantor_occupant_id | uuid (FK) | → parent company |  | Corporate guarantee.
+credit_rating / internal_risk_score | text / enum | CRISIL A+ / low |  | Optional.
+is_critical | boolean | true | Y | Auto-true for top-10 by annual revenue per property.
+portal_org_id | uuid (FK) | → occupant org |  | Links to the occupant's own portal login.
+--- END TABLE 36 ---
+
+P: 4.7 Contract (Lease / Agreement / Membership / Head Lease)
+
+--- TABLE 37 ---
+Field | Type | Example | Req | Description
+contract_code | text | APX-L-0042 | Y | Unique per org.
+contract_type | enum | lease_deed | Y | lease_deed | leave_and_licence | managed_office_agreement | coworking_membership | service_charge_agreement | head_lease | loi | term_sheet | renewal | amendment.
+direction | enum | receivable | Y | receivable | payable (head lease).
+billing_model | enum | area | Y | area | seat | hybrid | fixed | revenue_share | charges_only (§3.4).
+lease_structure | enum | modified_gross |  | gross | net | modified_gross | triple_net — for area contracts.
+occupant_id / property_id | uuid (FK) | → TechNova / APX-BKC | Y | For payable contracts, occupant_id points to the landlord party.
+parent_contract_id | uuid (FK) | null |  | Renewals and amendments chain.
+status | enum | active | Y | draft | future | active | notice_served | holding_over | expired | terminated | cancelled (§4.13). Pipeline deals are held in the separate deal entity (§4.7A).
+deal_id | uuid (FK) | → DEAL-021 |  | Deal this contract was converted from; terms copied, never re-keyed.
+current_document_id | uuid (FK) | → DOC-889 |  | Current executed agreement version.
+approval_status | enum | approved | Y | draft | submitted | approved | rejected. Financial terms take effect only when approved.
+signing / handover / commencement / rent_commencement / expiry | date | 2023-02-14 / … / 2032-03-31 | Y* | Commencement, rent_commencement and expiry mandatory; monthly flex memberships may have rolling expiry.
+term_months / auto_renew | integer / boolean | 108 / false | Y | Rolling monthly memberships use auto_renew = true with notice_period_days.
+lock_in_months / lock_in_end / lock_in_party | int / date / enum | 36 / 2026-03-31 / both |  | Common Indian clause.
+notice_period_months (or _days) | integer | 6 |  | Notice required to exit after lock-in.
+registration_status / stamp_duty | enum / numeric | registered / 4,85,000 |  | Contracts over 11 months require registration.
+billing_currency / frequency / invoice_day / due_days | char(3) / enum / int / int | INR / monthly / 1 / 7 | Y | monthly | quarterly | half_yearly | annual.
+seats_contracted / seats_minimum / seat_billing_basis | int / int / enum | 100 / 80 / minimum_commitment | Y* | *Seat and hybrid models. Basis: contracted | occupied | minimum_commitment.
+base_commitment_amount | numeric(14,2) | 3,00,000 |  | Hybrid model fixed component.
+tds_applicable / tds_rate | boolean / numeric | true / 10.00 |  | Sec 194-I on rent; 194-C/194-J may apply to service charges — rate configurable.
+broker_id | uuid (FK) | → Anita S. |  | Optional; from the deal or entered manually.
+--- END TABLE 37 ---
+
+P: 4.7A Deal / Prospect (pipeline)
+P: Pipeline deals are held separately from executed contracts but use compatible fields, so a deal converts into a future contract without re-keying. The deal table is a Platform Core entity: Rent Roll offers a lightweight deal register on its own; when Leasing CRM is subscribed, the CRM manages the same records with its full workflow. Deals never enter billing, collections or actual occupancy — only the Forecast view, weighted by probability.
+
+--- TABLE 38 ---
+Field | Type | Example | Req | Description
+deal_code / stage | text / enum | DEAL-021 / loi | Y | enquiry | qualified | site_visit | negotiation | loi | agreement_drafting | won | lost.
+occupant_id | uuid (FK) | → prospect occupant | Y | Occupant record with status = prospect (no duplicate master when won).
+property_id / space_ids | uuid / uuid[] | → PROP-002 / [4F-02] | Y | Proposed spaces or seats.
+proposed_terms | jsonb | {billing_model:"seat", seats:120, rate:16000} | Y | Same structure as contract terms, so conversion is a copy.
+probability_pct / expected_start | integer / date | 60 / 2027-01-01 | Y | Weighted forecast = proposed monthly revenue × probability.
+contract_id | uuid (FK) | null |  | Set on conversion; deal becomes won.
+source | enum | manual | Y | manual | import | leasing_crm | marketplace_enquiry.
+--- END TABLE 38 ---
+
+P: contract_space (join)
+
+--- TABLE 39 ---
+Field | Type | Example | Req | Description
+contract_id / space_id | uuid (FK) | → APX-L-0042 / APX-05A | Y | A contract can cover several spaces; a space can be part-let.
+area_let / seats_allocated | numeric / integer | 8,500 / null | Y* | Area for area contracts; seats (by seat type) for flex.
+start_date / end_date | date | 2023-04-01 / 2032-03-31 | Y | Supports expansion and surrender mid-term.
+--- END TABLE 39 ---
+
+P: 4.8 Contract Charge (Charge Rule / Revenue Line)
+
+--- TABLE 40 ---
+Field | Type | Example | Req | Description
+contract_id / component | uuid / enum | → APX-L-0042 / base_rent | Y | base_rent | seat_fee | cam | property_tax | insurance | electricity | dg_backup | water | hvac_extended | parking | internet | housekeeping | meeting_room | printing | signage | turnover_rent | fitout_recovery | other. Extendable via charge_type config table.
+calc_basis | enum | per_area | Y | per_area | per_seat | fixed | per_slot | metered | pro_rata_share | pct_of_turnover | per_use.
+rate / rate_period | numeric(14,4) / enum | 285.2000 / month | Y* | Current rate (denormalised from active rent_step). *Not required for metered/per_use.
+quantity_basis | numeric(12,2) | 8,500 |  | Defaults to contract area or billable seats.
+is_included | boolean | false | Y | True = included in seat/base price; generates no invoice line (R-40). Required for managed office and co-working.
+is_recoverable | boolean | false | Y | Cost recoveries (CAM, tax, insurance) for NOI and CAM pool.
+invoice_group | text | rent | Y | Controls separate invoices: rent | cam | electricity | water | parking | services. Charges with the same group and billing entity go on one invoice.
+billing_entity_id | uuid (FK) | → FM agency entity | Y | CAM is often billed by the maintenance agency, not the landlord.
+tax_profile_id / hsn_sac | uuid / text | → GST-18 / 997212 | Y | Tax profile from configuration (GST 18%, exempt, zero-rated IFSC/SEZ, etc.) — never a hard-coded rate.
+source_document_id | uuid (FK) | → DOC-889 |  | Contract document evidencing this charge.
+billing_mode | enum | advance | Y | advance | arrears (metered always arrears).
+start_date / end_date | date | 2023-06-01 / 2032-03-31 | Y | Charge validity.
+cam_pool_id / meter_id | uuid (FK) | → pool / meter |  | For pro_rata_share and metered charges.
+--- END TABLE 40 ---
+
+P: rent_step (escalations and step-ups)
+
+--- TABLE 41 ---
+Field | Type | Example | Req | Description
+contract_charge_id / step_no / effective_date | uuid / int / date | → base_rent / 2 / 2026-04-01 | Y | Dated rate.
+escalation_type / value / cycle_months | enum / numeric / int | fixed_pct / 15 / 36 | Y | initial | fixed_pct | fixed_amount | cpi_linked | market_review | stepped_schedule.
+compounding | boolean | true |  | On previous step vs. on initial rate.
+cpi_index / cap_pct / floor_pct | text / numeric | CPI-IW / 7 / 3 |  | Index-linked steps.
+rate / status | numeric / enum | 285.20 / applied | Y | scheduled | due | applied | pending_resolution | disputed. Applying requires approval (RR-ESC-03).
+--- END TABLE 41 ---
+
+P: concession, deposit, contract_clause
+
+--- TABLE 42 ---
+Field | Type | Example | Req | Description
+concession.type / period / value | enum / date range / numeric | rent_free / Apr–May 2023 / 100% | Y | rent_free | fitout_contribution | discount_pct | discount_amount | capex_by_landlord; amortise flag for effective-rent view (Ind AS 116); clawback clause.
+deposit.type / required / held | enum / numeric | security_deposit / 1,45,45,200 / 1,26,48,000 | Y | security_deposit | advance_rent | bank_guarantee | cam_deposit | utility_deposit; top_up_on_escalation; bg_expiry; refund_status. Transactions in deposit_transaction.
+contract_clause.type / window / terms | enum / date range / jsonb | renewal_option / Apr–Sep 2031 / {term:36} | Y | renewal_option | break_option | lock_in | notice | rofr | rofo | expansion | exclusivity | subletting | reinstatement; status open | exercised | lapsed | waived.
+--- END TABLE 42 ---
+
+P: 4.9 Contract Documents
+P: Every contract has its own document repository. A single upload field on the occupant record is not acceptable.
+
+--- TABLE 43 ---
+Field | Type | Example | Req | Description
+contract_id / doc_type | uuid / enum | → APX-L-0042 / lease_agreement | Y | term_sheet | loi | lease_agreement | amendment | renewal_agreement | termination | possession_letter | deposit_receipt | noc | insurance | fitout | other. Deal documents (term sheet, LOI) attach to the deal and carry over on conversion.
+version / is_current | integer / boolean | 2 / true | Y | New upload creates a new version; previous retained.
+status | enum | executed | Y | draft → under_review → approved → signed → executed → expired | superseded.
+effective_date / expiry_date | date | 2023-04-01 / null |  | Amendments carry effective date; insurance/NOC carry expiry (alert).
+visibility | enum | occupant_visible | Y | internal | client_visible | occupant_visible.
+storage_path / checksum | text | docs/org/…/v2.pdf | Y | Supabase Storage, private bucket, signed URLs only.
+view/download audit | audit_log | — | Y | Every view and download logged.
+--- END TABLE 43 ---
+
+P: 4.10 Billing & Cash Entities
+
+--- TABLE 44 ---
+Field | Type | Example | Req | Description
+invoice.invoice_no / billing_entity_id | text / uuid | SE/26-27/0142 | Y | Gapless per billing entity per FY.
+invoice.contract_id / occupant_id / period | uuid / daterange | → APX-L-0042 / Oct-2026 | Y | One invoice per contract × invoice_group × billing entity × period (unless consolidated).
+invoice.status | enum | partially_paid | Y | draft | pending_approval | approved | issued | partially_paid | paid | overdue | disputed | cancelled.
+invoice.taxable / tax / gross / outstanding | numeric(14,2) | 10,00,000 / 1,80,000 / 11,80,000 / 5,80,000 | Y | Outstanding = gross − allocations − credits (R-52).
+invoice.irn / task_id | text / uuid | null / → task |  | e-invoice IRN; linked workflow task for approval/dispute.
+invoice.currency / fx_rate / fx_date / reporting_amount | char(3) / numeric / date / numeric | USD / 84.00 / 2026-10-01 / 6,30,000 | Y | Original transaction currency is never overwritten; converted amount stored alongside.
+invoice_line.contract_charge_id / qty / rate / amount / gst | uuid / numeric | → base_rent / 8,500 / 285.20 / 24,24,200 / 18% | Y | Traceable to the charge and step that produced it.
+adjustment_note.type / invoice_id / amount / reason | enum / uuid / numeric / text | credit / → inv / 50,000 / proration | Y | credit | debit; own numbering series.
+payment.amount / method / reference / status | numeric / enum / text / enum | 12,75,000 / razorpay / pay_N8… / captured | Y | razorpay | neft | rtgs | cheque | upi | cash | tds_credit; idempotency_key unique.
+payment_allocation.payment_id / invoice_id / amount / method | uuid / numeric / enum | → pay / → inv / 10,00,000 / auto | Y | auto | manual. Sum of allocations ≤ payment amount; unallocated balance kept as on-account credit.
+payable (head lease) | numeric / date | 33,00,000 due 05-Oct-26 | Y | Generated from payable contracts; status due | paid; feeds centre P&L.
+owner_statement | jsonb snapshot | Oct-2026, Sharma Family Trust | Y | Billed, collected, arrears, fees, expenses, net remittance; frozen when issued.
+--- END TABLE 44 ---
+
+P: 4.11 Operations Inputs (usable without CAFM)
+
+--- TABLE 45 ---
+Field | Type | Example | Req | Description
+meter.space_id / utility / multiplier | uuid / enum / numeric | → APX-05A / electricity / 1 | Y | electricity | dg | water | chilled_water | gas.
+meter_reading.period / opening / closing / source | date / numeric / enum | Sep-26 / 184,220 / 196,410 / csv | Y | manual | csv | api | cafm. Consumption = (closing − opening) × multiplier.
+tariff (config) | numeric | ₹11.50/kWh; DG ₹24/kWh | Y | Per property/billing entity with validity dates.
+cam_pool.property_id / year / budget | uuid / int / numeric | → MTP-GGN / FY27 / 3,80,00,000 | Y | Annual CAM budget.
+cam_pool_cost.amount / category / source | numeric / enum / enum | 4,20,000 / security / manual | Y | Actual costs: manual, accounting import, or CAFM/Marketplace when subscribed.
+cam_pool.apportionment | enum | area_share | Y | area_share | fixed_share | weighted. Year-end true-up per occupant.
+--- END TABLE 45 ---
+
+P: 4.12 Rent Roll Snapshot
+
+--- TABLE 46 ---
+Field | Type | Example | Req | Description
+snapshot.period / as_of / status | text / date / enum | Sep-2026 / 2026-09-30 / locked | Y | draft | locked. Locked snapshots are immutable (RR-AUD-03).
+snapshot_line | rows | one per space/contract/charge | Y | Area, seats, rate, amount, status, expiry, fx rate used.
+--- END TABLE 46 ---
+
+P: 4.13 Contract Status Lifecycle
+
+--- TABLE 47 ---
+Status | Meaning | In the rent roll | Trigger
+(deal) | LOI / term sheet stage — separate deal entity | Forecast only, weighted by probability | Deal register or Leasing CRM
+draft | Contract being prepared or awaiting approval | Not in rent roll | Created manually or by deal conversion
+future | Executed, starts later | Contracted future income; space "reserved" | Signing recorded + document uploaded
+active | Within term | Occupied, billable | Nightly job on commencement
+notice_served | Exit notice given | Occupied with exit date | User action with notice document
+holding_over | Past expiry, still occupying | Occupied, billed at last rate; red flag | Nightly job
+expired / terminated | Ended | History only | Exit recorded
+cancelled | Future contract not proceeding | Removed from contracted view | User action with reason
+--- END TABLE 47 ---
+
+P: 4.14 Core Business Rules & Formulas
+
+--- TABLE 48 ---
+Rule ID | Rule | Formula / logic
+F-01 | Area rent | Monthly Rent = Chargeable Area × Rent Rate per sq ft
+F-02 | Escalated rent | New Rate = Previous Rate × (1 + Escalation %) — compounding; or Initial Rate × (1 + %) when non-compounding
+F-03 | Seat revenue | Seat Revenue = Billable Seats × Contracted Seat Rate
+F-04 | Contracted-seat billing | Billable Seats = Contracted Seats
+F-05 | Occupied-seat billing | Billable Seats = Occupied Seats (from the monthly seat count)
+F-06 | Minimum commitment | Billable Seats = MAX(Occupied Seats, Minimum Committed Seats)
+F-07 | Hybrid | Charge = Base Commitment + Additional Seats × Seat Rate + Usage Charges
+F-08 | Inclusions (R-40) | If charge.is_included = true, no invoice line is created for that component
+F-09 | Metered utility | Charge = (Closing − Opening) × Multiplier × Tariff
+F-10 | Proration | Period charge × (days occupied in period ÷ days in period) for part-month start/exit
+F-11 | Taxable / gross invoice | Taxable = Σ taxable lines; Gross = Taxable + CGST + SGST (intra-state) or IGST (inter-state)
+F-12 | Outstanding (R-52) | Outstanding = Invoice Gross − Allocated Payments − Credit Notes + Debit Notes
+F-13 | Partial payment | Paid < Invoice Gross → status partially_paid; balance remains outstanding
+F-14 | Ageing | Days Outstanding = Today − Due Date for unpaid balance; buckets 0–30, 31–60, 61–90, 90+
+F-15 | Occupancy — area | Occupied Area ÷ Total Leasable Area
+F-16 | Occupancy — seats | Occupied Seats ÷ Total Available Seats
+F-17 | Economic occupancy | Current Rent ÷ (Current Rent + Vacant Space at Asking Rate)
+F-18 | WALE | Σ(Remaining Years × Monthly Rent) ÷ Σ Monthly Rent (by income); same by area. Holding over = 0 years
+F-19 | NOI / NOI margin | NOI = Property Revenue − Operating Expenses; Margin = NOI ÷ Revenue
+F-20 | Management fee | Fee = Σ fee_rules applied (e.g. 4% × Collections) + GST on fee
+F-21 | Owner net remittance | Collections − Management Fee − GST on Fee − Expenses Paid on Owner's Behalf − TDS adjustments
+F-22 | CAM true-up | Occupant Share of Actual CAM − CAM Billed to Occupant = Debit (+) or Credit (−) note
+F-23 | Centre contribution (flex) | Member Revenue − Head-Lease Rent − CAM/Utilities Payable − Centre Opex
+F-24 | Break-even seat occupancy | (Head-Lease Rent + Payables + Opex) ÷ (Average Revenue per Occupied Seat × Seat Capacity)
+F-25 | Collection efficiency | Collected in period ÷ Billed and due in period
+--- END TABLE 48 ---
+
+P: Every formula F-01 to F-25 must have automated unit tests with the worked values from §13 as known answers.
+P: 4.15 Multi-Currency, Future Contracts and Schema Mapping
+P: Currency: every amount stored in its transaction currency with an ISO code; daily fx_rate table (RBI reference rate via n8n); portfolio totals converted at the as-of date with rate disclosed; snapshots freeze the rate. Main case: USD contracts in GIFT City IFSC/SEZ.
+P: Future contracts and pipeline deals: executed-but-not-started contracts have status future and never enter actual collections until activated. Pipeline deals live in the deal entity (§4.7A). The rent roll offers Current, Contracted (+future) and Forecast (+deals weighted by probability) views. Overlapping active/future contracts on the same area or seats are blocked (R-24).
+P: Schema mapping: upload → stage raw rows → detect header and strip totals → map columns via saved mapping_template and synonym dictionary ("Super Area", "SBA", "Chargeable" → chargeable_area) → transform (Indian number format, date formats, sq m → sq ft, text → enum, escalation phrase parser) → explode one source row into property/building/space/occupant/contract/charges/steps/deposit → validate (passed / warning / failed / unmapped) → exception queue → diff → approve → commit. Unmapped source columns are preserved in staging for review, never silently dropped. Source-specific columns never become production schema. Generic mapping rules in §13.4; worked example in §13.5.
+
+--- TABLE 49 ---
+SECTION5 | Functional Requirements & Screen InventorySprint backlog — every requirement has an ID, acceptance criterion, priority and phase
+--- END TABLE 49 ---
+
+P: 5.1 Core User Journeys
+
+--- TABLE 50 ---
+Transactional journeyLogin → Dashboard → Property → Building → Space → Occupant → Contract → Rent Roll → Billing → Invoice → Payment → Allocation → Ageing → Action → MIS
+--- END TABLE 50 ---
+
+
+--- TABLE 51 ---
+Exception-led journeyDashboard → Exception → Occupant/Contract → Root Cause → Task → Follow-up → Resolution → Audit
+--- END TABLE 51 ---
+
+P: The UI must support drill-down end to end: portfolio → client account → property → building → space → occupant → contract → invoice → payment, and back.
+P: Core user flows
+
+--- TABLE 52 ---
+Flow | Steps
+A. Import rent roll | Upload → map → preview → validate → resolve errors → reconcile totals → approve → commit → dashboard refresh
+B. Create contract | Select property/space/occupant (or convert deal) → choose contract type and billing model → enter commercial terms → attach term sheet/LOI/agreement → approval → activate
+C. Monthly billing | Calculate active charges → apply escalations, concessions, inclusions, proration → generate separate invoices → approve → issue → occupant notification
+D. Occupant payment | Invoices → Pay All / Selected / Individual / partial → gateway → payment received → allocation → receipt → ageing and MIS update
+E. Escalation | Alert → review source clause → approve → effective rate updates → future invoices and forecast update → audit event
+F. Contract expiry | 12/6/3/1-month alerts → renewal task → link deal/LOI → execute renewal → new contract version → history preserved
+G. Managed office / flex | Set contracted, minimum and occupied seats → configure bundled services → calculate seat revenue → bill optional services separately → consolidated reporting
+H. Monthly MIS | Select portfolio/property/client + period → generate → review exceptions → export/share approved MIS
+I. Owner statement (operators) | Period close → collections per client → fee and expenses → statement → approval → issue → remittance recorded
+--- END TABLE 52 ---
+
+P: 5.2 Screen Inventory
+
+--- TABLE 53 ---
+Screen | Key components | Primary actions | Edition / Phase
+Rent Roll Dashboard | KPI cards, revenue trend, collections, occupancy, ageing, expiry, escalations, exceptions | Filter, drill down, export, generate MIS | Essentials / P1 (financial KPIs P3)
+Rent Roll Register | Concise default columns per §5.3; contract detail drawer; as-of date; Current / Contracted / Forecast toggle | Search, filter, save view, open contract, export | Essentials / P1
+Deal Register | Prospects, proposed spaces/seats and terms, stage, probability, documents | Create, update stage, convert to contract | Essentials / P1
+Contract Detail | Commercial terms, spaces, charges, steps, concessions, deposits, clauses, documents, timeline, invoices, history | Edit, submit for approval, renew, serve notice, terminate | Essentials / P1
+Create Contract | Occupant, spaces/seats, billing model, charges, dates, deposits, clauses | Save draft, submit for approval | Essentials / P1
+Contract Documents | Term sheet, LOI, agreement, amendments, versions, status, visibility | Upload, view, download, approve, share | Essentials / P1
+Import Centre | Upload, mapping, validation, diff, approval, batch history | Map, fix, approve, commit, roll back | Essentials / P1
+Escalation Calendar | Upcoming / due / applied escalations; calendar and list | Approve and apply, notify occupant | Essentials / P1
+Lease Expiry Pipeline | 0–90, 91–180, 181–365, 365+ days; renewal stages | Create renewal task or pipeline contract | Essentials / P1
+Occupancy | Area and seat capacity, occupied, vacant, heatmap by floor | Drill into property/floor/space | Essentials / P1
+Billing Centre | Billing runs, charge types, periods, invoice status, tax summary | Generate, review, approve, issue | Professional / P2
+Invoice Detail | Lines, tax, source charges, approval, allocations, notes | Issue, download, credit/debit note, dispute | Professional / P2
+Meter Readings | Meters, readings by period, consumption, tariff | Enter, upload CSV, approve | Professional / P2
+Payment Centre | Payments, unallocated balances, allocation, reconciliation | Record, allocate, reallocate, reconcile | Professional / P3
+Ageing | 0–30, 31–60, 61–90, 90+, occupant drill-down, top overdue | Follow up, assign task, dispute | Professional / P3
+Occupant Billing Portal | Outstanding invoices, pay all/selected/individual/partial, receipts, documents, disputes, notices | Pay, download, raise dispute | Professional / P3
+Seat Count & Flex Billing | Contracted, minimum, occupied, billable seats per member; pricing plans | Record monthly seat count, approve | Flex add-on / P2
+Head Leases & Centre P&L | Payable schedule, escalations, centre revenue vs. cost, break-even | Record payables, view P&L | Flex add-on / P4
+Client Accounts & Mandates | Owners, billing entities, mandates, fee rules | Create, configure, invite principal | Multi-Client add-on / P4
+Owner Statements | Monthly statement per client: billed, collected, arrears, fees, expenses, remittance | Generate, approve, issue, record remittance | Multi-Client add-on / P4
+CAM Pools | Budget, actual cost, billed, variance, true-up per occupant | Enter costs, run true-up, issue notes | Professional / P4
+12-Month Forecast | Monthly rent, CAM, other, GST, gross; escalations and expiries | Scenario, export | Professional / P5
+Property P&L | Revenue, costs, NOI, margin, trend | Filter, export | Professional / P5
+Monthly MIS | Revenue, billing, collection, ageing, occupancy, expiry, escalation, P&L, exceptions, actions | Generate, export PDF, schedule, distribute | Professional / P5
+Exception Centre | Critical / action / upcoming / information alerts | Open, assign, resolve | Professional / P5
+Settings & Subscription | Edition, add-ons, usage, users, roles, branding, charge types, tax, numbering, alert rules | Configure, upgrade | All / P0
+--- END TABLE 53 ---
+
+P: 5.3 Rent Roll Register — Fields
+
+--- TABLE 54 ---
+Category | Fields
+Client & property | Client Account, Property ID, Property Name, Building, City, Micro-market
+Space | Floor, Unit/Suite, Space ID, Chargeable Area, Carpet Area, Seat Capacity
+Occupant | Occupant ID, Legal Name, Trade Name, GSTIN, Industry, Critical flag
+Contract | Contract ID, Contract Type, Billing Model, Status, Start, Expiry, Lock-in End, Notice
+Commercial | Monthly Rent, Rate per sq ft, Escalation, Next Escalation Date, Deposit Required/Held, Rent-free
+Managed / Flex | Contracted Seats, Minimum Seats, Occupied Seats, Billable Seats, Seat Rate, Seat Type, Inclusions
+Charges | CAM, Electricity, Water, Parking, DG, Internet, Housekeeping, Other — column set built from components in use
+Billing | Billing Entity, Cycle, Invoice Day, Due Days, Tax Configuration
+Collections | Billed, Collected, Outstanding, Ageing Bucket
+Expiry | Days to Expiry, Renewal Stage, Next Action
+Documents | Current Agreement Version, LOI, Term Sheet, Amendment status, missing-document flag
+Audit | Created By/At, Updated By/At, Last Action, Data-quality status
+--- END TABLE 54 ---
+
+P: 5.4 Standalone Product & Entitlements
+
+--- TABLE 55 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-ENT-01 | Rent Roll subscribable as its own product with editions and add-ons (§2.3); no other OFFICEX product required. | New org with only RR subscription completes UAT-41. | Must | P0
+RR-ENT-02 | Entitlement service: features enabled per org from subscription; checked server-side on every API call. | Calling a non-entitled endpoint returns 403 with feature code. | Must | P0
+RR-ENT-03 | Platform Core masters (properties, buildings, spaces, occupants, users) included with Rent Roll and editable from Rent Roll screens. | No CAFM screen needed to set up a property. | Must | P0
+RR-ENT-04 | Navigation built from entitlements and role; only subscribed products appear (fixes sidebar context bug). | RR-only user sees no FM, CRM or Marketplace menu. | Must | P0
+RR-ENT-05 | No hard dependency: every feature that can use CAFM/CRM/Marketplace data has a manual/CSV/API path (§2.4). | All UAT pass with only RR subscribed. | Must | P1
+RR-ENT-06 | Nightly usage metering: area under management, seat capacity, active contracts, client accounts. | Usage visible in Settings; exported to SaaS billing. | Must | P2
+RR-ENT-07 | Self-serve sign-up with 14-day trial, segment selection and configuration template (charge types, billing models, roles). | Trial org productive without OFFICEX staff. | Should | P4
+RR-ENT-08 | Full data export (Excel/CSV bundle + documents) on demand for the org or a client account. | Export of a 500-contract org < 5 min. | Must | P1
+RR-ENT-09 | Upgrade/downgrade by entitlement change with no data migration; downgraded features become read-only. | Adding CAFM reuses existing spaces and occupants. | Must | P2
+RR-ENT-10 | White-label: logo, colours, templates, sender domain, subdomain; custom domain on Enterprise. | Invoice and emails show subscriber brand. | Should | P4
+RR-ENT-11 | Sandbox organisation with sample data (§13) for demos and training. | Sandbox resettable in one click. | Could | P4
+--- END TABLE 55 ---
+
+P: 5.5 Data Ingestion & Normalisation
+
+--- TABLE 56 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-ING-01 | Upload .xlsx/.xls/.csv up to 20 MB, multiple sheets. | Sheets listed within 5 s. | Must | P1
+RR-ING-02 | Downloadable standard templates per billing model (area, seat, charges-only). | Template imports with zero mapping. | Must | P1
+RR-ING-03 | Column mapping with auto-suggestions from synonym dictionary. | ≥80% columns auto-mapped on pilot files. | Must | P1
+RR-ING-04 | Save and reuse mapping templates per org and per client account. | Second import of same layout needs no mapping. | Must | P1
+RR-ING-05 | Transforms: Indian number format, dates, sq m→sq ft, text→enum, escalation phrase parser. | Parser tests cover 30 real phrasings. | Must | P1
+RR-ING-06 | Row-level validation with rule codes (Table 5.5a) and summary: passed / warning / failed / unmapped. Errors block; warnings need acknowledgement. File checks for duplicates and malware. | Failed rows show rule, cell, fix hint. | Must | P1
+RR-ING-07 | Control totals for area, rent and seats reconciled to source. | >0.5% variance blocks sign-off unless overridden with reason. | Must | P1
+RR-ING-08 | In-grid correction, downloadable error file, and re-upload into same batch. | Corrections re-validated instantly. | Must | P1
+RR-ING-15 | Unmapped source columns preserved in staging and shown for review. | No source column silently dropped (UAT-63). | Must | P1
+RR-ING-16 | Data profiling report before mapping: duplicates, missing values, inconsistent dates/rates, totals. | Report attached to batch. | Should | P1
+RR-ING-09 | Diff preview: new / changed / unchanged / ended. | Counts per entity shown. | Must | P1
+RR-ING-10 | Two-step commit: preparer submits, approver signs off. | Commit blocked without approver role. | Should | P1
+RR-ING-11 | Import versioning; rollback/void of a committed batch within 7 days. | Prior state restored exactly; audited. | Should | P2
+RR-ING-12 | Occupant de-duplication on GSTIN, PAN, fuzzy name. | Suggestions before create. | Should | P1
+RR-ING-13 | Import opening balances (outstanding invoices, deposits held) at cut-over. | Ageing matches client report at cut-over. | Must | P3
+RR-ING-14 | Bulk import API with identical validation. | See §6.4. | Should | P5
+--- END TABLE 56 ---
+
+P: Table 5.5a — Core validation rules
+
+--- TABLE 57 ---
+Rule | Check | Severity
+R-01 | Required fields present | Error
+R-03 | Σ space chargeable area = property total (±0.5%) | Warning
+R-05 | Occupied + vacant = total leasable area; occupied + vacant seats = capacity | Error
+R-07 | Loading % between 20% and 60% | Warning
+R-10 | Rate within configured band for city/grade/segment | Warning
+R-12 | Monthly amount = rate × quantity (±₹1) | Error
+R-15 | GSTIN/PAN format; GSTIN state consistent with address | Error
+R-20 | commencement < expiry; rent_commencement ≥ commencement | Error
+R-22 | Lock-in end ≤ expiry; notice ≤ remaining term | Warning
+R-24 | No overlapping active/future contracts on same area or seats | Error
+R-26 | Active contract with past expiry → holding_over/expired | Warning
+R-30 | Identical rate across all spaces of a property (placeholder-data detector) | Warning
+R-40 | Included component also configured as billable charge (double billing) | Error
+R-42 | Seat contract without seat_billing_basis or minimum > contracted | Error
+R-44 | Charge has no billing entity or entity lacks GSTIN where GST > 0 | Error
+--- END TABLE 57 ---
+
+P: 5.6 Rent Roll Viewer & Contract Management
+
+--- TABLE 58 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-VW-01 | Property rent roll: one row per space (vacant included) with totals. | Totals reconcile to property record. | Must | P1
+RR-VW-02 | Portfolio rent roll grouped by client account and property. | <2 s p95 for 10k spaces. | Must | P1
+RR-VW-03 | As-of date and Current / Contracted / Forecast views. | Past dates reproduce historical state. | Must | P1
+RR-VW-04 | Filters: client, property, city, occupant, industry, contract type, billing model, status, occupancy, floor, area, rent, revenue component, expiry window, delinquency, critical. | Filters combinable; kept in URL. | Must | P1
+RR-VW-05 | Sort, column chooser, saved views. | Saved views persist. | Should | P1
+RR-VW-06 | Export Excel/CSV/PDF respecting filters and masking. | 10k rows < 10 s. | Must | P1
+RR-VW-07 | Contract detail with all tabs (§5.2). | All tabs read shared records. | Must | P1
+RR-CON-01 | Create/edit contract through form with billing-model-aware fields. | Seat fields shown only for seat/hybrid. | Must | P1
+RR-CON-02 | Approval workflow for new contracts and financial-term changes. | Unapproved terms never billed. | Must | P1
+RR-CON-03 | Renew, amend, serve notice, terminate as tracked transitions with documents. | Parent–child chain visible. | Must | P1
+RR-CON-04 | Document repository per contract with versioning, status and visibility (§4.9). | Executed versions never overwritten. | Must | P1
+RR-CON-05 | Missing-document flag (e.g. active contract without executed agreement). | Appears in exception centre. | Should | P1
+RR-CON-06 | Lease timeline (Gantt) by floor. | Renders 200 contracts smoothly. | Should | P5
+RR-CON-07 | Lightweight deal register in Rent Roll (§4.7A); convert won deal into a draft/future contract copying terms and documents; same records used by Leasing CRM if subscribed. | No re-keying on conversion (UAT-61). | Must | P1
+RR-CON-08 | Future contracts excluded from billing and collections until activated. | UAT-62 passes. | Must | P1
+RR-CON-09 | Maker-checker on every change to financial terms, with source clause reference. | Maker cannot approve own change. | Must | P1
+--- END TABLE 58 ---
+
+P: 5.7 Escalations & Expiry
+
+--- TABLE 59 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-ESC-01 | Generate all rent steps at contract approval from escalation terms. | Steps match F-02 for 9-year term. | Must | P1
+RR-ESC-02 | Escalation calendar with upcoming/due/applied. | All steps in next 12 months listed. | Must | P1
+RR-ESC-03 | Apply escalation with approval; notify occupant; update deposit requirement if top-up clause. | New rate effective on date (UAT-07). | Must | P1
+RR-ESC-04 | CPI/market-review steps held as pending_resolution until rate entered. | Alert 90 days before. | Should | P2
+RR-ESC-05 | Expiry pipeline 0–30/31–90/91–180/181–365/365+ with renewal stages (discussion → LOI → agreement → renewed/lost) and revenue-at-risk. | Stage changes audited. | Must | P1
+RR-ESC-06 | Lock-in end and notice-window dates computed from clauses. | Shown on register and alerts. | Must | P1
+--- END TABLE 59 ---
+
+P: 5.8 Billing & Invoicing
+
+--- TABLE 60 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-BIL-01 | Billing run per period: draft invoices for all billable charges applying steps, concessions, inclusions and proration. | Draft total = rent roll billable total (reconciliation report). | Must | P2
+RR-BIL-02 | Separate invoices by invoice_group (rent, CAM, electricity, water, parking, services) and billing entity; optional consolidation per contract. | UAT-08 to UAT-10 pass. | Must | P2
+RR-BIL-03 | Review, edit, approve; only approved invoices issue. | No issue without approval. | Must | P2
+RR-BIL-04 | GST-compliant invoice PDF: both GSTINs, SAC, place of supply, CGST/SGST or IGST, gapless numbering per entity per FY; branded. | Format reviewed by client CA. | Must | P2
+RR-BIL-05 | Metered utility billing from meter readings (manual, CSV, API or CAFM). | UAT-06 passes without CAFM. | Must | P2
+RR-BIL-06 | Credit and debit notes linked to invoice, own numbering. | Outstanding recalculates (UAT-33). | Must | P2
+RR-BIL-07 | Invoice delivery by email and WhatsApp with PDF and pay link. | Delivery status tracked. | Must | P2
+RR-BIL-08 | Bulk invoice generation as background job. | 5,000 invoices < 3 min (UAT-37). | Must | P2
+RR-BIL-09 | GST e-invoicing (IRN, QR) per billing entity where enabled. | IRN on invoice via GSP sandbox. | Should | P2
+RR-BIL-10 | Turnover rent from occupant sales submissions. | Matches worked example. | Could | P5
+RR-BIL-11 | Late-payment interest as draft debit note per contract terms. | Draft only; approval required. | Could | P5
+--- END TABLE 60 ---
+
+P: 5.9 Payments, Allocation & Collections
+
+--- TABLE 61 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-PAY-01 | Occupant can Pay All, Pay Selected, Pay Individual or pay a partial amount in one transaction. | UAT-11 to UAT-14 pass. | Must | P3
+RR-PAY-02 | Allocation engine distributes one payment across many invoices. | Σ allocations = payment (UAT-15). | Must | P3
+RR-PAY-03 | Auto-allocation priority configurable: selected invoices, oldest due first, or charge-type order. | UAT-16 passes. | Must | P3
+RR-PAY-04 | Manual allocation/reallocation by Finance with audit. | UAT-17 passes. | Must | P3
+RR-PAY-05 | Razorpay checkout and webhooks: signature-verified, idempotent. | Duplicate webhook creates no duplicate allocation (UAT-34). | Must | P3
+RR-PAY-06 | Offline receipts (NEFT/RTGS/cheque/UPI) and TDS credits recorded and allocated. | Outstanding = gross − receipts − TDS credit. | Must | P3
+RR-PAY-07 | Receipt PDF after successful reconciliation. | Receipt links to allocations. | Must | P3
+RR-PAY-08 | Unallocated/on-account balances tracked and alerted. | Visible in Payment Centre. | Must | P3
+RR-PAY-09 | Bank statement import for reconciliation suggestions. | Matches by amount/reference. | Should | P5
+RR-COL-01 | Ageing 0–30/31–60/61–90/90+ by occupant, property, client. | UAT-18 to UAT-21 pass. | Must | P3
+RR-COL-02 | Invoice dispute by occupant or staff creates task; invoice stays traceable. | UAT-32 passes. | Must | P3
+RR-COL-03 | Follow-up tasks and reminder cadence per overdue bucket. | Reminders sent per config. | Should | P3
+RR-COL-04 | Deposit ledger: receipts, adjustments, top-ups, refunds with approval. | Held amount reconciles. | Should | P3
+RR-PRT-01 | Occupant billing portal (§2.4) in subscriber branding; available without CAFM Tenant Portal. | Occupant pays and downloads receipts. | Must | P3
+RR-PRT-02 | Occupant sees only own contracts, invoices and occupant-visible documents. | UAT-24 passes. | Must | P3
+--- END TABLE 61 ---
+
+P: 5.10 Managed Office & Co-working (Flex & Seats add-on)
+P: Managed office and co-working use the same billing engine. CAM and electricity can be embedded in the seat price and must never be double-billed. Core seat billing (FLX-01 to 05 and 07) is part of the launch MVP in P2 so that flex operators can subscribe from standalone launch; head leases, centre P&L and flex dashboards follow in P4.
+
+--- TABLE 62 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-FLX-01 | Seat inventory by seat type per space; capacity roll-up. | Seat occupancy per F-16. | Must | P2
+RR-FLX-02 | Pricing plan master (Premium Dedicated Seat, Enterprise Cabin, Hot Desk, Team Room, Virtual Office) with inclusions and extras. | Plans reusable across contracts. | Must | P2
+RR-FLX-03 | Seat billing bases: contracted, occupied, minimum commitment; hybrid base + seats + usage. | UAT-03, 38, 39, 40 pass. | Must | P2
+RR-FLX-04 | Monthly seat count capture (manual, CSV or access-control/API) with approval before billing. | Occupied seats locked per period. | Must | P2
+RR-FLX-05 | Inclusion rules prevent billing included components (R-40). | UAT-04, 05 pass. | Must | P2
+RR-FLX-06 | Per-use extras (meeting room hours, printing, parking) billed from usage entries or CSV. | Lines show usage source. | Should | P4
+RR-FLX-07 | Short-term and rolling monthly memberships with notice in days; mid-month join/exit proration. | F-10 applied. | Must | P2
+RR-FLX-08 | Head leases as payable contracts with escalation and expiry alerts. | Payables generated monthly. | Must | P4
+RR-FLX-09 | Centre P&L: member revenue, head-lease rent, payables, opex, contribution, break-even occupancy. | Matches §13.7 worked example. | Must | P4
+RR-FLX-10 | Managed Office dashboard: capacity, contracted, occupied, seat occupancy, revenue per seat, contribution margin. | KPIs match F-16/F-23. | Must | P4
+--- END TABLE 62 ---
+
+P: 5.11 Multi-Client Operator (PM companies, FM companies, MSPs)
+
+--- TABLE 63 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-OPR-01 | Client accounts under one subscriber, each with own properties, billing entities, numbering and branding. | Data of client A never visible under client B filters or to B's principals. | Must | P4
+RR-OPR-02 | Management mandates with services and fee rules. | Staff actions limited to mandated services. | Must | P4
+RR-OPR-03 | Invoices issued in the owner's billing entity name when mandate says so. | Owner GSTIN and series on invoice. | Must | P4
+RR-OPR-04 | Collections settle to owner's account per OI-6; operator sees reconciliation. | No pooled client money by default. | Must | P4
+RR-OPR-05 | Management fee computed per F-20 and invoiced to the owner by the operator's billing entity. | Matches §13.8. | Must | P4
+RR-OPR-06 | Monthly owner statement (F-21) generated, approved, issued and archived; remittance recorded. | Statement frozen once issued. | Must | P4
+RR-OPR-07 | Client Principal portal: own portfolio dashboards, statements, MIS, approvals. | UAT-25 passes for principals. | Must | P4
+RR-OPR-08 | Operator-level consolidated view across clients (for operator management only). | Totals = Σ client totals. | Should | P4
+RR-OPR-09 | Mandate end revokes staff access to the client automatically; data export handed to owner. | Access removed on end date. | Must | P4
+--- END TABLE 63 ---
+
+P: 5.12 FM Charges, CAM Pools & Utilities (usable without CAFM)
+
+--- TABLE 64 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-FMC-01 | Charges-only contracts for occupants billed CAM/utilities/services by an FM entity. | No rent lines generated. | Must | P2
+RR-FMC-02 | Meters and readings: manual, CSV, API; auto-sourced from CAFM when subscribed. | Source recorded per reading. | Must | P2
+RR-FMC-03 | Tariff master with validity dates per property and billing entity. | Correct tariff by reading date. | Must | P2
+RR-FMC-04 | CAM pools: annual budget, monthly provisional billing by apportionment. | Provisional CAM = budget share ÷ 12. | Should | P4
+RR-FMC-05 | Actual CAM costs by category: manual, accounting import, or CAFM/Marketplace. | Variance budget vs. actual shown. | Should | P4
+RR-FMC-06 | Year-end CAM true-up per occupant (F-22) with debit/credit notes. | Σ true-ups = actual − billed. | Should | P4
+--- END TABLE 64 ---
+
+P: 5.13 Analytics, Forecast, P&L, MIS & Exceptions
+
+--- TABLE 65 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-ANL-01 | Occupancy: area, seats and economic, by property/floor/client/portfolio. | F-15 to F-17. | Must | P1
+RR-ANL-02 | WALE by income and area; to expiry and to lock-in end. | Matches §13.6. | Must | P1
+RR-ANL-03 | Rollover by year (10 years). | Stacked by property. | Must | P1
+RR-ANL-04 | Revenue by component; top-tenant and industry concentration. | Sums to gross. | Must | P3
+RR-ANL-05 | Month-end snapshots and movement report. | Locked snapshot immutable. | Must | P3
+RR-ANL-06 | 12-month forecast incl. escalations, expiries, renewal assumption and weighted pipeline. | UAT-28 passes. | Must | P5
+RR-ANL-07 | Property P&L: revenue, operating costs (manual/import/CAFM), NOI, margin. | UAT-30 passes. | Must | P5
+RR-ANL-08 | Automated monthly MIS (PDF + Excel) per property, client and portfolio; scheduled distribution. | UAT-31 passes. | Must | P5
+RR-ANL-09 | Exception centre: critical / action / upcoming / information, with assignment and resolution. | Every alert type in §5.15 routable. | Must | P5
+RR-ANL-10 | Executive, property, managed-office, ageing, forecast and lease-pipeline dashboards with KPIs per Table 5.13a. | All KPIs populated from records. | Must | P5
+RR-ANL-11 | Investor/lender pack export from a snapshot. | < 60 s for 50 properties. | Should | P5
+--- END TABLE 65 ---
+
+P: Table 5.13a — Mandatory dashboard KPIs
+
+--- TABLE 66 ---
+Dashboard | KPIs
+Executive | Annual contracted revenue, monthly billing, collections, outstanding, collection efficiency, occupancy, escalations due, expiring contracts
+Property | Revenue by charge type, occupancy, CAM/utilities, collections, outstanding, NOI
+Managed Office | Capacity, contracted seats, occupied seats, seat occupancy, revenue per seat, contribution margin, break-even occupancy
+Ageing | Outstanding by 0–30/31–60/61–90/90+, top overdue occupants
+Forecast | 12-month revenue, escalation uplift, expiry impact, occupancy assumptions
+Lease Pipeline | Expiring contracts, renewal stage, renewal value, renewed/lost
+Owner (Multi-Client) | Per client: billed, collected, arrears, fee, net remittance, occupancy
+Monthly MIS | Revenue, billing, collection, ageing, occupancy, expiry, escalation, P&L, exceptions, actions
+--- END TABLE 66 ---
+
+P: 5.14 Access Control & Roles
+
+--- TABLE 67 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-ACL-01 | Roles per Table 5.14a, inherited from Platform Core: Organisation → Client Account → Users → Roles → Properties → Spaces → Occupants → Contracts → Documents → Workflow → Audit. | Enforced in API and RLS. | Must | P1
+RR-ACL-02 | Record-level scoping by client account and property assignment. | Automated two-org and two-client RLS tests green. | Must | P1
+RR-ACL-03 | Field masking for PAN, bank details, contact data. | Masked in UI, API, exports. | Must | P1
+RR-ACL-04 | Custom roles (Enterprise) built from capability list. | Custom role cannot exceed creator's rights. | Could | P5
+RR-ACL-05 | Time-bound auditor access. | Auto-expiry. | Should | P3
+RR-ACL-06 | SSO (SAML/OIDC) on Enterprise. | Login via client IdP. | Could | P5
+--- END TABLE 67 ---
+
+P: Table 5.14a — Role permission matrix
+
+--- TABLE 68 ---
+Capability | Org Admin | Client Princ. | Mgmt | Asset Mgr | Prop/Ctr Mgr | Leasing | Finance | Facility Mgr | Tenant | Auditor
+View rent roll | ✓ | Own client | ✓ | ✓ | Scoped | ✓ | ✓ | Scoped | — | ✓
+Edit space / occupant | ✓ | — | — | ✓ | Scoped | — | — | — | — | —
+Create / edit contract (draft) | ✓ | — | — | ✓ | Scoped | ✓ | — | — | — | —
+Approve contract / financial terms | ✓ | Per mandate | — | ✓ | — | — | ✓ | — | — | —
+Apply escalation | ✓ | — | — | ✓ | — | — | ✓ | — | — | —
+CAM / utility charges & meters | ✓ | — | — | ✓ | Scoped | — | ✓ | ✓ | — | —
+Seat counts (flex) | ✓ | — | — | — | Scoped | — | ✓ | — | — | —
+Billing run / issue invoice | ✓ | — | — | — | — | — | ✓ | Charges only | — | —
+Record / allocate payment | ✓ | — | — | — | — | — | ✓ | — | Pay own | —
+Owner statement approve | ✓ | Receive | — | — | — | — | ✓ | — | — | —
+Import / mapping | ✓ | — | — | ✓ | — | — | — | — | — | —
+Documents | ✓ | Client docs | View | ✓ | Scoped | ✓ | ✓ | — | Own, visible | View
+Dashboards / MIS | ✓ | Own client | ✓ | ✓ | Scoped | Pipeline | ✓ | Charges | — | ✓
+Users, roles, subscription | ✓ | — | — | — | — | — | — | — | — | —
+--- END TABLE 68 ---
+
+P: "Scoped" = limited to properties assigned to the user. OFFICEX Platform Support has break-glass read access only, time-limited and logged. The OFFICEX platform Super Admin console (/admin) is separate from the subscriber's Organisation Admin.
+P: 5.15 Alerts & Notifications
+P: Generated nightly (data exceptions immediately); delivered in-app, email (Resend) and WhatsApp (via n8n); lead times, recipients and channels configurable per organisation and property; daily/weekly digest option. Default timings:
+
+--- TABLE 69 ---
+Alert | Default timing
+Contract expiry | 12 / 6 / 3 / 1 months
+Escalation | 90 / 60 / 30 days
+Invoice due | Configurable (default 3 days before due date)
+Overdue | 1 / 7 / 30 / 60 / 90+ days
+Document expiry (insurance, NOC, bank guarantee) | 90 / 30 / 7 days
+Data exception | Immediate, or daily digest
+--- END TABLE 69 ---
+
+
+--- TABLE 70 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-ALR-01 | Contract expiry at 12/6/3/1 months. | UAT-26. | Must | P1
+RR-ALR-02 | Escalation due at 90/60/30 days and on application. | UAT-27. | Must | P1
+RR-ALR-03 | Lock-in end, notice window, renewal/break option windows. | From clauses. | Must | P1
+RR-ALR-04 | Holding over; missing LOI/agreement/amendment; document expiry (insurance, NOC, BG). | Routed to exception centre. | Must | P1
+RR-ALR-05 | Invoice pending approval; issued but unpaid; disputed. | Finance notified. | Must | P2
+RR-ALR-06 | Overdue at 1/7/30/60/90+ days; payment partially allocated or unallocated; collection below target. | Escalates to owner/principal at 60+ (UAT-64). | Must | P3
+RR-ALR-07 | Deposit shortfall after escalation. | Shortfall amount shown. | Should | P3
+RR-ALR-08 | Occupancy below threshold; revenue variance vs. forecast. | Threshold per property. | Should | P5
+RR-ALR-09 | Seat count not submitted before billing; head-lease payment due. | Blocks flex billing until resolved. | Must | P4
+RR-ALR-10 | Owner statement due; mandate ending in 60 days. | Operator notified. | Should | P4
+--- END TABLE 70 ---
+
+P: 5.16 Integrations (all optional)
+
+--- TABLE 71 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-INT-01 | Accounting export: Tally Prime XML vouchers and generic CSV journal with ledger mapping. | Imports into Tally test company. | Should | P5
+RR-INT-02 | Zoho Books API sync; QuickBooks; SAP/Oracle via CSV/SFTP. | Idempotent; errors queued. | Could | P5
+RR-INT-03 | Leasing CRM: LOI → pipeline contract; activation → commission_ledger (OI-2). Only when CRM subscribed. | No re-keying. | Should | P5
+RR-INT-04 | CAFM: meter readings, CAM costs, occupant lookup on tickets; full Tenant Portal reads RR data. | Automatic when CAFM added. | Should | P5
+RR-INT-05 | Marketplace: optional publishing of vacant spaces with asking rent. | Listing ends when let. | Could | P5
+RR-INT-06 | Outbound webhooks and public API for subscribers (Enterprise). | Signed, retried, logged. | Should | P5
+RR-INT-07 | E-sign for LOI/agreements via approved provider. | Signed copy stored as executed version. | Could | P5
+--- END TABLE 71 ---
+
+P: 5.17 Audit & Compliance
+
+--- TABLE 72 ---
+ID | Requirement | Acceptance criterion | Priority | Phase
+RR-AUD-01 | Field-level change log for all contract, charge, step, deposit and financial records: old, new, actor, time, source. | UAT-36. | Must | P1
+RR-AUD-02 | Platform audit_log for imports, approvals, billing runs, allocations, statements, exports, role changes, document views. | Visible in audit timeline. | Must | P1
+RR-AUD-03 | Locked snapshots and issued invoices/statements are immutable; corrections via notes/adjustments. | Edit returns 409. | Must | P3
+RR-AUD-04 | GST export (GSTR-1-ready) and TDS receivable report. | Reviewed by client CA. | Should | P5
+RR-AUD-05 | Retention and legal-hold settings. | Per §6.6. | Should | P5
+--- END TABLE 72 ---
+
+
+--- TABLE 73 ---
+SECTION6 | Technical & Architecture GuidelinesBuilt on the confirmed OFFICEX stack — no new technology introduced
+--- END TABLE 73 ---
+
+P: 6.1 Stack Alignment
+
+--- TABLE 74 ---
+Layer | Technology | Use in OFFICEX Rent Roll
+Database | Supabase PostgreSQL + Drizzle ORM | All §4 tables; numeric (never float) for money/area; temporal history; RLS
+Web | Next.js 16 (App Router) | Desktop-first enterprise UI; server components and virtualised grids; responsive occupant and approval journeys
+Mobile | React Native (single app) | Owner/principal dashboard, approvals, occupant pay and receipts
+Storage | Supabase Storage (private buckets) | Source files, contract documents, invoices, statements, MIS PDFs
+Jobs | Postgres functions + n8n; queue for heavy jobs | Nightly status/alerts/metering, billing runs, MIS generation, fx rates
+Payments | Razorpay (incl. linked-account settlement per OI-6) | Checkout, webhooks, refunds, settlements
+Messaging | Resend, Firebase FCM, WhatsApp Business API | Alerts, invoices, statements, reminders
+Search & reporting | Algolia index; Postgres materialized views / reporting tables (warehouse later if scale requires) | High-volume register filtering; cached analytics and dashboards
+Analytics | Posthog, Metabase | Product metrics (§10), internal BI
+Hosting / CI | Vercel + AWS India region, GitHub Actions | India data residency; migrations reviewed in CI
+--- END TABLE 74 ---
+
+P: 6.2 Multi-Tenancy, Multi-Client and Entitlements
+P: Shared database, shared schema, row-level isolation. Every table has org_id and client_account_id.
+P: RLS read policy: org_id ∈ user's organisations AND (portfolio-wide role OR client_account_id ∈ user's clients) AND (portfolio-wide OR property_id ∈ assignments). Occupant users are restricted to their own occupant_id. Write policies add role capability checks.
+P: Entitlements are enforced server-side in API middleware (feature code per route) and in job runners. UI hiding is not a control. Entitlements never affect RLS data visibility — a downgraded feature becomes read-only, not invisible.
+P: Standalone guarantee: no Rent Roll query may inner-join to a CAFM, CRM or Marketplace table. Cross-product data is read through optional adapters that return empty when the product is absent (e.g. MeterReadingSource: manual | csv | api | cafm).
+P: Never trust client-supplied organisation, client-account or property IDs — every request is authorised server-side against the user's memberships. Cross-organisation administrative access (e.g. OFFICEX support) is time-limited and audited.
+P: Service-role jobs run as SECURITY DEFINER functions with explicit org scoping; no service keys in clients.
+P: Release gate: automated RLS suite seeds two orgs, two client accounts in one org, and an occupant user, and asserts zero leakage for every role and table.
+P: Partitioning: invoice_line, audit history, snapshot lines and meter_reading range-partitioned by month beyond ~5M rows. Key indexes: (org_id, client_account_id, property_id), (org_id, status, expiry_date), (org_id, occupant_id, status) on invoices.
+P: 6.3 Import Pipeline
+
+--- TABLE 75 ---
+Stage | What happens | Exit condition
+1. Landing | Original file stored unchanged with checksum; virus-scanned | File readable
+2. Staging | Rows saved as raw jsonb in import_row | All rows parsed
+3. Mapping & transform | Template applied; values normalised; rows exploded into canonical candidates | Mandatory fields mapped
+4. Validation | Rules R-01…R-44 and control totals | No errors; warnings acknowledged
+5. Diff & approval | New/changed/ended vs. production; approver signs off | Approval recorded
+6. Commit | Single transaction upsert; versions and audit written | Committed or fully rolled back
+7. Post-commit | Recompute statuses, charges, caches; trigger alerts | Jobs complete
+--- END TABLE 75 ---
+
+P: 6.4 API Design
+P: REST/JSON under /api/v1; Supabase JWT (OAuth2/OIDC for Enterprise API clients); org resolved from token; cursor pagination, filters and field selection on lists; If-Match version on writes; Idempotency-Key header mandatory on invoice, payment and allocation writes; all webhooks signed, idempotent and logged.
+
+--- TABLE 76 ---
+Group | Endpoints
+Subscription | GET /entitlements · GET /usage · PATCH /settings/branding
+Operator | CRUD /client-accounts · /billing-entities · /mandates
+Masters | CRUD /properties · /buildings · /spaces · /seat-inventory · /pricing-plans · /occupants (de-dup on POST)
+Contracts | CRUD /contracts · POST /contracts/{id}/transition (approve, activate, serve_notice, renew, terminate, cancel) · /charges · /steps · /concessions · /deposits · /clauses
+Documents | POST /contracts/{id}/documents (new version) · GET signed URL · PATCH status/visibility
+Rent roll | GET /rent-roll?as_of=&view=&group_by= · GET /analytics/{occupancy|wale|rollover|components|forecast|pnl}
+Billing | POST /billing-runs · POST /billing-runs/{id}/approve · GET/POST /invoices · POST /invoices/{id}/issue|cancel|dispute · POST /adjustment-notes
+Payments | POST /payments (initiate: invoice_ids[], amount) · POST /payments/{id}/allocations · POST /webhooks/razorpay · POST /refunds
+Operations inputs | POST /meter-readings (bulk) · POST /seat-counts · CRUD /cam-pools · POST /cam-pools/{id}/true-up
+Operator outputs | POST /owner-statements · POST /owner-statements/{id}/issue · POST /remittances
+Snapshots & MIS | POST /snapshots · POST /snapshots/{id}/lock · POST /mis (async) · GET /exports/{job}
+Imports | POST /imports · PUT /imports/{id}/mapping · POST /imports/{id}/validate|approve|commit|rollback
+--- END TABLE 76 ---
+
+P: 6.5 Performance Targets
+
+--- TABLE 77 ---
+Operation | Volume | Target
+Validate / commit import | 10,000 rent-roll rows | ≤ 30 s / ≤ 30 s (larger commits async)
+Property rent roll view | 500 spaces | < 800 ms p95
+Portfolio rent roll (paginated, with totals) | 10,000 spaces / 50 properties / 20 clients | < 2 s p95
+Filter / sort | 10,000 spaces | < 1 s p95
+Analytics (cached, refreshed on change) | 50 properties | < 1.5 s p95
+Billing run draft | 5,000 invoices | < 3 min
+Payment webhook to allocation visible | single payment | < 10 s
+Month-end snapshot | 50,000 charge lines | < 5 min
+Monthly MIS PDF | one property / portfolio of 50 | < 30 s / < 3 min
+Standard dashboard (from reporting layer) | Portfolio | ≤ 3 s
+Common read APIs (excl. external integrations) | — | ≤ 1 s p95
+Availability | Production module | ≥ 99.5%, within overall OFFICEX SLA
+Single-entity read / write | — | < 300 ms / < 500 ms p95
+--- END TABLE 77 ---
+
+P: Never load a full portfolio into the browser; paginate server-side. A load-test fixture (50 properties, 10k spaces, 2,000 seats, 20 client accounts) must run in CI before each release.
+P: 6.6 Security & Compliance
+P: TLS 1.2+ in transit; AES-256 at rest; column-level encryption for PAN and bank details; signed, short-lived document URLs.
+P: Personal data (occupant contacts, PAN, signatories, members' details) handled under the Digital Personal Data Protection Act, 2023: purpose-limited, masked by role, deletable where no legal retention applies.
+P: Financial records retained at least 8 years (books-of-account retention under the Companies Act); soft delete only; executed documents never overwritten.
+P: Append-only audit tables (no UPDATE/DELETE grants). Point-in-time recovery; quarterly restore drill with evidence; monitoring and alerting aligned to production SLA.
+P: Configurable financial year, currency, tax profiles and numbering schemes per billing entity.
+P: Input validation, malware scanning of uploads, rate limiting on APIs and portal, PII minimisation, and controlled (audited, role-limited) export and download.
+
+--- TABLE 78 ---
+SECTION7 | Phased Implementation PlanTwo-week sprints; phases reconcile both earlier documents
+--- END TABLE 78 ---
+
+
+--- TABLE 79 ---
+SequencingOFFICEX Managed Services portfolios are the first users (loaded by the OFFICEX team, P1–P3). Standalone subscribers are onboarded from P3 exit for landlords, FM companies and managed office/co-working operators, and from P4 exit for property management companies and MSPs managing several owners. AI features are Year 2+ (P6) and must not be demonstrated or sold as available before they ship.
+--- END TABLE 79 ---
+
+
+--- TABLE 80 ---
+Phase | Sprints | Scope | Exit criteria
+PD — Discovery & Design | 2–3 wks (overlaps OI replies) | Source templates from pilots, personas, UX flows, final schema, OpenAPI contracts, KPI definitions, management decisions (§0.5) | Management decisions signed; epics and stories in backlog; design approved
+P0 — Foundation & Product Shell | S0 (2 wks) | Drizzle migrations for §4; RLS + test suite; subscription, entitlement and navigation service (RR-ENT-01…04); settings, tax profiles, charge types; replace ₹185/sqft seed data with §13 samples | RR-only org can be provisioned; RLS suite green; realistic demo data
+P1 — Lease & Rent Roll | S1–S3 | Masters, import centre (profiling, mapping, unmapped columns, exception queue), deal register, contract master with maker-checker, documents, register/viewer, escalation & expiry engine, occupancy/WALE/rollover, alerts v1, roles, audit, data export | 3 Managed Services buildings loaded and signed off at ₹0 variance
+P2 — Billing (incl. core seat billing) | S4–S5 | Billing runs, separate invoice types, GST invoices, e-invoice option, credit/debit notes, meters & tariffs, charges-only contracts; seat inventory, pricing plans, contracted/occupied/minimum/hybrid seat billing, inclusions, rolling memberships; invoice delivery; usage metering | Pilot month draft billing reconciles to rent roll (area and seat contracts); CA sign-off on invoice format
+P3 — Payments & Collections | S6–S7 | Razorpay checkout/webhooks, Pay All/Selected/Individual/partial, allocation engine, offline receipts, TDS, receipts, ageing, disputes, deposits, occupant billing portal, snapshots, opening balances | One full month billed and collected; snapshot = Collections = MIS rent section. Standalone launch (MVP) for segments A, C and E
+P4 — Operators & Advanced Flex | S8–S10 | Client accounts, mandates, owner-entity invoicing, direct settlement, fee calc, owner statements, principal portal; head leases, centre P&L, flex dashboard, per-use extras; CAM pools & true-up; white-label; self-serve trial | One PM-managed client and one flex centre with head lease live. Standalone GA for segments B and D
+P5 — Analytics, MIS & Ecosystem | S11–S13 | Forecast, property P&L, automated MIS, exception centre, dashboards; Tally/Zoho, CAFM adapters, Leasing CRM + commission, Marketplace publishing, webhooks/API, e-sign, SSO, custom roles | Pilot closes a month in Tally without re-keying; 10k-row load test passes
+Pilot & rollout gates | Run alongside P1–P4 (4–8 wks per pilot) | 2–3 pilot customers per segment wave: parallel run with legacy Excel, UAT, training, hypercare | Rollout gate per wave: reconciliation, UAT and hypercare exit signed
+P6 — Intelligence (Year 2+) | Roadmap | AI-assisted extraction of rent, dates, escalation, lock-in, notice, deposit, CAM from documents with mandatory human verification; anomaly detection; renewal and pricing models | Only after sufficient normalised data; roadmap until shipped
+--- END TABLE 80 ---
+
+
+--- TABLE 81 ---
+MVP boundary (standalone launch at P3 exit)Included: canonical data, import/mapping, deal register, contract master, documents, rent roll, area, seat, hybrid, fixed, charges-only, usage and bundled billing models, escalation, expiry, occupancy, invoicing with separate invoice types, payments and allocation, ageing, occupant portal, core dashboards, audit.Not blocking launch: every ERP connector, multi-client operator features, head-lease P&L, advanced forecasting/MIS automation, AI, and unusual lease clauses (handled by manual charge lines and the exception backlog).
+--- END TABLE 81 ---
+
+P: Indicative duration: Discovery 2–3 weeks plus about 28 weeks for P0–P5 with one squad, subject to Scalezix estimation (OI-1). A second squad running P4 operator features in parallel with P3 would shorten this by about 4 weeks.
+P: 7.1 Dependencies
+P: Razorpay "Pay Now" (Flow Analysis item #1) must be built once against Rent Roll invoices and the allocation engine — not as a standalone payment page.
+P: SaaS subscription billing (OI-3) must be live before the first paying standalone subscriber (P3 exit).
+P: Settlement model for third-party owners (OI-6) must be decided before P4 build starts.
+P: Commission engine (OI-2) and Leasing CRM LOI flow gate RR-INT-03 in P5.
+P: Pilot data from 3 Managed Services buildings by start of S2; one flex operator identified as design partner by start of S4, and one property management company by start of S8.
+
+--- TABLE 82 ---
+SECTION8 | Onboarding & Data Migration PlaybookWhite-glove for early customers; self-serve as the product matures
+--- END TABLE 82 ---
+
+P: 8.1 Onboarding Routes
+
+--- TABLE 83 ---
+Route | Who | How
+Managed Services (white-glove) | OFFICEX Managed Services clients; first standalone customers | OFFICEX team collects documents, abstracts, imports, reconciles and trains (§8.3)
+Assisted | Standalone subscribers with >20 contracts or multi-client operators | Subscriber uploads; OFFICEX/Scalezix support reviews mapping and validation; joint sign-off
+Self-serve | Small landlords and single-centre flex operators (from P4) | Trial sign-up → segment template → sample sandbox → template import → go-live
+--- END TABLE 83 ---
+
+P: 8.2 Data Collection Checklist
+
+--- TABLE 84 ---
+Item | Segments | Mandatory | Notes
+Property, building and space schedule with chargeable & carpet area, seat capacity | All | Y | Include vacant/non-leasable
+Current rent roll / member list with control totals | All | Y | Latest month-end
+Executed agreements, amendments, side letters | All | Y | Amendments often override deeds
+Billing entities: legal names, GSTINs, invoice series, bank/settlement details | All | Y | Per owner/SPV/state
+Deposit register and bank guarantees | A, B, D, E | Y | Held vs. required
+Outstanding receivables at cut-over | All | Y | Opening balances
+Sample of last 3 months invoices | All | Y | Format and numbering continuity
+Client owner list and management agreements with fee terms | B, D | Y | Creates client accounts and mandates
+Meter list, last readings and tariffs | C, D, E | Y* | *If utilities are billed
+CAM budget and cost categories | C, D | Y* | *If CAM pools used
+Pricing plans, seat inventory, monthly seat counts | E | Y | Plans become pricing_plan records
+Head leases for flex centres | E | Y | Loaded as payable contracts
+Accounting ledger names | All |  | For P5 export
+--- END TABLE 84 ---
+
+P: 8.3 Standard Operating Procedure
+
+--- TABLE 85 ---
+Step | Activity | Owner | Exit criterion / output | Target
+1. Discover | Kick-off: cut-over date, scope, reporting currency, sign-off authority, segment template; collect documents per §8.2 | Onboarding lead + customer | Approved source inventory | Day 1–5
+2. Profile | Measure duplicates, missing values, inconsistent dates/rates, totals | Onboarding team | Data quality report | Day 3–5
+3. Abstract | Verify contracts; agreement + latest amendment prevail | Lease analyst | Abstract in OFFICEX template | Day 3–8
+4. Configure & map | Billing entities, charge types, tax profiles, numbering, branding, roles; map source to canonical schema and save template | Onboarding team | Mapping signed off | Day 5–8
+5. Stage & validate | Load, normalise, validate; resolve exceptions; document overrides | Onboarding team | Validation pass / accepted exceptions | Day 8–9
+6. Reconcile | Area, seats, rent, deposits, receivables vs. source totals by property | Onboarding + customer finance | Reconciliation signed (₹0 or explained) | Day 9–10
+7. Commit | Publish production records; lock opening snapshot; refresh dashboards | Customer authority approves | Signed data acceptance form | Day 11
+8. UAT & training | Business users test workflows and reports; role-based training (§8.5) | Customer + onboarding team | UAT sign-off | Day 11–13
+9. Go-live | Freeze legacy spreadsheet as read-only; activate alerts and billing as approved; parallel run for first billing cycle where required | Customer + onboarding team | Go-live approval | Day 14–15
+10. Hypercare | Daily issue review for 2 weeks, then weekly to week 6; first billing run and first owner statement supervised | Onboarding + Scalezix | Stable operations; hypercare exit | Weeks 3–6
+--- END TABLE 85 ---
+
+P: Targets: a standard single property or flex centre live within 2 business days of clean data receipt once templates exist; a 5-building, 150-contract portfolio within 15 working days including abstraction.
+P: 8.4 Exceptions & Data Quality
+
+--- TABLE 86 ---
+Issue | Resolution rule
+Rent roll and agreement disagree | Agreement + latest amendment prevail; discrepancy noted; customer confirms in writing
+Vague escalation ("as per market") | Step type market_review, pending_resolution; alert 90 days before
+Area or seat mismatch vs. totals | Load with warning; raise to customer; never force-balance with a dummy space
+Missing GSTIN/PAN | Warning; invoicing blocked for that occupant until filled
+Occupant without signed agreement | Contract flagged unsigned; appears in exception centre
+Expired contract still billed | Set holding_over; alert; never auto-extend
+CAM/electricity both included and billed | R-40 error; customer confirms which applies
+Disputed opening receivables | Load undisputed; disputed portion as separate flagged invoice
+Placeholder identical rates | R-30 warning; confirmation required before sign-off
+--- END TABLE 86 ---
+
+P: 8.5 Training Materials
+
+--- TABLE 87 ---
+Audience | Format | Content
+Property / Centre Managers | 60-min session, 5 short videos, quick-reference card | Register, contract tabs, seat counts, notices, alerts, edits and history
+Finance / AR | 90-min session + billing and collections playbook | Billing runs, GST checks, payments, allocation, TDS, notes, ageing, deposits, snapshots
+Operators (PM/FM/MSP) | 60-min session + operator guide | Client accounts, mandates, owner invoicing, fees, statements, remittance, CAM pools
+Owners / Client Principals / Management | 30–45-min walkthrough | Dashboards, statements, approvals, MIS
+Occupants | One-page guide + in-portal tips | Paying all/selected/partial, receipts, documents, disputes
+Leasing | 45-min session | Deal register, deal-to-LOI-to-contract conversion, renewal pipeline, documents
+Admin / Operations | Half-day workshop + import SOP | Settings, templates, validation, overrides, rollback, users and roles
+Scalezix support | Production runbook | Failed batches, webhook replay, allocation corrections, RLS troubleshooting
+--- END TABLE 87 ---
+
+
+--- TABLE 88 ---
+SECTION9 | UAT Scenarios & Definition of DoneUAT-01 to UAT-40 retained from Spec V1.0; UAT-41 to UAT-66 added
+--- END TABLE 88 ---
+
+
+--- TABLE 89 ---
+ID | Scenario | Expected result
+UAT-01 | Create property/building/space | Space available for contract/occupancy
+UAT-02 | Create conventional lease | Rent roll calculates area × rate
+UAT-03 | Create managed-office contract | Seat-based billing calculates correctly
+UAT-04 | Configure CAM included | CAM not separately billed
+UAT-05 | Configure electricity included | Electricity not separately billed
+UAT-06 | Configure electricity meter billing | Usage × configured rate calculated
+UAT-07 | Apply escalation | New rent effective on configured date
+UAT-08 | Generate separate rent invoice | Correct rent invoice issued
+UAT-09 | Generate CAM invoice | Correct CAM invoice issued
+UAT-10 | Generate electricity invoice | Correct utility invoice issued
+UAT-11 | Pay individual invoice | Invoice paid after successful allocation
+UAT-12 | Pay selected invoices | Single payment settles selected invoices
+UAT-13 | Pay all invoices | Single payment allocates to all selected invoices
+UAT-14 | Partial payment | Balance remains outstanding; ageing updates
+UAT-15 | One payment / multiple invoices | Allocation totals equal payment
+UAT-16 | Auto allocation | Configured priority applied
+UAT-17 | Manual allocation | Authorised finance user allocates with audit trail
+UAT-18 | Ageing 0–30 | Invoice in correct bucket
+UAT-19 | Ageing 31–60 | Invoice in correct bucket
+UAT-20 | Ageing 61–90 | Invoice in correct bucket
+UAT-21 | Ageing 90+ | Correct bucket and alert triggers
+UAT-22 | Contract document upload | Stored against correct contract
+UAT-23 | Document versioning | Old version retained; current flag correct
+UAT-24 | Occupant document access | Occupant sees only permitted documents
+UAT-25 | Owner access | Owner sees assigned portfolio records only
+UAT-26 | Lease expiry alert | Configured alert generated
+UAT-27 | Escalation alert | Configured alert generated
+UAT-28 | 12-month forecast | Includes contract events and escalations
+UAT-29 | Occupancy calculation | Area and seat occupancy correct
+UAT-30 | Property P&L | Revenue, costs, NOI correct
+UAT-31 | Monthly MIS | All required KPI sections present
+UAT-32 | Invoice dispute | Creates task and audit trail
+UAT-33 | Credit note | Outstanding recalculates
+UAT-34 | Duplicate payment webhook | No duplicate allocation
+UAT-35 | Role restriction | Unauthorised user cannot change financial terms
+UAT-36 | Audit log | Financial/contractual actions traceable
+UAT-37 | Bulk invoice generation | All eligible contracts invoiced correctly
+UAT-38 | Managed-office minimum commitment | Billing respects minimum seats
+UAT-39 | Occupied-seat billing | Billing follows occupied-seat configuration
+UAT-40 | Hybrid billing | Base and additional charges correct
+UAT-41 | Standalone end-to-end: org with only Rent Roll subscribed → property → contract → invoice → payment | Completes with no CAFM/CRM/Marketplace entitlement or data
+UAT-42 | Navigation for RR-only user | Only Rent Roll menus shown
+UAT-43 | Call non-entitled feature API | 403 with feature code; no data change
+UAT-44 | Add CAFM entitlement to existing RR org | Existing spaces/occupants reused; no duplicates; no migration
+UAT-45 | Full data export | Bundle contains all records and current documents
+UAT-46 | Client account isolation | Principal of client A cannot see any client B record via UI, API or export
+UAT-47 | Invoice in owner's billing entity | Owner name, GSTIN and series on invoice
+UAT-48 | Management fee | Fee and GST per F-20 match §13.8
+UAT-49 | Owner statement | Net remittance per F-21 matches §13.8; statement frozen on issue
+UAT-50 | Mandate end | Operator staff lose access to that client on end date
+UAT-51 | Head lease (payable) | Monthly payable generated; escalation alert raised
+UAT-52 | Centre P&L and break-even | Match §13.7
+UAT-53 | Charges-only contract | Only CAM/utility/service lines; no rent
+UAT-54 | Meter readings via CSV without CAFM | Electricity invoice correct per F-09
+UAT-55 | CAM year-end true-up | Notes per F-22; Σ true-ups = actual − billed
+UAT-56 | Import with errors → fix → commit → rollback | State restored exactly; audited
+UAT-57 | White-label | Invoice, email and portal show subscriber brand
+UAT-58 | Rolling monthly membership mid-month exit | Proration per F-10
+UAT-59 | Locked snapshot edit attempt | Rejected; correction via adjustment
+UAT-60 | Usage metering | Area, seats, contracts, clients correct in Settings and SaaS billing feed
+UAT-61 | Convert won deal to contract | Terms, occupant and documents carried over; nothing re-keyed; deal marked won
+UAT-62 | Future contract before commencement | Excluded from billing, collections and actual occupancy; included in Contracted view
+UAT-63 | Import file with extra source columns | Unmapped columns preserved and listed for review
+UAT-64 | Overdue cadence | Alerts at 1/7/30/60/90+ days; escalation to owner at 60+
+UAT-65 | USD invoice (IFSC) | Original currency, fx rate, fx date and INR reporting amount stored; original never overwritten
+UAT-66 | Maker-checker on financial terms | Maker cannot approve own change; approval audited
+--- END TABLE 89 ---
+
+P: Shaded rows are new in this final version. Each scenario must be executed on a Rent-Roll-only organisation unless it explicitly tests another product's entitlement, and evidenced with screenshots, data extracts and audit entries.
+P: 9.1 Definition of Done
+P: All agreed P0–P5 functionality implemented and demonstrated on a Rent-Roll-only organisation.
+P: Database schema (Drizzle), ERD and API documentation (OpenAPI) delivered.
+P: Role/permission matrix and entitlement map implemented and tested; RLS suite green.
+P: Formula test suite F-01 to F-25 passed against §13 known answers.
+P: UAT-01 to UAT-66 passed with evidence and signed by OFFICEX.
+P: Security and access-control testing completed, including client-account isolation.
+P: Invoice/payment reconciliation tested with positive, negative, partial and duplicate cases.
+P: Document versioning and audit trail verified.
+P: Performance tests per §6.5 passed on the load fixture.
+P: Area, seat, hybrid, fixed, charges-only, usage and bundled billing models tested; escalation, rent-free and expiry calculations covered by automated tests.
+P: Ageing, occupancy, WALE, forecast and MIS reconcile to source data; pilot migration completed with reconciliation sign-off.
+P: API documentation published with integration tests; production rollback plan and runbook approved.
+P: Admin, user, operator and occupant training material and production runbook delivered.
+
+--- TABLE 90 ---
+SECTION10 | Success Metrics & KPIsInstrumented in Posthog and Metabase
+--- END TABLE 90 ---
+
+
+--- TABLE 91 ---
+Category | Metric | Definition | Pilot target | 12-month target
+Commercial | Standalone subscribers | Orgs with RR subscription and no CAFM | 3 by P4 exit | 40+
+Commercial | Segment mix | Subscribers by segment A–E | At least 3 segments | All 5 segments
+Commercial | Attach rate | RR subscribers adding CAFM/CRM within 12 months | — | 20%
+Adoption | Area / seats under management | Metered nightly | 2.5 lakh sq ft / 300 seats | 25 lakh sq ft / 5,000 seats
+Adoption | Weekly active users | Active ÷ licensed users | 60% | 70%
+Adoption | Billing through OFFICEX | % subscribers invoicing via billing runs | 100% of pilots | 75%
+Adoption | Digital collection share | % of collections via occupant portal | 30% | 60%
+Data quality | Validation pass rate | Rows passing on first upload | 70% | 90%
+Data quality | Time to onboard | Kick-off to sign-off per property/centre | ≤ 10 days | ≤ 5 days
+Data quality | Reconciliation variance | At sign-off | ₹0 or explained | ₹0 or explained
+Business impact | Missed escalations | Applied late by >1 cycle | 0 | 0
+Business impact | Month-end reporting / owner statements | Days after month-end | ≤ 5 | ≤ 2
+Business impact | Collection efficiency | F-25 | Baseline | +10 pts
+Product health | Performance | % loads meeting §6.5 | 95% | 99%
+Product health | Error rate | Failed RR API requests | < 1% | < 0.2%
+Data quality | Rows passing validation after remediation | At go-live | ≥ 98% | ≥ 98%
+Data quality | Critical exceptions at go-live | Open critical exceptions ÷ records | < 2% | < 1%
+Efficiency | MIS preparation time | vs. customer baseline | ≥ 50% reduction | ≥ 75% reduction
+Business impact | Forecast accuracy | Actual vs. 12-month forecast variance | Track | ≤ 5%
+Product health | Import failure rate | Excluding source-data failures | < 2% | < 1%
+Product health | Support load | Tickets per 10 properties/centres per month | < 5 | < 1
+--- END TABLE 91 ---
+
+
+--- TABLE 92 ---
+SECTION11 | Risks & MitigationsRisk register for weekly OFFICEX–Scalezix review
+--- END TABLE 92 ---
+
+
+--- TABLE 93 ---
+Risk | Likelihood | Impact | Mitigation | Owner
+Poor customer data quality | High | High | Validation with fix hints; control totals; agreement verification; formal sign-off; R-30 | Onboarding + Scalezix
+Hidden dependency on CAFM breaks standalone use | Medium | High | No-join rule (§6.2); adapters; every UAT on RR-only org; UAT-41 as release gate | Scalezix
+Cross-client data leak in multi-client operators | Low | Critical | client_account_id in RLS; two-client test suite; UAT-46 gate | Scalezix
+Handling client money for third-party owners | Medium | High | Direct-to-owner settlement (OI-6); CA/legal review before P4 | OFFICEX
+Complex contract structures beyond MVP | Medium | Medium | Configurable components; manual line fallback; exception log drives backlog | OFFICEX Product
+Double billing of included CAM/electricity in flex | Medium | High | R-40 validation; inclusion flag; UAT-04/05 | Scalezix QA
+Billing/GST errors | Medium | High | Draft-review-approve; reconciliation report; CA review; formula tests | Scalezix QA
+Scope growth from standalone packaging | High | High | OI-1 change request; phased GA by segment; IDs as ticket keys | OFFICEX + Scalezix
+Integration delays (Tally/Zoho/e-invoice) | Medium | Medium | File-based export first; integrations off critical path | Scalezix
+User resistance to leaving Excel | High | High | White-glove onboarding; Excel export always available; quick-win findings at sign-off | OFFICEX
+Channel conflict between standalone sales and full-suite sales | Low | Medium | Clear editions; upgrade path without migration | OFFICEX
+Incorrect contractual calculations | Medium | High | Source-document link on every charge; maker-checker; formula tests F-01…F-25 | Scalezix QA
+Tax treatment mismatch | Medium | High | Configurable tax profiles; customer finance/CA validation before production billing | OFFICEX + customer
+Document version confusion | Medium | Medium | Current-version flag; immutable executed versions; audit history | Scalezix
+Large-portfolio performance | Medium | Medium | Indexes, pagination, search index, reporting layer, async jobs, load tests | Scalezix
+Overclaiming AI | Medium | High | AI strictly P6 / Year 2+ | OFFICEX leadership
+--- END TABLE 93 ---
+
+
+--- TABLE 94 ---
+SECTION12 | Scalezix Development RulesNon-negotiable; merged from both earlier documents
+--- END TABLE 94 ---
+
+P: Standalone product, single platform. Build Rent Roll on the OFFICEX Platform Core. Do not create a separate application, database or code base — and do not make any Rent Roll function depend on CAFM, Leasing CRM or Marketplace data.
+P: Do not create duplicate property, space, occupant or user masters.
+P: Enforce entitlements server-side; never rely on hiding UI.
+P: Do not hard-code charge types, tax rates, escalation rules, billing models, numbering or segment behaviour — use configuration.
+P: Separate contractual terms from monthly calculated transactions.
+P: Separate invoices from payments and payment allocation.
+P: Every row carries org_id and client_account_id; every query respects RLS.
+P: Never overwrite executed documents or issued invoices/statements; use versions and adjustment notes.
+P: Every financial and contractual change must be auditable.
+P: Money and area as numeric, never float; all invoice/payment writes idempotent.
+P: Configuration-driven workflows and permissions; API-first for accounting, e-sign, CAFM, CRM, Marketplace and future Intelligence.
+P: Never trust client-supplied organisation, client-account or property IDs; authorise every request server-side.
+P: Preserve unmapped source columns in staging; source-specific columns never become production schema.
+P: A contract is entered once; documents, charges, billing, collections, occupancy, forecast, expiry, P&L and reporting all flow from that one controlled record.
+P: UI must support drill-down portfolio → client → property → building → space → occupant → contract → invoice → payment.
+
+--- TABLE 95 ---
+SECTION13 | Appendix — Samples, Worked Examples, ERD & GlossaryKnown-answer test fixtures; replace the ₹185/sqft seed data in P0
+--- END TABLE 95 ---
+
+P: 13.1 Sample Rent Roll — Area-Based Contracts (as of 30-Sep-2026)
+P: Client account "self" (landlord segment A). Properties: Apex Business Tower (BKC, Mumbai), Meridian Tech Park (Gurugram), Nexus Hub (Noida), a GIFT City IFSC suite. Company names are fictional. Area in sq ft chargeable; rates per sq ft per month.
+
+--- TABLE 96 ---
+# | Property | Space | Occupant / industry | Area | Base rate | Monthly base rent | CAM rate | Start | Expiry | Lock-in end | Escalation | SD (mo) | Status | Flags / alerts
+1 | APX-BKC | APX-05A | TechNova Solutions Pvt LtdIT services | 8,500 | ₹285.20 | ₹24,24,200 | ₹28 | 01-Apr-23 | 31-Mar-32 | 31-Mar-26 | 15% / 3 yrs | 6 | Active | Deposit top-up due
+2 | APX-BKC | APX-07 | Global Logistics India LtdLogistics | 12,000 | ₹290 | ₹34,80,000 | ₹28 | 01-Jan-27 | 31-Dec-35 | 31-Dec-29 | 15% / 3 yrs | 6 | Pipeline 60% | LOI pending
+3 | APX-BKC | APX-08 | Apex Financial Advisors LLPBFSI | 10,200 | ₹275 | ₹28,05,000 | ₹28 | 15-Jul-21 | 14-Jul-27 | 14-Jul-24 | 5% p.a. | 10 | Active | Expiry < 12 m; critical
+4 | APX-BKC | APX-09 | — Vacant — | 10,200 | ₹290 | — | ₹28 | — | — | — | — | — | Vacant | Asking ₹290
+5 | MTP-GGN | MTP-T1-03 | Innovate Corp Technologies Pvt LtdIT services | 22,000 | ₹95 | ₹20,90,000 | ₹14 | 01-Nov-23 | 31-Oct-32 | 31-Oct-26 | 15% / 3 yrs | 6 | Active | Escalation 01-Nov-26
+6 | MTP-GGN | MTP-T1-04 | NextGen Retail Services Pvt LtdRetail tech | 22,000 | ₹92 | ₹20,24,000 | ₹14 | 01-Jan-20 | 31-Dec-25 | 31-Dec-22 | 15% / 3 yrs | 6 | Holding over | Arrears 62 days
+7 | MTP-GGN | MTP-T2-01 | Zenith Pharma Research Pvt LtdPharma | 18,500 | ₹98 | ₹18,13,000 | ₹14 | 01-Jun-24 | 31-May-33 | 31-May-27 | 4.5% p.a. | 6 | Active | 3 m rent-free (2024)
+8 | MTP-GGN | MTP-T2-02 | — Reserved — | 18,500 | ₹100 | — | ₹14 | — | — | — | — | — | Reserved | Asking ₹100
+9 | NXH-NDA | NXH-G01 | FreshMart Retail Pvt LtdGrocery retail | 2,400 | ₹160 | ₹3,84,000 | ₹18 | 01-Aug-26 | 31-Jul-35 | 31-Jul-29 | 5% p.a. | 6 | Active | MG + 8% turnover
+10 | NXH-NDA | NXH-03 | Orbit Edutech Pvt LtdEducation | 15,000 | ₹72 | ₹10,80,000 | ₹12 | 01-Mar-22 | 28-Feb-27 | 28-Feb-25 | 5% p.a. | 6 | Notice served | Exit 28-Feb-27
+11 | NXH-NDA | NXH-04 | Kestrel Engineering Services LtdEngineering | 15,000 | ₹70 | ₹10,50,000 | ₹12 | 01-Apr-25 | 31-Mar-34 | 31-Mar-28 | 15% / 3 yrs | 6 | Active | —
+12 | NXH-NDA | NXH-05 | — Vacant — | 15,000 | ₹75 | — | ₹12 | — | — | — | — | — | Vacant | Asking ₹75
+13 | GFT-IFSC | GFT-11A | Aurum Global Fund Services IFSC Pvt LtdFund admin | 6,000 | $1.25 | USD 7,500 | $0.15 | 01-Oct-25 | 30-Sept-31 | 30-Sept-28 | 5% p.a. | 3 | Active | USD; GST 0% (IFSC)
+--- END TABLE 96 ---
+
+P: Totals (USD at illustrative ₹84): total area 1,75,300 sq ft; occupied 1,19,600 sq ft; current monthly base rent ₹1,43,00,200 (annualised ₹17,16,02,400); pipeline 12,000 sq ft.
+P: 13.2 Sample Rent Roll — Mixed Area, Managed Office and Flex (carried over from Instruction Document V1.0)
+P: Illustrative portfolio mixing conventional leases and seat-based contracts. CAM and electricity are included in all seat prices (no separate CAM/electricity invoices — R-40). DEAL-021 is a pipeline deal (§4.7A), not a contract; LEASE-009 is a future contract excluded from billing until 01-Dec-2026.
+
+--- TABLE 97 ---
+Property | Building | Space | Occupant | Contract | Billing model | Area / seats | Rate | Monthly base | CAM | Escal. | Next esc. | Expiry | Status
+PROP-001 | Orion Tower | 8A | ABC Technologies | LEASE-001 | Area | 18,500 sqft | ₹125/sqft | ₹23,12,500 | CAM ₹15/sqft | 15% | 01-Feb-27 | 31-Jan-31 | Active
+PROP-001 | Orion Tower | 9A | Delta Consulting | LEASE-002 | Area | 12,000 sqft | ₹110/sqft | ₹13,20,000 | CAM ₹14/sqft | 10% | 01-Apr-27 | 31-Mar-30 | Active
+PROP-001 | Orion Tower | 10A | Nova Systems | LEASE-003 | Area | 9,500 sqft | ₹105/sqft | ₹9,97,500 | CAM ₹14/sqft | 12% | 01-Jun-27 | 31-May-31 | Active
+PROP-001 | Orion Tower | 11A | — Vacant — | — | — | 15,000 sqft | — | — | — | — | — | — | Vacant
+PROP-002 | Tech Park A | 3F-01 | Zenith Labs | LEASE-004 | Seat (managed) | 100 seats | ₹18,000/seat | ₹18,00,000 | Included | 10% | 01-Jan-27 | 31-Dec-28 | Active
+PROP-002 | Tech Park A | 3F-02 | Vertex AI | LEASE-005 | Seat (managed) | 60 seats | ₹19,500/seat | ₹11,70,000 | Included | 8% | 01-Mar-27 | 28-Feb-29 | Active
+PROP-002 | Tech Park A | 4F-01 | CoWork Hub | LEASE-006 | Seat (flex, 80 min.) | 80 seats | ₹15,000/seat | ₹12,00,000 | Included | 7% | 01-Jul-27 | 30-Jun-29 | Active
+PROP-002 | Tech Park A | 4F-02 | Prospect (deal) | DEAL-021 | Seat (proposed) | 120 seats | ₹16,000/seat | ₹19,20,000 | Included | 10% | 01-Jan-27 | 31-Dec-29 | Deal
+PROP-003 | Metro Plaza | 5A | Retail Services Co | LEASE-007 | Area | 7,500 sqft | ₹180/sqft | ₹13,50,000 | CAM ₹22/sqft | 15% | 01-Oct-27 | 30-Sep-32 | Active
+PROP-003 | Metro Plaza | 6A | Pioneer Finance | LEASE-008 | Area | 6,800 sqft | ₹155/sqft | ₹10,54,000 | CAM ₹20/sqft | 12% | 01-Nov-27 | 31-Oct-31 | Active
+PROP-004 | Business Centre | 2-12 | Kappa Solutions | LEASE-009 | Seat (managed) | 40 seats | ₹21,000/seat | ₹8,40,000 | Included | 10% | 01-Dec-26 | 30-Nov-28 | Future
+PROP-004 | Business Centre | 3-20 | Omni Global | LEASE-010 | Seat (managed) | 75 seats | ₹20,000/seat | ₹15,00,000 | Included | 8% | 01-Aug-27 | 31-Jul-30 | Active
+--- END TABLE 97 ---
+
+P: Monthly base revenue: active contracts ₹1,27,04,000 (54,300 sq ft area-based and 315 seats); future contract ₹8,40,000 (Contracted view only); weighted deal value appears only in the Forecast view (proposed ₹19,20,000 × probability).
+P: 13.3 Worked Example — Multi-Invoice Billing and One Payment
+P: An occupant receives five separate invoices for October (amounts shown gross for simplicity) totalling ₹12,75,000. It can pay all together, select some, pay one, or pay part. Here it pays ₹11,00,000 with "Pay All" selected and auto-allocation priority set to charge-type order (Rent → CAM → Electricity → Water → Parking).
+
+--- TABLE 98 ---
+Invoice | Invoice amount | Allocated | Outstanding | Status
+Rent | ₹10,00,000 | ₹10,00,000 | ₹0 | Paid
+CAM | ₹1,50,000 | ₹1,00,000 | ₹50,000 | Partially paid
+Electricity | ₹85,000 | ₹0 | ₹85,000 | Issued (unpaid)
+Water | ₹15,000 | ₹0 | ₹15,000 | Issued (unpaid)
+Parking | ₹25,000 | ₹0 | ₹25,000 | Issued (unpaid)
+Total | ₹12,75,000 | ₹11,00,000 | ₹1,75,000 | —
+--- END TABLE 98 ---
+
+P: Expected: one payment record, five allocation rows summing to ₹11,00,000, outstanding ₹1,75,000 ageing from each invoice's due date (UAT-13, 14, 15, 16).
+P: 13.4 Generic Mapping Rules (common source columns)
+
+--- TABLE 99 ---
+Source column | Canonical field | Transformation / rule
+Building Name | property.name / building.name | Trim; match property master; create only with approval
+Suite / Unit | space.suite_number | String; preserve leading zeros
+Rentable / Super / Chargeable Area | space.chargeable_area | Numeric; normalise to property area unit
+Tenant / Member Name | occupant.legal_name | Normalise legal name; duplicate check on GSTIN, PAN, fuzzy name
+Lease Start / Lease End | contract.commencement_date / expiry_date | ISO date; multi-format parse
+Monthly Rent | contract_charge[base_rent].rate | basis = fixed, or derived per area when area present (R-12 check)
+Rent/SF | contract_charge[base_rent].rate | basis = per_area
+Escalation % / Escalation Date | rent_step escalation_value / effective_date | type = fixed_pct; date validated against contract dates
+CAM | contract_charge[cam] | basis from mapping template (per_area / fixed / pro_rata_share)
+Electricity Included / CAM Included | contract_charge.is_included | True when contract states bundled; no separate invoice
+Seats / Contracted / Min / Occupied | seats_contracted / seats_minimum / seat count | Mapped according to billing model
+LOI / Lease PDF | contract_document (or deal document) | Linked document with type, version, status
+Any unrecognised column | import_row.unmapped | Preserved for review; never dropped
+--- END TABLE 99 ---
+
+P: 13.5 Worked Mapping — Source Row 1 to Canonical Records
+
+--- TABLE 100 ---
+Source column | Source value | Canonical target | Transform / rule
+Building | Apex Bus. Tower | property APX-BKC; building default | Alias match
+Flr / Unit | 5th / 5A | space.floor = 5; suite_number = 5A; space_code = APX-05A | Ordinal parse; code rule
+Tenant Name / GST No | TechNova Solutions Pvt. Ltd. / 27AABCT1234K1Z2 | occupant.legal_name; occupant.gstin | Normalise; de-dup on GSTIN
+Super Area / Carpet (sft) | 8,500 / 5,950 | space.chargeable_area; carpet_area; contract_space.area_let | Indian number parse; loading 42.86%
+Rent/sft | 285.20 | contract_charge[base_rent].rate; invoice_group = rent | Checked vs. steps
+Monthly Rent | 24,24,200 | Control value only | R-12: 8,500 × 285.20 ✓
+CAM/sft | 28 | contract_charge[cam]; is_recoverable; billing_entity = FM agency; invoice_group = cam | GST 18%
+LSD / LED / Rent Start | 01/04/23 / 31.03.2032 / 01-06-2023 | commencement, expiry, rent_commencement; concession rent_free Apr–May 2023 | Multi-format dates
+Lock-in / Notice | 36 months / 6 mths | lock_in_months 36 → 31-Mar-2026; notice 6 | Text-number parse
+Escl | 15% every 3 yrs | rent_step #1 ₹248.00 (01-Apr-23); #2 ₹285.20 (01-Apr-26, applied); #3 ₹327.98 (01-Apr-29) | Phrase parser; compounding
+IFRSD / Remarks | 1,26,48,000 / top up SD on escln | deposit.held; required 6 × 285.20 × 8,500 = 1,45,45,200; top_up_on_escalation | Shortfall ₹18,97,200 → alert
+--- END TABLE 100 ---
+
+P: Result: 1 space, 1 occupant, 1 contract, 1 contract_space, 2 charges, 3 rent steps (+ CAM steps), 1 concession, 1 deposit, 2 clauses — and a deposit shortfall that the customer's Excel did not show.
+P: 13.6 Worked Analytics from 13.1
+
+--- TABLE 101 ---
+Metric | Formula | Result
+Physical occupancy (F-15) | Occupied ÷ total area | 1,19,600 ÷ 1,75,300 = 68.2%
+Economic occupancy (F-17) | Current rent ÷ (current + non-occupied at asking) | 60.3%
+WALE by income (F-18) | Σ(years × rent) ÷ Σ rent; holding over = 0 | 3.86 years
+WALE by area (F-18) | Σ(years × area) ÷ Σ area | 4.03 years
+Alerts on 30-Sep-2026 | §5.15 rules | Escalation + lock-in end (MTP-T1-03); expiry <12 m (APX-08); expiry <6 m (NXH-03); holding over + arrears (MTP-T1-04); deposit shortfall (APX-05A); escalation due (GFT-11A)
+--- END TABLE 101 ---
+
+P: 13.7 Worked Example — Flex Centre (Segment E)
+P: Brightspace Flex, Sector 44, Gurugram (fictional). Head lease: 18,000 sq ft at ₹95/sq ft = ₹17,10,000 per month (payable contract). Seat capacity 240. CAM, electricity, housekeeping and internet are included in all seat plans (no separate lines — R-40).
+
+--- TABLE 102 ---
+Member | Plan | Billing basis | Contr. seats | Min. seats | Occ. seats | Rate / seat | Billable | Monthly amount
+Brightpath Analytics Pvt Ltd | Enterprise Cabin | Minimum commitment | 100 | 80 | 82 | ₹15,000 | 82 | ₹12,30,000
+Nimbus Labs Pvt Ltd | Premium Dedicated Seat | Contracted | 60 | — | 55 | ₹11,500 | 60 | ₹6,90,000
+Hot desk pool (14 members) | Hot Desk | Occupied | — | — | 30 | ₹7,500 | 30 | ₹2,25,000
+Veritas Legal LLP | Team Room (hybrid) | Base ₹3,00,000 for 25 seats + extra seats | 35 | 25 | 35 | ₹12,000 | Base + 10 | ₹4,20,000
+Virtual office clients (30) | Virtual Office | Contracted | 30 | — | 0 | ₹2,500 | 30 | ₹75,000
+--- END TABLE 102 ---
+
+
+--- TABLE 103 ---
+Centre P&L (monthly) | Amount
+Seat and membership revenue | ₹26,40,000
+Meeting rooms 42 hrs × ₹800 | ₹33,600
+Parking 12 slots × ₹4,000 | ₹48,000
+Total member revenue | ₹27,21,600
+Head-lease rent payable | (₹17,10,000)
+CAM payable to landlord (18,000 × ₹15) | (₹2,70,000)
+Centre opex (staff, utilities, housekeeping, internet) | (₹6,00,000)
+Centre contribution (F-23) | ₹1,41,600 (5.2% margin)
+Seat occupancy (F-16) | 202 ÷ 240 = 84.2%
+Revenue per occupied seat | ₹13,473
+Break-even seat occupancy (F-24) | 79.8%
+--- END TABLE 103 ---
+
+P: Note Brightpath: 82 occupied vs. minimum 80, so billable = 82 (F-06). Nimbus: 55 occupied but billed on 60 contracted (F-04). Veritas: base ₹3,00,000 covers 25 seats; 10 additional seats at ₹12,000 (F-07).
+P: 13.8 Worked Example — Owner Statement (Segments B and D)
+P: A property management company manages two buildings for "Sharma Family Trust" (client account). Mandate: rent collection and CAM billing; fee 4% of collections plus 18% GST; statement on the 7th, remittance on the 10th. Invoices are issued in the Trust's billing entity; collections settle to the Trust's account (OI-6).
+
+--- TABLE 104 ---
+Owner statement — October 2026 | Amount
+Billed in period (rent + CAM, gross) | ₹52,00,000
+Collected in period | ₹48,00,000
+Arrears carried forward | ₹4,00,000
+Management fee (4% × collections) — F-20 | (₹1,92,000)
+GST on management fee @ 18% | (₹34,560)
+Expenses paid on owner's behalf (repairs, approved) | (₹1,20,000)
+Net remittance to owner — F-21 | ₹44,53,440
+--- END TABLE 104 ---
+
+P: The fee is invoiced by the PM company's own billing entity to the Trust; when collections settle directly to the owner, the fee and expenses are invoiced for payment rather than deducted. The statement shows both views so either settlement model reconciles.
+P: 13.9 Simplified ERD (text form)
+
+--- TABLE 105 ---
+Parent | Cardinality | Child | Notes
+organization | 1 → many | org_subscription → entitlement; usage_meter | Product and feature switches
+organization | 1 → many | client_account (incl. "self") | Operator layer
+client_account | 1 → many | billing_entity, property, management_mandate, owner_statement | Owner books
+property | 1 → many | building → space → seat_inventory | Space hierarchy
+occupant | 1 → many | contract | Tenant, licensee, member or (payable) landlord
+contract | many ↔ many | space (contract_space) | Area or seats, dated
+contract | 1 → many | contract_charge → rent_step; concession; deposit → deposit_transaction; contract_clause; contract_document | Terms
+contract | 0..1 → many | contract (parent_contract_id) | Renewals, amendments
+contract_charge | 1 → many | invoice_line (via billing run) ← invoice | Traceability charge → line
+payment | 1 → many | payment_allocation → invoice | One payment, many invoices
+invoice | 0..1 → 1 | task | Approval, dispute, follow-up workflow
+contract (payable) | 1 → many | payable | Head-lease obligations
+space | 1 → many | meter → meter_reading | Manual/CSV/API/CAFM source
+property | 1 → many | cam_pool → cam_pool_cost | Budget, actuals, true-up
+organization | 1 → many | rent_roll_snapshot → snapshot_line; import_batch → import_row | Reporting and onboarding
+deal | 0..1 → 1 | contract (deal_id) | Deal/prospect converts into future contract
+Asset / vendor / FM data (optional) | 0..many | cam_pool_cost, property P&L costs | Recoveries and operating costs when CAFM/Marketplace subscribed; manual otherwise
+--- END TABLE 105 ---
+
+P: 13.10 Glossary
+
+--- TABLE 106 ---
+Term | Meaning in OFFICEX Rent Roll
+Subscriber | Organisation that buys OFFICEX Rent Roll
+Client account | An owner whose portfolio a subscriber manages; "self" for owner-subscribers
+Billing entity | Legal entity with GSTIN that issues invoices
+Management mandate | Operator–owner agreement defining services and fees
+Occupant | Tenant, licensee or co-working member
+Deal | Pipeline opportunity (prospect, proposed space and terms, probability) that converts into a contract
+Head lease | Lease under which a flex operator or MSP pays a landlord (payable contract)
+Chargeable / super built-up area | Billing-basis area: carpet area plus share of common areas ("loading")
+Carpet area | Net usable area (RERA definition)
+Lock-in | Period during which termination is not permitted without paying remaining rent
+IFRSD | Interest-free refundable security deposit
+Minimum commitment | Floor on billable seats regardless of occupancy
+Hot desk / dedicated desk / cabin | Unassigned seat / assigned seat / enclosed private office seat
+CAM true-up | Year-end adjustment of provisional CAM to actual cost share
+TDS 194-I | Tax deducted at source by the occupant on rent; landlord claims credit
+IRN | Invoice Reference Number under GST e-invoicing
+WALE | Weighted average lease expiry, by income or area
+Holding over | Occupant remains after expiry without a new agreement
+--- END TABLE 106 ---
+
+
+--- TABLE 107 ---
+SECTION14 | Priority Action Plan & VerdictWhat Scalezix should do first
+--- END TABLE 107 ---
+
+
+--- TABLE 108 ---
+# | Action | Req / ref | Effort | Impact | When
+1 | Reply in writing to OI-1 … OI-7; estimate standalone packaging as change request | §0.4 | Low | Critical | Before S0
+1A | OFFICEX management approves decisions MD-1 … MD-8; Discovery deliverables signed | §0.5, PD | Low | Critical | PD
+2 | Migrate §4 schema with client_account_id and RLS; two-org/two-client test suite | RR-ACL-01/02 | Medium | Critical | S0
+3 | Subscription, entitlement and navigation service; RR-only org provisioning | RR-ENT-01…04 | Medium | Critical | S0
+4 | Replace seed data with §13 fixtures | R-30 | Low | High | S0
+5 | Import centre with mapping, validation, control totals, approval | RR-ING-01…10 | High | Critical | S1–S2
+6 | Contract master, documents, escalation/expiry engine, register, analytics v1 | RR-CON, RR-ESC, RR-VW, RR-ANL-01…03 | High | Critical | S2–S3
+7 | Load and sign off 3 Managed Services buildings | §8.3 | Medium | Critical | S3
+8 | Billing runs, separate invoices, GST, meters, charges-only contracts | RR-BIL, RR-FMC-01…03 | High | Critical | S4–S5
+9 | Payments, allocation, receipts, ageing, occupant portal | RR-PAY, RR-COL, RR-PRT | High | Critical | S6–S7
+10 | SaaS subscription billing live for standalone GA | OI-3, RR-ENT-06 | Medium | Critical | By S7
+11 | Core seat billing in P2; head leases, centre P&L and flex dashboard in P4 | RR-FLX | High | High | S4–S5 / S8–S10
+12 | Multi-client operator, owner statements, white-label, self-serve trial | RR-OPR, RR-ENT-07/10 | High | High | S8–S10
+13 | Forecast, P&L, MIS, exception centre, integrations | RR-ANL-06…11, RR-INT | High | Medium | S11–S13
+--- END TABLE 108 ---
+
+
+--- TABLE 109 ---
+VERDICT — CONDITIONS FOR GENERAL AVAILABILITY AS A STANDALONE PRODUCTOFFICEX Rent Roll is both the revenue core of the OFFICEX platform and a product that any landlord, property management company, FM company, managed service provider or flex operator can buy on its own. The two goals are compatible only if it is built once, on the Platform Core, with entitlements — never as a CAFM sub-screen and never as a separate application.Final implementation principle: a contract is entered once. Its documents, charges, billing, collections, occupancy, forecast, expiry, P&L and reporting all flow from that one controlled record — for every segment, with or without other OFFICEX products.GA conditions: (1) open items OI-1 to OI-7 confirmed; (2) UAT-41 to UAT-44 pass on a Rent-Roll-only organisation; (3) RLS and client-isolation suites green; (4) Managed Services pilot buildings reconciled at ₹0 variance and signed off; (5) one full month billed and collected through Razorpay with snapshot, collections and MIS agreeing to the rupee; (6) SaaS subscription billing live. Segments A, C and E launch at P3 exit; segments B and D additionally require P4 exit with one live design partner each.
+--- END TABLE 109 ---

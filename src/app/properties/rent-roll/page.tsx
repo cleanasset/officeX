@@ -252,6 +252,31 @@ function RentRollPageInner() {
     }
   };
 
+  const handleLockSnapshot = async (snapshotId: string) => {
+    if (!confirm("Lock this month-end snapshot permanently? Once locked, it becomes strictly immutable per RR-AUD-03.")) return;
+    try {
+      const res = await fetch("/api/rent-roll/snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "lock",
+          snapshotId,
+          lockedBy: userInfo.name || "Finance Controller"
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionFeedback("Snapshot locked and marked immutable.");
+        setTimeout(() => setActionFeedback(null), 5000);
+        handleOpenSnapshots();
+      } else {
+        alert(data.error || "Failed to lock snapshot.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const name = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "";
@@ -681,6 +706,7 @@ function RentRollPageInner() {
               setSelectedInvoiceForAdjustment(inv);
               setIsAdjustmentNoteOpen(true);
             }}
+            onRefresh={fetchAllData}
           />
         )}
 
@@ -997,6 +1023,20 @@ function RentRollPageInner() {
                           {snap.snapshotMonth}
                         </span>
                         <span className="text-xs font-bold text-gray-800">As of {snap.asOfDate}</span>
+                        {snap.isLocked ? (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                            🔒 Locked &amp; Immutable
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleLockSnapshot(snap.id)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white transition-colors cursor-pointer"
+                            title="Lock this snapshot to prevent any changes or re-freezes"
+                          >
+                            Lock Snapshot
+                          </button>
+                        )}
                       </div>
                       <span className="text-[10px] text-gray-400 font-mono">
                         Frozen by {snap.frozenBy || "Finance Controller"} • {new Date(snap.frozenAt).toLocaleDateString()}

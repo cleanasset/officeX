@@ -73,6 +73,17 @@ export interface ManagementMandateEntity {
   status: "active" | "inactive";
 }
 
+export function isClientMandateActive(clientAccountId: string, asOfDate?: string): boolean {
+  if (!clientAccountId || clientAccountId === "CA-SELF") return true;
+  const db = getRentRollDb();
+  const today = asOfDate || new Date().toISOString().split("T")[0];
+  const mandate = (db.managementMandates || []).find(m => m.clientAccountId === clientAccountId);
+  if (!mandate) return true;
+  if (mandate.status === "inactive") return false;
+  if (mandate.endDate && mandate.endDate < today) return false;
+  return true;
+}
+
 export interface PropertyEntity {
   id: string;
   orgId: string;
@@ -226,6 +237,7 @@ export interface ContractDocumentEntity {
   fileSizeBytes?: number;
   status: "draft" | "under_review" | "executed" | "superseded";
   isExecuted: boolean;
+  isCurrent?: boolean;
   executionDate?: string;
   uploadedBy?: string;
   createdAt: string;
@@ -293,6 +305,11 @@ export interface LeaseEntity {
   terminationReason?: string;
   signedAgreementUrl?: string;
   notes?: string;
+  makerId?: string;
+  createdBy?: string;
+  currency?: string;
+  fxRate?: number;
+  monthlyRentUsd?: number;
   spacesCovered?: Array<{ spaceId: string; unitNumber: string; areaSqft: number; floorNumber: number }>;
   concessions?: Array<{ id: string; type: "rent_free" | "fitout_contribution" | "tenant_improvement"; value: number; unit: "days" | "inr"; startDate?: string; endDate?: string; remarks?: string }>;
   depositTransactions?: Array<{ id: string; type: "received" | "top_up" | "refund" | "deduction" | "bank_guarantee"; amount: number; transactionDate: string; refNumber?: string; bankName?: string; status: "cleared" | "held" | "refunded" }>;
@@ -359,6 +376,15 @@ export interface InvoiceEntity {
   disputeAmount?: number;
   disputeRemark?: string;
   disputedAt?: string;
+  disputeTaskId?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  currency?: string;
+  fxRate?: number;
+  fxDate?: string;
+  originalAmount?: number;
+  reportingAmountInr?: number;
+  isIfscTaxExempt?: boolean;
   paidDate?: string;
   paymentMode?: string;
   referenceNumber?: string;
@@ -445,6 +471,8 @@ export interface OwnerStatementEntity {
   remittanceStatus: "pending" | "remitted" | "acknowledged";
   remittanceDate?: string;
   remittanceUtr?: string;
+  isFrozen?: boolean;
+  frozenAt?: string;
   issuedAt: string;
 }
 
@@ -677,6 +705,9 @@ export interface RentRollSnapshotEntity {
   status: "frozen" | "draft";
   frozenAt?: string;
   frozenBy?: string;
+  isLocked?: boolean;
+  lockedAt?: string;
+  lockedBy?: string;
   lines: RentRollSnapshotLine[];
   createdAt: string;
 }
@@ -2543,28 +2574,32 @@ export function getRentRollDb(): RentRollDatabase {
     if (!parsed.leases) parsed.leases = [];
     if (!parsed.tenants) parsed.tenants = [];
 
-    // Only populate Section 13 fixtures if NOT marked as clean portfolio AND explicitly empty on initial bootstrap
+    const initial = getInitialSeedDatabase();
+
+    // Hydrate Section 13 fixtures if empty (R-30, Table 96-104)
+    if (!parsed.clientAccounts || parsed.clientAccounts.length === 0) parsed.clientAccounts = initial.clientAccounts;
+    if (!parsed.billingEntities || parsed.billingEntities.length === 0) parsed.billingEntities = initial.billingEntities;
+    if (!parsed.managementMandates || parsed.managementMandates.length === 0) parsed.managementMandates = initial.managementMandates;
+    if (!parsed.flexCentres || parsed.flexCentres.length === 0) parsed.flexCentres = initial.flexCentres;
+    if (!parsed.camPools || parsed.camPools.length === 0) parsed.camPools = initial.camPools;
+    if (!parsed.meterReadings || parsed.meterReadings.length === 0) parsed.meterReadings = initial.meterReadings;
+    if (!parsed.invoices || parsed.invoices.length === 0) parsed.invoices = initial.invoices;
+    if (!parsed.collections || parsed.collections.length === 0) parsed.collections = initial.collections;
+    if (!parsed.deals || parsed.deals.length === 0) parsed.deals = initial.deals;
+
+    // Only populate full properties/leases if explicitly empty on initial bootstrap
     if (!parsed.isCleanPortfolio && (!parsed.properties || parsed.properties.length === 0)) {
-      const initial = getInitialSeedDatabase();
-      parsed.clientAccounts = initial.clientAccounts;
-      parsed.billingEntities = initial.billingEntities;
-      parsed.managementMandates = initial.managementMandates;
       parsed.properties = initial.properties;
       parsed.spaces = initial.spaces;
       parsed.tenants = initial.tenants;
-      parsed.deals = initial.deals;
       parsed.leases = initial.leases;
       parsed.escalations = initial.escalations;
-      parsed.invoices = initial.invoices;
-      parsed.collections = initial.collections;
       parsed.paymentAllocations = initial.paymentAllocations;
       parsed.adjustmentNotes = initial.adjustmentNotes;
       parsed.ownerStatements = initial.ownerStatements;
       parsed.expenses = initial.expenses;
       parsed.notices = initial.notices;
       parsed.alerts = initial.alerts;
-      parsed.flexCentres = initial.flexCentres;
-      parsed.camPools = initial.camPools;
       fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), 'utf8');
     }
 
@@ -2946,7 +2981,12 @@ export function freezeMonthEndSnapshot(params: {
     createdAt: new Date().toISOString()
   };
 
-  // Upsert snapshot for this month & property
+  // Upsert snapshot for this month & property (RR-AUD-03, UAT-59)
+  const existing = (db.snapshots || []).find(s => s.id === snapshot.id);
+  if (existing && existing.isLocked) {
+    throw new Error(`Snapshot for month ${params.snapshotMonth} is locked and immutable. Corrections must be applied via adjustment notes (RR-AUD-03, UAT-59).`);
+  }
+
   db.snapshots = db.snapshots.filter(s => s.id !== snapshot.id);
   db.snapshots.unshift(snapshot);
   saveRentRollDb(db);
@@ -2965,5 +3005,91 @@ export function freezeMonthEndSnapshot(params: {
   });
 
   return snapshot;
+}
+
+export function lockMonthEndSnapshot(snapshotId: string, lockedBy: string = "Commercial Auditor"): RentRollSnapshotEntity {
+  const db = getRentRollDb();
+  if (!db.snapshots) db.snapshots = [];
+  const target = db.snapshots.find(s => s.id === snapshotId);
+  if (!target) {
+    throw new Error(`Snapshot ${snapshotId} not found.`);
+  }
+  target.isLocked = true;
+  target.lockedAt = new Date().toISOString();
+  target.lockedBy = lockedBy;
+  saveRentRollDb(db);
+
+  recordAuditLog({
+    entityName: "RentRollSnapshot",
+    action: "LOCK_SNAPSHOT",
+    newValues: { snapshotId, lockedBy, lockedAt: target.lockedAt },
+    changedBy: lockedBy
+  });
+
+  return target;
+}
+
+export function addContractDocumentVersion(params: {
+  leaseId: string;
+  documentType: string;
+  title: string;
+  fileName: string;
+  fileUrl: string;
+  fileSizeBytes?: number;
+  uploadedBy?: string;
+  isExecuted?: boolean;
+}): { document: ContractDocumentEntity; lease: LeaseEntity } {
+  const db = getRentRollDb();
+  const lease = db.leases.find(l => l.id === params.leaseId || l.leaseCode === params.leaseId);
+  if (!lease) {
+    throw new Error(`Contract ${params.leaseId} not found`);
+  }
+  if (!lease.documents) lease.documents = [];
+
+  // Supercede existing documents of same type (UAT-23)
+  const sameTypeDocs = lease.documents.filter(d => d.documentType === params.documentType);
+  let nextVersion = 1;
+  if (sameTypeDocs.length > 0) {
+    sameTypeDocs.forEach(d => {
+      d.isCurrent = false;
+      d.status = "superseded";
+    });
+    const maxVer = Math.max(...sameTypeDocs.map(d => d.versionNumber || 1));
+    nextVersion = maxVer + 1;
+  }
+
+  const newDoc: ContractDocumentEntity = {
+    id: `DOC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    contractId: lease.id,
+    documentType: params.documentType,
+    title: params.title || params.fileName,
+    versionNumber: nextVersion,
+    fileName: params.fileName,
+    fileUrl: params.fileUrl,
+    fileSizeBytes: params.fileSizeBytes || 102400,
+    status: params.isExecuted ? "executed" : "draft",
+    isExecuted: !!params.isExecuted,
+    isCurrent: true,
+    uploadedBy: params.uploadedBy || "Commercial Executive",
+    createdAt: new Date().toISOString()
+  };
+
+  lease.documents.unshift(newDoc);
+  saveRentRollDb(db);
+
+  recordAuditLog({
+    leaseId: lease.id,
+    entityName: "ContractDocument",
+    action: "UPLOAD_DOCUMENT_VERSION",
+    newValues: {
+      contractCode: lease.leaseCode,
+      documentType: params.documentType,
+      version: nextVersion,
+      fileName: params.fileName
+    },
+    changedBy: params.uploadedBy || "Commercial Executive"
+  });
+
+  return { document: newDoc, lease };
 }
 

@@ -40,11 +40,15 @@ export interface InvoiceItem {
   netPayable: number;
   amountPaid: number;
   balanceDue: number;
-  status: "draft" | "issued" | "partially_paid" | "paid" | "overdue" | "cancelled";
+  status: "draft" | "issued" | "partially_paid" | "paid" | "overdue" | "cancelled" | "disputed";
   paidDate?: string;
   paymentMode?: string;
   referenceNumber?: string;
   invoiceType?: "rent" | "cam" | "consolidated";
+  disputeReason?: string;
+  cancellationReason?: string;
+  currency?: string;
+  reportingAmountInr?: number;
 }
 
 interface InvoicesTabProps {
@@ -53,6 +57,7 @@ interface InvoicesTabProps {
   onOpenRecordPayment: (invoice: InvoiceItem) => void;
   onOpenGenerateInvoices: () => void;
   onOpenAdjustmentNote?: (invoice: InvoiceItem) => void;
+  onRefresh?: () => void;
 }
 
 export const InvoicesTab: React.FC<InvoicesTabProps> = ({
@@ -61,9 +66,52 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
   onOpenRecordPayment,
   onOpenGenerateInvoices,
   onOpenAdjustmentNote,
+  onRefresh,
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [search, setSearch] = useState<string>("");
+
+  const handleDispute = async (invoiceId: string) => {
+    const reason = prompt("Enter reason for disputing this invoice (RR-COL-02 / UAT-32):");
+    if (!reason) return;
+    try {
+      const res = await fetch("/api/rent-roll/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dispute", invoiceId, disputeReason: reason })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Invoice flagged as disputed. Follow-up task generated.");
+        if (onRefresh) onRefresh();
+      } else {
+        alert(data.error || "Failed to dispute invoice.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancelInvoice = async (invoiceId: string) => {
+    const reason = prompt("Enter reason for voiding/cancelling this invoice:");
+    if (!reason) return;
+    try {
+      const res = await fetch("/api/rent-roll/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", invoiceId, cancelReason: reason })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Invoice cancelled and voided.");
+        if (onRefresh) onRefresh();
+      } else {
+        alert(data.error || "Failed to cancel invoice.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const filteredInvoices = invoices.filter((inv) => {
     if (statusFilter !== "ALL" && inv.status.toLowerCase() !== statusFilter.toLowerCase()) {
@@ -102,6 +150,18 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
         return (
           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
             <Clock className="w-3 h-3" /> Partial
+          </span>
+        );
+      case "disputed":
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Disputed
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-300 flex items-center gap-1 line-through">
+            Void
           </span>
         );
       default:
@@ -143,7 +203,7 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
       {/* ──── CONTROLS & FILTER BAR ──── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 px-4 rounded-2xl border border-gray-200 shadow-xs">
         <div className="flex flex-wrap items-center gap-1.5">
-          {["ALL", "paid", "overdue", "issued", "partially_paid"].map((st) => (
+          {["ALL", "paid", "overdue", "issued", "partially_paid", "disputed", "cancelled"].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -334,6 +394,27 @@ export const InvoicesTab: React.FC<InvoicesTabProps> = ({
                         >
                           <DollarSign className="w-3 h-3" />
                           <span>Settle</span>
+                        </button>
+                      )}
+
+                      {inv.balanceDue > 0 && inv.status !== "disputed" && inv.status !== "cancelled" && (
+                        <button
+                          onClick={() => handleDispute(inv.id)}
+                          className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Dispute invoice terms (RR-COL-02 / UAT-32)"
+                        >
+                          <AlertTriangle className="w-3 h-3 text-purple-600" />
+                          <span>Dispute</span>
+                        </button>
+                      )}
+
+                      {inv.amountPaid === 0 && inv.status !== "cancelled" && (
+                        <button
+                          onClick={() => handleCancelInvoice(inv.id)}
+                          className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Void / Cancel Invoice"
+                        >
+                          <span>Void</span>
                         </button>
                       )}
                     </div>

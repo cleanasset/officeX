@@ -80,17 +80,23 @@ export async function POST(req: Request) {
         });
       });
 
-      // Synonym mapping auto-suggestion
+      // Synonym mapping auto-suggestion & unmapped source column identification (RR-ING-04, UAT-63)
       const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
       const suggestedMappings: Record<string, string> = {};
+      const unmappedHeaders: string[] = [];
 
       headers.forEach(header => {
         const cleanHeader = header.toLowerCase().trim();
+        let matched = false;
         for (const [targetField, synonyms] of Object.entries(SYNONYM_DICTIONARY)) {
           if (synonyms.some(syn => cleanHeader === syn || cleanHeader.includes(syn))) {
             suggestedMappings[header] = targetField;
+            matched = true;
             break;
           }
+        }
+        if (!matched) {
+          unmappedHeaders.push(header);
         }
       });
 
@@ -101,6 +107,7 @@ export async function POST(req: Request) {
         profiling,
         suggestedMappings,
         headers,
+        unmappedHeaders,
         totalRows: rows.length,
         status: "staged"
       });
@@ -115,12 +122,26 @@ export async function POST(req: Request) {
       const targetProperty = db.properties.find(p => p.id === targetPropertyId) || db.properties[0];
       const targetArea = targetProperty ? (targetProperty.chargeableArea || targetProperty.totalArea || 0) : 0;
 
-      // Transform rows using column mapping
+      // Transform rows using column mapping while preserving unmapped columns (RR-ING-04, UAT-63)
+      const unmappedColumnsSet = new Set<string>();
+      const canonicalTargetFields = new Set([
+        "propertyName", "unitNumber", "floorNumber", "chargeableArea", "carpetArea",
+        "monthlyRent", "baseRentPsf", "camRatePsf", "camMonthly", "tenantName", "gstin",
+        "pan", "startDate", "endDate", "lockInEndDate", "lockInMonths", "noticePeriodDays",
+        "escalationPct", "escalationFrequencyMonths", "securityDepositAmount", "billingModel"
+      ]);
+
       const normalizedRows = rows.map((r: any, idx: number) => {
-        const norm: Record<string, any> = { _originalRowNumber: idx + 1 };
+        const norm: Record<string, any> = { _originalRowNumber: idx + 1, _unmappedColumns: {} };
         Object.keys(r).forEach(srcCol => {
           const targetField = mapping[srcCol] || srcCol;
-          norm[targetField] = r[srcCol];
+          if (canonicalTargetFields.has(targetField)) {
+            norm[targetField] = r[srcCol];
+          } else {
+            norm[targetField] = r[srcCol]; // keep accessible
+            norm._unmappedColumns[srcCol] = r[srcCol]; // explicitly preserve per RR-ING-04
+            unmappedColumnsSet.add(srcCol);
+          }
         });
         return norm;
       });
@@ -143,6 +164,7 @@ export async function POST(req: Request) {
           hasWarnings: val.hasWarnings,
           errors: val.errors,
           warnings: val.warnings,
+          unmappedColumns: r._unmappedColumns,
           row: r
         };
       });
@@ -157,6 +179,7 @@ export async function POST(req: Request) {
         errorRowCount,
         isEligibleForCommit: errorRowCount === 0 && controlTotals.reconciliationPass,
         controlTotals,
+        unmappedColumns: Array.from(unmappedColumnsSet),
         rowValidations
       });
     }

@@ -522,8 +522,8 @@ export function validateRentRollRow(row: Record<string, any>, rowNumber: number 
   const errors: Array<{ ruleCode: string; message: string; fixHint: string }> = [];
   const warnings: Array<{ ruleCode: string; message: string; fixHint: string }> = [];
 
-  const spaceName = row.unit || row.spaceName || row.unitName || row.suite;
-  const floor = row.floor;
+  const spaceName = row.unit || row.unitNumber || row.spaceName || row.unitName || row.suite;
+  const floor = row.floor !== undefined ? row.floor : (row.floorNumber !== undefined ? row.floorNumber : 1);
   const area = Number(row.chargeableArea || row.area || row.squareFeet || 0);
   const carpet = Number(row.carpetArea || 0);
   const rent = Number(row.monthlyRent || row.rent || 0);
@@ -537,7 +537,7 @@ export function validateRentRollRow(row: Record<string, any>, rowNumber: number 
   const lockInMonths = Number(row.lockInMonths || 0);
 
   // R-01: Required fields
-  if (!spaceName || !floor || !area || area <= 0 || !tenant) {
+  if (!spaceName || floor === undefined || floor === null || !area || area <= 0 || !tenant) {
     errors.push({
       ruleCode: 'R-01',
       message: 'Missing mandatory fields (Unit, Floor, Chargeable Area, or Occupant Name).',

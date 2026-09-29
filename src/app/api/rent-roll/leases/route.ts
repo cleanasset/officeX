@@ -188,13 +188,26 @@ export async function POST(req: Request) {
     const body = await req.json();
     const db = getRentRollDb();
 
-    // Maker-Checker approval actions
+    // Maker-Checker approval actions (RR-AUD-04, UAT-66)
     if (body.action === "approve") {
       const targetId = body.id || body.leaseId;
-      const target = db.leases.find(l => l.id === targetId);
+      const target = db.leases.find(l => l.id === targetId || l.leaseCode === targetId);
       if (!target) {
         return NextResponse.json({ error: "Contract not found" }, { status: 404 });
       }
+
+      // Segregation of duties: Maker cannot approve own change (UAT-66)
+      const checker = (body.approvedBy || "Chief Real Estate Officer").toLowerCase().trim();
+      const maker = (target.createdBy || target.makerId || "").toLowerCase().trim();
+      if (checker && maker && checker === maker) {
+        return NextResponse.json({
+          error: "Maker cannot approve their own financial terms change (Segregation of Duties / RR-AUD-04, UAT-66). An independent commercial checker must approve.",
+          code: "MAKER_CHECKER_VIOLATION",
+          maker,
+          checker
+        }, { status: 403 });
+      }
+
       target.approvalStatus = "approved";
       target.status = "active";
       target.approvedBy = body.approvedBy || "Chief Real Estate Officer";
@@ -209,6 +222,33 @@ export async function POST(req: Request) {
       });
 
       return NextResponse.json({ success: true, message: `Contract ${target.leaseCode} approved and activated.`, lease: target });
+    }
+
+    // Action: Upload Contract Document Version (RR-CON-04, UAT-22, UAT-23, Table 76)
+    if (body.action === "add_document" || body.action === "upload_document") {
+      const targetId = body.id || body.leaseId;
+      const { documentType = "agreement", title, fileName, fileUrl = "/sample-lease-agreement.pdf", isExecuted = false, uploadedBy } = body;
+      const { addContractDocumentVersion } = require("@/lib/rent-roll-store");
+      try {
+        const result = addContractDocumentVersion({
+          leaseId: targetId,
+          documentType,
+          title: title || fileName,
+          fileName: fileName || "Executed_Contract.pdf",
+          fileUrl,
+          uploadedBy: uploadedBy || "Commercial Executive",
+          isExecuted
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: `Uploaded document version ${result.document.versionNumber} for ${result.lease.leaseCode} (RR-CON-04, UAT-22, UAT-23).`,
+          document: result.document,
+          lease: result.lease
+        }, { status: 201 });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 404 });
+      }
     }
 
     if (body.action === "reject") {
@@ -475,6 +515,8 @@ export async function POST(req: Request) {
       brokerName: brokerName || "Direct / Internal",
       brokeragePaid: 0,
       notes: notes || "Standard Commercial Contract",
+      createdBy: body.createdBy || "Leasing Executive",
+      makerId: body.makerId || body.createdBy || "USR-MAKER-01",
       spacesCovered: spacesCovered.length > 0 ? spacesCovered : [{ spaceId: targetSpaceId, unitNumber: unitNumber || "Suite", areaSqft: numChargeable, floorNumber: Number(floorNumber || 1) }],
       concessions,
       depositTransactions,

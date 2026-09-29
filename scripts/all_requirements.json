@@ -1,0 +1,975 @@
+{
+  "RR-ENT-01": {
+    "table": 55,
+    "title": "Rent Roll subscribable as its own product with editions and add-ons (\u00a72.3); no other OFFICEX product required.",
+    "acceptance": "New org with only RR subscription completes UAT-41.",
+    "priority": "Must",
+    "phase": "P0"
+  },
+  "RR-ENT-02": {
+    "table": 55,
+    "title": "Entitlement service: features enabled per org from subscription; checked server-side on every API call.",
+    "acceptance": "Calling a non-entitled endpoint returns 403 with feature code.",
+    "priority": "Must",
+    "phase": "P0"
+  },
+  "RR-ENT-03": {
+    "table": 55,
+    "title": "Platform Core masters (properties, buildings, spaces, occupants, users) included with Rent Roll and editable from Rent Roll screens.",
+    "acceptance": "No CAFM screen needed to set up a property.",
+    "priority": "Must",
+    "phase": "P0"
+  },
+  "RR-ENT-04": {
+    "table": 55,
+    "title": "Navigation built from entitlements and role; only subscribed products appear (fixes sidebar context bug).",
+    "acceptance": "RR-only user sees no FM, CRM or Marketplace menu.",
+    "priority": "Must",
+    "phase": "P0"
+  },
+  "RR-ENT-05": {
+    "table": 55,
+    "title": "No hard dependency: every feature that can use CAFM/CRM/Marketplace data has a manual/CSV/API path (\u00a72.4).",
+    "acceptance": "All UAT pass with only RR subscribed.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ENT-06": {
+    "table": 55,
+    "title": "Nightly usage metering: area under management, seat capacity, active contracts, client accounts.",
+    "acceptance": "Usage visible in Settings; exported to SaaS billing.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-ENT-07": {
+    "table": 55,
+    "title": "Self-serve sign-up with 14-day trial, segment selection and configuration template (charge types, billing models, roles).",
+    "acceptance": "Trial org productive without OFFICEX staff.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-ENT-08": {
+    "table": 55,
+    "title": "Full data export (Excel/CSV bundle + documents) on demand for the org or a client account.",
+    "acceptance": "Export of a 500-contract org < 5 min.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ENT-09": {
+    "table": 55,
+    "title": "Upgrade/downgrade by entitlement change with no data migration; downgraded features become read-only.",
+    "acceptance": "Adding CAFM reuses existing spaces and occupants.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-ENT-10": {
+    "table": 55,
+    "title": "White-label: logo, colours, templates, sender domain, subdomain; custom domain on Enterprise.",
+    "acceptance": "Invoice and emails show subscriber brand.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-ENT-11": {
+    "table": 55,
+    "title": "Sandbox organisation with sample data (\u00a713) for demos and training.",
+    "acceptance": "Sandbox resettable in one click.",
+    "priority": "Could",
+    "phase": "P4"
+  },
+  "RR-ING-01": {
+    "table": 56,
+    "title": "Upload .xlsx/.xls/.csv up to 20 MB, multiple sheets.",
+    "acceptance": "Sheets listed within 5 s.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-02": {
+    "table": 56,
+    "title": "Downloadable standard templates per billing model (area, seat, charges-only).",
+    "acceptance": "Template imports with zero mapping.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-03": {
+    "table": 56,
+    "title": "Column mapping with auto-suggestions from synonym dictionary.",
+    "acceptance": "\u226580% columns auto-mapped on pilot files.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-04": {
+    "table": 56,
+    "title": "Save and reuse mapping templates per org and per client account.",
+    "acceptance": "Second import of same layout needs no mapping.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-05": {
+    "table": 56,
+    "title": "Transforms: Indian number format, dates, sq m\u2192sq ft, text\u2192enum, escalation phrase parser.",
+    "acceptance": "Parser tests cover 30 real phrasings.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-06": {
+    "table": 56,
+    "title": "Row-level validation with rule codes (Table 5.5a) and summary: passed / warning / failed / unmapped. Errors block; warnings need acknowledgement. File checks for duplicates and malware.",
+    "acceptance": "Failed rows show rule, cell, fix hint.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-07": {
+    "table": 56,
+    "title": "Control totals for area, rent and seats reconciled to source.",
+    "acceptance": ">0.5% variance blocks sign-off unless overridden with reason.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-08": {
+    "table": 56,
+    "title": "In-grid correction, downloadable error file, and re-upload into same batch.",
+    "acceptance": "Corrections re-validated instantly.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-15": {
+    "table": 56,
+    "title": "Unmapped source columns preserved in staging and shown for review.",
+    "acceptance": "No source column silently dropped (UAT-63).",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-16": {
+    "table": 56,
+    "title": "Data profiling report before mapping: duplicates, missing values, inconsistent dates/rates, totals.",
+    "acceptance": "Report attached to batch.",
+    "priority": "Should",
+    "phase": "P1"
+  },
+  "RR-ING-09": {
+    "table": 56,
+    "title": "Diff preview: new / changed / unchanged / ended.",
+    "acceptance": "Counts per entity shown.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ING-10": {
+    "table": 56,
+    "title": "Two-step commit: preparer submits, approver signs off.",
+    "acceptance": "Commit blocked without approver role.",
+    "priority": "Should",
+    "phase": "P1"
+  },
+  "RR-ING-11": {
+    "table": 56,
+    "title": "Import versioning; rollback/void of a committed batch within 7 days.",
+    "acceptance": "Prior state restored exactly; audited.",
+    "priority": "Should",
+    "phase": "P2"
+  },
+  "RR-ING-12": {
+    "table": 56,
+    "title": "Occupant de-duplication on GSTIN, PAN, fuzzy name.",
+    "acceptance": "Suggestions before create.",
+    "priority": "Should",
+    "phase": "P1"
+  },
+  "RR-ING-13": {
+    "table": 56,
+    "title": "Import opening balances (outstanding invoices, deposits held) at cut-over.",
+    "acceptance": "Ageing matches client report at cut-over.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-ING-14": {
+    "table": 56,
+    "title": "Bulk import API with identical validation.",
+    "acceptance": "See \u00a76.4.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-VW-01": {
+    "table": 58,
+    "title": "Property rent roll: one row per space (vacant included) with totals.",
+    "acceptance": "Totals reconcile to property record.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-VW-02": {
+    "table": 58,
+    "title": "Portfolio rent roll grouped by client account and property.",
+    "acceptance": "<2 s p95 for 10k spaces.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-VW-03": {
+    "table": 58,
+    "title": "As-of date and Current / Contracted / Forecast views.",
+    "acceptance": "Past dates reproduce historical state.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-VW-04": {
+    "table": 58,
+    "title": "Filters: client, property, city, occupant, industry, contract type, billing model, status, occupancy, floor, area, rent, revenue component, expiry window, delinquency, critical.",
+    "acceptance": "Filters combinable; kept in URL.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-VW-05": {
+    "table": 58,
+    "title": "Sort, column chooser, saved views.",
+    "acceptance": "Saved views persist.",
+    "priority": "Should",
+    "phase": "P1"
+  },
+  "RR-VW-06": {
+    "table": 58,
+    "title": "Export Excel/CSV/PDF respecting filters and masking.",
+    "acceptance": "10k rows < 10 s.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-VW-07": {
+    "table": 58,
+    "title": "Contract detail with all tabs (\u00a75.2).",
+    "acceptance": "All tabs read shared records.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-01": {
+    "table": 58,
+    "title": "Create/edit contract through form with billing-model-aware fields.",
+    "acceptance": "Seat fields shown only for seat/hybrid.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-02": {
+    "table": 58,
+    "title": "Approval workflow for new contracts and financial-term changes.",
+    "acceptance": "Unapproved terms never billed.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-03": {
+    "table": 58,
+    "title": "Renew, amend, serve notice, terminate as tracked transitions with documents.",
+    "acceptance": "Parent\u2013child chain visible.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-04": {
+    "table": 58,
+    "title": "Document repository per contract with versioning, status and visibility (\u00a74.9).",
+    "acceptance": "Executed versions never overwritten.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-05": {
+    "table": 58,
+    "title": "Missing-document flag (e.g. active contract without executed agreement).",
+    "acceptance": "Appears in exception centre.",
+    "priority": "Should",
+    "phase": "P1"
+  },
+  "RR-CON-06": {
+    "table": 58,
+    "title": "Lease timeline (Gantt) by floor.",
+    "acceptance": "Renders 200 contracts smoothly.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-CON-07": {
+    "table": 58,
+    "title": "Lightweight deal register in Rent Roll (\u00a74.7A); convert won deal into a draft/future contract copying terms and documents; same records used by Leasing CRM if subscribed.",
+    "acceptance": "No re-keying on conversion (UAT-61).",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-08": {
+    "table": 58,
+    "title": "Future contracts excluded from billing and collections until activated.",
+    "acceptance": "UAT-62 passes.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-CON-09": {
+    "table": 58,
+    "title": "Maker-checker on every change to financial terms, with source clause reference.",
+    "acceptance": "Maker cannot approve own change.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ESC-01": {
+    "table": 59,
+    "title": "Generate all rent steps at contract approval from escalation terms.",
+    "acceptance": "Steps match F-02 for 9-year term.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ESC-02": {
+    "table": 59,
+    "title": "Escalation calendar with upcoming/due/applied.",
+    "acceptance": "All steps in next 12 months listed.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ESC-03": {
+    "table": 59,
+    "title": "Apply escalation with approval; notify occupant; update deposit requirement if top-up clause.",
+    "acceptance": "New rate effective on date (UAT-07).",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ESC-04": {
+    "table": 59,
+    "title": "CPI/market-review steps held as pending_resolution until rate entered.",
+    "acceptance": "Alert 90 days before.",
+    "priority": "Should",
+    "phase": "P2"
+  },
+  "RR-ESC-05": {
+    "table": 59,
+    "title": "Expiry pipeline 0\u201330/31\u201390/91\u2013180/181\u2013365/365+ with renewal stages (discussion \u2192 LOI \u2192 agreement \u2192 renewed/lost) and revenue-at-risk.",
+    "acceptance": "Stage changes audited.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ESC-06": {
+    "table": 59,
+    "title": "Lock-in end and notice-window dates computed from clauses.",
+    "acceptance": "Shown on register and alerts.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-BIL-01": {
+    "table": 60,
+    "title": "Billing run per period: draft invoices for all billable charges applying steps, concessions, inclusions and proration.",
+    "acceptance": "Draft total = rent roll billable total (reconciliation report).",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-02": {
+    "table": 60,
+    "title": "Separate invoices by invoice_group (rent, CAM, electricity, water, parking, services) and billing entity; optional consolidation per contract.",
+    "acceptance": "UAT-08 to UAT-10 pass.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-03": {
+    "table": 60,
+    "title": "Review, edit, approve; only approved invoices issue.",
+    "acceptance": "No issue without approval.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-04": {
+    "table": 60,
+    "title": "GST-compliant invoice PDF: both GSTINs, SAC, place of supply, CGST/SGST or IGST, gapless numbering per entity per FY; branded.",
+    "acceptance": "Format reviewed by client CA.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-05": {
+    "table": 60,
+    "title": "Metered utility billing from meter readings (manual, CSV, API or CAFM).",
+    "acceptance": "UAT-06 passes without CAFM.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-06": {
+    "table": 60,
+    "title": "Credit and debit notes linked to invoice, own numbering.",
+    "acceptance": "Outstanding recalculates (UAT-33).",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-07": {
+    "table": 60,
+    "title": "Invoice delivery by email and WhatsApp with PDF and pay link.",
+    "acceptance": "Delivery status tracked.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-08": {
+    "table": 60,
+    "title": "Bulk invoice generation as background job.",
+    "acceptance": "5,000 invoices < 3 min (UAT-37).",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-BIL-09": {
+    "table": 60,
+    "title": "GST e-invoicing (IRN, QR) per billing entity where enabled.",
+    "acceptance": "IRN on invoice via GSP sandbox.",
+    "priority": "Should",
+    "phase": "P2"
+  },
+  "RR-BIL-10": {
+    "table": 60,
+    "title": "Turnover rent from occupant sales submissions.",
+    "acceptance": "Matches worked example.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-BIL-11": {
+    "table": 60,
+    "title": "Late-payment interest as draft debit note per contract terms.",
+    "acceptance": "Draft only; approval required.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-PAY-01": {
+    "table": 61,
+    "title": "Occupant can Pay All, Pay Selected, Pay Individual or pay a partial amount in one transaction.",
+    "acceptance": "UAT-11 to UAT-14 pass.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-02": {
+    "table": 61,
+    "title": "Allocation engine distributes one payment across many invoices.",
+    "acceptance": "\u03a3 allocations = payment (UAT-15).",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-03": {
+    "table": 61,
+    "title": "Auto-allocation priority configurable: selected invoices, oldest due first, or charge-type order.",
+    "acceptance": "UAT-16 passes.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-04": {
+    "table": 61,
+    "title": "Manual allocation/reallocation by Finance with audit.",
+    "acceptance": "UAT-17 passes.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-05": {
+    "table": 61,
+    "title": "Razorpay checkout and webhooks: signature-verified, idempotent.",
+    "acceptance": "Duplicate webhook creates no duplicate allocation (UAT-34).",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-06": {
+    "table": 61,
+    "title": "Offline receipts (NEFT/RTGS/cheque/UPI) and TDS credits recorded and allocated.",
+    "acceptance": "Outstanding = gross \u2212 receipts \u2212 TDS credit.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-07": {
+    "table": 61,
+    "title": "Receipt PDF after successful reconciliation.",
+    "acceptance": "Receipt links to allocations.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-08": {
+    "table": 61,
+    "title": "Unallocated/on-account balances tracked and alerted.",
+    "acceptance": "Visible in Payment Centre.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PAY-09": {
+    "table": 61,
+    "title": "Bank statement import for reconciliation suggestions.",
+    "acceptance": "Matches by amount/reference.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-COL-01": {
+    "table": 61,
+    "title": "Ageing 0\u201330/31\u201360/61\u201390/90+ by occupant, property, client.",
+    "acceptance": "UAT-18 to UAT-21 pass.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-COL-02": {
+    "table": 61,
+    "title": "Invoice dispute by occupant or staff creates task; invoice stays traceable.",
+    "acceptance": "UAT-32 passes.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-COL-03": {
+    "table": 61,
+    "title": "Follow-up tasks and reminder cadence per overdue bucket.",
+    "acceptance": "Reminders sent per config.",
+    "priority": "Should",
+    "phase": "P3"
+  },
+  "RR-COL-04": {
+    "table": 61,
+    "title": "Deposit ledger: receipts, adjustments, top-ups, refunds with approval.",
+    "acceptance": "Held amount reconciles.",
+    "priority": "Should",
+    "phase": "P3"
+  },
+  "RR-PRT-01": {
+    "table": 61,
+    "title": "Occupant billing portal (\u00a72.4) in subscriber branding; available without CAFM Tenant Portal.",
+    "acceptance": "Occupant pays and downloads receipts.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-PRT-02": {
+    "table": 61,
+    "title": "Occupant sees only own contracts, invoices and occupant-visible documents.",
+    "acceptance": "UAT-24 passes.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-FLX-01": {
+    "table": 62,
+    "title": "Seat inventory by seat type per space; capacity roll-up.",
+    "acceptance": "Seat occupancy per F-16.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FLX-02": {
+    "table": 62,
+    "title": "Pricing plan master (Premium Dedicated Seat, Enterprise Cabin, Hot Desk, Team Room, Virtual Office) with inclusions and extras.",
+    "acceptance": "Plans reusable across contracts.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FLX-03": {
+    "table": 62,
+    "title": "Seat billing bases: contracted, occupied, minimum commitment; hybrid base + seats + usage.",
+    "acceptance": "UAT-03, 38, 39, 40 pass.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FLX-04": {
+    "table": 62,
+    "title": "Monthly seat count capture (manual, CSV or access-control/API) with approval before billing.",
+    "acceptance": "Occupied seats locked per period.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FLX-05": {
+    "table": 62,
+    "title": "Inclusion rules prevent billing included components (R-40).",
+    "acceptance": "UAT-04, 05 pass.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FLX-06": {
+    "table": 62,
+    "title": "Per-use extras (meeting room hours, printing, parking) billed from usage entries or CSV.",
+    "acceptance": "Lines show usage source.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-FLX-07": {
+    "table": 62,
+    "title": "Short-term and rolling monthly memberships with notice in days; mid-month join/exit proration.",
+    "acceptance": "F-10 applied.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FLX-08": {
+    "table": 62,
+    "title": "Head leases as payable contracts with escalation and expiry alerts.",
+    "acceptance": "Payables generated monthly.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-FLX-09": {
+    "table": 62,
+    "title": "Centre P&L: member revenue, head-lease rent, payables, opex, contribution, break-even occupancy.",
+    "acceptance": "Matches \u00a713.7 worked example.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-FLX-10": {
+    "table": 62,
+    "title": "Managed Office dashboard: capacity, contracted, occupied, seat occupancy, revenue per seat, contribution margin.",
+    "acceptance": "KPIs match F-16/F-23.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-01": {
+    "table": 63,
+    "title": "Client accounts under one subscriber, each with own properties, billing entities, numbering and branding.",
+    "acceptance": "Data of client A never visible under client B filters or to B's principals.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-02": {
+    "table": 63,
+    "title": "Management mandates with services and fee rules.",
+    "acceptance": "Staff actions limited to mandated services.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-03": {
+    "table": 63,
+    "title": "Invoices issued in the owner's billing entity name when mandate says so.",
+    "acceptance": "Owner GSTIN and series on invoice.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-04": {
+    "table": 63,
+    "title": "Collections settle to owner's account per OI-6; operator sees reconciliation.",
+    "acceptance": "No pooled client money by default.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-05": {
+    "table": 63,
+    "title": "Management fee computed per F-20 and invoiced to the owner by the operator's billing entity.",
+    "acceptance": "Matches \u00a713.8.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-06": {
+    "table": 63,
+    "title": "Monthly owner statement (F-21) generated, approved, issued and archived; remittance recorded.",
+    "acceptance": "Statement frozen once issued.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-07": {
+    "table": 63,
+    "title": "Client Principal portal: own portfolio dashboards, statements, MIS, approvals.",
+    "acceptance": "UAT-25 passes for principals.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-OPR-08": {
+    "table": 63,
+    "title": "Operator-level consolidated view across clients (for operator management only).",
+    "acceptance": "Totals = \u03a3 client totals.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-OPR-09": {
+    "table": 63,
+    "title": "Mandate end revokes staff access to the client automatically; data export handed to owner.",
+    "acceptance": "Access removed on end date.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-FMC-01": {
+    "table": 64,
+    "title": "Charges-only contracts for occupants billed CAM/utilities/services by an FM entity.",
+    "acceptance": "No rent lines generated.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FMC-02": {
+    "table": 64,
+    "title": "Meters and readings: manual, CSV, API; auto-sourced from CAFM when subscribed.",
+    "acceptance": "Source recorded per reading.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FMC-03": {
+    "table": 64,
+    "title": "Tariff master with validity dates per property and billing entity.",
+    "acceptance": "Correct tariff by reading date.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-FMC-04": {
+    "table": 64,
+    "title": "CAM pools: annual budget, monthly provisional billing by apportionment.",
+    "acceptance": "Provisional CAM = budget share \u00f7 12.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-FMC-05": {
+    "table": 64,
+    "title": "Actual CAM costs by category: manual, accounting import, or CAFM/Marketplace.",
+    "acceptance": "Variance budget vs. actual shown.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-FMC-06": {
+    "table": 64,
+    "title": "Year-end CAM true-up per occupant (F-22) with debit/credit notes.",
+    "acceptance": "\u03a3 true-ups = actual \u2212 billed.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-ANL-01": {
+    "table": 65,
+    "title": "Occupancy: area, seats and economic, by property/floor/client/portfolio.",
+    "acceptance": "F-15 to F-17.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ANL-02": {
+    "table": 65,
+    "title": "WALE by income and area; to expiry and to lock-in end.",
+    "acceptance": "Matches \u00a713.6.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ANL-03": {
+    "table": 65,
+    "title": "Rollover by year (10 years).",
+    "acceptance": "Stacked by property.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ANL-04": {
+    "table": 65,
+    "title": "Revenue by component; top-tenant and industry concentration.",
+    "acceptance": "Sums to gross.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-ANL-05": {
+    "table": 65,
+    "title": "Month-end snapshots and movement report.",
+    "acceptance": "Locked snapshot immutable.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-ANL-06": {
+    "table": 65,
+    "title": "12-month forecast incl. escalations, expiries, renewal assumption and weighted pipeline.",
+    "acceptance": "UAT-28 passes.",
+    "priority": "Must",
+    "phase": "P5"
+  },
+  "RR-ANL-07": {
+    "table": 65,
+    "title": "Property P&L: revenue, operating costs (manual/import/CAFM), NOI, margin.",
+    "acceptance": "UAT-30 passes.",
+    "priority": "Must",
+    "phase": "P5"
+  },
+  "RR-ANL-08": {
+    "table": 65,
+    "title": "Automated monthly MIS (PDF + Excel) per property, client and portfolio; scheduled distribution.",
+    "acceptance": "UAT-31 passes.",
+    "priority": "Must",
+    "phase": "P5"
+  },
+  "RR-ANL-09": {
+    "table": 65,
+    "title": "Exception centre: critical / action / upcoming / information, with assignment and resolution.",
+    "acceptance": "Every alert type in \u00a75.15 routable.",
+    "priority": "Must",
+    "phase": "P5"
+  },
+  "RR-ANL-10": {
+    "table": 65,
+    "title": "Executive, property, managed-office, ageing, forecast and lease-pipeline dashboards with KPIs per Table 5.13a.",
+    "acceptance": "All KPIs populated from records.",
+    "priority": "Must",
+    "phase": "P5"
+  },
+  "RR-ANL-11": {
+    "table": 65,
+    "title": "Investor/lender pack export from a snapshot.",
+    "acceptance": "< 60 s for 50 properties.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-ACL-01": {
+    "table": 67,
+    "title": "Roles per Table 5.14a, inherited from Platform Core: Organisation \u2192 Client Account \u2192 Users \u2192 Roles \u2192 Properties \u2192 Spaces \u2192 Occupants \u2192 Contracts \u2192 Documents \u2192 Workflow \u2192 Audit.",
+    "acceptance": "Enforced in API and RLS.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ACL-02": {
+    "table": 67,
+    "title": "Record-level scoping by client account and property assignment.",
+    "acceptance": "Automated two-org and two-client RLS tests green.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ACL-03": {
+    "table": 67,
+    "title": "Field masking for PAN, bank details, contact data.",
+    "acceptance": "Masked in UI, API, exports.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ACL-04": {
+    "table": 67,
+    "title": "Custom roles (Enterprise) built from capability list.",
+    "acceptance": "Custom role cannot exceed creator's rights.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-ACL-05": {
+    "table": 67,
+    "title": "Time-bound auditor access.",
+    "acceptance": "Auto-expiry.",
+    "priority": "Should",
+    "phase": "P3"
+  },
+  "RR-ACL-06": {
+    "table": 67,
+    "title": "SSO (SAML/OIDC) on Enterprise.",
+    "acceptance": "Login via client IdP.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-ALR-01": {
+    "table": 70,
+    "title": "Contract expiry at 12/6/3/1 months.",
+    "acceptance": "UAT-26.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ALR-02": {
+    "table": 70,
+    "title": "Escalation due at 90/60/30 days and on application.",
+    "acceptance": "UAT-27.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ALR-03": {
+    "table": 70,
+    "title": "Lock-in end, notice window, renewal/break option windows.",
+    "acceptance": "From clauses.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ALR-04": {
+    "table": 70,
+    "title": "Holding over; missing LOI/agreement/amendment; document expiry (insurance, NOC, BG).",
+    "acceptance": "Routed to exception centre.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-ALR-05": {
+    "table": 70,
+    "title": "Invoice pending approval; issued but unpaid; disputed.",
+    "acceptance": "Finance notified.",
+    "priority": "Must",
+    "phase": "P2"
+  },
+  "RR-ALR-06": {
+    "table": 70,
+    "title": "Overdue at 1/7/30/60/90+ days; payment partially allocated or unallocated; collection below target.",
+    "acceptance": "Escalates to owner/principal at 60+ (UAT-64).",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-ALR-07": {
+    "table": 70,
+    "title": "Deposit shortfall after escalation.",
+    "acceptance": "Shortfall amount shown.",
+    "priority": "Should",
+    "phase": "P3"
+  },
+  "RR-ALR-08": {
+    "table": 70,
+    "title": "Occupancy below threshold; revenue variance vs. forecast.",
+    "acceptance": "Threshold per property.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-ALR-09": {
+    "table": 70,
+    "title": "Seat count not submitted before billing; head-lease payment due.",
+    "acceptance": "Blocks flex billing until resolved.",
+    "priority": "Must",
+    "phase": "P4"
+  },
+  "RR-ALR-10": {
+    "table": 70,
+    "title": "Owner statement due; mandate ending in 60 days.",
+    "acceptance": "Operator notified.",
+    "priority": "Should",
+    "phase": "P4"
+  },
+  "RR-INT-01": {
+    "table": 71,
+    "title": "Accounting export: Tally Prime XML vouchers and generic CSV journal with ledger mapping.",
+    "acceptance": "Imports into Tally test company.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-INT-02": {
+    "table": 71,
+    "title": "Zoho Books API sync; QuickBooks; SAP/Oracle via CSV/SFTP.",
+    "acceptance": "Idempotent; errors queued.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-INT-03": {
+    "table": 71,
+    "title": "Leasing CRM: LOI \u2192 pipeline contract; activation \u2192 commission_ledger (OI-2). Only when CRM subscribed.",
+    "acceptance": "No re-keying.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-INT-04": {
+    "table": 71,
+    "title": "CAFM: meter readings, CAM costs, occupant lookup on tickets; full Tenant Portal reads RR data.",
+    "acceptance": "Automatic when CAFM added.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-INT-05": {
+    "table": 71,
+    "title": "Marketplace: optional publishing of vacant spaces with asking rent.",
+    "acceptance": "Listing ends when let.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-INT-06": {
+    "table": 71,
+    "title": "Outbound webhooks and public API for subscribers (Enterprise).",
+    "acceptance": "Signed, retried, logged.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-INT-07": {
+    "table": 71,
+    "title": "E-sign for LOI/agreements via approved provider.",
+    "acceptance": "Signed copy stored as executed version.",
+    "priority": "Could",
+    "phase": "P5"
+  },
+  "RR-AUD-01": {
+    "table": 72,
+    "title": "Field-level change log for all contract, charge, step, deposit and financial records: old, new, actor, time, source.",
+    "acceptance": "UAT-36.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-AUD-02": {
+    "table": 72,
+    "title": "Platform audit_log for imports, approvals, billing runs, allocations, statements, exports, role changes, document views.",
+    "acceptance": "Visible in audit timeline.",
+    "priority": "Must",
+    "phase": "P1"
+  },
+  "RR-AUD-03": {
+    "table": 72,
+    "title": "Locked snapshots and issued invoices/statements are immutable; corrections via notes/adjustments.",
+    "acceptance": "Edit returns 409.",
+    "priority": "Must",
+    "phase": "P3"
+  },
+  "RR-AUD-04": {
+    "table": 72,
+    "title": "GST export (GSTR-1-ready) and TDS receivable report.",
+    "acceptance": "Reviewed by client CA.",
+    "priority": "Should",
+    "phase": "P5"
+  },
+  "RR-AUD-05": {
+    "table": 72,
+    "title": "Retention and legal-hold settings.",
+    "acceptance": "Per \u00a76.6.",
+    "priority": "Should",
+    "phase": "P5"
+  }
+}

@@ -103,7 +103,8 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
         if (onLeaseUpdated) onLeaseUpdated();
         setTimeout(() => setApprovalMessage(""), 4000);
       } else {
-        alert("Failed to process approval action.");
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || "Failed to process approval action.");
       }
     } catch (err) {
       console.error("Maker-checker action error:", err);
@@ -607,7 +608,19 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                           <FileText className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="font-extrabold text-gray-900 text-xs">{doc.title}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-gray-900 text-xs">{doc.title}</span>
+                            {doc.version && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-100 text-purple-800">
+                                v{doc.version}
+                              </span>
+                            )}
+                            {doc.isCurrent === false && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-gray-200 text-gray-600">
+                                Superseded
+                              </span>
+                            )}
+                          </div>
                           <div className="text-[11px] text-gray-500 font-mono mt-0.5">
                             {doc.fileName} • {doc.uploadedBy}
                           </div>
@@ -615,8 +628,12 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200">
-                          {doc.status || "Verified"}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          doc.isCurrent === false
+                            ? "bg-gray-100 text-gray-500 border-gray-300"
+                            : "bg-teal-50 text-teal-700 border-teal-200"
+                        }`}>
+                          {doc.isCurrent === false ? "Superseded" : (doc.status || "Verified")}
                         </span>
                         <button
                           type="button"

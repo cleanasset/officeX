@@ -139,6 +139,57 @@ export async function GET(req: Request) {
       });
     }
 
+    // Full Data Export Bundle (§12, RR-INT-01, UAT-45, Table 76: GET /exports/{job})
+    if (type === "full" || type === "bundle") {
+      const currentDocuments = db.leases.flatMap(l => (l.documents || []).filter(d => d.isCurrent !== false).map(d => ({
+        ...d,
+        contractCode: l.leaseCode,
+        tenantName: l.tenantName,
+        propertyName: l.propertyName
+      })));
+
+      const bundle = {
+        meta: {
+          format: "officex_full_data_bundle_v2_1",
+          exportedAt: new Date().toISOString(),
+          version: "2.1",
+          totalContracts: db.leases.length,
+          totalInvoices: db.invoices.length,
+          totalCollections: db.collections.length,
+          totalCurrentDocuments: currentDocuments.length
+        },
+        organization: db.organization,
+        clientAccounts: db.clientAccounts || [],
+        billingEntities: db.billingEntities || [],
+        managementMandates: db.managementMandates || [],
+        properties: db.properties,
+        spaces: db.spaces,
+        tenants: db.tenants,
+        deals: db.deals || [],
+        contracts: db.leases,
+        escalations: db.escalations,
+        invoices: db.invoices,
+        collections: db.collections,
+        paymentAllocations: db.paymentAllocations || [],
+        adjustmentNotes: db.adjustmentNotes || [],
+        ownerStatements: db.ownerStatements || [],
+        camPools: db.camPools || [],
+        flexCentres: db.flexCentres || [],
+        meterReadings: db.meterReadings || [],
+        snapshots: db.snapshots || [],
+        currentDocuments,
+        auditLogs: db.auditLogs || []
+      };
+
+      const jsonStr = JSON.stringify(bundle, null, 2);
+      return new NextResponse(jsonStr, {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Content-Disposition": `attachment; filename="officex_full_data_bundle_${new Date().toISOString().split('T')[0]}.json"`
+        }
+      });
+    }
+
     return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
   } catch (error: any) {
     console.error("GET /api/rent-roll/export error:", error);

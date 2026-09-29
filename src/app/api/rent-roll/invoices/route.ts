@@ -121,6 +121,105 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, adjustmentNote: note, updatedInvoice: targetInvoice }, { status: 201 });
     }
 
+    // Action: Dispute Invoice (RR-COL-02, UAT-32, Table 76: POST /invoices/{id}/dispute)
+    if (body.action === "dispute") {
+      const invoiceId = body.invoiceId || body.id;
+      const targetInvoice = db.invoices.find(i => i.id === invoiceId || i.invoiceNumber === invoiceId);
+      if (!targetInvoice) {
+        return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      }
+
+      const disputeReason = body.reason || body.disputeReason || "Commercial term dispute";
+      const taskId = `TASK-DISP-${Date.now().toString().slice(-6)}`;
+      targetInvoice.status = "disputed";
+      targetInvoice.isDisputed = true;
+      targetInvoice.disputeReason = disputeReason;
+      targetInvoice.disputeTaskId = taskId;
+      targetInvoice.disputedAt = new Date().toISOString();
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Invoice",
+        action: "DISPUTE_INVOICE",
+        newValues: {
+          invoiceNumber: targetInvoice.invoiceNumber,
+          disputeReason,
+          disputeTaskId: taskId,
+          balanceDue: targetInvoice.balanceDue
+        },
+        changedBy: body.disputedBy || "Tenant Portal / Account Manager"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Invoice ${targetInvoice.invoiceNumber} marked as disputed. Workflow task ${taskId} initiated (RR-COL-02, UAT-32).`,
+        invoice: targetInvoice,
+        disputeTaskId: taskId
+      });
+    }
+
+    // Action: Cancel / Void Invoice (Table 76: POST /invoices/{id}/cancel)
+    if (body.action === "cancel") {
+      const invoiceId = body.invoiceId || body.id;
+      const targetInvoice = db.invoices.find(i => i.id === invoiceId || i.invoiceNumber === invoiceId);
+      if (!targetInvoice) {
+        return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      }
+
+      if (targetInvoice.status === "paid") {
+        return NextResponse.json({ error: "Cannot cancel an already settled invoice. Issue a credit note instead." }, { status: 400 });
+      }
+
+      targetInvoice.status = "cancelled";
+      targetInvoice.cancellationReason = body.reason || "Invoice voided by billing manager";
+      targetInvoice.cancelledAt = new Date().toISOString();
+      targetInvoice.balanceDue = 0;
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Invoice",
+        action: "CANCEL_INVOICE",
+        newValues: {
+          invoiceNumber: targetInvoice.invoiceNumber,
+          cancellationReason: targetInvoice.cancellationReason
+        },
+        changedBy: body.cancelledBy || "Finance Controller"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Invoice ${targetInvoice.invoiceNumber} cancelled successfully.`,
+        invoice: targetInvoice
+      });
+    }
+
+    // Action: Issue Draft Invoice (Table 76: POST /invoices/{id}/issue)
+    if (body.action === "issue") {
+      const invoiceId = body.invoiceId || body.id;
+      const targetInvoice = db.invoices.find(i => i.id === invoiceId || i.invoiceNumber === invoiceId);
+      if (!targetInvoice) {
+        return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      }
+
+      targetInvoice.status = "issued";
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Invoice",
+        action: "ISSUE_INVOICE",
+        newValues: { invoiceNumber: targetInvoice.invoiceNumber },
+        changedBy: body.issuedBy || "Billing Administrator"
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Invoice ${targetInvoice.invoiceNumber} issued.`,
+        invoice: targetInvoice
+      });
+    }
+
     // Default Action: Billing Run (RR-BIL-01)
     const { leaseId, billingMonth, dueDate, invoiceType = "consolidated" } = body;
 

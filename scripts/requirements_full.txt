@@ -1,0 +1,139 @@
+RR-ACL-01 | Roles per Table 5.14a, inherited from Platform Core: Organisation → Client Account → Users → Roles → Properties → Spaces → Occupants → Contracts → Documents → Workflow → Audit. | Enforced in API and RLS. | Priority: Must | Phase: P1
+RR-ACL-02 | Record-level scoping by client account and property assignment. | Automated two-org and two-client RLS tests green. | Priority: Must | Phase: P1
+RR-ACL-03 | Field masking for PAN, bank details, contact data. | Masked in UI, API, exports. | Priority: Must | Phase: P1
+RR-ACL-04 | Custom roles (Enterprise) built from capability list. | Custom role cannot exceed creator's rights. | Priority: Could | Phase: P5
+RR-ACL-05 | Time-bound auditor access. | Auto-expiry. | Priority: Should | Phase: P3
+RR-ACL-06 | SSO (SAML/OIDC) on Enterprise. | Login via client IdP. | Priority: Could | Phase: P5
+RR-ALR-01 | Contract expiry at 12/6/3/1 months. | UAT-26. | Priority: Must | Phase: P1
+RR-ALR-02 | Escalation due at 90/60/30 days and on application. | UAT-27. | Priority: Must | Phase: P1
+RR-ALR-03 | Lock-in end, notice window, renewal/break option windows. | From clauses. | Priority: Must | Phase: P1
+RR-ALR-04 | Holding over; missing LOI/agreement/amendment; document expiry (insurance, NOC, BG). | Routed to exception centre. | Priority: Must | Phase: P1
+RR-ALR-05 | Invoice pending approval; issued but unpaid; disputed. | Finance notified. | Priority: Must | Phase: P2
+RR-ALR-06 | Overdue at 1/7/30/60/90+ days; payment partially allocated or unallocated; collection below target. | Escalates to owner/principal at 60+ (UAT-64). | Priority: Must | Phase: P3
+RR-ALR-07 | Deposit shortfall after escalation. | Shortfall amount shown. | Priority: Should | Phase: P3
+RR-ALR-08 | Occupancy below threshold; revenue variance vs. forecast. | Threshold per property. | Priority: Should | Phase: P5
+RR-ALR-09 | Seat count not submitted before billing; head-lease payment due. | Blocks flex billing until resolved. | Priority: Must | Phase: P4
+RR-ALR-10 | Owner statement due; mandate ending in 60 days. | Operator notified. | Priority: Should | Phase: P4
+RR-ANL-01 | Occupancy: area, seats and economic, by property/floor/client/portfolio. | F-15 to F-17. | Priority: Must | Phase: P1
+RR-ANL-02 | WALE by income and area; to expiry and to lock-in end. | Matches §13.6. | Priority: Must | Phase: P1
+RR-ANL-03 | Rollover by year (10 years). | Stacked by property. | Priority: Must | Phase: P1
+RR-ANL-04 | Revenue by component; top-tenant and industry concentration. | Sums to gross. | Priority: Must | Phase: P3
+RR-ANL-05 | Month-end snapshots and movement report. | Locked snapshot immutable. | Priority: Must | Phase: P3
+RR-ANL-06 | 12-month forecast incl. escalations, expiries, renewal assumption and weighted pipeline. | UAT-28 passes. | Priority: Must | Phase: P5
+RR-ANL-07 | Property P&L: revenue, operating costs (manual/import/CAFM), NOI, margin. | UAT-30 passes. | Priority: Must | Phase: P5
+RR-ANL-08 | Automated monthly MIS (PDF + Excel) per property, client and portfolio; scheduled distribution. | UAT-31 passes. | Priority: Must | Phase: P5
+RR-ANL-09 | Exception centre: critical / action / upcoming / information, with assignment and resolution. | Every alert type in §5.15 routable. | Priority: Must | Phase: P5
+RR-ANL-10 | Executive, property, managed-office, ageing, forecast and lease-pipeline dashboards with KPIs per Table 5.13a. | All KPIs populated from records. | Priority: Must | Phase: P5
+RR-ANL-11 | Investor/lender pack export from a snapshot. | < 60 s for 50 properties. | Priority: Should | Phase: P5
+RR-AUD-01 | Field-level change log for all contract, charge, step, deposit and financial records: old, new, actor, time, source. | UAT-36. | Priority: Must | Phase: P1
+RR-AUD-02 | Platform audit_log for imports, approvals, billing runs, allocations, statements, exports, role changes, document views. | Visible in audit timeline. | Priority: Must | Phase: P1
+RR-AUD-03 | Locked snapshots and issued invoices/statements are immutable; corrections via notes/adjustments. | Edit returns 409. | Priority: Must | Phase: P3
+RR-AUD-04 | GST export (GSTR-1-ready) and TDS receivable report. | Reviewed by client CA. | Priority: Should | Phase: P5
+RR-AUD-05 | Retention and legal-hold settings. | Per §6.6. | Priority: Should | Phase: P5
+RR-BIL-01 | Billing run per period: draft invoices for all billable charges applying steps, concessions, inclusions and proration. | Draft total = rent roll billable total (reconciliation report). | Priority: Must | Phase: P2
+RR-BIL-02 | Separate invoices by invoice_group (rent, CAM, electricity, water, parking, services) and billing entity; optional consolidation per contract. | UAT-08 to UAT-10 pass. | Priority: Must | Phase: P2
+RR-BIL-03 | Review, edit, approve; only approved invoices issue. | No issue without approval. | Priority: Must | Phase: P2
+RR-BIL-04 | GST-compliant invoice PDF: both GSTINs, SAC, place of supply, CGST/SGST or IGST, gapless numbering per entity per FY; branded. | Format reviewed by client CA. | Priority: Must | Phase: P2
+RR-BIL-05 | Metered utility billing from meter readings (manual, CSV, API or CAFM). | UAT-06 passes without CAFM. | Priority: Must | Phase: P2
+RR-BIL-06 | Credit and debit notes linked to invoice, own numbering. | Outstanding recalculates (UAT-33). | Priority: Must | Phase: P2
+RR-BIL-07 | Invoice delivery by email and WhatsApp with PDF and pay link. | Delivery status tracked. | Priority: Must | Phase: P2
+RR-BIL-08 | Bulk invoice generation as background job. | 5,000 invoices < 3 min (UAT-37). | Priority: Must | Phase: P2
+RR-BIL-09 | GST e-invoicing (IRN, QR) per billing entity where enabled. | IRN on invoice via GSP sandbox. | Priority: Should | Phase: P2
+RR-BIL-10 | Turnover rent from occupant sales submissions. | Matches worked example. | Priority: Could | Phase: P5
+RR-BIL-11 | Late-payment interest as draft debit note per contract terms. | Draft only; approval required. | Priority: Could | Phase: P5
+RR-COL-01 | Ageing 0–30/31–60/61–90/90+ by occupant, property, client. | UAT-18 to UAT-21 pass. | Priority: Must | Phase: P3
+RR-COL-02 | Invoice dispute by occupant or staff creates task; invoice stays traceable. | UAT-32 passes. | Priority: Must | Phase: P3
+RR-COL-03 | Follow-up tasks and reminder cadence per overdue bucket. | Reminders sent per config. | Priority: Should | Phase: P3
+RR-COL-04 | Deposit ledger: receipts, adjustments, top-ups, refunds with approval. | Held amount reconciles. | Priority: Should | Phase: P3
+RR-CON-01 | Create/edit contract through form with billing-model-aware fields. | Seat fields shown only for seat/hybrid. | Priority: Must | Phase: P1
+RR-CON-02 | Approval workflow for new contracts and financial-term changes. | Unapproved terms never billed. | Priority: Must | Phase: P1
+RR-CON-03 | Renew, amend, serve notice, terminate as tracked transitions with documents. | Parent–child chain visible. | Priority: Must | Phase: P1
+RR-CON-04 | Document repository per contract with versioning, status and visibility (§4.9). | Executed versions never overwritten. | Priority: Must | Phase: P1
+RR-CON-05 | Missing-document flag (e.g. active contract without executed agreement). | Appears in exception centre. | Priority: Should | Phase: P1
+RR-CON-06 | Lease timeline (Gantt) by floor. | Renders 200 contracts smoothly. | Priority: Should | Phase: P5
+RR-CON-07 | Lightweight deal register in Rent Roll (§4.7A); convert won deal into a draft/future contract copying terms and documents; same records used by Leasing CRM if subscribed. | No re-keying on conversion (UAT-61). | Priority: Must | Phase: P1
+RR-CON-08 | Future contracts excluded from billing and collections until activated. | UAT-62 passes. | Priority: Must | Phase: P1
+RR-CON-09 | Maker-checker on every change to financial terms, with source clause reference. | Maker cannot approve own change. | Priority: Must | Phase: P1
+RR-ENT-01 | Rent Roll subscribable as its own product with editions and add-ons (§2.3); no other OFFICEX product required. | New org with only RR subscription completes UAT-41. | Priority: Must | Phase: P0
+RR-ENT-02 | Entitlement service: features enabled per org from subscription; checked server-side on every API call. | Calling a non-entitled endpoint returns 403 with feature code. | Priority: Must | Phase: P0
+RR-ENT-03 | Platform Core masters (properties, buildings, spaces, occupants, users) included with Rent Roll and editable from Rent Roll screens. | No CAFM screen needed to set up a property. | Priority: Must | Phase: P0
+RR-ENT-04 | Navigation built from entitlements and role; only subscribed products appear (fixes sidebar context bug). | RR-only user sees no FM, CRM or Marketplace menu. | Priority: Must | Phase: P0
+RR-ENT-05 | No hard dependency: every feature that can use CAFM/CRM/Marketplace data has a manual/CSV/API path (§2.4). | All UAT pass with only RR subscribed. | Priority: Must | Phase: P1
+RR-ENT-06 | Nightly usage metering: area under management, seat capacity, active contracts, client accounts. | Usage visible in Settings; exported to SaaS billing. | Priority: Must | Phase: P2
+RR-ENT-07 | Self-serve sign-up with 14-day trial, segment selection and configuration template (charge types, billing models, roles). | Trial org productive without OFFICEX staff. | Priority: Should | Phase: P4
+RR-ENT-08 | Full data export (Excel/CSV bundle + documents) on demand for the org or a client account. | Export of a 500-contract org < 5 min. | Priority: Must | Phase: P1
+RR-ENT-09 | Upgrade/downgrade by entitlement change with no data migration; downgraded features become read-only. | Adding CAFM reuses existing spaces and occupants. | Priority: Must | Phase: P2
+RR-ENT-10 | White-label: logo, colours, templates, sender domain, subdomain; custom domain on Enterprise. | Invoice and emails show subscriber brand. | Priority: Should | Phase: P4
+RR-ENT-11 | Sandbox organisation with sample data (§13) for demos and training. | Sandbox resettable in one click. | Priority: Could | Phase: P4
+RR-ESC-01 | Generate all rent steps at contract approval from escalation terms. | Steps match F-02 for 9-year term. | Priority: Must | Phase: P1
+RR-ESC-02 | Escalation calendar with upcoming/due/applied. | All steps in next 12 months listed. | Priority: Must | Phase: P1
+RR-ESC-03 | Apply escalation with approval; notify occupant; update deposit requirement if top-up clause. | New rate effective on date (UAT-07). | Priority: Must | Phase: P1
+RR-ESC-04 | CPI/market-review steps held as pending_resolution until rate entered. | Alert 90 days before. | Priority: Should | Phase: P2
+RR-ESC-05 | Expiry pipeline 0–30/31–90/91–180/181–365/365+ with renewal stages (discussion → LOI → agreement → renewed/lost) and revenue-at-risk. | Stage changes audited. | Priority: Must | Phase: P1
+RR-ESC-06 | Lock-in end and notice-window dates computed from clauses. | Shown on register and alerts. | Priority: Must | Phase: P1
+RR-FLX-01 | Seat inventory by seat type per space; capacity roll-up. | Seat occupancy per F-16. | Priority: Must | Phase: P2
+RR-FLX-02 | Pricing plan master (Premium Dedicated Seat, Enterprise Cabin, Hot Desk, Team Room, Virtual Office) with inclusions and extras. | Plans reusable across contracts. | Priority: Must | Phase: P2
+RR-FLX-03 | Seat billing bases: contracted, occupied, minimum commitment; hybrid base + seats + usage. | UAT-03, 38, 39, 40 pass. | Priority: Must | Phase: P2
+RR-FLX-04 | Monthly seat count capture (manual, CSV or access-control/API) with approval before billing. | Occupied seats locked per period. | Priority: Must | Phase: P2
+RR-FLX-05 | Inclusion rules prevent billing included components (R-40). | UAT-04, 05 pass. | Priority: Must | Phase: P2
+RR-FLX-06 | Per-use extras (meeting room hours, printing, parking) billed from usage entries or CSV. | Lines show usage source. | Priority: Should | Phase: P4
+RR-FLX-07 | Short-term and rolling monthly memberships with notice in days; mid-month join/exit proration. | F-10 applied. | Priority: Must | Phase: P2
+RR-FLX-08 | Head leases as payable contracts with escalation and expiry alerts. | Payables generated monthly. | Priority: Must | Phase: P4
+RR-FLX-09 | Centre P&L: member revenue, head-lease rent, payables, opex, contribution, break-even occupancy. | Matches §13.7 worked example. | Priority: Must | Phase: P4
+RR-FLX-10 | Managed Office dashboard: capacity, contracted, occupied, seat occupancy, revenue per seat, contribution margin. | KPIs match F-16/F-23. | Priority: Must | Phase: P4
+RR-FMC-01 | Charges-only contracts for occupants billed CAM/utilities/services by an FM entity. | No rent lines generated. | Priority: Must | Phase: P2
+RR-FMC-02 | Meters and readings: manual, CSV, API; auto-sourced from CAFM when subscribed. | Source recorded per reading. | Priority: Must | Phase: P2
+RR-FMC-03 | Tariff master with validity dates per property and billing entity. | Correct tariff by reading date. | Priority: Must | Phase: P2
+RR-FMC-04 | CAM pools: annual budget, monthly provisional billing by apportionment. | Provisional CAM = budget share ÷ 12. | Priority: Should | Phase: P4
+RR-FMC-05 | Actual CAM costs by category: manual, accounting import, or CAFM/Marketplace. | Variance budget vs. actual shown. | Priority: Should | Phase: P4
+RR-FMC-06 | Year-end CAM true-up per occupant (F-22) with debit/credit notes. | Σ true-ups = actual − billed. | Priority: Should | Phase: P4
+RR-ING-01 | Upload .xlsx/.xls/.csv up to 20 MB, multiple sheets. | Sheets listed within 5 s. | Priority: Must | Phase: P1
+RR-ING-02 | Downloadable standard templates per billing model (area, seat, charges-only). | Template imports with zero mapping. | Priority: Must | Phase: P1
+RR-ING-03 | Column mapping with auto-suggestions from synonym dictionary. | ≥80% columns auto-mapped on pilot files. | Priority: Must | Phase: P1
+RR-ING-04 | Save and reuse mapping templates per org and per client account. | Second import of same layout needs no mapping. | Priority: Must | Phase: P1
+RR-ING-05 | Transforms: Indian number format, dates, sq m→sq ft, text→enum, escalation phrase parser. | Parser tests cover 30 real phrasings. | Priority: Must | Phase: P1
+RR-ING-06 | Row-level validation with rule codes (Table 5.5a) and summary: passed / warning / failed / unmapped. Errors block; warnings need acknowledgement. File checks for duplicates and malware. | Failed rows show rule, cell, fix hint. | Priority: Must | Phase: P1
+RR-ING-07 | Control totals for area, rent and seats reconciled to source. | >0.5% variance blocks sign-off unless overridden with reason. | Priority: Must | Phase: P1
+RR-ING-08 | In-grid correction, downloadable error file, and re-upload into same batch. | Corrections re-validated instantly. | Priority: Must | Phase: P1
+RR-ING-09 | Diff preview: new / changed / unchanged / ended. | Counts per entity shown. | Priority: Must | Phase: P1
+RR-ING-10 | Two-step commit: preparer submits, approver signs off. | Commit blocked without approver role. | Priority: Should | Phase: P1
+RR-ING-11 | Import versioning; rollback/void of a committed batch within 7 days. | Prior state restored exactly; audited. | Priority: Should | Phase: P2
+RR-ING-12 | Occupant de-duplication on GSTIN, PAN, fuzzy name. | Suggestions before create. | Priority: Should | Phase: P1
+RR-ING-13 | Import opening balances (outstanding invoices, deposits held) at cut-over. | Ageing matches client report at cut-over. | Priority: Must | Phase: P3
+RR-ING-14 | Bulk import API with identical validation. | See §6.4. | Priority: Should | Phase: P5
+RR-ING-15 | Unmapped source columns preserved in staging and shown for review. | No source column silently dropped (UAT-63). | Priority: Must | Phase: P1
+RR-ING-16 | Data profiling report before mapping: duplicates, missing values, inconsistent dates/rates, totals. | Report attached to batch. | Priority: Should | Phase: P1
+RR-INT-01 | Accounting export: Tally Prime XML vouchers and generic CSV journal with ledger mapping. | Imports into Tally test company. | Priority: Should | Phase: P5
+RR-INT-02 | Zoho Books API sync; QuickBooks; SAP/Oracle via CSV/SFTP. | Idempotent; errors queued. | Priority: Could | Phase: P5
+RR-INT-03 | Leasing CRM: LOI → pipeline contract; activation → commission_ledger (OI-2). Only when CRM subscribed. | No re-keying. | Priority: Should | Phase: P5
+RR-INT-04 | CAFM: meter readings, CAM costs, occupant lookup on tickets; full Tenant Portal reads RR data. | Automatic when CAFM added. | Priority: Should | Phase: P5
+RR-INT-05 | Marketplace: optional publishing of vacant spaces with asking rent. | Listing ends when let. | Priority: Could | Phase: P5
+RR-INT-06 | Outbound webhooks and public API for subscribers (Enterprise). | Signed, retried, logged. | Priority: Should | Phase: P5
+RR-INT-07 | E-sign for LOI/agreements via approved provider. | Signed copy stored as executed version. | Priority: Could | Phase: P5
+RR-OPR-01 | Client accounts under one subscriber, each with own properties, billing entities, numbering and branding. | Data of client A never visible under client B filters or to B's principals. | Priority: Must | Phase: P4
+RR-OPR-02 | Management mandates with services and fee rules. | Staff actions limited to mandated services. | Priority: Must | Phase: P4
+RR-OPR-03 | Invoices issued in the owner's billing entity name when mandate says so. | Owner GSTIN and series on invoice. | Priority: Must | Phase: P4
+RR-OPR-04 | Collections settle to owner's account per OI-6; operator sees reconciliation. | No pooled client money by default. | Priority: Must | Phase: P4
+RR-OPR-05 | Management fee computed per F-20 and invoiced to the owner by the operator's billing entity. | Matches §13.8. | Priority: Must | Phase: P4
+RR-OPR-06 | Monthly owner statement (F-21) generated, approved, issued and archived; remittance recorded. | Statement frozen once issued. | Priority: Must | Phase: P4
+RR-OPR-07 | Client Principal portal: own portfolio dashboards, statements, MIS, approvals. | UAT-25 passes for principals. | Priority: Must | Phase: P4
+RR-OPR-08 | Operator-level consolidated view across clients (for operator management only). | Totals = Σ client totals. | Priority: Should | Phase: P4
+RR-OPR-09 | Mandate end revokes staff access to the client automatically; data export handed to owner. | Access removed on end date. | Priority: Must | Phase: P4
+RR-PAY-01 | Occupant can Pay All, Pay Selected, Pay Individual or pay a partial amount in one transaction. | UAT-11 to UAT-14 pass. | Priority: Must | Phase: P3
+RR-PAY-02 | Allocation engine distributes one payment across many invoices. | Σ allocations = payment (UAT-15). | Priority: Must | Phase: P3
+RR-PAY-03 | Auto-allocation priority configurable: selected invoices, oldest due first, or charge-type order. | UAT-16 passes. | Priority: Must | Phase: P3
+RR-PAY-04 | Manual allocation/reallocation by Finance with audit. | UAT-17 passes. | Priority: Must | Phase: P3
+RR-PAY-05 | Razorpay checkout and webhooks: signature-verified, idempotent. | Duplicate webhook creates no duplicate allocation (UAT-34). | Priority: Must | Phase: P3
+RR-PAY-06 | Offline receipts (NEFT/RTGS/cheque/UPI) and TDS credits recorded and allocated. | Outstanding = gross − receipts − TDS credit. | Priority: Must | Phase: P3
+RR-PAY-07 | Receipt PDF after successful reconciliation. | Receipt links to allocations. | Priority: Must | Phase: P3
+RR-PAY-08 | Unallocated/on-account balances tracked and alerted. | Visible in Payment Centre. | Priority: Must | Phase: P3
+RR-PAY-09 | Bank statement import for reconciliation suggestions. | Matches by amount/reference. | Priority: Should | Phase: P5
+RR-PRT-01 | Occupant billing portal (§2.4) in subscriber branding; available without CAFM Tenant Portal. | Occupant pays and downloads receipts. | Priority: Must | Phase: P3
+RR-PRT-02 | Occupant sees only own contracts, invoices and occupant-visible documents. | UAT-24 passes. | Priority: Must | Phase: P3
+RR-VW-01 | Property rent roll: one row per space (vacant included) with totals. | Totals reconcile to property record. | Priority: Must | Phase: P1
+RR-VW-02 | Portfolio rent roll grouped by client account and property. | <2 s p95 for 10k spaces. | Priority: Must | Phase: P1
+RR-VW-03 | As-of date and Current / Contracted / Forecast views. | Past dates reproduce historical state. | Priority: Must | Phase: P1
+RR-VW-04 | Filters: client, property, city, occupant, industry, contract type, billing model, status, occupancy, floor, area, rent, revenue component, expiry window, delinquency, critical. | Filters combinable; kept in URL. | Priority: Must | Phase: P1
+RR-VW-05 | Sort, column chooser, saved views. | Saved views persist. | Priority: Should | Phase: P1
+RR-VW-06 | Export Excel/CSV/PDF respecting filters and masking. | 10k rows < 10 s. | Priority: Must | Phase: P1
+RR-VW-07 | Contract detail with all tabs (§5.2). | All tabs read shared records. | Priority: Must | Phase: P1
