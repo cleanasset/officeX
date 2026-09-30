@@ -399,6 +399,8 @@ export interface InvoiceEntity {
   paymentMode?: string;
   referenceNumber?: string;
   pdfUrl?: string;
+  daysOverdue?: number;
+  notes?: string;
   createdAt: string;
 }
 
@@ -806,6 +808,33 @@ export interface RentRollDatabase {
       testBillingRunCompleted: boolean;
       parallelRunAgreed: boolean;
       occupantCommunicationSent: boolean;
+    };
+    tallyConfig?: {
+      serverUrl: string;
+      companyName: string;
+      autoSyncOnApproval: boolean;
+      ledgers: {
+        rentIncome: string;
+        camIncome: string;
+        cgst: string;
+        sgst: string;
+        igst: string;
+        bankLedger: string;
+        tdsLedger: string;
+        partyGroup: string;
+      };
+      lastSyncTimestamp: string | null;
+      lastSyncStatus: string | null;
+      lastSyncMessage: string | null;
+    };
+    zohoConfig?: {
+      orgId: string;
+      authToken: string;
+      domain: string;
+      isConnected: boolean;
+      lastSyncTimestamp: string | null;
+      lastSyncStatus: string | null;
+      lastSyncMessage: string | null;
     };
   };
   isCleanPortfolio?: boolean;
