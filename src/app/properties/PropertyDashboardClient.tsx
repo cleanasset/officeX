@@ -63,7 +63,14 @@ const SEED_PROP_NAMES = new Set([
   "signature tower b"
 ]);
 
-const isSeedOrMockProp = (p: any) => !p;
+const isSeedOrMockProp = (p: any) => {
+  if (!p) return true;
+  if (SEED_PROP_IDS.has(p.id)) return true;
+  const name = (p.name || "").toLowerCase().trim();
+  if (SEED_PROP_NAMES.has(name)) return true;
+  if (name.includes("apex business") || name.includes("meridian tech") || name.includes("nexus hub") || name.includes("shivalik shilp") || name.includes("business hub") || name.includes("fortune sky") || name.includes("eka club")) return true;
+  return false;
+};
 
 export default function PropertyDashboardClient({
   initialProperties,
@@ -98,10 +105,10 @@ export default function PropertyDashboardClient({
     const emailQuery = email ? `?ownerEmail=${encodeURIComponent(email)}` : "";
 
     try {
-      // Query both rent-roll properties and general properties DB in parallel
+      // Query both rent-roll properties and user-scoped properties DB in parallel
       const [propsRes, genPropsRes, leasesRes, dashRes] = await Promise.all([
         fetch(`/api/rent-roll/properties${emailQuery}`),
-        fetch(`/api/properties`),
+        email ? fetch(`/api/properties?ownerCompany=${encodeURIComponent(email)}&userId=${encodeURIComponent(email)}`) : Promise.resolve({ ok: false } as any),
         fetch(`/api/rent-roll/leases${emailQuery}`),
         fetch(`/api/rent-roll/dashboard${emailQuery}`)
       ]);

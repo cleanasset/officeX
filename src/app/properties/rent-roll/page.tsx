@@ -92,9 +92,23 @@ const DEPRECATED_PROP_NAMES = new Set([
   "signature tower b"
 ]);
 
-// Active real inventory validator (never filter out user-registered entities)
-const isDeprecatedMockProperty = (p: any) => !p;
-const isDeprecatedMockLease = (l: any) => !l;
+const isDeprecatedMockProperty = (p: any) => {
+  if (!p) return true;
+  if (DEPRECATED_PROP_IDS.has(p.id)) return true;
+  const name = (p.name || "").toLowerCase().trim();
+  if (DEPRECATED_PROP_NAMES.has(name)) return true;
+  if (name.includes("apex business") || name.includes("meridian tech") || name.includes("nexus hub")) return true;
+  return false;
+};
+
+const isDeprecatedMockLease = (l: any) => {
+  if (!l) return true;
+  const propName = (l.propertyName || "").toLowerCase().trim();
+  const tenant = (l.tenantName || "").toLowerCase().trim();
+  if (DEPRECATED_PROP_NAMES.has(propName)) return true;
+  if (tenant.includes("hdfc bank corporate") || tenant.includes("tcs digital solutions") || tenant.includes("deloitte shared services")) return true;
+  return false;
+};
 
 function RentRollPageInner() {
   const searchParams = useSearchParams();

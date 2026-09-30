@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { db } from "@/db";
-import { properties } from "@/db/schema";
+import { properties, complianceCertificates, userProperties, leaseUnits, helpdeskTickets, utilityMetrics, rfqs, quotations, workOrders, leases } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 
 export async function GET(req: Request) {
@@ -44,8 +44,6 @@ export async function GET(req: Request) {
     }
   }
 }
-
-import { complianceCertificates, userProperties } from "@/db/schema";
 
 export async function POST(req: Request) {
   try {
@@ -280,8 +278,6 @@ export async function POST(req: Request) {
   }
 }
 
-import { leaseUnits } from "@/db/schema";
-
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -293,6 +289,29 @@ export async function DELETE(req: Request) {
 
     // Clean up dependent child records first
     try {
+      await db.delete(helpdeskTickets).where(eq(helpdeskTickets.propertyId, id));
+    } catch (e) {
+      console.warn("Could not delete helpdesk tickets:", e);
+    }
+
+    try {
+      await db.delete(utilityMetrics).where(eq(utilityMetrics.propertyId, id));
+    } catch (e) {
+      console.warn("Could not delete utility metrics:", e);
+    }
+
+    try {
+      const propRfqs = await db.select().from(rfqs).where(eq(rfqs.propertyId, id));
+      for (const r of propRfqs) {
+        await db.delete(quotations).where(eq(quotations.rfqId, r.id));
+        await db.delete(workOrders).where(eq(workOrders.rfqId, r.id));
+      }
+      await db.delete(rfqs).where(eq(rfqs.propertyId, id));
+    } catch (e) {
+      console.warn("Could not delete rfqs:", e);
+    }
+
+    try {
       await db.delete(complianceCertificates).where(eq(complianceCertificates.propertyId, id));
     } catch (e) {
       console.warn("Could not delete compliance certificates:", e);
@@ -302,6 +321,12 @@ export async function DELETE(req: Request) {
       await db.delete(leaseUnits).where(eq(leaseUnits.propertyId, id));
     } catch (e) {
       console.warn("Could not delete lease units:", e);
+    }
+
+    try {
+      await db.delete(leases).where(eq(leases.propertyId, id));
+    } catch (e) {
+      console.warn("Could not delete leases:", e);
     }
 
     try {
@@ -330,7 +355,7 @@ export async function DELETE(req: Request) {
     await db.delete(properties).where(eq(properties.id, id));
     return NextResponse.json({ success: true, message: "Property deleted successfully" });
   } catch (error: any) {
-    console.error("Property deletion error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Property deletion error:", error?.cause || error);
+    return NextResponse.json({ error: error.message, detail: error?.cause?.detail || error?.cause?.message }, { status: 500 });
   }
 }

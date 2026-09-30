@@ -32,14 +32,6 @@ export default async function PropertyDashboard() {
         allProperties = userProps.map(formatSupabaseProp);
       }
     }
-
-    // If no email-scoped properties found or no email provided, get the latest properties
-    if (allProperties.length === 0) {
-      const { data: latestProps } = await query.limit(20);
-      if (latestProps && latestProps.length > 0) {
-        allProperties = latestProps.map(formatSupabaseProp);
-      }
-    }
   } catch (err) {
     console.warn("Supabase fetch warning in properties page:", err);
   }
