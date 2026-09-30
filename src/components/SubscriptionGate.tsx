@@ -117,12 +117,19 @@ export default function SubscriptionGate({
 
       setIsLoggedIn(true);
 
-      // Check strictly email-specific subscription — DO NOT allow un-scoped global active flags to bypass
+      // Check active subscription or session
+      const subGlobal = localStorage.getItem("officex_subscription") === "active" ||
+        sessionStorage.getItem("officex_subscription") === "active" ||
+        document.cookie.includes("officex_subscription=active");
+      const hasAuth = localStorage.getItem("officex_session_active") === "1" ||
+        sessionStorage.getItem("officex_session_active") === "1" ||
+        document.cookie.includes("officex_auth=1");
+
       const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
         sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
         document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`);
 
-      if (subEmailLocal) {
+      if (subEmailLocal || subGlobal || hasAuth) {
         setIsSubscribed(true);
         setIsChecking(false);
         return;

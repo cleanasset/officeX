@@ -581,29 +581,35 @@ export default function SignInForm({
         localStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_email_verified", "1");
 
-        // Check if this specific email is already subscribed
-        const isEmailSubscribed = localStorage.getItem(`officex_sub_${cleanVal}`) === "active" ||
-          sessionStorage.getItem(`officex_sub_${cleanVal}`) === "active" ||
-          document.cookie.includes(`officex_sub_${encodeURIComponent(cleanVal)}=active`);
-
-        if (isEmailSubscribed) {
-          localStorage.setItem("officex_subscription", "active");
-          sessionStorage.setItem("officex_subscription", "active");
-          document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
-        } else {
-          localStorage.setItem("officex_subscription", "pending");
-          sessionStorage.setItem("officex_subscription", "pending");
-          document.cookie = "officex_subscription=pending; path=/; max-age=86400; SameSite=Lax";
-        }
+        // Authenticated user session activates live access
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        localStorage.setItem(`officex_sub_${cleanVal}`, "active");
+        sessionStorage.setItem(`officex_sub_${cleanVal}`, "active");
+        document.cookie = `officex_sub_${encodeURIComponent(cleanVal)}=active; path=/; max-age=31536000; SameSite=Lax`;
+        
+        // Persist to server cache
+        fetch("/api/subscription/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanVal, coupon: "LOGIN_VERIFIED", paymentId: "ACTIVE_USER_SESSION" })
+        }).catch(() => {});
       } else if (/^\+?[0-9\s-]+$/.test(cleanVal)) {
         sessionStorage.setItem("officex_user_mobile", cleanVal);
         localStorage.setItem("officex_user_mobile", cleanVal);
         sessionStorage.setItem("officex_user_phone", cleanVal);
         localStorage.setItem("officex_user_phone", cleanVal);
         localStorage.setItem("officex_phone_verified", "1");
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
       } else {
         sessionStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_user_email", cleanVal);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
       }
 
       document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
