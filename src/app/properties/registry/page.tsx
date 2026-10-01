@@ -17,6 +17,7 @@ interface PropertyItem {
   grade?: string;
   inviteCode?: string;
   ownerName?: string;
+  activeLeases?: number;
 }
 
 const SEED_PROP_IDS = new Set([
@@ -398,7 +399,7 @@ export default function PropertyMasterRegistry() {
                       <span className="text-slate-500 flex items-center gap-1.5 font-medium">
                         <Users size={13} className="text-slate-400" /> Active Leases
                       </span>
-                      <span className="font-bold text-slate-900">{selectedProp.activeLeases} Contracted</span>
+                      <span className="font-bold text-slate-900">{(selectedProp.activeLeases ?? selectedProp.occupied) || 0} Contracted</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 flex items-center gap-1.5 font-medium">
