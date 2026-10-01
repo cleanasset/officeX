@@ -36,7 +36,7 @@ export interface LeasableSpaceUnit {
   chargeableArea: number;
   carpetArea: number;
   askingRate: number;
-  seatCapacity: number;
+  seatCapacity?: number;
   fitoutCondition: "bare_shell" | "warm_shell" | "fully_fitted" | "plug_and_play";
   status: "vacant" | "occupied" | "reserved" | "under_fitout" | "not_leasable";
 }
