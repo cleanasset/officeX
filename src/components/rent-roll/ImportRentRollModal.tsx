@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import * as XLSX from "xlsx";
 import {
   X,
   UploadCloud,
@@ -190,11 +191,295 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
     document.body.removeChild(link);
   };
 
-  // Parse CSV File & Generate Profiling Report (RR-ING-01, RR-ING-16)
+  // Helper to process parsed raw row data into structured rent roll models
+  const processIngestionRows = (rawRows: any[]) => {
+    const rows: any[] = [];
+    const seenUnits = new Set<string>();
+    let duplicatesCount = 0;
+    let missingValues = 0;
+    let totalSqft = 0;
+    let totalRent = 0;
+
+    rawRows.forEach((r, idx) => {
+      const tenantName = r.tenantName || `Tenant ${idx + 1}`;
+      const legalName = r.legalName || tenantName;
+      const propertyName = r.propertyName || currentPropertyObj?.name || "Apex Tower";
+      const unitNumber = r.unitNumber || `Unit ${100 + idx + 1}`;
+      const floorNumber = Number(r.floorNumber || 1);
+      const chargeableArea = Number(r.chargeableArea || 1000);
+      const carpetArea = Number(r.carpetArea || Math.round(chargeableArea * 0.75));
+      const monthlyRent = Number(r.monthlyRent || (chargeableArea * 150));
+      const ratePsf = Number(r.ratePsf || (chargeableArea > 0 ? monthlyRent / chargeableArea : 0));
+      const camRatePsf = Number(r.camRatePsf || 20);
+      const startDate = r.startDate || "2026-04-01";
+      const endDate = r.endDate || "2029-03-31";
+      const lockInMonths = Number(r.lockInMonths || 36);
+      const escalationPct = Number(r.escalationPct || 5);
+      const gstin = r.gstin || "";
+      const pan = r.pan || "";
+
+      if (!r.tenantName || !chargeableArea || !monthlyRent) missingValues++;
+
+      const unitKey = `${unitNumber.toLowerCase()}-${floorNumber}`;
+      if (seenUnits.has(unitKey)) {
+        duplicatesCount++;
+      } else {
+        seenUnits.add(unitKey);
+      }
+
+      totalSqft += chargeableArea;
+      totalRent += monthlyRent;
+
+      rows.push({
+        rowNumber: idx + 1,
+        tenantName,
+        legalName,
+        propertyName,
+        unitNumber,
+        floorNumber,
+        chargeableArea,
+        carpetArea,
+        monthlyRent,
+        ratePsf,
+        camRatePsf,
+        startDate,
+        endDate,
+        lockInMonths,
+        escalationPct,
+        gstin,
+        pan
+      });
+    });
+
+    if (rows.length === 0) {
+      setErrorMsg("Could not parse any valid lease records from this file.");
+      return;
+    }
+
+    setParsedRows(rows);
+    revalidateAllRows(rows);
+
+    setProfilingReport({
+      totalRows: rows.length,
+      duplicatesDetected: duplicatesCount,
+      missingValuesCount: missingValues,
+      sourceTotalArea: totalSqft,
+      sourceTotalRent: totalRent
+    });
+  };
+
+  // Parse CSV / Excel File & Generate Profiling Report (RR-ING-01, RR-ING-16)
   const handleFileUpload = (file: File) => {
     setErrorMsg("");
     setFileName(file.name);
 
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          if (!buffer) {
+            setErrorMsg("Uploaded Excel file is empty.");
+            return;
+          }
+          const wb = XLSX.read(new Uint8Array(buffer), { type: "array" });
+
+          // Check if this is the Official Multi-Sheet OFFICEX Workbook
+          if (wb.SheetNames.includes("Contracts")) {
+            const contractsSheet = wb.Sheets["Contracts"];
+            const occupantsSheet = wb.Sheets["Occupants"];
+            const spacesSheet = wb.Sheets["Spaces"];
+            const chargesSheet = wb.Sheets["Charges"];
+
+            const contractsRows = XLSX.utils.sheet_to_json<any[]>(contractsSheet, { header: 1 });
+            const contractsHeaders = (contractsRows[0] || []).map((h: any) => String(h || "").trim().toLowerCase());
+
+            // Build Occupants map: occupant_ref -> { trade_name, legal_name, pan, gstin }
+            const occupantsMap = new Map<string, any>();
+            if (occupantsSheet) {
+              const occRows = XLSX.utils.sheet_to_json<any[]>(occupantsSheet, { header: 1 });
+              const occHeaders = (occRows[0] || []).map((h: any) => String(h || "").trim().toLowerCase());
+              const refIdx = occHeaders.indexOf("occupant_ref");
+              const tradeIdx = occHeaders.indexOf("trade_name");
+              const legalIdx = occHeaders.indexOf("legal_name");
+              const panIdx = occHeaders.indexOf("pan");
+              const gstinIdx = occHeaders.indexOf("gstin");
+
+              for (let i = 1; i < occRows.length; i++) {
+                const row = occRows[i];
+                if (!row || !row[refIdx] || String(row[0] || "").trim().startsWith("#")) continue;
+                occupantsMap.set(String(row[refIdx]).trim(), {
+                  tradeName: row[tradeIdx] || row[legalIdx],
+                  legalName: row[legalIdx] || row[tradeIdx],
+                  pan: row[panIdx] || "",
+                  gstin: row[gstinIdx] || ""
+                });
+              }
+            }
+
+            // Build Spaces map: space_code -> { suite_number, floor, chargeable_area, carpet_area, property_code }
+            const spacesMap = new Map<string, any>();
+            if (spacesSheet) {
+              const spRows = XLSX.utils.sheet_to_json<any[]>(spacesSheet, { header: 1 });
+              const spHeaders = (spRows[0] || []).map((h: any) => String(h || "").trim().toLowerCase());
+              const codeIdx = spHeaders.indexOf("space_code");
+              const suiteIdx = spHeaders.indexOf("suite_number");
+              const floorIdx = spHeaders.indexOf("floor");
+              const chgAreaIdx = spHeaders.indexOf("chargeable_area");
+              const carpetIdx = spHeaders.indexOf("carpet_area");
+              const propIdx = spHeaders.indexOf("property_code");
+
+              for (let i = 1; i < spRows.length; i++) {
+                const row = spRows[i];
+                if (!row || !row[codeIdx] || String(row[0] || "").trim().startsWith("#")) continue;
+                spacesMap.set(String(row[codeIdx]).trim(), {
+                  suiteNumber: row[suiteIdx] || row[codeIdx],
+                  floor: row[floorIdx] || 1,
+                  chargeableArea: Number(row[chgAreaIdx]) || 0,
+                  carpetArea: Number(row[carpetIdx]) || 0,
+                  propertyCode: row[propIdx] || ""
+                });
+              }
+            }
+
+            // Build Charges map: contract_code -> { baseRentRate, baseRentAmount, camRate }
+            const chargesMap = new Map<string, any>();
+            if (chargesSheet) {
+              const chgRows = XLSX.utils.sheet_to_json<any[]>(chargesSheet, { header: 1 });
+              const chgHeaders = (chgRows[0] || []).map((h: any) => String(h || "").trim().toLowerCase());
+              const cCodeIdx = chgHeaders.indexOf("contract_code");
+              const compIdx = chgHeaders.indexOf("component");
+              const rateIdx = chgHeaders.indexOf("rate");
+              const qtyIdx = chgHeaders.indexOf("quantity");
+
+              for (let i = 1; i < chgRows.length; i++) {
+                const row = chgRows[i];
+                if (!row || !row[cCodeIdx] || String(row[0] || "").trim().startsWith("#")) continue;
+                const cCode = String(row[cCodeIdx]).trim();
+                const comp = String(row[compIdx] || "").trim().toLowerCase();
+                const rate = Number(row[rateIdx]) || 0;
+                const qty = Number(row[qtyIdx]) || 0;
+
+                const curr = chargesMap.get(cCode) || {};
+                if (comp === "base_rent") {
+                  curr.baseRentRate = rate;
+                  curr.baseRentQty = qty;
+                  curr.baseRentAmount = rate * (qty || 1);
+                } else if (comp === "cam") {
+                  curr.camRate = rate;
+                }
+                chargesMap.set(cCode, curr);
+              }
+            }
+
+            // Iterate Contracts rows (skipping Row 2 guidance starting with '#')
+            const contractCodeIdx = contractsHeaders.indexOf("contract_code");
+            const occRefIdx = contractsHeaders.indexOf("occupant_ref");
+            const spCodeIdx = contractsHeaders.indexOf("space_codes");
+            const areaLetIdx = contractsHeaders.indexOf("area_let");
+            const seatsAllocIdx = contractsHeaders.indexOf("seats_allocated");
+            const commDateIdx = contractsHeaders.indexOf("commencement_date");
+            const rentCommDateIdx = contractsHeaders.indexOf("rent_commencement_date");
+            const expDateIdx = contractsHeaders.indexOf("expiry_date");
+            const lockInIdx = contractsHeaders.indexOf("lock_in_months");
+
+            const rawExtracted: any[] = [];
+            for (let i = 1; i < contractsRows.length; i++) {
+              const row = contractsRows[i];
+              if (!row || !row[contractCodeIdx] || String(row[0] || "").trim().startsWith("#")) continue;
+
+              const cCode = String(row[contractCodeIdx]).trim();
+              const occRef = String(row[occRefIdx] || "").trim();
+              const spCode = String(row[spCodeIdx] || "").trim().split(",")[0].trim();
+
+              const occ = occupantsMap.get(occRef) || {};
+              const sp = spacesMap.get(spCode) || {};
+              const chg = chargesMap.get(cCode) || {};
+
+              const area = Number(row[areaLetIdx]) || sp.chargeableArea || 1000;
+              const ratePsf = chg.baseRentRate || 150;
+              const monthlyRent = chg.baseRentAmount || (ratePsf * area);
+
+              rawExtracted.push({
+                tenantName: occ.tradeName || occ.legalName || occRef || `Tenant ${i}`,
+                legalName: occ.legalName || occ.tradeName || occRef,
+                propertyName: sp.propertyCode || currentPropertyObj?.name || "Apex Tower",
+                unitNumber: sp.suiteNumber || spCode || `Unit ${100 + i}`,
+                floorNumber: sp.floor || 1,
+                chargeableArea: area,
+                carpetArea: sp.carpetArea || Math.round(area * 0.75),
+                monthlyRent: Math.round(monthlyRent),
+                ratePsf: ratePsf,
+                camRatePsf: chg.camRate || 20,
+                startDate: row[rentCommDateIdx] || row[commDateIdx] || "2026-04-01",
+                endDate: row[expDateIdx] || "2029-03-31",
+                lockInMonths: Number(row[lockInIdx]) || 36,
+                escalationPct: 5,
+                gstin: occ.gstin || "",
+                pan: occ.pan || ""
+              });
+            }
+
+            processIngestionRows(rawExtracted);
+          } else {
+            // Generic single-sheet Excel file
+            const firstSheet = wb.Sheets[wb.SheetNames[0]];
+            const sheetRows = XLSX.utils.sheet_to_json<any[]>(firstSheet, { header: 1 });
+            if (sheetRows.length < 2) {
+              setErrorMsg("Spreadsheet must contain at least headers and one data row.");
+              return;
+            }
+
+            const rawHeaders = (sheetRows[0] || []).map((h: any) => String(h || "").trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
+            const rawExtracted: any[] = [];
+
+            for (let i = 1; i < sheetRows.length; i++) {
+              const cells = sheetRows[i];
+              if (!cells || cells.length < 2 || String(cells[0] || "").trim().startsWith("#")) continue;
+
+              const rowData: Record<string, any> = {};
+              rawHeaders.forEach((h: string, idx: number) => {
+                rowData[h] = cells[idx] || "";
+              });
+
+              const tenantName = rowData["tenanttradename"] || rowData["tenantname"] || rowData["tenant"] || rowData["memberlegalname"] || cells[0] || "";
+              const chargeableArea = Number(rowData["chargeableareasqft"] || rowData["chargeablearea"] || rowData["area"] || 1000);
+              const monthlyRent = Number(rowData["monthlybaserentinr"] || rowData["monthlyrent"] || rowData["baserent"] || (chargeableArea * 150));
+
+              rawExtracted.push({
+                tenantName,
+                legalName: rowData["tenantlegalname"] || rowData["legalname"] || tenantName,
+                propertyName: rowData["buildingname"] || rowData["propertyname"] || rowData["building"] || cells[2] || "",
+                unitNumber: rowData["unitnumber"] || rowData["unit"] || rowData["cabinsuiteid"] || cells[3] || `Unit ${100 + i}`,
+                floorNumber: Number(rowData["floornumber"] || rowData["floor"] || cells[4] || 1),
+                chargeableArea,
+                carpetArea: Number(rowData["carpetareasqft"] || rowData["carpetarea"] || Math.round(chargeableArea * 0.75)),
+                monthlyRent,
+                ratePsf: Number(rowData["ratepsf"] || rowData["rate"] || (chargeableArea > 0 ? monthlyRent / chargeableArea : 0)),
+                camRatePsf: Number(rowData["camratepsf"] || rowData["camrate"] || 20),
+                startDate: rowData["startdateyyyymmdd"] || rowData["startdate"] || "2026-04-01",
+                endDate: rowData["enddateyyyymmdd"] || rowData["enddate"] || "2029-03-31",
+                lockInMonths: Number(rowData["lockinmonths"] || 36),
+                escalationPct: Number(rowData["escalationpct"] || 5),
+                gstin: rowData["gstin"] || rowData["gstno"] || "",
+                pan: rowData["pan"] || rowData["panno"] || ""
+              });
+            }
+
+            processIngestionRows(rawExtracted);
+          }
+        } catch (err: any) {
+          console.error("Excel parse error:", err);
+          setErrorMsg(err?.message || "Failed to parse Excel workbook.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    // Standard CSV parser
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -211,16 +496,11 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
         }
 
         const rawHeaders = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
-        const rows: any[] = [];
-        const seenUnits = new Set<string>();
-        let duplicatesCount = 0;
-        let missingValues = 0;
-        let totalSqft = 0;
-        let totalRent = 0;
+        const rawExtracted: any[] = [];
 
         for (let i = 1; i < lines.length; i++) {
           const cells = lines[i].split(",").map((c) => c.trim().replace(/^["']|["']$/g, ""));
-          if (cells.length < 3) continue;
+          if (cells.length < 2 || cells[0].startsWith("#")) continue;
 
           const rowData: Record<string, any> = {};
           rawHeaders.forEach((header, idx) => {
@@ -228,70 +508,30 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
           });
 
           const tenantName = rowData["tenanttradename"] || rowData["tenantname"] || rowData["tenant"] || rowData["memberlegalname"] || cells[0] || "";
-          const legalName = rowData["tenantlegalname"] || rowData["legalname"] || tenantName;
-          const propertyName = rowData["buildingname"] || rowData["propertyname"] || rowData["building"] || cells[2] || "";
-          const unitNumber = rowData["unitnumber"] || rowData["unit"] || rowData["cabinsuiteid"] || cells[3] || `Unit ${100 + i}`;
-          const floorNumber = Number(rowData["floornumber"] || rowData["floor"] || cells[4] || 1);
           const chargeableArea = Number(rowData["chargeableareasqft"] || rowData["chargeablearea"] || rowData["area"] || 1000);
-          const carpetArea = Number(rowData["carpetareasqft"] || rowData["carpetarea"] || Math.round(chargeableArea * 0.75));
           const monthlyRent = Number(rowData["monthlybaserentinr"] || rowData["monthlyrent"] || rowData["baserent"] || (chargeableArea * 150));
-          const ratePsf = Number(rowData["ratepsf"] || rowData["rate"] || (chargeableArea > 0 ? monthlyRent / chargeableArea : 0));
-          const camRatePsf = Number(rowData["camratepsf"] || rowData["camrate"] || 20);
-          const startDate = rowData["startdateyyyymmdd"] || rowData["startdate"] || "2026-04-01";
-          const endDate = rowData["enddateyyyymmdd"] || rowData["enddate"] || "2029-03-31";
-          const lockInMonths = Number(rowData["lockinmonths"] || 36);
-          const escalationPct = Number(rowData["escalationpct"] || 5);
-          const gstin = rowData["gstin"] || rowData["gstno"] || "";
-          const pan = rowData["pan"] || rowData["panno"] || "";
 
-          if (!tenantName || !chargeableArea || !monthlyRent) missingValues++;
-
-          const unitKey = `${unitNumber.toLowerCase()}-${floorNumber}`;
-          if (seenUnits.has(unitKey)) {
-            duplicatesCount++;
-          } else {
-            seenUnits.add(unitKey);
-          }
-
-          totalSqft += chargeableArea;
-          totalRent += monthlyRent;
-
-          rows.push({
-            rowNumber: i,
+          rawExtracted.push({
             tenantName,
-            legalName,
-            propertyName,
-            unitNumber,
-            floorNumber,
+            legalName: rowData["tenantlegalname"] || rowData["legalname"] || tenantName,
+            propertyName: rowData["buildingname"] || rowData["propertyname"] || rowData["building"] || cells[2] || "",
+            unitNumber: rowData["unitnumber"] || rowData["unit"] || rowData["cabinsuiteid"] || cells[3] || `Unit ${100 + i}`,
+            floorNumber: Number(rowData["floornumber"] || rowData["floor"] || cells[4] || 1),
             chargeableArea,
-            carpetArea,
+            carpetArea: Number(rowData["carpetareasqft"] || rowData["carpetarea"] || Math.round(chargeableArea * 0.75)),
             monthlyRent,
-            ratePsf,
-            camRatePsf,
-            startDate,
-            endDate,
-            lockInMonths,
-            escalationPct,
-            gstin,
-            pan
+            ratePsf: Number(rowData["ratepsf"] || rowData["rate"] || (chargeableArea > 0 ? monthlyRent / chargeableArea : 0)),
+            camRatePsf: Number(rowData["camratepsf"] || rowData["camrate"] || 20),
+            startDate: rowData["startdateyyyymmdd"] || rowData["startdate"] || "2026-04-01",
+            endDate: rowData["enddateyyyymmdd"] || rowData["enddate"] || "2029-03-31",
+            lockInMonths: Number(rowData["lockinmonths"] || 36),
+            escalationPct: Number(rowData["escalationpct"] || 5),
+            gstin: rowData["gstin"] || rowData["gstno"] || "",
+            pan: rowData["pan"] || rowData["panno"] || ""
           });
         }
 
-        if (rows.length === 0) {
-          setErrorMsg("Could not parse any valid lease records from this CSV file.");
-          return;
-        }
-
-        setParsedRows(rows);
-        revalidateAllRows(rows);
-
-        setProfilingReport({
-          totalRows: rows.length,
-          duplicatesDetected: duplicatesCount,
-          missingValuesCount: missingValues,
-          sourceTotalArea: totalSqft,
-          sourceTotalRent: totalRent
-        });
+        processIngestionRows(rawExtracted);
 
         setCurrentStep(2);
       } catch (err: any) {
@@ -491,33 +731,79 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h4 className="text-xs font-bold text-gray-700 mb-2">Step 1: Download Standard Institutional Template (RR-ING-02)</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3.5 bg-teal-50/60 border border-teal-200/80 rounded-xl flex items-center justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-gray-700">Step 1: Download Standard Institutional Templates (RR-ING-02)</h4>
+                  <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    10 Relational Sheets · 146 Columns · Dropdown Validations
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  {/* Official Blank 10-Sheet Workbook */}
+                  <div className="p-3.5 bg-gradient-to-br from-teal-50/90 to-emerald-50/70 border-2 border-teal-500/30 rounded-xl flex items-center justify-between shadow-2xs">
                     <div>
-                      <div className="font-bold text-xs text-teal-950">Commercial Area Template</div>
-                      <div className="text-[11px] text-teal-800/80">₹/SqFt, Base Rent, CAM, Stepped Escalations, GSTIN/PAN</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-xs text-teal-950">Official Blank Import Workbook</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 bg-teal-600 text-white rounded">.XLSX</span>
+                      </div>
+                      <div className="text-[11px] text-teal-800/90 mt-0.5">10 Sheets: Properties, Spaces, Occupants, Contracts, Charges, Escalations, Deposits</div>
+                    </div>
+                    <a
+                      href="/templates/OFFICEX_Rent_Roll_Import_Template.xlsx"
+                      download="OFFICEX_Rent_Roll_Import_Template.xlsx"
+                      className="px-3 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Blank</span>
+                    </a>
+                  </div>
+
+                  {/* Golden Sample File */}
+                  <div className="p-3.5 bg-gradient-to-br from-indigo-50/90 to-blue-50/70 border-2 border-indigo-500/30 rounded-xl flex items-center justify-between shadow-2xs">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-xs text-indigo-950">Benchmark Sample Portfolio</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 bg-indigo-600 text-white rounded">SAMPLE</span>
+                      </div>
+                      <div className="text-[11px] text-indigo-800/90 mt-0.5">5 Props, 14 Spaces, 11 Occupants, USD Contracts, Retail Rev-Share, Coworking Seats</div>
+                    </div>
+                    <a
+                      href="/templates/OFFICEX_Rent_Roll_Import_Template_SAMPLE.xlsx"
+                      download="OFFICEX_Rent_Roll_Import_Template_SAMPLE.xlsx"
+                      className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Sample</span>
+                    </a>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-2.5 bg-gray-50 border border-gray-200/80 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-semibold text-gray-800 text-[11px]">Quick Area CSV Template</div>
+                      <div className="text-[10px] text-gray-500">Simple flat CSV (Chargeable Area, Rate PSF, CAM)</div>
                     </div>
                     <button
                       onClick={() => handleDownloadSampleTemplate("area")}
-                      className="px-3 py-1.5 bg-white text-[#0F8B7D] font-bold text-xs rounded-lg border border-teal-300 shadow-2xs hover:bg-teal-50 transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1 bg-white text-gray-700 font-bold text-[11px] rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                     >
                       <Download className="w-3 h-3" />
-                      <span>Download</span>
+                      <span>CSV</span>
                     </button>
                   </div>
 
-                  <div className="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-xl flex items-center justify-between">
+                  <div className="p-2.5 bg-gray-50 border border-gray-200/80 rounded-xl flex items-center justify-between text-xs">
                     <div>
-                      <div className="font-bold text-xs text-amber-950">Flex &amp; Seats Template</div>
-                      <div className="text-[11px] text-amber-800/80">Per-Seat Billing, Cabins, Desks &amp; Inclusions</div>
+                      <div className="font-semibold text-gray-800 text-[11px]">Quick Flex Seats CSV Template</div>
+                      <div className="text-[10px] text-gray-500">Simple flat CSV (Seat Billing Basis, Cabins, Desks)</div>
                     </div>
                     <button
                       onClick={() => handleDownloadSampleTemplate("seat")}
-                      className="px-3 py-1.5 bg-white text-amber-800 font-bold text-xs rounded-lg border border-amber-300 shadow-2xs hover:bg-amber-50 transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1 bg-white text-gray-700 font-bold text-[11px] rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                     >
                       <Download className="w-3 h-3" />
-                      <span>Download</span>
+                      <span>CSV</span>
                     </button>
                   </div>
                 </div>
@@ -543,7 +829,7 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
 
               {/* Dropzone */}
               <div>
-                <label className="text-xs font-bold text-gray-800 block mb-1.5">Step 2: Upload CSV / Excel File</label>
+                <label className="text-xs font-bold text-gray-800 block mb-1.5">Step 2: Upload CSV or Excel (.xlsx) File</label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className="border-2 border-dashed border-gray-300 hover:border-[#0F8B7D] bg-gray-50/50 hover:bg-teal-50/30 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2.5"
@@ -555,11 +841,11 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
                     <span className="text-xs font-black text-gray-900">Click to upload spreadsheet</span>
                     <span className="text-xs text-gray-500"> or drag and drop</span>
                   </div>
-                  <p className="text-[11px] text-gray-400">Standard CSV or Excel (.csv, .txt) up to 20 MB</p>
+                  <p className="text-[11px] text-gray-400">Official multi-sheet Excel (.xlsx, .xls) or standard CSV up to 20 MB</p>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".csv,.txt,.xlsx,.xls"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                     className="hidden"
                   />
