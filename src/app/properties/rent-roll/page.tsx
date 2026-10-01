@@ -60,6 +60,8 @@ import { ManagePropertiesModal } from "@/components/rent-roll/ManagePropertiesMo
 import { DeletePropertyModal } from "@/components/rent-roll/DeletePropertyModal";
 import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal";
 import { OwnerStatementsModal } from "@/components/rent-roll/OwnerStatementsModal";
+import { ClientAccountsModal } from "@/components/rent-roll/ClientAccountsModal";
+import { MonthlyMisModal } from "@/components/rent-roll/MonthlyMisModal";
 import { DealsModal } from "@/components/rent-roll/DealsModal";
 import { BillingRunModal } from "@/components/rent-roll/BillingRunModal";
 import { AdjustmentNoteModal } from "@/components/rent-roll/AdjustmentNoteModal";
@@ -223,6 +225,8 @@ function RentRollPageInner() {
   const [isAddTenantOpen, setIsAddTenantOpen] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [isOwnerStatementsOpen, setIsOwnerStatementsOpen] = useState<boolean>(false);
+  const [isClientAccountsOpen, setIsClientAccountsOpen] = useState<boolean>(false);
+  const [isMonthlyMisOpen, setIsMonthlyMisOpen] = useState<boolean>(false);
   const [isDealsModalOpen, setIsDealsModalOpen] = useState<boolean>(false);
   const [isBillingRunModalOpen, setIsBillingRunModalOpen] = useState<boolean>(false);
   const [isAdjustmentNoteOpen, setIsAdjustmentNoteOpen] = useState<boolean>(false);
@@ -634,6 +638,8 @@ function RentRollPageInner() {
         selectedBillingEntity={selectedBillingEntity}
         onSelectBillingEntity={setSelectedBillingEntity}
         onOpenOwnerStatements={() => setIsOwnerStatementsOpen(true)}
+        onOpenClientAccounts={() => setIsClientAccountsOpen(true)}
+        onOpenMonthlyMis={() => setIsMonthlyMisOpen(true)}
         onOpenDeals={() => setIsDealsModalOpen(true)}
         onOpenConfigWizard={() => setIsConfigWizardOpen(true)}
         onOpenProfileBanking={() => setIsProfileBankingOpen(true)}
@@ -999,11 +1005,27 @@ function RentRollPageInner() {
         }}
       />
 
-      {/* Multi-Client Owner Statements Modal (Section 11) */}
+      {/* Multi-Client Owner Statements Modal (Section 11 · S-55) */}
       <OwnerStatementsModal
         isOpen={isOwnerStatementsOpen}
         onClose={() => setIsOwnerStatementsOpen(false)}
         clientAccounts={clientAccounts}
+      />
+
+      {/* Multi-Client Accounts & Mandates Modal (Section 11 · S-56) */}
+      <ClientAccountsModal
+        isOpen={isClientAccountsOpen}
+        onClose={() => setIsClientAccountsOpen(false)}
+        onSuccess={fetchAllData}
+      />
+
+      {/* Monthly MIS & Statutory Investor Pack Modal (S-54) */}
+      <MonthlyMisModal
+        isOpen={isMonthlyMisOpen}
+        onClose={() => setIsMonthlyMisOpen(false)}
+        properties={properties}
+        clientAccounts={clientAccounts}
+        dashboardData={dashboardData}
       />
 
       {/* Leasing Deals & Pipeline Modal (Section 7) */}

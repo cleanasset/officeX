@@ -92,6 +92,8 @@ interface RentRollHeaderProps {
 
   // Commercial Operations Triggers (Section 7, Section 11)
   onOpenOwnerStatements?: () => void;
+  onOpenClientAccounts?: () => void;
+  onOpenMonthlyMis?: () => void;
   onOpenDeals?: () => void;
   onOpenConfigWizard?: () => void;
 
@@ -139,6 +141,8 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   selectedBillingEntity,
   onSelectBillingEntity,
   onOpenOwnerStatements,
+  onOpenClientAccounts,
+  onOpenMonthlyMis,
   onOpenDeals,
   onOpenConfigWizard,
   onOpenProfileBanking,
@@ -372,7 +376,27 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
                     className="w-full text-left px-2.5 py-2 hover:bg-emerald-50 text-gray-800 rounded-lg font-medium flex items-center gap-2 cursor-pointer"
                   >
                     <Receipt className="w-3.5 h-3.5 text-emerald-600" />
-                    Owner Statements
+                    Owner Statements (S-55)
+                  </button>
+                )}
+
+                {onOpenClientAccounts && (
+                  <button
+                    onClick={() => { onOpenClientAccounts(); setIsActionsOpen(false); }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-indigo-50 text-gray-800 rounded-lg font-medium flex items-center gap-2 cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5 text-indigo-600" />
+                    Client Accounts &amp; Mandates (S-56)
+                  </button>
+                )}
+
+                {onOpenMonthlyMis && (
+                  <button
+                    onClick={() => { onOpenMonthlyMis(); setIsActionsOpen(false); }}
+                    className="w-full text-left px-2.5 py-2 hover:bg-purple-50 text-gray-800 rounded-lg font-medium flex items-center gap-2 cursor-pointer"
+                  >
+                    <FileCheck2 className="w-3.5 h-3.5 text-purple-600" />
+                    Monthly MIS &amp; Investor Pack (S-54)
                   </button>
                 )}
 
