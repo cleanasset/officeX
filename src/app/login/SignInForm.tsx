@@ -747,7 +747,7 @@ export default function SignInForm({
       orgName,
       role: roleTitle,
       roleCode: setupRole === "owner" ? "OWNER" : setupRole === "broker" ? "LEASING" : setupRole === "vendor" ? "VENDOR" : "TENANT",
-      workspaceTitle: setupRole === "owner" ? "Commercial Landlord Desk" : setupRole === "broker" ? "Leasing Broker CRM" : setupRole === "vendor" ? "Vendor Hub" : "Corporate Workplace",
+      workspaceTitle: setupRole === "owner" ? "Commercial Asset Desk" : setupRole === "broker" ? "Leasing Broker CRM" : setupRole === "vendor" ? "Vendor Hub" : "Corporate Workplace",
       workspaceUrl,
       propertyScope: `${propName} · ${city}`,
       badge: setupRole === "owner" ? "Asset Owner" : setupRole === "broker" ? "Leasing" : setupRole === "vendor" ? "Vendor" : "Tenant",
@@ -1129,7 +1129,7 @@ export default function SignInForm({
                 {isRentRollContext ? (
                   <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs animate-fadeIn">
                     <Building2 size={14} className="text-[#0D7B6C]" />
-                    <span>Commercial Landlord Desk · Live Rent Roll</span>
+                    <span>Commercial Asset &amp; Rent Roll Desk</span>
                   </div>
                 ) : isOperateContext ? (
                   <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-bold text-[#0D7B6C] shadow-2xs animate-fadeIn">

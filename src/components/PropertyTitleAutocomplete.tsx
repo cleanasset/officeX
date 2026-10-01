@@ -127,9 +127,9 @@ export default function PropertyTitleAutocomplete({
         <div className="absolute top-full left-0 right-0 z-50 mt-1.5 max-h-72 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-2xl divide-y divide-gray-50">
           <div className="p-2.5 bg-gray-50/80 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
             <span className="flex items-center gap-1 text-[#0F8B7D]">
-              <Globe size={11} /> Google Maps Places Autocomplete
+              <Globe size={11} /> Suggested Locations
             </span>
-            <span>{isLoading ? "Searching..." : `${suggestions.length} Places Found`}</span>
+            <span>{isLoading ? "Searching..." : `${suggestions.length} Locations Found`}</span>
           </div>
 
           {suggestions.length > 0 ? (
@@ -156,7 +156,7 @@ export default function PropertyTitleAutocomplete({
             ))
           ) : !isLoading ? (
             <div className="p-3.5 text-center text-xs text-gray-400">
-              Not listed on Google Maps yet? You can manually type your property name & address details below.
+              Not listed yet? You can manually type your property name &amp; address details below.
             </div>
           ) : null}
         </div>

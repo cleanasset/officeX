@@ -36,7 +36,7 @@ import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 // Primary roles defined in Section 1.2 & Table 0 of Registration Specification
 const ROLE_OPTIONS = [
-  { id: "owner", code: "OWNER", label: "Property Owner", badge: "Leasing · Rent Roll · FM", desc: "Commercial asset owner / landlord", icon: Building },
+  { id: "owner", code: "OWNER", label: "Property Owner", badge: "Leasing · Rent Roll · FM", desc: "Commercial asset owner", icon: Building },
   { id: "broker", code: "BROKER", label: "Broker / Partner", badge: "Leasing CRM", desc: "Channel partner & advisory", icon: Handshake },
   { id: "vendor", code: "VENDOR", label: "Facility Vendor", badge: "FM Contracts", desc: "FM & property contractor", icon: Truck },
   { id: "pm", code: "PM", label: "Facility Manager", badge: "Site Operations", desc: "Building & site operations", icon: Settings },
@@ -582,7 +582,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
               <span className="w-2 h-2 rounded-full bg-[#0D7B6C] animate-pulse" />
               <span className="font-bold tracking-wide">OfficeX</span>
               <span className="text-teal-300">·</span>
-              <span className="text-teal-800">Commercial Landlord &amp; Rent Roll Onboarding</span>
+              <span className="text-teal-800">Commercial Real Estate &amp; Rent Roll Onboarding</span>
             </div>
           ) : isOperate ? (
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-900 shadow-2xs">
@@ -641,7 +641,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
             <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
               {step === 1 && (
                 isRentRoll
-                  ? "Create Your Landlord Account"
+                  ? "Create Your Account"
                   : isOperate
                   ? "Create Operations Account"
                   : isFm
@@ -649,7 +649,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   : "Create Marketplace Account"
               )}
               {step === 2 && "Verify Email & Mobile"}
-              {step === 3 && (isRentRoll ? "Establish Landlord Legal Entity" : "Establish Your Business Entity")}
+              {step === 3 && (isRentRoll ? "Set Up Your Business Entity" : "Establish Your Business Entity")}
               {step === 4 && (selectedRole === "owner" ? (isRentRoll ? "Commercial Asset & Rent Roll Setup" : "Commercial Property Portfolio") : "Role Business Profile")}
               {step === 5 && "Review & Complete Onboarding"}
             </h1>

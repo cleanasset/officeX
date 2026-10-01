@@ -117,15 +117,15 @@ export const RentRollConfigWizardModal: React.FC<RentRollConfigWizardModalProps>
 
   // Section B: Operational Settings & Charge Master (Checklist)
   const [chargeList, setChargeList] = useState([
-    { id: "base_rent", name: "Base Rent", enabled: true, rate: 150, unit: "psf_month", isInclusion: false },
-    { id: "cam", name: "CAM (Common Area Maintenance)", enabled: true, rate: 28, unit: "psf_month", isInclusion: false },
-    { id: "electricity_grid", name: "Grid HT Electricity", enabled: true, rate: 11.50, unit: "kwh", isInclusion: false },
-    { id: "electricity_dg", name: "DG Backup Power", enabled: true, rate: 32.00, unit: "kwh", isInclusion: false },
-    { id: "water", name: "Commercial Water Supply", enabled: true, rate: 45.00, unit: "kl", isInclusion: false },
-    { id: "parking", name: "Reserved Parking Bay", enabled: true, rate: 4500, unit: "slot_month", isInclusion: false },
-    { id: "internet", name: "High-Speed Internet / IT", enabled: true, rate: 2500, unit: "fixed_month", isInclusion: false },
-    { id: "housekeeping", name: "Housekeeping & Janitorial", enabled: false, rate: 8.50, unit: "psf_month", isInclusion: true },
-    { id: "security", name: "Physical Security & Guarding", enabled: false, rate: 6.00, unit: "psf_month", isInclusion: true }
+    { id: "base_rent", name: "Property / Office Rent", enabled: true, rate: 0, unit: "psf_month", isInclusion: false },
+    { id: "cam", name: "CAM (Common Area Maintenance)", enabled: true, rate: 0, unit: "psf_month", isInclusion: false },
+    { id: "electricity_grid", name: "Electricity", enabled: true, rate: 0, unit: "kwh", isInclusion: false },
+    { id: "electricity_dg", name: "Generator / Backup Power", enabled: true, rate: 0, unit: "kwh", isInclusion: false },
+    { id: "water", name: "Water Supply", enabled: true, rate: 0, unit: "kl", isInclusion: false },
+    { id: "parking", name: "Parking Slots", enabled: true, rate: 0, unit: "slot_month", isInclusion: false },
+    { id: "internet", name: "Internet / Wi-Fi", enabled: true, rate: 0, unit: "fixed_month", isInclusion: false },
+    { id: "housekeeping", name: "Office Cleaning", enabled: false, rate: 0, unit: "psf_month", isInclusion: true },
+    { id: "security", name: "Security Personnel", enabled: false, rate: 0, unit: "psf_month", isInclusion: true }
   ]);
 
   const [currencySettings, setCurrencySettings] = useState({

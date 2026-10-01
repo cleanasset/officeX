@@ -162,7 +162,7 @@ export default function SubscriptionGate({
   const handleActivateSubscription = async () => {
     setIsPaymentProcessing(true);
     const email = (userEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "").trim().toLowerCase();
-    const effectiveName = (userName || ownerName || "Commercial Landlord").trim();
+    const effectiveName = (userName || ownerName || "Account Holder").trim();
     const effectiveBuilding = (typeof window !== "undefined" ? localStorage.getItem("officex_property_name") : "") || `${effectiveName}'s Commercial Portfolio`;
     const cleanPhone = phone.trim();
     const phoneDigits = cleanPhone.replace(/\D/g, "");
@@ -355,7 +355,7 @@ export default function SubscriptionGate({
             <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-4 my-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0F8B7D]">
-                  New Landlord Onboarding &amp; Subscription
+                  New Account Setup & Subscription
                 </span>
                 <Link
                   href={`/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`}
@@ -391,7 +391,7 @@ export default function SubscriptionGate({
                       amount: finalAmountInPaise,
                       receipt: `GOOGLE_GATE_${Date.now()}`,
                       description: `Rent Roll Subscription - Commercial Portfolio`,
-                      prefillName: ownerName || "Commercial Landlord",
+                      prefillName: ownerName || "Account Holder",
                       prefillEmail: userEmail,
                       notes: { portal: portalName, auth_provider: "google" },
                       onSuccess: async (response) => {
@@ -431,7 +431,7 @@ export default function SubscriptionGate({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                 <div>
                   <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Your Full Name (Owner / Manager) *
+                    Your Full Name *
                   </label>
                   <input
                     type="text"
@@ -450,7 +450,7 @@ export default function SubscriptionGate({
                     type="email"
                     value={userEmail}
                     onChange={(e) => setUserEmail(e.target.value)}
-                    placeholder="e.g. landlord@commercial.com"
+                    placeholder="e.g. you@company.com"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
                     required
                   />

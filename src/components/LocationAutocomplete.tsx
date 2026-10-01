@@ -30,7 +30,7 @@ export default function LocationAutocomplete({
   value,
   onChange,
   placeholder = "Search any locality, area, landmark, or city (e.g. Nikol, Bandra, Whitefield, GIFT City)...",
-  label = "SEARCH LOCATION ON MAP (GOOGLE MAPS PLACES AUTOCOMPLETE)",
+  label = "Search Location or Address",
   required = false,
   className = ""
 }: LocationAutocompleteProps) {

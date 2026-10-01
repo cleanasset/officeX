@@ -24,6 +24,7 @@ export interface GeocodeLocation {
   area?: string;
   city: string;
   state: string;
+  country?: string;
   pincode: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -195,11 +196,11 @@ export function AddressAutocomplete({
 
       {/* Suggestion Dropdown */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-in fade-in-50 slide-in-from-top-1 max-h-72 overflow-y-auto">
+        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-in fade-in-50 slide-in-from-top-1 max-h-80 overflow-y-auto">
           <div className="px-3 py-1.5 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             <span className="flex items-center gap-1">
               <Compass size={11} className="text-teal-600" />
-              Live Location Matches (Google Maps / OSM)
+              Address Suggestions ({suggestions.length})
             </span>
             <span className="text-[9px] text-slate-400 font-normal">Use ↑↓ &amp; Enter</span>
           </div>
@@ -230,7 +231,7 @@ export function AddressAutocomplete({
                     <p className="text-[11px] text-slate-500 truncate mt-0.5">
                       {item.fullAddress || item.displayName}
                     </p>
-                    {(item.city || item.state) && (
+                    {(item.city || item.state || item.country) && (
                       <div className="flex items-center gap-2 mt-1">
                         {item.city && (
                           <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 font-semibold text-slate-600">
@@ -240,6 +241,11 @@ export function AddressAutocomplete({
                         {item.state && (
                           <span className="text-[9px] px-1.5 py-0.2 rounded bg-teal-50 font-semibold text-teal-700">
                             {item.state}
+                          </span>
+                        )}
+                        {item.country && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-50 font-semibold text-indigo-700">
+                            {item.country}
                           </span>
                         )}
                         {item.pincode && (
@@ -254,6 +260,20 @@ export function AddressAutocomplete({
               );
             })}
           </div>
+
+          {query.trim().length >= 3 && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange(query.trim());
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-3.5 py-2 bg-slate-50 hover:bg-teal-50 border-t border-slate-100 flex items-center gap-2 text-xs font-medium text-teal-700 transition-colors"
+            >
+              <Check size={13} className="text-teal-600 shrink-0" />
+              <span className="truncate">Keep entered address: &ldquo;{query}&rdquo;</span>
+            </button>
+          )}
         </div>
       )}
     </div>

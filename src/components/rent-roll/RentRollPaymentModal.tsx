@@ -28,152 +28,15 @@ import {
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 
-// Comprehensive Indian cities covering all major commercial centers, Tier-1, Tier-2 & Tier-3 hubs
-export const ALL_INDIAN_CITIES: string[] = [
-  "Agartala",
-  "Agra",
-  "Ahmedabad",
-  "Ahmednagar",
-  "Aizawl",
-  "Ajmer",
-  "Akola",
-  "Aligarh",
-  "Alwar",
-  "Ambala",
-  "Amravati",
-  "Amritsar",
-  "Anand",
-  "Anantapur",
-  "Asansol",
-  "Aurangabad (Chhatrapati Sambhajinagar)",
-  "Bareilly",
-  "Belagavi (Belgaum)",
-  "Bellary (Ballari)",
-  "Bengaluru (Bangalore)",
-  "Bhagalpur",
-  "Bharatpur",
-  "Bhavnagar",
-  "Bhilai",
-  "Bhilwara",
-  "Bhopal",
-  "Bhubaneswar",
-  "Bikaner",
-  "Bilaspur",
-  "Bokaro Steel City",
-  "Chandigarh (Tricity)",
-  "Chennai",
-  "Coimbatore",
-  "Cuttack",
-  "Darbhanga",
-  "Dehradun",
-  "Delhi",
-  "Dhanbad",
-  "Dhule",
-  "Durgapur",
-  "Erode",
-  "Faridabad",
-  "Gandhinagar (GIFT City)",
-  "Gaya",
-  "Ghaziabad",
-  "Gorakhpur",
-  "Greater Noida",
-  "Gulbarga (Kalaburagi)",
-  "Guntur",
-  "Gurgaon (Gurugram)",
-  "Guwahati",
-  "Gwalior",
-  "Haldia",
-  "Haridwar",
-  "Hubballi-Dharwad",
-  "Hyderabad",
-  "Imphal",
-  "Indore",
-  "Jabalpur",
-  "Jaipur",
-  "Jalandhar",
-  "Jalgaon",
-  "Jalna",
-  "Jammu",
-  "Jamnagar",
-  "Jamshedpur",
-  "Jhansi",
-  "Jodhpur",
-  "Junagadh",
-  "Kakinada",
-  "Kalyan-Dombivli",
-  "Kanpur",
-  "Karnal",
-  "Kochi (Cochin)",
-  "Kolhapur",
-  "Kolkata",
-  "Kollam",
-  "Kota",
-  "Kozhikode (Calicut)",
-  "Kurnool",
-  "Latur",
-  "Lucknow",
-  "Ludhiana",
-  "Madurai",
-  "Malegaon",
-  "Mangalore (Mangaluru)",
-  "Mathura",
-  "Meerut",
-  "Moradabad",
-  "Mumbai (MMR)",
-  "Muzaffarnagar",
-  "Muzaffarpur",
-  "Mysore (Mysuru)",
-  "Nadiad",
-  "Nagpur",
-  "Nanded",
-  "Nashik",
-  "Navi Mumbai",
-  "Nellore",
-  "New Delhi",
-  "Noida",
-  "Panaji (Goa)",
-  "Panipat",
-  "Patna",
-  "Panchkula",
-  "Prayagraj (Allahabad)",
-  "Puducherry (Pondicherry)",
-  "Pune",
-  "Raipur",
-  "Rajahmundry",
-  "Rajkot",
-  "Ranchi",
-  "Rohtak",
-  "Rourkela",
-  "Sagar",
-  "Saharanpur",
-  "Salem",
-  "Sangli",
-  "Satara",
-  "Shillong",
-  "Shimla",
-  "Siliguri",
-  "Solapur",
-  "Sonipat",
-  "Srinagar",
-  "Surat",
-  "Thane",
-  "Thiruvananthapuram",
-  "Thrissur",
-  "Tiruchirappalli (Trichy)",
-  "Tirunelveli",
-  "Tiruppur",
-  "Tirupati",
-  "Udaipur",
-  "Ujjain",
-  "Vadodara",
-  "Varanasi",
-  "Vasai-Virar",
-  "Vijayawada",
-  "Visakhapatnam",
-  "Warangal",
-  "Pan-India Portfolio",
-  "Other (Specify City)"
-];
+import {
+  INDIAN_STATES,
+  getCitiesForState,
+  ALL_INDIAN_CITY_NAMES,
+  IndianState,
+  IndianCity
+} from "@/lib/location-data";
+
+export const ALL_INDIAN_CITIES: string[] = ALL_INDIAN_CITY_NAMES;
 
 interface RentRollPaymentModalProps {
   isOpen: boolean;
@@ -197,12 +60,25 @@ export default function RentRollPaymentModal({
 
   // Onboarding Form Fields (Building Name removed upfront — property owners may own 1 to 50 buildings)
   const [personName, setPersonName] = useState(defaultName);
-  const [city, setCity] = useState("Mumbai (MMR)");
+  const [state, setState] = useState("Maharashtra");
+  const [city, setCity] = useState("Mumbai");
   const [customCity, setCustomCity] = useState("");
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Cascading city list strictly filtered by selected state
+  const handleStateChange = (newState: string) => {
+    setState(newState);
+    const citiesInState = getCitiesForState(newState);
+    if (citiesInState.length > 0) {
+      setCity(citiesInState[0].name);
+    } else {
+      setCity("Other (Specify City)");
+    }
+    setCustomCity("");
+  };
 
   // Sign In Form Fields
   const [signInIdentifier, setSignInIdentifier] = useState(defaultEmail);
@@ -229,7 +105,8 @@ export default function RentRollPaymentModal({
     if (typeof window !== "undefined" && !email) {
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "";
-      const storedCity = localStorage.getItem("officex_property_city") || "";
+      const storedState = localStorage.getItem("officex_property_state") || localStorage.getItem("officex_user_state") || "";
+      const storedCity = localStorage.getItem("officex_property_city") || localStorage.getItem("officex_user_city") || "";
       const storedPhone = localStorage.getItem("officex_user_phone") || localStorage.getItem("officex_user_mobile") || "";
 
       if (storedEmail) {
@@ -237,12 +114,25 @@ export default function RentRollPaymentModal({
         setSignInIdentifier(storedEmail);
       }
       if (storedName) setPersonName(storedName);
-      if (storedCity) {
-        if (ALL_INDIAN_CITIES.includes(storedCity)) {
+      if (storedState) {
+        setState(storedState);
+        const citiesInState = getCitiesForState(storedState);
+        if (storedCity && citiesInState.some(c => c.name.toLowerCase() === storedCity.toLowerCase())) {
           setCity(storedCity);
-        } else {
+        } else if (storedCity) {
           setCity("Other (Specify City)");
           setCustomCity(storedCity);
+        } else if (citiesInState.length > 0) {
+          setCity(citiesInState[0].name);
+        }
+      } else if (storedCity) {
+        const found = INDIAN_STATES.find(s => {
+          const cities = getCitiesForState(s.name);
+          return cities.some(c => c.name.toLowerCase() === storedCity.toLowerCase());
+        });
+        if (found) {
+          setState(found.name);
+          setCity(storedCity);
         }
       }
       if (storedPhone) setPhone(storedPhone);
@@ -345,7 +235,7 @@ export default function RentRollPaymentModal({
         amount: finalAmountInPaise,
         receipt: `GOOGLE_SUB_${Date.now()}`,
         description: `Rent Roll Subscription - Commercial Portfolio`,
-        prefillName: personName.trim() || "Commercial Landlord",
+        prefillName: personName.trim() || "Operations Administrator",
         prefillEmail: email.trim(),
         prefillPhone: phone.trim(),
         notes: {
@@ -392,18 +282,20 @@ export default function RentRollPaymentModal({
     }
   };
 
-  // Complete Landlord Account Setup & Route to Onboarding Form
+  // Complete Account Setup & Route to Onboarding Form
   const completeLandlordOnboarding = async (
     targetEmail: string,
     targetName: string,
     targetCity: string,
     targetPhone: string,
     paymentId: string,
-    coupon: string = "none"
+    coupon: string = "none",
+    targetState: string = "Maharashtra"
   ) => {
     const cleanEmail = targetEmail.trim().toLowerCase();
-    const cleanName = targetName.trim() || "Commercial Landlord";
+    const cleanName = targetName.trim() || "Operations Administrator";
     const cleanCity = targetCity.trim() || "Mumbai";
+    const cleanState = targetState.trim() || "Maharashtra";
     const cleanPhone = targetPhone.trim();
 
     if (typeof window !== "undefined") {
@@ -411,8 +303,8 @@ export default function RentRollPaymentModal({
       sessionStorage.setItem("officex_user_name", cleanName);
       localStorage.setItem("officex_user_email", cleanEmail);
       sessionStorage.setItem("officex_user_email", cleanEmail);
-      localStorage.setItem("officex_user_role", "Property Owner & Commercial Landlord");
-      sessionStorage.setItem("officex_user_role", "Property Owner & Commercial Landlord");
+      localStorage.setItem("officex_user_role", "Commercial Portfolio Operator");
+      sessionStorage.setItem("officex_user_role", "Commercial Portfolio Operator");
 
       if (cleanPhone) {
         localStorage.setItem("officex_user_phone", cleanPhone);
@@ -421,6 +313,8 @@ export default function RentRollPaymentModal({
         sessionStorage.setItem("officex_user_mobile", cleanPhone);
       }
 
+      localStorage.setItem("officex_user_state", cleanState);
+      localStorage.setItem("officex_property_state", cleanState);
       localStorage.setItem("officex_user_city", cleanCity);
       localStorage.setItem("officex_property_city", cleanCity);
       localStorage.setItem("officex_dashboard", "/properties/rent-roll");
@@ -456,7 +350,7 @@ export default function RentRollPaymentModal({
       await fetch("/api/subscription/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, coupon, paymentId })
+        body: JSON.stringify({ email: cleanEmail, coupon, paymentId, city: cleanCity, state: cleanState })
       });
     } catch (e) {
       console.warn("Subscription sync note:", e);
@@ -470,7 +364,7 @@ export default function RentRollPaymentModal({
     const cleanPerson = personName.trim();
     const cleanPhone = phone.trim();
     const phoneDigits = cleanPhone.replace(/\D/g, "");
-    const effectiveCity = city === "Other (Specify City)" ? customCity.trim() : city;
+    const effectiveCity = city === "Other (Specify City)" ? customCity.trim() || state : city;
 
     if (!cleanPerson) {
       setErrorMsg("Please enter your full name (Property Owner / Manager).");
@@ -506,12 +400,13 @@ export default function RentRollPaymentModal({
         effectiveCity,
         cleanPhone,
         `FREE_RENTROLL12_${Date.now()}`,
-        "RENTROLL12"
+        "RENTROLL12",
+        state
       );
       setSuccessMsg("🎉 Account created & 100% Free Subscription Activated! Launching Property Owner Onboarding...");
       setTimeout(() => {
         onClose();
-        router.push("/onboarding?role=owner");
+        router.push(`/onboarding?role=owner&state=${encodeURIComponent(state)}&city=${encodeURIComponent(effectiveCity)}`);
       }, 1000);
       return;
     }
@@ -528,6 +423,7 @@ export default function RentRollPaymentModal({
         notes: {
           portal: "Rent Roll & Revenue Management",
           user_email: cleanEmail,
+          state: state,
           city: effectiveCity,
           type: "subscription",
           coupon: appliedCoupon || "none",
@@ -539,12 +435,13 @@ export default function RentRollPaymentModal({
             effectiveCity,
             cleanPhone,
             response.razorpay_payment_id,
-            appliedCoupon || "none"
+            appliedCoupon || "none",
+            state
           );
           setSuccessMsg("Payment successful! Launching Property Owner Onboarding...");
           setTimeout(() => {
             onClose();
-            router.push("/onboarding?role=owner");
+            router.push(`/onboarding?role=owner&state=${encodeURIComponent(state)}&city=${encodeURIComponent(effectiveCity)}`);
           }, 1000);
         },
         onFailure: (err) => {
@@ -679,7 +576,7 @@ export default function RentRollPaymentModal({
                 {mode === "onboard"
                   ? appliedCoupon === "RENTROLL12"
                     ? "100% Free Promotional Access Activated (₹0)"
-                    : "Commercial Landlord Plan · Apply offer below for 100% free access"
+                    : "Universal Commercial License · Apply offer below for 100% free access"
                   : "Enter your registered credentials to open your dashboard"}
               </p>
             </div>
@@ -758,7 +655,7 @@ export default function RentRollPaymentModal({
               </div>
               <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
                 <span className="bg-white px-2">
-                  {mode === "onboard" ? "or register your landlord account" : "or sign in with password"}
+                  {mode === "onboard" ? "or register your account" : "or sign in with password"}
                 </span>
               </div>
             </div>
@@ -797,7 +694,7 @@ export default function RentRollPaymentModal({
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="landlord@company.com"
+                      placeholder="work.email@company.com"
                       required
                       className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
                     />
@@ -850,8 +747,30 @@ export default function RentRollPaymentModal({
                 </div>
               </div>
 
-              {/* Row 3: Operating City & Promotional Plan / Custom City — Paired in 2-Column Balance */}
+              {/* Row 3: Operating State & Operating City (State-First Cascading) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Operating State <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={state}
+                      onChange={(e) => handleStateChange(e.target.value)}
+                      required
+                      className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium bg-white focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none truncate cursor-pointer"
+                    >
+                      <option value="" disabled>Select State / UT</option>
+                      {INDIAN_STATES.map((s) => (
+                        <option key={s.code} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <MapPin size={14} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Operating City <span className="text-rose-500">*</span>
@@ -860,106 +779,64 @@ export default function RentRollPaymentModal({
                     <select
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium bg-white focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none truncate"
+                      disabled={!state}
+                      required
+                      className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium bg-white focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none truncate cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
                     >
-                      <optgroup label="Top Commercial Hubs">
-                        <option value="Mumbai (MMR)">Mumbai (MMR)</option>
-                        <option value="Delhi">Delhi</option>
-                        <option value="Gurgaon (Gurugram)">Gurgaon (Gurugram)</option>
-                        <option value="Noida">Noida</option>
-                        <option value="Bengaluru (Bangalore)">Bengaluru (Bangalore)</option>
-                        <option value="Hyderabad">Hyderabad</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Chennai">Chennai</option>
-                        <option value="Kolkata">Kolkata</option>
-                        <option value="Ahmedabad">Ahmedabad</option>
-                      </optgroup>
-                      <optgroup label="All Indian Cities (A to Z)">
-                        {ALL_INDIAN_CITIES.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Other">
-                        <option value="Pan-India Portfolio">Pan-India Portfolio</option>
-                        <option value="Other (Specify City)">Other (Specify City)</option>
-                      </optgroup>
+                      {!state ? (
+                        <option value="">Select State first</option>
+                      ) : (
+                        <>
+                          {getCitiesForState(state).map((c) => (
+                            <option key={c.name} value={c.name}>
+                              {c.name}
+                            </option>
+                          ))}
+                          <option value="Other (Specify City)">Other (Specify City)</option>
+                        </>
+                      )}
                     </select>
-                    <MapPin size={14} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
+                    <Building2 size={14} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-
-                {city === "Other (Specify City)" ? (
-                  <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">
-                      Specify City <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={customCity}
-                        onChange={(e) => setCustomCity(e.target.value)}
-                        placeholder="Type city name"
-                        required
-                        autoFocus
-                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-amber-300 bg-amber-50/40 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
-                      />
-                      <MapPin size={14} className="absolute left-2.5 top-2.5 text-amber-600" />
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-slate-700">Special Offer</label>
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">100% Off</span>
-                    </div>
-                    <div className="h-[38px] px-2.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 flex items-center justify-between text-xs shadow-2xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Gift size={13} className="text-amber-600 shrink-0" />
-                        <span className="font-mono font-bold text-slate-900 text-[11px]">RENTROLL12</span>
-                      </div>
-                      {appliedCoupon === "RENTROLL12" ? (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                            <CheckCircle2 size={11} className="text-emerald-600" />
-                            Applied (₹0)
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleRemoveCoupon}
-                            className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 underline cursor-pointer"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAppliedCoupon("RENTROLL12");
-                            setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
-                            setErrorMsg(null);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-[11px] shadow-2xs cursor-pointer active:scale-95 transition-all"
-                        >
-                          Apply Free
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* When "Other (Specify City)" is chosen, render the offer card cleanly below Row 3 */}
+              {/* If "Other (Specify City)" selected, show custom text input */}
               {city === "Other (Specify City)" && (
-                <div className="h-[38px] px-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/50 flex items-center justify-between text-xs shadow-2xs">
-                  <div className="flex items-center gap-2">
+                <div className="animate-fadeIn">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Specify City Name <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={customCity}
+                      onChange={(e) => setCustomCity(e.target.value)}
+                      placeholder={`Type city name in ${state}`}
+                      required
+                      autoFocus
+                      className="w-full pl-8 pr-3 py-2 rounded-xl border border-teal-300 bg-teal-50/30 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
+                    />
+                    <Building2 size={14} className="absolute left-2.5 top-2.5 text-[#0D7B6C]" />
+                  </div>
+                </div>
+              )}
+
+              {/* Row 4: Special Offer (100% Free Access) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">Special Offer</label>
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                    100% Off
+                  </span>
+                </div>
+                <div className="h-[40px] px-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 flex items-center justify-between text-xs shadow-2xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <Gift size={14} className="text-amber-600 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-800">
-                      Special Offer: Code <strong className="font-mono text-[#0D7B6C] bg-white px-1.5 py-0.5 rounded border border-amber-200">RENTROLL12</strong> (100% Off)
-                    </span>
+                    <span className="font-mono font-bold text-slate-900 text-xs tracking-wider">RENTROLL12</span>
                   </div>
                   {appliedCoupon === "RENTROLL12" ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
                         <CheckCircle2 size={11} className="text-emerald-600" />
                         Applied (₹0)
@@ -980,13 +857,13 @@ export default function RentRollPaymentModal({
                         setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
                         setErrorMsg(null);
                       }}
-                      className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-[11px] shadow-2xs cursor-pointer active:scale-95 transition-all"
+                      className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-xs shadow-2xs cursor-pointer active:scale-95 transition-all"
                     >
                       Apply Free
                     </button>
                   )}
                 </div>
-              )}
+              </div>
 
               {/* Submit CTA */}
               <button
@@ -1043,7 +920,7 @@ export default function RentRollPaymentModal({
                     type="text"
                     value={signInIdentifier}
                     onChange={(e) => setSignInIdentifier(e.target.value)}
-                    placeholder="e.g. landlord@company.com"
+                    placeholder="e.g. name@company.com"
                     required
                     autoFocus
                     className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"

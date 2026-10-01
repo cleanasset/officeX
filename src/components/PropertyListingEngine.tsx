@@ -1176,7 +1176,7 @@ export default function PropertyListingEngine({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div className="sm:col-span-2">
                   <AddressAutocomplete
-                    label="FULL PHYSICAL ADDRESS (GOOGLE MAPS PLACES AUTOCOMPLETE)"
+                    label="Full Physical Address"
                     value={formData.address}
                     onChange={(address) => setFormData((prev) => ({ ...prev, address }))}
                     onSelectLocation={(loc) => {

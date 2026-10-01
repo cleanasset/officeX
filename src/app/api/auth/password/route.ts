@@ -130,7 +130,7 @@ export async function POST(request: Request) {
         orgName: 'Acme Commercial Realty Ltd',
         role: 'Property Owner & Asset Manager',
         roleCode: 'OWNER',
-        workspaceTitle: 'Commercial Landlord Desk',
+        workspaceTitle: 'Commercial Asset Desk',
         workspaceUrl: '/properties',
         propertyScope: '5 properties · Mumbai & Bengaluru',
         badge: 'Asset Owner',

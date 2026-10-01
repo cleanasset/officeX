@@ -43,7 +43,8 @@ import {
   Play,
   Share2,
   Pencil,
-  Headphones
+  Headphones,
+  Info
 } from "lucide-react";
 import { formatINR } from "@/components/rent-roll/DashboardTab";
 import {
@@ -51,6 +52,7 @@ import {
   CityAutocomplete,
   StateAutocomplete,
 } from "@/components/ui/LocationInputs";
+import { getCitiesForState } from "@/lib/location-data";
 
 interface BillingEntityItem {
   id: string;
@@ -82,6 +84,25 @@ interface ChargeTypeItem {
   unit: "psf_month" | "kwh" | "kl" | "slot_month" | "fixed_month" | "per_seat";
   isInclusion: boolean; // e.g. CAM included in flex rent (Slide 10 Inclusions Rule)
   description: string;
+}
+
+function getBillingUnitLabel(unit: string): string {
+  switch (unit) {
+    case "psf_month":
+      return "Billed per sq. ft. / month";
+    case "kwh":
+      return "Metered per unit (kWh)";
+    case "kl":
+      return "Metered per kL";
+    case "slot_month":
+      return "Billed per slot / month";
+    case "fixed_month":
+      return "Fixed monthly fee";
+    case "per_seat":
+      return "Billed per seat / month";
+    default:
+      return "Per property";
+  }
 }
 
 function OnboardingContent() {
@@ -119,16 +140,35 @@ function OnboardingContent() {
     type: "Commercial Office"
   });
 
+  const handleSegmentChange = (segId: string) => {
+    setOrgData(prev => ({ ...prev, segments: [segId] }));
+    if (segId === "fm_company") {
+      // FM Companies bill CAM, Utilities, Services (Base Rent is N/A - billed by Owner)
+      setChargeList(prev => prev.map(chg => {
+        if (chg.id === "base_rent") return { ...chg, enabled: false };
+        if (["cam", "electricity_grid", "electricity_dg", "water", "housekeeping", "security", "hvac_btu"].includes(chg.id)) {
+          return { ...chg, enabled: true };
+        }
+        return chg;
+      }));
+    } else if (segId === "commercial_owner" || segId === "pm_company") {
+      // Commercial Owners and PMs bill Base Rent + CAM
+      setChargeList(prev => prev.map(chg => {
+        if (chg.id === "base_rent") return { ...chg, enabled: true };
+        if (["cam", "electricity_grid", "parking"].includes(chg.id)) return { ...chg, enabled: true };
+        return chg;
+      }));
+    } else if (segId === "flex_operator") {
+      // Flex Operators bill seat fees, internet, meeting rooms
+      setChargeList(prev => prev.map(chg => {
+        if (chg.id === "internet") return { ...chg, enabled: true };
+        return chg;
+      }));
+    }
+  };
+
   const toggleSegment = (segId: string) => {
-    setOrgData(prev => {
-      const exists = prev.segments.includes(segId);
-      if (exists && prev.segments.length > 1) {
-        return { ...prev, segments: prev.segments.filter(s => s !== segId) };
-      } else if (!exists) {
-        return { ...prev, segments: [...prev.segments, segId] };
-      }
-      return prev;
-    });
+    handleSegmentChange(segId);
   };
 
   // ──── STEP 2: FINANCIAL ENTITIES & TAX PROFILES ────
@@ -251,19 +291,19 @@ function OnboardingContent() {
     }
   };
 
-  // ──── STEP 3: SECTION B — OPERATIONAL SETTINGS & CHARGE MASTER (Slide 4) ────
+  // ──── STEP 3: BILLING SETTINGS & CHARGE TYPES ────
   const [chargeList, setChargeList] = useState<ChargeTypeItem[]>([
-    { id: "base_rent", name: "Base Rent", category: "rent", enabled: true, rate: 150, unit: "psf_month", isInclusion: false, description: "Monthly commercial leasable space charge" },
-    { id: "cam", name: "CAM (Common Area Maintenance)", category: "cam", enabled: true, rate: 28, unit: "psf_month", isInclusion: false, description: "Facility upkeep, security, housekeeping, lift maintenance" },
-    { id: "electricity_grid", name: "Grid HT Electricity", category: "utility", enabled: true, rate: 11.50, unit: "kwh", isInclusion: false, description: "State power board metered commercial power consumption" },
-    { id: "electricity_dg", name: "DG Backup Power", category: "utility", enabled: true, rate: 32.00, unit: "kwh", isInclusion: false, description: "Diesel Generator captive backup power supply" },
-    { id: "water", name: "Commercial Water Supply", category: "utility", enabled: true, rate: 45.00, unit: "kl", isInclusion: false, description: "Bulk municipal & tanker potable water supply per kL" },
-    { id: "parking", name: "Reserved Parking Bays", category: "amenity", enabled: true, rate: 4500, unit: "slot_month", isInclusion: false, description: "Allocated basement / stilt vehicular parking slots" },
-    { id: "internet", name: "High-Speed Internet / IT", category: "service", enabled: true, rate: 2500, unit: "fixed_month", isInclusion: false, description: "Dedicated leased-line fibre connectivity" },
-    { id: "housekeeping", name: "Housekeeping & Janitorial", category: "service", enabled: false, rate: 8.50, unit: "psf_month", isInclusion: true, description: "In-suite specialized cleaning and sanitization" },
-    { id: "security", name: "Physical Security & Guarding", category: "service", enabled: false, rate: 6.00, unit: "psf_month", isInclusion: true, description: "Dedicated 24/7 lobby & floor security personnel" },
-    { id: "hvac_btu", name: "Chilled Water / HVAC BTU", category: "utility", enabled: false, rate: 18.00, unit: "kwh", isInclusion: false, description: "Thermal energy BTU meter consumption for central air" },
-    { id: "signage", name: "Signage & Facade Display", category: "amenity", enabled: false, rate: 15000, unit: "fixed_month", isInclusion: false, description: "Pylon and exterior building branding rights" }
+    { id: "base_rent", name: "Property / Office Rent", category: "rent", enabled: true, rate: 0, unit: "psf_month", isInclusion: false, description: "Monthly commercial rental charge for leased office or retail space" },
+    { id: "cam", name: "CAM (Common Area Maintenance)", category: "cam", enabled: true, rate: 0, unit: "psf_month", isInclusion: false, description: "Building upkeep, housekeeping, security, lift and lobby maintenance" },
+    { id: "electricity_grid", name: "Electricity", category: "utility", enabled: true, rate: 0, unit: "kwh", isInclusion: false, description: "State electricity board metered commercial power consumption" },
+    { id: "electricity_dg", name: "Generator / Backup Power", category: "utility", enabled: true, rate: 0, unit: "kwh", isInclusion: false, description: "Captive diesel generator backup power supply during outages" },
+    { id: "water", name: "Water Supply", category: "utility", enabled: true, rate: 0, unit: "kl", isInclusion: false, description: "Commercial municipal & tanker potable water supply" },
+    { id: "parking", name: "Parking Slots", category: "amenity", enabled: true, rate: 0, unit: "slot_month", isInclusion: false, description: "Dedicated basement / stilt vehicular parking slots" },
+    { id: "internet", name: "Internet / Wi-Fi", category: "service", enabled: true, rate: 0, unit: "fixed_month", isInclusion: false, description: "High-speed dedicated leased-line fiber internet connectivity" },
+    { id: "housekeeping", name: "Dedicated Housekeeping", category: "service", enabled: false, rate: 0, unit: "psf_month", isInclusion: true, description: "In-office dedicated cleaning, housekeeping and waste management" },
+    { id: "security", name: "Dedicated Security", category: "service", enabled: false, rate: 0, unit: "psf_month", isInclusion: true, description: "24/7 dedicated floor and reception security personnel" },
+    { id: "hvac_btu", name: "Central Air Conditioning (HVAC)", category: "utility", enabled: false, rate: 0, unit: "kwh", isInclusion: false, description: "Thermal energy / BTU meter consumption for central air conditioning" },
+    { id: "signage", name: "Signage & Branding Space", category: "amenity", enabled: false, rate: 0, unit: "fixed_month", isInclusion: false, description: "Building facade, lobby, or rooftop branding display rights" }
   ]);
 
   const [fySettings, setFySettings] = useState({
@@ -544,7 +584,7 @@ function OnboardingContent() {
   };
 
   // Handle Download Templates
-  const handleDownloadSample = (model: "area" | "seat") => {
+  const handleDownloadSample = (model: "area" | "seat" | "fm") => {
     let headers = "";
     let row = "";
     let filename = "";
@@ -553,6 +593,10 @@ function OnboardingContent() {
       headers = "Member Trade Name,Member Legal Name,Building Name,Cabin Suite ID,Contracted Seats,Occupied Seats,Rate Per Seat Monthly,Start Date (YYYY-MM-DD),End Date (YYYY-MM-DD),Deposit Months,Notice Days";
       row = "Example Tech Solutions,Example Tech India Pvt Ltd,Tower A,Suite 201,50,48,15000,2026-04-01,2028-03-31,2,60";
       filename = "officex_flex_seats_template.csv";
+    } else if (model === "fm") {
+      headers = "Occupant Trade Name,Occupant Legal Name,Tower / Building,Demised Area SqFt,Electric Meter ID,Electric Start kWh,DG Meter ID,DG Start kWh,CAM Rate PSF,Water Monthly Fixed,Billing Due Day";
+      row = "Acme Corp Tech,Acme Technologies India Pvt Ltd,Tower Alpha,12000,EM-401,15420,DG-401,2840,28.5,12000,5";
+      filename = "officex_facility_meters_cam_template.csv";
     } else {
       headers = "Tenant Trade Name,Tenant Legal Name,Building Name,Unit Number,Floor Number,Chargeable Area SqFt,Carpet Area SqFt,Monthly Base Rent INR,CAM Rate PSF,Utility Fixed Monthly,Start Date (YYYY-MM-DD),End Date (YYYY-MM-DD),Escalation Pct,Escalation Frequency Months,Security Deposit Months,Lock In Months";
       row = "Example Corporate Tenant,Example Enterprises India Pvt Ltd,Tower A,Unit 101,1,5000,4000,250000,25,15000,2026-04-01,2029-03-31,15,36,6,36";
@@ -693,12 +737,12 @@ function OnboardingContent() {
   };
 
   const steps = [
-    { num: 1, title: "1. Organization", subtitle: "Entity & Segments" },
-    { num: 2, title: "2. Financial Entities", subtitle: "Multi-SPV & Taxes" },
-    { num: 3, title: "3. Charge Master", subtitle: "Billing Rules & Tariffs" },
-    { num: 4, title: "4. Visual Branding", subtitle: "Branding & Roles" },
-    { num: 5, title: "5. Data Ingestion", subtitle: "Import Rent Roll" },
-    { num: 6, title: "6. Go-Live", subtitle: "Production Launch" }
+    { num: 1, title: "1. Organization", subtitle: "Entity & Address" },
+    { num: 2, title: "2. Billing & Taxes", subtitle: "GST & Bank Details" },
+    { num: 3, title: "3. Charge Types", subtitle: "Billing Settings & Services" },
+    { num: 4, title: "4. Visual Branding", subtitle: "Logo & Brand Colors" },
+    { num: 5, title: "5. Data Ingestion", subtitle: "Properties & Leases" },
+    { num: 6, title: "6. Review & Launch", subtitle: "Final Confirmation" }
   ];
 
   return (
@@ -782,67 +826,44 @@ function OnboardingContent() {
                   <div className="space-y-5 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 1 of 6 · Organization &amp; Business Segments
+                        Step 1 of 6 · Organization Profile
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Create Organization &amp; Select Segment</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Create Organization</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Define your primary enterprise entity and select one or more commercial operating models.
+                        Fill in your company details and choose your business type.
                       </p>
+
+                      {/* Subtle, small pro-tip on upper side */}
+                      <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <Sparkles className="w-3.5 h-3.5 text-[#0F8B7D] shrink-0" />
+                        <span>
+                          <strong className="text-slate-700 font-semibold">Pro Tip:</strong> Pick the option that best matches how your business operates.
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Segment Selector Cards */}
+                    {/* Organization Type Dropdown */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-bold text-slate-700">
-                          Organization Type (Select One or More) *
-                        </label>
-                        <span className="text-[11px] font-semibold text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full">
-                          {orgData.segments.length} selected
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                        {[
-                          { id: "commercial_owner", title: "Property Owner / Landlord", desc: "You own office buildings or commercial retail spaces and lease them out" },
-                          { id: "pm_company", title: "Property Management Company", desc: "You manage commercial assets on behalf of owners and collect rent" },
-                          { id: "fm_company", title: "Facility Management Company", desc: "You bill occupants for CAM, utilities, and site maintenance" },
-                          { id: "msp", title: "Managed Service Provider (MSP)", desc: "You run entire commercial real estate portfolios for enterprise clients" },
-                          { id: "flex_operator", title: "Managed Office / Flex Operator", desc: "You run co-working spaces and bill by seats or minimum commitment" }
-                        ].map((seg) => {
-                          const isSelected = orgData.segments.includes(seg.id);
-                          return (
-                            <div
-                              key={seg.id}
-                              onClick={() => toggleSegment(seg.id)}
-                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative ${
-                                isSelected
-                                  ? "bg-teal-50/80 border-[#0F8B7D] ring-2 ring-[#0F8B7D]/25"
-                                  : "bg-slate-50/60 border-slate-200 hover:border-slate-300"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="font-extrabold text-xs text-slate-900">{seg.title}</div>
-                                {isSelected && (
-                                  <CheckCircle2 className="w-4 h-4 text-[#0F8B7D] shrink-0 ml-1.5" />
-                                )}
-                              </div>
-                              <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">{seg.desc}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
-                        <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <span>
-                          <strong>Pro Tip:</strong> You can select multiple operating models if your business spans multiple verticals (e.g. both commercial asset ownership and co-working operations).
-                        </span>
-                      </div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Business Type *
+                      </label>
+                      <select
+                        value={orgData.segments[0] || "commercial_owner"}
+                        onChange={(e) => handleSegmentChange(e.target.value)}
+                        className="w-full text-xs sm:text-sm p-3 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#0F8B7D] focus:ring-2 focus:ring-[#0F8B7D]/20 transition-all cursor-pointer shadow-2xs"
+                      >
+                        <option value="commercial_owner">Property Owner / Asset Entity</option>
+                        <option value="pm_company">Property Management Company</option>
+                        <option value="fm_company">Facility Management Company</option>
+                        <option value="msp">Managed Service Provider (MSP)</option>
+                        <option value="flex_operator">Flex Space / Coworking Operator</option>
+                      </select>
                     </div>
 
                     <div className="space-y-3 pt-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">Organization Legal Name *</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">Company Legal Name *</label>
                           <input
                             type="text"
                             placeholder="e.g. Acme Commercial Estates Pvt Ltd"
@@ -853,7 +874,7 @@ function OnboardingContent() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">Trade / Portfolio Name</label>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">Brand / Trade Name</label>
                           <input
                             type="text"
                             placeholder="e.g. Acme Realty Horizon"
@@ -866,7 +887,7 @@ function OnboardingContent() {
 
                       <div>
                         <AddressAutocomplete
-                          label="Corporate Registered Address (Google Maps Search)"
+                          label="Registered Office Address"
                           value={orgData.primaryAddress}
                           onChange={(val) => setOrgData((prev) => ({ ...prev, primaryAddress: val }))}
                           onSelectLocation={(loc) => {
@@ -877,7 +898,7 @@ function OnboardingContent() {
                               state: loc.state || prev.state,
                             }));
                           }}
-                          placeholder="Type building, commercial park, road, or full address..."
+                          placeholder="Start typing your office address..."
                         />
                       </div>
 
@@ -925,10 +946,31 @@ function OnboardingContent() {
                           <span className="text-[10px] text-slate-400 mt-0.5 block">Format: 2 state + 10 PAN + 3 entity</span>
                         </div>
                         <div>
+                          <StateAutocomplete
+                            label="Primary State *"
+                            required
+                            value={orgData.state}
+                            onChange={(state) => {
+                              setOrgData((prev) => {
+                                const cities = getCitiesForState(state);
+                                const isCityInState = cities.some(c => c.name.toLowerCase() === prev.city.toLowerCase());
+                                return {
+                                  ...prev,
+                                  state,
+                                  city: isCityInState ? prev.city : (cities[0]?.name || "")
+                                };
+                              });
+                            }}
+                            placeholder="Select your state..."
+                          />
+                        </div>
+                        <div>
                           <CityAutocomplete
-                            label="Primary City"
+                            label="Primary City *"
                             required
                             value={orgData.city}
+                            selectedState={orgData.state}
+                            requireStateFirst={true}
                             onChange={(city) => setOrgData((prev) => ({ ...prev, city }))}
                             onSelectCityAndState={(city, state) => {
                               setOrgData((prev) => ({
@@ -937,16 +979,7 @@ function OnboardingContent() {
                                 state: state || prev.state,
                               }));
                             }}
-                            placeholder="Type to search all Indian cities..."
-                          />
-                        </div>
-                        <div>
-                          <StateAutocomplete
-                            label="Primary State"
-                            required
-                            value={orgData.state}
-                            onChange={(state) => setOrgData((prev) => ({ ...prev, state }))}
-                            placeholder="Type to search all 36 States/UTs..."
+                            placeholder={orgData.state ? `Search cities in ${orgData.state}...` : "Select State first..."}
                           />
                         </div>
                       </div>
@@ -954,16 +987,16 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 2: FINANCIAL ENTITIES & TAX PROFILES ════════ */}
+                {/* ════════ STEP 2: BILLING & TAX DETAILS ════════ */}
                 {currentStep === 2 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 2 of 6 · Financial Entities &amp; Tax Profiles
+                        Step 2 of 6 · Billing &amp; Tax Details
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Financial Entities &amp; Statutory Setup</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Billing Details &amp; Taxes</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Configure multiple statutory billing entities (SPVs/States) and standard Tax Profiles per charge type.
+                        Set up your billing company information, GST number, and standard tax rates for your invoices.
                       </p>
                     </div>
 
@@ -973,10 +1006,10 @@ function OnboardingContent() {
                         <div>
                           <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-[#0F8B7D]" />
-                            <span>Billing Entities (SPVs &amp; State Jurisdictions)</span>
+                            <span>Billing Companies &amp; States</span>
                           </h3>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            <em>Create a distinct billing profile for each legal entity, state GSTIN, or SPV structure.</em>
+                            <em>Add the company names, GST numbers, and bank details you use for invoicing.</em>
                           </p>
                         </div>
                         <button
@@ -984,7 +1017,7 @@ function OnboardingContent() {
                           onClick={() => setIsAddingEntity(true)}
                           className="px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] hover:bg-teal-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                         >
-                          <Plus size={14} /> Add Another Billing Entity / State
+                          <Plus size={14} /> Add Another Company / State
                         </button>
                       </div>
 
@@ -992,11 +1025,11 @@ function OnboardingContent() {
                       {billingEntities.length === 0 ? (
                         <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
                           <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                          <p className="text-xs font-bold text-slate-700">No Billing Entities Configured Yet</p>
+                          <p className="text-xs font-bold text-slate-700">No Billing Companies Added Yet</p>
                           <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1">
                             {orgData.legalName
-                              ? `Click below to create your primary billing entity for "${orgData.legalName}".`
-                              : "Add your legal SPVs or state billing entities to generate statutory GST invoices."}
+                              ? `Click below to create your primary billing profile for "${orgData.legalName}".`
+                              : "Add your company details and GST number to start generating invoices."}
                           </p>
                           <button
                             type="button"
@@ -1026,7 +1059,7 @@ function OnboardingContent() {
                             }}
                             className="mt-3 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                           >
-                            <Plus size={14} /> {orgData.legalName ? `Generate Entity from "${orgData.legalName}"` : "Add Billing Entity"}
+                            <Plus size={14} /> {orgData.legalName ? `Use Details from "${orgData.legalName}"` : "Add Billing Company"}
                           </button>
                         </div>
                       ) : (
@@ -1045,10 +1078,10 @@ function OnboardingContent() {
                                 <div className="space-y-3 animate-fadeIn">
                                   <div className="flex items-center justify-between">
                                     <span className="font-bold text-xs text-teal-950 flex items-center gap-1.5">
-                                      <Pencil size={13} className="text-[#0F8B7D]" /> Edit Billing Entity
+                                      <Pencil size={13} className="text-[#0F8B7D]" /> Edit Billing Details
                                       {be.isDefault && (
                                         <span className="px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold ml-1">
-                                          Default Primary
+                                          Primary Company
                                         </span>
                                       )}
                                     </span>
@@ -1062,7 +1095,7 @@ function OnboardingContent() {
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                                     <div>
-                                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">SPV Legal Entity Name *</label>
+                                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Company Legal Name *</label>
                                       <input
                                         type="text"
                                         value={editEntity.spvName}
@@ -1072,17 +1105,17 @@ function OnboardingContent() {
                                     </div>
                                     <div>
                                       <StateAutocomplete
-                                        label="State Code / Jurisdiction"
+                                        label="State (GST)"
                                         required
                                         returnCodeFormat={true}
                                         value={editEntity.stateCode}
                                         onChange={(val) => setEditEntity({ ...editEntity, stateCode: val })}
-                                        placeholder="e.g. 07 - Delhi, 27 - Maharashtra..."
+                                        placeholder="Select your state..."
                                       />
                                     </div>
                                     <div>
                                       <div className="flex items-center justify-between mb-0.5">
-                                        <label className="block text-[11px] font-bold text-slate-700">15-Digit GSTIN *</label>
+                                        <label className="block text-[11px] font-bold text-slate-700">15-Digit GST Number *</label>
                                         <span className={`text-[10px] font-mono font-bold ${editEntity.gstin.length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
                                           {editEntity.gstin.length}/15
                                         </span>
@@ -1102,7 +1135,7 @@ function OnboardingContent() {
                                     </div>
                                     <div>
                                       <div className="flex items-center justify-between mb-0.5">
-                                        <label className="block text-[11px] font-bold text-slate-700">Invoice Numbering Prefix *</label>
+                                        <label className="block text-[11px] font-bold text-slate-700">Invoice Prefix *</label>
                                         <span className="text-[10px] text-slate-400 font-mono">Max 8 Chars</span>
                                       </div>
                                       <input
@@ -1115,7 +1148,20 @@ function OnboardingContent() {
                                     </div>
                                     <div>
                                       <div className="flex items-center justify-between mb-0.5">
-                                        <label className="block text-[11px] font-bold text-slate-700">Bank Account for Collections</label>
+                                        <label className="block text-[11px] font-bold text-slate-700">Bank Name</label>
+                                        <span className="text-[10px] text-slate-400">e.g. HDFC Bank</span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. HDFC Bank"
+                                        value={editEntity.bankName}
+                                        onChange={(e) => setEditEntity({ ...editEntity, bankName: e.target.value })}
+                                        className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
+                                      />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <label className="block text-[11px] font-bold text-slate-700">Bank Account Number</label>
                                         <span className="text-[10px] text-slate-400 font-mono">Digits Only</span>
                                       </div>
                                       <input
@@ -1129,7 +1175,7 @@ function OnboardingContent() {
                                     </div>
                                     <div>
                                       <div className="flex items-center justify-between mb-0.5">
-                                        <label className="block text-[11px] font-bold text-slate-700">IFSC Code (11 Chars)</label>
+                                        <label className="block text-[11px] font-bold text-slate-700">Bank IFSC Code</label>
                                         <span className={`text-[10px] font-mono font-bold ${editEntity.ifscCode.length === 11 ? "text-emerald-600" : "text-slate-400"}`}>
                                           {editEntity.ifscCode.length}/11
                                         </span>
@@ -1170,12 +1216,12 @@ function OnboardingContent() {
                                     <span className="font-extrabold text-xs text-slate-900">{be.spvName}</span>
                                     {be.isDefault && (
                                       <span className="px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold">
-                                        Default Primary
+                                        Primary Company
                                       </span>
                                     )}
                                   </div>
                                   <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
-                                    Jurisdiction: {be.stateCode}
+                                    State: {be.stateCode}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -1185,7 +1231,7 @@ function OnboardingContent() {
                                       onClick={() => handleSetDefaultEntity(be.id)}
                                       className="text-[10px] text-teal-700 hover:underline font-bold px-1.5 py-0.5 cursor-pointer"
                                     >
-                                      Set Default
+                                      Set Primary
                                     </button>
                                   )}
                                   <button
@@ -1209,20 +1255,22 @@ function OnboardingContent() {
 
                             <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200/80 text-[11px]">
                               <div>
-                                <span className="text-slate-400 block text-[10px]">GSTIN (15-Digit)</span>
-                                <span className="font-mono font-bold text-slate-800">{be.gstin}</span>
+                                <span className="text-slate-400 block text-[10px]">GST Number</span>
+                                <span className="font-mono font-bold text-slate-800">{be.gstin || "—"}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 block text-[10px]">Invoice Series Prefix</span>
-                                <span className="font-mono font-bold text-teal-700">{be.invoicePrefix}</span>
+                                <span className="text-slate-400 block text-[10px]">Invoice Prefix</span>
+                                <span className="font-mono font-bold text-teal-700">{be.invoicePrefix || "—"}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 block text-[10px]">Bank for Collections</span>
-                                <span className="text-slate-700 font-medium truncate block">{be.bankName}</span>
+                                <span className="text-slate-400 block text-[10px]">Bank Name</span>
+                                <span className="text-slate-700 font-medium truncate block">{be.bankName || "—"}</span>
                               </div>
                               <div>
                                 <span className="text-slate-400 block text-[10px]">Account &amp; IFSC</span>
-                                <span className="font-mono text-slate-700 truncate block">{be.accountNumber || "—"} ({be.ifscCode})</span>
+                                <span className="font-mono text-slate-700 truncate block">
+                                  {be.accountNumber ? `${be.accountNumber} (${be.ifscCode || ""})` : "—"}
+                                </span>
                               </div>
                             </div>
                                 </>
@@ -1236,7 +1284,7 @@ function OnboardingContent() {
                       {isAddingEntity && (
                         <div className="p-4 bg-teal-50/50 border border-teal-200 rounded-2xl space-y-3 animate-fadeIn">
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs text-teal-950">Add SPV / State Billing Entity</span>
+                            <span className="font-bold text-xs text-teal-950">Add Billing Company &amp; State</span>
                             <button
                               type="button"
                               onClick={() => setIsAddingEntity(false)}
@@ -1247,10 +1295,10 @@ function OnboardingContent() {
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">SPV Legal Entity Name *</label>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Company Legal Name *</label>
                               <input
                                 type="text"
-                                placeholder="e.g. Skyline Commercial Assets SPV-1 Pvt Ltd"
+                                placeholder="e.g. Acme Properties Pvt Ltd"
                                 value={newEntity.spvName}
                                 onChange={(e) => setNewEntity({ ...newEntity, spvName: e.target.value })}
                                 className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
@@ -1258,17 +1306,17 @@ function OnboardingContent() {
                             </div>
                             <div>
                               <StateAutocomplete
-                                label="State Code / Jurisdiction"
+                                label="State (GST)"
                                 required
                                 returnCodeFormat={true}
                                 value={newEntity.stateCode}
                                 onChange={(val) => setNewEntity({ ...newEntity, stateCode: val })}
-                                placeholder="e.g. 07 - Delhi, 27 - Maharashtra..."
+                                placeholder="Select your state..."
                               />
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-0.5">
-                                <label className="block text-[11px] font-bold text-slate-700">15-Digit GSTIN *</label>
+                                <label className="block text-[11px] font-bold text-slate-700">15-Digit GST Number *</label>
                                 <span className={`text-[10px] font-mono font-bold ${newEntity.gstin.length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
                                   {newEntity.gstin.length}/15
                                 </span>
@@ -1285,11 +1333,11 @@ function OnboardingContent() {
                                 }}
                                 className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold tracking-wider uppercase focus:border-[#0F8B7D]"
                               />
-                              <span className="text-[10px] text-slate-400 block mt-0.5">Format: 2 state + 10 PAN + 3 entity</span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">Format: 2-digit state code + 10-digit PAN + 3 digits</span>
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-0.5">
-                                <label className="block text-[11px] font-bold text-slate-700">Invoice Numbering Prefix *</label>
+                                <label className="block text-[11px] font-bold text-slate-700">Invoice Prefix *</label>
                                 <span className="text-[10px] text-slate-400 font-mono">Max 8 Chars</span>
                               </div>
                               <input
@@ -1300,11 +1348,24 @@ function OnboardingContent() {
                                 onChange={(e) => setNewEntity({ ...newEntity, invoicePrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 8) })}
                                 className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-teal-700 uppercase focus:border-[#0F8B7D]"
                               />
-                              <span className="text-[10px] text-slate-400 block mt-0.5">Used for invoice serial numbering</span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">Shown at the start of your invoice numbers (e.g. INV-001)</span>
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-0.5">
-                                <label className="block text-[11px] font-bold text-slate-700">Bank Account for Collections</label>
+                                <label className="block text-[11px] font-bold text-slate-700">Bank Name</label>
+                                <span className="text-[10px] text-slate-400">e.g. HDFC Bank</span>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="e.g. HDFC Bank"
+                                value={newEntity.bankName}
+                                onChange={(e) => setNewEntity({ ...newEntity, bankName: e.target.value })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
+                              />
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <label className="block text-[11px] font-bold text-slate-700">Bank Account Number</label>
                                 <span className="text-[10px] text-slate-400 font-mono">Digits Only</span>
                               </div>
                               <input
@@ -1315,11 +1376,11 @@ function OnboardingContent() {
                                 onChange={(e) => setNewEntity({ ...newEntity, accountNumber: e.target.value.replace(/[^0-9]/g, "").slice(0, 18) })}
                                 className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
                               />
-                              <span className="text-[10px] text-slate-400 block mt-0.5">9 to 18 digits bank account number</span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">Your bank account number for receiving payments</span>
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-0.5">
-                                <label className="block text-[11px] font-bold text-slate-700">IFSC Code (11 Chars)</label>
+                                <label className="block text-[11px] font-bold text-slate-700">Bank IFSC Code</label>
                                 <span className={`text-[10px] font-mono font-bold ${newEntity.ifscCode.length === 11 ? "text-emerald-600" : "text-slate-400"}`}>
                                   {newEntity.ifscCode.length}/11
                                 </span>
@@ -1332,7 +1393,7 @@ function OnboardingContent() {
                                 onChange={(e) => setNewEntity({ ...newEntity, ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) })}
                                 className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono uppercase focus:border-[#0F8B7D]"
                               />
-                              <span className="text-[10px] text-slate-400 block mt-0.5">Format: 4 letters + 0 + 6 alphanumeric</span>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">11-character bank IFSC code (e.g. HDFC0001234)</span>
                             </div>
                           </div>
                           <div className="flex justify-end pt-1">
@@ -1341,7 +1402,7 @@ function OnboardingContent() {
                               onClick={handleAddEntity}
                               className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer"
                             >
-                              Save Entity
+                              Save Details
                             </button>
                           </div>
                         </div>
@@ -1354,10 +1415,10 @@ function OnboardingContent() {
                         <div>
                           <h3 className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
                             <Percent className="w-4 h-4 text-[#0F8B7D]" />
-                            <span>Tax Profiles — Standard GST Rates per Charge Type</span>
+                            <span>GST &amp; Tax Settings</span>
                           </h3>
                           <p className="text-[11px] text-slate-500">
-                            <em>Standard commercial rates default to 18% GST; SEZ and IFSC properties default to 0% GST (tax-exempt).</em>
+                            <em>Commercial properties standard rate is 18% GST. Tax-free or SEZ properties can be set to 0%.</em>
                           </p>
                         </div>
 
@@ -1383,14 +1444,14 @@ function OnboardingContent() {
                                 : "bg-white border border-slate-200 text-slate-700"
                             }`}
                           >
-                            IFSC / SEZ (0% Exempt)
+                            Tax-Exempt (0% GST)
                           </button>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
                         <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-500 font-bold block">Base Rent GST</span>
+                          <span className="text-[10px] text-slate-500 font-bold block">Rent GST</span>
                           <div className="flex items-center gap-1 mt-1">
                             <input
                               type="number"
@@ -1403,7 +1464,7 @@ function OnboardingContent() {
                         </div>
 
                         <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-500 font-bold block">CAM GST</span>
+                          <span className="text-[10px] text-slate-500 font-bold block">Maintenance (CAM) GST</span>
                           <div className="flex items-center gap-1 mt-1">
                             <input
                               type="number"
@@ -1416,7 +1477,7 @@ function OnboardingContent() {
                         </div>
 
                         <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-500 font-bold block">Grid Power GST</span>
+                          <span className="text-[10px] text-slate-500 font-bold block">Electricity GST</span>
                           <div className="flex items-center gap-1 mt-1">
                             <input
                               type="number"
@@ -1455,9 +1516,9 @@ function OnboardingContent() {
                         </div>
 
                         <div className="p-2.5 bg-white border border-slate-200 rounded-xl flex flex-col justify-between">
-                          <span className="text-[10px] text-slate-500 font-bold block">IFSC SEZ Status</span>
+                          <span className="text-[10px] text-slate-500 font-bold block">Tax Category</span>
                           <span className={`text-[11px] font-bold ${taxProfiles.isIfscTaxExempt ? "text-emerald-600" : "text-slate-600"}`}>
-                            {taxProfiles.isIfscTaxExempt ? "0% Tax-Exempt" : "Standard Domestic"}
+                            {taxProfiles.isIfscTaxExempt ? "Tax-Exempt (0% GST)" : "Standard (18% GST)"}
                           </span>
                         </div>
                       </div>
@@ -1465,54 +1526,67 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 3: SECTION B — CHARGES CHECKLIST & TARIFFS (Slide 4) ════════ */}
+                {/* ════════ STEP 3: BILLING SETTINGS & CHARGE TYPES ════════ */}
                 {currentStep === 3 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 3 of 6 · Operational Settings &amp; Charge Master
+                        Step 3 of 6 · Billing Settings &amp; Charge Types
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Operational Settings &amp; Charge Master</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Billing Settings &amp; Applicable Charges</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Select which charges you bill for, configure individual rates, and enforce the portfolio Inclusions Rule.
+                        Choose which services and charges apply to your properties. Exact rental rates and tariffs are decided individually when listing each property or lease agreement.
                       </p>
+                    </div>
+
+                    {/* Informative Note for Rent/Rate clarification */}
+                    <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <Info size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-blue-900">Rental rates are decided per property</h4>
+                        <p className="text-[11px] text-blue-700 mt-0.5 leading-relaxed">
+                          You do not need to enter rent amounts or utility numbers here. Exact rent per sq. ft., maintenance (CAM) charges, and meter rates are configured when you list each property or add a tenant lease.
+                        </p>
+                      </div>
                     </div>
 
                     {/* Currency and Financial Year */}
                     <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Reporting Currency</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Currency</label>
                         <select
                           value={fySettings.currency}
                           onChange={(e) => setFySettings({ ...fySettings, currency: e.target.value })}
                           className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold"
                         >
-                          <option value="INR (₹)">INR (₹) — Standard Domestic</option>
-                          <option value="USD ($)">USD ($) — IFSC / SEZ Offshore Units</option>
+                          <option value="INR (₹)">INR (₹) — Indian Rupee</option>
+                          <option value="USD ($)">USD ($) — US Dollar</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Financial Year Cycle</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Financial Year</label>
                         <select
                           value={fySettings.fyStartMonth}
                           onChange={(e) => setFySettings({ ...fySettings, fyStartMonth: e.target.value })}
                           className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold"
                         >
-                          <option value="April 1 (Standard Indian FY)">April 1 – March 31 (Indian FY)</option>
-                          <option value="January 1 (Calendar Year)">January 1 – December 31 (Calendar FY)</option>
+                          <option value="April 1 (Standard Indian FY)">April 1 – March 31 (Indian Financial Year)</option>
+                          <option value="January 1 (Calendar Year)">January 1 – December 31 (Calendar Year)</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Monthly Invoicing Due Day</label>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Monthly Bill Due Date</label>
                         <select
                           value={fySettings.billingDueDay}
                           onChange={(e) => setFySettings({ ...fySettings, billingDueDay: Number(e.target.value) })}
                           className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold"
                         >
-                          <option value={5}>5th of each month</option>
-                          <option value={7}>7th of each month</option>
-                          <option value={10}>10th of each month</option>
-                          <option value={15}>15th of each month</option>
+                          <option value={5}>5th of every month</option>
+                          <option value={7}>7th of every month</option>
+                          <option value={10}>10th of every month</option>
+                          <option value={15}>15th of every month</option>
                         </select>
                       </div>
                     </div>
@@ -1522,10 +1596,10 @@ function OnboardingContent() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-xs font-extrabold text-slate-900">
-                            Charge Types Checklist: Select Which Charges You Bill For
+                            Select Charges &amp; Services That Apply to Your Properties
                           </h3>
                           <p className="text-[11px] text-slate-500">
-                            Check items active in your portfolio. Toggle &quot;Included in Base Rent&quot; to prevent double billing.
+                            Check items that you provide or bill tenants for. You can also specify if a service is already bundled inside the rent.
                           </p>
                         </div>
                         <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full">
@@ -1564,29 +1638,33 @@ function OnboardingContent() {
 
                             {chg.enabled && (
                               <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                                {/* Inclusions Rule Toggle */}
-                                <label className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={chg.isInclusion}
-                                    onChange={() => toggleInclusionRule(chg.id)}
-                                    className="rounded text-[#0F8B7D] w-3.5 h-3.5"
-                                  />
-                                  <span>Included in Rent</span>
-                                </label>
+                                {/* Inclusions Rule Toggle (Only for non-rent charges) */}
+                                {chg.id !== "base_rent" && (
+                                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={chg.isInclusion}
+                                      onChange={() => toggleInclusionRule(chg.id)}
+                                      className="rounded text-[#0F8B7D] w-3.5 h-3.5"
+                                    />
+                                    <span>Included in Rent</span>
+                                  </label>
+                                )}
 
-                                {/* Rate input */}
-                                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-xl">
-                                  <span className="text-[11px] font-bold text-slate-600">Rate:</span>
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    value={chg.rate}
-                                    onChange={(e) => updateChargeRate(chg.id, Number(e.target.value))}
-                                    className="w-16 p-0.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-200 rounded text-right"
-                                  />
-                                  <span className="text-[11px] text-slate-500 font-medium">{chg.unit}</span>
-                                </div>
+                                {/* Rate indicator */}
+                                {chg.id === "base_rent" ? (
+                                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-xl">
+                                    Rate decided per property / lease
+                                  </span>
+                                ) : chg.isInclusion ? (
+                                  <span className="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-xl">
+                                    Bundled in Rent
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-xl">
+                                    {getBillingUnitLabel(chg.unit)} · Rate set per property
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2281,10 +2359,13 @@ function OnboardingContent() {
                             <span>Don&apos;t have a formatted spreadsheet yet?</span>
                             <button
                               type="button"
-                              onClick={() => handleDownloadSample("area")}
+                              onClick={() => {
+                                const model = orgData.segments[0] === "fm_company" ? "fm" : orgData.segments[0] === "flex_operator" ? "seat" : "area";
+                                handleDownloadSample(model);
+                              }}
                               className="text-[#0F8B7D] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
                             >
-                              <Download size={11} /> Download Sample Excel Template (.CSV)
+                              <Download size={11} /> Download Sample Spreadsheet Template (.CSV)
                             </button>
                           </div>
                         </div>
@@ -2695,8 +2776,8 @@ function OnboardingContent() {
                         },
                         {
                           key: "userTrainingCompleted",
-                          title: "2. User Training & Role SOPs",
-                          desc: "Team logged in and aware of role-based dashboards (Org Admin, Finance AR, Property Mgr, Leasing, Occupant)."
+                          title: "2. User Training & Operational SOPs",
+                          desc: "Team logged in and familiarized with key modules (Org Admin, Finance AR, Property Ops, Leasing, Occupant)."
                         },
                         {
                           key: "testBillingRunCompleted",
