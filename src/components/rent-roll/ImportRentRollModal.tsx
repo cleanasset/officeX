@@ -738,7 +738,7 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div className="mb-3">
                   {/* Official Blank 10-Sheet Workbook */}
                   <div className="p-3.5 bg-gradient-to-br from-teal-50/90 to-emerald-50/70 border-2 border-teal-500/30 rounded-xl flex items-center justify-between shadow-2xs">
                     <div>
@@ -746,34 +746,15 @@ export const ImportRentRollModal: React.FC<ImportRentRollModalProps> = ({
                         <span className="font-black text-xs text-teal-950">Official Blank Import Workbook</span>
                         <span className="text-[9px] font-bold px-1.5 py-0.2 bg-teal-600 text-white rounded">.XLSX</span>
                       </div>
-                      <div className="text-[11px] text-teal-800/90 mt-0.5">10 Sheets: Properties, Spaces, Occupants, Contracts, Charges, Escalations, Deposits</div>
+                      <div className="text-[11px] text-teal-800/90 mt-0.5">Clean template for your real portfolio: Properties, Spaces, Occupants, Contracts, Charges, Escalations</div>
                     </div>
                     <a
                       href="/templates/OFFICEX_Rent_Roll_Import_Template.xlsx"
                       download="OFFICEX_Rent_Roll_Import_Template.xlsx"
-                      className="px-3 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                      className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Blank</span>
-                    </a>
-                  </div>
-
-                  {/* Golden Sample File */}
-                  <div className="p-3.5 bg-gradient-to-br from-indigo-50/90 to-blue-50/70 border-2 border-indigo-500/30 rounded-xl flex items-center justify-between shadow-2xs">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-xs text-indigo-950">Benchmark Sample Portfolio</span>
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 bg-indigo-600 text-white rounded">SAMPLE</span>
-                      </div>
-                      <div className="text-[11px] text-indigo-800/90 mt-0.5">5 Props, 14 Spaces, 11 Occupants, USD Contracts, Retail Rev-Share, Coworking Seats</div>
-                    </div>
-                    <a
-                      href="/templates/OFFICEX_Rent_Roll_Import_Template_SAMPLE.xlsx"
-                      download="OFFICEX_Rent_Roll_Import_Template_SAMPLE.xlsx"
-                      className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Sample</span>
+                      <span>Download Blank Template</span>
                     </a>
                   </div>
                 </div>

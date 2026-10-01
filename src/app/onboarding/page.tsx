@@ -2576,38 +2576,22 @@ function OnboardingContent() {
                               <span>Download Standard Institutional Templates:</span>
                               <span className="text-[10px] text-teal-700 font-mono">10 Sheets · 146 Columns · Dropdown Rules</span>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="mb-2.5">
                               <a
                                 href="/templates/OFFICEX_Rent_Roll_Import_Template.xlsx"
                                 download="OFFICEX_Rent_Roll_Import_Template.xlsx"
-                                className="p-2.5 bg-white border border-teal-300 hover:border-teal-500 rounded-xl flex items-center justify-between group shadow-2xs transition-all cursor-pointer"
+                                className="p-3 bg-white border border-teal-300 hover:border-teal-500 rounded-xl flex items-center justify-between group shadow-2xs transition-all cursor-pointer"
                               >
                                 <div className="text-left">
                                   <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                                    <span>Official Blank Template</span>
-                                    <span className="text-[9px] px-1 py-0.2 bg-teal-50 text-[#0F8B7D] font-mono font-bold rounded">.XLSX</span>
+                                    <span>Official Blank Rent Roll Workbook</span>
+                                    <span className="text-[9px] px-1.5 py-0.2 bg-teal-50 text-[#0F8B7D] font-mono font-bold rounded">.XLSX</span>
                                   </div>
-                                  <div className="text-[10px] text-slate-500">10 data sheets with instructions &amp; dropdowns</div>
+                                  <div className="text-[10px] text-slate-500 mt-0.5">Clean import sheets for your real portfolio: Properties, Spaces, Occupants, Leases &amp; Charges</div>
                                 </div>
-                                <span className="p-1.5 bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white rounded-lg transition-colors">
-                                  <Download size={13} />
-                                </span>
-                              </a>
-
-                              <a
-                                href="/templates/OFFICEX_Rent_Roll_Import_Template_SAMPLE.xlsx"
-                                download="OFFICEX_Rent_Roll_Import_Template_SAMPLE.xlsx"
-                                className="p-2.5 bg-white border border-indigo-300 hover:border-indigo-500 rounded-xl flex items-center justify-between group shadow-2xs transition-all cursor-pointer"
-                              >
-                                <div className="text-left">
-                                  <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                                    <span>Golden Sample Portfolio</span>
-                                    <span className="text-[9px] px-1 py-0.2 bg-indigo-50 text-indigo-700 font-mono font-bold rounded">SAMPLE</span>
-                                  </div>
-                                  <div className="text-[10px] text-slate-500">5 properties, 14 spaces, edge cases &amp; flex seats</div>
-                                </div>
-                                <span className="p-1.5 bg-indigo-50 group-hover:bg-indigo-700 text-indigo-700 group-hover:text-white rounded-lg transition-colors">
-                                  <Download size={13} />
+                                <span className="p-2 bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+                                  <Download size={14} />
+                                  <span>Download Blank Template</span>
                                 </span>
                               </a>
                             </div>
