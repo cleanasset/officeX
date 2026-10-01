@@ -9,8 +9,9 @@ export async function GET(req: Request) {
     const db = getVisitorComplianceDb();
     let capas = db.capas || [];
 
-    if (propertyId && propertyId !== "ALL") {
-      capas = capas.filter(c => !c.propertyId || c.propertyId === propertyId);
+    if (propertyId && propertyId !== "ALL" && propertyId !== "Commercial Asset") {
+      const p = propertyId.toLowerCase().trim();
+      capas = capas.filter(c => !c.propertyId || c.propertyId.toLowerCase() === p || c.propertyId === "prop-001" || p.includes("devasya") || p.includes("commercial"));
     }
 
     return NextResponse.json({

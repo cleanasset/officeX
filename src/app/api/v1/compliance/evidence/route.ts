@@ -28,13 +28,18 @@ export async function POST(req: Request) {
     const {
       obligationId,
       certificateNumber,
-      issuedDate,
-      validUntilDate,
+      issuedDate: directIssuedDate,
+      issueDate,
+      validUntilDate: directValidUntilDate,
+      expiryDate,
       fileName,
       fileUrl,
       uploadedBy,
       autoVerify = true
     } = body;
+
+    const issuedDate = directIssuedDate || issueDate;
+    const validUntilDate = directValidUntilDate || expiryDate;
 
     if (!obligationId || !certificateNumber || !issuedDate || !fileName) {
       return NextResponse.json(

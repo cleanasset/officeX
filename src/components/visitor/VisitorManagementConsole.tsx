@@ -6,21 +6,32 @@ import {
   Clock, CheckCircle, XCircle, Search, Filter, Plus, Calendar,
   Building, Printer, Download, Eye, ArrowRight, UserCheck,
   Radio, Phone, Mail, Car, FileText, Check, AlertCircle,
-  Truck, Package, Flame, Sparkles, RefreshCw, X, ArrowUpRight
+  Truck, Package, Flame, Sparkles, RefreshCw, X, ArrowUpRight,
+  Smartphone, ExternalLink, Copy, Info, CheckSquare, Trash2
 } from "lucide-react";
+import ComplianceOperationsCenter from "@/components/compliance/ComplianceOperationsCenter";
 
 interface VisitorManagementConsoleProps {
   portalRole?: "tenant" | "security" | "fm" | "admin";
   defaultProperty?: string;
+  initialTab?: "dashboard" | "reception" | "preregister" | "approvals" | "inside" | "contractor_delivery" | "emergency" | "watchlist";
+  initialModule?: "visitors" | "compliance";
 }
 
 export default function VisitorManagementConsole({
   portalRole = "tenant",
-  defaultProperty = "Devasya Gold - Commercial Tower"
+  defaultProperty = "Devasya Gold - Commercial Tower",
+  initialTab,
+  initialModule = "visitors"
 }: VisitorManagementConsoleProps) {
+  const [activeModule, setActiveModule] = useState<"visitors" | "compliance">(initialModule);
+  const [currentRole, setCurrentRole] = useState<"tenant" | "security" | "fm" | "admin">(portalRole);
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "reception" | "preregister" | "approvals" | "inside" | "contractor_delivery" | "emergency" | "watchlist"
-  >("dashboard");
+  >(
+    initialTab ||
+    (portalRole === "security" ? "reception" : portalRole === "tenant" ? "preregister" : "dashboard")
+  );
 
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [selectedProperty, setSelectedProperty] = useState(defaultProperty);
@@ -31,6 +42,8 @@ export default function VisitorManagementConsole({
   const [selectedVisitForApproval, setSelectedVisitForApproval] = useState<any | null>(null);
   const [approvalDecisionReason, setApprovalDecisionReason] = useState("");
   const [activeEmergencyAlert, setActiveEmergencyAlert] = useState(false);
+  const [showAddWatchlistModal, setShowAddWatchlistModal] = useState(false);
+  const [newWatchlist, setNewWatchlist] = useState({ name: "", identifier: "", reason: "", riskLevel: "HIGH" });
 
   // Pre-registration Form
   const [form, setForm] = useState({
@@ -50,128 +63,17 @@ export default function VisitorManagementConsole({
     requiresApproval: false
   });
 
-  // Data Store
-  const [visitsList, setVisitsList] = useState<any[]>([
-    {
-      id: "v-1001",
-      visitorName: "Vikram Malhotra",
-      company: "McKinsey & Company",
-      visitorType: "client",
-      mobile: "+91 98200 44211",
-      hostName: "Ravi Mehta",
-      tenantName: "Godrej Capital",
-      purpose: "Q3 Asset Advisory & Portfolio Strategy",
-      visitStart: "2026-09-19T09:00:00.000Z",
-      visitEnd: "2026-09-19T17:00:00.000Z",
-      approvalStatus: "approved",
-      checkinAt: "2026-09-19T09:15:00.000Z",
-      checkoutAt: null,
-      status: "checked_in",
-      zone: "Floor 14 - Executive Suite",
-      passId: "PASS-QR-88910",
-      riskLevel: "low",
-      vehicle: "MH-02-CB-9081",
-      evacuationStatus: "SAFE"
-    },
-    {
-      id: "v-1002",
-      visitorName: "Ananya Deshmukh",
-      company: "Deloitte India",
-      visitorType: "interview_candidate",
-      mobile: "+91 97690 12890",
-      hostName: "Priya Sharma",
-      tenantName: "Apex Ventures",
-      purpose: "Senior Financial Analyst Round 2",
-      visitStart: "2026-09-19T14:30:00.000Z",
-      visitEnd: "2026-09-19T16:30:00.000Z",
-      approvalStatus: "approved",
-      checkinAt: null,
-      checkoutAt: null,
-      status: "pre_registered",
-      zone: "Floor 6 - Boardroom B",
-      passId: "PASS-QR-88911",
-      riskLevel: "low",
-      vehicle: null,
-      evacuationStatus: "UNACCOUNTED"
-    },
-    {
-      id: "v-1003",
-      visitorName: "Ramesh Pawar",
-      company: "Voltas MEP Services",
-      visitorType: "contractor",
-      mobile: "+91 99300 88712",
-      hostName: "Kailash Verma (FM)",
-      tenantName: "Building Management",
-      purpose: "AHU Filter Replacement & Pressure Test",
-      visitStart: "2026-09-19T08:00:00.000Z",
-      visitEnd: "2026-09-19T11:00:00.000Z",
-      approvalStatus: "approved",
-      checkinAt: "2026-09-19T08:15:00.000Z",
-      checkoutAt: null,
-      status: "overstay", // Overstay BR-V06
-      zone: "Basement 1 - Chiller Plant",
-      passId: "PASS-QR-88912",
-      riskLevel: "medium",
-      isOverstay: true,
-      vehicle: "MH-04-TR-4412",
-      evacuationStatus: "UNACCOUNTED"
-    },
-    {
-      id: "v-1004",
-      visitorName: "Suresh Kumar",
-      company: "BlueDart Express",
-      visitorType: "delivery",
-      mobile: "+91 98199 66543",
-      hostName: "Mailroom Desk",
-      tenantName: "Tata Consultancy Services",
-      purpose: "Legal Contracts Delivery (Ref: BD-4491)",
-      visitStart: "2026-09-19T10:00:00.000Z",
-      visitEnd: "2026-09-19T11:00:00.000Z",
-      approvalStatus: "approved",
-      checkinAt: "2026-09-19T10:15:00.000Z",
-      checkoutAt: "2026-09-19T10:45:00.000Z",
-      status: "checked_out",
-      zone: "Ground Floor Mailroom",
-      passId: "PASS-QR-88913",
-      riskLevel: "low",
-      vehicle: "MH-01-BK-2201",
-      evacuationStatus: "SAFE"
-    },
-    {
-      id: "v-1005",
-      visitorName: "Aditya Singhania",
-      company: "Singhania Holdings",
-      visitorType: "vip",
-      mobile: "+91 98210 99999",
-      hostName: "Chairman Office",
-      tenantName: "Prestige Group",
-      purpose: "Board Advisory Briefing",
-      visitStart: "2026-09-19T16:00:00.000Z",
-      visitEnd: "2026-09-19T18:00:00.000Z",
-      approvalStatus: "pending", // VC-03
-      checkinAt: null,
-      checkoutAt: null,
-      status: "pending_approval",
-      zone: "Penthouse Level",
-      passId: "PASS-QR-88914",
-      riskLevel: "low",
-      vehicle: "MH-01-DD-0001",
-      evacuationStatus: "UNACCOUNTED"
-    }
-  ]);
-
-  // Watchlist (VC-14)
-  const [watchlistEntries, setWatchlistEntries] = useState([
-    { id: "WL-01", name: "Kunal Singhal", identifier: "+91 98200 00099", reason: "Unauthorized commercial photography attempt; barred from premises.", activeFrom: "2026-06-01", status: "active" },
-    { id: "WL-02", name: "Apex Facade Agency (Blacklisted sub-vendor)", identifier: "Apex Facade", reason: "Repeated safety violations on height work without harness.", activeFrom: "2026-08-10", status: "active" }
-  ]);
+  // Data Store (Live Persistent Backend Engine)
+  const [visitsList, setVisitsList] = useState<any[]>([]);
+  const [watchlistEntries, setWatchlistEntries] = useState<any[]>([]);
 
   // Reception check-in state (VC-04)
   const [scannedPassCode, setScannedPassCode] = useState("");
   const [receptionMatch, setReceptionMatch] = useState<any | null>(null);
   const [speedGateActive, setSpeedGateActive] = useState(false);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
@@ -194,6 +96,49 @@ export default function VisitorManagementConsole({
       console.error("Failed to load visits:", err);
     } finally {
       setIsLoading(false);
+      setHasLoadedInitial(true);
+    }
+  };
+
+  const handleAddWatchlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWatchlist.name || !newWatchlist.identifier || !newWatchlist.reason) {
+      showToast("Please fill in name, identifier, and restriction reason.", "error");
+      return;
+    }
+    try {
+      const res = await fetch("/api/v1/visits/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newWatchlist)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("✓ Identity added to active security watchlist.", "success");
+        setShowAddWatchlistModal(false);
+        setNewWatchlist({ name: "", identifier: "", reason: "", riskLevel: "HIGH" });
+        await fetchVisits();
+      } else {
+        showToast(data.error || "Failed to add to watchlist", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to add to watchlist", "error");
+    }
+  };
+
+  const handleRemoveWatchlist = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/visits/watchlist?id=${encodeURIComponent(id)}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        showToast("Entry removed from watchlist.", "info");
+        await fetchVisits();
+      } else {
+        showToast("Failed to remove watchlist entry", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Error removing watchlist entry", "error");
     }
   };
 
@@ -202,7 +147,8 @@ export default function VisitorManagementConsole({
   }, [searchTerm]);
 
   useEffect(() => {
-    if (portalRole === "tenant" && typeof window !== "undefined") {
+    if (currentRole === "tenant" && typeof window !== "undefined") {
+
       const b = localStorage.getItem("officex_tenant_building");
       if (b) setSelectedProperty(b);
       const myUser = localStorage.getItem("officex_user_name") || "Tenant Lead";
@@ -403,26 +349,106 @@ export default function VisitorManagementConsole({
         </div>
       )}
 
-      {/* Top Banner & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+      {/* Institutional Module & Role Header */}
+      <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#0F8B7D] border border-teal-200">
-              INSTITUTIONAL SAAS CORE · VC-01 TO VC-15
+            <span className="text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 px-2.5 py-0.5 rounded-full border border-teal-500/30">
+              OFFICEX UNIFIED SAAS CORE · {activeModule === "visitors" ? "VC-01 TO VC-15" : "CM-01 TO CM-16"}
             </span>
-            <span className="text-xs font-bold text-slate-400">|</span>
-            <span className="text-xs font-bold text-slate-600">{selectedProperty}</span>
+            <span className="text-xs text-slate-400 font-bold">|</span>
+            <span className="text-xs font-bold text-slate-200">{selectedProperty}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-            Visitor Flow &amp; Speed-Gate Access Console
+          <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight mt-1">
+            {activeModule === "visitors"
+              ? "Touchless Visitor Flow & Optical Speed-Gate Console"
+              : "Statutory Compliance Operations Center & 52-Week Audit Vault"}
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Pre-registration, optical turnstile relay, real-time live occupancy, and emergency roll-call.
+          <p className="text-xs text-slate-400 mt-0.5">
+            {activeModule === "visitors"
+              ? "Gunnebo & Boon Edam optical relays, 18-second transit, WhatsApp QR passes, and live inside occupancy."
+              : "Fire NOC, Lift licenses, SPCB consent, CEIG substation, evidence verification, and CAPA workflows."}
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Module Switcher */}
+          <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+            <button
+              type="button"
+              onClick={() => setActiveModule("visitors")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeModule === "visitors" ? "bg-[#0D7B6C] text-white shadow-xs" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Users size={13} />
+              <span>Visitor Flow</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveModule("compliance")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeModule === "compliance" ? "bg-[#0D7B6C] text-white shadow-xs" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <ShieldCheck size={13} />
+              <span>Statutory Compliance</span>
+            </button>
+          </div>
+
+          {/* Role Switcher */}
+          <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+            <span className="text-[10px] font-bold text-slate-400 px-2 uppercase">Role:</span>
+            {[
+              { role: "security", label: "Security & Gates", tab: "reception" },
+              { role: "fm", label: "FM & Safety", tab: "dashboard" },
+              { role: "admin", label: "Asset Owner", tab: "dashboard" },
+              { role: "tenant", label: "Tenant Host", tab: "preregister" }
+            ].map((r) => (
+              <button
+                key={r.role}
+                type="button"
+                onClick={() => {
+                  setCurrentRole(r.role as any);
+                  setActiveTab(r.tab as any);
+                  showToast(`Operational view switched to ${r.label}.`, "info");
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  currentRole === r.role ? "bg-white text-slate-900 shadow-xs" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {activeModule === "compliance" ? (
+        <ComplianceOperationsCenter
+          portalRole={currentRole === "admin" ? "owner" : "fm"}
+          defaultProperty={selectedProperty}
+        />
+      ) : (
+        <>
+
+
+      {/* Action Strip: Emergency Declare, Refresh, Pre-register */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs font-bold text-slate-700">
+            Optical Barrier Gates: <strong>6 Turnstiles Synced</strong>
+          </span>
+          <span className="text-xs text-slate-400">·</span>
+          <span className="text-xs text-slate-500 font-medium">
+            Active Occupancy: <strong className="text-slate-900">{insideCount} Guests</strong> Inside
+          </span>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
+            type="button"
             onClick={async () => {
               const next = !activeEmergencyAlert;
               setActiveEmergencyAlert(next);
@@ -452,6 +478,7 @@ export default function VisitorManagementConsole({
           </button>
 
           <button
+            type="button"
             onClick={() => fetchVisits()}
             disabled={isLoading}
             className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -460,6 +487,7 @@ export default function VisitorManagementConsole({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab("preregister")}
             className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
@@ -467,6 +495,7 @@ export default function VisitorManagementConsole({
           </button>
         </div>
       </div>
+
 
       {/* Optical Speed-Gate Pulse Simulation Banner */}
       {speedGateActive && (
@@ -783,21 +812,27 @@ export default function VisitorManagementConsole({
               {/* Sample QR Codes for quick demo */}
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
-                  1-Click Test Scanners
+                  1-Click Test Optical Scanners
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => { setScannedPassCode("PASS-QR-88911"); setReceptionMatch(visitsList[1]); }}
-                    className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 hover:border-teal-400 cursor-pointer"
-                  >
-                    Scan Ananya Deshmukh (Interview)
-                  </button>
-                  <button
-                    onClick={() => { setScannedPassCode("PASS-QR-88910"); setReceptionMatch(visitsList[0]); }}
-                    className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 hover:border-teal-400 cursor-pointer"
-                  >
-                    Scan Vikram Malhotra (Client)
-                  </button>
+                  {visitsList.slice(0, 3).map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        setScannedPassCode(v.passId || v.mobile);
+                        setReceptionMatch(v);
+                        showToast(`Scanner read pass for ${v.visitorName} (${v.passId})`, "info");
+                      }}
+                      className="px-2.5 py-1 bg-white border border-slate-200 hover:border-teal-400 rounded-lg text-[11px] font-bold text-slate-700 cursor-pointer shadow-2xs transition-all flex items-center gap-1.5"
+                    >
+                      <QrCode size={12} className="text-teal-600" />
+                      <span>Scan {v.visitorName} ({v.passId})</span>
+                    </button>
+                  ))}
+                  {visitsList.length === 0 && (
+                    <span className="text-xs text-slate-400 italic">No pre-registered visitors available. Register one below.</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -815,69 +850,124 @@ export default function VisitorManagementConsole({
               <h3 className="text-sm font-black text-slate-900">Walk-In Instant Registration (VC-05)</h3>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Fast registration for unscheduled visitors with instant host ping.
+              Fast registration for unscheduled visitors with instant optical speed-gate admission.
             </p>
 
-            <form onSubmit={e => {
-              e.preventDefault();
-              const name = (e.target as any).walkinName.value;
-              const mobile = (e.target as any).walkinMobile.value;
-              const host = (e.target as any).walkinHost.value;
-              if (!name || !mobile) {
-                showToast("Please enter walk-in visitor name and mobile.", "error");
-                return;
-              }
-              const newWalkin = {
-                id: `v-walk-${Date.now()}`,
-                visitorName: name,
-                company: "Walk-in Guest",
-                visitorType: "guest",
-                mobile,
-                hostName: host,
-                tenantName: "Commercial Occupier",
-                purpose: "Unscheduled Walk-In",
-                visitStart: new Date().toISOString(),
-                visitEnd: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-                approvalStatus: "approved",
-                checkinAt: new Date().toISOString(),
-                checkoutAt: null,
-                status: "checked_in",
-                zone: "Ground Floor Lobby & Host Floor",
-                passId: `PASS-WALK-${Math.floor(1000 + Math.random() * 9000)}`,
-                riskLevel: "low",
-                evacuationStatus: "UNACCOUNTED"
-              };
-              setVisitsList(prev => [newWalkin, ...prev]);
-              showToast(`Walk-in visitor ${name} registered & checked in!`, "success");
-              setSelectedVisitForBadge(newWalkin);
-              (e.target as any).reset();
-            }} className="space-y-3">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formEl = e.currentTarget;
+                const name = ((formEl.elements.namedItem("walkinName") as HTMLInputElement)?.value || "").trim();
+                const mobile = ((formEl.elements.namedItem("walkinMobile") as HTMLInputElement)?.value || "").trim();
+                const company = ((formEl.elements.namedItem("walkinCompany") as HTMLInputElement)?.value || "").trim() || "Independent Visitor";
+                const host = ((formEl.elements.namedItem("walkinHost") as HTMLSelectElement)?.value || "Ravi Mehta (Godrej Capital)");
+
+                if (!name || !mobile) {
+                  showToast("Please enter walk-in visitor name and mobile number.", "error");
+                  return;
+                }
+
+                try {
+                  const now = new Date();
+                  const hostName = host.split(" (")[0] || host;
+                  const tenantName = host.includes("(") ? host.split("(")[1].replace(")", "") : "Commercial Tenant";
+
+                  const res = await fetch("/api/v1/visits", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      visitorName: name,
+                      company,
+                      visitorType: "guest",
+                      mobile,
+                      hostName,
+                      tenantName,
+                      purpose: "Unscheduled Walk-In Guest",
+                      visitStart: now.toISOString(),
+                      visitEnd: new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString(),
+                      accessZone: "Floor 6 & Executive Suites",
+                      requiresApproval: false,
+                      propertyId: "prop-001",
+                      propertyName: selectedProperty
+                    })
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) {
+                    showToast(data.error || "Walk-in registration failed", "error");
+                    return;
+                  }
+
+                  if (data.watchlistHit) {
+                    showToast("🚨 SECURITY WARNING: Visitor is on active watchlist. Barred from admission.", "error");
+                    return;
+                  }
+
+                  // Automatically check in the walk-in guest and pulse the speed-gate!
+                  if (data.visit?.id) {
+                    await handleCheckIn(data.visit.id);
+                    setSelectedVisitForBadge(data.visit);
+                  }
+
+                  showToast(`✓ Walk-in guest ${name} admitted! Gunnebo turnstile pulse issued.`, "success");
+                  formEl.reset();
+                  await fetchVisits();
+                } catch (err: any) {
+                  showToast(err.message || "Failed to process walk-in", "error");
+                }
+              }}
+              className="space-y-3"
+            >
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Visitor Name</label>
-                <input name="walkinName" placeholder="Full legal name" className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]" />
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Visitor Full Name *</label>
+                <input
+                  required
+                  name="walkinName"
+                  placeholder="e.g. Anand Mahindra"
+                  className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                />
               </div>
+
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Mobile Number</label>
-                  <input name="walkinMobile" placeholder="+91 98..." className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]" />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Mobile Number *</label>
+                  <input
+                    required
+                    name="walkinMobile"
+                    placeholder="+91 98200..."
+                    className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                  />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Host Tenant</label>
-                  <select name="walkinHost" className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]">
-                    <option>Ravi Mehta (Godrej Capital)</option>
-                    <option>Priya Sharma (Apex Ventures)</option>
-                    <option>Anita Saxena (TCS Lead)</option>
-                    <option>Building Management (FM)</option>
-                  </select>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Company / Org</label>
+                  <input
+                    name="walkinCompany"
+                    placeholder="Guest company"
+                    className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Host Tenant &amp; Executive</label>
+                <select
+                  name="walkinHost"
+                  className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
+                >
+                  <option>Ravi Mehta (Godrej Capital)</option>
+                  <option>Priya Sharma (Apex Ventures)</option>
+                  <option>Anita Saxena (TCS Lead)</option>
+                  <option>Kailash Verma (Building Management FM)</option>
+                </select>
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black cursor-pointer shadow-xs"
+                  className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7368] text-white text-xs font-black cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5"
                 >
-                  Register &amp; Check In Walk-In
+                  <UserCheck size={14} />
+                  <span>Register, Issue Pass &amp; Pulse Speed-Gate</span>
                 </button>
               </div>
             </form>
@@ -1320,7 +1410,7 @@ export default function VisitorManagementConsole({
       )}
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {/* TAB 8: WATCHLIST MANAGEMENT (VC-14)                                       */}
+      {/* TAB 8: WATCHLIST MANAGEMENT (VC-14, BR-V10)                               */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {activeTab === "watchlist" && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
@@ -1330,39 +1420,141 @@ export default function VisitorManagementConsole({
               <p className="text-xs text-slate-500">Security list of restricted identities with automated check-in block (BR-V10).</p>
             </div>
             <button
-              onClick={() => {
-                const name = prompt("Enter Name or Company to block:");
-                const idRef = prompt("Enter Phone number or registration:");
-                const reason = prompt("Enter reason for restriction:");
-                if (name && reason) {
-                  setWatchlistEntries(prev => [...prev, { id: `WL-0${prev.length + 1}`, name, identifier: idRef || name, reason, activeFrom: new Date().toISOString(), status: "active" }]);
-                  showToast("Identity added to security watchlist.", "info");
-                }
-              }}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold cursor-pointer"
+              type="button"
+              onClick={() => setShowAddWatchlistModal(true)}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5"
             >
-              + Add to Watchlist
+              <Plus size={14} /> Add Restricted Identity
             </button>
           </div>
 
           <div className="space-y-3">
             {watchlistEntries.map(w => (
-              <div key={w.id} className="p-4 rounded-xl border border-red-200 bg-red-50/50 flex items-center justify-between">
+              <div key={w.id} className="p-4 rounded-xl border border-red-200 bg-red-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-sm text-red-950">{w.name}</span>
                     <span className="text-[10px] font-mono text-red-800 bg-red-200/70 px-2 py-0.5 rounded">
                       Ref: {w.identifier}
                     </span>
+                    <span className="text-[10px] font-black uppercase bg-red-600 text-white px-2 py-0.5 rounded">
+                      {w.riskLevel || "CRITICAL"} RISK
+                    </span>
                   </div>
                   <p className="text-xs text-red-900 font-medium mt-1">Reason: {w.reason}</p>
-                  <p className="text-[10px] text-red-700 mt-0.5">Active since: {w.activeFrom}</p>
+                  <p className="text-[10px] text-red-700 mt-0.5">Active since: {w.activeFrom} · Flagged by: {w.flaggedBy || "Security Desk"}</p>
                 </div>
-                <span className="text-[10px] font-black uppercase bg-red-600 text-white px-2.5 py-1 rounded-full">
-                  AUTO-BLOCK ACTIVE
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase bg-red-100 text-red-800 border border-red-300 px-2.5 py-1 rounded-full">
+                    AUTO-BLOCK ACTIVE
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveWatchlist(w.id)}
+                    className="p-1.5 rounded-lg border border-red-300 hover:bg-red-100 text-red-700 text-xs font-bold cursor-pointer"
+                    title="Remove from watchlist"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
+            {watchlistEntries.length === 0 && (
+              <div className="p-8 text-center text-slate-500 border border-dashed rounded-xl">
+                <ShieldCheck size={32} className="mx-auto text-teal-600 mb-2" />
+                <p className="text-xs font-bold text-slate-700">Watchlist is clear</p>
+                <p className="text-[11px] text-slate-400">Zero active security restrictions on file.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: ADD WATCHLIST ENTRY (VC-14)                                        */}
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {showAddWatchlistModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-red-700 font-black text-sm">
+                <ShieldAlert size={18} />
+                <span>Add Identity to Security Watchlist</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddWatchlistModal(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddWatchlist} className="space-y-3.5 mt-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Individual / Vendor Name *</label>
+                <input
+                  required
+                  value={newWatchlist.name}
+                  onChange={e => setNewWatchlist({ ...newWatchlist, name: e.target.value })}
+                  placeholder="e.g. Kunal Singhal or Sub-vendor name"
+                  className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Phone / Reg ID / Email *</label>
+                <input
+                  required
+                  value={newWatchlist.identifier}
+                  onChange={e => setNewWatchlist({ ...newWatchlist, identifier: e.target.value })}
+                  placeholder="+91 98200... or GSTIN / Company"
+                  className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Restriction Reason *</label>
+                <textarea
+                  required
+                  value={newWatchlist.reason}
+                  onChange={e => setNewWatchlist({ ...newWatchlist, reason: e.target.value })}
+                  placeholder="Reason for barring entry e.g. Unauthorized access, safety violation..."
+                  className="mt-1 w-full h-20 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Risk Level</label>
+                <select
+                  value={newWatchlist.riskLevel}
+                  onChange={e => setNewWatchlist({ ...newWatchlist, riskLevel: e.target.value as any })}
+                  className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white"
+                >
+                  <option value="CRITICAL">CRITICAL (Immediate Turnstile Barricade)</option>
+                  <option value="HIGH">HIGH (Escalate to Security Officer)</option>
+                  <option value="MEDIUM">MEDIUM (Escort Mandatory)</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddWatchlistModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl cursor-pointer shadow-xs"
+                >
+                  Add to Active Watchlist
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1376,11 +1568,12 @@ export default function VisitorManagementConsole({
             <div className="bg-gradient-to-r from-teal-800 to-[#0F8B7D] p-5 text-white flex items-center justify-between">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded">
-                  OFFICEX PASS
+                  OFFICEX EXECUTIVE PASS
                 </span>
                 <h4 className="text-sm font-black mt-1">{selectedProperty}</h4>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedVisitForBadge(null)}
                 className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white cursor-pointer"
               >
@@ -1389,39 +1582,81 @@ export default function VisitorManagementConsole({
             </div>
 
             <div className="p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-teal-50 border-2 border-teal-500 mx-auto flex items-center justify-center text-teal-800 font-black text-xl mb-3">
-                {selectedVisitForBadge.visitorName.charAt(0)}
+              <div className="w-16 h-16 rounded-full bg-teal-50 border-2 border-teal-500 mx-auto flex items-center justify-center text-teal-800 font-black text-xl mb-3 shadow-inner">
+                {selectedVisitForBadge.visitorName?.charAt(0) || "G"}
               </div>
 
               <h3 className="text-lg font-black text-slate-900">{selectedVisitForBadge.visitorName}</h3>
               <p className="text-xs font-bold text-teal-700">{selectedVisitForBadge.company}</p>
 
+              {/* Dynamic Optical QR Code */}
               <div className="my-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl inline-block">
-                <div className="w-32 h-32 bg-white border border-slate-300 rounded-xl flex items-center justify-center font-mono text-[10px] text-slate-500 flex-col gap-1 p-2">
-                  <QrCode size={64} className="text-slate-900" />
-                  <span className="font-bold text-[9px] text-slate-900">{selectedVisitForBadge.passId}</span>
+                <div className="w-36 h-36 bg-white border border-slate-300 rounded-xl flex items-center justify-center font-mono text-[10px] text-slate-500 flex-col gap-1 p-2 mx-auto shadow-inner relative overflow-hidden">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(selectedVisitForBadge.passId || selectedVisitForBadge.id)}`}
+                    alt="Visitor QR Token"
+                    className="w-28 h-28 object-contain"
+                  />
+                  <span className="font-mono font-black text-[9px] text-slate-900 tracking-wider">
+                    {selectedVisitForBadge.passId || "PASS-QR-OFFICEX"}
+                  </span>
                 </div>
+                <span className="text-[9.5px] font-bold text-teal-700 block mt-1.5">
+                  ● Optical Turnstile Ready · 18-Sec Transit
+                </span>
               </div>
 
               <div className="text-left bg-slate-50 rounded-xl p-3 text-[11px] text-slate-600 space-y-1">
                 <p>Host: <strong className="text-slate-900">{selectedVisitForBadge.hostName}</strong> ({selectedVisitForBadge.tenantName})</p>
                 <p>Access Zone: <strong className="text-slate-900">{selectedVisitForBadge.zone}</strong></p>
-                <p>Valid On: <strong className="text-slate-900">Today, 09:00 AM – 06:00 PM</strong></p>
+                <p>Validity Window: <strong className="text-slate-900">
+                  {selectedVisitForBadge.visitStart
+                    ? `${new Date(selectedVisitForBadge.visitStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – ${new Date(selectedVisitForBadge.visitEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : "Scheduled Today"}
+                </strong></p>
               </div>
 
-              <div className="flex gap-2.5 mt-5">
-                <button
-                  onClick={() => window.print()}
-                  className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-black rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <Printer size={13} /> Print Badge
-                </button>
-                <button
-                  onClick={() => setSelectedVisitForBadge(null)}
-                  className="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
-                >
-                  Close
-                </button>
+              <div className="flex flex-col gap-2 mt-4">
+                <div className="flex gap-2">
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                      `*OFFICEX DIGITAL ACCESS PASS*\n🏢 Campus: ${selectedProperty}\n👤 Guest: ${selectedVisitForBadge.visitorName} (${selectedVisitForBadge.company || "Guest"})\n🔑 Pass Token: ${selectedVisitForBadge.passId}\n🚪 Zone: ${selectedVisitForBadge.zone}\n⏰ Window: ${new Date(selectedVisitForBadge.visitStart).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(selectedVisitForBadge.visitEnd).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}\n📍 Host: ${selectedVisitForBadge.hostName} · ${selectedVisitForBadge.tenantName}\n\nPresent this digital pass at the reception optical turnstile reader for contactless 18-second transit.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                  >
+                    <Smartphone size={14} /> WhatsApp Pass
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText?.(
+                        `https://www.officex.pro/operate/visitors?pass=${selectedVisitForBadge.passId}`
+                      );
+                      showToast("Digital pass link copied to clipboard!", "success");
+                    }}
+                    className="px-3.5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-black rounded-xl cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    <Printer size={13} /> Print Thermal Badge
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVisitForBadge(null)}
+                    className="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1448,12 +1683,14 @@ export default function VisitorManagementConsole({
 
             <div className="flex gap-2 justify-end mt-4">
               <button
+                type="button"
                 onClick={() => setSelectedVisitForApproval(null)}
                 className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => handleApprovalDecision("rejected")}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl cursor-pointer shadow-xs"
               >
@@ -1467,3 +1704,4 @@ export default function VisitorManagementConsole({
     </div>
   );
 }
+

@@ -9,8 +9,9 @@ export async function GET(req: Request) {
     const db = getVisitorComplianceDb();
     let risks = db.risks || [];
 
-    if (propertyId && propertyId !== "ALL") {
-      risks = risks.filter(r => !r.propertyId || r.propertyId === propertyId);
+    if (propertyId && propertyId !== "ALL" && propertyId !== "Commercial Asset") {
+      const p = propertyId.toLowerCase().trim();
+      risks = risks.filter(r => !r.propertyId || r.propertyId.toLowerCase() === p || r.propertyId === "prop-001" || p.includes("devasya") || p.includes("commercial"));
     }
 
     return NextResponse.json({

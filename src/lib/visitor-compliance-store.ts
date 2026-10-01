@@ -1265,8 +1265,13 @@ export function getComplianceScorecardAndObligations(filters?: {
   const db = getVisitorComplianceDb();
   let list = db.obligations || [];
 
-  if (filters?.propertyId && filters.propertyId !== "ALL") {
-    list = list.filter(o => !o.propertyId || o.propertyId === filters.propertyId);
+  if (filters?.propertyId && filters.propertyId !== "ALL" && filters.propertyId !== "Commercial Asset") {
+    const pId = filters.propertyId.toLowerCase().trim();
+    list = list.filter(o => 
+      !o.propertyId || 
+      o.propertyId.toLowerCase() === pId ||
+      (o.propertyName && (o.propertyName.toLowerCase().includes(pId) || pId.includes(o.propertyName.toLowerCase())))
+    );
   }
 
   if (filters?.category && filters.category !== "all") {

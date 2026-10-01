@@ -172,8 +172,8 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   const showAddExpense = activeTab === "pnl";
   const showAddTenant = activeTab === "tenants";
   const showAlerts = activeTab === "dashboard" || activeTab === "rentroll" || activeTab === "invoices" || activeTab === "aging" || activeTab === "escalations";
-  const showStatusFilter = activeTab === "rentroll";
-  const showLeaseSearch = activeTab === "rentroll";
+  const showStatusFilter = activeTab !== "rentroll" && activeTab !== "dictionary";
+  const showLeaseSearch = activeTab !== "rentroll" && activeTab !== "dictionary";
 
   // Active property name calculation
   const currentSelectedProp = properties.find((p) => p.id === selectedProperty);

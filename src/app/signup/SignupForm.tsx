@@ -171,15 +171,31 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
   const passwordStrength = getPasswordStrength();
 
+  const [isGoogleSession, setIsGoogleSession] = useState(false);
+
   // Sync with searchParams and localStorage (e.g. if arriving from Google OAuth)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedName = localStorage.getItem("officex_user_name");
       const savedEmail = localStorage.getItem("officex_user_email");
       const savedMobile = localStorage.getItem("officex_user_mobile");
+      const sessionActive = localStorage.getItem("officex_session_active") === "1";
       if (savedName && !fullName) setFullName(savedName);
       if (savedEmail && !email) setEmail(savedEmail);
       if (savedMobile && !mobileNumber) setMobileNumber(savedMobile);
+      if (sessionActive || savedEmail) setIsGoogleSession(true);
+
+      // Check active Supabase auth session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setIsGoogleSession(true);
+          const u = session.user;
+          const uEmail = u.email || "";
+          const uName = u.user_metadata?.full_name || u.user_metadata?.name || "";
+          if (uEmail && !email) setEmail(uEmail);
+          if (uName && !fullName) setFullName(uName);
+        }
+      }).catch(() => {});
 
       const stepParam = searchParams?.get("step");
       if (stepParam && ["1", "2", "3", "4", "5"].includes(stepParam)) {
@@ -240,26 +256,36 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
     e.preventDefault();
     setError(null);
 
-    if (!fullName.trim() || !email.trim() || !mobileNumber.trim() || !password) {
+    if (!fullName.trim() || !email.trim() || !mobileNumber.trim() || (!password && !isGoogleSession)) {
       setError("Please fill in all mandatory fields (Name, Work Email, Mobile, Password).");
       return;
     }
 
-    const cleanMobile = mobileNumber.trim();
-    const cleanDigits = cleanMobile.replace(/\D/g, "");
-    if (cleanDigits.length < 8) {
-      setError("Please enter a valid mobile number.");
+    // Clean & normalize mobile digits (extract 10-digit Indian mobile number)
+    let cleanDigits = mobileNumber.replace(/\D/g, "");
+    if (cleanDigits.startsWith("91") && cleanDigits.length === 12) {
+      cleanDigits = cleanDigits.slice(2);
+    } else if (cleanDigits.startsWith("0") && cleanDigits.length === 11) {
+      cleanDigits = cleanDigits.slice(1);
+    }
+
+    if (cleanDigits.length !== 10) {
+      setError("Please enter a valid 10-digit Indian mobile number (e.g. 98253 58618).");
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must contain at least 8 characters.");
-      return;
-    }
+    const effectivePassword = password || `GAuth-${Date.now().toString(36)}!`;
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match. Please re-enter.");
-      return;
+    if (!isGoogleSession) {
+      if (effectivePassword.length < 8) {
+        setError("Password must contain at least 8 characters.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match. Please re-enter.");
+        return;
+      }
     }
 
     if (!termsAccepted) {
@@ -276,8 +302,8 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         body: JSON.stringify({
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
-          mobileNumber: cleanMobile,
-          password: password,
+          mobileNumber: cleanDigits,
+          password: effectivePassword,
           role: selectedRole
         })
       });
@@ -285,8 +311,42 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       const data = await res.json();
 
       if (!res.ok) {
+        if (isGoogleSession && (res.status === 409 || data.error?.includes("already exists"))) {
+          // User already exists via Google OAuth - complete session and route to workspace
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_user_mobile", cleanDigits);
+            sessionStorage.setItem("officex_user_mobile", cleanDigits);
+            localStorage.setItem("officex_session_active", "1");
+            sessionStorage.setItem("officex_session_active", "1");
+            localStorage.setItem("officex_subscription", "active");
+            document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+            document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+          }
+          const destination = initialRedirect || (
+            isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
+          );
+          window.location.href = destination;
+          return;
+        }
         setError(data.error || "Registration failed. Please check your inputs.");
         setIsLoading(false);
+        return;
+      }
+
+      if (isGoogleSession) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_user_mobile", cleanDigits);
+          sessionStorage.setItem("officex_user_mobile", cleanDigits);
+          localStorage.setItem("officex_session_active", "1");
+          sessionStorage.setItem("officex_session_active", "1");
+          localStorage.setItem("officex_subscription", "active");
+          document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+          document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        }
+        const destination = initialRedirect || (
+          isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
+        );
+        window.location.href = destination;
         return;
       }
 
@@ -779,56 +839,77 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                 />
               </div>
 
-              {/* Password Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    PASSWORD *
-                  </label>
-                  <div className="relative">
-                    <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+              {/* Google OAuth Banner */}
+              {isGoogleSession && (
+                <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <CheckCircle2 size={18} className="text-[#0D7B6C] shrink-0" />
+                    <div className="truncate">
+                      <p className="font-extrabold text-slate-900 truncate">Signed In with Google</p>
+                      <p className="text-[11px] text-slate-500 font-medium truncate">{email || fullName || "Google Account"}</p>
+                    </div>
                   </div>
+                  <Link
+                    href={initialRedirect || (isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace")}
+                    className="px-3.5 py-1.5 bg-[#0D7B6C] hover:bg-[#0a6559] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs whitespace-nowrap self-start sm:self-auto cursor-pointer transition-all"
+                  >
+                    <span>Open Workspace →</span>
+                  </Link>
                 </div>
+              )}
 
-                <div>
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    CONFIRM PASSWORD *
-                  </label>
-                  <div className="relative">
-                    <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+              {/* Password Fields (Only for manual credentials) */}
+              {!isGoogleSession && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                      PASSWORD *
+                    </label>
+                    <div className="relative">
+                      <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                      CONFIRM PASSWORD *
+                    </label>
+                    <div className="relative">
+                      <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Password Strength Meter */}
               {password && (
@@ -880,7 +961,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                   </>
                 ) : (
                   <>
-                    <span>Create Account & Verify Contact</span>
+                    <span>{isGoogleSession ? "Save Contact & Open Workspace" : "Create Account & Verify Contact"}</span>
                     <ArrowRight size={15} />
                   </>
                 )}

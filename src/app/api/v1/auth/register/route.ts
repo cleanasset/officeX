@@ -18,7 +18,14 @@ export async function POST(req: Request) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanMobile = mobileNumber.replace(/\D/g, "");
+    let cleanMobile = mobileNumber.replace(/\D/g, "");
+
+    // Strip country code 91 if present (e.g. +91 9825358618 -> 919825358618 -> 9825358618)
+    if (cleanMobile.startsWith("91") && cleanMobile.length === 12) {
+      cleanMobile = cleanMobile.slice(2);
+    } else if (cleanMobile.startsWith("0") && cleanMobile.length === 11) {
+      cleanMobile = cleanMobile.slice(1);
+    }
 
     if (cleanMobile.length !== 10) {
       return NextResponse.json(
