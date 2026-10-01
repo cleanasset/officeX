@@ -64,6 +64,7 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
   const [webhookTestResult, setWebhookTestResult] = useState<{
     success: boolean;
     statusCode?: number;
+    statusText?: string;
     latencyMs?: number;
     message?: string;
     error?: string;
@@ -927,7 +928,7 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
                       <span>
                         {webhookTestResult.success
                           ? `✓ Webhook Delivered (HTTP ${webhookTestResult.statusCode || 200})`
-                          : `✕ Webhook Failed (${webhookTestResult.statusText || "Unreachable"})`}
+                          : `✕ Webhook Failed (${webhookTestResult.statusText || (webhookTestResult.statusCode ? `HTTP ${webhookTestResult.statusCode}` : "Unreachable")})`}
                       </span>
                       {webhookTestResult.latencyMs && (
                         <span className="ml-auto text-[10px] font-mono text-slate-500 font-normal">

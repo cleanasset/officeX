@@ -46,6 +46,7 @@ export default function IntegrationsPage() {
   const [settlementMode, setSettlementMode] = useState<"direct_bank" | "razorpay_route" | "byo_gateway">("direct_bank");
   const [customKeyId, setCustomKeyId] = useState("");
   const [customKeySecret, setCustomKeySecret] = useState("");
+  const [routeAccountId, setRouteAccountId] = useState("acc_ApexRealty_001");
   const [isSavedBank, setIsSavedBank] = useState(false);
   const [isSavingSettlement, setIsSavingSettlement] = useState(false);
 
