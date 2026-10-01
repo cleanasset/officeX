@@ -75,10 +75,11 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "CAM Pools & True-Up", href: "/properties/rent-roll?tab=cam-pools", tabKey: "cam-pools", icon: Sparkles },
         { name: "Tenant Directory & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
         { name: "Financial Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
-        { name: "Accounting & ERP Sync", href: "/properties/rent-roll?tab=integrations", tabKey: "integrations", icon: Zap },
+        { name: "Accounting & ERP Sync", href: "/properties/integrations", tabKey: "integrations", icon: Zap },
         { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
+    { name: "Accounting & Integrations", href: "/properties/integrations", icon: Zap, badge: "Tally / Zoho" },
     { name: "Visitor Management", href: "/properties/visitors", icon: Users },
     { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
   ],
@@ -146,6 +147,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   admin: [
     { name: "Governance Console", href: "/admin", icon: Shield },
     { name: "KYC & Vetting", href: "/admin/kyc", icon: ShieldCheck },
+    { name: "Accounting & ERP Sync", href: "/properties/integrations", icon: Zap },
     { name: "Razorpay Escrow Control", href: "/admin/escrow", icon: DollarSign },
     { name: "Platform Users", href: "/admin/users", icon: Users },
     { name: "System Audit Logs", href: "/admin/audit", icon: FileText }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getRentRollDb, saveRentRollDb, recordAuditLog, LeaseEntity } from "@/lib/rent-roll-store";
-import { computeFullLeaseSummary, generateContractRentSteps } from "@/lib/rent-roll-engine";
+import { computeFullLeaseSummary, generateContractRentSteps, calculateInvoice } from "@/lib/rent-roll-engine";
 
 export async function GET(req: Request) {
   try {
@@ -591,6 +591,89 @@ export async function POST(req: Request) {
     }
 
     db.leases.unshift(newLease);
+
+    // Auto-generate current month's opening invoice so tenant & owner can immediately view, settle, and pay it
+    try {
+      const today = new Date();
+      const invoiceDateStr = today.toISOString().split('T')[0];
+      const dueDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const dueDateStr = dueDate.toISOString().split('T')[0];
+      const fyYear = today.getMonth() >= 3 ? `${today.getFullYear()}-${today.getFullYear() + 1}` : `${today.getFullYear() - 1}-${today.getFullYear()}`;
+      const invNum = `INV-${today.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const calc = calculateInvoice({
+        baseRent: newLease.monthlyRent,
+        camCharges: newLease.camMonthly || 0,
+        utilityCharges: newLease.utilityFixedMonthly || 0,
+        otherCharges: newLease.otherChargesMonthly || 0,
+        gstRate: newLease.gstRate || 18,
+        tdsRate: newLease.tdsRate || 10,
+        dueDate: dueDateStr,
+        amountPaid: 0
+      });
+
+      const initialInvoice: any = {
+        id: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        orgId: db.organization.id,
+        billingEntityId: newLease.billingEntityId || db.billingEntities[0]?.id || "",
+        clientAccountId: newLease.clientAccountId || "CA-SELF",
+        leaseId: newLease.id,
+        leaseCode: newLease.leaseCode,
+        propertyId: newLease.propertyId,
+        propertyName: newLease.propertyName,
+        tenantId: newLease.tenantId,
+        tenantName: newLease.tenantName,
+        invoiceNumber: invNum,
+        fyYear,
+        invoiceDate: invoiceDateStr,
+        dueDate: dueDateStr,
+        periodStart: invoiceDateStr,
+        periodEnd: dueDateStr,
+        invoiceType: "consolidated",
+        baseRent: newLease.monthlyRent,
+        camCharges: newLease.camMonthly || 0,
+        utilityCharges: newLease.utilityFixedMonthly || 0,
+        otherCharges: newLease.otherChargesMonthly || 0,
+        subtotal: calc.subtotal,
+        gstRate: 18,
+        gstAmount: calc.gstAmount,
+        grossTotal: calc.grossTotal,
+        tdsDeducted: calc.tdsDeducted,
+        netPayable: calc.netPayable,
+        amountPaid: 0,
+        balanceDue: calc.netPayable,
+        status: "issued",
+        lineItems: [
+          {
+            id: `LINE-${Date.now()}-1`,
+            chargeType: "base_rent",
+            description: `Commercial Office Rent — ${newLease.unitNumber}`,
+            quantity: newLease.chargeableArea,
+            rate: newLease.baseRentPsf,
+            amount: newLease.monthlyRent,
+            gstRate: 18,
+            sacCode: "997212"
+          },
+          ...(newLease.camMonthly ? [{
+            id: `LINE-${Date.now()}-2`,
+            chargeType: "cam",
+            description: "Common Area Maintenance (CAM)",
+            quantity: newLease.chargeableArea,
+            rate: newLease.camRatePsf,
+            amount: newLease.camMonthly,
+            gstRate: 18,
+            sacCode: "997212"
+          }] : [])
+        ],
+        createdAt: new Date().toISOString()
+      };
+
+      if (!db.invoices) db.invoices = [];
+      db.invoices.unshift(initialInvoice);
+    } catch (invErr) {
+      console.warn("Auto-invoice creation note:", invErr);
+    }
+
     saveRentRollDb(db);
 
     recordAuditLog({

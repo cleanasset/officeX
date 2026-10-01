@@ -70,7 +70,18 @@ export default function RentPaymentGateway() {
   const fetchTenantData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/tenant/invoices");
+      let queryParam = "";
+      if (typeof window !== "undefined") {
+        const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
+        const storedOrg = localStorage.getItem("officex_active_org") || sessionStorage.getItem("officex_active_org") || "";
+        const params = new URLSearchParams();
+        if (storedEmail) params.set("email", storedEmail);
+        if (storedOrg) params.set("name", storedOrg);
+        if (params.toString()) {
+          queryParam = `?${params.toString()}`;
+        }
+      }
+      const res = await fetch(`/api/tenant/invoices${queryParam}`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data.invoices || []);

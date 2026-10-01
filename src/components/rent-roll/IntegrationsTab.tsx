@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Server,
   Cloud,
@@ -20,7 +21,10 @@ import {
   Settings2,
   Activity,
   ArrowRight,
-  Code2
+  Code2,
+  BookOpen,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 
 interface IntegrationsTabProps {
@@ -32,7 +36,8 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({
   organizationName = "Commercial Asset SPV",
   onRefresh
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<"tally" | "zoho" | "sap" | "logs">("tally");
+  const [activeSubTab, setActiveSubTab] = useState<"tally" | "zoho" | "sap" | "guides" | "logs">("tally");
+  const [openGuide, setOpenGuide] = useState<string>("tally-step-by-step");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Tally Live State
@@ -240,8 +245,15 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({
           </p>
         </div>
 
-        {/* Status Badges */}
+        {/* Status Badges & Fullscreen Link */}
         <div className="flex flex-wrap lg:flex-col gap-2 shrink-0">
+          <Link
+            href="/properties/integrations"
+            className="px-3.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold flex items-center justify-between gap-2 transition-colors border border-white/20"
+          >
+            <span>Open Dedicated ERP Hub</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
           <div className="px-3 py-1.5 bg-white/10 rounded-xl border border-white/15 text-xs flex items-center justify-between gap-3">
             <span className="text-slate-300 text-[11px] font-bold">Tally Prime:</span>
             <span className="px-2 py-0.5 rounded font-mono text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -283,6 +295,19 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({
         >
           <Cloud className="w-4 h-4" />
           <span>Zoho Books (Cloud API)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("guides")}
+          className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+            activeSubTab === "guides"
+              ? "bg-indigo-600 text-white shadow-xs font-black"
+              : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200"
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-indigo-500" />
+          <span>Detailed Setup Guides &amp; Steps</span>
         </button>
 
         <button
@@ -812,6 +837,165 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ──── TAB 5: STEP-BY-STEP GUIDES ──── */}
+      {activeSubTab === "guides" && (
+        <div className="space-y-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
+            <div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-800 border border-indigo-200">
+                Official Integration Documentation
+              </span>
+              <h3 className="text-base font-extrabold text-slate-900 mt-2">
+                Detailed Steps &amp; Explanation: How to Connect Accounting Software
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Follow these exact steps to configure Tally Prime and Zoho Books with OfficeX.
+              </p>
+            </div>
+
+            {/* Accordion 1: Tally Prime Complete Setup */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setOpenGuide(openGuide === "tally-step-by-step" ? "" : "tally-step-by-step")}
+                className="w-full p-4 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="text-xs md:text-sm font-extrabold text-slate-900">
+                      Tally Prime: Step-by-Step Connection &amp; XML Import Guide
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Enabling Port 9000 XML Server, ledger creation, and 2-way voucher posting
+                    </p>
+                  </div>
+                </div>
+                {openGuide === "tally-step-by-step" ? (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                )}
+              </button>
+
+              {openGuide === "tally-step-by-step" && (
+                <div className="p-4 md:p-5 bg-white space-y-4 text-xs text-slate-700 leading-relaxed border-t border-slate-200">
+                  <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950 space-y-1">
+                    <span className="font-extrabold block text-xs">Why Connect Tally Prime to OfficeX?</span>
+                    <p className="text-[11px] leading-relaxed">
+                      OfficeX automatically manages your real estate leases, escalation milestones (+5% yearly), CAM expense recoveries, and generates GST invoices on the 1st of every month. By syncing with Tally Prime, your accounts department does not need to manually re-type thousands of line items, SAC codes (997212), or calculate TDS (10%).
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <span className="font-extrabold text-slate-900 text-xs block">
+                        Step 1: Enable Tally Prime XML HTTP Server (Port 9000)
+                      </span>
+                      <p className="text-[11px] text-slate-600">
+                        1. Open <strong>Tally Prime</strong> on your desktop or office server.
+                        <br />
+                        2. Click on <strong>F1: Help</strong> in top menu (or press <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold">Alt + F12</code>).
+                        <br />
+                        3. Select <strong>Settings</strong> &gt; <strong>Connectivity</strong>.
+                        <br />
+                        4. Under <em>Client/Server configuration</em>:
+                        <br />
+                        &bull; Set <strong>&quot;TallyPrime is acting as&quot;</strong> to <strong>Both</strong> (or <strong>Server</strong>).
+                        <br />
+                        &bull; Set <strong>&quot;Enable ODBC&quot;</strong> to <strong>Yes</strong>.
+                        <br />
+                        &bull; Set <strong>&quot;Port&quot;</strong> to <strong>9000</strong>.
+                        <br />
+                        5. Press <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold">Ctrl + A</code> to save and <strong>Restart Tally Prime</strong>. Verify footer shows <code className="bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-mono font-bold">Server: Port 9000</code>.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="font-extrabold text-slate-900 text-xs block">
+                        Step 2: Setup Chart of Accounts (Ledgers) in Tally
+                      </span>
+                      <p className="text-[11px] text-slate-600">
+                        In Tally Prime, go to <strong>Gateway of Tally</strong> &gt; <strong>Masters</strong> &gt; <strong>Create</strong> &gt; <strong>Ledger</strong>. Create:
+                        <br />
+                        &bull; <strong>Commercial Rental Income</strong> (Direct Incomes, GST 18%, SAC 997212)
+                        <br />
+                        &bull; <strong>CAM Recoveries</strong> (Direct Incomes, GST 18%, SAC 997212)
+                        <br />
+                        &bull; <strong>Output CGST @ 9% &amp; Output SGST @ 9%</strong> (Duties &amp; Taxes)
+                        <br />
+                        &bull; <strong>TDS Receivable u/s 194-I</strong> (Current Assets, 10% TDS)
+                        <br />
+                        &bull; <strong>Escrow Bank Account</strong> (Bank Accounts)
+                        <br />
+                        &bull; <strong>Tenant Ledgers</strong> (Sundry Debtors with Tenant GSTIN)
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="font-extrabold text-slate-900 text-xs block">
+                        Step 3: Two Ways to Sync Vouchers
+                      </span>
+                      <p className="text-[11px] text-slate-600">
+                        <strong>Method A (Direct HTTP Push):</strong> On the Tally Prime tab, enter <code className="font-mono text-slate-800 font-bold">http://localhost:9000</code> and company name, click <strong>Test Connection</strong>, then <strong>Auto-Push Vouchers</strong>.
+                        <br />
+                        <strong>Method B (1-Click XML Import):</strong> Click <strong>Download XML Voucher File</strong>. In Tally Prime, press <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold">Alt + O</code> &gt; <strong>Transactions</strong> &gt; select XML file to import in seconds!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Accordion 2: Zoho Books Setup */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setOpenGuide(openGuide === "zoho-step-by-step" ? "" : "zoho-step-by-step")}
+                className="w-full p-4 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="text-xs md:text-sm font-extrabold text-slate-900">
+                      Zoho Books: Step-by-Step Cloud API &amp; OAuth 2.0 Integration
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Generating Developer Tokens, Organization ID, and Automated Invoicing
+                    </p>
+                  </div>
+                </div>
+                {openGuide === "zoho-step-by-step" ? (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                )}
+              </button>
+
+              {openGuide === "zoho-step-by-step" && (
+                <div className="p-4 md:p-5 bg-white space-y-4 text-xs text-slate-700 leading-relaxed border-t border-slate-200">
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-slate-600">
+                      1. Go to <a href="https://api-console.zoho.in" target="_blank" rel="noreferrer" className="text-indigo-600 underline font-bold">api-console.zoho.in</a> and create a <strong>Server-based Application</strong>.
+                      <br />
+                      2. Under <strong>Generate Code</strong>, select Scopes: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px] text-indigo-700 font-bold">ZohoBooks.invoices.CREATE, ZohoBooks.contacts.CREATE</code>.
+                      <br />
+                      3. In Zoho Books (<code className="font-mono">books.zoho.in</code>), click <strong>Settings</strong> &gt; <strong>Organization Profile</strong> to get your numeric <strong>Organization ID</strong>.
+                      <br />
+                      4. Enter both in the <strong>Zoho Books</strong> tab in OfficeX, click <strong>Authenticate Zoho Connection</strong>, then click <strong>Sync Invoices to Zoho Books</strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

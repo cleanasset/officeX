@@ -171,8 +171,8 @@ export async function POST(req: Request) {
       notes
     } = body;
 
-    if (!amountReceived || !referenceNumber || (!invoiceId && !leaseId)) {
-      return NextResponse.json({ error: "Missing required payment settlement fields" }, { status: 400 });
+    if (!amountReceived || Number(amountReceived) <= 0 || !referenceNumber || (!invoiceId && !leaseId)) {
+      return NextResponse.json({ error: "Missing or invalid payment settlement fields. Valid amount (> 0), UTR reference number, and invoice or lease are required." }, { status: 400 });
     }
 
     // Duplicate payment reference check (RR-PAY-03, UAT-34: No duplicate allocation)

@@ -18,7 +18,10 @@ import {
   Sparkles,
   Loader2,
   Check,
-  Building
+  Building,
+  DollarSign,
+  Calendar,
+  FileText
 } from "lucide-react";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
@@ -29,6 +32,14 @@ interface PropertyPreview {
   location: string;
   grade?: string;
   totalArea?: string;
+  allocatedUnits?: string;
+  monthlyRent?: number;
+  camMonthly?: number;
+  securityDeposit?: number;
+  chargeableArea?: number;
+  leaseTenureYears?: number;
+  escalationPct?: number;
+  contractDoc?: string;
   inviteCode?: string;
 }
 
@@ -41,17 +52,56 @@ function TenantJoinContent() {
   const buildingParam = searchParams?.get("building") || searchParams?.get("property") || "";
   const ownerParam = searchParams?.get("owner") || searchParams?.get("ownerName") || "";
   const locationParam = searchParams?.get("location") || "";
+  const unitsParam = searchParams?.get("units") || searchParams?.get("unit") || "";
+  const rentParam = searchParams?.get("rent") || "";
+  const camParam = searchParams?.get("cam") || "";
+  const depositParam = searchParams?.get("deposit") || "";
+  const areaParam = searchParams?.get("area") || "";
+  const tenureParam = searchParams?.get("tenure") || "";
+  const escalationParam = searchParams?.get("escalation") || "";
+  const docParam = searchParams?.get("doc") || "";
 
   const [inviteCode, setInviteCode] = useState(codeParam.toUpperCase());
   const [isVerifying, setIsVerifying] = useState(false);
-  const [previewProperty, setPreviewProperty] = useState<PropertyPreview | null>(null);
+  const [unitNumber, setUnitNumber] = useState(unitsParam || "Entire Building / All Floors");
+
+  // Agreed financial terms for the lease
+  const [agreedRent, setAgreedRent] = useState<number>(Number(rentParam) || 250000);
+  const [agreedCam, setAgreedCam] = useState<number>(Number(camParam) || 45000);
+  const [agreedDeposit, setAgreedDeposit] = useState<number>(Number(depositParam) || (Number(rentParam) || 250000) * 3);
+  const [agreedArea, setAgreedArea] = useState<number>(Number(areaParam) || 5000);
+  const [agreedTenure, setAgreedTenure] = useState<number>(Number(tenureParam) || 3);
+  const [agreedEscalation, setAgreedEscalation] = useState<number>(Number(escalationParam) || 5);
+  const [contractDocName, setContractDocName] = useState<string>(docParam || "Standard Commercial Lease Agreement (Executed)");
+
+  // Initialize previewProperty immediately if URL parameters are available
+  const [previewProperty, setPreviewProperty] = useState<PropertyPreview | null>(
+    (buildingParam || locationParam)
+      ? {
+          id: propertyIdParam || "PROP-ACTIVE",
+          name: buildingParam || "Commercial Building",
+          ownerName: ownerParam || "Commercial Property Owner / Management",
+          location: locationParam || "Prime Commercial District",
+          grade: "Grade A",
+          totalArea: areaParam ? `${Number(areaParam).toLocaleString()} sqft` : "50,000 sqft",
+          allocatedUnits: unitsParam || "Entire Building / All Floors",
+          monthlyRent: Number(rentParam) || 250000,
+          camMonthly: Number(camParam) || 45000,
+          securityDeposit: Number(depositParam) || 750000,
+          chargeableArea: Number(areaParam) || 5000,
+          leaseTenureYears: Number(tenureParam) || 3,
+          escalationPct: Number(escalationParam) || 5,
+          contractDoc: docParam || "Standard Commercial Lease Agreement (Executed)",
+          inviteCode: codeParam.toUpperCase() || "OX-ACTIVE"
+        }
+      : null
+  );
 
   // Tenant confirmation form fields
   const [companyName, setCompanyName] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
-  const [unitNumber, setUnitNumber] = useState("Suite 401");
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -60,7 +110,7 @@ function TenantJoinContent() {
   // Verification helper: resolve building & property owner preview
   const verifyCode = useCallback(async (codeToTest: string) => {
     const cleanCode = codeToTest.trim().toUpperCase();
-    if (!cleanCode && !propertyIdParam && !buildingParam) {
+    if (!cleanCode && !propertyIdParam && !buildingParam && !locationParam) {
       setPreviewProperty(null);
       return;
     }
@@ -68,12 +118,22 @@ function TenantJoinContent() {
     setIsVerifying(true);
     setError(null);
 
-    // 1. First attempt API verification with propertyId & building
+    // 1. First attempt API verification with propertyId & building & query params
     try {
       const qParams = new URLSearchParams();
       if (cleanCode) qParams.set("code", cleanCode);
       if (propertyIdParam) qParams.set("propertyId", propertyIdParam);
       if (buildingParam) qParams.set("building", buildingParam);
+      if (locationParam) qParams.set("location", locationParam);
+      if (ownerParam) qParams.set("owner", ownerParam);
+      if (unitsParam) qParams.set("units", unitsParam);
+      if (rentParam) qParams.set("rent", rentParam);
+      if (camParam) qParams.set("cam", camParam);
+      if (depositParam) qParams.set("deposit", depositParam);
+      if (areaParam) qParams.set("area", areaParam);
+      if (tenureParam) qParams.set("tenure", tenureParam);
+      if (escalationParam) qParams.set("escalation", escalationParam);
+      if (docParam) qParams.set("doc", docParam);
 
       const res = await fetch(`/api/tenant/verify-code?${qParams.toString()}`);
       if (res.ok) {
@@ -85,9 +145,31 @@ function TenantJoinContent() {
             ownerName: data.property.ownerName || ownerParam || "Commercial Property Owner",
             location: data.property.location || locationParam || "Commercial Corridor",
             grade: data.property.grade || "Grade A",
-            totalArea: data.property.totalArea || "50,000 sqft",
+            totalArea: data.property.totalArea || (areaParam ? `${Number(areaParam).toLocaleString()} sqft` : "50,000 sqft"),
+            allocatedUnits: unitsParam || data.property.allocatedUnits || "Entire Building / All Floors",
+            monthlyRent: data.property.monthlyRent || (rentParam ? Number(rentParam) : 250000),
+            camMonthly: data.property.camMonthly || (camParam ? Number(camParam) : 45000),
+            securityDeposit: data.property.securityDeposit || (depositParam ? Number(depositParam) : 750000),
+            chargeableArea: data.property.chargeableArea || (areaParam ? Number(areaParam) : 5000),
+            leaseTenureYears: data.property.leaseTenureYears || (tenureParam ? Number(tenureParam) : 3),
+            escalationPct: data.property.escalationPct || (escalationParam ? Number(escalationParam) : 5),
+            contractDoc: data.property.contractDoc || docParam || "Standard Commercial Lease Agreement (Executed)",
             inviteCode: cleanCode || data.property.inviteCode
           });
+
+          if (data.property.monthlyRent) setAgreedRent(Number(data.property.monthlyRent));
+          if (data.property.camMonthly) setAgreedCam(Number(data.property.camMonthly));
+          if (data.property.securityDeposit) setAgreedDeposit(Number(data.property.securityDeposit));
+          if (data.property.chargeableArea) setAgreedArea(Number(data.property.chargeableArea));
+          if (data.property.leaseTenureYears) setAgreedTenure(Number(data.property.leaseTenureYears));
+          if (data.property.escalationPct) setAgreedEscalation(Number(data.property.escalationPct));
+          if (data.property.contractDoc) setContractDocName(data.property.contractDoc);
+
+          if (unitsParam) {
+            setUnitNumber(unitsParam);
+          } else if (data.property.allocatedUnits) {
+            setUnitNumber(data.property.allocatedUnits);
+          }
           setIsVerifying(false);
           return;
         }
@@ -101,7 +183,32 @@ function TenantJoinContent() {
       try {
         const storedInvites = JSON.parse(localStorage.getItem("officex_building_invites") || "{}");
         if (cleanCode && storedInvites[cleanCode]) {
-          setPreviewProperty(storedInvites[cleanCode]);
+          const inv = storedInvites[cleanCode];
+          setPreviewProperty({
+            id: inv.id,
+            name: inv.name,
+            ownerName: inv.ownerName || "Asset Owner",
+            location: inv.location || locationParam || "Commercial Corridor",
+            allocatedUnits: unitsParam || inv.allocatedUnits || "Entire Building / All Floors",
+            monthlyRent: inv.monthlyRent || (rentParam ? Number(rentParam) : 250000),
+            camMonthly: inv.camMonthly || (camParam ? Number(camParam) : 45000),
+            securityDeposit: inv.securityDeposit || (depositParam ? Number(depositParam) : 750000),
+            chargeableArea: inv.chargeableArea || (areaParam ? Number(areaParam) : 5000),
+            leaseTenureYears: inv.leaseTenureYears || (tenureParam ? Number(tenureParam) : 3),
+            escalationPct: inv.escalationPct || (escalationParam ? Number(escalationParam) : 5),
+            contractDoc: inv.contractDoc || docParam || "Standard Commercial Lease Agreement (Executed)",
+            inviteCode: cleanCode
+          });
+
+          if (inv.monthlyRent) setAgreedRent(Number(inv.monthlyRent));
+          if (inv.camMonthly) setAgreedCam(Number(inv.camMonthly));
+          if (inv.securityDeposit) setAgreedDeposit(Number(inv.securityDeposit));
+          if (inv.chargeableArea) setAgreedArea(Number(inv.chargeableArea));
+          if (inv.leaseTenureYears) setAgreedTenure(Number(inv.leaseTenureYears));
+          if (inv.escalationPct) setAgreedEscalation(Number(inv.escalationPct));
+          if (inv.contractDoc) setContractDocName(inv.contractDoc);
+
+          if (unitsParam) setUnitNumber(unitsParam);
           setIsVerifying(false);
           return;
         }
@@ -112,18 +219,21 @@ function TenantJoinContent() {
           (propertyIdParam && p.id === propertyIdParam) ||
           (buildingParam && p.name?.toLowerCase() === buildingParam.toLowerCase()) ||
           (p.inviteCode && p.inviteCode.toUpperCase() === cleanCode) ||
-          (cleanCode && cleanCode.includes(p.id?.replace(/\D/g, "").slice(-4)))
+          (cleanCode && cleanCode.includes(p.id?.replace(/\D/g, "").slice(-4))) ||
+          (cleanCode && p.name && p.name.toLowerCase().includes(cleanCode.toLowerCase()))
         );
         if (match) {
           setPreviewProperty({
             id: match.id,
             name: match.name,
             ownerName: match.ownerName || match.ownerCompany || localStorage.getItem("officex_user_name") || "Commercial Asset Management",
-            location: `${match.city || "Maninagar"}, ${match.state || "Gujarat"}`,
+            location: match.address ? `${match.address}, ${match.city}, ${match.state}` : `${match.city || "Commercial"}, ${match.state || ""}`,
             grade: match.grade || "Grade A",
             totalArea: `${Number(match.totalArea || 50000).toLocaleString()} sqft`,
+            allocatedUnits: unitsParam || match.unitNumber || "Entire Leased Premises",
             inviteCode: cleanCode || match.inviteCode
           });
+          if (unitsParam) setUnitNumber(unitsParam);
           setIsVerifying(false);
           return;
         }
@@ -133,34 +243,43 @@ function TenantJoinContent() {
     }
 
     // 3. Fallback with URL search parameters
-    if (buildingParam || propertyIdParam) {
+    if (buildingParam || propertyIdParam || locationParam) {
       setPreviewProperty({
         id: propertyIdParam || `prop-${cleanCode.replace(/\D/g, "") || "101"}`,
-        name: buildingParam || "Commercial Business Hub",
+        name: buildingParam || "Commercial Building",
         ownerName: ownerParam || "Commercial Property Owner / Management",
         location: locationParam || "Prime Commercial District",
         grade: "Grade A",
         totalArea: "50,000 sqft",
+        allocatedUnits: unitsParam || "Entire Building / All Floors",
         inviteCode: cleanCode
       });
+      if (unitsParam) setUnitNumber(unitsParam);
       setIsVerifying(false);
       return;
     }
 
-    // 4. Default generic preview
+    // 4. Default generic preview only if completely unknown
     setPreviewProperty({
       id: `prop-${cleanCode.replace(/\D/g, "") || "101"}`,
-      name: "Commercial Business Hub",
-      ownerName: "Commercial Real Estate Holdings",
-      location: "Mumbai CBD, Maharashtra",
+      name: "Commercial Asset",
+      ownerName: "Commercial Real Estate Management",
+      location: "Commercial Business District",
       grade: "Grade A",
-      totalArea: "45,000 sqft",
+      totalArea: "50,000 sqft",
+      allocatedUnits: "Entire Leased Premises",
       inviteCode: cleanCode
     });
     setIsVerifying(false);
-  }, [buildingParam, propertyIdParam, ownerParam, locationParam]);
+  }, [buildingParam, propertyIdParam, ownerParam, locationParam, unitsParam]);
 
   // Initial load check
+  useEffect(() => {
+    if (unitsParam && (!unitNumber || unitNumber === "Suite 401")) {
+      setUnitNumber(unitsParam);
+    }
+  }, [unitsParam]);
+
   useEffect(() => {
     if (inviteCode && inviteCode.length >= 4) {
       verifyCode(inviteCode);
@@ -232,16 +351,16 @@ function TenantJoinContent() {
             propertyId: previewProperty.id,
             propertyName: previewProperty.name,
             tenantName: effectiveTenantName,
-            unitNumber: unitNumber || "Suite 401",
+            unitNumber: unitNumber || "Entire Premises",
             floorNumber: 4,
-            chargeableArea: 5000,
-            carpetArea: 4000,
-            monthlyRent: 250000,
-            camMonthly: 45000,
-            securityDepositAmount: 750000,
+            chargeableArea: agreedArea,
+            carpetArea: Math.round(agreedArea * 0.8),
+            monthlyRent: agreedRent,
+            camMonthly: agreedCam,
+            securityDepositAmount: agreedDeposit,
             startDate: new Date().toISOString().split("T")[0],
-            endDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-            escalationPct: 5,
+            endDate: new Date(Date.now() + agreedTenure * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+            escalationPct: agreedEscalation,
             status: "active"
           })
         });
@@ -256,14 +375,14 @@ function TenantJoinContent() {
                 propertyId: previewProperty.id,
                 propertyName: previewProperty.name,
                 tenantName: effectiveTenantName,
-                unitNumber: unitNumber || "Suite 401",
-                chargeableArea: 5000,
-                monthlyRent: 250000,
-                camMonthly: 45000,
-                totalMonthlyGross: 295000,
+                unitNumber: unitNumber || "Entire Premises",
+                chargeableArea: agreedArea,
+                monthlyRent: agreedRent,
+                camMonthly: agreedCam,
+                totalMonthlyGross: agreedRent + agreedCam,
                 status: "active",
                 leaseStartDate: new Date().toISOString().split("T")[0],
-                leaseEndDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+                leaseEndDate: new Date(Date.now() + agreedTenure * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
               });
               localStorage.setItem("officex_active_leases", JSON.stringify(localLeases));
               window.dispatchEvent(new CustomEvent("officex-property-added"));
@@ -278,16 +397,18 @@ function TenantJoinContent() {
       if (typeof window !== "undefined") {
         sessionStorage.setItem("officex_session_active", "1");
         sessionStorage.setItem("officex_user_role", "Tenant / Occupier");
-        sessionStorage.setItem("officex_dashboard", "/tenant");
+        sessionStorage.setItem("officex_active_portal", "tenant");
+        sessionStorage.setItem("officex_dashboard", "/tenant/payments");
         sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
         sessionStorage.setItem("officex_user_name", fullName.trim());
 
         localStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_user_role", "Tenant / Occupier");
-        localStorage.setItem("officex_dashboard", "/tenant");
+        localStorage.setItem("officex_active_portal", "tenant");
+        localStorage.setItem("officex_dashboard", "/tenant/payments");
         localStorage.setItem("officex_user_email", email.trim().toLowerCase());
         localStorage.setItem("officex_user_name", fullName.trim());
-        localStorage.setItem("officex_active_org", companyName.trim());
+        localStorage.setItem("officex_active_org", companyName.trim() || effectiveTenantName);
         localStorage.setItem("officex_tenant_building", previewProperty.name);
         localStorage.setItem("officex_tenant_owner", previewProperty.ownerName);
         localStorage.setItem("officex_tenant_unit", unitNumber);
@@ -296,27 +417,28 @@ function TenantJoinContent() {
 
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = `officex_user_role=${encodeURIComponent("Tenant / Occupier")}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = "officex_dashboard=/tenant; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = "officex_dashboard=/tenant/payments; path=/; max-age=86400; SameSite=Lax";
       }
 
       setIsSuccess(true);
       setTimeout(() => {
-        router.push("/tenant");
-      }, 1000);
+        router.push("/tenant/payments");
+      }, 1200);
     } catch (err: any) {
       console.warn("Tenant onboarding warning:", err);
       if (typeof window !== "undefined") {
         localStorage.setItem("officex_user_role", "Tenant / Occupier");
-        localStorage.setItem("officex_dashboard", "/tenant");
-        localStorage.setItem("officex_active_org", companyName.trim());
+        localStorage.setItem("officex_active_portal", "tenant");
+        localStorage.setItem("officex_dashboard", "/tenant/payments");
+        localStorage.setItem("officex_active_org", companyName.trim() || effectiveTenantName);
         localStorage.setItem("officex_tenant_building", previewProperty.name);
         localStorage.setItem("officex_tenant_owner", previewProperty.ownerName);
         localStorage.setItem("officex_tenant_unit", unitNumber);
       }
       setIsSuccess(true);
       setTimeout(() => {
-        router.push("/tenant");
-      }, 800);
+        router.push("/tenant/payments");
+      }, 1000);
     } finally {
       setIsLoading(false);
     }
@@ -380,14 +502,14 @@ function TenantJoinContent() {
                 <CheckCircle2 size={34} />
               </div>
               <h3 className="text-lg font-black text-slate-900">
-                Connected to {previewProperty?.name}!
+                Commercial Lease Activated!
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
-                Building verification confirmed with <span className="font-bold text-slate-800">{previewProperty?.ownerName}</span>. Launching your tenant dashboard...
+                Premises allocated at <span className="font-bold text-slate-800">{previewProperty?.name}</span> by <span className="font-bold text-slate-800">{previewProperty?.ownerName}</span>. Opening tax invoice generated with SAC 997212.
               </p>
               <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#0F8B7D] pt-2">
                 <Loader2 size={16} className="animate-spin" />
-                <span>Entering Tenant Dashboard...</span>
+                <span>Opening Invoices & Payments Dashboard...</span>
               </div>
             </div>
           ) : (
@@ -452,7 +574,7 @@ function TenantJoinContent() {
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
                     <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
                       <span className="text-[9px] font-bold text-slate-400 uppercase block">Property Owner / Landlord</span>
                       <span className="font-bold text-slate-900 block truncate mt-0.5">
@@ -466,6 +588,52 @@ function TenantJoinContent() {
                         <MapPin size={11} className="text-[#0F8B7D] shrink-0" />
                         {previewProperty.location}
                       </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 sm:col-span-1">
+                      <span className="text-[9px] font-bold text-teal-700 uppercase block">Allocated Leased Part</span>
+                      <span className="font-black text-teal-950 block truncate mt-0.5">
+                        {previewProperty.allocatedUnits || unitNumber || "Entire Premises"}
+                      </span>
+                    </div>
+
+                    {/* Financial Terms & Digital Lease Contract Banner */}
+                    <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-2.5 sm:col-span-3 shadow-inner mt-1">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+                          <DollarSign size={13} /> Agreed Commercial Lease Terms
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-300">
+                          {agreedTenure} Yrs Tenure ({agreedEscalation}% p.a.)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Monthly Base Rent</span>
+                          <span className="font-black text-white text-sm">₹{agreedRent.toLocaleString()}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Monthly CAM</span>
+                          <span className="font-bold text-teal-300 text-xs">₹{agreedCam.toLocaleString()}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Security Deposit</span>
+                          <span className="font-bold text-white text-xs">₹{agreedDeposit.toLocaleString()}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Leased Area</span>
+                          <span className="font-bold text-white text-xs">{agreedArea.toLocaleString()} sqft</span>
+                        </div>
+                      </div>
+                      <div className="pt-1.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-1 text-[10px] text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                          <span className="truncate max-w-[280px]">Contract: {contractDocName}</span>
+                        </span>
+                        <span className="text-teal-300 font-bold bg-teal-500/20 px-2 py-0.5 rounded">
+                          GST 18% HSN 997212
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -528,9 +696,12 @@ function TenantJoinContent() {
 
                   {/* Leased Space / Unit */}
                   <div>
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      LEASED OFFICE UNIT / SUITE # *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+                        LEASED OFFICE UNIT / ALLOCATED PREMISES *
+                      </label>
+                      <span className="text-[9px] text-[#0F8B7D] font-bold">Allocated by Landlord</span>
+                    </div>
                     <div className="relative">
                       <MapPin size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
                       <input
@@ -538,7 +709,7 @@ function TenantJoinContent() {
                         required
                         value={unitNumber}
                         onChange={(e) => setUnitNumber(e.target.value)}
-                        placeholder="e.g. Suite 401, 4th Floor"
+                        placeholder="e.g. Floor 2 & 3 or Entire Building"
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                       />
                     </div>
@@ -573,11 +744,11 @@ function TenantJoinContent() {
                     {isLoading ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        <span>Confirming &amp; Entering Tenant Dashboard...</span>
+                        <span>Activating Lease &amp; Generating Tax Invoice...</span>
                       </>
                     ) : (
                       <>
-                        <span>Confirm Building &amp; Enter Tenant Dashboard</span>
+                        <span>Verify KYC &amp; Activate Commercial Lease</span>
                         <ArrowRight size={16} />
                       </>
                     )}

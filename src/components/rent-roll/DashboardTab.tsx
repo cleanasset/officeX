@@ -22,7 +22,8 @@ import {
   EyeOff,
   Pencil,
   User,
-  MapPin
+  MapPin,
+  ChevronDown
 } from "lucide-react";
 
 interface DashboardData {
@@ -127,6 +128,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   billingEntities = [],
 }) => {
   const [showAccount, setShowAccount] = React.useState(false);
+  const [showKycDetails, setShowKycDetails] = React.useState(false);
   if (!data) {
     return (
       <div className="p-16 text-center text-gray-400 flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-200">
@@ -209,160 +211,159 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
       ) : null}
 
-      {/* ──── COMMERCIAL ENTITY & BANK SETTLEMENT PROFILE (Live Institutional KYC) ──── */}
+      {/* ──── COMMERCIAL ENTITY & BANK SETTLEMENT PROFILE (Compact Collapsible Strip) ──── */}
       {(() => {
         const org = organizationData || {};
         const defaultEntity = (billingEntities && billingEntities.length > 0)
           ? (billingEntities.find((b: any) => b.isDefault) || billingEntities[0])
           : null;
+        const displayOrgName = (org?.name && !org.name.includes("Acme"))
+          ? org.name
+          : (typeof window !== "undefined" ? (localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || localStorage.getItem("officex_portfolio_name")) : "") || "Commercial Portfolio Profile";
+        const isKycComplete = Boolean((org?.pan || org?.gstin) && (org?.bankAccountNumber || defaultEntity?.bankAccountNumber));
 
         return (
-          <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs transition-all hover:border-[#0F8B7D]/40">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-50 to-teal-100/60 border border-teal-200 text-[#0F8B7D] flex items-center justify-center font-bold shadow-2xs">
-                  <CreditCard className="w-5 h-5" />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:px-4 sm:py-3 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200/80 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                  <CreditCard className="w-4 h-4" />
                 </div>
-                <div>
-                    {(() => {
-                      const displayOrgName = (org?.name && !org.name.includes("Acme"))
-                        ? org.name
-                        : (typeof window !== "undefined" ? (localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || localStorage.getItem("officex_portfolio_name")) : "") || "Commercial Portfolio Profile";
-                      const isKycComplete = Boolean((org?.pan || org?.gstin) && (org?.bankAccountNumber || defaultEntity?.bankAccountNumber));
-
-                      return (
-                        <>
-                          <h3 className="text-sm font-extrabold text-gray-900">
-                            {displayOrgName}
-                          </h3>
-                          {org?.tradeName && org.tradeName !== displayOrgName && !org.tradeName.includes("Acme") && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                              {org.tradeName}
-                            </span>
-                          )}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
-                            isKycComplete 
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}>
-                            <CheckCircle2 className="w-2.5 h-2.5" /> 
-                            {isKycComplete ? "Institutional KYC Active" : "KYC Setup In Progress"}
-                          </span>
-                        </>
-                      );
-                    })()}
-                  <p className="text-xs text-gray-500 font-medium mt-0.5">
-                    Statutory PAN/GSTIN IDs and official bank settlement account for rent, CAM and utility collections
-                  </p>
+                <div className="min-w-0 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-black text-slate-900 truncate">
+                    {displayOrgName}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                    isKycComplete
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}>
+                    <CheckCircle2 className="w-2.5 h-2.5" />
+                    {isKycComplete ? "Settlement KYC Active" : "KYC Pending"}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-mono hidden md:inline">
+                    PAN: {org?.pan || defaultEntity?.pan || "—"} • GSTIN: {org?.gstin || defaultEntity?.gstin || "—"}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowKycDetails(prev => !prev)}
+                  className="px-2.5 py-1 text-slate-600 hover:text-slate-900 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{showKycDetails ? "Hide Settlement Info" : "View Bank & Tax Details"}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showKycDetails ? "rotate-180" : ""}`} />
+                </button>
                 {onOpenProfileSettings && (
                   <button
                     type="button"
                     onClick={onOpenProfileSettings}
-                    className="px-3.5 py-1.5 bg-white hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-slate-700 hover:text-teal-900 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                    className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                   >
-                    <Pencil className="w-3.5 h-3.5 text-teal-600" />
-                    <span>Edit Profile &amp; Banking</span>
+                    <Pencil className="w-3 h-3" />
+                    <span className="hidden sm:inline">Edit</span>
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-              {/* 1. Official Bank Account */}
-              <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Collection Bank Account
-                </span>
-                <div className="font-bold text-slate-900 text-sm truncate">
-                  {org?.bankName || defaultEntity?.bankName || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "") || "Pending Bank Setup"}
-                </div>
-                <div className="font-mono text-xs font-semibold text-slate-700 mt-1 flex items-center justify-between">
-                  <span>
-                    {(org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
-                      ? (showAccount
-                          ? (org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
-                          : `•••• •••• ${(org?.bankAccountNumber || defaultEntity?.bankAccountNumber).slice(-4)}`)
-                      : "Not Configured"}
+            {/* Collapsible Details Grid */}
+            {showKycDetails && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 mt-3 border-t border-slate-100 text-xs animate-in fade-in-50 duration-150">
+                {/* 1. Official Bank Account */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Collection Bank Account
                   </span>
-                  {(org?.bankAccountNumber || defaultEntity?.bankAccountNumber) && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAccount(!showAccount)}
-                      className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
-                      title={showAccount ? "Hide" : "Reveal"}
-                    >
-                      {showAccount ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    </button>
-                  )}
+                  <div className="font-bold text-slate-900 text-xs truncate">
+                    {org?.bankName || defaultEntity?.bankName || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "") || "Pending Bank Setup"}
+                  </div>
+                  <div className="font-mono text-xs font-semibold text-slate-700 mt-0.5 flex items-center justify-between">
+                    <span>
+                      {(org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
+                        ? (showAccount
+                            ? (org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
+                            : `•••• •••• ${(org?.bankAccountNumber || defaultEntity?.bankAccountNumber).slice(-4)}`)
+                        : "Not Configured"}
+                    </span>
+                    {(org?.bankAccountNumber || defaultEntity?.bankAccountNumber) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAccount(!showAccount)}
+                        className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
+                        title={showAccount ? "Hide" : "Reveal"}
+                      >
+                        {showAccount ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+                    <span>IFSC: <strong className="font-mono text-slate-800">{org?.bankIfsc || defaultEntity?.bankIfsc || "HDFC0000060"}</strong></span>
+                    <span className="text-[9px] text-teal-700 font-bold bg-teal-50 px-1 py-0.5 rounded">Escrow Direct</span>
+                  </div>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-                  <span>IFSC: <strong className="font-mono text-slate-800">{org?.bankIfsc || defaultEntity?.bankIfsc || "HDFC0000060"}</strong></span>
-                  <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded">Escrow Direct</span>
-                </div>
-              </div>
 
-              {/* 2. Statutory PAN & GSTIN */}
-              <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Tax Registration IDs
-                </span>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Entity PAN:</span>
-                  <span className="font-mono font-bold text-slate-900">{org?.pan || defaultEntity?.pan || "—"}</span>
-                </div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-slate-500 font-medium">State GSTIN:</span>
-                  <span className="font-mono font-bold text-slate-900 truncate max-w-[140px]">{org?.gstin || defaultEntity?.gstin || "—"}</span>
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-                  <span>Billing SPVs:</span>
-                  <span className="font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded text-[10px]">
-                    {billingEntities.length > 0 ? `${billingEntities.length} Entity/Entities` : "1 SPV (Default)"}
+                {/* 2. Statutory PAN & GSTIN */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Tax Registration IDs
                   </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Entity PAN:</span>
+                    <span className="font-mono font-bold text-slate-900">{org?.pan || defaultEntity?.pan || "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-slate-500 font-medium">State GSTIN:</span>
+                    <span className="font-mono font-bold text-slate-900 truncate max-w-[140px]">{org?.gstin || defaultEntity?.gstin || "—"}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+                    <span>Billing Entities:</span>
+                    <span className="font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded text-[9px]">
+                      {billingEntities.length > 0 ? `${billingEntities.length} Entity/Entities` : "1 SPV"}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* 3. Primary Contact / Signatory */}
-              <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Authorized Signatory
-                </span>
-                <div className="font-bold text-slate-900 truncate">
-                  {org?.contactPerson || "Portfolio Executive"}
+                {/* 3. Authorized Signatory */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Authorized Signatory
+                  </span>
+                  <div className="font-bold text-slate-900 text-xs truncate">
+                    {org?.contactPerson || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") : "") || "Portfolio Executive"}
+                  </div>
+                  <div className="text-slate-600 text-[11px] truncate mt-0.5 font-medium">
+                    {org?.contactEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "admin@officex.com"}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+                    <span>Phone:</span>
+                    <span className="font-semibold text-slate-800">{org?.contactPhone || "+91 98200 11223"}</span>
+                  </div>
                 </div>
-                <div className="text-slate-600 text-[11px] truncate mt-0.5 font-medium">
-                  {org?.contactEmail || "admin@officex.com"}
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-                  <span>Phone:</span>
-                  <span className="font-semibold text-slate-800">{org?.contactPhone || "+91 98200 11223"}</span>
-                </div>
-              </div>
 
-              {/* 4. Registered Address & Currency */}
-              <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                  Registered Commercial Office
-                </span>
-                <div className="text-slate-800 font-medium line-clamp-2 text-[11px]">
-                  {org?.address || (org?.city ? `${org.city}, ${org.state || "India"}` : "Commercial Assets Hub")}
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-                  <span>Currency:</span>
-                  <span className="font-bold text-slate-900">{org?.currency || "INR (₹)"}</span>
+                {/* 4. Registered Office */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Registered Commercial Office
+                  </span>
+                  <div className="font-medium text-slate-800 text-[11px] line-clamp-2">
+                    {org?.address || (org?.city ? `${org.city}, ${org.state || "India"}` : "Commercial Headquarters")}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+                    <span>Currency: <strong className="text-slate-800">{org?.currency || "INR (₹)"}</strong></span>
+                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded">Active</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         );
       })()}
 
-      {/* ──── 8 PRIMARY KPI METRIC CARDS (Excel Dashboard Layout) ──── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ──── 8 PRIMARY KPI METRIC CARDS (Responsive 2-col on mobile, 4-col on desktop) ──── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Total Leases */}
         <div
           onClick={() => onNavigateTab("rentroll")}

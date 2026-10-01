@@ -43,7 +43,9 @@ import {
   FileSpreadsheet,
   Copy,
   MessageSquare,
-  Share2
+  Share2,
+  RefreshCw,
+  CheckSquare
 } from "lucide-react";
 import {
   AddressAutocomplete,
@@ -331,6 +333,22 @@ export default function CommercialPropertyMaster() {
   const [standardCamPsf, setStandardCamPsf] = useState<number>(0);
   const [defaultEscalation, setDefaultEscalation] = useState<string>("15_every_36");
   const [defaultSecurityDepositMonths, setDefaultSecurityDepositMonths] = useState<number>(6);
+
+  // Property overall building specifications (Provided first by property owner)
+  const [totalFloorsCount, setTotalFloorsCount] = useState<number>(towers[0]?.floorsAbove || 5);
+  const [basementsCount, setBasementsCount] = useState<number>(towers[0]?.floorsBelow || 1);
+  const [buildingFitoutCondition, setBuildingFitoutCondition] = useState<"furnished" | "bare_shell" | "warm_shell" | "plug_and_play" | "semi_furnished">("warm_shell");
+  const [clearHeightFt, setClearHeightFt] = useState<number>(11);
+  const [dgBackupPct, setDgBackupPct] = useState<number>(100);
+  const [sanctionedPowerKva, setSanctionedPowerKva] = useState<number>(150);
+  const [hvacSystemType, setHvacSystemType] = useState<string>("VRV/VRF Central Air Conditioning");
+  const [parkingSlotsCount, setParkingSlotsCount] = useState<number>(25);
+
+  // Lease Scope Mode: "whole_tower" or "specific_floors"
+  const [leaseScopeMode, setLeaseScopeMode] = useState<"whole_tower" | "specific_floors">("whole_tower");
+  const [wholeTowerStatus, setWholeTowerStatus] = useState<"vacant" | "occupied">("vacant");
+  const [wholeTowerTenantName, setWholeTowerTenantName] = useState<string>("");
+  const [wholeTowerRentPsf, setWholeTowerRentPsf] = useState<number>(0);
 
   // Area unit label helper
   const areaLabel = areaUnit === "sqm" ? "sq. m." : "sq. ft.";
@@ -668,16 +686,22 @@ export default function CommercialPropertyMaster() {
     setTotalCarpetArea(sumCpt);
   };
 
-  const handleCreateSingleBuildingUnit = () => {
+  const handleCreateSingleBuildingUnit = (forcedStatus?: "vacant" | "occupied", forcedTenant?: string, forcedRent?: number) => {
+    setLeaseScopeMode("whole_tower");
     const bldgCode = towers[0]?.code || "T1";
     const propPrefix = propertyCode ? propertyCode.split("-")[0] : "SP";
-    const area = totalChargeableArea > 0 ? totalChargeableArea : 10000;
+    const area = totalChargeableArea > 0 ? totalChargeableArea : 50000;
     const carpet = totalCarpetArea > 0 && totalCarpetArea <= area ? totalCarpetArea : Math.round(area * 0.75);
+
+    const fitout = buildingFitoutCondition === "furnished" ? "fully_fitted" : buildingFitoutCondition === "semi_furnished" ? "warm_shell" : buildingFitoutCondition;
+    const stat = forcedStatus || wholeTowerStatus;
+    const tName = forcedTenant !== undefined ? forcedTenant : wholeTowerTenantName;
+    const rPsf = forcedRent !== undefined ? forcedRent : (wholeTowerRentPsf || targetRentPsf || 150);
 
     const fullUnit: LeasableSpaceUnit = {
       id: `u-${Date.now()}`,
-      spaceCode: `${propPrefix}-${bldgCode}-01-01`,
-      suiteNumber: `${assetName ? assetName.trim() : "Main Building"} (Entire Premise)`,
+      spaceCode: `${propPrefix}-${bldgCode}-ALL-01`,
+      suiteNumber: `${assetName ? assetName.trim() : "Main Building"} (Entire Building / All Floors)`,
       buildingCode: bldgCode,
       floorNumber: 1,
       spaceType: "office",
@@ -685,13 +709,81 @@ export default function CommercialPropertyMaster() {
       carpetArea: carpet,
       askingRate: targetRentPsf || 150,
       seatCapacity: 0,
-      fitoutCondition: "warm_shell",
-      status: "vacant"
+      fitoutCondition: fitout as any,
+      status: stat,
+      tenantName: stat === "occupied" ? (tName || "Single Corporate Occupant") : undefined,
+      contractedRentPsf: stat === "occupied" ? rPsf : undefined,
+      camRatePsf: standardCamPsf || 0
     };
 
     setUnits([fullUnit]);
     setTotalChargeableArea(area);
     setTotalCarpetArea(carpet);
+  };
+
+  const handleSwitchToSpecificFloors = () => {
+    setLeaseScopeMode("specific_floors");
+    const isSingleAllUnit = units.length === 1 && (units[0].suiteNumber.includes("Entire") || units[0].suiteNumber.includes("All Floors"));
+    if (isSingleAllUnit || units.length === 0) {
+      handleGenerateFloors(totalFloorsCount > 0 ? totalFloorsCount : 5);
+    }
+  };
+
+  const handleGenerateFloors = (floorCount: number) => {
+    const bldgCode = towers[0]?.code || "T1";
+    const propPrefix = propertyCode ? propertyCode.split("-")[0] : "SP";
+    const count = floorCount > 0 ? floorCount : 5;
+    const perFloorArea = totalChargeableArea > 0 ? Math.round(totalChargeableArea / count) : 10000;
+    const perFloorCarpet = Math.round(perFloorArea * 0.75);
+    const fitout = buildingFitoutCondition === "furnished" ? "fully_fitted" : buildingFitoutCondition === "semi_furnished" ? "warm_shell" : buildingFitoutCondition;
+
+    const generated: LeasableSpaceUnit[] = [];
+    for (let f = 1; f <= count; f++) {
+      generated.push({
+        id: `u-floor-${f}-${Date.now()}`,
+        spaceCode: `${propPrefix}-${bldgCode}-${String(f).padStart(2, "0")}-01`,
+        suiteNumber: f === 1 ? "Ground / 1st Floor" : `Floor ${f}`,
+        buildingCode: bldgCode,
+        floorNumber: f,
+        spaceType: "office",
+        chargeableArea: perFloorArea,
+        carpetArea: perFloorCarpet,
+        askingRate: targetRentPsf || 150,
+        seatCapacity: 0,
+        fitoutCondition: fitout as any,
+        status: "vacant"
+      });
+    }
+    setUnits(generated);
+    setTotalChargeableArea(perFloorArea * count);
+    setTotalCarpetArea(perFloorCarpet * count);
+  };
+
+  const handleToggleFloorStatus = (unitId: string, newStatus: "vacant" | "occupied", tenantName?: string) => {
+    setUnits(prev => prev.map(u => {
+      if (u.id === unitId) {
+        return {
+          ...u,
+          status: newStatus,
+          tenantName: newStatus === "occupied" ? (tenantName || u.tenantName || "Corporate Tenant") : undefined,
+          contractedRentPsf: newStatus === "occupied" ? (u.contractedRentPsf || u.askingRate || targetRentPsf || 150) : undefined
+        };
+      }
+      return u;
+    }));
+  };
+
+  const handleUpdateUnitField = (unitId: string, field: keyof LeasableSpaceUnit, value: any) => {
+    setUnits(prev => {
+      const updated = prev.map(u => u.id === unitId ? { ...u, [field]: value } : u);
+      if (field === "chargeableArea" || field === "carpetArea") {
+        const sumChg = updated.reduce((a, b) => a + b.chargeableArea, 0);
+        const sumCpt = updated.reduce((a, b) => a + b.carpetArea, 0);
+        setTotalChargeableArea(sumChg);
+        setTotalCarpetArea(sumCpt);
+      }
+      return updated;
+    });
   };
 
   const handleBulkImportUnits = (importedUnits: LeasableSpaceUnit[]) => {
@@ -1048,7 +1140,8 @@ export default function CommercialPropertyMaster() {
 
       // Pre-select all unit codes for WhatsApp & Tenant link sharing
       const allUnitCodes = units.map(u => u.suiteNumber || u.spaceCode || "");
-      setSelectedShareUnits(allUnitCodes.length > 0 ? allUnitCodes : ["Suite 101"]);
+      const leasedUnitCodes = units.filter(u => u.status === "occupied").map(u => u.suiteNumber || u.spaceCode || "");
+      setSelectedShareUnits(leasedUnitCodes.length > 0 ? leasedUnitCodes : (allUnitCodes.length > 0 ? allUnitCodes : ["Suite 101"]));
       setSuccessProperty(rrData);
     } catch (e: any) {
       alert(`Could not register property: ${e.message || "Unknown error"}`);
@@ -1280,66 +1373,7 @@ export default function CommercialPropertyMaster() {
                 </select>
               </div>
 
-              {/* Quick Sample Credentials Presets Bar */}
-              <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-                <div className="flex items-center gap-1.5 text-teal-950 font-bold text-[11px]">
-                  <Sparkles size={14} className="text-[#0F8B7D] shrink-0" />
-                  <span>Quick Test Presets (1-Click Auto-Fill):</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEntityType("pvt_ltd");
-                      setCinNumber("U70102MH2018PTC123456");
-                      setPanNumber("AAACR1234F");
-                      setPropertyGstin("27AAACR1234F1Z5");
-                      setGstExempted(false);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-teal-300 text-teal-900 text-[10px] font-bold hover:bg-teal-100 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Sample Pvt Ltd
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEntityType("public_ltd");
-                      setCinNumber("L17110MH1973PLC019786");
-                      setPanNumber("AABCP9876K");
-                      setPropertyGstin("27AABCP9876K1Z8");
-                      setGstExempted(false);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-teal-300 text-teal-900 text-[10px] font-bold hover:bg-teal-100 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Sample Public Ltd
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEntityType("llp");
-                      setLlpinNumber("AAA-1234");
-                      setPanNumber("AABFL5432M");
-                      setPropertyGstin("27AABFL5432M1Z2");
-                      setGstExempted(false);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-teal-300 text-teal-900 text-[10px] font-bold hover:bg-teal-100 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Sample LLP
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEntityType("individual");
-                      setPanNumber("BNZPJ8765A");
-                      setPropertyGstin("");
-                      setGstExempted(true);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-teal-300 text-teal-900 text-[10px] font-bold hover:bg-teal-100 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Sample Individual (Exempt)
-                  </button>
-                </div>
-              </div>
+
 
               {/* 3 Credential Cards: CIN/LLPIN + PAN + GSTIN */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
@@ -2020,931 +2054,722 @@ export default function CommercialPropertyMaster() {
 
         {/* ── STEP 2: AREA & LEASABLE INVENTORY (Space Master) ── */}
         {currentStep === 2 && (
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-8 animate-in fade-in-50 duration-200">
+            {/* Header */}
             <div className="border-b border-slate-100 pb-4">
-              <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <Layers size={18} className="text-[#0F8B7D]" />
-                2. Area Metrics &amp; Leasable Floor Inventory
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200">
+                  Step 2 of 3 • Property Specs &amp; Lease Allocation
+                </span>
+              </div>
+              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Layers size={20} className="text-[#0F8B7D]" />
+                Building Specifications &amp; Leasable Inventory Selection
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Establish Chargeable Area, Carpet Area, Loading Factor, and individual leasable suites ready for tenant lease contracting.
+                First specify overall building structure, handover condition, and technical specs. Then select whether to lease the whole tower or configure individual floors/suites.
               </p>
             </div>
 
-            {/* 1. Building Commercial Benchmarks & Total Portfolio Area */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/70 pb-3">
-                <div>
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Building size={14} className="text-[#0F8B7D]" />
-                    Building Master Commercial Rates &amp; Area Totals
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {units.length > 0
-                      ? `Leasable areas are automatically summed from your ${units.length} unit(s) below.`
-                      : "Set baseline rent rates and add leasable units below (or use the whole-building shortcut)."}
-                  </p>
+            {/* ════════════════════════════════════════════════════════════
+                PART 1: PROPERTY SPECIFICATIONS (Building Master Details)
+               ════════════════════════════════════════════════════════════ */}
+            <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-teal-100/70 text-[#0F8B7D] flex items-center justify-center">
+                    <Building size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      Part 1 • Master Building Specifications &amp; Handover Condition
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Overall building footprint, floor count, carpet area, fitout state, and utility ratings.
+                    </p>
+                  </div>
                 </div>
-
-                {units.length === 0 && (
-                  <button
-                    type="button"
-                    onClick={handleCreateSingleBuildingUnit}
-                    className="px-3 py-1.5 rounded-xl border border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shadow-2xs"
-                  >
-                    <Sparkles size={13} className="text-[#0F8B7D]" />
-                    <span>Single Unit: Lease Entire Building as 1 Suite</span>
-                  </button>
-                )}
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 self-start sm:self-auto">
+                  Asset Infrastructure
+                </span>
               </div>
 
+              {/* Grid 1: Total Area, Carpet Area, Floors, Basements */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {/* Total Chargeable Area */}
+                {/* Total Super Leasable Area */}
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-slate-700">Total Leasable Area *</label>
-                    {units.length > 0 && (
-                      <span className="text-[9px] font-bold text-teal-700 bg-teal-100/70 px-1.5 py-0.5 rounded">
-                        Auto-Summed
-                      </span>
-                    )}
-                  </div>
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                    <span>Total Leasable Area *</span>
+                    <span className="text-[9px] font-normal text-slate-400">Super Built-up</span>
+                  </label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
-                      placeholder={units.length > 0 ? String(totalChargeableArea) : "e.g. 50,000"}
+                      placeholder="e.g. 50,000"
                       value={totalChargeableArea || ""}
-                      onChange={(e) => setTotalChargeableArea(Number(e.target.value) || 0)}
-                      readOnly={units.length > 0}
-                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold ${
-                        units.length > 0
-                          ? "border-teal-200 bg-teal-50/50 text-teal-950 focus:outline-none"
-                          : "border-slate-200 bg-white text-slate-900"
-                      }`}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 0;
+                        setTotalChargeableArea(val);
+                        if (totalCarpetArea === 0 || totalCarpetArea > val) {
+                          setTotalCarpetArea(Math.round(val * 0.75));
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20"
                     />
-                    <span className="text-[10px] text-slate-400 font-bold">{areaLabel}</span>
+                    <span className="text-[10px] text-slate-400 font-bold shrink-0">{areaLabel}</span>
                   </div>
-                  <p className="text-[10px] text-slate-400">
-                    {units.length > 0 ? `Total of ${units.length} suite(s) below` : "Building super built-up area"}
-                  </p>
                 </div>
 
-                {/* Total Carpet / Usable Area */}
+                {/* Total Usable Carpet Area */}
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-slate-700">Total Carpet Area *</label>
-                    {units.length > 0 && (
-                      <span className="text-[9px] font-bold text-teal-700 bg-teal-100/70 px-1.5 py-0.5 rounded">
-                        Auto-Summed
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                    <span>Usable Carpet Area *</span>
+                    {totalChargeableArea > 0 && totalCarpetArea > 0 && !hasCarpetExceedsSuper && (
+                      <span className="text-[9px] font-bold text-teal-700 bg-teal-100/70 px-1 rounded">
+                        {loadingPct}% Loading
                       </span>
                     )}
-                  </div>
+                  </label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
-                      placeholder={units.length > 0 ? String(totalCarpetArea) : "e.g. 37,500"}
+                      placeholder="e.g. 37,500"
                       value={totalCarpetArea || ""}
                       onChange={(e) => setTotalCarpetArea(Number(e.target.value) || 0)}
-                      readOnly={units.length > 0}
                       className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold ${
-                        units.length > 0
-                          ? "border-teal-200 bg-teal-50/50 text-teal-950 focus:outline-none"
+                        hasCarpetExceedsSuper
+                          ? "border-red-400 bg-red-50/40 text-red-900"
                           : "border-slate-200 bg-white text-slate-900"
                       }`}
                     />
-                    <span className="text-[10px] text-slate-400 font-bold">{areaLabel}</span>
+                    <span className="text-[10px] text-slate-400 font-bold shrink-0">{areaLabel}</span>
                   </div>
-                  <p className="text-[10px] text-slate-400">
-                    {units.length > 0 ? `Sum of internal usable areas` : "Internal usable area"}
-                  </p>
                 </div>
 
-                {/* Target Rent Rate */}
+                {/* Total Floors Above Ground */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700">Baseline Target Rent</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      placeholder="e.g. 150"
-                      value={targetRentPsf || ""}
-                      onChange={(e) => setTargetRentPsf(Number(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}/{areaUnit === "sqm" ? "sqm" : "sqft"}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400">Default asking rate for suites</p>
+                  <label className="text-[11px] font-bold text-slate-700">Total Floors (Above Ground) *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    placeholder="e.g. 10"
+                    value={totalFloorsCount || ""}
+                    onChange={(e) => setTotalFloorsCount(Math.max(1, Number(e.target.value) || 1))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20"
+                  />
+                  <p className="text-[10px] text-slate-400">e.g. G + 9 upper floors = 10</p>
                 </div>
 
-                {/* Standard CAM Rate */}
+                {/* Basements / Parking Levels */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700">Standard CAM Rate</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      placeholder="e.g. 22"
-                      value={standardCamPsf || ""}
-                      onChange={(e) => setStandardCamPsf(Number(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}/{areaUnit === "sqm" ? "sqm" : "sqft"}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400">Common Area Maintenance</p>
+                  <label className="text-[11px] font-bold text-slate-700">Basement Levels</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    placeholder="e.g. 2"
+                    value={basementsCount || ""}
+                    onChange={(e) => setBasementsCount(Number(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20"
+                  />
+                  <p className="text-[10px] text-slate-400">Underground parking / utility</p>
                 </div>
               </div>
 
-              {/* Computed Loading Ratio Bar & Validation */}
-              <div className="pt-2 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500 font-medium">Computed Loading Ratio:</span>
-                  <span className="text-sm font-black font-mono text-slate-900">
-                    {hasCarpetExceedsSuper ? "Invalid" : `${loadingPct}%`}
+              {/* Fitout / Handover Condition Selector */}
+              <div className="space-y-2 pt-2 border-t border-slate-200/70">
+                <label className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <CheckSquare size={13} className="text-[#0F8B7D]" />
+                    Building Fitout &amp; Handover Condition *
                   </span>
+                  <span className="text-[10px] text-slate-400">Specifies handover condition to tenants</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  {[
+                    { id: "bare_shell", title: "Bare Shell", desc: "Unfurnished / Raw Concrete Slab & Open Ceiling" },
+                    { id: "warm_shell", title: "Warm Shell", desc: "Finished Screed, HVAC Ducts, Power Tapping & Toilets" },
+                    { id: "semi_furnished", title: "Semi-Furnished", desc: "Flooring, False Ceiling, Grid Lights & Basic Cabins" },
+                    { id: "furnished", title: "Fully Furnished", desc: "Complete Desks, Workstations, Partitions & Cabins" },
+                    { id: "plug_and_play", title: "Plug & Play", desc: "100% Ready with IT Cabling, Server Rack & Cafeteria" },
+                  ].map((item) => {
+                    const isSelected = buildingFitoutCondition === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setBuildingFitoutCondition(item.id as any)}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? "bg-teal-50/80 border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-2xs"
+                            : "bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs font-black ${isSelected ? "text-teal-950" : "text-slate-800"}`}>
+                              {item.title}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle size={14} className="text-[#0F8B7D] shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+                            {item.desc}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
 
-                <div>
-                  {hasCarpetExceedsSuper ? (
-                    <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                      <AlertTriangle size={13} />
-                      Carpet Area ({totalCarpetArea.toLocaleString()}) cannot be greater than Super Area ({totalChargeableArea.toLocaleString()})
-                    </span>
-                  ) : loadingPct > 0 ? (
-                    <span className={`text-[11px] font-bold ${loadingPct >= 15 && loadingPct <= 50 ? "text-emerald-700" : "text-amber-700"}`}>
-                      {loadingPct >= 15 && loadingPct <= 50
-                        ? `✓ Standard institutional loading (${loadingPct}%)`
-                        : `ℹ Loading factor ${loadingPct}% (Typical institutional range is 20%–40%)`}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-slate-400">
-                      Calculated automatically from (Super Area − Carpet Area) ÷ Carpet Area
-                    </span>
-                  )}
+              {/* Technical Infrastructure (Height, DG backup, Power, HVAC, Parking) */}
+              <div className="pt-2 border-t border-slate-200/70">
+                <label className="text-[11px] font-bold text-slate-800 block mb-2">
+                  Building Utilities &amp; Engineering Specifications
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-600 block">Clear Height</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="11"
+                        value={clearHeightFt || ""}
+                        onChange={(e) => setClearHeightFt(Number(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">Ft</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-600 block">DG Power Backup</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="100"
+                        value={dgBackupPct}
+                        onChange={(e) => setDgBackupPct(Number(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-600 block">Sanctioned Power</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="150"
+                        value={sanctionedPowerKva || ""}
+                        onChange={(e) => setSanctionedPowerKva(Number(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">kVA</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-600 block">Reserved Parking</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="25"
+                        value={parkingSlotsCount || ""}
+                        onChange={(e) => setParkingSlotsCount(Number(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-400 font-bold">Slots</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-600 block">HVAC Cooling</span>
+                    <select
+                      value={hvacSystemType}
+                      onChange={(e) => setHvacSystemType(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900"
+                    >
+                      <option value="VRV/VRF Central Air Conditioning">VRV / VRF Central</option>
+                      <option value="Water Cooled Chiller Plant">Central Chiller</option>
+                      <option value="Split Air Conditioning">Split Units</option>
+                      <option value="Provisions Only (Tenant Fitout)">Provisions Only</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* ════════════════════════════════════════════════════════════
+                PART 2: LEASE SCOPE SELECTION (Whole Tower vs Specific Floors)
+               ════════════════════════════════════════════════════════════ */}
             <div className="space-y-5">
-              {/* 2. LEASABLE SUITES & FLOOR INVENTORY */}
-              <div className="p-5 rounded-2xl border border-teal-200 bg-teal-50/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-black text-teal-900 flex items-center gap-1.5 uppercase tracking-wider">
-                      {editingUnitId ? (
-                        <>
-                          <Edit3 size={15} className="text-[#0F8B7D]" /> Editing Leasable Unit: {newUnit.suiteNumber}
-                        </>
-                      ) : (
-                        <>
-                          <Plus size={15} className="text-[#0F8B7D]" /> Add Leasable Suite / Demised Unit
-                        </>
-                      )}
-                    </span>
-                    <p className="text-[11px] text-teal-700 mt-0.5">
-                      Enter each demised suite or floor. Each unit&apos;s area automatically adds to the building&apos;s total leasable area above.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {editingUnitId ? (
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors"
-                      >
-                        Cancel Edit
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setShowBulkImport(true)}
-                        className="px-2.5 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 text-[11px] font-bold hover:bg-teal-50 transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        <FileUp size={12} /> Bulk Import (CSV)
-                      </button>
-                    )}
-                  </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckSquare size={15} className="text-[#0F8B7D]" />
+                    Part 2 • How Much Part Do You Want to Put on Lease?
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Choose whether you are leasing the entire building/tower as a single block, or selecting individual floors/suites.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Suite / Unit Identifier *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Suite 402 or Floor 2"
-                      value={newUnit.suiteNumber || ""}
-                      onChange={(e) => setNewUnit({ ...newUnit, suiteNumber: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    />
-                  </div>
+                {/* Scope Switcher Tabs */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLeaseScopeMode("whole_tower");
+                      handleCreateSingleBuildingUnit();
+                    }}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      leaseScopeMode === "whole_tower"
+                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Building size={13} className={leaseScopeMode === "whole_tower" ? "text-[#0F8B7D]" : "text-slate-400"} />
+                    <span>Lease Whole Tower / Building</span>
+                  </button>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Tower / Block</label>
-                    <select
-                      value={newUnit.buildingCode}
-                      onChange={(e) => setNewUnit({ ...newUnit, buildingCode: e.target.value })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    >
-                      {towers.length > 0 ? (
-                        towers.map(t => (
-                          <option key={t.id} value={t.code}>{t.name} ({t.code})</option>
-                        ))
-                      ) : (
-                        <option value="T1">Tower 1 (Default)</option>
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Floor #</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 4"
-                      value={newUnit.floorNumber || ""}
-                      onChange={(e) => setNewUnit({ ...newUnit, floorNumber: Number(e.target.value) || 1 })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-700 block mb-1 flex items-center justify-between">
-                      <span>Demised Space Type *</span>
-                      <span className="text-[9px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                        Unit Function
-                      </span>
-                    </label>
-                    <select
-                      value={newUnit.spaceType}
-                      onChange={(e) => setNewUnit({ ...newUnit, spaceType: e.target.value as any })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    >
-                      <option value="office">Commercial Office Suite</option>
-                      <option value="retail">Ground Retail Storefront / ATM</option>
-                      <option value="food_court">Food Court / Cafeteria / F&amp;B</option>
-                      <option value="storage">Storage / Archive / Server Room</option>
-                      <option value="parking_block">Dedicated Parking Bay / Stacks</option>
-                      <option value="terrace">Terrace / Rooftop Lounge</option>
-                      <option value="antenna_site">Telecom / Antenna / Tower Site</option>
-                      <option value="flex_floor">Flex Floor / Coworking Floor</option>
-                      <option value="cabin">Executive Private Cabin</option>
-                      <option value="meeting_room">Conference / Board Room</option>
-                      <option value="other">Other Leasable Space</option>
-                    </select>
-                    <span className="text-[9px] text-slate-400 mt-0.5 block">
-                      Specific demised use inside this {propertyType === "it_park" ? "Tech Park" : propertyType === "retail" ? "Retail Mall" : "Building"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Unit Super Area ({areaLabel}) *</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 5000"
-                      value={newUnit.chargeableArea || ""}
-                      onChange={(e) => {
-                        const chg = Number(e.target.value) || 0;
-                        setNewUnit({
-                          ...newUnit,
-                          chargeableArea: chg,
-                          carpetArea: newUnit.carpetArea ? newUnit.carpetArea : Math.round(chg * 0.75)
-                        });
-                      }}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Carpet Area ({areaLabel})</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 3750"
-                      value={newUnit.carpetArea || ""}
-                      onChange={(e) => setNewUnit({ ...newUnit, carpetArea: Number(e.target.value) || 0 })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Fitout Condition</label>
-                    <select
-                      value={newUnit.fitoutCondition}
-                      onChange={(e) => setNewUnit({ ...newUnit, fitoutCondition: e.target.value as any })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    >
-                      <option value="warm_shell">Warm Shell (HVAC + Screed)</option>
-                      <option value="bare_shell">Bare Shell (Raw Structure)</option>
-                      <option value="fully_fitted">Fully Fitted (Furnished)</option>
-                      <option value="plug_and_play">Plug & Play (Immediate Occupancy)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600 block mb-1">Rent Roll Space Status</label>
-                    <select
-                      value={newUnit.status}
-                      onChange={(e) => {
-                        const nextStatus = e.target.value as any;
-                        setNewUnit({
-                          ...newUnit,
-                          status: nextStatus,
-                          // If switching to occupied, default asking rate to contracted rent or targetRentPsf
-                          contractedRentPsf: newUnit.contractedRentPsf || newUnit.askingRate || targetRentPsf || 0,
-                          camRatePsf: newUnit.camRatePsf || standardCamPsf || 0
-                        });
-                      }}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                    >
-                      <option value="occupied">Occupied (Active Commercial Lease)</option>
-                      <option value="vacant">Vacant (Available / Unleased)</option>
-                      <option value="reserved">Reserved (Under LOI / Term Sheet)</option>
-                      <option value="under_fitout">Under Fitout (Rent-Free Period)</option>
-                      <option value="not_leasable">Building Services / Non-Leasable (BMS / MEP)</option>
-                    </select>
-                  </div>
-
-                  {/* Dynamic Fields Based on Rent Roll Status */}
-                  {newUnit.status === "occupied" && (
-                    <div className="sm:col-span-4 p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-teal-900 uppercase tracking-wider flex items-center gap-1.5">
-                          <Users size={14} className="text-[#0F8B7D]" />
-                          Contracted Tenant Lease Details (Client Rent Roll Spec)
-                        </span>
-                        <span className="text-[10px] font-bold text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded">
-                          Active Lease Cashflow
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <div className="sm:col-span-2">
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            Tenant Entity / Corporate Name *
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Morgan Stanley India Support Services"
-                            value={newUnit.tenantName || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, tenantName: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            Contracted Base Rent ({currency === "USD" ? "$" : "₹"}/{areaLabel}/mo) *
-                          </label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 185"
-                            value={newUnit.contractedRentPsf || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, contractedRentPsf: Number(e.target.value) || 0, askingRate: Number(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            CAM Rate ({currency === "USD" ? "$" : "₹"}/{areaLabel}/mo)
-                          </label>
-                          <input
-                            type="number"
-                            placeholder={`e.g. ${standardCamPsf || 18}`}
-                            value={newUnit.camRatePsf || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, camRatePsf: Number(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            Lease Start Date
-                          </label>
-                          <input
-                            type="date"
-                            value={newUnit.leaseStartDate || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, leaseStartDate: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            Lease Expiry Date *
-                          </label>
-                          <input
-                            type="date"
-                            value={newUnit.leaseExpiryDate || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, leaseExpiryDate: e.target.value })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            Contracted Escalation
-                          </label>
-                          <select
-                            value={`${newUnit.escalationPct || 15}_every_${newUnit.escalationFrequencyYears || 3}`}
-                            onChange={(e) => {
-                              if (e.target.value === "5_every_1") {
-                                setNewUnit({ ...newUnit, escalationPct: 5, escalationFrequencyYears: 1 });
-                              } else if (e.target.value === "none") {
-                                setNewUnit({ ...newUnit, escalationPct: 0, escalationFrequencyYears: 0 });
-                              } else {
-                                setNewUnit({ ...newUnit, escalationPct: 15, escalationFrequencyYears: 3 });
-                              }
-                            }}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          >
-                            <option value="15_every_3">15% every 3 Years (Standard Institutional)</option>
-                            <option value="5_every_1">5% Compounded Annually</option>
-                            <option value="none">Fixed Rent (No Escalation)</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">
-                            Security Deposit (Months)
-                          </label>
-                          <input
-                            type="number"
-                            placeholder="6"
-                            value={newUnit.securityDepositMonths || 6}
-                            onChange={(e) => setNewUnit({ ...newUnit, securityDepositMonths: Number(e.target.value) || 6 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {newUnit.status === "vacant" && (
-                    <>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
-                          Target Market Asking Rate ({currency === "USD" ? "$" : "₹"}/{areaLabel}/mo)
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="e.g. 165"
-                          value={newUnit.askingRate || ""}
-                          onChange={(e) => setNewUnit({ ...newUnit, askingRate: Number(e.target.value) || 0, contractedRentPsf: Number(e.target.value) || 0 })}
-                          className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                        <span className="text-[9px] text-slate-400 mt-0.5 block">Used for building Vacancy Loss KPI</span>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-600 block mb-1">Seat Capacity (Flex / Cabins)</label>
-                        <input
-                          type="number"
-                          placeholder="e.g. 24"
-                          value={newUnit.seatCapacity || ""}
-                          onChange={(e) => setNewUnit({ ...newUnit, seatCapacity: Number(e.target.value) || 0 })}
-                          className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {newUnit.status === "reserved" && (
-                    <>
-                      <div className="sm:col-span-2">
-                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Prospective Tenant (LOI / Term Sheet)</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Deloitte Shared Services (Under Legal Draft)"
-                          value={newUnit.tenantName || ""}
-                          onChange={(e) => setNewUnit({ ...newUnit, tenantName: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-600 block mb-1">Agreed Rent PSF</label>
-                        <input
-                          type="number"
-                          placeholder="e.g. 175"
-                          value={newUnit.askingRate || ""}
-                          onChange={(e) => setNewUnit({ ...newUnit, askingRate: Number(e.target.value) || 0, contractedRentPsf: Number(e.target.value) || 0 })}
-                          className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {newUnit.status === "under_fitout" && (
-                    <>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Tenant Name (Fitout Period)</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Boston Consulting Group"
-                          value={newUnit.tenantName || ""}
-                          onChange={(e) => setNewUnit({ ...newUnit, tenantName: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Rent Commencement Date</label>
-                        <input
-                          type="date"
-                          value={newUnit.leaseStartDate || ""}
-                          onChange={(e) => setNewUnit({ ...newUnit, leaseStartDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Dynamic Fitout Inclusions & Handover Condition (Item 9) */}
-                  {(newUnit.fitoutCondition === "fully_fitted" || newUnit.fitoutCondition === "plug_and_play") && (
-                    <div className="sm:col-span-4 p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
-                          <Sparkles size={14} className="text-purple-600" />
-                          Fully Fitted / Plug &amp; Play Fitout Inclusions
-                        </span>
-                        <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                          Turnkey Workplace Spec
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Workstations / Seats</label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 50"
-                            value={newUnit.workstationCount || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, workstationCount: Number(e.target.value) || 0, seatCapacity: Number(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-purple-600"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Private Cabins</label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 4"
-                            value={newUnit.privateCabins || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, privateCabins: Number(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-purple-600"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Meeting / Board Rooms</label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 2"
-                            value={newUnit.meetingRooms || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, meetingRooms: Number(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-purple-600"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">HVAC System Type</label>
-                          <select
-                            value={newUnit.hvacType || "VRV/VRF"}
-                            onChange={(e) => setNewUnit({ ...newUnit, hvacType: e.target.value })}
-                            className="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-purple-600"
-                          >
-                            <option value="VRV/VRF">VRV / VRF Dedicated</option>
-                            <option value="Central Chilled Water">Central Chilled Water (AHU)</option>
-                            <option value="Split AC">Split ACs Installed</option>
-                            <option value="DX System">DX Air-Cooled Package</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Pantry Setup</label>
-                          <select
-                            value={newUnit.pantryType || "wet"}
-                            onChange={(e) => setNewUnit({ ...newUnit, pantryType: e.target.value as any })}
-                            className="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-purple-600"
-                          >
-                            <option value="wet">Wet Pantry (Plumbing + Sink)</option>
-                            <option value="dry">Dry Pantry (Microwave/Coffee)</option>
-                            <option value="none">No Pantry (Cafeteria Access)</option>
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-4 sm:col-span-3 pt-4">
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(newUnit.hasReception)}
-                              onChange={(e) => setNewUnit({ ...newUnit, hasReception: e.target.checked })}
-                              className="rounded text-purple-600 focus:ring-purple-600 h-4 w-4 cursor-pointer"
-                            />
-                            <span>Reception / Welcome Lounge</span>
-                          </label>
-
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(newUnit.hasServerRoom)}
-                              onChange={(e) => setNewUnit({ ...newUnit, hasServerRoom: e.target.checked })}
-                              className="rounded text-purple-600 focus:ring-purple-600 h-4 w-4 cursor-pointer"
-                            />
-                            <span>Dedicated Server / IT Rack Room</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {newUnit.fitoutCondition === "bare_shell" && (
-                    <div className="sm:col-span-4 p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                          <Layers size={14} className="text-amber-700" />
-                          Bare Shell Handover Specifications
-                        </span>
-                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                          Raw Structure Handover
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Clear Height (Floor-to-Ceiling)</label>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              placeholder="e.g. 12"
-                              value={newUnit.clearHeightFt || ""}
-                              onChange={(e) => setNewUnit({ ...newUnit, clearHeightFt: Number(e.target.value) || 0 })}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-amber-600"
-                            />
-                            <span className="text-[10px] text-slate-400 font-bold">ft</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Flooring Status</label>
-                          <select
-                            value={newUnit.flooringStatus || "Bare Concrete Slab"}
-                            onChange={(e) => setNewUnit({ ...newUnit, flooringStatus: e.target.value })}
-                            className="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-amber-600"
-                          >
-                            <option value="Bare Concrete Slab">Bare Concrete Slab</option>
-                            <option value="IPS Screed Finished">IPS Screed Finished</option>
-                            <option value="Raised Access Flooring">Raised Access Flooring (False Floor)</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Sanctioned Power Load</label>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              placeholder="e.g. 35"
-                              value={newUnit.sanctionedPowerKva || ""}
-                              onChange={(e) => setNewUnit({ ...newUnit, sanctionedPowerKva: Number(e.target.value) || 0 })}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-amber-600"
-                            />
-                            <span className="text-[10px] text-slate-400 font-bold">kVA</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col justify-end gap-2">
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(newUnit.dgBackup100Pct)}
-                              onChange={(e) => setNewUnit({ ...newUnit, dgBackup100Pct: e.target.checked })}
-                              className="rounded text-amber-600 focus:ring-amber-600 h-4 w-4 cursor-pointer"
-                            />
-                            <span>100% DG Power Backup</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(newUnit.ahuRoomProvided)}
-                              onChange={(e) => setNewUnit({ ...newUnit, ahuRoomProvided: e.target.checked })}
-                              className="rounded text-amber-600 focus:ring-amber-600 h-4 w-4 cursor-pointer"
-                            />
-                            <span>AHU Room Provisioned</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {propertyType === "warehouse" && (
-                    <div className="sm:col-span-4 p-4 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                          <Building2 size={14} className="text-blue-700" />
-                          Warehouse &amp; Industrial Logistics Inclusions
-                        </span>
-                        <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
-                          Industrial Standard
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Clear Height to Eaves</label>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              placeholder="e.g. 11"
-                              value={newUnit.clearHeightToEavesMeters || ""}
-                              onChange={(e) => setNewUnit({ ...newUnit, clearHeightToEavesMeters: Number(e.target.value) || 0 })}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
-                            />
-                            <span className="text-[10px] text-slate-400 font-bold">Meters</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Dock Doors Count</label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 4"
-                            value={newUnit.dockDoorsCount || ""}
-                            onChange={(e) => setNewUnit({ ...newUnit, dockDoorsCount: Number(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Floor Loading Capacity</label>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              placeholder="e.g. 5"
-                              value={newUnit.floorLoadingCapacityTons || ""}
-                              onChange={(e) => setNewUnit({ ...newUnit, floorLoadingCapacityTons: Number(e.target.value) || 0 })}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
-                            />
-                            <span className="text-[10px] text-slate-400 font-bold">Tons/m² (FM2)</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="sm:col-span-4 flex items-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleAddUnit}
-                      className="flex-1 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-black transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
-                    >
-                      {editingUnitId ? (
-                        <>
-                          <Check size={14} /> Update Space Unit in Rent Roll
-                        </>
-                      ) : (
-                        <>
-                          <Plus size={14} /> Add Space to Property Stacking
-                        </>
-                      )}
-                    </button>
-                    {editingUnitId && (
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSwitchToSpecificFloors}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      leaseScopeMode === "specific_floors"
+                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Layers size={13} className={leaseScopeMode === "specific_floors" ? "text-[#0F8B7D]" : "text-slate-400"} />
+                    <span>Select Specific Floors / Suites</span>
+                  </button>
                 </div>
               </div>
 
-              {/* 2. LOWER SIDE: ADDED LEASABLE UNITS TABLE */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <span>Master Rent Roll Leasable Inventory</span>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-700">
-                      {units.length} Units Defined
-                    </span>
-                  </h3>
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    Total Unit Area: {units.reduce((acc, u) => acc + u.chargeableArea, 0).toLocaleString()} {areaLabel}
-                  </span>
-                </div>
+              {/* ── OPTION A: WHOLE TOWER LEASING ── */}
+              {leaseScopeMode === "whole_tower" && (
+                <div className="p-5 rounded-2xl bg-teal-50/40 border border-teal-200/80 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-teal-100 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900">
+                          Single Space Lease: Entire Building ({totalChargeableArea.toLocaleString()} {areaLabel})
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 text-[10px] font-bold">
+                          All {totalFloorsCount} Floors Combined
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        The entire asset is contracted to one tenant or offered as a corporate headquarters / BTS campus.
+                      </p>
+                    </div>
 
-                {units.length > 0 ? (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white overflow-x-auto shadow-2xs">
-                    <table className="w-full text-left text-xs min-w-[850px]">
-                      <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="py-2.5 px-3">Space Code</th>
-                          <th className="py-2.5 px-3">Unit / Suite</th>
-                          <th className="py-2.5 px-3">Tower &amp; Floor</th>
-                          <th className="py-2.5 px-3 text-right">Super Area</th>
-                          <th className="py-2.5 px-3 text-right">Carpet</th>
-                          <th className="py-2.5 px-3 text-center">Status</th>
-                          <th className="py-2.5 px-3">Tenant &amp; Lease Financials</th>
-                          <th className="py-2.5 px-3 text-center">Lease Expiry</th>
-                          <th className="py-2.5 px-3 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-[11px]">
-                        {units.map((u) => (
-                          <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
-                            <td className="py-2.5 px-3 font-mono font-bold text-teal-800 text-[10px]">{u.spaceCode || "-"}</td>
-                            <td className="py-2.5 px-3 font-bold text-slate-900 font-sans">{u.suiteNumber}</td>
-                            <td className="py-2.5 px-3 text-slate-600 font-sans">{u.buildingCode} • Fl {u.floorNumber}</td>
-                            <td className="py-2.5 px-3 text-right font-bold text-slate-900 font-mono">{u.chargeableArea.toLocaleString()}</td>
-                            <td className="py-2.5 px-3 text-right text-slate-600 font-mono">{u.carpetArea ? u.carpetArea.toLocaleString() : "-"}</td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-sans ${
-                                u.status === "occupied"
-                                  ? "bg-teal-50 text-teal-800 border border-teal-200"
-                                  : u.status === "vacant"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : u.status === "reserved"
-                                  ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                  : u.status === "under_fitout"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                  : "bg-slate-100 text-slate-600 border border-slate-200"
-                              }`}>
-                                {u.status === "occupied"
-                                  ? "Active Lease"
-                                  : u.status === "vacant"
-                                  ? "Unleased"
-                                  : u.status === "reserved"
-                                  ? "Under LOI"
-                                  : u.status === "under_fitout"
-                                  ? "Fitout Period"
-                                  : "Services"}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 font-sans">
-                              {u.status === "occupied" ? (
-                                <div>
-                                  <span className="font-bold text-slate-900 block truncate max-w-[220px]">{u.tenantName || "Occupied Tenant"}</span>
-                                  <span className="text-[10px] text-slate-500 font-mono">
-                                    {currency === "USD" ? "$" : "₹"}{u.contractedRentPsf || u.askingRate}/sf {u.camRatePsf ? `+ ₹${u.camRatePsf} CAM` : ""}
-                                  </span>
-                                </div>
-                              ) : u.status === "vacant" ? (
-                                <span className="text-[11px] text-slate-400 font-mono">
-                                  Target: {currency === "USD" ? "$" : "₹"}{u.askingRate || targetRentPsf || 0}/sf
-                                </span>
-                              ) : u.status === "reserved" ? (
-                                <span className="text-[11px] text-amber-800 font-medium font-sans">
-                                  LOI: {u.tenantName || "Term Sheet Stage"}
-                                </span>
-                              ) : u.status === "under_fitout" ? (
-                                <span className="text-[11px] text-blue-800 font-medium font-sans">
-                                  Fitout: {u.tenantName || "Contractor Active"}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-slate-400 italic">Non-revenue space</span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-center font-mono text-[10px] text-slate-600">
-                              {u.status === "occupied" && u.leaseExpiryDate ? (
-                                <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-semibold text-slate-700">
-                                  {u.leaseExpiryDate}
-                                </span>
-                              ) : u.status === "under_fitout" && u.leaseStartDate ? (
-                                <span className="text-blue-700">Starts {u.leaseStartDate}</span>
-                              ) : (
-                                <span className="text-slate-300">—</span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditUnit(u)}
-                                  className="text-slate-400 hover:text-teal-700 transition-colors p-1 cursor-pointer"
-                                  title="Edit Unit"
+                    {/* Switch to specific floors button if user changes mind */}
+                    <button
+                      type="button"
+                      onClick={handleSwitchToSpecificFloors}
+                      className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                    >
+                      <Layers size={13} />
+                      <span>Switch to Floor-by-Floor Selection</span>
+                    </button>
+                  </div>
+
+                  {/* Occupancy Status for Whole Tower */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-800">Lease Status of the Building</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWholeTowerStatus("vacant");
+                            handleCreateSingleBuildingUnit("vacant");
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                            units[0]?.status === "vacant"
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${units[0]?.status === "vacant" ? "bg-white" : "bg-emerald-500"}`} />
+                          <span>Vacant (Available for Lease)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWholeTowerStatus("occupied");
+                            handleCreateSingleBuildingUnit("occupied", wholeTowerTenantName || "Single Corporate Occupant");
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                            units[0]?.status === "occupied"
+                              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${units[0]?.status === "occupied" ? "bg-white" : "bg-blue-500"}`} />
+                          <span>Already Leased (Occupied)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {units[0]?.status === "occupied" ? (
+                      <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-teal-200">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Contracted Tenant Name *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Acme Tech Global"
+                            value={units[0]?.tenantName || wholeTowerTenantName}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setWholeTowerTenantName(val);
+                              setUnits(prev => prev.map(u => ({ ...u, tenantName: val })));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Contracted Rent ({currency}/{areaLabel})</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 150"
+                            value={units[0]?.contractedRentPsf || wholeTowerRentPsf || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              setWholeTowerRentPsf(val);
+                              setUnits(prev => prev.map(u => ({ ...u, contractedRentPsf: val })));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-teal-200">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Asking Rent Target ({currency}/{areaLabel})</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 165"
+                            value={targetRentPsf || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              setTargetRentPsf(val);
+                              setUnits(prev => prev.map(u => ({ ...u, askingRate: val })));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Estimated CAM ({currency}/{areaLabel})</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 18"
+                            value={standardCamPsf || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              setStandardCamPsf(val);
+                              setUnits(prev => prev.map(u => ({ ...u, camRatePsf: val })));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── OPTION B: SPECIFIC FLOORS SELECTION ── */}
+              {leaseScopeMode === "specific_floors" && (
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Layers size={14} className="text-[#0F8B7D]" />
+                        Floor-by-Floor Inventory Breakdown ({units.length} Floors Configured)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Mark which floors are already leased vs vacant, set individual areas, or add custom suites.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateFloors(totalFloorsCount > 0 ? totalFloorsCount : 5)}
+                        className="px-3 py-1.5 rounded-xl border border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Re-generate standard floor list based on Total Floors count"
+                      >
+                        <RefreshCw size={12} />
+                        <span>Auto-Generate {totalFloorsCount || 5} Floors</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLeaseScopeMode("whole_tower");
+                          handleCreateSingleBuildingUnit();
+                        }}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Building size={12} />
+                        <span>Switch to Whole Tower</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Floor List Table with Quick Status Toggle */}
+                  {units.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50/80 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                            <th className="py-2.5 px-3">Floor / Suite</th>
+                            <th className="py-2.5 px-3">Leasable Area ({areaLabel})</th>
+                            <th className="py-2.5 px-3">Carpet Area ({areaLabel})</th>
+                            <th className="py-2.5 px-3">Handover Fitout</th>
+                            <th className="py-2.5 px-3">Lease Status</th>
+                            <th className="py-2.5 px-3">Tenant / Rent</th>
+                            <th className="py-2.5 px-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {units.map((u) => (
+                            <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                              {/* Floor / Suite Name */}
+                              <td className="py-2.5 px-3 font-bold text-slate-900">
+                                <input
+                                  type="text"
+                                  value={u.suiteNumber}
+                                  onChange={(e) => handleUpdateUnitField(u.id, "suiteNumber", e.target.value)}
+                                  className="w-32 px-2 py-1 rounded border border-transparent hover:border-slate-300 focus:border-[#0F8B7D] font-bold text-xs bg-transparent"
+                                />
+                              </td>
+
+                              {/* Leasable Area */}
+                              <td className="py-2.5 px-3">
+                                <input
+                                  type="number"
+                                  value={u.chargeableArea || ""}
+                                  onChange={(e) => handleUpdateUnitField(u.id, "chargeableArea", Number(e.target.value) || 0)}
+                                  className="w-24 px-2 py-1 rounded border border-transparent hover:border-slate-300 focus:border-[#0F8B7D] font-mono font-bold text-xs bg-transparent"
+                                />
+                              </td>
+
+                              {/* Carpet Area */}
+                              <td className="py-2.5 px-3">
+                                <input
+                                  type="number"
+                                  value={u.carpetArea || ""}
+                                  onChange={(e) => handleUpdateUnitField(u.id, "carpetArea", Number(e.target.value) || 0)}
+                                  className="w-24 px-2 py-1 rounded border border-transparent hover:border-slate-300 focus:border-[#0F8B7D] font-mono text-xs bg-transparent"
+                                />
+                              </td>
+
+                              {/* Fitout condition */}
+                              <td className="py-2.5 px-3">
+                                <select
+                                  value={u.fitoutCondition}
+                                  onChange={(e) => handleUpdateUnitField(u.id, "fitoutCondition", e.target.value)}
+                                  className="px-2 py-1 rounded border border-slate-200 text-[11px] font-bold bg-white text-slate-700"
                                 >
-                                  <Edit3 size={13} />
-                                </button>
+                                  <option value="bare_shell">Bare Shell</option>
+                                  <option value="warm_shell">Warm Shell</option>
+                                  <option value="semi_furnished">Semi-Furnished</option>
+                                  <option value="fully_fitted">Furnished</option>
+                                  <option value="plug_and_play">Plug &amp; Play</option>
+                                </select>
+                              </td>
+
+                              {/* Quick Leased vs Vacant status toggle */}
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleFloorStatus(u.id, "vacant")}
+                                    className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all ${
+                                      u.status === "vacant"
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs font-extrabold"
+                                        : "text-slate-400 hover:text-slate-700"
+                                    }`}
+                                  >
+                                    Vacant
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleFloorStatus(u.id, "occupied")}
+                                    className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all ${
+                                      u.status === "occupied"
+                                        ? "bg-blue-50 text-blue-700 border border-blue-300 shadow-2xs font-extrabold"
+                                        : "text-slate-400 hover:text-slate-700"
+                                    }`}
+                                  >
+                                    Leased
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Tenant Name if occupied, or asking rate if vacant */}
+                              <td className="py-2.5 px-3">
+                                {u.status === "occupied" ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Tenant Name (e.g. Infosys)"
+                                    value={u.tenantName || ""}
+                                    onChange={(e) => handleUpdateUnitField(u.id, "tenantName", e.target.value)}
+                                    className="w-36 px-2 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-bold text-xs"
+                                  />
+                                ) : (
+                                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    For Lease ({currency} {u.askingRate || targetRentPsf || 150}/mo)
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Remove button */}
+                              <td className="py-2.5 px-3 text-right">
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveUnit(u.id)}
                                   className="text-slate-400 hover:text-red-600 transition-colors p-1 cursor-pointer"
-                                  title="Remove Unit"
+                                  title="Delete Floor"
                                 >
                                   <Trash2 size={13} />
                                 </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-white text-xs text-slate-400 space-y-2">
+                      <p className="font-bold text-slate-600">No floors added yet.</p>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateFloors(totalFloorsCount > 0 ? totalFloorsCount : 5)}
+                        className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Sparkles size={13} />
+                        <span>Auto-Generate {totalFloorsCount || 5} Floors Now</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Add Custom Floor / Suite Inline Button */}
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newFloorNum = units.length + 1;
+                        const defaultArea = Math.round((totalChargeableArea || 50000) / (totalFloorsCount || 5));
+                        const added: LeasableSpaceUnit = {
+                          id: `u-custom-${Date.now()}`,
+                          spaceCode: `SP-T1-${String(newFloorNum).padStart(2, "0")}-01`,
+                          suiteNumber: `Floor ${newFloorNum}`,
+                          buildingCode: towers[0]?.code || "T1",
+                          floorNumber: newFloorNum,
+                          spaceType: "office",
+                          chargeableArea: defaultArea > 0 ? defaultArea : 5000,
+                          carpetArea: Math.round((defaultArea > 0 ? defaultArea : 5000) * 0.75),
+                          askingRate: targetRentPsf || 150,
+                          fitoutCondition: (buildingFitoutCondition as any) || "warm_shell",
+                          status: "vacant"
+                        };
+                        setUnits(prev => [...prev, added]);
+                        setTotalChargeableArea(prev => prev + added.chargeableArea);
+                        setTotalCarpetArea(prev => prev + added.carpetArea);
+                      }}
+                      className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Plus size={13} />
+                      <span>Add Another Floor / Suite</span>
+                    </button>
+
+                    <div className="text-[11px] font-bold text-slate-500">
+                      Total Allocated: <span className="text-slate-900 font-mono font-black">{units.reduce((s, u) => s + u.chargeableArea, 0).toLocaleString()} {areaLabel}</span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/40 text-xs text-slate-400 space-y-1">
-                    <p className="font-semibold text-slate-600">No leasable units defined yet.</p>
-                    <p className="text-[11px]">
-                      Enter a unit/suite identifier above and click <strong>&ldquo;+ Add Unit to Inventory&rdquo;</strong>, or use <strong>&ldquo;Bulk Import (CSV)&rdquo;</strong> to paste multiple floors at once.
-                    </p>
+                </div>
+              )}
+            </div>
+
+            {/* ════════════════════════════════════════════════════════════
+                PART 3: MARKETPLACE & QUICK TENANT SHARABLE LINK PREFERENCES
+               ════════════════════════════════════════════════════════════ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {/* Card 1: Office Marketplace Syndication for Unleased / Vacant Space */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50/70 to-orange-50/40 border border-amber-200/90 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">List Unleased Vacancy on Office Marketplace</h4>
+                      <p className="text-[11px] text-slate-600">Showcase vacant office floors to institutional corporate tenants &amp; IPC brokers</p>
+                    </div>
                   </div>
-                )}
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={syndicateToMarketplace}
+                      onChange={(e) => setSyndicateToMarketplace(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white/80 border border-amber-200/70 text-[11px] text-slate-700 space-y-1">
+                  <div className="flex items-center justify-between font-bold text-amber-950">
+                    <span>Unleased Leasable Area:</span>
+                    <span className="font-mono">{units.filter(u => u.status === "vacant").reduce((s, u) => s + u.chargeableArea, 0).toLocaleString()} {areaLabel}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    {syndicateToMarketplace
+                      ? "✓ Active: Unleased spaces will be listed immediately on the Office Marketplace with photos, specs & asking rates."
+                      : "Off: This asset will remain private in your internal portfolio."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2: Quick Sharable Link for Already Leased Units */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-teal-50/70 to-emerald-50/40 border border-teal-200/90 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-teal-100 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                      <Share2 size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">Tenant Onboarding Sharable Link</h4>
+                      <p className="text-[11px] text-slate-600">Quick sharable WhatsApp &amp; web link generated immediately after Step 3</p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-extrabold uppercase">
+                    Ready
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white/80 border border-teal-200/70 text-[11px] text-slate-700 space-y-1">
+                  <div className="flex items-center justify-between font-bold text-teal-950">
+                    <span>Occupied / Leased Units:</span>
+                    <span className="font-mono">{units.filter(u => u.status === "occupied").length} Leased Floor(s)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    {units.filter(u => u.status === "occupied").length > 0
+                      ? "✓ Upon completing Step 3, you will receive a direct 1-click WhatsApp & email sharable link for your leased tenants."
+                      : "Currently all units are vacant. If you mark any unit as Leased, the quick sharable link will be tailored for that tenant."}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -2955,7 +2780,7 @@ export default function CommercialPropertyMaster() {
                 onClick={() => setCurrentStep(1)}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                <ArrowLeft size={14} className="inline mr-1" /> Back to Asset &amp; Towers
+                <ArrowLeft size={14} className="inline mr-1" /> Back to Asset &amp; Address
               </button>
 
               <button
@@ -2968,7 +2793,7 @@ export default function CommercialPropertyMaster() {
                 }}
                 className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
-                <span>Continue to Statutory Clearances &amp; Review</span>
+                <span>Continue to Step 3: Clearances &amp; Review</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -4040,6 +3865,26 @@ export default function CommercialPropertyMaster() {
                 </div>
               </div>
 
+              {/* Office Marketplace Live Listing Confirmation */}
+              {syndicateToMarketplace && units.some(u => u.status === "vacant") && (
+                <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-left flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                    <Sparkles size={16} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-slate-900">Unleased Space Listed on Office Marketplace</h4>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold uppercase">
+                        Live Syndication
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      Your unleased vacant inventory ({units.filter(u => u.status === "vacant").reduce((s, u) => s + u.chargeableArea, 0).toLocaleString()} {areaLabel}) is now actively showcased on the public Office Marketplace for prospective tenant inquiries.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Tenant Onboarding & WhatsApp Sharing Card with Unit Selector */}
               <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/50 border border-teal-200/90 text-left space-y-3.5">
                 <div className="flex items-center justify-between">
@@ -4117,11 +3962,11 @@ export default function CommercialPropertyMaster() {
                 {(() => {
                   const propId = successProperty.id || propertyCode || "PROP-DEFAULT";
                   const unitsParam = selectedShareUnits.length > 0 ? selectedShareUnits.join(",") : "all";
-                  const origin = typeof window !== "undefined" ? window.location.origin : "https://officex.app";
+                  const origin = "https://www.officex.pro";
                   const shareUrl = `${origin}/tenant/join?propertyId=${encodeURIComponent(propId)}&building=${encodeURIComponent(assetName)}&units=${encodeURIComponent(unitsParam)}&location=${encodeURIComponent(`${city}, ${state}`)}`;
                   
                   const selectedUnitsDisplay = selectedShareUnits.length > 0 ? selectedShareUnits.join(", ") : "All Leasable Units";
-                  const whatsappMsg = `🏢 *Commercial Lease Onboarding - ${assetName}*\n📍 *Location:* ${city}, ${state}\n🚪 *Allocated Units:* ${selectedUnitsDisplay}\n\nPlease complete your tenant onboarding KYC and digital lease verification using the secure link below:\n${shareUrl}`;
+                  const whatsappMsg = `🏢 *Commercial Lease Onboarding - ${assetName}*\n📍 *Location:* ${city}, ${state}\n🚪 *Allocated Units:* ${selectedUnitsDisplay}\n\nPlease complete your tenant onboarding KYC and digital lease verification to connect directly to your Tenant Dashboard using the secure link below:\n${shareUrl}\n\n*Tenant Dashboard:* Once verified, you will immediately get access to view active lease terms, invoices, and payment receipts.`;
 
                   const handleWhatsAppShare = () => {
                     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMsg)}`, "_blank");

@@ -8,7 +8,8 @@ import {
   Receipt,
   FileCheck2,
   Building,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -74,8 +75,14 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       setAmountReceived(first.balanceDue);
       setTdsDeducted(first.tdsDeducted || 0);
       setReferenceNumber(`HDFCR5${Date.now().toString().slice(-10)}`);
+    } else {
+      setSelectedInvoiceId("");
+      setSelectedLeaseId("");
+      setAmountReceived(0);
+      setTdsDeducted(0);
+      setReferenceNumber("");
     }
-  }, [preSelectedInvoice, isOpen]);
+  }, [preSelectedInvoice, isOpen, invoices]);
 
   const handleInvoiceChange = (id: string) => {
     setSelectedInvoiceId(id);
@@ -108,8 +115,31 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     };
   });
 
+  const isFormValid =
+    openInvoices.length > 0 &&
+    amountReceived > 0 &&
+    referenceNumber.trim().length > 0 &&
+    (allocationMode === "single" ? Boolean(selectedInvoiceId) : Boolean(selectedLeaseId || targetLeaseInvoices[0]?.leaseId));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (openInvoices.length === 0) {
+      setErrorMsg("Cannot record payment: No open tenant invoices exist for settlement.");
+      return;
+    }
+    if (!amountReceived || amountReceived <= 0) {
+      setErrorMsg("Please enter an amount greater than ₹0.");
+      return;
+    }
+    if (allocationMode === "single" && !selectedInvoiceId) {
+      setErrorMsg("Please select an open invoice to settle.");
+      return;
+    }
+    if (!referenceNumber.trim()) {
+      setErrorMsg("Please enter a valid bank UTR / reference number.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg("");
 
@@ -176,212 +206,245 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs font-medium text-gray-700">
-          {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold">
-              {errorMsg}
+        {/* Modal Body */}
+        {openInvoices.length === 0 ? (
+          <div className="p-8 text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+              <AlertCircle className="w-7 h-7" />
             </div>
-          )}
-
-          {/* Allocation Mode Switcher */}
-          <div className="flex bg-gray-100 p-1 rounded-xl text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setAllocationMode("single")}
-              className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                allocationMode === "single"
-                  ? "bg-white text-emerald-800 shadow-2xs"
-                  : "text-gray-500 hover:text-gray-900"
-              }`}
-            >
-              Single Invoice Settlement
-            </button>
-            <button
-              type="button"
-              onClick={() => setAllocationMode("waterfall")}
-              className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                allocationMode === "waterfall"
-                  ? "bg-[#0F8B7D] text-white shadow-2xs"
-                  : "text-gray-500 hover:text-gray-900"
-              }`}
-            >
-              Multi-Invoice Waterfall (Oldest First)
-            </button>
-          </div>
-
-          {allocationMode === "single" ? (
-            <>
-              {/* Invoice Selection */}
-              <div>
-                <label className="block text-gray-700 font-bold mb-1">Select Open Invoice to Settle *</label>
-                <select
-                  value={selectedInvoiceId}
-                  onChange={(e) => handleInvoiceChange(e.target.value)}
-                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-medium shadow-2xs cursor-pointer"
-                  required
-                >
-                  {openInvoices.map((inv) => (
-                    <option key={inv.id} value={inv.id}>
-                      {inv.invoiceNumber} — {inv.tenantName} ({inv.propertyName}) — Balance: {formatINR(inv.balanceDue)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Invoice Quick Summary */}
-              {currentInvoice && (
-                <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200 grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <span className="text-[10px] text-gray-500 uppercase font-bold">Invoice Value</span>
-                    <p className="font-black text-gray-900 font-mono mt-0.5">{formatINR(currentInvoice.netPayable)}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-gray-500 uppercase font-bold">TDS Deducted</span>
-                    <p className="font-bold text-gray-700 font-mono mt-0.5">{formatINR(currentInvoice.tdsDeducted)}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-rose-700 uppercase font-bold">Balance Due</span>
-                    <p className="font-black text-rose-600 font-mono mt-0.5">{formatINR(currentInvoice.balanceDue)}</p>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-gray-700 font-bold mb-1">Select Tenant Lease Account *</label>
-                <select
-                  value={selectedLeaseId}
-                  onChange={(e) => setSelectedLeaseId(e.target.value)}
-                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 font-medium shadow-2xs"
-                  required
-                >
-                  {tenantLeases.map((t: any) => (
-                    <option key={t.leaseId} value={t.leaseId}>
-                      {t.tenantName} ({t.leaseCode})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Waterfall Cascade Preview */}
-              <div className="p-3 bg-teal-50/60 border border-teal-200 rounded-2xl space-y-2">
-                <div className="font-extrabold text-teal-950 text-xs flex items-center justify-between">
-                  <span>Waterfall Cascade Preview (Oldest Due Date First)</span>
-                  <span className="text-[10px] font-mono text-teal-700">{targetLeaseInvoices.length} Invoices</span>
-                </div>
-                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                  {waterfallPreview.map((item: any) => (
-                    <div key={item.id} className="p-2 bg-white border border-teal-100 rounded-xl flex items-center justify-between text-[11px]">
-                      <div>
-                        <span className="font-mono font-bold text-gray-900">{item.invoiceNumber}</span>
-                        <span className="text-gray-400 ml-1.5">Due: {item.dueDate}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[#0F8B7D] font-bold">Allocated: {formatINR(item.allocated)}</span>
-                        <span className="text-gray-400 text-[10px] ml-1.5">
-                          {item.willBePaid ? "→ Fully Settled" : `→ Rem: ${formatINR(item.remBalance)}`}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="max-w-md mx-auto space-y-2">
+              <h4 className="text-base font-bold text-gray-950">No Open Invoices Available</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Payments can only be recorded against active tenant lease invoices. There are currently no outstanding receivables for this selection.
+              </p>
+              <div className="text-xs text-left bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-1.5 text-gray-600">
+                <p className="font-semibold text-gray-700">Possible reasons:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-500">
+                  <li>No tenant lease has been added or onboarded to this property yet.</li>
+                  <li>Monthly billing invoices have not been generated yet for this period.</li>
+                  <li>All previous invoices for this property have already been settled in full.</li>
+                </ul>
               </div>
             </div>
-          )}
-
-          {/* Payment Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700 font-bold mb-1">Amount Received (INR) *</label>
-              <input
-                type="number"
-                value={amountReceived}
-                onChange={(e) => setAmountReceived(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white border border-gray-200 text-teal-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono font-black shadow-2xs"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-bold mb-1">Payment Date *</label>
-              <input
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono shadow-2xs"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-bold mb-1">Payment Mode *</label>
-              <select
-                value={paymentMode}
-                onChange={(e) => setPaymentMode(e.target.value)}
-                className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none shadow-2xs cursor-pointer font-medium"
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
-                <option value="neft_rtgs">NEFT / RTGS Corporate Bank Transfer</option>
-                <option value="upi">UPI / Instant Corporate Rail</option>
-                <option value="ach">ACH / NACH Auto-Debit</option>
-                <option value="cheque">Cheque / Demand Draft</option>
-                <option value="credit_card">Corporate Credit Card</option>
-              </select>
+                Close Window
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs font-medium text-gray-700">
+            {errorMsg && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold">
+                {errorMsg}
+              </div>
+            )}
+
+            {/* Allocation Mode Switcher */}
+            <div className="flex bg-gray-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setAllocationMode("single")}
+                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  allocationMode === "single"
+                    ? "bg-white text-emerald-800 shadow-2xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Single Invoice Settlement
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllocationMode("waterfall")}
+                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  allocationMode === "waterfall"
+                    ? "bg-[#0F8B7D] text-white shadow-2xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Multi-Invoice Waterfall (Oldest First)
+              </button>
+            </div>
+
+            {allocationMode === "single" ? (
+              <>
+                {/* Invoice Selection */}
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">Select Open Invoice to Settle *</label>
+                  <select
+                    value={selectedInvoiceId}
+                    onChange={(e) => handleInvoiceChange(e.target.value)}
+                    className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-medium shadow-2xs cursor-pointer"
+                    required
+                  >
+                    {openInvoices.map((inv) => (
+                      <option key={inv.id} value={inv.id}>
+                        {inv.invoiceNumber} — {inv.tenantName} ({inv.propertyName}) — Balance: {formatINR(inv.balanceDue)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Invoice Quick Summary */}
+                {currentInvoice && (
+                  <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <span className="text-[10px] text-gray-500 uppercase font-bold">Invoice Value</span>
+                      <p className="font-black text-gray-900 font-mono mt-0.5">{formatINR(currentInvoice.netPayable)}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-500 uppercase font-bold">TDS Deducted</span>
+                      <p className="font-bold text-gray-700 font-mono mt-0.5">{formatINR(currentInvoice.tdsDeducted)}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-rose-700 uppercase font-bold">Balance Due</span>
+                      <p className="font-black text-rose-600 font-mono mt-0.5">{formatINR(currentInvoice.balanceDue)}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">Select Tenant Lease Account *</label>
+                  <select
+                    value={selectedLeaseId}
+                    onChange={(e) => setSelectedLeaseId(e.target.value)}
+                    className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 font-medium shadow-2xs"
+                    required
+                  >
+                    {tenantLeases.map((t: any) => (
+                      <option key={t.leaseId} value={t.leaseId}>
+                        {t.tenantName} ({t.leaseCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Waterfall Cascade Preview */}
+                <div className="p-3 bg-teal-50/60 border border-teal-200 rounded-2xl space-y-2">
+                  <div className="font-extrabold text-teal-950 text-xs flex items-center justify-between">
+                    <span>Waterfall Cascade Preview (Oldest Due Date First)</span>
+                    <span className="text-[10px] font-mono text-teal-700">{targetLeaseInvoices.length} Invoices</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {waterfallPreview.map((item: any) => (
+                      <div key={item.id} className="p-2 bg-white border border-teal-100 rounded-xl flex items-center justify-between text-[11px]">
+                        <div>
+                          <span className="font-mono font-bold text-gray-900">{item.invoiceNumber}</span>
+                          <span className="text-gray-400 ml-1.5">Due: {item.dueDate}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[#0F8B7D] font-bold">Allocated: {formatINR(item.allocated)}</span>
+                          <span className="text-gray-400 text-[10px] ml-1.5">
+                            {item.willBePaid ? "→ Fully Settled" : `→ Rem: ${formatINR(item.remBalance)}`}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Amount Received (INR) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={amountReceived}
+                  onChange={(e) => setAmountReceived(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-white border border-gray-200 text-teal-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono font-black shadow-2xs"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Payment Date *</label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono shadow-2xs"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Payment Mode *</label>
+                <select
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none shadow-2xs cursor-pointer font-medium"
+                >
+                  <option value="neft_rtgs">NEFT / RTGS Corporate Bank Transfer</option>
+                  <option value="upi">UPI / Instant Corporate Rail</option>
+                  <option value="ach">ACH / NACH Auto-Debit</option>
+                  <option value="cheque">Cheque / Demand Draft</option>
+                  <option value="credit_card">Corporate Credit Card</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Bank UTR / Transaction Reference *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. HDFCR52026090511892"
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  className="w-full bg-white border border-gray-200 text-indigo-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono font-bold shadow-2xs"
+                  required
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-gray-700 font-bold mb-1">Bank UTR / Transaction Reference *</label>
+              <label className="block text-gray-700 font-bold mb-1">Escrow Bank Account</label>
               <input
                 type="text"
-                placeholder="e.g. HDFCR52026090511892"
-                value={referenceNumber}
-                onChange={(e) => setReferenceNumber(e.target.value)}
-                className="w-full bg-white border border-gray-200 text-indigo-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono font-bold shadow-2xs"
-                required
+                value={bankAccount}
+                onChange={(e) => setBankAccount(e.target.value)}
+                className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono text-[11px] shadow-2xs"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-gray-700 font-bold mb-1">Escrow Bank Account</label>
-            <input
-              type="text"
-              value={bankAccount}
-              onChange={(e) => setBankAccount(e.target.value)}
-              className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none font-mono text-[11px] shadow-2xs"
-            />
-          </div>
+            <div>
+              <label className="block text-gray-700 font-bold mb-1">Reconciliation Notes</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none shadow-2xs"
+              />
+            </div>
 
-          <div>
-            <label className="block text-gray-700 font-bold mb-1">Reconciliation Notes</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl px-3 py-2 focus:border-emerald-500 focus:outline-none shadow-2xs"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{isSubmitting ? "Processing..." : "Confirm & Settle Payment"}</span>
-            </button>
-          </div>
-        </form>
+            {/* Actions */}
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !isFormValid}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isSubmitting ? "Processing..." : "Confirm & Settle Payment"}</span>
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

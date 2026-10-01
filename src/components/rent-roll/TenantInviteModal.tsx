@@ -16,7 +16,12 @@ import {
   Users,
   CheckCircle2,
   ArrowRight,
-  Loader2
+  Loader2,
+  DollarSign,
+  Calendar,
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
@@ -27,8 +32,17 @@ interface TenantInviteModalProps {
     id: string;
     name: string;
     location?: string;
+    address?: string;
+    city?: string;
+    state?: string;
     inviteCode?: string;
     ownerName?: string;
+    allocatedUnits?: string;
+    units?: string;
+    unitNumber?: string;
+    monthlyRent?: number;
+    camMonthly?: number;
+    totalArea?: number;
   } | null;
   onSuccess?: () => void;
 }
@@ -43,25 +57,70 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<"quick_link" | "direct_invite">("quick_link");
 
+  const [allocatedUnit, setAllocatedUnit] = useState<string>(
+    property?.allocatedUnits || property?.units || property?.unitNumber || "Entire Building / All Floors"
+  );
+
+  // Financial lease terms to agree with tenant
+  const [monthlyRent, setMonthlyRent] = useState<string>(
+    property?.monthlyRent ? String(property.monthlyRent) : "250000"
+  );
+  const [camMonthly, setCamMonthly] = useState<string>(
+    property?.camMonthly ? String(property.camMonthly) : "45000"
+  );
+  const [securityDeposit, setSecurityDeposit] = useState<string>(
+    property?.monthlyRent ? String(property.monthlyRent * 3) : "750000"
+  );
+  const [chargeableArea, setChargeableArea] = useState<string>(
+    property?.totalArea ? String(property.totalArea) : "5000"
+  );
+  const [leaseTenureYears, setLeaseTenureYears] = useState<string>("3");
+  const [escalationPct, setEscalationPct] = useState<string>("5");
+  const [contractDoc, setContractDoc] = useState<string>("Standard Commercial Lease Agreement (Executed)");
+  const [showContractConfig, setShowContractConfig] = useState<boolean>(true);
+
   // Direct tenant invite fields
   const [tenantName, setTenantName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [unitNumber, setUnitNumber] = useState("Unit 401");
-  const [monthlyRent, setMonthlyRent] = useState("250000");
   const [isSending, setIsSending] = useState(false);
   const [inviteSentSuccess, setInviteSentSuccess] = useState(false);
+
+  // Keep allocatedUnit in sync if property changes
+  React.useEffect(() => {
+    if (property) {
+      setAllocatedUnit(property.allocatedUnits || property.units || property.unitNumber || "Entire Building / All Floors");
+      if (property.monthlyRent) {
+        setMonthlyRent(String(property.monthlyRent));
+        setSecurityDeposit(String(property.monthlyRent * 3));
+      }
+      if (property.camMonthly) setCamMonthly(String(property.camMonthly));
+      if (property.totalArea) setChargeableArea(String(property.totalArea));
+    }
+  }, [property]);
 
   // Derive persistent or readable invite code for this building
   const propIdClean = property?.id.replace(/\D/g, "").slice(-4) || "8841";
   const code = property?.inviteCode || `OX-${propIdClean.padStart(4, "7")}`;
 
-  // Dynamic origin for local testing & production
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://www.officex.pro";
+  const effectiveLocation = property?.location || (property?.city ? `${property.city}, ${property.state || ""}` : "Commercial Asset Location");
+  const baseUrl = "https://www.officex.pro";
   const propertyIdParam = property?.id ? `&propertyId=${encodeURIComponent(property.id)}` : "";
   const ownerParam = property?.ownerName ? `&owner=${encodeURIComponent(property.ownerName)}` : "";
-  const locationParam = property?.location ? `&location=${encodeURIComponent(property.location)}` : "";
-  const inviteUrl = property ? `${baseUrl}/tenant/join?code=${encodeURIComponent(code)}&building=${encodeURIComponent(property.name)}${propertyIdParam}${ownerParam}${locationParam}` : "";
+  const locationParam = effectiveLocation ? `&location=${encodeURIComponent(effectiveLocation)}` : "";
+  const unitsParam = allocatedUnit ? `&units=${encodeURIComponent(allocatedUnit)}` : "";
+  const rentParam = monthlyRent ? `&rent=${encodeURIComponent(monthlyRent)}` : "";
+  const camParam = camMonthly ? `&cam=${encodeURIComponent(camMonthly)}` : "";
+  const depositParam = securityDeposit ? `&deposit=${encodeURIComponent(securityDeposit)}` : "";
+  const areaParam = chargeableArea ? `&area=${encodeURIComponent(chargeableArea)}` : "";
+  const tenureParam = leaseTenureYears ? `&tenure=${encodeURIComponent(leaseTenureYears)}` : "";
+  const escalationParam = escalationPct ? `&escalation=${encodeURIComponent(escalationPct)}` : "";
+  const docParam = contractDoc ? `&doc=${encodeURIComponent(contractDoc)}` : "";
+
+  const inviteUrl = property
+    ? `${baseUrl}/tenant/join?code=${encodeURIComponent(code)}&building=${encodeURIComponent(property.name)}${propertyIdParam}${ownerParam}${locationParam}${unitsParam}${rentParam}${camParam}${depositParam}${areaParam}${tenureParam}${escalationParam}${docParam}`
+    : "";
 
   React.useEffect(() => {
     if (typeof window !== "undefined" && property) {
@@ -71,7 +130,15 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
           id: property.id,
           name: property.name,
           ownerName: property.ownerName || localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org") || "Asset Owner",
-          location: property.location || "Commercial Corridor",
+          location: effectiveLocation,
+          allocatedUnits: allocatedUnit,
+          monthlyRent: Number(monthlyRent) || 250000,
+          camMonthly: Number(camMonthly) || 45000,
+          securityDeposit: Number(securityDeposit) || 750000,
+          chargeableArea: Number(chargeableArea) || 5000,
+          leaseTenureYears: Number(leaseTenureYears) || 3,
+          escalationPct: Number(escalationPct) || 5,
+          contractDoc,
           inviteCode: code
         };
         localStorage.setItem("officex_building_invites", JSON.stringify(invites));
@@ -79,7 +146,7 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
         console.warn("Failed to cache building invite code:", e);
       }
     }
-  }, [code, property]);
+  }, [code, property, effectiveLocation, allocatedUnit, monthlyRent, camMonthly, securityDeposit, chargeableArea, leaseTenureYears, escalationPct, contractDoc]);
 
   if (!isOpen || !property) return null;
 
@@ -96,10 +163,16 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   };
 
   const whatsappMessage = encodeURIComponent(
-    `Hello! You have been invited to join the official tenant workplace & rent roll portal for ${property.name} on OfficeX.\n\n` +
+    `🏢 *Commercial Lease Onboarding - ${property.name}*\n` +
+    `📍 *Location:* ${effectiveLocation}\n` +
+    `🚪 *Allocated Leased Part:* ${allocatedUnit}\n` +
+    `📐 *Area:* ${chargeableArea} sqft\n` +
+    `💰 *Agreed Base Rent:* ₹${Number(monthlyRent).toLocaleString()} / month\n` +
+    `⚡ *CAM Maintenance:* ₹${Number(camMonthly).toLocaleString()} / month\n` +
+    `🔒 *Security Deposit:* ₹${Number(securityDeposit).toLocaleString()}\n\n` +
     `Building Code: ${code}\n` +
-    `Direct Invitation Link: ${inviteUrl}\n\n` +
-    `Use this link to verify your building premises, access automated GST rent invoices, submit payments, and connect with property management.`
+    `Direct Onboarding Link: ${inviteUrl}\n\n` +
+    `Please complete your tenant onboarding KYC and digital lease verification using the secure link above to connect directly to your Tenant Dashboard and view your invoice.`
   );
 
   const handleSendDirectInvite = async (e: React.FormEvent) => {
@@ -259,6 +332,143 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Allocated Leased Part / Units */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+                  Allocated Leased Part / Units / Floors *
+                </label>
+                <span className="text-[10px] font-semibold text-[#0F8B7D]">Included in link</span>
+              </div>
+              <input
+                type="text"
+                value={allocatedUnit}
+                onChange={(e) => setAllocatedUnit(e.target.value)}
+                placeholder="e.g. Entire Building / All Floors, or Floors 1-3"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:border-[#0F8B7D]"
+              />
+            </div>
+
+            {/* Lease Contract Commercial Terms */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-3">
+              <div
+                onClick={() => setShowContractConfig(!showContractConfig)}
+                className="flex items-center justify-between cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <FileText size={15} className="text-[#0F8B7D]" />
+                  <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Agreed Financial &amp; Contract Terms
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#0F8B7D]">
+                  <span>{showContractConfig ? "Minimize" : "Configure"}</span>
+                  {showContractConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </div>
+              </div>
+
+              {showContractConfig && (
+                <div className="space-y-2.5 pt-1 border-t border-slate-200/80 animate-fadeIn">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                        Monthly Base Rent (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        value={monthlyRent}
+                        onChange={(e) => {
+                          const r = e.target.value;
+                          setMonthlyRent(r);
+                          setSecurityDeposit(String((Number(r) || 0) * 3));
+                        }}
+                        placeholder="250000"
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                        Monthly CAM (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        value={camMonthly}
+                        onChange={(e) => setCamMonthly(e.target.value)}
+                        placeholder="45000"
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                        Security Deposit (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={securityDeposit}
+                        onChange={(e) => setSecurityDeposit(e.target.value)}
+                        placeholder="750000"
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                        Chargeable Area (Sq.Ft)
+                      </label>
+                      <input
+                        type="number"
+                        value={chargeableArea}
+                        onChange={(e) => setChargeableArea(e.target.value)}
+                        placeholder="5000"
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                        Lease Tenure (Years)
+                      </label>
+                      <input
+                        type="number"
+                        value={leaseTenureYears}
+                        onChange={(e) => setLeaseTenureYears(e.target.value)}
+                        placeholder="3"
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                        Annual Escalation (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={escalationPct}
+                        onChange={(e) => setEscalationPct(e.target.value)}
+                        placeholder="5"
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none focus:border-[#0F8B7D]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                      Lease Agreement Contract Reference
+                    </label>
+                    <input
+                      type="text"
+                      value={contractDoc}
+                      onChange={(e) => setContractDoc(e.target.value)}
+                      placeholder="e.g. Standard Commercial Lease Agreement (Executed)"
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs font-medium focus:outline-none focus:border-[#0F8B7D]"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Direct Link */}

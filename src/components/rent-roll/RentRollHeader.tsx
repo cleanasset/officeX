@@ -182,7 +182,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
       ? currentSelectedProp?.name || primaryBuildingName || "Selected Property"
       : properties.length === 0
       ? "No Assets"
-      : primaryBuildingName || (properties[0]?.name ? `${properties[0].name} (+${properties.length - 1} more)` : "Portfolio");
+      : primaryBuildingName || (properties[0]?.name ? (properties.length > 1 ? `${properties[0].name} (+${properties.length - 1} more)` : properties[0].name) : "Portfolio");
 
   return (
     <div className="flex flex-col gap-2.5 w-full">
@@ -468,7 +468,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
 
       {/* ──── ROW 2: COMPACT FILTERS (only when relevant) ──── */}
       {activeTab !== "dictionary" && (
-        <div className="flex flex-wrap items-center gap-2 px-1">
+        <div className="flex items-center gap-2 px-1 overflow-x-auto pb-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
           {/* Client Account Filter */}
           {clientAccounts && clientAccounts.length > 0 && onSelectClientAccount && (
             <select

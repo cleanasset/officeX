@@ -677,19 +677,31 @@ function RentRollPageInner() {
         onOpenManageProperties={() => setIsManagePropertiesOpen(true)}
       />
 
-      {/* ──── COMPACT TAB INDICATOR (sidebar handles full navigation) ──── */}
-      {(() => {
-        const currentTab = tabs.find(t => t.id === activeTab);
-        const Icon = currentTab?.icon || Building2;
-        return (
-          <div className="flex items-center gap-2 px-1 text-xs text-gray-500">
-            <Icon className="w-3.5 h-3.5 text-[#0F8B7D]" />
-            <span className="font-bold text-gray-900">{currentTab?.label || "Dashboard"}</span>
-            <span className="text-gray-300">·</span>
-            <span className="text-gray-400">FY 2026-27</span>
-          </div>
-        );
-      })()}
+      {/* ──── INTERACTIVE TAB BAR (Scrollable on Mobile & Compact on Desktop) ──── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 px-0.5 scrollbar-none border-b border-slate-200/80 -mt-1">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.id);
+                router.replace(`/properties/rent-roll?tab=${tab.id}`, { scroll: false });
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                isActive
+                  ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold"
+                  : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 border border-slate-200/70"
+              }`}
+            >
+              <Icon size={13} className={isActive ? "text-white" : "text-slate-400"} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Action Feedback Banner */}
       {actionFeedback && (
