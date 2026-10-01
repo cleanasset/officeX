@@ -3546,6 +3546,50 @@ export default function CommercialPropertyMaster() {
                 </div>
               )}
 
+              {/* Action Required: Remaining Details Notification Popup */}
+              {units.some(u => u.status === "occupied") && (
+                <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-left space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black text-slate-900">
+                          Action Required: Complete Lease Terms ({units.filter(u => u.status === "occupied").length} Occupied Units)
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase tracking-wider">
+                          Details Pending
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                        Commercial lease terms (Base Rent psf, Escalation %, Security Deposit, Lock-in) were skipped during property setup. These units are marked as <strong>Pending / Invited</strong> in your Rent Roll and will show as pending until filled or accepted once the tenant joins.
+                      </p>
+                      
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {units.filter(u => u.status === "occupied").map(u => (
+                          <span key={u.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-amber-200 text-[11px] font-mono text-slate-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <strong>{u.suiteNumber || u.spaceCode}</strong>: {u.tenantName || "Tenant Invite Pending"}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => router.push("/properties/rent-roll?tab=rentroll")}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <span>Complete Details in Rent Roll</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Tenant Onboarding & WhatsApp Sharing Card with Unit Selector */}
               <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/50 border border-teal-200/90 text-left space-y-3.5">
                 <div className="flex items-center justify-between">

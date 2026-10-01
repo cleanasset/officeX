@@ -22,7 +22,8 @@ import {
   Plus,
   BookOpen,
   Zap,
-  Sliders
+  Sliders,
+  AlertTriangle
 } from "lucide-react";
 
 import { RentRollHeader } from "@/components/rent-roll/RentRollHeader";
@@ -337,6 +338,7 @@ function RentRollPageInner() {
   const [isManagePropertiesOpen, setIsManagePropertiesOpen] = useState<boolean>(false);
   const [propertyToDelete, setPropertyToDelete] = useState<any | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [dismissPendingAlert, setDismissPendingAlert] = useState<boolean>(false);
 
   // Property Removal Handler
   const handleRemoveProperty = async (propertyId: string) => {
@@ -691,6 +693,45 @@ function RentRollPageInner() {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Action Required: Pending Leases Notification Banner */}
+      {!dismissPendingAlert && leases.some(l => l.approvalStatus === "submitted" || (l as any).isTermsPending || l.status === "pending_approval") && (
+        <div className="p-3.5 px-4 bg-amber-50/90 border border-amber-200 text-amber-900 rounded-2xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <AlertTriangle size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900">
+                  {leases.filter(l => l.approvalStatus === "submitted" || (l as any).isTermsPending || l.status === "pending_approval").length} Leased Unit(s) Pending Final Commercial Details
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold uppercase">
+                  Terms Incomplete
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                Details were skipped during property setup. Complete base rent psf, escalation schedule, and lock-in, or finalize upon tenant invite acceptance.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <button
+              onClick={() => setActiveTab("rentroll")}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            >
+              Review Pending Leases
+            </button>
+            <button
+              onClick={() => setDismissPendingAlert(true)}
+              className="text-slate-400 hover:text-slate-600 p-1 text-xs cursor-pointer font-bold"
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 

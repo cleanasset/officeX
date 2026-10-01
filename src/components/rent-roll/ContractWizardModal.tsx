@@ -108,11 +108,11 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [seatsContracted, setSeatsContracted] = useState<number>(100);
   const [seatsMinimum, setSeatsMinimum] = useState<number>(80);
   const [seatBillingBasis, setSeatBillingBasis] = useState<"contracted" | "occupied" | "minimum_commitment">("minimum_commitment");
-  const [baseRentPsf, setBaseRentPsf] = useState<number>(150);
-  const [camRatePsf, setCamRatePsf] = useState<number>(25);
+  const [baseRentPsf, setBaseRentPsf] = useState<number>(0);
+  const [camRatePsf, setCamRatePsf] = useState<number>(0);
   const [camIsIncluded, setCamIsIncluded] = useState<boolean>(false);
   const [parkingSlots, setParkingSlots] = useState<number>(0);
-  const [parkingSlotRate, setParkingSlotRate] = useState<number>(4000);
+  const [parkingSlotRate, setParkingSlotRate] = useState<number>(0);
   const [utilityFixedMonthly, setUtilityFixedMonthly] = useState<number>(0);
 
   // STEP 4: Escalation & Concessions
@@ -125,7 +125,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [rentFreeEndDate, setRentFreeEndDate] = useState<string>("");
 
   // STEP 5: Deposits & Clauses
-  const [depositMonths, setDepositMonths] = useState<number>(6);
+  const [depositMonths, setDepositMonths] = useState<number>(0);
   const [securityDepositRequired, setSecurityDepositRequired] = useState<number>(0);
   const [securityDepositHeld, setSecurityDepositHeld] = useState<number>(0);
   const [topUpOnEscalation, setTopUpOnEscalation] = useState<boolean>(true);
@@ -174,7 +174,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
               spaceCode: s.unitNumber || s.spaceCode || `Space-${s.id.slice(0, 4)}`,
               area: Number(s.chargeableArea) || Number(s.carpetArea) || 1000,
               floorNumber: s.floorNumber || 1,
-              askingRate: Number(s.standardMarketRentPsf) || Number(s.standardRatePsf) || 150,
+              askingRate: Number(s.standardMarketRentPsf) || Number(s.standardRatePsf) || 0,
             })));
           }
         })
@@ -194,9 +194,13 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
       setSelectedSpaces([spaceObj]);
       if (preSelectedSpace.standardMarketRentPsf || preSelectedSpace.standardRatePsf) {
         setBaseRentPsf(Number(preSelectedSpace.standardMarketRentPsf || preSelectedSpace.standardRatePsf));
+      } else {
+        setBaseRentPsf(0);
       }
       if (preSelectedSpace.standardCamPsf) {
         setCamRatePsf(Number(preSelectedSpace.standardCamPsf));
+      } else {
+        setCamRatePsf(0);
       }
     }
   }, [preSelectedSpace]);
@@ -1481,29 +1485,47 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
 
               {/* Financial Metrics */}
               <div className="space-y-2 text-xs">
+                {liveSummary.monthlyBaseRent === 0 && (
+                  <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200 text-amber-900 text-[10px] flex items-center gap-1.5 leading-tight">
+                    <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                    <span>Terms skipped during creation. Rates show as pending until entered or accepted.</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Effective Rate</span>
-                  <span className="font-bold text-slate-800">₹{liveSummary.effectiveRate.toFixed(2)} psf/mo</span>
+                  <span className={`font-bold ${liveSummary.effectiveRate > 0 ? "text-slate-800" : "text-amber-600 font-mono text-[11px]"}`}>
+                    {liveSummary.effectiveRate > 0 ? `₹${liveSummary.effectiveRate.toFixed(2)} psf/mo` : "Pending Entry"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Monthly Base Rent (D-01)</span>
-                  <span className="font-bold text-slate-900">{formatINR(liveSummary.monthlyBaseRent)}</span>
+                  <span className={`font-bold ${liveSummary.monthlyBaseRent > 0 ? "text-slate-900" : "text-amber-600"}`}>
+                    {liveSummary.monthlyBaseRent > 0 ? formatINR(liveSummary.monthlyBaseRent) : "₹0.00 (Pending)"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">CAM (Monthly D-04)</span>
-                  <span className="font-semibold text-slate-700">{liveSummary.camText}</span>
+                  <span className={`font-semibold ${liveSummary.camMonthly > 0 ? "text-slate-700" : "text-slate-400"}`}>
+                    {liveSummary.camMonthly > 0 ? liveSummary.camText : "₹0.00 (Unset)"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Total Monthly Gross (D-05)</span>
-                  <span className="font-bold text-teal-700 text-sm">{formatINR(liveSummary.grossMonthlyRecurring)}</span>
+                  <span className={`font-bold text-sm ${liveSummary.grossMonthlyRecurring > 0 ? "text-teal-700" : "text-slate-400"}`}>
+                    {liveSummary.grossMonthlyRecurring > 0 ? formatINR(liveSummary.grossMonthlyRecurring) : "₹0.00 (Pending)"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Annual Contracted Rev</span>
-                  <span className="font-bold text-slate-900">{formatINR(liveSummary.annualisedBaseRent)}</span>
+                  <span className={`font-bold ${liveSummary.annualisedBaseRent > 0 ? "text-slate-900" : "text-slate-400"}`}>
+                    {liveSummary.annualisedBaseRent > 0 ? formatINR(liveSummary.annualisedBaseRent) : "₹0.00 (Pending)"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Deposit Required (D-13)</span>
-                  <span className="font-semibold text-slate-800">{formatINR(liveSummary.depositRequired)}</span>
+                  <span className={`font-semibold ${liveSummary.depositRequired > 0 ? "text-slate-800" : "text-slate-400"}`}>
+                    {liveSummary.depositRequired > 0 ? formatINR(liveSummary.depositRequired) : "₹0.00 (Pending)"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Deposit Shortfall</span>
