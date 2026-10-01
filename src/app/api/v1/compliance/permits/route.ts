@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { getVisitorComplianceDb, createOrApprovePermit } from "@/lib/visitor-compliance-store";
 
 export async function GET(req: Request) {
   try {
-    const permits: any[] = [];
+    const { searchParams } = new URL(req.url);
+    const propertyId = searchParams.get("propertyId") || "";
+
+    const db = getVisitorComplianceDb();
+    let permits = db.permits || [];
+
+    if (propertyId && propertyId !== "ALL") {
+      permits = permits.filter(p => !p.propertyId || p.propertyId === propertyId);
+    }
 
     return NextResponse.json({
       totalPermits: permits.length,
@@ -30,54 +39,33 @@ export async function POST(req: Request) {
       // For approval requests (BR-C11, C-029)
       isApprovalAction = false,
       permitId,
-      vendorPrerequisiteValid = true
+      vendorPrerequisiteValid = true,
+      approver
     } = body;
 
-    // BR-C11 / C-029: Validate contractor statutory prerequisites
-    if (isApprovalAction) {
-      if (!vendorPrerequisiteValid) {
-        return NextResponse.json(
-          {
-            error: "BR-C11 Violation: Cannot approve permit. Mandatory vendor compliance certificate or workman insurance is expired.",
-            code: "EXPIRED_PREREQUISITE_BLOCKED"
-          },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        permitId,
-        status: "active",
-        approvedAt: new Date().toISOString(),
-        message: "Permit approved. Safety controls verified. Active permit issued."
-      });
-    }
-
-    if (!title || !contractor || !validFrom || !validTo || !riskControls) {
-      return NextResponse.json({ error: "Title, Contractor, Validity Window, and Risk Controls are required." }, { status: 400 });
-    }
-
-    const newPermit = {
-      id: `PTW-2026-${Math.floor(100 + Math.random() * 900)}`,
+    const result = createOrApprovePermit({
       permitType,
-      title: title.trim(),
-      contractor: contractor.trim(),
-      location: location || "Building Campus",
-      validFrom: new Date(validFrom).toISOString(),
-      validTo: new Date(validTo).toISOString(),
-      riskControls: riskControls.trim(),
-      vendorPrerequisiteValid: true,
-      status: "pending_approval",
-      createdAt: new Date().toISOString()
-    };
+      title,
+      contractor,
+      location,
+      validFrom,
+      validTo,
+      riskControls,
+      isApprovalAction,
+      permitId,
+      vendorPrerequisiteValid,
+      approver
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Permit requested and submitted for EHS review.",
-      permit: newPermit
+      message: result.message,
+      permit: result.permit
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Permit operation failed" },
+      { status: 400 }
+    );
   }
 }

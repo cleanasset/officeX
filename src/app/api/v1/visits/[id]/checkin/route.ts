@@ -1,43 +1,22 @@
 import { NextResponse } from "next/server";
+import { checkinVisit } from "@/lib/visitor-compliance-store";
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const {
-      badgeNumber,
-      photoDataUri,
-      accessGate = "Turnstile Gate G-01",
-      bypassWatchlist = false
-    } = body;
+    const { id } = await context.params;
+    if (!id) {
+      return NextResponse.json({ error: "Visit ID or Pass Token is required" }, { status: 400 });
+    }
 
-    const checkinTime = new Date().toISOString();
-    const assignedBadge = badgeNumber || `BDG-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    return NextResponse.json({
-      success: true,
-      visitId: id,
-      status: "checked_in",
-      checkinAt: checkinTime,
-      badge: {
-        badgeNumber: assignedBadge,
-        type: "PHYSICAL_STICKER",
-        accessPoint: accessGate,
-        issuedAt: checkinTime
-      },
-      speedGateRelay: {
-        vendor: "GUNNEBO_OPTICAL_RELAY",
-        gate: accessGate,
-        command: "PULSE_OPEN",
-        transitSecondsWindow: 18,
-        result: "GRANTED"
-      },
-      message: `Visitor successfully checked in. Badge ${assignedBadge} issued. Optical speed gate opened.`
-    });
+    const result = checkinVisit(id);
+    return NextResponse.json(result);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to check in visitor" },
+      { status: 400 }
+    );
   }
 }

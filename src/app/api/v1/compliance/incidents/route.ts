@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { getVisitorComplianceDb, logIncident } from "@/lib/visitor-compliance-store";
 
 export async function GET(req: Request) {
   try {
-    const incidents: any[] = [];
+    const { searchParams } = new URL(req.url);
+    const propertyId = searchParams.get("propertyId") || "";
+
+    const db = getVisitorComplianceDb();
+    let incidents = db.incidents || [];
+
+    if (propertyId && propertyId !== "ALL") {
+      incidents = incidents.filter(i => !i.propertyId || i.propertyId === propertyId);
+    }
 
     return NextResponse.json({
       totalIncidents: incidents.length,
@@ -25,41 +34,35 @@ export async function POST(req: Request) {
       severity = "moderate",
       description,
       immediateAction,
-      reportedBy = "Operations Staff"
+      reportedBy = "Operations Staff",
+      propertyId
     } = body;
 
     if (!title || !location || !immediateAction) {
-      return NextResponse.json({ error: "Incident Title, Location, and Immediate Action are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Incident Title, Location, and Immediate Action are required." },
+        { status: 400 }
+      );
     }
 
-    const isCritical = severity.toLowerCase() === "critical";
-    const incidentId = `INC-2026-${Math.floor(100 + Math.random() * 900)}`;
-    const capaId = `CAPA-2026-${Math.floor(100 + Math.random() * 900)}`;
-
-    const newIncident = {
-      id: incidentId,
-      title: title.trim(),
-      location: location.trim(),
+    const result = logIncident({
+      title,
+      location,
       type,
-      severity: severity.toLowerCase(),
-      occurredAt: new Date().toISOString(),
-      reportedAt: new Date().toISOString(),
+      severity,
+      description,
+      immediateAction,
       reportedBy,
-      status: "open",
-      description: description || title,
-      immediateAction: immediateAction.trim(),
-      capaRequired: true,
-      capaId,
-      escalationTriggered: isCritical, // C-025 Critical escalation
-      escalatedTo: isCritical ? ["Head of EHS", "Property Director", "Municipal Liaison"] : []
-    };
+      propertyId
+    });
 
     return NextResponse.json({
       success: true,
-      message: isCritical
-        ? "CRITICAL INCIDENT LOGGED. High-priority EHS escalation and SMS broadcast dispatched."
-        : "Incident recorded successfully. Corrective Action (CAPA) ticket initialized.",
-      incident: newIncident
+      message: result.isCritical
+        ? "🚨 CRITICAL INCIDENT LOGGED. High-priority EHS escalation and SMS broadcast dispatched."
+        : "Incident recorded and corrective action assigned.",
+      incident: result.incident,
+      capa: result.capa
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

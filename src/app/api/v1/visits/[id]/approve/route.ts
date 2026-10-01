@@ -1,35 +1,29 @@
 import { NextResponse } from "next/server";
+import { approveVisit } from "@/lib/visitor-compliance-store";
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const { decision, reason, approverName = "Host Approver" } = body;
+    const { id } = await context.params;
+    const body = await req.json().catch(() => ({}));
+    const { decision = "approved", approver = "Host Manager", remarks } = body;
 
-    if (!decision || !["approved", "rejected"].includes(decision.toLowerCase())) {
-      return NextResponse.json({ error: "Valid decision ('approved' or 'rejected') is required." }, { status: 400 });
+    if (decision !== "approved" && decision !== "rejected") {
+      return NextResponse.json({ error: "Decision must be 'approved' or 'rejected'." }, { status: 400 });
     }
 
-    const isApproved = decision.toLowerCase() === "approved";
-
+    const updated = approveVisit(id, decision, approver, remarks);
     return NextResponse.json({
       success: true,
-      visitId: id,
-      decision: isApproved ? "approved" : "rejected",
-      status: isApproved ? "approved" : "denied",
-      audit: {
-        approver: approverName,
-        reason: reason || (isApproved ? "Approved by Host" : "Host unavailable"),
-        decidedAt: new Date().toISOString()
-      },
-      message: isApproved
-        ? "Visitor approved. Access pass activated."
-        : "Visitor request rejected with audit reason logged."
+      message: decision === "approved" ? "Visit approved. Digital pass activated." : "Visit request rejected.",
+      visit: updated
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to process visit approval" },
+      { status: 400 }
+    );
   }
 }

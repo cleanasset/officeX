@@ -171,19 +171,38 @@ export default function VisitorManagementConsole({
   const [receptionMatch, setReceptionMatch] = useState<any | null>(null);
   const [speedGateActive, setSpeedGateActive] = useState(false);
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
+  const fetchVisits = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/v1/visits?search=${encodeURIComponent(searchTerm)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.visits) setVisitsList(data.visits);
+        if (data.watchlist) setWatchlistEntries(data.watchlist);
+        if (data.summary && typeof data.summary.emergencyActive === "boolean") {
+          setActiveEmergencyAlert(data.summary.emergencyActive);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load visits:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVisits();
+  }, [searchTerm]);
+
   useEffect(() => {
     if (portalRole === "tenant" && typeof window !== "undefined") {
-      try {
-        const stored = JSON.parse(localStorage.getItem("officex_tenant_visitors") || "[]");
-        setVisitsList(Array.isArray(stored) ? stored : []);
-      } catch {
-        setVisitsList([]);
-      }
       const b = localStorage.getItem("officex_tenant_building");
       if (b) setSelectedProperty(b);
       const myUser = localStorage.getItem("officex_user_name") || "Tenant Lead";
@@ -206,7 +225,7 @@ export default function VisitorManagementConsole({
   const contractorsCount = visitsList.filter(v => v.visitorType === "contractor" || v.visitorType === "vendor").length;
 
   // Handle Pre-registration submission (VC-02, V-001, V-003)
-  const handlePreRegister = (e: React.FormEvent) => {
+  const handlePreRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!form.visitorName || !form.mobile || !form.visitStart || !form.visitEnd) {
@@ -221,135 +240,154 @@ export default function VisitorManagementConsole({
       return;
     }
 
-    // Watchlist check (BR-V10)
-    const isRestricted = watchlistEntries.some(
-      w => w.identifier.toLowerCase().includes(form.mobile.toLowerCase()) || w.name.toLowerCase().includes(form.visitorName.toLowerCase())
-    );
+    try {
+      const res = await fetch("/api/v1/visits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          visitorName: form.visitorName.trim(),
+          company: form.company.trim() || "Independent",
+          visitorType: form.visitorType,
+          mobile: form.mobile.trim(),
+          email: form.email.trim() || null,
+          hostName: form.hostName,
+          tenantName: form.tenantName,
+          purpose: form.purpose,
+          visitStart: new Date(form.visitStart).toISOString(),
+          visitEnd: new Date(form.visitEnd).toISOString(),
+          accessZone: form.accessZone,
+          vehicleRegistration: form.vehicleRegistration || undefined,
+          requiresApproval: form.requiresApproval,
+          propertyId: "prop-001",
+          propertyName: selectedProperty
+        })
+      });
 
-    if (isRestricted) {
-      showToast("🚨 SECURITY WARNING: Visitor is on active watchlist. Routed to Security Manager.", "error");
-    }
-
-    const newId = `v-${Date.now()}`;
-    const newPass = `PASS-QR-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const newEntry = {
-      id: newId,
-      visitorName: form.visitorName.trim(),
-      company: form.company.trim() || "Independent",
-      visitorType: form.visitorType,
-      mobile: form.mobile.trim(),
-      email: form.email.trim() || null,
-      hostName: form.hostName,
-      tenantName: form.tenantName,
-      purpose: form.purpose,
-      visitStart: new Date(form.visitStart).toISOString(),
-      visitEnd: new Date(form.visitEnd).toISOString(),
-      approvalStatus: form.requiresApproval ? "pending" : "approved",
-      checkinAt: null,
-      checkoutAt: null,
-      status: form.requiresApproval ? "pending_approval" : "pre_registered",
-      zone: form.accessZone,
-      passId: newPass,
-      riskLevel: isRestricted ? "high" : "low",
-      vehicle: form.vehicleRegistration ? form.vehicleRegistration.toUpperCase() : null,
-      evacuationStatus: "UNACCOUNTED"
-    };
-
-    setVisitsList(prev => {
-      const updated = [newEntry, ...prev];
-      if (portalRole === "tenant" && typeof window !== "undefined") {
-        try {
-          localStorage.setItem("officex_tenant_visitors", JSON.stringify(updated));
-        } catch (err) {
-          console.warn("Storage note:", err);
-        }
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "Failed to register visitor", "error");
+        return;
       }
-      return updated;
-    });
-    showToast(form.requiresApproval ? "Pre-registration submitted to host approval queue." : "🎉 Visitor pre-registered! Digital pass activated.", "success");
-    setSelectedVisitForBadge(newEntry);
 
-    // Reset Form
-    setForm({
-      visitorName: "",
-      mobile: "",
-      email: "",
-      company: "",
-      visitorType: "client",
-      hostName: "Ravi Mehta",
-      tenantName: "Godrej Capital",
-      purpose: "Meeting",
-      visitStart: "",
-      visitEnd: "",
-      accessZone: "Floor 14 - Executive Suite",
-      vehicleRegistration: "",
-      consentFlag: true,
-      requiresApproval: false
-    });
+      if (data.watchlistHit) {
+        showToast("🚨 SECURITY WARNING: Visitor is on active watchlist. Routed to Security Manager.", "error");
+      } else {
+        showToast(data.message || "🎉 Visitor pre-registered! Digital pass activated.", "success");
+      }
+
+      if (data.visit) {
+        setSelectedVisitForBadge(data.visit);
+      }
+      await fetchVisits();
+
+      // Reset Form
+      setForm({
+        visitorName: "",
+        mobile: "",
+        email: "",
+        company: "",
+        visitorType: "client",
+        hostName: form.hostName,
+        tenantName: form.tenantName,
+        purpose: "Meeting",
+        visitStart: "",
+        visitEnd: "",
+        accessZone: "Floor 14 - Executive Suite",
+        vehicleRegistration: "",
+        consentFlag: true,
+        requiresApproval: false
+      });
+    } catch (err: any) {
+      showToast(err.message || "Network error", "error");
+    }
   };
 
   // Handle Reception Check-in (VC-04, V-008, BR-V04)
-  const handleCheckIn = (visitId: string) => {
-    const visit = visitsList.find(v => v.id === visitId);
-    if (!visit) return;
+  const handleCheckIn = async (visitId: string) => {
+    try {
+      const res = await fetch(`/api/v1/visits/${encodeURIComponent(visitId)}/checkin`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "Cannot check in visitor", "error");
+        return;
+      }
 
-    if (visit.approvalStatus === "pending") {
-      showToast("Cannot check in: Host approval is still pending (BR-V02).", "error");
-      return;
+      setSpeedGateActive(true);
+      setTimeout(() => setSpeedGateActive(false), 3000);
+
+      showToast(data.message || "✓ Checked in successfully. Gunnebo Speed-Gate Pulse Issued.", "success");
+      setReceptionMatch(null);
+      await fetchVisits();
+    } catch (err: any) {
+      showToast(err.message || "Check-in failed", "error");
     }
-
-    setSpeedGateActive(true);
-    setTimeout(() => setSpeedGateActive(false), 3000);
-
-    const checkinTime = new Date().toISOString();
-    setVisitsList(prev =>
-      prev.map(v => (v.id === visitId ? { ...v, status: "checked_in", checkinAt: checkinTime, evacuationStatus: "UNACCOUNTED" } : v))
-    );
-
-    showToast(`✓ Checked in ${visit.visitorName}. Gunnebo Speed-Gate Pulse Issued (18s window).`, "success");
-    setReceptionMatch(null);
   };
 
   // Handle Checkout (VC-09, V-020, BR-V05)
-  const handleCheckOut = (visitId: string, manualReason?: string) => {
-    const checkoutTime = new Date().toISOString();
-    setVisitsList(prev =>
-      prev.map(v => (v.id === visitId ? { ...v, status: "checked_out", checkoutAt: checkoutTime, isOverstay: false, evacuationStatus: "SAFE" } : v))
-    );
-    showToast("Visitor checked out. Badge returned.", "info");
+  const handleCheckOut = async (visitId: string, manualReason?: string) => {
+    try {
+      const res = await fetch(`/api/v1/visits/${encodeURIComponent(visitId)}/checkout`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "Cannot check out visitor", "error");
+        return;
+      }
+      showToast(manualReason ? `Visitor checked out (${manualReason}).` : (data.message || "Visitor checked out. Badge returned."), "info");
+      await fetchVisits();
+    } catch (err: any) {
+      showToast(err.message || "Checkout failed", "error");
+    }
   };
 
   // Handle Host Approval Decision (VC-03, V-005, V-006, BR-V02)
-  const handleApprovalDecision = (decision: "approved" | "rejected") => {
+  const handleApprovalDecision = async (decision: "approved" | "rejected") => {
     if (!selectedVisitForApproval) return;
-
-    const isApproved = decision === "approved";
-    setVisitsList(prev =>
-      prev.map(v =>
-        v.id === selectedVisitForApproval.id
-          ? {
-              ...v,
-              approvalStatus: decision,
-              status: isApproved ? "approved" : "denied",
-              approvalReason: approvalDecisionReason || (isApproved ? "Approved by Host" : "Declined by Host")
-            }
-          : v
-      )
-    );
-
-    showToast(`Visit ${isApproved ? "Approved" : "Rejected"} successfully.`, isApproved ? "success" : "info");
-    setSelectedVisitForApproval(null);
-    setApprovalDecisionReason("");
+    try {
+      const res = await fetch(`/api/v1/visits/${encodeURIComponent(selectedVisitForApproval.id)}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          decision,
+          approver: "Host Manager",
+          remarks: approvalDecisionReason || (decision === "approved" ? "Approved by Host" : "Declined by Host")
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "Approval action failed", "error");
+        return;
+      }
+      showToast(data.message || `Visit ${decision} successfully.`, decision === "approved" ? "success" : "info");
+      setSelectedVisitForApproval(null);
+      setApprovalDecisionReason("");
+      await fetchVisits();
+    } catch (err: any) {
+      showToast(err.message || "Approval decision failed", "error");
+    }
   };
 
   // Handle Emergency Roll Call Status Toggle (VC-13, V-031, BR-V07)
-  const handleToggleRollCallStatus = (visitId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === "SAFE" ? "MISSING" : currentStatus === "MISSING" ? "UNACCOUNTED" : "SAFE";
-    setVisitsList(prev =>
-      prev.map(v => (v.id === visitId ? { ...v, evacuationStatus: nextStatus } : v))
-    );
-    showToast(`Visitor status updated to ${nextStatus}`, "info");
+  const handleToggleRollCallStatus = async (visitId: string, currentStatus?: string) => {
+    try {
+      const res = await fetch("/api/v1/visits/emergency", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          active: true,
+          markedSafeVisits: [visitId]
+        })
+      });
+      if (res.ok) {
+        showToast(`Visitor status updated ${currentStatus ? `(was ${currentStatus})` : ""}`, "success");
+        await fetchVisits();
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to update emergency roll call", "error");
+    }
   };
 
   return (
@@ -385,15 +423,23 @@ export default function VisitorManagementConsole({
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => {
+            onClick={async () => {
               const next = !activeEmergencyAlert;
               setActiveEmergencyAlert(next);
+              try {
+                await fetch("/api/v1/visits/emergency", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ active: next })
+                });
+              } catch (e) {}
               if (next) {
                 setActiveTab("emergency");
                 showToast("🚨 EMERGENCY EVACUATION MODE ACTIVATED! Roll-call protocol engaged.", "error");
               } else {
                 showToast("Emergency mode cleared. Normal access restored.", "info");
               }
+              await fetchVisits();
             }}
             className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
               activeEmergencyAlert
@@ -403,6 +449,14 @@ export default function VisitorManagementConsole({
           >
             <Flame size={14} />
             <span>{activeEmergencyAlert ? "EMERGENCY ACTIVE (ROLL-CALL)" : "Declare Emergency"}</span>
+          </button>
+
+          <button
+            onClick={() => fetchVisits()}
+            disabled={isLoading}
+            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin text-teal-600" : ""} /> Refresh
           </button>
 
           <button

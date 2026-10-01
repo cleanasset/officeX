@@ -79,6 +79,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
+    { name: "Visitor Management", href: "/properties/visitors", icon: Users },
     { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
   ],
 

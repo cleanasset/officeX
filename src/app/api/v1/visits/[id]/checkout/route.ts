@@ -1,30 +1,22 @@
 import { NextResponse } from "next/server";
+import { checkoutVisit } from "@/lib/visitor-compliance-store";
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await req.json().catch(() => ({}));
-    const { badgeReturned = true, manualOverrideReason, checkedOutBy = "Security Desk" } = body;
+    const { id } = await context.params;
+    if (!id) {
+      return NextResponse.json({ error: "Visit ID or Pass Token is required" }, { status: 400 });
+    }
 
-    const checkoutTime = new Date().toISOString();
-
-    return NextResponse.json({
-      success: true,
-      visitId: id,
-      status: "checked_out",
-      checkoutAt: checkoutTime,
-      badgeReturned: Boolean(badgeReturned),
-      audit: {
-        checkedOutBy,
-        manualOverrideReason: manualOverrideReason || null,
-        timestamp: checkoutTime
-      },
-      message: "Visitor successfully checked out. Active visit closed and removed from live roll-call."
-    });
+    const result = checkoutVisit(id);
+    return NextResponse.json(result);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to check out visitor" },
+      { status: 400 }
+    );
   }
 }

@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { getVisitorComplianceDb, createRisk } from "@/lib/visitor-compliance-store";
 
 export async function GET(req: Request) {
   try {
-    const risks: any[] = [];
+    const { searchParams } = new URL(req.url);
+    const propertyId = searchParams.get("propertyId") || "";
+
+    const db = getVisitorComplianceDb();
+    let risks = db.risks || [];
+
+    if (propertyId && propertyId !== "ALL") {
+      risks = risks.filter(r => !r.propertyId || r.propertyId === propertyId);
+    }
 
     return NextResponse.json({
       totalRisks: risks.length,
@@ -29,40 +38,27 @@ export async function POST(req: Request) {
     } = body;
 
     if (!statement || !category) {
-      return NextResponse.json({ error: "Category and Risk Statement are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Category and Risk Statement are required." },
+        { status: 400 }
+      );
     }
 
-    const l = Math.min(5, Math.max(1, Number(likelihood)));
-    const i = Math.min(5, Math.max(1, Number(impact)));
-    const inherentScore = l * i; // BR-C10, C-026
-
-    const rl = Math.min(5, Math.max(1, Number(residualLikelihood)));
-    const ri = Math.min(5, Math.max(1, Number(residualImpact)));
-    const residualScore = rl * ri; // C-027
-
-    const rating = inherentScore >= 16 ? "CRITICAL" : inherentScore >= 10 ? "HIGH" : inherentScore >= 5 ? "MEDIUM" : "LOW";
-
-    const newRisk = {
-      id: `RSK-${Math.floor(100 + Math.random() * 900)}`,
+    const risk = createRisk({
       category,
-      statement: statement.trim(),
-      likelihood: l,
-      impact: i,
-      inherentScore,
-      rating,
+      statement,
+      likelihood: Number(likelihood),
+      impact: Number(impact),
       mitigation: mitigation || "Standard operational SOP controls.",
-      residualLikelihood: rl,
-      residualImpact: ri,
-      residualScore,
-      owner,
-      status: "active",
-      createdAt: new Date().toISOString()
-    };
+      residualLikelihood: Number(residualLikelihood),
+      residualImpact: Number(residualImpact),
+      owner
+    });
 
     return NextResponse.json({
       success: true,
-      message: `Risk registered. Inherent Score: ${inherentScore} (${rating}), Residual Score: ${residualScore}.`,
-      risk: newRisk
+      message: "Enterprise risk registered with inherent and residual risk matrix scores.",
+      risk
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
