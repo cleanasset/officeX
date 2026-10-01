@@ -40,7 +40,10 @@ import {
   CheckCircle,
   Eye,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Copy,
+  MessageSquare,
+  Share2
 } from "lucide-react";
 import {
   AddressAutocomplete,
@@ -84,6 +87,24 @@ interface LeasableSpaceUnit {
   escalationPct?: number;
   escalationFrequencyYears?: number;
   securityDepositMonths?: number;
+  // Dynamic Fitout Inclusions (Item 9)
+  workstationCount?: number;
+  privateCabins?: number;
+  meetingRooms?: number;
+  pantryType?: "wet" | "dry" | "none";
+  hasReception?: boolean;
+  hasServerRoom?: boolean;
+  hvacType?: string;
+  // Bare shell specific
+  clearHeightFt?: number;
+  flooringStatus?: string;
+  sanctionedPowerKva?: number;
+  dgBackup100Pct?: boolean;
+  ahuRoomProvided?: boolean;
+  // Warehouse specific
+  dockDoorsCount?: number;
+  floorLoadingCapacityTons?: number;
+  clearHeightToEavesMeters?: number;
 }
 
 interface UploadedDocument {
@@ -342,8 +363,28 @@ export default function CommercialPropertyMaster() {
     leaseExpiryDate: "",
     escalationPct: 15,
     escalationFrequencyYears: 3,
-    securityDepositMonths: 6
+    securityDepositMonths: 6,
+    // Fitout inclusions
+    workstationCount: 0,
+    privateCabins: 0,
+    meetingRooms: 0,
+    pantryType: "dry",
+    hasReception: false,
+    hasServerRoom: false,
+    hvacType: "VRV/VRF",
+    clearHeightFt: 11,
+    flooringStatus: "Bare Concrete Slab",
+    sanctionedPowerKva: 25,
+    dgBackup100Pct: true,
+    ahuRoomProvided: false,
+    dockDoorsCount: 0,
+    floorLoadingCapacityTons: 5,
+    clearHeightToEavesMeters: 10
   });
+
+  // Tenant Invite Sharing in Success Modal
+  const [selectedShareUnits, setSelectedShareUnits] = useState<string[]>([]);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   const handleEditUnit = (unit: LeasableSpaceUnit) => {
     setEditingUnitId(unit.id);
@@ -365,7 +406,22 @@ export default function CommercialPropertyMaster() {
       leaseExpiryDate: unit.leaseExpiryDate || "",
       escalationPct: unit.escalationPct || 15,
       escalationFrequencyYears: unit.escalationFrequencyYears || 3,
-      securityDepositMonths: unit.securityDepositMonths || 6
+      securityDepositMonths: unit.securityDepositMonths || 6,
+      workstationCount: unit.workstationCount || 0,
+      privateCabins: unit.privateCabins || 0,
+      meetingRooms: unit.meetingRooms || 0,
+      pantryType: unit.pantryType || "dry",
+      hasReception: unit.hasReception || false,
+      hasServerRoom: unit.hasServerRoom || false,
+      hvacType: unit.hvacType || "VRV/VRF",
+      clearHeightFt: unit.clearHeightFt || 11,
+      flooringStatus: unit.flooringStatus || "Bare Concrete Slab",
+      sanctionedPowerKva: unit.sanctionedPowerKva || 25,
+      dgBackup100Pct: unit.dgBackup100Pct !== undefined ? unit.dgBackup100Pct : true,
+      ahuRoomProvided: unit.ahuRoomProvided || false,
+      dockDoorsCount: unit.dockDoorsCount || 0,
+      floorLoadingCapacityTons: unit.floorLoadingCapacityTons || 5,
+      clearHeightToEavesMeters: unit.clearHeightToEavesMeters || 10
     });
   };
 
@@ -389,7 +445,22 @@ export default function CommercialPropertyMaster() {
       leaseExpiryDate: "",
       escalationPct: 15,
       escalationFrequencyYears: 3,
-      securityDepositMonths: 6
+      securityDepositMonths: 6,
+      workstationCount: 0,
+      privateCabins: 0,
+      meetingRooms: 0,
+      pantryType: "dry",
+      hasReception: false,
+      hasServerRoom: false,
+      hvacType: "VRV/VRF",
+      clearHeightFt: 11,
+      flooringStatus: "Bare Concrete Slab",
+      sanctionedPowerKva: 25,
+      dgBackup100Pct: true,
+      ahuRoomProvided: false,
+      dockDoorsCount: 0,
+      floorLoadingCapacityTons: 5,
+      clearHeightToEavesMeters: 10
     });
   };
 
@@ -429,7 +500,22 @@ export default function CommercialPropertyMaster() {
             leaseExpiryDate: newUnit.leaseExpiryDate || undefined,
             escalationPct: Number(newUnit.escalationPct) || 15,
             escalationFrequencyYears: Number(newUnit.escalationFrequencyYears) || 3,
-            securityDepositMonths: Number(newUnit.securityDepositMonths) || 6
+            securityDepositMonths: Number(newUnit.securityDepositMonths) || 6,
+            workstationCount: Number(newUnit.workstationCount) || 0,
+            privateCabins: Number(newUnit.privateCabins) || 0,
+            meetingRooms: Number(newUnit.meetingRooms) || 0,
+            pantryType: newUnit.pantryType || "dry",
+            hasReception: Boolean(newUnit.hasReception),
+            hasServerRoom: Boolean(newUnit.hasServerRoom),
+            hvacType: newUnit.hvacType || "VRV/VRF",
+            clearHeightFt: Number(newUnit.clearHeightFt) || 11,
+            flooringStatus: newUnit.flooringStatus || "Bare Concrete Slab",
+            sanctionedPowerKva: Number(newUnit.sanctionedPowerKva) || 25,
+            dgBackup100Pct: newUnit.dgBackup100Pct !== undefined ? newUnit.dgBackup100Pct : true,
+            ahuRoomProvided: Boolean(newUnit.ahuRoomProvided),
+            dockDoorsCount: Number(newUnit.dockDoorsCount) || 0,
+            floorLoadingCapacityTons: Number(newUnit.floorLoadingCapacityTons) || 5,
+            clearHeightToEavesMeters: Number(newUnit.clearHeightToEavesMeters) || 10
           };
         }
         return u;
@@ -458,7 +544,22 @@ export default function CommercialPropertyMaster() {
         leaseExpiryDate: "",
         escalationPct: 15,
         escalationFrequencyYears: 3,
-        securityDepositMonths: 6
+        securityDepositMonths: 6,
+        workstationCount: 0,
+        privateCabins: 0,
+        meetingRooms: 0,
+        pantryType: "dry",
+        hasReception: false,
+        hasServerRoom: false,
+        hvacType: "VRV/VRF",
+        clearHeightFt: 11,
+        flooringStatus: "Bare Concrete Slab",
+        sanctionedPowerKva: 25,
+        dgBackup100Pct: true,
+        ahuRoomProvided: false,
+        dockDoorsCount: 0,
+        floorLoadingCapacityTons: 5,
+        clearHeightToEavesMeters: 10
       });
       return;
     }
@@ -487,7 +588,22 @@ export default function CommercialPropertyMaster() {
       leaseExpiryDate: newUnit.leaseExpiryDate || undefined,
       escalationPct: Number(newUnit.escalationPct) || 15,
       escalationFrequencyYears: Number(newUnit.escalationFrequencyYears) || 3,
-      securityDepositMonths: Number(newUnit.securityDepositMonths) || 6
+      securityDepositMonths: Number(newUnit.securityDepositMonths) || 6,
+      workstationCount: Number(newUnit.workstationCount) || 0,
+      privateCabins: Number(newUnit.privateCabins) || 0,
+      meetingRooms: Number(newUnit.meetingRooms) || 0,
+      pantryType: newUnit.pantryType || "dry",
+      hasReception: Boolean(newUnit.hasReception),
+      hasServerRoom: Boolean(newUnit.hasServerRoom),
+      hvacType: newUnit.hvacType || "VRV/VRF",
+      clearHeightFt: Number(newUnit.clearHeightFt) || 11,
+      flooringStatus: newUnit.flooringStatus || "Bare Concrete Slab",
+      sanctionedPowerKva: Number(newUnit.sanctionedPowerKva) || 25,
+      dgBackup100Pct: newUnit.dgBackup100Pct !== undefined ? newUnit.dgBackup100Pct : true,
+      ahuRoomProvided: Boolean(newUnit.ahuRoomProvided),
+      dockDoorsCount: Number(newUnit.dockDoorsCount) || 0,
+      floorLoadingCapacityTons: Number(newUnit.floorLoadingCapacityTons) || 5,
+      clearHeightToEavesMeters: Number(newUnit.clearHeightToEavesMeters) || 10
     };
 
     const nextUnits = [...units, created];
@@ -522,7 +638,21 @@ export default function CommercialPropertyMaster() {
       leaseExpiryDate: "",
       escalationPct: 15,
       escalationFrequencyYears: 3,
-      securityDepositMonths: 6
+      securityDepositMonths: 6,
+      workstationCount: 0,
+      privateCabins: 0,
+      meetingRooms: 0,
+      pantryType: "dry",
+      hasReception: false,
+      hasServerRoom: false,
+      hvacType: "VRV/VRF",
+      clearHeightFt: 11,
+      flooringStatus: "Bare Concrete Slab",
+      sanctionedPowerKva: 25,
+      dgBackup100Pct: true,
+      ahuRoomProvided: false,
+      dockDoorsCount: 0,
+      floorLoadingCapacityTons: 5,
     });
   };
 
@@ -578,8 +708,12 @@ export default function CommercialPropertyMaster() {
   // ──── 4. STATUTORY CLEARANCES & SYNDICATION (Statutory Clearances) ────
   const [occupancyCertStatus, setOccupancyCertStatus] = useState<"issued" | "in_progress" | "provisional">("issued");
   const [ocSanctionNumber, setOcSanctionNumber] = useState<string>("");
+  const [ocValidityDate, setOcValidityDate] = useState<string>("");
   const [fireNocValidUntil, setFireNocValidUntil] = useState<string>("");
   const [sanctionedPlanRef, setSanctionedPlanRef] = useState<string>("");
+  const [sanctionedPlanDate, setSanctionedPlanDate] = useState<string>("");
+  const [titleDeedRef, setTitleDeedRef] = useState<string>("");
+  const [titleDeedDate, setTitleDeedDate] = useState<string>("");
   const [syndicateToMarketplace, setSyndicateToMarketplace] = useState<boolean>(false);
   const [activeDocCategory, setActiveDocCategory] = useState<string>("all");
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -602,6 +736,22 @@ export default function CommercialPropertyMaster() {
       });
     }
     setUploadedDocs(prev => [...prev, ...newDocs]);
+
+    // Automatically set deadline / validity dates if empty based on uploaded document type
+    if ((targetCategory === "Fire Department NOC" || targetCategory?.includes("Fire")) && !fireNocValidUntil) {
+      handleSetFireNocPreset(1);
+    }
+    if ((targetCategory === "Occupancy Certificate (OC)" || targetCategory?.includes("Occupancy")) && !ocValidityDate) {
+      const now = new Date();
+      now.setFullYear(now.getFullYear() + 5);
+      setOcValidityDate(now.toISOString().split("T")[0]);
+    }
+    if ((targetCategory === "Sanctioned Floor Blueprint" || targetCategory?.includes("Blueprint") || targetCategory?.includes("Sanction")) && !sanctionedPlanDate) {
+      setSanctionedPlanDate(new Date().toISOString().split("T")[0]);
+    }
+    if ((targetCategory === "Title & Ownership Deed" || targetCategory?.includes("Title") || targetCategory?.includes("Deed")) && !titleDeedDate) {
+      setTitleDeedDate(new Date().toISOString().split("T")[0]);
+    }
     e.target.value = "";
   };
 
@@ -625,6 +775,22 @@ export default function CommercialPropertyMaster() {
       });
     }
     setUploadedDocs(prev => [...prev, ...newDocs]);
+
+    // Automatically set deadline / validity dates if empty based on uploaded document type
+    if ((targetCategory === "Fire Department NOC" || targetCategory?.includes("Fire")) && !fireNocValidUntil) {
+      handleSetFireNocPreset(1);
+    }
+    if ((targetCategory === "Occupancy Certificate (OC)" || targetCategory?.includes("Occupancy")) && !ocValidityDate) {
+      const now = new Date();
+      now.setFullYear(now.getFullYear() + 5);
+      setOcValidityDate(now.toISOString().split("T")[0]);
+    }
+    if ((targetCategory === "Sanctioned Floor Blueprint" || targetCategory?.includes("Blueprint") || targetCategory?.includes("Sanction")) && !sanctionedPlanDate) {
+      setSanctionedPlanDate(new Date().toISOString().split("T")[0]);
+    }
+    if ((targetCategory === "Title & Ownership Deed" || targetCategory?.includes("Title") || targetCategory?.includes("Deed")) && !titleDeedDate) {
+      setTitleDeedDate(new Date().toISOString().split("T")[0]);
+    }
   };
 
   const handleRemoveDoc = (id: string) => {
@@ -748,10 +914,10 @@ export default function CommercialPropertyMaster() {
         city: city.trim(),
         state: state.trim(),
         microMarket: microMarket.trim() || city.trim(),
-        pincode: pincode.trim(),
-        totalArea: totalChargeableArea,
-        chargeableArea: totalChargeableArea,
-        carpetArea: totalCarpetArea,
+        pincode: pincode.trim() || "400001",
+        totalArea: totalChargeableArea || 1000,
+        chargeableArea: totalChargeableArea || 1000,
+        carpetArea: totalCarpetArea || Math.round((totalChargeableArea || 1000) * 0.75),
         currency,
         operatingCurrency: currency,
         areaUnit,
@@ -782,8 +948,12 @@ export default function CommercialPropertyMaster() {
         compliance: {
           occupancyCertStatus,
           occupancyCertNumber: ocSanctionNumber || undefined,
-          fireNocValidUntil,
-          sanctionedPlanRef,
+          occupancyCertValidityDate: ocValidityDate || undefined,
+          fireNocValidUntil: fireNocValidUntil || undefined,
+          sanctionedPlanRef: sanctionedPlanRef || undefined,
+          sanctionedPlanDate: sanctionedPlanDate || undefined,
+          titleDeedRef: titleDeedRef || undefined,
+          titleDeedDate: titleDeedDate || undefined,
           documents: uploadedDocs
         },
         syndicateToMarketplace
@@ -796,6 +966,9 @@ export default function CommercialPropertyMaster() {
         body: JSON.stringify(payload)
       });
       const rrData = await rrRes.json();
+      if (!rrRes.ok) {
+        throw new Error(rrData.error || `Server responded with status ${rrRes.status}`);
+      }
 
       // 2. Also post to general properties DB table for cross-platform availability
       try {
@@ -804,7 +977,7 @@ export default function CommercialPropertyMaster() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...payload,
-            totalArea: totalChargeableArea
+            totalArea: totalChargeableArea || 1000
           })
         });
       } catch (err) {
@@ -817,8 +990,8 @@ export default function CommercialPropertyMaster() {
           const currentList = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
           const occupiedUnits = units.filter(u => u.status === "occupied");
           const calcOccupiedArea = occupiedUnits.reduce((sum, u) => sum + (Number(u.chargeableArea) || 0), 0);
-          const calcVacantArea = Math.max(0, totalChargeableArea - calcOccupiedArea);
-          const calcOccupancyPct = totalChargeableArea > 0 ? Math.round((calcOccupiedArea / totalChargeableArea) * 1000) / 10 : 0;
+          const calcVacantArea = Math.max(0, (totalChargeableArea || 1000) - calcOccupiedArea);
+          const calcOccupancyPct = (totalChargeableArea || 1000) > 0 ? Math.round((calcOccupiedArea / (totalChargeableArea || 1000)) * 1000) / 10 : 0;
           const calcMonthlyRent = occupiedUnits.reduce((sum, u) => sum + Math.round((Number(u.chargeableArea) || 0) * (Number(u.contractedRentPsf) || Number(u.askingRate) || 0)), 0);
           const calcBilling = occupiedUnits.reduce((sum, u) => sum + Math.round((Number(u.chargeableArea) || 0) * ((Number(u.contractedRentPsf) || Number(u.askingRate) || 0) + (Number(u.camRatePsf) || standardCamPsf || 0))), 0);
 
@@ -831,7 +1004,7 @@ export default function CommercialPropertyMaster() {
             city: city.trim(),
             state: state.trim(),
             microMarket: microMarket.trim() || city.trim(),
-            pincode: pincode.trim(),
+            pincode: pincode.trim() || "400001",
             grade,
             areaUnit,
             geoLat: geoLat.trim(),
@@ -842,9 +1015,9 @@ export default function CommercialPropertyMaster() {
             llpinNumber: entityType === "llp" ? llpinNumber.trim().toUpperCase() : undefined,
             panNumber: panNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || undefined,
             gstin: gstExempted ? "UNREGISTERED" : (propertyGstin.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || customSpvGstin.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || undefined),
-            totalArea: totalChargeableArea,
-            chargeableArea: totalChargeableArea,
-            carpetArea: totalCarpetArea,
+            totalArea: totalChargeableArea || 1000,
+            chargeableArea: totalChargeableArea || 1000,
+            carpetArea: totalCarpetArea || Math.round((totalChargeableArea || 1000) * 0.75),
             currency,
             occupancyTargetPct: 95,
             ownerEmail,
@@ -873,6 +1046,9 @@ export default function CommercialPropertyMaster() {
         window.dispatchEvent(new CustomEvent("officex-property-added"));
       }
 
+      // Pre-select all unit codes for WhatsApp & Tenant link sharing
+      const allUnitCodes = units.map(u => u.suiteNumber || u.spaceCode || "");
+      setSelectedShareUnits(allUnitCodes.length > 0 ? allUnitCodes : ["Suite 101"]);
       setSuccessProperty(rrData);
     } catch (e: any) {
       alert(`Could not register property: ${e.message || "Unknown error"}`);
@@ -1251,33 +1427,11 @@ export default function CommercialPropertyMaster() {
 
                   <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
                     {(entityType === "pvt_ltd" || entityType === "public_ltd") ? (
-                      <button
-                        type="button"
-                        onClick={() => setCinNumber("U70102MH2018PTC123456")}
-                        className="text-[#0F8B7D] hover:underline font-mono font-bold cursor-pointer text-[10px]"
-                      >
-                        + Use: U70102MH2018PTC123456
-                      </button>
+                      <span className="text-slate-500 font-medium">Standard 21-character MCA corporate identifier</span>
                     ) : entityType === "llp" ? (
-                      <button
-                        type="button"
-                        onClick={() => setLlpinNumber("AAA-1234")}
-                        className="text-[#0F8B7D] hover:underline font-mono font-bold cursor-pointer text-[10px]"
-                      >
-                        + Use: AAA-1234
-                      </button>
+                      <span className="text-slate-500 font-medium">Limited Liability Partnership Identification Number (LLPIN)</span>
                     ) : (
                       <span>Non-corporate title deed</span>
-                    )}
-                    {(entityType === "pvt_ltd" || entityType === "public_ltd") && (
-                      <a
-                        href="https://www.mca.gov.in/mcafoportal/viewCompanyMasterData.do"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-0.5"
-                      >
-                        MCA Portal <ExternalLink size={10} />
-                      </a>
                     )}
                   </div>
                 </div>
@@ -1328,18 +1482,7 @@ export default function CommercialPropertyMaster() {
                   </div>
 
                   <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPanNumber("AAACR1234F");
-                        if (!propertyGstin || propertyGstin.startsWith("27")) {
-                          setPropertyGstin("27AAACR1234F1Z5");
-                        }
-                      }}
-                      className="text-[#0F8B7D] hover:underline font-mono font-bold cursor-pointer text-[10px]"
-                    >
-                      + Use: AAACR1234F
-                    </button>
+                    <span className="text-slate-500 font-medium">10-character Permanent Account Number</span>
                     <span className="font-semibold text-slate-500">10% TDS Sec 194-I</span>
                   </div>
                 </div>
@@ -1417,24 +1560,8 @@ export default function CommercialPropertyMaster() {
                       />
                     </label>
                     <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const cleanP = panNumber.trim().toUpperCase() || "AAACR1234F";
-                          setPropertyGstin(`27${cleanP}1Z5`);
-                        }}
-                        className="text-[#0F8B7D] hover:underline font-mono font-bold cursor-pointer text-[10px]"
-                      >
-                        + Match PAN (27{panNumber || "PAN"}1Z5)
-                      </button>
-                      <a
-                        href="https://services.gst.gov.in/services/searchtp"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-bold text-[#0F8B7D] hover:underline flex items-center gap-0.5"
-                      >
-                        GST Portal <ExternalLink size={10} />
-                      </a>
+                      <span className="text-slate-500 font-medium">15-digit GSTIN format: State Code + PAN + 1Z + Checksum</span>
+                      <span className="font-semibold text-slate-500">18% GST Applicable</span>
                     </div>
                   </div>
                 </div>
@@ -2428,10 +2555,235 @@ export default function CommercialPropertyMaster() {
                     </>
                   )}
 
-                  {newUnit.status === "not_leasable" && (
-                    <div className="sm:col-span-2 p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
-                      <Info size={15} className="text-slate-500 shrink-0" />
-                      <span>Building core services, MEP/AHU shafts, and maintenance control rooms are excluded from chargeable rent roll calculations.</span>
+                  {/* Dynamic Fitout Inclusions & Handover Condition (Item 9) */}
+                  {(newUnit.fitoutCondition === "fully_fitted" || newUnit.fitoutCondition === "plug_and_play") && (
+                    <div className="sm:col-span-4 p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={14} className="text-purple-600" />
+                          Fully Fitted / Plug &amp; Play Fitout Inclusions
+                        </span>
+                        <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
+                          Turnkey Workplace Spec
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Workstations / Seats</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 50"
+                            value={newUnit.workstationCount || ""}
+                            onChange={(e) => setNewUnit({ ...newUnit, workstationCount: Number(e.target.value) || 0, seatCapacity: Number(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-purple-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Private Cabins</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 4"
+                            value={newUnit.privateCabins || ""}
+                            onChange={(e) => setNewUnit({ ...newUnit, privateCabins: Number(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-purple-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Meeting / Board Rooms</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 2"
+                            value={newUnit.meetingRooms || ""}
+                            onChange={(e) => setNewUnit({ ...newUnit, meetingRooms: Number(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-purple-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">HVAC System Type</label>
+                          <select
+                            value={newUnit.hvacType || "VRV/VRF"}
+                            onChange={(e) => setNewUnit({ ...newUnit, hvacType: e.target.value })}
+                            className="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-purple-600"
+                          >
+                            <option value="VRV/VRF">VRV / VRF Dedicated</option>
+                            <option value="Central Chilled Water">Central Chilled Water (AHU)</option>
+                            <option value="Split AC">Split ACs Installed</option>
+                            <option value="DX System">DX Air-Cooled Package</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Pantry Setup</label>
+                          <select
+                            value={newUnit.pantryType || "wet"}
+                            onChange={(e) => setNewUnit({ ...newUnit, pantryType: e.target.value as any })}
+                            className="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-purple-600"
+                          >
+                            <option value="wet">Wet Pantry (Plumbing + Sink)</option>
+                            <option value="dry">Dry Pantry (Microwave/Coffee)</option>
+                            <option value="none">No Pantry (Cafeteria Access)</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-4 sm:col-span-3 pt-4">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(newUnit.hasReception)}
+                              onChange={(e) => setNewUnit({ ...newUnit, hasReception: e.target.checked })}
+                              className="rounded text-purple-600 focus:ring-purple-600 h-4 w-4 cursor-pointer"
+                            />
+                            <span>Reception / Welcome Lounge</span>
+                          </label>
+
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(newUnit.hasServerRoom)}
+                              onChange={(e) => setNewUnit({ ...newUnit, hasServerRoom: e.target.checked })}
+                              className="rounded text-purple-600 focus:ring-purple-600 h-4 w-4 cursor-pointer"
+                            />
+                            <span>Dedicated Server / IT Rack Room</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {newUnit.fitoutCondition === "bare_shell" && (
+                    <div className="sm:col-span-4 p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <Layers size={14} className="text-amber-700" />
+                          Bare Shell Handover Specifications
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                          Raw Structure Handover
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Clear Height (Floor-to-Ceiling)</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              placeholder="e.g. 12"
+                              value={newUnit.clearHeightFt || ""}
+                              onChange={(e) => setNewUnit({ ...newUnit, clearHeightFt: Number(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-amber-600"
+                            />
+                            <span className="text-[10px] text-slate-400 font-bold">ft</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Flooring Status</label>
+                          <select
+                            value={newUnit.flooringStatus || "Bare Concrete Slab"}
+                            onChange={(e) => setNewUnit({ ...newUnit, flooringStatus: e.target.value })}
+                            className="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-amber-600"
+                          >
+                            <option value="Bare Concrete Slab">Bare Concrete Slab</option>
+                            <option value="IPS Screed Finished">IPS Screed Finished</option>
+                            <option value="Raised Access Flooring">Raised Access Flooring (False Floor)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Sanctioned Power Load</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              placeholder="e.g. 35"
+                              value={newUnit.sanctionedPowerKva || ""}
+                              onChange={(e) => setNewUnit({ ...newUnit, sanctionedPowerKva: Number(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-amber-600"
+                            />
+                            <span className="text-[10px] text-slate-400 font-bold">kVA</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col justify-end gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(newUnit.dgBackup100Pct)}
+                              onChange={(e) => setNewUnit({ ...newUnit, dgBackup100Pct: e.target.checked })}
+                              className="rounded text-amber-600 focus:ring-amber-600 h-4 w-4 cursor-pointer"
+                            />
+                            <span>100% DG Power Backup</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(newUnit.ahuRoomProvided)}
+                              onChange={(e) => setNewUnit({ ...newUnit, ahuRoomProvided: e.target.checked })}
+                              className="rounded text-amber-600 focus:ring-amber-600 h-4 w-4 cursor-pointer"
+                            />
+                            <span>AHU Room Provisioned</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {propertyType === "warehouse" && (
+                    <div className="sm:col-span-4 p-4 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <Building2 size={14} className="text-blue-700" />
+                          Warehouse &amp; Industrial Logistics Inclusions
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                          Industrial Standard
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Clear Height to Eaves</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              placeholder="e.g. 11"
+                              value={newUnit.clearHeightToEavesMeters || ""}
+                              onChange={(e) => setNewUnit({ ...newUnit, clearHeightToEavesMeters: Number(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                            />
+                            <span className="text-[10px] text-slate-400 font-bold">Meters</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Dock Doors Count</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 4"
+                            value={newUnit.dockDoorsCount || ""}
+                            onChange={(e) => setNewUnit({ ...newUnit, dockDoorsCount: Number(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">Floor Loading Capacity</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              placeholder="e.g. 5"
+                              value={newUnit.floorLoadingCapacityTons || ""}
+                              onChange={(e) => setNewUnit({ ...newUnit, floorLoadingCapacityTons: Number(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-blue-600"
+                            />
+                            <span className="text-[10px] text-slate-400 font-bold">Tons/m² (FM2)</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -2631,10 +2983,10 @@ export default function CommercialPropertyMaster() {
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200">
-                    Step 3 of 3 • Master Verification
+                    Step 3 of 3 • Statutory Verification
                   </span>
                   <span className="text-[10px] font-bold text-slate-400">
-                    Final Pre-Commissioning Audit
+                    Final Pre-Registration Compliance Audit
                   </span>
                 </div>
                 <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -2642,19 +2994,19 @@ export default function CommercialPropertyMaster() {
                   Statutory Building Clearances &amp; Master Review
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Record municipal permits, fire clearance validity, attach legal title deeds, and review the master rent roll ledger before commissioning.
+                  Attach statutory permits, specify clearance deadline dates, review legal title deeds, and verify space inventory before registering.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
-                  <CheckCircle size={14} className="text-emerald-600" />
-                  <span>Ready to Commission</span>
+                <div className="px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200/80 text-[#0F8B7D] text-xs font-bold flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-[#0F8B7D]" />
+                  <span>Statutory Verification</span>
                 </div>
               </div>
             </div>
 
-            {/* 1. Municipal Clearances & Statutory Approvals */}
+            {/* 1. Unified Municipal Clearances & Compliance Cards with Inline Uploads & Auto-Deadlines */}
             <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
                 <div className="flex items-center gap-3">
@@ -2663,211 +3015,435 @@ export default function CommercialPropertyMaster() {
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Municipal Permits &amp; Statutory NOC Clearances
+                      Municipal Clearances &amp; Statutory Document Uploads
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Verified statutory permits required for legal tenant occupancy, fitout approvals, and lease registration.
+                      Upload compliance certificates directly with deadline / validity dates. Dates auto-populate when documents are attached.
                     </p>
                   </div>
                 </div>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600 self-start sm:self-auto">
-                  Municipal Registry
+                  Statutory Registry
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* 1. Occupancy Certificate (OC) Card */}
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                        <Building size={14} />
+                {(() => {
+                  const ocDoc = uploadedDocs.find(d => d.category === "Occupancy Certificate (OC)" || d.category?.includes("Occupancy"));
+                  return (
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
+                            <Building size={14} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 block">Occupancy Certificate (OC) *</span>
+                            <span className="text-[10px] text-slate-400">Urban Local Body Municipal Approval</span>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          occupancyCertStatus === "issued"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : occupancyCertStatus === "in_progress"
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                        }`}>
+                          {occupancyCertStatus === "issued" ? "Fully Sanctioned" : occupancyCertStatus === "in_progress" ? "In Review" : "Provisional"}
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">Occupancy Certificate (OC) *</span>
-                        <span className="text-[10px] text-slate-400">Urban Local Body Approval</span>
+
+                      {/* 3-State Segmented Control */}
+                      <div className="grid grid-cols-3 p-1 rounded-xl bg-slate-200/60 border border-slate-200/80 text-[11px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setOccupancyCertStatus("issued")}
+                          className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
+                            occupancyCertStatus === "issued"
+                              ? "bg-white text-emerald-800 shadow-xs border border-emerald-200/80 font-black"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          Issued (OC)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOccupancyCertStatus("in_progress")}
+                          className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
+                            occupancyCertStatus === "in_progress"
+                              ? "bg-white text-amber-800 shadow-xs border border-amber-200/80 font-black"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          In Review
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOccupancyCertStatus("provisional")}
+                          className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
+                            occupancyCertStatus === "provisional"
+                              ? "bg-white text-blue-800 shadow-xs border border-blue-200/80 font-black"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          Provisional
+                        </button>
+                      </div>
+
+                      {/* Sanction Ref & Deadline Validity Date */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                            {occupancyCertStatus === "issued"
+                              ? "OC Sanction Ref / Order No."
+                              : occupancyCertStatus === "in_progress"
+                              ? "Application File No."
+                              : "Provisional OC Ref"}
+                          </label>
+                          <input
+                            type="text"
+                            value={ocSanctionNumber}
+                            onChange={(e) => setOcSanctionNumber(e.target.value)}
+                            placeholder="e.g. BMC/EB/6211/WS/OC"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              OC Validity Date
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const d = new Date();
+                                d.setFullYear(d.getFullYear() + 5);
+                                setOcValidityDate(d.toISOString().split("T")[0]);
+                              }}
+                              className="text-[9px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                            >
+                              +5 Years
+                            </button>
+                          </div>
+                          <input
+                            type="date"
+                            value={ocValidityDate}
+                            onChange={(e) => setOcValidityDate(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Integrated Document Upload / File Display */}
+                      <div className="pt-1 border-t border-slate-200/60">
+                        {ocDoc ? (
+                          <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                            <div className="flex items-center gap-2 truncate mr-2">
+                              <FileText size={14} className="text-[#0F8B7D] shrink-0" />
+                              <span className="font-bold text-slate-900 truncate text-[11px]">{ocDoc.name}</span>
+                              <span className="text-[10px] text-teal-700 font-mono">({ocDoc.size})</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Verified</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDoc(ocDoc.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-teal-300 hover:border-[#0F8B7D] bg-teal-50/40 hover:bg-teal-50 text-[11px] font-bold text-[#0F8B7D] cursor-pointer transition-all">
+                            <UploadCloud size={14} />
+                            <span>Upload OC Certificate (PDF / DWG) • Auto-sets +5Y</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, "Occupancy Certificate (OC)")}
+                            />
+                          </label>
+                        )}
                       </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      occupancyCertStatus === "issued"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : occupancyCertStatus === "in_progress"
-                        ? "bg-amber-50 text-amber-700 border border-amber-200"
-                        : "bg-blue-50 text-blue-700 border border-blue-200"
-                    }`}>
-                      {occupancyCertStatus === "issued" ? "Fully Sanctioned" : occupancyCertStatus === "in_progress" ? "In Review" : "Provisional"}
-                    </span>
-                  </div>
-
-                  {/* 3-State Segmented Control */}
-                  <div className="grid grid-cols-3 p-1 rounded-xl bg-slate-200/60 border border-slate-200/80 text-[11px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setOccupancyCertStatus("issued")}
-                      className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                        occupancyCertStatus === "issued"
-                          ? "bg-white text-emerald-800 shadow-xs border border-emerald-200/80 font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Issued (OC)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOccupancyCertStatus("in_progress")}
-                      className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                        occupancyCertStatus === "in_progress"
-                          ? "bg-white text-amber-800 shadow-xs border border-amber-200/80 font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      In Audit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOccupancyCertStatus("provisional")}
-                      className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                        occupancyCertStatus === "provisional"
-                          ? "bg-white text-blue-800 shadow-xs border border-blue-200/80 font-black"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Provisional
-                    </button>
-                  </div>
-
-                  {/* Dynamic Reference Input */}
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                      {occupancyCertStatus === "issued"
-                        ? "OC Sanction Ref / Municipal Order"
-                        : occupancyCertStatus === "in_progress"
-                        ? "Inward Application File No."
-                        : "Provisional OC Sanction Ref"}
-                    </label>
-                    <input
-                      type="text"
-                      value={ocSanctionNumber}
-                      onChange={(e) => setOcSanctionNumber(e.target.value)}
-                      placeholder={
-                        occupancyCertStatus === "issued"
-                          ? "e.g. BMC/EB/6211/WS/OC"
-                          : occupancyCertStatus === "in_progress"
-                          ? "e.g. INW/2026/MCGM/891"
-                          : "e.g. BBMP/POC/2025/112"
-                      }
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span className="flex items-center gap-1">
-                      <ShieldCheck size={11} className="text-emerald-600" />
-                      Tenant fitout prerequisite
-                    </span>
-                    <span className="font-semibold text-slate-500">Sec 353 Municipal Act</span>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* 2. Fire Safety NOC Card */}
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-orange-100/70 text-orange-600 flex items-center justify-center">
-                        <Flame size={14} />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">Fire Safety NOC Validity</span>
-                        <span className="text-[10px] text-slate-400">Chief Fire Officer (CFO)</span>
-                      </div>
-                    </div>
-                    {(() => {
-                      const st = getFireNocStatus();
-                      return (
+                {(() => {
+                  const fireDoc = uploadedDocs.find(d => d.category === "Fire Department NOC" || d.category?.includes("Fire"));
+                  const st = getFireNocStatus();
+                  return (
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-orange-100/70 text-orange-600 flex items-center justify-center">
+                            <Flame size={14} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 block">Fire Safety NOC Validity *</span>
+                            <span className="text-[10px] text-slate-400">Chief Fire Officer (CFO) Clearance</span>
+                          </div>
+                        </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${st.color}`}>
                           {st.label}
                         </span>
-                      );
-                    })()}
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                      NOC Expiry Date
-                    </label>
-                    <input
-                      type="date"
-                      value={fireNocValidUntil}
-                      onChange={(e) => setFireNocValidUntil(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
-                    />
-                  </div>
-
-                  {/* Quick Preset Buttons */}
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick Sets:</span>
-                    <button
-                      type="button"
-                      onClick={() => handleSetFireNocPreset(1)}
-                      className="px-2 py-1 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors shadow-2xs cursor-pointer"
-                    >
-                      +1 Year (Annual)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSetFireNocPreset(3)}
-                      className="px-2 py-1 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors shadow-2xs cursor-pointer"
-                    >
-                      +3 Years (High-Rise)
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>Fire Prevention &amp; Life Safety Act</span>
-                    <span className="font-semibold text-slate-500">Annual CFO Audit</span>
-                  </div>
-                </div>
-
-                {/* 3. Sanctioned Plan / Blueprint */}
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                        <FileText size={14} />
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">Sanctioned Blueprint Ref</span>
-                        <span className="text-[10px] text-slate-400">IOD &amp; Commencement Cert</span>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                            NOC Expiry / Deadline Date
+                          </label>
+                          <input
+                            type="date"
+                            value={fireNocValidUntil}
+                            onChange={(e) => setFireNocValidUntil(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                            Quick Expiry Presets
+                          </label>
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleSetFireNocPreset(1)}
+                              className="flex-1 py-1.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors shadow-2xs cursor-pointer text-center"
+                            >
+                              +1 Year (Annual)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetFireNocPreset(3)}
+                              className="flex-1 py-1.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors shadow-2xs cursor-pointer text-center"
+                            >
+                              +3 Years (High-Rise)
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Integrated Document Upload / File Display */}
+                      <div className="pt-1 border-t border-slate-200/60">
+                        {fireDoc ? (
+                          <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 border border-orange-200 text-xs">
+                            <div className="flex items-center gap-2 truncate mr-2">
+                              <Flame size={14} className="text-orange-600 shrink-0" />
+                              <span className="font-bold text-slate-900 truncate text-[11px]">{fireDoc.name}</span>
+                              <span className="text-[10px] text-orange-700 font-mono">({fireDoc.size})</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Attached</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDoc(fireDoc.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/40 hover:bg-orange-50 text-[11px] font-bold text-orange-700 cursor-pointer transition-all">
+                            <UploadCloud size={14} />
+                            <span>Upload CFO Fire NOC (PDF / DWG) • Auto-sets +1Y</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, "Fire Department NOC")}
+                            />
+                          </label>
+                        )}
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                      Town Planning
-                    </span>
-                  </div>
+                  );
+                })()}
 
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                      Building Sanction / IOD Order Number
-                    </label>
-                    <input
-                      type="text"
-                      value={sanctionedPlanRef}
-                      onChange={(e) => setSanctionedPlanRef(e.target.value)}
-                      placeholder="e.g. BMC/BP/2024/991/IOD"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
-                    />
-                  </div>
+                {/* 3. Sanctioned Plan / Blueprint Card */}
+                {(() => {
+                  const bpDoc = uploadedDocs.find(d => d.category === "Sanctioned Floor Blueprint" || d.category?.includes("Blueprint") || d.category?.includes("Sanction"));
+                  return (
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
+                            <FileText size={14} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 block">Sanctioned Blueprint / IOD</span>
+                            <span className="text-[10px] text-slate-400">Town Planning Sanction Authority</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                          Town Planning
+                        </span>
+                      </div>
 
-                  <div className="p-2 rounded-lg bg-white border border-slate-200/70 text-[10px] text-slate-500">
-                    <span className="font-bold text-slate-700 block">Approved Issuing Authority:</span>
-                    Municipal Corp / DTCP / HMDA / BBMP Town Planning
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                            Building Sanction / IOD Order
+                          </label>
+                          <input
+                            type="text"
+                            value={sanctionedPlanRef}
+                            onChange={(e) => setSanctionedPlanRef(e.target.value)}
+                            placeholder="e.g. BMC/BP/2024/991/IOD"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              Sanction Approval Date
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setSanctionedPlanDate(new Date().toISOString().split("T")[0])}
+                              className="text-[9px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                            >
+                              Set Today
+                            </button>
+                          </div>
+                          <input
+                            type="date"
+                            value={sanctionedPlanDate}
+                            onChange={(e) => setSanctionedPlanDate(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>Structural Stability Certified</span>
-                    <span className="font-semibold text-slate-500">FAR / FSI Compliant</span>
-                  </div>
-                </div>
+                      {/* Integrated Document Upload / File Display */}
+                      <div className="pt-1 border-t border-slate-200/60">
+                        {bpDoc ? (
+                          <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                            <div className="flex items-center gap-2 truncate mr-2">
+                              <FileText size={14} className="text-[#0F8B7D] shrink-0" />
+                              <span className="font-bold text-slate-900 truncate text-[11px]">{bpDoc.name}</span>
+                              <span className="text-[10px] text-teal-700 font-mono">({bpDoc.size})</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Blueprint Attached</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDoc(bpDoc.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-teal-300 hover:border-[#0F8B7D] bg-teal-50/40 hover:bg-teal-50 text-[11px] font-bold text-[#0F8B7D] cursor-pointer transition-all">
+                            <UploadCloud size={14} />
+                            <span>Upload Layout / Sanctioned Blueprint (CAD / PDF)</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, "Sanctioned Floor Blueprint")}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 4. Legal Title Deed & Non-Encumbrance Card */}
+                {(() => {
+                  const deedDoc = uploadedDocs.find(d => d.category === "Title & Ownership Deed" || d.category?.includes("Title") || d.category?.includes("Deed"));
+                  return (
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
+                            <ShieldCheck size={14} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 block">Title Deed &amp; Non-Encumbrance</span>
+                            <span className="text-[10px] text-slate-400">Sub-Registrar Ownership Document</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                          Sub-Registrar
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                            Registered Deed / Khata / Index II
+                          </label>
+                          <input
+                            type="text"
+                            value={titleDeedRef}
+                            onChange={(e) => setTitleDeedRef(e.target.value)}
+                            placeholder="e.g. REG/MUM/2019/8821"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              Execution / Record Date
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setTitleDeedDate(new Date().toISOString().split("T")[0])}
+                              className="text-[9px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                            >
+                              Set Today
+                            </button>
+                          </div>
+                          <input
+                            type="date"
+                            value={titleDeedDate}
+                            onChange={(e) => setTitleDeedDate(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Integrated Document Upload / File Display */}
+                      <div className="pt-1 border-t border-slate-200/60">
+                        {deedDoc ? (
+                          <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                            <div className="flex items-center gap-2 truncate mr-2">
+                              <FileText size={14} className="text-[#0F8B7D] shrink-0" />
+                              <span className="font-bold text-slate-900 truncate text-[11px]">{deedDoc.name}</span>
+                              <span className="text-[10px] text-teal-700 font-mono">({deedDoc.size})</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Title Verified</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDoc(deedDoc.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-teal-300 hover:border-[#0F8B7D] bg-teal-50/40 hover:bg-teal-50 text-[11px] font-bold text-[#0F8B7D] cursor-pointer transition-all">
+                            <UploadCloud size={14} />
+                            <span>Upload Title Deed / 7-12 Extract (PDF)</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, "Title & Ownership Deed")}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -3427,7 +4003,7 @@ export default function CommercialPropertyMaster() {
         {/* ── SUCCESS MODAL / REDIRECT ── */}
         {successProperty && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-150 text-center">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-150 text-center max-h-[92vh] overflow-y-auto">
               <div className="w-14 h-14 rounded-2xl bg-teal-50 text-[#0F8B7D] border border-teal-100 flex items-center justify-center mx-auto shadow-2xs">
                 <CheckCircle2 size={32} />
               </div>
@@ -3464,6 +4040,131 @@ export default function CommercialPropertyMaster() {
                 </div>
               </div>
 
+              {/* Tenant Onboarding & WhatsApp Sharing Card with Unit Selector */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/50 border border-teal-200/90 text-left space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-teal-100 text-[#0F8B7D] flex items-center justify-center">
+                      <Share2 size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">Tenant Onboarding &amp; WhatsApp Link Sharing</h4>
+                      <p className="text-[11px] text-slate-500">Send tailored onboarding invite to tenants for their specific floor or units</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedShareUnits(units.map(u => u.suiteNumber || u.spaceCode || ""))}
+                      className="text-[10px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedShareUnits([])}
+                      className="text-[10px] font-bold text-slate-500 hover:underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                {/* Unit / Floor Multi-select Checkboxes */}
+                {units.length > 0 && (
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
+                      Select Unit(s) to Send (Floor / Unit Specific):
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-1 bg-white/70 rounded-xl border border-teal-100">
+                      {units.map((u) => {
+                        const unitCode = u.suiteNumber || u.spaceCode || "Unit";
+                        const isChecked = selectedShareUnits.includes(unitCode);
+                        return (
+                          <label
+                            key={u.id}
+                            className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                              isChecked
+                                ? "bg-white border-[#0F8B7D] shadow-2xs font-bold text-slate-900"
+                                : "bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-white"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedShareUnits(prev => [...prev, unitCode]);
+                                } else {
+                                  setSelectedShareUnits(prev => prev.filter(c => c !== unitCode));
+                                }
+                              }}
+                              className="rounded text-[#0F8B7D] focus:ring-[#0F8B7D] w-3.5 h-3.5 shrink-0"
+                            />
+                            <div className="truncate">
+                              <span className="block truncate text-[11px] font-bold">{unitCode}</span>
+                              <span className="text-[9px] text-slate-400 font-normal">Floor {u.floorNumber} • {u.chargeableArea} {areaLabel}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Generated URL Box + WhatsApp & Copy Buttons */}
+                {(() => {
+                  const propId = successProperty.id || propertyCode || "PROP-DEFAULT";
+                  const unitsParam = selectedShareUnits.length > 0 ? selectedShareUnits.join(",") : "all";
+                  const origin = typeof window !== "undefined" ? window.location.origin : "https://officex.app";
+                  const shareUrl = `${origin}/tenant/join?propertyId=${encodeURIComponent(propId)}&building=${encodeURIComponent(assetName)}&units=${encodeURIComponent(unitsParam)}&location=${encodeURIComponent(`${city}, ${state}`)}`;
+                  
+                  const selectedUnitsDisplay = selectedShareUnits.length > 0 ? selectedShareUnits.join(", ") : "All Leasable Units";
+                  const whatsappMsg = `🏢 *Commercial Lease Onboarding - ${assetName}*\n📍 *Location:* ${city}, ${state}\n🚪 *Allocated Units:* ${selectedUnitsDisplay}\n\nPlease complete your tenant onboarding KYC and digital lease verification using the secure link below:\n${shareUrl}`;
+
+                  const handleWhatsAppShare = () => {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMsg)}`, "_blank");
+                  };
+
+                  const handleCopyLink = () => {
+                    navigator.clipboard.writeText(shareUrl);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2500);
+                  };
+
+                  return (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={shareUrl}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 select-all focus:outline-none focus:border-[#0F8B7D]"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCopyLink}
+                          className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                        >
+                          {copiedLink ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleWhatsAppShare}
+                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                      >
+                        <MessageSquare size={15} />
+                        <span>Share Tenant Link via WhatsApp ({selectedShareUnits.length > 0 ? `${selectedShareUnits.length} Units Selected` : "Entire Property"})</span>
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
@@ -3475,10 +4176,10 @@ export default function CommercialPropertyMaster() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/properties")}
+                  onClick={() => router.push("/properties/registry")}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Building2 size={15} /> Property Master
+                  <Building2 size={15} /> Open Property Registry
                 </button>
               </div>
             </div>

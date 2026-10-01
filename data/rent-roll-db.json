@@ -1,9 +1,9 @@
 {
   "organization": {
     "id": "org-officex-001",
-    "name": "Acme Commercial Realty Pvt Ltd",
-    "pan": "AAACA1234F",
-    "gstin": "27AAACA1234F1Z5",
+    "name": "",
+    "pan": "",
+    "gstin": "",
     "address": "",
     "city": "",
     "state": "",
@@ -11,16 +11,16 @@
     "fyStartMonth": 4,
     "invoicePrefix": "INV-2026",
     "currency": "INR",
-    "tradeName": "Acme Assets",
-    "bankName": "ICICI Bank Ltd",
-    "bankAccountNumber": "000405001234",
-    "bankIfsc": "ICIC0000004",
-    "bankBranch": "Nariman Point, Mumbai",
+    "tradeName": "",
+    "bankName": "",
+    "bankAccountNumber": "",
+    "bankIfsc": "",
+    "bankBranch": "",
     "accountType": "Current Account",
-    "escrowNodalVerified": true,
-    "contactPerson": "Rahul Mehra",
-    "contactEmail": "rahul@acme.com",
-    "contactPhone": "+91 98200 99887"
+    "escrowNodalVerified": false,
+    "contactPerson": "",
+    "contactEmail": "",
+    "contactPhone": ""
   },
   "clientAccounts": [],
   "billingEntities": [],
@@ -40,21 +40,7 @@
   "expenses": [],
   "notices": [],
   "alerts": [],
-  "auditLogs": [
-    {
-      "id": "AUD-1790713045316-973",
-      "entityName": "OrganizationConfig",
-      "action": "UPDATE_ONBOARDING_CONFIG",
-      "newValues": {
-        "orgName": "Acme Commercial Realty Pvt Ltd",
-        "billingEntitiesCount": 0,
-        "hasBranding": false,
-        "hasTaxProfiles": false
-      },
-      "changedBy": "Org Super Admin",
-      "timestamp": "2026-09-29T20:17:25.316Z"
-    }
-  ],
+  "auditLogs": [],
   "importBatches": [],
   "mappingTemplates": [],
   "flexCentres": [],

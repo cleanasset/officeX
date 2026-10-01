@@ -10,7 +10,7 @@ export async function GET() {
       tradeName: db.organization.tradeName || primaryBe.tradeName || db.organization.name,
       pan: db.organization.pan || primaryBe.pan || "",
       gstin: db.organization.gstin || primaryBe.gstin || "",
-      bankName: db.organization.bankName || primaryBe.bankName || "HDFC Bank Ltd",
+      bankName: db.organization.bankName || primaryBe.bankName || "",
       bankAccountNumber: db.organization.bankAccountNumber || primaryBe.bankAccountNumber || "",
       bankIfsc: db.organization.bankIfsc || primaryBe.bankIfsc || "",
       bankBranch: db.organization.bankBranch || primaryBe.bankBranch || "",

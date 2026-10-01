@@ -224,19 +224,33 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-extrabold text-gray-900">
-                      {org?.name || org?.legalName || "Commercial Portfolio Profile"}
-                    </h3>
-                    {org?.tradeName && org.tradeName !== org.name && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                        {org.tradeName}
-                      </span>
-                    )}
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                      <CheckCircle2 className="w-2.5 h-2.5" /> Institutional KYC Active
-                    </span>
-                  </div>
+                    {(() => {
+                      const displayOrgName = (org?.name && !org.name.includes("Acme"))
+                        ? org.name
+                        : (typeof window !== "undefined" ? (localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || localStorage.getItem("officex_portfolio_name")) : "") || "Commercial Portfolio Profile";
+                      const isKycComplete = Boolean((org?.pan || org?.gstin) && (org?.bankAccountNumber || defaultEntity?.bankAccountNumber));
+
+                      return (
+                        <>
+                          <h3 className="text-sm font-extrabold text-gray-900">
+                            {displayOrgName}
+                          </h3>
+                          {org?.tradeName && org.tradeName !== displayOrgName && !org.tradeName.includes("Acme") && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                              {org.tradeName}
+                            </span>
+                          )}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                            isKycComplete 
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}>
+                            <CheckCircle2 className="w-2.5 h-2.5" /> 
+                            {isKycComplete ? "Institutional KYC Active" : "KYC Setup In Progress"}
+                          </span>
+                        </>
+                      );
+                    })()}
                   <p className="text-xs text-gray-500 font-medium mt-0.5">
                     Statutory PAN/GSTIN IDs and official bank settlement account for rent, CAM and utility collections
                   </p>
@@ -264,7 +278,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   Collection Bank Account
                 </span>
                 <div className="font-bold text-slate-900 text-sm truncate">
-                  {org?.bankName || defaultEntity?.bankName || "HDFC Bank Ltd"}
+                  {org?.bankName || defaultEntity?.bankName || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "") || "Pending Bank Setup"}
                 </div>
                 <div className="font-mono text-xs font-semibold text-slate-700 mt-1 flex items-center justify-between">
                   <span>

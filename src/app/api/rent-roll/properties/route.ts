@@ -208,7 +208,7 @@ export async function POST(req: Request) {
       version: Number(version) || 1,
       dataQualityStatus: dataQualityStatus || "passed"
     };
-    db.properties.push(newProp);
+    db.properties.unshift(newProp);
 
     // Sync leasable units into db.spaces and active commercial leases into db.leases
     if (Array.isArray(units) && units.length > 0) {
@@ -332,9 +332,13 @@ export async function POST(req: Request) {
             securityDepositBgReference: `BG-${newProp.propertyCode}-${i + 1}`,
             escalationPct: escPct,
             escalationFrequencyMonths: escFreqMonths,
-            nextEscalationDate: leaseSummary.nextEscalationDate.toISOString().split("T")[0],
+            nextEscalationDate: (leaseSummary.nextEscalationDate instanceof Date && !isNaN(leaseSummary.nextEscalationDate.getTime()))
+              ? leaseSummary.nextEscalationDate.toISOString().split("T")[0]
+              : new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
             lockInMonths: 36,
-            lockInEndDate: leaseSummary.lockInEndDate.toISOString().split("T")[0],
+            lockInEndDate: (leaseSummary.lockInEndDate instanceof Date && !isNaN(leaseSummary.lockInEndDate.getTime()))
+              ? leaseSummary.lockInEndDate.toISOString().split("T")[0]
+              : new Date(Date.now() + 3 * 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
             noticePeriodDays: 90,
             status: "active",
             renewalStatus: "not_due",
@@ -362,9 +366,9 @@ export async function POST(req: Request) {
             propertyName: newLease.propertyName,
             escalationDate: newLease.nextEscalationDate,
             previousRent: newLease.monthlyRent,
-            newRent: leaseSummary.nextEscalatedRent,
+            newRent: leaseSummary.nextEscalatedRent || Math.round(newLease.monthlyRent * 1.15),
             escalationPct: newLease.escalationPct,
-            calculatedIncrease: leaseSummary.nextEscalatedRent - newLease.monthlyRent,
+            calculatedIncrease: (leaseSummary.nextEscalatedRent || Math.round(newLease.monthlyRent * 1.15)) - newLease.monthlyRent,
             status: "pending",
             notes: "Auto-scheduled escalation from commercial property master registration"
           });

@@ -202,7 +202,7 @@ export const MOCK_USERS: Record<string, MockUserRecord> = {
       {
         id: 'mem_acme_owner',
         orgId: 'org_acme',
-        orgName: 'Acme Commercial Realty Ltd',
+        orgName: 'Commercial Asset Desk',
         role: 'Property Owner & Asset Manager',
         roleCode: 'OWNER',
         workspaceTitle: 'Commercial Asset Desk',
@@ -215,7 +215,7 @@ export const MOCK_USERS: Record<string, MockUserRecord> = {
       {
         id: 'mem_acme_leasing',
         orgId: 'org_acme',
-        orgName: 'Acme Commercial Realty Ltd',
+        orgName: 'Commercial Asset Desk',
         role: 'Commercial Leasing Director',
         roleCode: 'LEASING',
         workspaceTitle: 'Leasing & Occupancy Pipeline',
@@ -249,7 +249,7 @@ export const MOCK_USERS: Record<string, MockUserRecord> = {
       {
         id: 'mem_acme_owner',
         orgId: 'org_acme',
-        orgName: 'Acme Commercial Realty Ltd',
+        orgName: 'Commercial Asset Desk',
         role: 'Property Owner & Asset Manager',
         roleCode: 'OWNER',
         workspaceTitle: 'Commercial Asset Desk',
@@ -262,7 +262,7 @@ export const MOCK_USERS: Record<string, MockUserRecord> = {
       {
         id: 'mem_acme_leasing',
         orgId: 'org_acme',
-        orgName: 'Acme Commercial Realty Ltd',
+        orgName: 'Commercial Asset Desk',
         role: 'Commercial Leasing Director',
         roleCode: 'LEASING',
         workspaceTitle: 'Leasing & Occupancy Pipeline',
@@ -298,7 +298,7 @@ export const MOCK_USERS: Record<string, MockUserRecord> = {
       {
         id: 'mem_acme_ops',
         orgId: 'org_acme',
-        orgName: 'Acme Commercial Realty Ltd',
+        orgName: 'Commercial Asset Desk',
         role: 'Vendor Operations Lead',
         roleCode: 'VENDOR',
         workspaceTitle: 'Service Vendor Hub',

@@ -86,12 +86,26 @@ export default function SignInForm({
 
   const safeRedirect = validateRedirect(initialRedirect, defaultRedirect);
 
+const LOGIN_COUNTRY_CODES = [
+  { code: "+91", flag: "🇮🇳", name: "India (+91)" },
+  { code: "+1", flag: "🇺🇸", name: "USA / Canada (+1)" },
+  { code: "+44", flag: "🇬🇧", name: "UK (+44)" },
+  { code: "+971", flag: "🇦🇪", name: "UAE (+971)" },
+  { code: "+65", flag: "🇸🇬", name: "Singapore (+65)" },
+  { code: "+61", flag: "🇦🇺", name: "Australia (+61)" },
+  { code: "+49", flag: "🇩🇪", name: "Germany (+49)" },
+  { code: "+81", flag: "🇯🇵", name: "Japan (+81)" }
+];
+
   // Locale state: English or Hindi
   const [lang, setLang] = useState<Lang>("en");
   const t = AUTH_LOCALES[lang];
 
   // Primary workflow state
   const [step, setStep] = useState<Step>("identifier");
+  const [identifierMode, setIdentifierMode] = useState<"email" | "mobile">("email");
+  const [phoneCountryCode, setPhoneCountryCode] = useState<string>("+91");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [isRentRollPaymentOpen, setIsRentRollPaymentOpen] = useState(false);
   const [successUserName, setSuccessUserName] = useState("");
   const [isOnboardingNeeded, setIsOnboardingNeeded] = useState(false);
@@ -263,14 +277,28 @@ export default function SignInForm({
     setError("");
     setInfoMessage("");
 
-    const clean = identifier.trim();
-    if (!clean) {
-      setError(
-        lang === "hi"
-          ? "कृपया एक वैध कार्य ईमेल या 10-अंकीय मोबाइल नंबर दर्ज करें।"
-          : "Enter a valid work email or 10-digit mobile number."
-      );
-      return;
+    let clean = identifier.trim();
+    if (identifierMode === "mobile") {
+      const cleanDigits = phoneNumber.replace(/\D/g, "");
+      if (!cleanDigits || cleanDigits.length < 10) {
+        setError(
+          lang === "hi"
+            ? "कृपया एक मान्य 10-अंकीय मोबाइल नंबर दर्ज करें।"
+            : "Enter a valid 10-digit mobile number."
+        );
+        return;
+      }
+      clean = cleanDigits.length === 10 ? cleanDigits : `${phoneCountryCode}${cleanDigits}`;
+      setIdentifier(clean);
+    } else {
+      if (!clean) {
+        setError(
+          lang === "hi"
+            ? "कृपया एक वैध कार्य ईमेल दर्ज करें।"
+            : "Enter a valid work email address."
+        );
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -1199,26 +1227,94 @@ export default function SignInForm({
 
                 <form onSubmit={handleIdentifierSubmit} className="space-y-4">
                   <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="identifier-input"
-                      className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block"
-                    >
-                      {t.identifierLabel}
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="identifier-input"
-                        type="text"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder={t.identifierPlaceholder}
-                        autoComplete="username"
-                        autoFocus
-                        required
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all shadow-2xs"
-                      />
-                      <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="identifier-input"
+                        className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block"
+                      >
+                        {identifierMode === "email" ? t.identifierLabel : (lang === "hi" ? "मोबाइल नंबर" : "Mobile Number")}
+                      </label>
+                      <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIdentifierMode("email");
+                            setError("");
+                          }}
+                          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                            identifierMode === "email"
+                              ? "bg-white text-slate-900 shadow-2xs font-extrabold"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          Email
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIdentifierMode("mobile");
+                            setError("");
+                          }}
+                          className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                            identifierMode === "mobile"
+                              ? "bg-white text-slate-900 shadow-2xs font-extrabold"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          Mobile
+                        </button>
+                      </div>
                     </div>
+
+                    {identifierMode === "email" ? (
+                      <div className="relative">
+                        <input
+                          id="identifier-input"
+                          type="email"
+                          value={identifier}
+                          onChange={(e) => setIdentifier(e.target.value)}
+                          placeholder={t.identifierPlaceholder}
+                          autoComplete="username"
+                          autoFocus
+                          required
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all shadow-2xs"
+                        />
+                        <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <select
+                          value={phoneCountryCode}
+                          onChange={(e) => setPhoneCountryCode(e.target.value)}
+                          aria-label="Country Code"
+                          className="w-28 px-2.5 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 shrink-0 cursor-pointer shadow-2xs"
+                        >
+                          {LOGIN_COUNTRY_CODES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.flag} {c.code}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="relative flex-1">
+                          <input
+                            id="identifier-input"
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                              setPhoneNumber(val);
+                              setIdentifier(val);
+                            }}
+                            placeholder="98765 43210"
+                            autoComplete="tel"
+                            autoFocus
+                            required
+                            className="w-full pl-9 pr-4 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm font-bold tracking-wider focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all shadow-2xs font-mono"
+                          />
+                          <Phone size={15} className="absolute left-3 top-3.5 text-slate-400" />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -2159,14 +2255,28 @@ export default function SignInForm({
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
                     Work Email or Mobile
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={recoveryIdentifier}
-                    onChange={(e) => setRecoveryIdentifier(e.target.value)}
-                    placeholder="name@company.com or 9876543210"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={phoneCountryCode}
+                      onChange={(e) => setPhoneCountryCode(e.target.value)}
+                      aria-label="Country Code"
+                      className="w-24 px-2 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold shrink-0 cursor-pointer shadow-2xs"
+                    >
+                      {LOGIN_COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.code}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      required
+                      value={recoveryIdentifier}
+                      onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                      placeholder="name@company.com or 9876543210"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                    />
+                  </div>
                 </div>
 
                 <button

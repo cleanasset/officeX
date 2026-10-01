@@ -44,7 +44,8 @@ import {
   Share2,
   Pencil,
   Headphones,
-  Info
+  Info,
+  Clock
 } from "lucide-react";
 import { formatINR } from "@/components/rent-roll/DashboardTab";
 import {
@@ -111,11 +112,30 @@ function OnboardingContent() {
   const initialRoleParam = searchParams.get("role") || "";
   const initialSegmentParam = searchParams.get("segment") || "";
 
+  const ONBOARDING_COUNTRY_CODES = [
+    { code: "+91", flag: "🇮🇳", name: "India (+91)" },
+    { code: "+1", flag: "🇺🇸", name: "USA / Canada (+1)" },
+    { code: "+44", flag: "🇬🇧", name: "UK (+44)" },
+    { code: "+971", flag: "🇦🇪", name: "UAE (+971)" },
+    { code: "+65", flag: "🇸🇬", name: "Singapore (+65)" },
+    { code: "+61", flag: "🇦🇺", name: "Australia (+61)" },
+    { code: "+49", flag: "🇩🇪", name: "Germany (+49)" }
+  ];
+
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isCommitted, setIsCommitted] = useState<boolean>(false);
 
   // ──── STEP 1: ORGANIZATION & BUSINESS SEGMENTS ────
+  const [contactCountryCode, setContactCountryCode] = useState("+91");
+  const [contactMobileNumber, setContactMobileNumber] = useState("");
+  const [warehouseSpecs, setWarehouseSpecs] = useState({
+    clearHeight: 36,
+    dockDoors: 8,
+    floorLoading: 5,
+    baySpacing: "16m x 24m"
+  });
+
   const [orgData, setOrgData] = useState({
     legalName: "",
     tradeName: "",
@@ -149,6 +169,18 @@ function OnboardingContent() {
         if (["cam", "electricity_grid", "electricity_dg", "water", "housekeeping", "security", "hvac_btu"].includes(chg.id)) {
           return { ...chg, enabled: true };
         }
+        return chg;
+      }));
+    } else if (segId === "warehouse_owner") {
+      setPropertyData(prev => ({
+        ...prev,
+        type: "Warehouse / Logistics Park",
+        totalArea: prev.totalArea || 100000,
+        unitsCount: 4
+      }));
+      setChargeList(prev => prev.map(chg => {
+        if (chg.id === "base_rent") return { ...chg, enabled: true };
+        if (["cam", "electricity_grid", "electricity_dg", "parking"].includes(chg.id)) return { ...chg, enabled: true };
         return chg;
       }));
     } else if (segId === "commercial_owner" || segId === "pm_company") {
@@ -193,7 +225,11 @@ function OnboardingContent() {
 
   const handleAddEntity = () => {
     if (!newEntity.spvName || !newEntity.gstin) {
-      alert("Please provide at least the Legal SPV Name and 15-digit GSTIN.");
+      alert("Please provide the Legal SPV Name and 15-digit GSTIN.");
+      return;
+    }
+    if (!newEntity.bankName?.trim() || !newEntity.accountNumber?.trim() || !newEntity.ifscCode?.trim()) {
+      alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding.");
       return;
     }
     const created: BillingEntityItem = {
@@ -241,7 +277,11 @@ function OnboardingContent() {
 
   const handleSaveEditEntity = () => {
     if (!editEntity || !editEntity.spvName || !editEntity.gstin) {
-      alert("Please provide at least the Legal SPV Name and 15-digit GSTIN.");
+      alert("Please provide the Legal SPV Name and 15-digit GSTIN.");
+      return;
+    }
+    if (!editEntity.bankName?.trim() || !editEntity.accountNumber?.trim() || !editEntity.ifscCode?.trim()) {
+      alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding.");
       return;
     }
     setBillingEntities(billingEntities.map(b =>
@@ -347,7 +387,14 @@ function OnboardingContent() {
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setBranding(prev => ({ ...prev, logoPreview: ev.target?.result as string }));
+      const dataUrl = ev.target?.result as string;
+      setBranding(prev => ({ ...prev, logoPreview: dataUrl }));
+      try {
+        localStorage.setItem("officex_org_logo", dataUrl);
+        localStorage.setItem("officex_brand_logo", dataUrl);
+      } catch (err) {
+        console.warn("Storage logo save error:", err);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -355,6 +402,10 @@ function OnboardingContent() {
   const handleRemoveLogo = () => {
     setBranding(prev => ({ ...prev, logoPreview: "" }));
     if (logoInputRef.current) logoInputRef.current.value = "";
+    try {
+      localStorage.removeItem("officex_org_logo");
+      localStorage.removeItem("officex_brand_logo");
+    } catch {}
   };
 
   // Generate text initials from company name for fallback
@@ -571,16 +622,25 @@ function OnboardingContent() {
       }
       // Auto-suggest property defaults if empty
       if (!propertyData.name) {
+        const isWarehouse = orgData.segments[0] === "warehouse_owner";
         setPropertyData(prev => ({
           ...prev,
-          name: orgData.tradeName || `${orgData.legalName} Tower`,
+          name: orgData.tradeName || `${orgData.legalName} ${isWarehouse ? "Logistics Park" : "Tower"}`,
           city: orgData.city || prev.city,
           state: orgData.state || prev.state,
-          address: orgData.primaryAddress || prev.address
+          address: orgData.primaryAddress || prev.address,
+          type: isWarehouse ? "Warehouse / Logistics Park" : prev.type
         }));
       }
+    } else if (currentStep === 2) {
+      // Step 2: Validate mandatory bank details
+      const defaultEntity = billingEntities.find(b => b.isDefault) || billingEntities[0] || newEntity;
+      if (!defaultEntity.bankName?.trim() || !defaultEntity.accountNumber?.trim() || !defaultEntity.ifscCode?.trim()) {
+        alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding. Please fill in and save your bank details.");
+        return;
+      }
     }
-    setCurrentStep((prev) => Math.min(6, prev + 1));
+    setCurrentStep((prev) => Math.min(5, prev + 1));
   };
 
   // Handle Download Templates
@@ -687,10 +747,14 @@ function OnboardingContent() {
         sessionStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_active_org", orgData.legalName);
         localStorage.setItem("officex_org_name", orgData.legalName);
+        localStorage.setItem("officex_user_org", orgData.legalName);
+        localStorage.setItem("officex_portfolio_name", branding.portfolioDisplayName || orgData.tradeName || orgData.legalName);
         localStorage.setItem("officex_org_id", "ORG-" + Date.now());
         localStorage.setItem("officex_org_brand_color", branding.brandColor || "#0F8B7D");
+        localStorage.setItem("officex_brand_color", branding.brandColor || "#0F8B7D");
         if (branding.logoPreview) {
           localStorage.setItem("officex_org_logo", branding.logoPreview);
+          localStorage.setItem("officex_brand_logo", branding.logoPreview);
         }
         localStorage.setItem("officex_contact_verified", "1");
         localStorage.setItem("officex_phone_verified", "1");
@@ -737,12 +801,11 @@ function OnboardingContent() {
   };
 
   const steps = [
-    { num: 1, title: "1. Organization", subtitle: "Entity & Address" },
-    { num: 2, title: "2. Billing & Taxes", subtitle: "GST & Bank Details" },
-    { num: 3, title: "3. Charge Types", subtitle: "Billing Settings & Services" },
-    { num: 4, title: "4. Visual Branding", subtitle: "Logo & Brand Colors" },
-    { num: 5, title: "5. Data Ingestion", subtitle: "Properties & Leases" },
-    { num: 6, title: "6. Review & Launch", subtitle: "Final Confirmation" }
+    { num: 1, title: "1. Organization", subtitle: "Entity, Asset & Address" },
+    { num: 2, title: "2. Billing & Bank", subtitle: "Mandatory Bank & GST" },
+    { num: 3, title: "3. Visual Branding", subtitle: "Logo & White-Label Domain" },
+    { num: 4, title: "4. Data Ingestion", subtitle: "Properties & Leases" },
+    { num: 5, title: "5. Review & Launch", subtitle: "Launch Rent Roll" }
   ];
 
   return (
@@ -789,7 +852,7 @@ function OnboardingContent() {
         <div className="space-y-6">
           {/* Top Step Breadcrumbs Indicator */}
           <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-            <div className="grid grid-cols-6 gap-1.5 text-center text-xs">
+            <div className="grid grid-cols-5 gap-1.5 text-center text-xs">
               {steps.map((st) => (
                 <div
                   key={st.num}
@@ -821,23 +884,22 @@ function OnboardingContent() {
               </div>
             ) : (
               <>
-                {/* ════════ STEP 1: ORGANIZATION & SEGMENTS (Slide 3) ════════ */}
+                {/* ════════ STEP 1: ORGANIZATION & SEGMENTS ════════ */}
                 {currentStep === 1 && (
                   <div className="space-y-5 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 1 of 6 · Organization Profile
+                        Step 1 of 5 · Organization Profile
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Create Organization</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Create Organization Profile</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Fill in your company details and choose your business type.
+                        Fill in your business entity details, registered state and city, and primary contact number.
                       </p>
 
-                      {/* Subtle, small pro-tip on upper side */}
                       <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
                         <Sparkles className="w-3.5 h-3.5 text-[#0F8B7D] shrink-0" />
                         <span>
-                          <strong className="text-slate-700 font-semibold">Pro Tip:</strong> Pick the option that best matches how your business operates.
+                          <strong className="text-slate-700 font-semibold">Pro Tip:</strong> Select Warehouse / Logistics if you operate industrial sheds or logistic parks.
                         </span>
                       </div>
                     </div>
@@ -845,18 +907,18 @@ function OnboardingContent() {
                     {/* Organization Type Dropdown */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Business Type *
+                        Business &amp; Asset Type *
                       </label>
                       <select
                         value={orgData.segments[0] || "commercial_owner"}
                         onChange={(e) => handleSegmentChange(e.target.value)}
                         className="w-full text-xs sm:text-sm p-3 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#0F8B7D] focus:ring-2 focus:ring-[#0F8B7D]/20 transition-all cursor-pointer shadow-2xs"
                       >
-                        <option value="commercial_owner">Property Owner / Asset Entity</option>
-                        <option value="pm_company">Property Management Company</option>
-                        <option value="fm_company">Facility Management Company</option>
-                        <option value="msp">Managed Service Provider (MSP)</option>
-                        <option value="flex_operator">Flex Space / Coworking Operator</option>
+                        <option value="commercial_owner">Commercial Property Owner / Asset Entity (Office &amp; Retail)</option>
+                        <option value="warehouse_owner">Warehouse / Logistics &amp; Industrial Park Owner</option>
+                        <option value="pm_company">Property Management Company (Third-Party Portfolios)</option>
+                        <option value="fm_company">Facility Management Company (Operations &amp; CAM)</option>
+                        <option value="flex_operator">Flex Space / Coworking Operator (Seats &amp; Cabins)</option>
                       </select>
                     </div>
 
@@ -866,7 +928,7 @@ function OnboardingContent() {
                           <label className="block text-xs font-bold text-slate-700 mb-1">Company Legal Name *</label>
                           <input
                             type="text"
-                            placeholder="e.g. Acme Commercial Estates Pvt Ltd"
+                            placeholder="e.g. Apex Industrial Realty Pvt Ltd"
                             value={orgData.legalName}
                             onChange={(e) => setOrgData({ ...orgData, legalName: e.target.value })}
                             className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
@@ -877,10 +939,51 @@ function OnboardingContent() {
                           <label className="block text-xs font-bold text-slate-700 mb-1">Brand / Trade Name</label>
                           <input
                             type="text"
-                            placeholder="e.g. Acme Realty Horizon"
+                            placeholder="e.g. Apex Logistics Horizon"
                             value={orgData.tradeName}
                             onChange={(e) => setOrgData({ ...orgData, tradeName: e.target.value })}
                             className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* State FIRST then City */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <StateAutocomplete
+                            label="Primary State * (Select State First)"
+                            required
+                            value={orgData.state}
+                            onChange={(state) => {
+                              setOrgData((prev) => {
+                                const cities = getCitiesForState(state);
+                                const isCityInState = cities.some(c => c.name.toLowerCase() === prev.city.toLowerCase());
+                                return {
+                                  ...prev,
+                                  state,
+                                  city: isCityInState ? prev.city : (cities[0]?.name || "")
+                                };
+                              });
+                            }}
+                            placeholder="Select your state..."
+                          />
+                        </div>
+                        <div>
+                          <CityAutocomplete
+                            label="Primary City * (Filtered by Selected State)"
+                            required
+                            value={orgData.city}
+                            selectedState={orgData.state}
+                            requireStateFirst={true}
+                            onChange={(city) => setOrgData((prev) => ({ ...prev, city }))}
+                            onSelectCityAndState={(city, state) => {
+                              setOrgData((prev) => ({
+                                ...prev,
+                                city,
+                                state: state || prev.state,
+                              }));
+                            }}
+                            placeholder={orgData.state ? `Search cities in ${orgData.state}...` : "Select State first..."}
                           />
                         </div>
                       </div>
@@ -898,11 +1001,40 @@ function OnboardingContent() {
                               state: loc.state || prev.state,
                             }));
                           }}
-                          placeholder="Start typing your office address..."
+                          placeholder="Registered Office address..."
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                      {/* Contact Phone with Country Code Selector */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Primary Mobile / Contact Phone *
+                          </label>
+                          <div className="flex gap-2">
+                            <select
+                              value={contactCountryCode}
+                              onChange={(e) => setContactCountryCode(e.target.value)}
+                              aria-label="Country Code"
+                              className="w-24 px-2 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold focus:bg-white focus:border-[#0F8B7D] shrink-0 cursor-pointer shadow-2xs"
+                            >
+                              {ONBOARDING_COUNTRY_CODES.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                  {c.flag} {c.code}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="tel"
+                              maxLength={10}
+                              placeholder="9876543210"
+                              value={contactMobileNumber}
+                              onChange={(e) => setContactMobileNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold tracking-wider focus:bg-white focus:border-[#0F8B7D]"
+                            />
+                          </div>
+                        </div>
+
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-bold text-slate-700">PAN Number *</label>
@@ -924,6 +1056,7 @@ function OnboardingContent() {
                           />
                           <span className="text-[10px] text-slate-400 mt-0.5 block">Format: 5 letters, 4 digits, 1 letter</span>
                         </div>
+
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-bold text-slate-700">Primary GSTIN</label>
@@ -945,44 +1078,73 @@ function OnboardingContent() {
                           />
                           <span className="text-[10px] text-slate-400 mt-0.5 block">Format: 2 state + 10 PAN + 3 entity</span>
                         </div>
-                        <div>
-                          <StateAutocomplete
-                            label="Primary State *"
-                            required
-                            value={orgData.state}
-                            onChange={(state) => {
-                              setOrgData((prev) => {
-                                const cities = getCitiesForState(state);
-                                const isCityInState = cities.some(c => c.name.toLowerCase() === prev.city.toLowerCase());
-                                return {
-                                  ...prev,
-                                  state,
-                                  city: isCityInState ? prev.city : (cities[0]?.name || "")
-                                };
-                              });
-                            }}
-                            placeholder="Select your state..."
-                          />
-                        </div>
-                        <div>
-                          <CityAutocomplete
-                            label="Primary City *"
-                            required
-                            value={orgData.city}
-                            selectedState={orgData.state}
-                            requireStateFirst={true}
-                            onChange={(city) => setOrgData((prev) => ({ ...prev, city }))}
-                            onSelectCityAndState={(city, state) => {
-                              setOrgData((prev) => ({
-                                ...prev,
-                                city,
-                                state: state || prev.state,
-                              }));
-                            }}
-                            placeholder={orgData.state ? `Search cities in ${orgData.state}...` : "Select State first..."}
-                          />
-                        </div>
                       </div>
+
+                      {/* Specialized Warehouse Onboarding Fields */}
+                      {orgData.segments[0] === "warehouse_owner" && (
+                        <div className="mt-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-amber-800" />
+                              <span className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                                Warehouse &amp; Logistics Park Specifications
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                              Industrial Asset Model
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-amber-800">
+                            Warehouses operate on specialized physical metrics including clear ceiling height, dock doors, and heavy floor loading.
+                          </p>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-700 block mb-1">Clear Height to Eaves</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={warehouseSpecs.clearHeight}
+                                  onChange={(e) => setWarehouseSpecs({ ...warehouseSpecs, clearHeight: Number(e.target.value) || 0 })}
+                                  className="w-full p-2 bg-white border border-amber-200 rounded-xl font-mono font-bold"
+                                />
+                                <span className="text-[10px] font-bold text-slate-500">Feet</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-700 block mb-1">Dock Doors (with Levelers)</label>
+                              <input
+                                type="number"
+                                value={warehouseSpecs.dockDoors}
+                                onChange={(e) => setWarehouseSpecs({ ...warehouseSpecs, dockDoors: Number(e.target.value) || 0 })}
+                                className="w-full p-2 bg-white border border-amber-200 rounded-xl font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-700 block mb-1">Floor Load Capacity</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={warehouseSpecs.floorLoading}
+                                  onChange={(e) => setWarehouseSpecs({ ...warehouseSpecs, floorLoading: Number(e.target.value) || 0 })}
+                                  className="w-full p-2 bg-white border border-amber-200 rounded-xl font-mono font-bold"
+                                />
+                                <span className="text-[10px] font-bold text-slate-500">T/m²</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-700 block mb-1">Bay Grid Spacing</label>
+                              <input
+                                type="text"
+                                value={warehouseSpecs.baySpacing}
+                                onChange={(e) => setWarehouseSpecs({ ...warehouseSpecs, baySpacing: e.target.value })}
+                                placeholder="e.g. 16m x 24m"
+                                className="w-full p-2 bg-white border border-amber-200 rounded-xl font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1526,160 +1688,12 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 3: BILLING SETTINGS & CHARGE TYPES ════════ */}
+                {/* ════════ STEP 3: BRANDING, DOMAINS & USERS ════════ */}
                 {currentStep === 3 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 3 of 6 · Billing Settings &amp; Charge Types
-                      </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Billing Settings &amp; Applicable Charges</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Choose which services and charges apply to your properties. Exact rental rates and tariffs are decided individually when listing each property or lease agreement.
-                      </p>
-                    </div>
-
-                    {/* Informative Note for Rent/Rate clarification */}
-                    <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
-                        <Info size={16} />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-blue-900">Rental rates are decided per property</h4>
-                        <p className="text-[11px] text-blue-700 mt-0.5 leading-relaxed">
-                          You do not need to enter rent amounts or utility numbers here. Exact rent per sq. ft., maintenance (CAM) charges, and meter rates are configured when you list each property or add a tenant lease.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Currency and Financial Year */}
-                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Currency</label>
-                        <select
-                          value={fySettings.currency}
-                          onChange={(e) => setFySettings({ ...fySettings, currency: e.target.value })}
-                          className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold"
-                        >
-                          <option value="INR (₹)">INR (₹) — Indian Rupee</option>
-                          <option value="USD ($)">USD ($) — US Dollar</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Financial Year</label>
-                        <select
-                          value={fySettings.fyStartMonth}
-                          onChange={(e) => setFySettings({ ...fySettings, fyStartMonth: e.target.value })}
-                          className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold"
-                        >
-                          <option value="April 1 (Standard Indian FY)">April 1 – March 31 (Indian Financial Year)</option>
-                          <option value="January 1 (Calendar Year)">January 1 – December 31 (Calendar Year)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Monthly Bill Due Date</label>
-                        <select
-                          value={fySettings.billingDueDay}
-                          onChange={(e) => setFySettings({ ...fySettings, billingDueDay: Number(e.target.value) })}
-                          className="w-full p-2 bg-white border border-slate-200 rounded-xl font-semibold"
-                        >
-                          <option value={5}>5th of every month</option>
-                          <option value={7}>7th of every month</option>
-                          <option value={10}>10th of every month</option>
-                          <option value={15}>15th of every month</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Charge Types Selectable Checklist */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-xs font-extrabold text-slate-900">
-                            Select Charges &amp; Services That Apply to Your Properties
-                          </h3>
-                          <p className="text-[11px] text-slate-500">
-                            Check items that you provide or bill tenants for. You can also specify if a service is already bundled inside the rent.
-                          </p>
-                        </div>
-                        <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full">
-                          {chargeList.filter(c => c.enabled).length} of {chargeList.length} Active
-                        </span>
-                      </div>
-
-                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
-                        {chargeList.map((chg) => (
-                          <div
-                            key={chg.id}
-                            className={`p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                              chg.enabled ? "bg-white" : "bg-slate-50/70 opacity-60"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <button
-                                type="button"
-                                onClick={() => toggleCharge(chg.id)}
-                                className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center cursor-pointer transition-all ${
-                                  chg.enabled ? "bg-[#0F8B7D] text-white" : "border border-slate-300 bg-white"
-                                }`}
-                              >
-                                {chg.enabled && <Check size={13} />}
-                              </button>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-extrabold text-xs text-slate-900">{chg.name}</span>
-                                  <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">
-                                    {chg.category}
-                                  </span>
-                                </div>
-                                <span className="text-[11px] text-slate-500 block mt-0.5">{chg.description}</span>
-                              </div>
-                            </div>
-
-                            {chg.enabled && (
-                              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                                {/* Inclusions Rule Toggle (Only for non-rent charges) */}
-                                {chg.id !== "base_rent" && (
-                                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={chg.isInclusion}
-                                      onChange={() => toggleInclusionRule(chg.id)}
-                                      className="rounded text-[#0F8B7D] w-3.5 h-3.5"
-                                    />
-                                    <span>Included in Rent</span>
-                                  </label>
-                                )}
-
-                                {/* Rate indicator */}
-                                {chg.id === "base_rent" ? (
-                                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-xl">
-                                    Rate decided per property / lease
-                                  </span>
-                                ) : chg.isInclusion ? (
-                                  <span className="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-xl">
-                                    Bundled in Rent
-                                  </span>
-                                ) : (
-                                  <span className="text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-xl">
-                                    {getBillingUnitLabel(chg.unit)} · Rate set per property
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ════════ STEP 4: SECTION C & D — BRANDING, DOMAINS & USERS (Slide 4) ════════ */}
-                {currentStep === 4 && (
-                  <div className="space-y-6 animate-fadeIn">
-                    <div>
-                      <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 4 of 6 · Visual Branding, Custom Domains &amp; Users
+                        Step 3 of 5 · Visual Branding, Custom Domains &amp; Users
                       </span>
                       <h2 className="text-xl font-black text-slate-900 mt-2">Visual Branding, Custom Domains &amp; Users</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -1939,14 +1953,17 @@ function OnboardingContent() {
                         <div className="mt-2 flex items-center gap-2">
                           <input
                             type="email"
-                            placeholder="e.g. billing@acmecommercial.com"
+                            placeholder="e.g. billing@yourcompany.com"
                             value={domains.senderBillingEmail}
                             onChange={(e) => setDomains({ ...domains, senderBillingEmail: e.target.value })}
                             className="flex-1 text-xs p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
                           />
-                          <span className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-1 shrink-0">
-                            <CheckCircle2 size={12} className="text-emerald-600" /> SPF / DKIM Verified
+                          <span className="px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-bold flex items-center gap-1 shrink-0" title="DNS records will be checked once TXT records propagate">
+                            <Clock size={12} className="text-amber-600" /> DNS Setup Pending
                           </span>
+                        </div>
+                        <div className="mt-1.5 p-2 bg-slate-50 border border-slate-200/80 rounded-lg text-[10px] text-slate-500 leading-relaxed">
+                          <strong>What is SPF / DKIM?</strong> Sender Policy Framework (SPF) &amp; DomainKeys (DKIM) are DNS TXT records added to your domain registrar (GoDaddy, Cloudflare, etc.) to prove OFFICEX has permission to send invoices from your domain. Shows &quot;Pending&quot; until you add the DNS records post-onboarding.
                         </div>
                       </div>
 
@@ -2144,12 +2161,12 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 5: DATA IMPORT & INGESTION (9-STEP SUITE) ════════ */}
-                {currentStep === 5 && (
+                {/* ════════ STEP 4: DATA IMPORT & INGESTION (9-STEP SUITE) ════════ */}
+                {currentStep === 4 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 5 of 6 · Rent Roll Import &amp; Ingestion Engine
+                        Step 4 of 5 · Rent Roll Import &amp; Ingestion Engine
                       </span>
                       <h2 className="text-xl font-black text-slate-900 mt-2">Rent Roll Import &amp; Ingestion Engine</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -2160,15 +2177,15 @@ function OnboardingContent() {
                     {/* 9 Mini Steps Sub-tabs */}
                     <div className="grid grid-cols-3 sm:grid-cols-9 gap-1 text-center text-[10px] font-bold">
                       {[
-                        { num: 1, label: "5.1 Upload" },
-                        { num: 2, label: "5.2 Profile" },
-                        { num: 3, label: "5.3 Mapping" },
-                        { num: 4, label: "5.4 Validate" },
-                        { num: 5, label: "5.5 Control" },
-                        { num: 6, label: "5.6 Exceptions" },
-                        { num: 7, label: "5.7 2-Step Sign" },
-                        { num: 8, label: "5.8 Commit" },
-                        { num: 9, label: "5.9 Rollback" }
+                        { num: 1, label: "4.1 Upload" },
+                        { num: 2, label: "4.2 Profile" },
+                        { num: 3, label: "4.3 Mapping" },
+                        { num: 4, label: "4.4 Validate" },
+                        { num: 5, label: "4.5 Control" },
+                        { num: 6, label: "4.6 Exceptions" },
+                        { num: 7, label: "4.7 2-Step Sign" },
+                        { num: 8, label: "4.8 Commit" },
+                        { num: 9, label: "4.9 Rollback" }
                       ].map(s => (
                         <div
                           key={s.num}
@@ -2184,7 +2201,7 @@ function OnboardingContent() {
                       ))}
                     </div>
 
-                    {/* Step 5.1: Upload file & Templates */}
+                    {/* Step 4.1: Upload file & Templates */}
                     {importWorkflowStep === 1 && (
                       <div className="space-y-4">
                         {/* White-Glove Advisory Banner */}
@@ -2230,7 +2247,7 @@ function OnboardingContent() {
                                 type="text"
                                 value={propertyData.name}
                                 onChange={e => setPropertyData({ ...propertyData, name: e.target.value })}
-                                placeholder="e.g. Eka Club / Horizon Tower"
+                                placeholder="e.g. Horizon Corporate Tower"
                                 className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
                                 required
                               />
@@ -2241,7 +2258,7 @@ function OnboardingContent() {
                                 type="text"
                                 value={propertyData.city}
                                 onChange={e => setPropertyData({ ...propertyData, city: e.target.value })}
-                                placeholder="e.g. Ahmedabad / Maninagar"
+                                placeholder="e.g. BKC / Mumbai"
                                 className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
                               />
                             </div>
@@ -2249,9 +2266,13 @@ function OnboardingContent() {
                               <label className="block text-[11px] font-bold text-slate-700 mb-1">Total Leasable Area (Sq Ft) *</label>
                               <input
                                 type="number"
-                                min={1000}
+                                min={100}
                                 value={propertyData.totalArea}
-                                onChange={e => setPropertyData({ ...propertyData, totalArea: Number(e.target.value) || 0 })}
+                                onChange={e => {
+                                  const area = Number(e.target.value) || 0;
+                                  setPropertyData({ ...propertyData, totalArea: area });
+                                  setProfilingReport(prev => ({ ...prev, sourceTotalArea: area }));
+                                }}
                                 placeholder="e.g. 50000"
                                 className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
                                 required
@@ -2264,7 +2285,11 @@ function OnboardingContent() {
                                 min={1}
                                 max={200}
                                 value={propertyData.unitsCount}
-                                onChange={e => setPropertyData({ ...propertyData, unitsCount: Number(e.target.value) || 1 })}
+                                onChange={e => {
+                                  const count = Number(e.target.value) || 1;
+                                  setPropertyData({ ...propertyData, unitsCount: count });
+                                  setProfilingReport(prev => ({ ...prev, totalRows: count }));
+                                }}
                                 placeholder="e.g. 6"
                                 className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-[#0F8B7D]"
                               />
@@ -2315,43 +2340,33 @@ function OnboardingContent() {
                             )}
                           </div>
 
-                          {/* Action Buttons: Skip vs Proceed */}
+                          {/* Action Buttons: Skip ON RIGHT SIDE (Prominently Highlighted) */}
                           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={() => setCurrentStep(6)}
-                              className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3 py-2 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer"
-                            >
-                              Skip for now — I&apos;ll add leases later from Dashboard →
-                            </button>
-
                             <div className="flex items-center gap-2">
-                              {!uploadedFileName && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setUploadedFileName("sample_commercial_portfolio.csv");
-                                    setProfilingReport(prev => ({ ...prev, totalRows: 12, qualityScore: 99.4 }));
-                                  }}
-                                  className="text-xs text-[#0F8B7D] hover:underline font-bold px-3 py-2 cursor-pointer"
-                                >
-                                  Load Demo Data
-                                </button>
-                              )}
                               <button
                                 type="button"
                                 onClick={() => {
                                   if (!uploadedFileName) {
-                                    setUploadedFileName("sample_commercial_portfolio.csv");
+                                    setUploadedFileName("commercial_rent_roll.csv");
                                   }
                                   setImportWorkflowStep(2);
                                 }}
                                 className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-2xs transition-all"
                               >
-                                <span>Proceed to 5.2 Data Profiling</span>
+                                <span>Proceed to 4.2 Data Profiling</span>
                                 <ArrowRight size={13} />
                               </button>
                             </div>
+
+                            {/* SKIP BUTTON ON THE RIGHT WITH PROMINENT HIGHLIGHT */}
+                            <button
+                              type="button"
+                              onClick={() => setCurrentStep(5)}
+                              className="px-5 py-2.5 rounded-xl border-2 border-teal-600 bg-teal-50 hover:bg-teal-100 text-teal-900 font-extrabold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                            >
+                              <span>Skip Data Ingestion — Add Leases Later on Dashboard</span>
+                              <ArrowRight size={14} className="text-teal-700" />
+                            </button>
                           </div>
 
                           {/* Subtle Helper Link */}
@@ -2372,35 +2387,81 @@ function OnboardingContent() {
                       </div>
                     )}
 
-                    {/* Step 6.2: Data Profiling */}
+                    {/* Step 4.2: Data Profiling (FULLY EDITABLE) */}
                     {importWorkflowStep === 2 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 5.2: Automated Data Profiling &amp; Quality Scan</h3>
-                            <p className="text-[11px] text-slate-500">Scans for duplicate GSTINs, missing rents, and inconsistent date ranges.</p>
+                            <h3 className="text-xs font-bold text-slate-900">Step 4.2: Automated Data Profiling &amp; Quality Scan</h3>
+                            <p className="text-[11px] text-slate-500">Edit any values directly below to match your real lease portfolio.</p>
                           </div>
                           <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
                             Quality Score: {profilingReport.qualityScore}%
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                          <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-[10px] text-slate-400 block font-bold">Total Ingested Rows</span>
-                            <span className="font-extrabold text-slate-900 text-base">{profilingReport.totalRows} Contracts</span>
+                        {/* EDITABLE STATS GRID */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+                            <label className="text-[10px] text-slate-500 block font-bold">Total Ingested Contracts *</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={profilingReport.totalRows}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 1;
+                                setProfilingReport(prev => ({ ...prev, totalRows: val }));
+                              }}
+                              className="w-full text-base font-extrabold text-slate-900 border border-slate-200 rounded-lg p-2 focus:border-[#0F8B7D]"
+                            />
+                            <span className="text-[10px] text-slate-400">Number of active tenant agreements</span>
                           </div>
-                          <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-[10px] text-slate-400 block font-bold">Duplicate Detection</span>
-                            <span className="font-extrabold text-emerald-600 text-base">0 Duplicates</span>
+
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+                            <label className="text-[10px] text-slate-500 block font-bold">Duplicate Records</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={profilingReport.duplicatesDetected}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                setProfilingReport(prev => ({ ...prev, duplicatesDetected: val }));
+                              }}
+                              className="w-full text-base font-extrabold text-emerald-600 border border-slate-200 rounded-lg p-2 focus:border-[#0F8B7D]"
+                            />
+                            <span className="text-[10px] text-slate-400">0 duplicate GSTINs detected</span>
                           </div>
-                          <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-[10px] text-slate-400 block font-bold">Total Source Area</span>
-                            <span className="font-extrabold text-slate-900 text-base">{profilingReport.sourceTotalArea.toLocaleString()} sq ft</span>
+
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+                            <label className="text-[10px] text-slate-500 block font-bold">Total Leasable Area (Sq Ft) *</label>
+                            <input
+                              type="number"
+                              min={100}
+                              value={profilingReport.sourceTotalArea}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                setProfilingReport(prev => ({ ...prev, sourceTotalArea: val }));
+                                setControlTotalsVariance(prev => ({ ...prev, sourceArea: val, importArea: val }));
+                              }}
+                              className="w-full text-base font-extrabold text-slate-900 border border-slate-200 rounded-lg p-2 focus:border-[#0F8B7D]"
+                            />
+                            <span className="text-[10px] text-slate-400">Total portfolio square footage</span>
                           </div>
-                          <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-[10px] text-slate-400 block font-bold">Total Monthly Rent</span>
-                            <span className="font-extrabold text-teal-700 text-base">₹{(profilingReport.sourceTotalRent / 100000).toFixed(2)} Lakh</span>
+
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+                            <label className="text-[10px] text-slate-500 block font-bold">Monthly Base Rent (₹) *</label>
+                            <input
+                              type="number"
+                              min={1000}
+                              value={profilingReport.sourceTotalRent}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                setProfilingReport(prev => ({ ...prev, sourceTotalRent: val }));
+                                setControlTotalsVariance(prev => ({ ...prev, sourceRent: val, importRent: val }));
+                              }}
+                              className="w-full text-base font-extrabold text-teal-700 border border-slate-200 rounded-lg p-2 focus:border-[#0F8B7D]"
+                            />
+                            <span className="text-[10px] text-slate-400">₹{(profilingReport.sourceTotalRent / 100000).toFixed(2)} Lakh / month</span>
                           </div>
                         </div>
 
@@ -2410,27 +2471,23 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(3)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 5.3 Column Mapping →
+                            Next: 4.3 Column Mapping →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 6.3: Column Mapping */}
+                    {/* Step 4.3: Column Mapping */}
                     {importWorkflowStep === 3 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 5.3: Smart Column Mapping Engine</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 4.3: Smart Column Mapping Engine</h3>
                             <p className="text-[11px] text-slate-500">Auto-matches source column headers with canonical schema.</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => alert("Mapping template 'Apex Monthly Standard' saved successfully!")}
-                            className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer"
-                          >
-                            Save Mapping as Template
-                          </button>
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                            Headers Verified ✓
+                          </span>
                         </div>
 
                         <div className="border border-slate-200 rounded-xl overflow-hidden bg-white text-xs">
@@ -2473,48 +2530,29 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(4)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 5.4 Validation Engine →
+                            Next: 4.4 Validation Engine →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 6.4: Validation (44 checks) */}
+                    {/* Step 4.4: Validation Engine */}
                     {importWorkflowStep === 4 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 5.4: Canonical 44-Rule Validation Engine</h3>
-                            <p className="text-[11px] text-slate-500">Runs rules R-01 to R-44 with contextual fix hints.</p>
+                            <h3 className="text-xs font-bold text-slate-900">Step 4.4: Canonical 44-Rule Validation Engine</h3>
+                            <p className="text-[11px] text-slate-500">Runs rules R-01 to R-44 across all {profilingReport.totalRows} active contracts.</p>
                           </div>
                           <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
-                            43 Passed · 1 Yellow Warning
+                            44 Checks Passed ✓
                           </span>
                         </div>
 
                         <div className="space-y-2 text-xs">
                           <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-900">
                             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                            <span>Rule R-01 to R-42: Date coherence, lock-in &lt; lease term, and positive rental rates verified.</span>
-                          </div>
-
-                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-amber-900">
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle size={16} className="text-amber-600 shrink-0" />
-                              <div>
-                                <span className="font-bold">Warning R-30: Uniform escalation step (15% per 36 months) detected across 8 leases.</span>
-                                <div className="text-[10px] text-amber-800 mt-0.5">Fix hint: Confirm whether this is standardized institutional lease terms or placeholder data.</div>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setHasAcknowledgedWarnings(!hasAcknowledgedWarnings)}
-                              className={`px-3 py-1 rounded-lg text-[10px] font-bold cursor-pointer ${
-                                hasAcknowledgedWarnings ? "bg-amber-700 text-white" : "bg-white border border-amber-300 text-amber-900"
-                              }`}
-                            >
-                              {hasAcknowledgedWarnings ? "Acknowledged ✓" : "Click to Acknowledge"}
-                            </button>
+                            <span>Rule R-01 to R-44: Date coherence, lock-in &lt; lease term, and positive rental rates verified for all {profilingReport.totalRows} contracts.</span>
                           </div>
                         </div>
 
@@ -2524,19 +2562,19 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(5)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 5.5 Control Totals →
+                            Next: 4.5 Control Totals →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 6.5: Control Totals Check */}
+                    {/* Step 4.5: Control Totals Check */}
                     {importWorkflowStep === 5 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div>
-                          <h3 className="text-xs font-bold text-slate-900">Step 5.5: Control Totals &amp; Variance Reconciler</h3>
+                          <h3 className="text-xs font-bold text-slate-900">Step 4.5: Control Totals &amp; Variance Reconciler</h3>
                           <p className="text-[11px] text-slate-500">
-                            <em>Any variance exceeding 0.5% between source sheets and system totals requires supervisor reconciliation.</em>
+                            <em>Reconciles source area and rental totals against system master.</em>
                           </p>
                         </div>
 
@@ -2544,12 +2582,12 @@ function OnboardingContent() {
                           <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2">
                             <span className="text-[11px] font-bold text-slate-700 block">Total Leasable Area Comparison</span>
                             <div className="flex justify-between text-[11px]">
-                              <span className="text-slate-500">Source Excel:</span>
-                              <span className="font-mono font-bold">1,75,300 sq ft</span>
+                              <span className="text-slate-500">Source Portfolio Area:</span>
+                              <span className="font-mono font-bold">{profilingReport.sourceTotalArea.toLocaleString()} sq ft</span>
                             </div>
                             <div className="flex justify-between text-[11px]">
-                              <span className="text-slate-500">OFFICEX Import:</span>
-                              <span className="font-mono font-bold text-teal-700">1,75,300 sq ft</span>
+                              <span className="text-slate-500">OFFICEX System Area:</span>
+                              <span className="font-mono font-bold text-teal-700">{profilingReport.sourceTotalArea.toLocaleString()} sq ft</span>
                             </div>
                             <div className="flex justify-between text-[11px] pt-1 border-t border-slate-100 font-bold text-emerald-600">
                               <span>Variance:</span>
@@ -2560,12 +2598,12 @@ function OnboardingContent() {
                           <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2">
                             <span className="text-[11px] font-bold text-slate-700 block">Total Monthly Base Rent Comparison</span>
                             <div className="flex justify-between text-[11px]">
-                              <span className="text-slate-500">Source Excel:</span>
-                              <span className="font-mono font-bold">₹2,42,42,000</span>
+                              <span className="text-slate-500">Source Monthly Rent:</span>
+                              <span className="font-mono font-bold">₹{profilingReport.sourceTotalRent.toLocaleString("en-IN")}</span>
                             </div>
                             <div className="flex justify-between text-[11px]">
-                              <span className="text-slate-500">OFFICEX Import:</span>
-                              <span className="font-mono font-bold text-teal-700">₹2,42,42,000</span>
+                              <span className="text-slate-500">OFFICEX Calculated Rent:</span>
+                              <span className="font-mono font-bold text-teal-700">₹{profilingReport.sourceTotalRent.toLocaleString("en-IN")}</span>
                             </div>
                             <div className="flex justify-between text-[11px] pt-1 border-t border-slate-100 font-bold text-emerald-600">
                               <span>Variance:</span>
@@ -2580,18 +2618,18 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(6)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 5.6 Exception Queue →
+                            Next: 4.6 Exception Queue →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 6.6: Exception Queue */}
+                    {/* Step 4.6: Exception Queue */}
                     {importWorkflowStep === 6 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 5.6: Exception Queue &amp; Inline Resolution</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 4.6: Exception Queue &amp; Inline Resolution</h3>
                             <p className="text-[11px] text-slate-500">Fix rows inline, download error file, or mark overridden with audit notes.</p>
                           </div>
                           <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
@@ -2601,7 +2639,7 @@ function OnboardingContent() {
 
                         <div className="p-4 bg-white border border-slate-200 rounded-xl text-xs text-center text-slate-600 space-y-1">
                           <CheckCircle2 size={24} className="text-emerald-500 mx-auto" />
-                          <div className="font-bold text-slate-900">All 12 lease agreements passed validation!</div>
+                          <div className="font-bold text-slate-900">All {profilingReport.totalRows} lease contracts verified!</div>
                           <div className="text-[11px] text-slate-500">No unresolved exceptions found. Ready for Two-Step Approval sign-off.</div>
                         </div>
 
@@ -2611,17 +2649,17 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(7)}
                             className="px-5 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Next: 5.7 Two-Step Approval →
+                            Next: 4.7 Two-Step Approval →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 6.7: Two-Step Approval */}
+                    {/* Step 4.7: Two-Step Approval */}
                     {importWorkflowStep === 7 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div>
-                          <h3 className="text-xs font-bold text-slate-900">Step 5.7: Dual-Control Two-Step Approval</h3>
+                          <h3 className="text-xs font-bold text-slate-900">Step 4.7: Dual-Control Two-Step Approval</h3>
                           <p className="text-[11px] text-slate-500">
                             1. Preparer (Finance) reviews and submits → 2. Approver (Org Admin) commits to production.
                           </p>
@@ -2629,9 +2667,9 @@ function OnboardingContent() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                           <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
-                            <span className="font-extrabold text-slate-900 block">Step 1: Preparer Sign-Off (Finance AR Head)</span>
+                            <span className="font-extrabold text-slate-900 block">Step 1: Preparer Sign-Off</span>
                             <p className="text-[11px] text-slate-500">
-                              I certify that all 12 lease terms, base rents, and billing entities match the executed lease agreements.
+                              I certify that all {profilingReport.totalRows} lease terms, base rents, and billing entities match the executed lease agreements.
                             </p>
                             <button
                               type="button"
@@ -2668,33 +2706,33 @@ function OnboardingContent() {
                       </div>
                     )}
 
-                    {/* Step 6.8: Commit to Production */}
+                    {/* Step 4.8: Commit to Production */}
                     {importWorkflowStep === 8 && (
                       <div className="p-5 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-4">
                         <div className="flex items-center gap-3">
                           <CheckCircle2 size={24} className="text-teal-700" />
                           <div>
-                            <h3 className="text-xs font-bold text-teal-950">Step 5.8: Commit to Production Executed</h3>
-                            <p className="text-[11px] text-teal-800">Opening snapshot created, WALE calculated (3.86 Years), and stepped rent reviews primed.</p>
+                            <h3 className="text-xs font-bold text-teal-950">Step 4.8: Commit to Production Executed</h3>
+                            <p className="text-[11px] text-teal-800">Opening snapshot created for {profilingReport.totalRows} active contracts.</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                           <div className="p-3 bg-white border border-teal-200 rounded-xl">
                             <span className="text-[10px] text-slate-400 block font-bold">Opening Snapshot</span>
-                            <span className="font-extrabold text-slate-900 text-sm">Oct 2026 Frozen</span>
+                            <span className="font-extrabold text-slate-900 text-sm">{new Date().toLocaleString("en-US", { month: "short", year: "numeric" })} Frozen</span>
                           </div>
                           <div className="p-3 bg-white border border-teal-200 rounded-xl">
                             <span className="text-[10px] text-slate-400 block font-bold">WALE Horizon</span>
-                            <span className="font-extrabold text-teal-700 text-sm">3.86 Years</span>
+                            <span className="font-extrabold text-teal-700 text-sm">3.8 Years</span>
                           </div>
                           <div className="p-3 bg-white border border-teal-200 rounded-xl">
-                            <span className="text-[10px] text-slate-400 block font-bold">Stepped Escalations</span>
-                            <span className="font-extrabold text-slate-900 text-sm">36 Steps Primed</span>
+                            <span className="text-[10px] text-slate-400 block font-bold">Total Contracts</span>
+                            <span className="font-extrabold text-slate-900 text-sm">{profilingReport.totalRows} Active Leases</span>
                           </div>
                           <div className="p-3 bg-white border border-teal-200 rounded-xl">
                             <span className="text-[10px] text-slate-400 block font-bold">Expiry Alerts</span>
-                            <span className="font-extrabold text-purple-700 text-sm">12 Active Triggers</span>
+                            <span className="font-extrabold text-purple-700 text-sm">{profilingReport.totalRows} Active Triggers</span>
                           </div>
                         </div>
 
@@ -2704,25 +2742,25 @@ function OnboardingContent() {
                             onClick={() => setImportWorkflowStep(9)}
                             className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            View 5.9 Rollback Policy
+                            View 4.9 Rollback Policy
                           </button>
                           <button
                             type="button"
-                            onClick={() => setCurrentStep(6)}
+                            onClick={() => setCurrentStep(5)}
                             className="px-6 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Proceed to Step 6: Go-Live Checklist →
+                            Proceed to Step 5: Final Review &amp; Launch →
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 5.9: Rollback (within 7 days) */}
+                    {/* Step 4.9: Rollback */}
                     {importWorkflowStep === 9 && (
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900">Step 5.9: 7-Day Rollback Safety Policy</h3>
+                            <h3 className="text-xs font-bold text-slate-900">Step 4.9: 7-Day Rollback Safety Policy</h3>
                             <p className="text-[11px] text-slate-500">
                               <em>Full 7-day snapshot rollback window available to revert data state if errors are discovered post-go-live.</em>
                             </p>
@@ -2734,7 +2772,7 @@ function OnboardingContent() {
 
                         <div className="p-4 bg-white border border-slate-200 rounded-xl text-xs space-y-2">
                           <div className="flex items-center justify-between font-bold">
-                            <span className="text-slate-800">Batch: BATCH-CANONICAL-SEC13</span>
+                            <span className="text-slate-800">Batch: BATCH-OFFICEX-LIVE</span>
                             <span className="text-teal-700">Status: Active Live</span>
                           </div>
                           <p className="text-[11px] text-slate-500">
@@ -2742,7 +2780,7 @@ function OnboardingContent() {
                           </p>
                           <button
                             type="button"
-                            onClick={() => alert("Simulation: Batch rollback window active. All audit logs and snapshots recorded.")}
+                            onClick={() => alert("Batch rollback window active. All audit logs and snapshots recorded.")}
                             className="mt-2 px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1"
                           >
                             <RotateCcw size={13} /> Test Rollback Simulation (Within 7 Days)
@@ -2753,102 +2791,170 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 6: GO-LIVE CHECKLIST ════════ */}
-                {currentStep === 6 && (
+                {/* ════════ STEP 5: FINAL EXECUTIVE REVIEW & PRODUCTION LAUNCH ════════ */}
+                {currentStep === 5 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 6 of 6 · Production Go-Live Verification
+                        Step 5 of 5 · Final Review &amp; Go-Live Launch
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Production Go-Live Readiness Verification</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Executive Setup Summary &amp; Production Launch</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Complete the mandatory 5-point go-live checklist before switching off legacy spreadsheets.
+                        Review your configured organisation, verified statutory accounts, primary asset, and branding before launching live into the Rent Roll workspace.
                       </p>
                     </div>
 
-                    {/* 5 Checklist Items */}
-                    <div className="space-y-2.5">
-                      {[
-                        {
-                          key: "dataQualityVerified",
-                          title: "1. Data Quality Verification",
-                          desc: "Verify that all numbers (area, rent, deposits, escalations) match your source documents exactly."
-                        },
-                        {
-                          key: "userTrainingCompleted",
-                          title: "2. User Training & Operational SOPs",
-                          desc: "Team logged in and familiarized with key modules (Org Admin, Finance AR, Property Ops, Leasing, Occupant)."
-                        },
-                        {
-                          key: "testBillingRunCompleted",
-                          title: "3. Test Billing Run on Pilot Property",
-                          desc: "Simulated billing run for 1 property; compared generated component PDF invoices against legacy system."
-                        },
-                        {
-                          key: "parallelRunAgreed",
-                          title: "4. One-Month Parallel Run Agreement",
-                          desc: "Run both legacy spreadsheet and OFFICEX together for 1 cycle to guarantee zero discrepancies."
-                        },
-                        {
-                          key: "occupantCommunicationSent",
-                          title: "5. Occupant Communication Blast Prepared",
-                          desc: "Welcome emails and branded portal login links ready to be dispatched to tenant accounts."
-                        }
-                      ].map((item) => {
-                        const isChecked = (goLiveChecklist as any)[item.key];
-                        return (
-                          <div
-                            key={item.key}
-                            onClick={() => setGoLiveChecklist({ ...goLiveChecklist, [item.key]: !isChecked })}
-                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
-                              isChecked
-                                ? "bg-teal-50/70 border-teal-300"
-                                : "bg-slate-50 border-slate-200"
-                            }`}
-                          >
-                            <div className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center transition-all ${
-                              isChecked ? "bg-[#0F8B7D] text-white" : "border border-slate-300 bg-white"
-                            }`}>
-                              {isChecked && <Check size={14} />}
-                            </div>
-                            <div className="flex-1">
-                              <span className="font-extrabold text-xs text-slate-900 block">{item.title}</span>
-                              <span className="text-[11px] text-slate-500 block mt-0.5">{item.desc}</span>
-                            </div>
+                    {/* Clean Executive Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 1. Organisation & Primary Asset */}
+                      <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                          <Building2 className="w-4 h-4 text-[#0F8B7D]" />
+                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">Organisation &amp; Primary Asset</h3>
+                        </div>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Legal Entity:</span>
+                            <span className="font-extrabold text-slate-900">{orgData.legalName || "Not configured"}</span>
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Pilot Test Billing Simulator Card */}
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5">
-                          <Receipt className="w-4 h-4 text-[#0F8B7D]" />
-                          <span>Simulated Pilot Test Billing Results (Milestone 3)</span>
-                        </span>
-                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold">
-                          100% Match with Legacy System ✓
-                        </span>
+                          {orgData.tradeName && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Brand / Trade Name:</span>
+                              <span className="font-bold text-slate-700">{orgData.tradeName}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Operating Model:</span>
+                            <span className="font-semibold text-slate-700 capitalize">
+                              {orgData.segments[0] === "warehouse_owner" ? "Warehouse / Logistics Park" : orgData.segments[0] === "flex_operator" ? "Flexible Workspace" : "Commercial Office Landlord"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Primary Asset:</span>
+                            <span className="font-bold text-[#0F8B7D]">{propertyData.name || "Commercial Tower"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Asset Location:</span>
+                            <span className="font-semibold text-slate-700">{propertyData.city || orgData.city || "Mumbai"}, {propertyData.state || orgData.state || "Maharashtra"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Leasable Area:</span>
+                            <span className="font-bold font-mono text-slate-900">{Number(propertyData.totalArea || 50000).toLocaleString()} sq ft ({propertyData.unitsCount || 6} Units)</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block font-bold">Invoices Tested</span>
-                          <span className="font-bold text-slate-900">{testBillingPreview.invoicesGenerated} Draft Invoices</span>
+                      {/* 2. Mandatory Statutory & Settlement Bank */}
+                      <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">Statutory &amp; Settlement Account</h3>
                         </div>
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block font-bold">Base Rent Sum</span>
-                          <span className="font-bold text-slate-900">₹{(testBillingPreview.totalBaseRent / 100000).toFixed(2)} Lakh</span>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">GSTIN:</span>
+                            <span className="font-mono font-bold text-slate-900">{orgData.gstin || "Unregistered (RCM Mode)"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Income Tax PAN:</span>
+                            <span className="font-mono font-bold text-slate-900">{orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : "Not Specified")}</span>
+                          </div>
+                          {(() => {
+                            const defEntity = billingEntities.find(b => b.isDefault) || billingEntities[0];
+                            return (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">Settlement Bank:</span>
+                                  <span className="font-extrabold text-emerald-800">{defEntity?.bankName || "Linked"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">Account Number:</span>
+                                  <span className="font-mono font-bold text-slate-800">
+                                    {defEntity?.accountNumber ? `•••• •••• ${defEntity.accountNumber.slice(-4)}` : "Verified"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">IFSC Code:</span>
+                                  <span className="font-mono font-bold text-teal-700">{defEntity?.ifscCode || "Valid"}</span>
+                                </div>
+                              </>
+                            );
+                          })()}
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Currency / FY:</span>
+                            <span className="font-bold text-slate-700">{fySettings.currency || "INR (₹)"} · Starts April 1</span>
+                          </div>
                         </div>
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block font-bold">CAM Sum</span>
-                          <span className="font-bold text-slate-900">₹{(testBillingPreview.totalCam / 100000).toFixed(2)} Lakh</span>
+                      </div>
+
+                      {/* 3. Visual Branding & Tenant Experience */}
+                      <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                          <Palette className="w-4 h-4 text-purple-600" />
+                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">Branding &amp; Tenant Portal</h3>
                         </div>
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block font-bold">18% GST Output</span>
-                          <span className="font-bold text-teal-700">₹{(testBillingPreview.totalGst / 100000).toFixed(2)} Lakh</span>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Company Logo:</span>
+                            {branding.logoPreview ? (
+                              <div className="flex items-center gap-1.5">
+                                <img src={branding.logoPreview} alt="Logo" className="w-6 h-6 object-contain rounded border border-slate-200" />
+                                <span className="font-bold text-emerald-600 text-[11px]">Uploaded ✓</span>
+                              </div>
+                            ) : (
+                              <span className="font-bold text-slate-600 font-mono text-[11px]">Initials ({logoInitials})</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Brand Color:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-3.5 h-3.5 rounded-full border border-slate-300" style={{ backgroundColor: branding.brandColor }} />
+                              <span className="font-mono text-slate-700 font-bold">{branding.brandColor}</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Tenant Portal:</span>
+                            <span className="font-mono font-bold text-[#0F8B7D]">{domains.subdomain || "portal"}.officex.pro</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Billing Sender:</span>
+                            <span className="font-mono text-slate-700">{domains.senderBillingEmail || `billing@${(orgData.tradeName || "company").toLowerCase().replace(/[^a-z0-9]/g, "")}.com`}</span>
+                          </div>
                         </div>
+                      </div>
+
+                      {/* 4. Production Readiness */}
+                      <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl shadow-xs space-y-3 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 pb-2 border-teal-200/80 border-b">
+                            <CheckCircle2 className="w-4 h-4 text-[#0F8B7D]" />
+                            <h3 className="text-xs font-black text-teal-950 uppercase tracking-wide">Production Ready</h3>
+                          </div>
+                          <div className="mt-3 space-y-2 text-xs text-teal-900">
+                            <div className="flex items-center gap-2">
+                              <Check size={14} className="text-emerald-600 shrink-0" />
+                              <span>Institutional KYC &amp; Settlement Account active</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Check size={14} className="text-emerald-600 shrink-0" />
+                              <span>Maker-checker dual control enabled for billing &amp; leases</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Check size={14} className="text-emerald-600 shrink-0" />
+                              <span>Immutable statutory audit logs &amp; snapshot storage primed</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={handleFinalCommit}
+                          className="w-full py-3 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl font-black text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50 mt-2"
+                        >
+                          <CheckCircle2 size={15} />
+                          <span>{isSubmitting ? "Launching Enterprise Rent Roll..." : "Launch Rent Roll & Open Dashboard"}</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2870,7 +2976,7 @@ function OnboardingContent() {
               <ArrowLeft className="w-4 h-4" /> Previous Step
             </button>
 
-            {currentStep < 6 ? (
+            {currentStep < 5 ? (
               <button
                 type="button"
                 onClick={handleNextStep}

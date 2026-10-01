@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       {
         id: 'mem_default',
         orgId: 'org_default',
-        orgName: 'Acme Commercial Realty Ltd',
+        orgName: 'Commercial Asset Desk',
         role: 'Property Owner & Asset Manager',
         roleCode: 'OWNER',
         workspaceTitle: 'Commercial Asset Desk',

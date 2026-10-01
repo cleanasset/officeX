@@ -57,8 +57,6 @@ const SEED_PROP_NAMES = new Set([
   "nexus hub",
   "meridian tech park",
   "shivalik shilp",
-  "business hub",
-  "test commercial tower",
   "fortune sky",
   "signature tower b"
 ]);
@@ -68,7 +66,6 @@ const isSeedOrMockProp = (p: any) => {
   if (SEED_PROP_IDS.has(p.id)) return true;
   const name = (p.name || "").toLowerCase().trim();
   if (SEED_PROP_NAMES.has(name)) return true;
-  if (name.includes("apex business") || name.includes("meridian tech") || name.includes("nexus hub") || name.includes("shivalik shilp") || name.includes("business hub") || name.includes("fortune sky") || name.includes("eka club")) return true;
   return false;
 };
 

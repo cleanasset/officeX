@@ -197,6 +197,7 @@ export default function Sidebar() {
   const [userName, setUserName] = useState<string>("");
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
   const [orgCity, setOrgCity] = useState<string>("");
+  const [orgLogo, setOrgLogo] = useState<string>("");
   const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({});
 
   // Synchronously compute active portal from URL first, handling both direct keys and aliases
@@ -227,10 +228,12 @@ export default function Sidebar() {
       }
 
       // Load dynamic org identity from onboarding
-      const storedOrgName = localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || "";
+      const storedOrgName = localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || localStorage.getItem("officex_portfolio_name") || "";
       const storedOrgCity = localStorage.getItem("officex_org_city") || "";
+      const storedOrgLogo = localStorage.getItem("officex_org_logo") || localStorage.getItem("officex_brand_logo") || "";
       if (storedOrgName) setOrgDisplayName(storedOrgName);
       if (storedOrgCity) setOrgCity(storedOrgCity);
+      if (storedOrgLogo) setOrgLogo(storedOrgLogo);
     }
   }, []);
 
@@ -287,7 +290,7 @@ export default function Sidebar() {
   const portfolioTitle = isMounted
     ? (orgDisplayName || (signedInName ? `${signedInName}'s Portfolio` : "Commercial Portfolio"))
     : "Commercial Portfolio";
-  const portfolioSubtitle = isMounted && orgCity ? `${orgCity} Portfolio` : "Commercial Real Estate";
+  const portfolioSubtitle = isMounted && orgCity ? `${orgCity} Portfolio` : "";
   
   const initials = isMounted
     ? ((orgDisplayName || signedInName || "OX")
@@ -354,9 +357,13 @@ export default function Sidebar() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <div 
                   suppressHydrationWarning
-                  className="w-7 h-7 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase"
+                  className="w-8 h-8 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase overflow-hidden p-0.5 border border-teal-300/40"
                 >
-                  {initials}
+                  {orgLogo ? (
+                    <img src={orgLogo} alt="Logo" className="w-full h-full object-contain rounded-md bg-white" />
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span 
@@ -365,12 +372,14 @@ export default function Sidebar() {
                   >
                     {portfolioTitle}
                   </span>
-                  <span 
-                    suppressHydrationWarning
-                    className="text-[10px] text-teal-700 font-semibold truncate"
-                  >
-                    {portfolioSubtitle}
-                  </span>
+                  {portfolioSubtitle ? (
+                    <span 
+                      suppressHydrationWarning
+                      className="text-[10px] text-teal-700 font-semibold truncate"
+                    >
+                      {portfolioSubtitle}
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <ShieldCheck className="w-4 h-4 text-[#0F8B7D] shrink-0" />

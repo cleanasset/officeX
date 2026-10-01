@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
@@ -554,7 +555,7 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full my-auto overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
-        
+
         {/* ── MODAL HEADER ── */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50/40 via-white to-slate-50">
           <div className="flex items-center gap-3">
@@ -590,13 +591,11 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
             <button
               type="button"
               onClick={() => setModalStep(1)}
-              className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
-                modalStep === 1 ? "text-[#0F8B7D] font-black" : "text-slate-500 hover:text-slate-800"
-              }`}
+              className={`flex items-center gap-1.5 transition-colors cursor-pointer ${modalStep === 1 ? "text-[#0F8B7D] font-black" : "text-slate-500 hover:text-slate-800"
+                }`}
             >
-              <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black ${
-                modalStep === 1 ? "bg-[#0F8B7D] text-white" : "bg-slate-200 text-slate-700"
-              }`}>1</span>
+              <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black ${modalStep === 1 ? "bg-[#0F8B7D] text-white" : "bg-slate-200 text-slate-700"
+                }`}>1</span>
               <span>1. Upload &amp; Template</span>
             </button>
 
@@ -606,17 +605,15 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
               type="button"
               disabled={csvHeaders.length === 0}
               onClick={() => csvHeaders.length > 0 && setModalStep(2)}
-              className={`flex items-center gap-1.5 transition-colors ${
-                modalStep === 2
+              className={`flex items-center gap-1.5 transition-colors ${modalStep === 2
                   ? "text-[#0F8B7D] font-black"
                   : csvHeaders.length > 0
-                  ? "text-slate-500 hover:text-slate-800 cursor-pointer"
-                  : "text-slate-300 cursor-not-allowed"
-              }`}
+                    ? "text-slate-500 hover:text-slate-800 cursor-pointer"
+                    : "text-slate-300 cursor-not-allowed"
+                }`}
             >
-              <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black ${
-                modalStep === 2 ? "bg-[#0F8B7D] text-white" : "bg-slate-200 text-slate-700"
-              }`}>2</span>
+              <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black ${modalStep === 2 ? "bg-[#0F8B7D] text-white" : "bg-slate-200 text-slate-700"
+                }`}>2</span>
               <span>2. Column Mapping</span>
             </button>
 
@@ -626,17 +623,15 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
               type="button"
               disabled={csvHeaders.length === 0}
               onClick={() => csvHeaders.length > 0 && setModalStep(3)}
-              className={`flex items-center gap-1.5 transition-colors ${
-                modalStep === 3
+              className={`flex items-center gap-1.5 transition-colors ${modalStep === 3
                   ? "text-[#0F8B7D] font-black"
                   : csvHeaders.length > 0
-                  ? "text-slate-500 hover:text-slate-800 cursor-pointer"
-                  : "text-slate-300 cursor-not-allowed"
-              }`}
+                    ? "text-slate-500 hover:text-slate-800 cursor-pointer"
+                    : "text-slate-300 cursor-not-allowed"
+                }`}
             >
-              <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black ${
-                modalStep === 3 ? "bg-[#0F8B7D] text-white" : "bg-slate-200 text-slate-700"
-              }`}>3</span>
+              <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-black ${modalStep === 3 ? "bg-[#0F8B7D] text-white" : "bg-slate-200 text-slate-700"
+                }`}>3</span>
               <span>3. Preview &amp; Import</span>
             </button>
           </div>
@@ -665,7 +660,7 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
              ══════════════════════════════════════════════════════════════════ */}
           {modalStep === 1 && (
             <div className="space-y-5">
-              
+
               {/* Template Action Header Bar */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -770,11 +765,10 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setInputMode("file")}
-                    className={`pb-2 text-xs font-black border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      inputMode === "file"
+                    className={`pb-2 text-xs font-black border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${inputMode === "file"
                         ? "border-[#0F8B7D] text-[#0F8B7D]"
                         : "border-transparent text-slate-500 hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     <UploadCloud size={15} />
                     <span>Upload CSV / Excel File</span>
@@ -783,11 +777,10 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setInputMode("paste")}
-                    className={`pb-2 text-xs font-black border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      inputMode === "paste"
+                    className={`pb-2 text-xs font-black border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${inputMode === "paste"
                         ? "border-[#0F8B7D] text-[#0F8B7D]"
                         : "border-transparent text-slate-500 hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     <FileUp size={15} />
                     <span>Paste Raw Text / Spreadsheet</span>
@@ -929,13 +922,12 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
                           <select
                             value={currentMapped}
                             onChange={(e) => setColumnMapping({ ...columnMapping, [field.key]: e.target.value })}
-                            className={`w-full px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all focus:outline-none ${
-                              currentMapped
+                            className={`w-full px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all focus:outline-none ${currentMapped
                                 ? "border-[#0F8B7D] bg-teal-50/30 text-teal-900"
                                 : field.required
-                                ? "border-amber-300 bg-amber-50/30 text-amber-900"
-                                : "border-slate-200 bg-white text-slate-700"
-                            }`}
+                                  ? "border-amber-300 bg-amber-50/30 text-amber-900"
+                                  : "border-slate-200 bg-white text-slate-700"
+                              }`}
                           >
                             <option value="">
                               {field.required ? "⚠️ Select matching column..." : "— (Use Default / Unmapped) —"}
@@ -972,7 +964,7 @@ export const BulkImportSpaceModal: React.FC<BulkImportSpaceModalProps> = ({
              ══════════════════════════════════════════════════════════════════ */}
           {modalStep === 3 && (
             <div className="space-y-4">
-              
+
               {/* Metric Cards Summary */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 rounded-2xl bg-teal-50 border border-teal-200">

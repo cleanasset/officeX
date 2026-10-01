@@ -67,8 +67,11 @@ export async function POST(req: Request) {
       compliance
     } = body;
 
-    if (!name || !type || !address || !city || !pincode || !totalArea) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const effectivePincode = (pincode && String(pincode).trim()) || "400001";
+    const effectiveTotalArea = parseFloat(String(totalArea)) || 1000;
+
+    if (!name || !type || !address || !city) {
+      return NextResponse.json({ error: "Missing required fields (name, type, address, city)" }, { status: 400 });
     }
 
     // Sanitize Grade enum
@@ -92,8 +95,8 @@ export async function POST(req: Request) {
         city: city.trim(),
         state: state && state.trim() ? state.trim() : null,
         micro_market: microMarket && microMarket.trim() ? microMarket.trim() : null,
-        pincode: String(pincode).trim(),
-        total_area: parseFloat(String(totalArea)) || 0,
+        pincode: effectivePincode,
+        total_area: effectiveTotalArea,
         latitude: latitude ? parseFloat(String(latitude)) : null,
         longitude: longitude ? parseFloat(String(longitude)) : null,
         owner_name: ownerName && ownerName.trim() ? ownerName.trim() : null,

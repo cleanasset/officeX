@@ -61,19 +61,52 @@ export default function PropertyMasterRegistry() {
       const isDemoAccount = email.includes("demo.seed") || (typeof window !== "undefined" && localStorage.getItem("officex_mode") === "demo");
 
       let loadedProps: PropertyItem[] = [];
+      let localStoredProps: PropertyItem[] = [];
+      const seenIds = new Set<string>();
+
+      // Check localStorage for newly registered properties first (so freshly registered properties are on top)
+      if (typeof window !== "undefined") {
+        try {
+          const localStored = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          if (Array.isArray(localStored)) {
+            localStored.forEach((p: any) => {
+              if (p && (p.id || p.name)) {
+                const pId = p.id || `PROP-${Date.now()}`;
+                const codeNum = pId.replace(/\D/g, "").slice(-4) || "8841";
+                localStoredProps.push({
+                  id: pId,
+                  name: p.name,
+                  type: p.type || "Commercial Office",
+                  location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
+                  area: p.totalArea ? Number(p.totalArea).toLocaleString() : "0",
+                  occupied: p.activeLeasesCount || 0,
+                  vacant: Math.max(0, (Number(p.totalArea) || 0) - (Number(p.occupiedArea) || 0)),
+                  occPct: p.occupancyPct || 0,
+                  grade: p.grade || "A",
+                  inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+                  ownerName: p.ownerName || p.owner_name || p.ownerCompany || (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) || "Commercial Property Owner"
+                });
+                seenIds.add(pId);
+              }
+            });
+          }
+        } catch (e) {}
+      }
 
       try {
         const emailQuery = email ? `?ownerEmail=${encodeURIComponent(email)}` : "";
-        const res = await fetch(`/api/rent-roll/properties${emailQuery}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            const filtered = data.filter((p: any) => Boolean(p && (p.id || p.name)));
+        const [rrRes, genRes] = await Promise.all([
+          fetch(`/api/rent-roll/properties${emailQuery}`),
+          fetch(`/api/properties${email ? `?ownerCompany=${encodeURIComponent(email)}&userId=${encodeURIComponent(email)}` : ""}`)
+        ]);
 
-            if (filtered.length > 0) {
-              loadedProps = filtered.map((p: any) => {
+        if (rrRes.ok) {
+          const data = await rrRes.json();
+          if (Array.isArray(data) && data.length > 0) {
+            data.filter((p: any) => Boolean(p && (p.id || p.name))).forEach((p: any) => {
+              if (!seenIds.has(p.id)) {
                 const codeNum = (p.id || String(Date.now())).replace(/\D/g, "").slice(-4) || "8841";
-                return {
+                loadedProps.push({
                   id: p.id,
                   name: p.name,
                   type: p.type || "Commercial Office",
@@ -85,25 +118,45 @@ export default function PropertyMasterRegistry() {
                   grade: p.grade || "A",
                   inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
                   ownerName: p.ownerName || p.owner_name || p.ownerCompany || (typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) : "") || "Commercial Property Owner"
-                };
-              });
-            }
+                });
+                seenIds.add(p.id);
+              }
+            });
+          }
+        }
+
+        if (genRes.ok) {
+          const genData = await genRes.json();
+          if (Array.isArray(genData)) {
+            genData.forEach((p: any) => {
+              if (p && p.id && !seenIds.has(p.id)) {
+                const codeNum = String(p.id).replace(/\D/g, "").slice(-4) || "8841";
+                loadedProps.push({
+                  id: p.id,
+                  name: p.name,
+                  type: p.type || "Commercial Office",
+                  location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
+                  area: p.total_area || p.totalArea ? Number(p.total_area || p.totalArea).toLocaleString() : "0",
+                  occupied: p.active_leases_count || p.activeLeasesCount || 0,
+                  vacant: Math.max(0, (Number(p.total_area || p.totalArea) || 0) - (Number(p.occupied_area || p.occupiedArea) || 0)),
+                  occPct: p.occupancy_pct || p.occupancyPct || 0,
+                  grade: p.grade || "A",
+                  inviteCode: p.invite_code || p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+                  ownerName: p.owner_name || p.ownerName || p.owner_company || p.ownerCompany || "Commercial Property Owner"
+                });
+                seenIds.add(p.id);
+              }
+            });
           }
         }
       } catch (e) {
-        // Fallback to local
+        console.warn("API properties fetch error, falling back to local:", e);
       }
 
-      // Synchronize localStorage with backend truth, clearing out any ghost records
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("officex_user_properties", JSON.stringify(loadedProps));
-        } catch (e) {}
-      }
-
-      setProperties(loadedProps);
-      if (loadedProps.length > 0) {
-        setSelectedPropId(loadedProps[0].id);
+      const combined = [...localStoredProps, ...loadedProps];
+      setProperties(combined);
+      if (combined.length > 0) {
+        setSelectedPropId(combined[0].id);
       } else {
         setSelectedPropId(null);
       }
@@ -111,6 +164,19 @@ export default function PropertyMasterRegistry() {
     }
 
     loadProperties();
+
+    const handlePropertyAdded = () => {
+      loadProperties();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("officex-property-added", handlePropertyAdded);
+      window.addEventListener("storage", handlePropertyAdded);
+      return () => {
+        window.removeEventListener("officex-property-added", handlePropertyAdded);
+        window.removeEventListener("storage", handlePropertyAdded);
+      };
+    }
   }, []);
 
   const filteredProperties = (properties || []).filter((p) =>
