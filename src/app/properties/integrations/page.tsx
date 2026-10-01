@@ -101,6 +101,42 @@ export default function IntegrationsPage() {
     }
   };
 
+  // Live Gateway Credentials Test State
+  const [isTestingGateway, setIsTestingGateway] = useState(false);
+  const [gatewayTestResult, setGatewayTestResult] = useState<{
+    success: boolean;
+    keyMode?: string;
+    keyIdMasked?: string;
+    latencyMs?: number;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
+  const handleTestGatewayKeys = async () => {
+    setIsTestingGateway(true);
+    setGatewayTestResult(null);
+    try {
+      const res = await fetch("/api/rent-roll/integrations/razorpay/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyId: settlementMode === "byo_gateway" && customKeyId.trim() ? customKeyId.trim() : undefined,
+          keySecret: settlementMode === "byo_gateway" && customKeySecret.trim() ? customKeySecret.trim() : undefined
+        })
+      });
+      const data = await res.json();
+      setGatewayTestResult(data);
+    } catch (err: any) {
+      setGatewayTestResult({
+        success: false,
+        error: err.message,
+        message: `Network failure connecting to gateway API: ${err.message}`
+      });
+    } finally {
+      setIsTestingGateway(false);
+    }
+  };
+
   // Tally Live State
   const [tallyUrl, setTallyUrl] = useState("http://localhost:9000");
   const [tallyCompany, setTallyCompany] = useState("Commercial Asset Management SPV");
@@ -781,6 +817,61 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
               )}
+              {/* Live Gateway Test Control */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h5 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-emerald-600" />
+                      <span>Test Live Gateway API Connection</span>
+                    </h5>
+                    <p className="text-[11px] text-slate-500">
+                      Sends a live authentication query to Razorpay to verify that keys are valid and active before collecting tenant rent.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isTestingGateway}
+                    onClick={handleTestGatewayKeys}
+                    className="px-4 py-2 bg-slate-900 hover:bg-black text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingGateway ? "animate-spin text-teal-400" : ""}`} />
+                    <span>{isTestingGateway ? "Connecting..." : "Test Gateway Credentials Live"}</span>
+                  </button>
+                </div>
+
+                {gatewayTestResult && (
+                  <div className={`p-3.5 rounded-xl border text-xs space-y-1 ${
+                    gatewayTestResult.success ? "bg-emerald-50 text-emerald-950 border-emerald-200" : "bg-rose-50 text-rose-950 border-rose-200"
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold">
+                      {gatewayTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span>
+                        {gatewayTestResult.success
+                          ? `✓ Razorpay Verified (${gatewayTestResult.keyMode || "ACTIVE"})`
+                          : "✕ Gateway Connection Failed"}
+                      </span>
+                      {gatewayTestResult.latencyMs && (
+                        <span className="ml-auto text-[10px] font-mono text-slate-500 font-normal">
+                          Latency: {gatewayTestResult.latencyMs}ms
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {gatewayTestResult.message || gatewayTestResult.error}
+                    </p>
+                    {gatewayTestResult.keyIdMasked && (
+                      <div className="text-[10px] font-mono text-slate-600">
+                        Authenticated Key: {gatewayTestResult.keyIdMasked}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="pt-2 flex items-center justify-between">
                 <span className="text-[11px] text-slate-500">

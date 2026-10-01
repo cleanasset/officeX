@@ -20,7 +20,8 @@ import {
   Layers,
   Send,
   Lock,
-  ArrowRight
+  ArrowRight,
+  CreditCard
 } from "lucide-react";
 
 interface AccountingIntegrationsModalProps {
@@ -34,8 +35,40 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
   onClose,
   orgName = "Commercial Asset SPV"
 }) => {
-  const [activeTab, setActiveTab] = useState<"tally" | "zoho" | "quickbooks" | "sap" | "webhooks">("tally");
+  const [activeTab, setActiveTab] = useState<"razorpay" | "tally" | "zoho" | "quickbooks" | "sap" | "webhooks">("razorpay");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Razorpay Gateway Live Test State
+  const [isTestingRazorpay, setIsTestingRazorpay] = useState(false);
+  const [razorpayTestResult, setRazorpayTestResult] = useState<{
+    success: boolean;
+    statusCode?: number;
+    latencyMs?: number;
+    keyMode?: string;
+    keyIdMasked?: string;
+    message?: string;
+    error?: string;
+  } | null>(null);
+  const [isCreatingTestOrder, setIsCreatingTestOrder] = useState(false);
+  const [testOrderResult, setTestOrderResult] = useState<{
+    success: boolean;
+    orderId?: string;
+    amount?: number;
+    currency?: string;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
+  // Webhook Test State
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<{
+    success: boolean;
+    statusCode?: number;
+    latencyMs?: number;
+    message?: string;
+    error?: string;
+    responsePreview?: string;
+  } | null>(null);
 
   // Tally Settings
   const [tallyMode, setTallyMode] = useState<"agent" | "file">("agent");
@@ -74,39 +107,140 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // REAL TALLY PRIME API CALLS
   const handleTestTallyConnection = async () => {
     setIsTestingTally(true);
     setTallyTestResult(null);
 
-    // Simulation of pinging Tally's local XML server or checking agent
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/rent-roll/integrations/tally", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test",
+          serverUrl: tallyServerUrl,
+          companyName: tallyCompanyName
+        })
+      });
+      const data = await res.json();
+      setTallyTestResult({
+        success: data.success,
+        message: data.message || (data.success ? data.statusText : data.error)
+      });
+    } catch (err: any) {
+      setTallyTestResult({
+        success: false,
+        message: `Network error contacting OfficeX Tally gateway: ${err.message}`
+      });
+    } finally {
       setIsTestingTally(false);
-      if (tallyServerUrl.includes("9000") || tallyServerUrl.includes("localhost")) {
-        setTallyTestResult({
-          success: true,
-          message: `Ready to push. Tally XML Server listening on ${tallyServerUrl}. Target company: "${tallyCompanyName}".`
-        });
-      } else {
-        setTallyTestResult({
-          success: false,
-          message: `Could not reach Tally on ${tallyServerUrl}. Ensure Tally Prime is running with F1 > Settings > Connectivity > Port 9000 enabled.`
-        });
-      }
-    }, 1200);
+    }
   };
 
   const handlePushToTally = async () => {
     setIsPushingTally(true);
     setTallyPushResult(null);
     try {
-      // Simulate live voucher transmission to Tally
-      setTimeout(() => {
-        setIsPushingTally(false);
-        setTallyPushResult("Successfully transmitted 12 Sales Vouchers and 8 Receipt Vouchers to Tally Prime. 0 errors.");
-      }, 1500);
-    } catch {
+      const res = await fetch("/api/rent-roll/integrations/tally", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "sync",
+          serverUrl: tallyServerUrl,
+          companyName: tallyCompanyName,
+          ledgers
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTallyPushResult(`Successfully generated and transmitted ${data.vouchersPushed || 0} vouchers to Tally Prime.`);
+      } else {
+        setTallyPushResult(data.message || data.error || "Failed to push to Tally server. Please verify Tally is open on port 9000 or download XML vouchers.");
+      }
+    } catch (err: any) {
+      setTallyPushResult(`Error connecting to Tally endpoint: ${err.message}. Please use the 1-Click XML voucher download.`);
+    } finally {
       setIsPushingTally(false);
-      setTallyPushResult("Error connecting to Tally. Downloading XML file fallback instead.");
+    }
+  };
+
+  // REAL RAZORPAY API TEST CALLS
+  const handleTestRazorpay = async () => {
+    setIsTestingRazorpay(true);
+    setRazorpayTestResult(null);
+    try {
+      const res = await fetch("/api/rent-roll/integrations/razorpay/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      setRazorpayTestResult(data);
+    } catch (err: any) {
+      setRazorpayTestResult({
+        success: false,
+        error: err.message,
+        message: `Network failure connecting to Razorpay verification service: ${err.message}`
+      });
+    } finally {
+      setIsTestingRazorpay(false);
+    }
+  };
+
+  const handleCreateTestOrder = async () => {
+    setIsCreatingTestOrder(true);
+    setTestOrderResult(null);
+    try {
+      const res = await fetch("/api/rent-roll/integrations/razorpay/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create_test_order" })
+      });
+      const data = await res.json();
+      if (data.success && data.testOrder) {
+        setTestOrderResult({
+          success: true,
+          orderId: data.testOrder.id,
+          amount: data.testOrder.amount,
+          currency: data.testOrder.currency,
+          message: `Live Razorpay Order generated: ${data.testOrder.id} (${data.testOrder.currency} ${data.testOrder.amount / 100})`
+        });
+      } else {
+        setTestOrderResult({
+          success: false,
+          error: data.error || data.message || "Failed to generate test order"
+        });
+      }
+    } catch (err: any) {
+      setTestOrderResult({
+        success: false,
+        error: err.message
+      });
+    } finally {
+      setIsCreatingTestOrder(false);
+    }
+  };
+
+  // REAL OUTBOUND WEBHOOK TEST CALL
+  const handleTestWebhook = async () => {
+    setIsTestingWebhook(true);
+    setWebhookTestResult(null);
+    try {
+      const res = await fetch("/api/rent-roll/integrations/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl })
+      });
+      const data = await res.json();
+      setWebhookTestResult(data);
+    } catch (err: any) {
+      setWebhookTestResult({
+        success: false,
+        error: err.message,
+        message: `Failed to deliver test webhook ping: ${err.message}`
+      });
+    } finally {
+      setIsTestingWebhook(false);
     }
   };
 
@@ -144,6 +278,20 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-200 bg-slate-50/30 overflow-x-auto text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setActiveTab("razorpay")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 cursor-pointer transition-all ${
+              activeTab === "razorpay"
+                ? "border-indigo-600 text-indigo-700"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Razorpay Gateway Test</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold">Active API</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab("tally")}
@@ -213,6 +361,115 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
+          {/* ──────────────── TAB 0: RAZORPAY GATEWAY TEST ──────────────── */}
+          {activeTab === "razorpay" && (
+            <div className="space-y-6 text-xs">
+              <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <div className="space-y-1">
+                  <div className="font-extrabold text-emerald-950 text-sm">
+                    Razorpay Payment Gateway Integration Test
+                  </div>
+                  <p className="text-emerald-800 leading-relaxed text-[11px]">
+                    Test the live connection between OfficeX and Razorpay servers. This utility makes authentic HTTP Basic Auth calls to Razorpay&apos;s API to verify that API keys are authorized, active, and capable of generating payment orders before accepting real tenant rent.
+                  </p>
+                </div>
+              </div>
+
+              {/* Status & Test Panel */}
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-xs">Active Gateway Credentials</h3>
+                    <p className="text-[11px] text-slate-500">Configured via server environment variables (.env.local / Vercel)</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-mono font-bold text-[10px]">
+                    Key ID Loaded
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={isTestingRazorpay}
+                    onClick={handleTestRazorpay}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingRazorpay ? "animate-spin" : ""}`} />
+                    <span>{isTestingRazorpay ? "Connecting to Razorpay..." : "1. Ping & Verify Razorpay API"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isCreatingTestOrder}
+                    onClick={handleCreateTestOrder}
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  >
+                    <Zap className={`w-3.5 h-3.5 ${isCreatingTestOrder ? "animate-spin" : ""}`} />
+                    <span>{isCreatingTestOrder ? "Creating Order..." : "2. Generate Live Test Order (₹1)"}</span>
+                  </button>
+                </div>
+
+                {/* Test Output Diagnostic Card */}
+                {razorpayTestResult && (
+                  <div className={`p-4 rounded-xl space-y-1.5 border ${
+                    razorpayTestResult.success ? "bg-emerald-50 text-emerald-950 border-emerald-200" : "bg-rose-50 text-rose-950 border-rose-200"
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold text-xs">
+                      {razorpayTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span>
+                        {razorpayTestResult.success
+                          ? `✓ Razorpay Verified (${razorpayTestResult.keyMode || "ACTIVE"})`
+                          : "✕ Razorpay Authentication Failed"}
+                      </span>
+                      {razorpayTestResult.latencyMs && (
+                        <span className="ml-auto text-[10px] font-mono text-slate-500 font-normal">
+                          Latency: {razorpayTestResult.latencyMs}ms
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {razorpayTestResult.message || razorpayTestResult.error}
+                    </p>
+                    {razorpayTestResult.keyIdMasked && (
+                      <div className="text-[10px] font-mono text-slate-500">
+                        Authenticated Key: {razorpayTestResult.keyIdMasked}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {testOrderResult && (
+                  <div className={`p-4 rounded-xl space-y-1.5 border ${
+                    testOrderResult.success ? "bg-indigo-50 text-indigo-950 border-indigo-200" : "bg-rose-50 text-rose-950 border-rose-200"
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold text-xs">
+                      {testOrderResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span>
+                        {testOrderResult.success
+                          ? `✓ Live Order Created: ${testOrderResult.orderId}`
+                          : "✕ Order Creation Failed"}
+                      </span>
+                    </div>
+                    <p className="text-[11px]">
+                      {testOrderResult.message || testOrderResult.error}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ──────────────── TAB 1: TALLY PRIME ──────────────── */}
           {activeTab === "tally" && (
             <div className="space-y-6">
@@ -633,16 +890,61 @@ export const AccountingIntegrationsModal: React.FC<AccountingIntegrationsModalPr
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Outbound Webhook URL</label>
-                  <input
-                    type="text"
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={webhookUrl}
+                      onChange={(e) => setWebhookUrl(e.target.value)}
+                      placeholder="https://your-server.com/webhooks/officex"
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      disabled={isTestingWebhook}
+                      onClick={handleTestWebhook}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+                    >
+                      <Send className={`w-3.5 h-3.5 ${isTestingWebhook ? "animate-spin" : ""}`} />
+                      <span>{isTestingWebhook ? "Pinging..." : "Test Webhook Ping"}</span>
+                    </button>
+                  </div>
                   <span className="text-[10px] text-slate-400 mt-1 block">
                     Events emitted: <code className="text-purple-700 font-mono">invoice.issued</code>, <code className="text-purple-700 font-mono">payment.received</code>, <code className="text-purple-700 font-mono">escalation.applied</code>
                   </span>
                 </div>
+
+                {/* Webhook Test Diagnostic Card */}
+                {webhookTestResult && (
+                  <div className={`p-4 rounded-xl space-y-1.5 border ${
+                    webhookTestResult.success ? "bg-emerald-50 text-emerald-950 border-emerald-200" : "bg-rose-50 text-rose-950 border-rose-200"
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold text-xs">
+                      {webhookTestResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span>
+                        {webhookTestResult.success
+                          ? `✓ Webhook Delivered (HTTP ${webhookTestResult.statusCode || 200})`
+                          : `✕ Webhook Failed (${webhookTestResult.statusText || "Unreachable"})`}
+                      </span>
+                      {webhookTestResult.latencyMs && (
+                        <span className="ml-auto text-[10px] font-mono text-slate-500 font-normal">
+                          Latency: {webhookTestResult.latencyMs}ms
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {webhookTestResult.message || webhookTestResult.error}
+                    </p>
+                    {webhookTestResult.responsePreview && (
+                      <div className="text-[10px] font-mono text-slate-600 bg-white/70 p-2 rounded border border-slate-200 truncate">
+                        Response: {webhookTestResult.responsePreview}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
