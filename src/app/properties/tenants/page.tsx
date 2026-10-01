@@ -680,15 +680,19 @@ export default function TenantDirectoryPage() {
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {t.status === "active" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live (Portal Active)
+                            </span>
+                          ) : (t.status === "invited" || (t as any).inviteStatus === "pending") ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Invite Pending
                             </span>
                           ) : t.status === "under_notice" ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Under Notice
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Under Notice
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                              Draft
+                              Pending Setup
                             </span>
                           )}
                         </td>

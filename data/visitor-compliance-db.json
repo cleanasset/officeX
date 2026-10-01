@@ -149,7 +149,7 @@
       "approvalStatus": "approved",
       "checkinAt": "2026-10-01T01:49:52.692Z",
       "checkoutAt": null,
-      "status": "checked_in",
+      "status": "overstay",
       "zone": "Floor 14 - Executive Suite",
       "floor": "14",
       "building": "Tower A",
@@ -158,7 +158,8 @@
       "riskLevel": "low",
       "vehicle": "MH-02-CB-9081",
       "evacuationStatus": "SAFE",
-      "createdAt": "2026-10-01T00:39:52.692Z"
+      "createdAt": "2026-10-01T00:39:52.692Z",
+      "isOverstay": true
     },
     {
       "id": "v-1002",

@@ -119,9 +119,20 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
                     </h4>
                     <p className="text-[11px] text-gray-500 font-medium">{t.legalName}</p>
                   </div>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {t.tenantCode}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {t.status === "active" ? (
+                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Live in Portal
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        ○ Invite Pending
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {t.tenantCode}
+                    </span>
+                  </div>
                 </div>
                 <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[10px] font-medium">
                   {t.industry}

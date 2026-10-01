@@ -61,22 +61,22 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
       href: "/properties/rent-roll?tab=dashboard", 
       icon: DollarSign,
       subItems: [
-        { name: "Executive Dashboard", href: "/properties/rent-roll?tab=dashboard", tabKey: "dashboard", icon: Building },
-        { name: "Active Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
-        { name: "Monthly Billing & Invoices", href: "/properties/rent-roll?tab=invoices", tabKey: "invoices", icon: DollarSign },
-        { name: "Meter Readings & Utilities", href: "/properties/rent-roll?tab=meter-readings", tabKey: "meter-readings", icon: Zap },
-        { name: "Collections & Receipts", href: "/properties/rent-roll?tab=collections", tabKey: "collections", icon: CheckCircle },
-        { name: "Arrears & Aging Ledger", href: "/properties/rent-roll?tab=aging", tabKey: "aging", icon: AlertTriangle },
-        { name: "Escalation & Expiries", href: "/properties/rent-roll?tab=escalations", tabKey: "escalations", icon: TrendingUp },
-        { name: "Stacking & Occupancy", href: "/properties/rent-roll?tab=occupancy", tabKey: "occupancy", icon: Layers },
-        { name: "12-Mo Financial Forecast", href: "/properties/rent-roll?tab=forecast", tabKey: "forecast", icon: Calendar },
-        { name: "NOI & Property P&L", href: "/properties/rent-roll?tab=pnl", tabKey: "pnl", icon: BarChart3 },
-        { name: "Centre P&L & Seats (Flex)", href: "/properties/rent-roll?tab=flex-centre", tabKey: "flex-centre", icon: Layers },
+        { name: "Dashboard", href: "/properties/rent-roll?tab=dashboard", tabKey: "dashboard", icon: Building },
+        { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
+        { name: "Billing & Invoices", href: "/properties/rent-roll?tab=invoices", tabKey: "invoices", icon: DollarSign },
+        { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", tabKey: "meter-readings", icon: Zap },
+        { name: "Collections", href: "/properties/rent-roll?tab=collections", tabKey: "collections", icon: CheckCircle },
+        { name: "Arrears & Aging", href: "/properties/rent-roll?tab=aging", tabKey: "aging", icon: AlertTriangle },
+        { name: "Escalations & Expiries", href: "/properties/rent-roll?tab=escalations", tabKey: "escalations", icon: TrendingUp },
+        { name: "Occupancy & Stacking", href: "/properties/rent-roll?tab=occupancy", tabKey: "occupancy", icon: Layers },
+        { name: "12-Mo Forecast", href: "/properties/rent-roll?tab=forecast", tabKey: "forecast", icon: Calendar },
+        { name: "NOI & P&L", href: "/properties/rent-roll?tab=pnl", tabKey: "pnl", icon: BarChart3 },
+        { name: "Flex & Coworking", href: "/properties/rent-roll?tab=flex-centre", tabKey: "flex-centre", icon: Layers },
         { name: "CAM Pools & True-Up", href: "/properties/rent-roll?tab=cam-pools", tabKey: "cam-pools", icon: Sparkles },
-        { name: "Tenant Directory & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
-        { name: "Financial Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
-        { name: "Accounting & ERP Sync", href: "/properties/integrations", tabKey: "integrations", icon: Zap },
-        { name: "Audit Trail & Config", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
+        { name: "Tenants & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
+        { name: "Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
+        { name: "Accounting & Sync", href: "/properties/integrations", tabKey: "integrations", icon: Zap },
+        { name: "Audit Trail", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
     { name: "Accounting & Integrations", href: "/properties/integrations", icon: Zap, badge: "Tally / Zoho" },
@@ -273,41 +273,9 @@ export default function Sidebar() {
     }
   };
 
-  // Strictly extract the name from state without accessing localStorage directly in render
-  const getSignedInName = () => {
-    let name = (userName || "").trim();
-    if (!name && userEmail) {
-      name = userEmail.split("@")[0].replace(/[._-]/g, " ");
-    }
-    // Clean any accidental company suffix attached to the user name
-    name = name.replace(/\s+(Commercial Holdings|Holdings|Pvt Ltd|Private Limited|LLC|LLP|Inc).*$/i, "").trim();
-    if (!name) return "";
-    return name
-      .split(/\s+/)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ");
-  };
 
-  const signedInName = isMounted ? getSignedInName() : "";
-  const portfolioTitle = isMounted
-    ? (orgDisplayName || (signedInName ? `${signedInName}'s Portfolio` : "Commercial Portfolio"))
-    : "Commercial Portfolio";
-  const portfolioSubtitle = isMounted && orgCity ? `${orgCity} Portfolio` : "";
-  
-  const initials = isMounted
-    ? ((orgDisplayName || signedInName || "OX")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .map(n => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase() || "OX")
-    : "OX";
 
-  const userInitial = isMounted ? (signedInName || userEmail || "U")[0].toUpperCase() : "U";
-  const displayName = isMounted ? (signedInName || "Commercial Portfolio") : "Commercial Portfolio";
-  const displayEmail = isMounted ? (userEmail || "portfolio@officex.in") : "portfolio@officex.in";
+
 
   return (
     <>
@@ -321,8 +289,8 @@ export default function Sidebar() {
 
       <div className={`w-[260px] h-screen bg-white/95 backdrop-blur-md border-r border-gray-200/80 flex flex-col justify-between fixed left-0 top-0 z-30 shrink-0 transition-transform duration-200 shadow-sm md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
         
-        {/* Top Brand Logo & Active Workspace Card */}
-        <div className="p-4 flex flex-col gap-3 border-b border-gray-100 bg-slate-50/50 shrink-0">
+        {/* Top Brand Logo */}
+        <div className="p-4 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
           <Link href="/" className="flex items-center gap-2.5 group">
             <Image 
               src="/logo-removebg-preview.png" 
@@ -341,52 +309,6 @@ export default function Sidebar() {
               style={{ width: "auto", height: "25px" }}
             />
           </Link>
-          
-          {/* Active Workspace Identity Card (Clean, Institutional, No Role Text) */}
-          <div className="flex flex-col gap-1.5 mt-0.5">
-            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-between">
-              <span>Active Workspace</span>
-              <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Verified
-              </span>
-            </div>
-            
-            <Link 
-              href="/properties"
-              className="w-full px-3 py-2.5 rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/80 via-white to-teal-50/30 flex items-center justify-between shadow-2xs hover:border-teal-300 transition-colors group cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div 
-                  suppressHydrationWarning
-                  className="w-8 h-8 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center font-black text-[11px] shadow-2xs shrink-0 tracking-tighter uppercase overflow-hidden p-0.5 border border-teal-300/40"
-                >
-                  {orgLogo ? (
-                    <img src={orgLogo} alt="Logo" className="w-full h-full object-contain rounded-md bg-white" />
-                  ) : (
-                    initials
-                  )}
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span 
-                    suppressHydrationWarning
-                    className="text-xs font-black text-gray-900 truncate leading-tight group-hover:text-teal-800 transition-colors"
-                  >
-                    {portfolioTitle}
-                  </span>
-                  {portfolioSubtitle ? (
-                    <span 
-                      suppressHydrationWarning
-                      className="text-[10px] text-teal-700 font-semibold truncate"
-                    >
-                      {portfolioSubtitle}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <ShieldCheck className="w-4 h-4 text-[#0F8B7D] shrink-0" />
-            </Link>
-          </div>
         </div>
 
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
@@ -430,7 +352,7 @@ export default function Sidebar() {
 
                   {/* Dropdown Sub-Items List */}
                   {isExpanded && item.subItems && (
-                    <div className="ml-3 pl-2.5 border-l-2 border-gray-200 flex flex-col gap-1 py-1 my-0.5 animate-in fade-in duration-150">
+                    <div className="ml-3 pl-2.5 border-l-2 border-gray-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
                       {item.subItems.map((sub) => {
                         const SubIcon = sub.icon || ChevronRight;
                         const isSubActive =
@@ -482,33 +404,14 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Bottom User Profile Section */}
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-slate-50/80">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div 
-              suppressHydrationWarning
-              className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0"
-            >
-              {userInitial}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span 
-                suppressHydrationWarning
-                className="text-xs font-extrabold text-gray-900 leading-none truncate"
-              >
-                {displayName}
-              </span>
-              <span 
-                suppressHydrationWarning
-                className="text-[10px] text-gray-400 mt-1 leading-none font-mono truncate"
-              >
-                {displayEmail}
-              </span>
-            </div>
-          </div>
-
-          <Link href="/login" title="Logout" className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition-colors shrink-0">
-            <LogOut size={15} />
+        {/* Bottom Minimal Footer */}
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-gray-400 text-xs bg-slate-50/50">
+          <Link href="/support" className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
+            <HelpCircle size={14} />
+            <span>Help &amp; Support</span>
+          </Link>
+          <Link href="/login" title="Logout" className="hover:text-rose-600 p-1 rounded-md transition-colors">
+            <LogOut size={14} />
           </Link>
         </div>
       </div>

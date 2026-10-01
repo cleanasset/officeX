@@ -147,6 +147,7 @@ export async function GET(request: Request) {
 
     if (!seenPlaceKeys.has(key)) {
       seenPlaceKeys.add(key);
+      item.id = `${item.id || "geo"}-${results.length}`;
       results.push(item);
     }
   }

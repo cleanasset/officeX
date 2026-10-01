@@ -2570,42 +2570,42 @@ function OnboardingContent() {
                             </button>
                           </div>
 
-                          {/* Institutional Template Downloads */}
+                          {/* Standard Template Download */}
                           <div className="pt-3 border-t border-slate-200/80 space-y-2">
-                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                              <span>Download Standard Institutional Templates:</span>
-                              <span className="text-[10px] text-teal-700 font-mono">10 Sheets · 146 Columns · Dropdown Rules</span>
-                            </div>
-                            <div className="mb-2.5">
-                              <a
-                                href="/templates/OFFICEX_Rent_Roll_Import_Template.xlsx"
-                                download="OFFICEX_Rent_Roll_Import_Template.xlsx"
-                                className="p-3 bg-white border border-teal-300 hover:border-teal-500 rounded-xl flex items-center justify-between group shadow-2xs transition-all cursor-pointer"
-                              >
-                                <div className="text-left">
-                                  <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                                    <span>Official Blank Rent Roll Workbook</span>
-                                    <span className="text-[9px] px-1.5 py-0.2 bg-teal-50 text-[#0F8B7D] font-mono font-bold rounded">.XLSX</span>
-                                  </div>
-                                  <div className="text-[10px] text-slate-500 mt-0.5">Clean import sheets for your real portfolio: Properties, Spaces, Occupants, Leases &amp; Charges</div>
+                            <div className="p-3.5 bg-gradient-to-r from-teal-50/90 via-emerald-50/40 to-white border border-teal-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-[#0F8B7D] text-white flex items-center justify-center shrink-0">
+                                  <FileSpreadsheet size={16} />
                                 </div>
-                                <span className="p-2 bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
-                                  <Download size={14} />
-                                  <span>Download Blank Template</span>
-                                </span>
-                              </a>
-                            </div>
-                            <div className="flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const model = orgData.segments[0] === "fm_company" ? "fm" : orgData.segments[0] === "flex_operator" ? "seat" : "area";
-                                  handleDownloadSample(model);
-                                }}
-                                className="text-[10px] text-slate-500 hover:text-slate-700 underline font-medium inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                Or download simple single-sheet CSV template
-                              </button>
+                                <div className="text-left">
+                                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>Standard Rent Roll Template</span>
+                                    <span className="text-[9px] px-1.5 py-0.2 bg-teal-100 text-teal-800 font-bold rounded">Universal</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500">Universal columns for spaces, leases, area (sq. ft.) &amp; seats.</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                  href="/templates/OFFICEX_Rent_Roll_Import_Template.xlsx"
+                                  download="OFFICEX_Rent_Roll_Import_Template.xlsx"
+                                  className="px-3 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Download size={13} />
+                                  <span>Excel (.xlsx)</span>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const model = orgData.segments[0] === "fm_company" ? "fm" : orgData.segments[0] === "flex_operator" ? "seat" : "area";
+                                    handleDownloadSample(model);
+                                  }}
+                                  className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Download size={13} />
+                                  <span>CSV</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

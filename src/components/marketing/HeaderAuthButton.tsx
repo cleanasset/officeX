@@ -229,7 +229,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
 
               {/* My Profile */}
               <Link
-                href="/onboarding"
+                href="/properties/organization"
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
               >

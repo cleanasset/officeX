@@ -216,7 +216,7 @@ export function AddressAutocomplete({
               const isSelected = idx === activeIndex;
               return (
                 <button
-                  key={item.id || idx}
+                  key={`${item.id || "loc"}-${idx}`}
                   type="button"
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setActiveIndex(idx)}
@@ -441,7 +441,7 @@ export function CityAutocomplete({
                 const isSelected = idx === activeIndex || query.toLowerCase() === item.name.toLowerCase();
                 return (
                   <button
-                    key={`${item.name}-${item.state}`}
+                    key={`${item.name}-${item.state}-${idx}`}
                     type="button"
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setActiveIndex(idx)}

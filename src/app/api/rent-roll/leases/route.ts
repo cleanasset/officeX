@@ -29,14 +29,10 @@ export async function GET(req: Request) {
 
     let properties = db.properties || [];
     if (ownerEmail) {
-      const owned = properties.filter(p => 
+      properties = properties.filter(p => 
         (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || 
-        p.ownerUserId === ownerEmail ||
-        (p.ownerEmail || "").includes("officex.com")
+        p.ownerUserId === ownerEmail
       );
-      if (owned.length > 0) {
-        properties = owned;
-      }
     }
 
     const validPropIds = new Set(properties.map(p => p.id));

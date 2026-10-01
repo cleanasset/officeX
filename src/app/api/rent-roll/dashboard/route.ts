@@ -29,14 +29,10 @@ export async function GET(req: Request) {
     let properties = db.properties || [];
 
     if (ownerEmail) {
-      const owned = properties.filter(p => 
+      properties = properties.filter(p => 
         (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || 
-        p.ownerUserId === ownerEmail ||
-        (p.ownerEmail || "").includes("officex.com")
+        p.ownerUserId === ownerEmail
       );
-      if (owned.length > 0) {
-        properties = owned;
-      }
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
@@ -56,7 +52,7 @@ export async function GET(req: Request) {
     // Filter active leases as of asOfDate
     const activeLeases = leases.filter(l => {
       const isDateValid = l.startDate <= asOfDate && l.endDate >= asOfDate;
-      const isStatusValid = l.status === "active" || l.status === "under_notice" || l.status === "holdover";
+      const isStatusValid = l.status === "active" || l.status === "under_notice" || l.status === "holdover" || l.status === "pending_approval";
       return isDateValid && isStatusValid;
     });
 
@@ -165,13 +161,19 @@ export async function GET(req: Request) {
     const topTenants = [...activeLeases]
       .sort((a, b) => b.monthlyRent - a.monthlyRent)
       .slice(0, 5)
-      .map(l => ({
-        tenantName: l.tenantName,
-        propertyName: l.propertyName,
-        monthlyRent: l.monthlyRent,
-        areaSqFt: l.chargeableArea,
-        sharePct: totalMonthlyRent > 0 ? round2((l.monthlyRent / totalMonthlyRent) * 100) : 0
-      }));
+      .map(l => {
+        const tenantObj = (db.tenants || []).find(t => t.id === l.tenantId || t.tradeName.toLowerCase() === l.tenantName.toLowerCase());
+        return {
+          tenantName: l.tenantName,
+          propertyName: l.propertyName,
+          monthlyRent: l.monthlyRent,
+          areaSqFt: l.chargeableArea,
+          sharePct: totalMonthlyRent > 0 ? round2((l.monthlyRent / totalMonthlyRent) * 100) : 0,
+          portalLive: Boolean(tenantObj?.portalLive),
+          tenantStatus: tenantObj?.status || "invited",
+          isTermsPending: Boolean(l.isTermsPending || l.status === "pending_approval" || l.approvalStatus === "submitted")
+        };
+      });
 
     // Status breakdown
     const statusCounts = {

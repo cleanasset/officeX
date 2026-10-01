@@ -594,89 +594,91 @@ export default function PropertyDashboardClient({
 
       </div>
 
-      {/* RECEIVABLES AGEING & RECOVERY LEDGER */}
-      <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gray-50 pb-3">
-          <div>
-            <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider block">Collections &amp; Liquidity</span>
-            <h3 className="text-base font-bold text-gray-900 mt-0.5">Receivables Ageing Analysis (Last 90 Days)</h3>
+      {/* RECEIVABLES AGEING & RECOVERY LEDGER (Only shown when properties exist) */}
+      {propertiesCount > 0 && (
+        <div className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gray-50 pb-3">
+            <div>
+              <span className="text-[10px] text-[#0F8B7D] font-bold uppercase tracking-wider block">Collections &amp; Liquidity</span>
+              <h3 className="text-base font-bold text-gray-900 mt-0.5">Receivables Ageing Analysis (Last 90 Days)</h3>
+            </div>
+            <Link
+              href="/properties/collections"
+              className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
+            >
+              Full Invoice Ledger <ArrowRight size={13} />
+            </Link>
           </div>
-          <Link
-            href="/properties/collections"
-            className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
-          >
-            Full Invoice Ledger <ArrowRight size={13} />
-          </Link>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 0-30 Days Current */}
+            <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="font-bold text-emerald-900">0–30 Days (Current / On-Time)</span>
+                <span className="font-black text-emerald-700">
+                  {rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <div className="text-xl font-black text-emerald-950">
+                ₹{rentRollData?.aging?.current ? Number(rentRollData.aging.current).toLocaleString("en-IN") : "0"}
+              </div>
+              <div className="w-full bg-emerald-200/60 h-2 rounded-full overflow-hidden mt-2.5">
+                <div 
+                  className="bg-emerald-600 h-full rounded-full" 
+                  style={{ width: `${rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+                />
+              </div>
+              <span className="text-[10px] text-emerald-700 font-semibold mt-1.5 block">
+                {(rentRollData?.summary?.activeLeasesCount || 0)} Corporate Leases Cleared
+              </span>
+            </div>
+
+            {/* 31-60 Days Follow-up */}
+            <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="font-bold text-amber-900">31–60 Days (Grace Period)</span>
+                <span className="font-black text-amber-700">
+                  {rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <div className="text-xl font-black text-amber-950">
+                ₹{rentRollData?.aging?.bucket31to60 ? Number(rentRollData.aging.bucket31to60).toLocaleString("en-IN") : "0"}
+              </div>
+              <div className="w-full bg-amber-200/60 h-2 rounded-full overflow-hidden mt-2.5">
+                <div 
+                  className="bg-amber-500 h-full rounded-full" 
+                  style={{ width: `${rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+                />
+              </div>
+              <span className="text-[10px] text-amber-700 font-semibold mt-1.5 block">
+                {(rentRollData?.summary?.overdueLeasesCount || 0)} Leases Pending Reconciliation
+              </span>
+            </div>
+
+            {/* 61-90+ Days Overdue */}
+            <div className="bg-rose-50/60 border border-rose-100 rounded-xl p-4">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="font-bold text-rose-900">61–90+ Days (Overdue Notice)</span>
+                <span className="font-black text-rose-700">
+                  {rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <div className="text-xl font-black text-rose-950">
+                ₹{rentRollData?.aging?.bucket61to90 ? Number(rentRollData.aging.bucket61to90 + (rentRollData.aging.bucket90Plus || 0)).toLocaleString("en-IN") : "0"}
+              </div>
+              <div className="w-full bg-rose-200/60 h-2 rounded-full overflow-hidden mt-2.5">
+                <div 
+                  className="bg-rose-500 h-full rounded-full" 
+                  style={{ width: `${rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
+                />
+              </div>
+              <span className="text-[10px] text-rose-700 font-semibold mt-1.5 block">
+                {rentRollData?.aging?.bucket90Plus ? "Statutory Reminder Dispatched" : "No overdue notices"}
+              </span>
+            </div>
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* 0-30 Days Current */}
-          <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-bold text-emerald-900">0–30 Days (Current / On-Time)</span>
-              <span className="font-black text-emerald-700">
-                {propertiesCount > 0 && rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-            <div className="text-xl font-black text-emerald-950">
-              ₹{propertiesCount > 0 && rentRollData?.aging?.current ? Number(rentRollData.aging.current).toLocaleString("en-IN") : "0"}
-            </div>
-            <div className="w-full bg-emerald-200/60 h-2 rounded-full overflow-hidden mt-2.5">
-              <div 
-                className="bg-emerald-600 h-full rounded-full" 
-                style={{ width: `${propertiesCount > 0 && rentRollData?.aging?.current && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.current / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
-              />
-            </div>
-            <span className="text-[10px] text-emerald-700 font-semibold mt-1.5 block">
-              {propertiesCount > 0 ? (rentRollData?.summary?.activeLeasesCount || 0) : 0} Corporate Leases Cleared
-            </span>
-          </div>
-
-          {/* 31-60 Days Follow-up */}
-          <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-bold text-amber-900">31–60 Days (Grace Period)</span>
-              <span className="font-black text-amber-700">
-                {propertiesCount > 0 && rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-            <div className="text-xl font-black text-amber-950">
-              ₹{propertiesCount > 0 && rentRollData?.aging?.bucket31to60 ? Number(rentRollData.aging.bucket31to60).toLocaleString("en-IN") : "0"}
-            </div>
-            <div className="w-full bg-amber-200/60 h-2 rounded-full overflow-hidden mt-2.5">
-              <div 
-                className="bg-amber-500 h-full rounded-full" 
-                style={{ width: `${propertiesCount > 0 && rentRollData?.aging?.bucket31to60 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket31to60 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
-              />
-            </div>
-            <span className="text-[10px] text-amber-700 font-semibold mt-1.5 block">
-              {propertiesCount > 0 ? (rentRollData?.summary?.overdueLeasesCount || 0) : 0} Leases Pending Reconciliation
-            </span>
-          </div>
-
-          {/* 61-90+ Days Overdue */}
-          <div className="bg-rose-50/60 border border-rose-100 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="font-bold text-rose-900">61–90+ Days (Overdue Notice)</span>
-              <span className="font-black text-rose-700">
-                {propertiesCount > 0 && rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? ((rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-            <div className="text-xl font-black text-rose-950">
-              ₹{propertiesCount > 0 && rentRollData?.aging?.bucket61to90 ? Number(rentRollData.aging.bucket61to90 + (rentRollData.aging.bucket90Plus || 0)).toLocaleString("en-IN") : "0"}
-            </div>
-            <div className="w-full bg-rose-200/60 h-2 rounded-full overflow-hidden mt-2.5">
-              <div 
-                className="bg-rose-500 h-full rounded-full" 
-                style={{ width: `${propertiesCount > 0 && rentRollData?.aging?.bucket61to90 && rentRollData?.summary?.totalMonthlyBilling ? Math.min(100, (rentRollData.aging.bucket61to90 / rentRollData.summary.totalMonthlyBilling) * 100) : 0}%` }} 
-              />
-            </div>
-            <span className="text-[10px] text-rose-700 font-semibold mt-1.5 block">
-              {propertiesCount > 0 && rentRollData?.aging?.bucket90Plus ? "Statutory Reminder Dispatched" : "No overdue notices"}
-            </span>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* PORTFOLIO PROPERTY BUILDINGS LIST / EMPTY STATE */}
       <div id="portfolio-properties" className="premium-card p-5 sm:p-6 border border-gray-200 bg-white shadow-sm scroll-mt-6">

@@ -288,6 +288,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   );
   const [showColumnChooser, setShowColumnChooser] = useState<boolean>(false);
   const [showSavedViewsMenu, setShowSavedViewsMenu] = useState<boolean>(false);
+  const [mobileLayout, setMobileLayout] = useState<"cards" | "table">("cards");
 
   useEffect(() => {
     try {
@@ -623,35 +624,27 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
   const getApprovalBadge = (row: RentRollGridRow) => {
     if (row.isVacant) {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
           Vacant Unit
         </span>
       );
     }
-    if (row.approvalStatus === "submitted" || row.status === "pending_approval") {
+    const isPending = row.approvalStatus === "submitted" || row.status === "pending_approval" || (row.originalLease as any)?.isTermsPending;
+    if (isPending) {
       return (
-        <div className="flex items-center gap-1.5">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse flex items-center gap-1">
+        <div className="flex items-center justify-center gap-1.5">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1" title="Lease details skipped during property setup. Pending tenant onboarding & terms confirmation.">
             <Clock size={11} className="text-amber-600" />
-            Pending Checker
+            Terms Incomplete (Invite Pending)
           </span>
           <button
             type="button"
             disabled={approvingId === row.leaseId}
             onClick={(e) => handleApproveContract(e, row.leaseId!)}
-            className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-2xs"
-            title="Approve Contract"
+            className="p-1 rounded bg-teal-700 text-white hover:bg-teal-800 cursor-pointer shadow-2xs"
+            title="Confirm & Activate Contract Terms"
           >
             <Check size={11} />
-          </button>
-          <button
-            type="button"
-            disabled={approvingId === row.leaseId}
-            onClick={(e) => handleRejectContract(e, row.leaseId!)}
-            className="p-1 rounded bg-rose-600 text-white hover:bg-rose-700 cursor-pointer shadow-2xs"
-            title="Reject Contract"
-          >
-            <X size={11} />
           </button>
         </div>
       );
@@ -659,151 +652,130 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
     if (row.status === "under_notice") {
       return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Under Notice</span>;
     }
-    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">Active</span>;
+    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">● Active &amp; Live</span>;
   };
 
+  if (unifiedRows.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-12 text-center shadow-xs max-w-xl mx-auto my-12">
+        <div className="w-16 h-16 bg-teal-50 text-[#0F8B7D] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-teal-100 shadow-2xs">
+          <Building2 size={32} />
+        </div>
+        <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">No Properties or Spaces Registered</h3>
+        <p className="text-xs text-slate-500 mt-2 max-w-sm mx-auto leading-relaxed">
+          Your rent roll portfolio is completely clean. Register your commercial office space or building to activate demised inventory, escalations, and automated tenant billing.
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <a
+            href="/properties/add"
+            className="px-4 py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>Add Commercial Property</span>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* ──── TOP STATUTORY KPI SUMMARY CARDS ──── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
-            <span>Total Leasable Area</span>
-            <Building2 size={13} className="text-slate-400" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-            {totalLeasableArea.toLocaleString()} <span className="text-xs font-semibold text-slate-400">sq ft</span>
-          </p>
-          <span className="text-[11px] font-semibold text-slate-500 block mt-0.5">100% Reconciled Space</span>
+    <div className="space-y-3">
+      {/* KPI Summary Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 hover:shadow-sm transition-shadow">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Leasable Area</p>
+          <p className="text-lg font-black text-slate-900 tracking-tight">{totalLeasableArea.toLocaleString()} <span className="text-[10px] font-medium text-slate-400">sqft</span></p>
         </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-teal-600">
-            <span>Occupied Area</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-[#0F8B7D] tracking-tight mt-1">
-            {occupiedArea.toLocaleString()} <span className="text-xs font-semibold text-teal-600/70">sq ft</span>
-          </p>
-          <span className="text-[11px] font-bold text-teal-700 block mt-0.5">{occupancyPct}% Occupancy Rate</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 hover:shadow-sm transition-shadow">
+          <p className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Occupied</p>
+          <p className="text-lg font-black text-teal-700 tracking-tight">{occupiedArea.toLocaleString()} <span className="text-[10px] font-medium text-teal-500">sqft · {occupancyPct}%</span></p>
         </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-amber-600">
-            <span>Vacant Area</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-amber-900 tracking-tight mt-1">
-            {vacantArea.toLocaleString()} <span className="text-xs font-semibold text-amber-600/70">sq ft</span>
-          </p>
-          <span className="text-[11px] font-bold text-amber-700 block mt-0.5">{unifiedRows.filter(r => r.isVacant).length} Units Ready to Lease</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 hover:shadow-sm transition-shadow">
+          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Vacant</p>
+          <p className="text-lg font-black text-amber-800 tracking-tight">{vacantArea.toLocaleString()} <span className="text-[10px] font-medium text-amber-500">sqft</span></p>
         </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-emerald-600">
-            <span>In-Place Rent Roll</span>
-            <TrendingUp size={13} className="text-emerald-500" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight mt-1">
-            {formatINR(inPlaceMonthlyRent)}<span className="text-xs font-semibold text-emerald-600/70"> /mo</span>
-          </p>
-          <span className="text-[11px] font-semibold text-emerald-700 block mt-0.5">Active Contracted Rent</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 hover:shadow-sm transition-shadow">
+          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">In-Place Rent</p>
+          <p className="text-lg font-black text-emerald-800 tracking-tight">{formatINR(inPlaceMonthlyRent)} <span className="text-[10px] font-medium text-emerald-500">/mo</span></p>
         </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-indigo-500">
-            <span>Potential Vacant Rent</span>
-            <Sparkles size={13} className="text-indigo-400" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight mt-1">
-            {formatINR(potentialVacantRent)}<span className="text-xs font-semibold text-slate-400"> /mo</span>
-          </p>
-          <span className="text-[11px] font-semibold text-slate-500 block mt-0.5">Standard Market Rates</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 hover:shadow-sm transition-shadow">
+          <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Potential Rent</p>
+          <p className="text-lg font-black text-slate-800 tracking-tight">{formatINR(potentialVacantRent)} <span className="text-[10px] font-medium text-slate-400">/mo</span></p>
         </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-purple-600">
-            <span>Inventory Breakdown</span>
-            <Layers size={13} className="text-purple-400" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-            {unifiedRows.filter(r => !r.isVacant).length} <span className="text-xs font-medium text-slate-400">Leased</span> · {unifiedRows.filter(r => r.isVacant).length} <span className="text-xs font-medium text-slate-400">Vac</span>
-          </p>
-          <span className="text-[11px] font-bold text-purple-700 block mt-0.5">WALE: 3.84 Years</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 hover:shadow-sm transition-shadow">
+          <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">Inventory</p>
+          <p className="text-lg font-black text-slate-900 tracking-tight">{unifiedRows.filter(r => !r.isVacant).length} <span className="text-[10px] text-slate-400">Leased</span> · {unifiedRows.filter(r => r.isVacant).length} <span className="text-[10px] text-slate-400">Vacant</span></p>
         </div>
       </div>
 
-      {/* ──── CONTROL FILTER TABS & ACTIONS BAR ──── */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-        {/* Tier 1: Segmented Filter Tabs (Smooth horizontal scrolling on mobile/tablet) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 text-xs">
-          <button
-            type="button"
-            onClick={() => setFilterMode("all")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
-              filterMode === "all" ? "bg-[#0F8B7D] text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            All Spaces ({unifiedRows.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode("occupied")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
-              filterMode === "occupied" ? "bg-teal-700 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            Occupied Contracts ({unifiedRows.filter(r => !r.isVacant).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode("vacant")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
-              filterMode === "vacant" ? "bg-amber-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            Vacant Spaces ({unifiedRows.filter(r => r.isVacant).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode("payable")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
-              filterMode === "payable" ? "bg-purple-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            Payable Head Leases ({unifiedRows.filter(r => r.direction === "payable").length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode("pending_approval")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
-              filterMode === "pending_approval" ? "bg-rose-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            Pending Checker ({unifiedRows.filter(r => r.approvalStatus === "submitted" || r.status === "pending_approval").length})
-          </button>
+      {/* Filter & Controls */}
+      <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2.5">
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[11px]">
+          {[
+            { key: "all", label: "All", count: unifiedRows.length, color: "bg-teal-600" },
+            { key: "occupied", label: "Occupied", count: unifiedRows.filter(r => !r.isVacant).length, color: "bg-teal-700" },
+            { key: "vacant", label: "Vacant", count: unifiedRows.filter(r => r.isVacant).length, color: "bg-amber-600" },
+            { key: "payable", label: "Payable", count: unifiedRows.filter(r => r.direction === "payable").length, color: "bg-purple-600" },
+            { key: "pending_approval", label: "Pending", count: unifiedRows.filter(r => r.approvalStatus === "submitted" || r.status === "pending_approval").length, color: "bg-rose-600" }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilterMode(tab.key as any)}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap cursor-pointer ${
+                filterMode === tab.key ? `${tab.color} text-white shadow-sm` : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
         </div>
 
-        {/* Tier 2: Search Bar & Utilities */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100">
-          {/* Search Input */}
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search unit, occupant, code..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F8B7D] focus:bg-white transition-all"
-            />
-            {searchTerm && (
+        {/* Search & Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
+          {/* Search Input & Mobile Cards/Table Toggle */}
+          <div className="flex items-center gap-2 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Filter spaces, tenants, contract codes..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F8B7D] focus:bg-white transition-all shadow-2xs"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Mobile View Toggle (Cards vs Full Table) */}
+            <div className="md:hidden flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs shrink-0">
               <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                type="button"
+                onClick={() => setMobileLayout("cards")}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  mobileLayout === "cards" ? "bg-white text-slate-900 shadow-2xs font-extrabold" : "text-slate-500"
+                }`}
               >
-                <X size={12} />
+                Cards
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setMobileLayout("table")}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  mobileLayout === "table" ? "bg-white text-slate-900 shadow-2xs font-extrabold" : "text-slate-500"
+                }`}
+              >
+                Table
+              </button>
+            </div>
           </div>
 
           {/* Right utilities group */}
@@ -852,12 +824,12 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                 className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
               >
                 <Bookmark size={13} className="text-[#0F8B7D]" />
-                <span className="hidden md:inline">View:</span>
-                <span>{SAVED_VIEWS.find((v) => v.id === activeSavedView)?.name.slice(0, 12) || "Standard"}...</span>
+                <span className="hidden lg:inline text-slate-500">View:</span>
+                <span className="font-bold text-slate-800">{SAVED_VIEWS.find((v) => v.id === activeSavedView)?.name || "Standard Demised"}</span>
               </button>
               {showSavedViewsMenu && (
-                <div className="absolute right-0 sm:left-0 mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1">
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400">Canonical Saved Views (RR-VW-05)</div>
+                <div className="absolute right-0 sm:left-0 mt-1 w-60 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1.5 space-y-1">
+                  <div className="px-2 py-1 text-[9px] font-bold uppercase text-slate-400">Saved Views</div>
                   {SAVED_VIEWS.map((view) => (
                     <button
                       key={view.id}
@@ -886,6 +858,9 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
               >
                 <SlidersHorizontal size={13} className="text-slate-600" />
                 <span className="hidden sm:inline">Columns</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                  {visibleColumns.size}
+                </span>
               </button>
               {showColumnChooser && (
                 <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 max-h-80 overflow-y-auto">
@@ -923,22 +898,22 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
             <a
               href="/api/rent-roll/export/tally"
               download
-              className="px-2.5 py-1.5 rounded-xl border border-indigo-200 text-xs font-semibold flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 transition-colors shadow-2xs cursor-pointer shrink-0"
+              className="px-2.5 py-1.5 rounded-xl border border-indigo-200 text-xs font-semibold flex items-center gap-1.5 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-900 transition-colors shadow-2xs cursor-pointer shrink-0"
               title="Export to Tally XML"
             >
               <FileSpreadsheet size={13} className="text-indigo-600" />
-              <span className="hidden md:inline">Tally Vouchers</span>
+              <span className="hidden md:inline">Tally</span>
               <span className="md:hidden">XML</span>
             </a>
 
-            {/* Primary Action Button */}
+            {/* Secondary New Contract trigger */}
             {onOpenAddLease && (
               <button
                 type="button"
                 onClick={onOpenAddLease}
-                className="px-3.5 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap shrink-0 transition-all"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap shrink-0 transition-all"
               >
-                <Plus size={14} />
+                <Plus size={13} className="text-slate-500" />
                 <span>New Contract</span>
               </button>
             )}
@@ -946,48 +921,215 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
         </div>
       </div>
 
-      {/* ──── MASTER REGISTER GRID TABLE ──── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto max-h-[640px]">
-          <table className="w-full text-left text-xs border-collapse">
+      {/* ──── MOBILE CARDS VIEW (Clean, high-density presentation on mobile) ──── */}
+      <div className={`space-y-3 ${mobileLayout === "cards" ? "block md:hidden" : "hidden"}`}>
+        {sortedRows.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">
+            <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm font-bold text-slate-800">No spaces found matching filter</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              All physical spaces and active lease contracts for this property are automatically reconciled here.
+            </p>
+          </div>
+        ) : (
+          sortedRows.map((row) => (
+            <div
+              key={`card-${row.id}`}
+              onClick={() => row.originalLease && onSelectLease(row.originalLease)}
+              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3 cursor-pointer hover:border-teal-500/40 transition-colors"
+            >
+              {/* Card Header: Unit Name + Status */}
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-3 h-3 rounded-full shrink-0 ${
+                      row.isVacant ? "bg-amber-400" : row.direction === "payable" ? "bg-purple-500" : "bg-[#0F8B7D]"
+                    }`}
+                  />
+                  <div>
+                    <div className="font-black text-slate-900 text-sm flex items-center gap-2">
+                      <span>{row.unitNumber}</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 uppercase">
+                        {row.spaceType}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      {row.propertyName}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  {row.isVacant ? (
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      Vacant
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-teal-50 text-[#0F8B7D] border border-teal-200">
+                      Leased
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Occupant / Lease Info */}
+              {!row.isVacant ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block truncate max-w-[180px]">{row.tenantName}</span>
+                    <span className="text-[10px] text-slate-400 font-mono truncate">{row.leaseCode}</span>
+                  </div>
+                  {getContractTypeBadge(row.contractType, row.direction)}
+                </div>
+              ) : (
+                <div className="text-xs font-semibold text-amber-800 italic">
+                  Available space · {row.daysVacant} days vacant
+                </div>
+              )}
+
+              {/* Commercials Grid: 3 columns */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Chargeable</span>
+                  <span className="text-xs font-black text-slate-800 font-mono">
+                    {row.chargeableArea.toLocaleString()}<span className="text-[9px] font-normal text-slate-500 ml-0.5">sqft</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Base Rent</span>
+                  <span className="text-xs font-black text-slate-800 font-mono">
+                    ₹{row.baseRentPsf}<span className="text-[9px] font-normal text-slate-500 ml-0.5">/psf</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Gross</span>
+                  <span className="text-xs font-black text-[#0F8B7D] font-mono">
+                    {row.isVacant ? "—" : formatINR(row.totalMonthlyGross)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Contract Terms Bar */}
+              {!row.isVacant && (
+                <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100">
+                  <div className="flex items-center gap-1 font-mono text-[10px] text-slate-500">
+                    <Calendar size={12} className="text-slate-400" />
+                    <span>{row.startDate ? row.startDate.slice(0, 10) : "—"} → {row.endDate ? row.endDate.slice(0, 10) : "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-bold text-[11px]">
+                    <span className="text-teal-700">+{row.escalationPct}%/36m</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-700">Dep: {formatINR(row.securityDepositPaid)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-1.5 pt-1">
+                {row.isVacant ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (row.originalSpace && onOpenAddLeaseForSpace) {
+                        onOpenAddLeaseForSpace(row.originalSpace);
+                      } else if (onOpenAddLease) {
+                        onOpenAddLease();
+                      }
+                    }}
+                    className="w-full py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Lease This Unit</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 w-full justify-between">
+                    <span className="text-[10px] text-slate-400">Tap to view</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (row.originalLease) onSelectLease(row.originalLease);
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg flex items-center gap-1 cursor-pointer"
+                      >
+                        <Eye size={12} />
+                        <span>View</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (row.originalLease) onOpenApplyEscalation(row.originalLease);
+                        }}
+                        className="p-1.5 hover:bg-teal-50 text-teal-700 rounded-lg border border-slate-200 cursor-pointer"
+                        title="Escalations"
+                      >
+                        <TrendingUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (row.originalLease) onOpenServeNotice(row.originalLease);
+                        }}
+                        className="p-1.5 hover:bg-rose-50 text-rose-700 rounded-lg border border-slate-200 cursor-pointer"
+                        title="Notice"
+                      >
+                        <AlertCircle size={13} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ──── MASTER REGISTER GRID TABLE (Desktop default, or mobile if 'table' toggled) ──── */}
+      <div className={`bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs ${mobileLayout === "cards" ? "hidden md:block" : "block"}`}>
+        <div className="overflow-x-auto max-h-[640px] scrollbar-thin">
+          <table className="min-w-[1380px] w-full text-left text-xs border-collapse">
             <thead className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 border-b border-slate-200">
               <tr>
-                <th className="p-3.5 sticky left-0 z-30 bg-slate-50 border-r border-slate-200">Space &amp; Unit</th>
-                {visibleColumns.has("tenant") && <th className="p-3.5">Occupant / Tenant</th>}
-                {visibleColumns.has("code") && <th className="p-3.5">Contract Code</th>}
-                {visibleColumns.has("type") && <th className="p-3.5">Type &amp; Direction</th>}
+                <th className="p-3 sticky left-0 z-30 bg-slate-50 border-r border-slate-200 min-w-[130px] whitespace-nowrap">Space &amp; Unit</th>
+                {visibleColumns.has("tenant") && <th className="p-3 min-w-[150px] whitespace-nowrap">Occupant / Tenant</th>}
+                {visibleColumns.has("code") && <th className="p-3 min-w-[120px] whitespace-nowrap">Contract Code</th>}
+                {visibleColumns.has("type") && <th className="p-3 min-w-[130px] whitespace-nowrap">Type &amp; Direction</th>}
                 {visibleColumns.has("area") && (
-                  <th onClick={() => handleSort("chargeableArea")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
+                  <th onClick={() => handleSort("chargeableArea")} className="p-3 text-right cursor-pointer hover:text-slate-900 min-w-[120px] whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
-                      <span>Chargeable Sq Ft</span>
+                      <span>Area (Sq Ft)</span>
                       <ArrowUpDown size={11} />
                     </div>
                   </th>
                 )}
                 {visibleColumns.has("ratePsf") && (
-                  <th onClick={() => handleSort("baseRentPsf")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
+                  <th onClick={() => handleSort("baseRentPsf")} className="p-3 text-right cursor-pointer hover:text-slate-900 min-w-[100px] whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
-                      <span>Base Rent PSF</span>
+                      <span>Base PSF</span>
                       <ArrowUpDown size={11} />
                     </div>
                   </th>
                 )}
                 {visibleColumns.has("rent") && (
-                  <th onClick={() => handleSort("monthlyRent")} className="p-3.5 text-right cursor-pointer hover:text-slate-900">
+                  <th onClick={() => handleSort("monthlyRent")} className="p-3 text-right cursor-pointer hover:text-slate-900 min-w-[120px] whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       <span>Monthly Rent</span>
                       <ArrowUpDown size={11} />
                     </div>
                   </th>
                 )}
-                {visibleColumns.has("cam") && <th className="p-3.5 text-right">CAM Rate PSF</th>}
-                {visibleColumns.has("gross") && <th className="p-3.5 text-right bg-amber-50/50 font-black text-amber-900">Total Monthly Gross</th>}
-                {visibleColumns.has("escalation") && <th className="p-3.5 text-center">Escalation</th>}
-                {visibleColumns.has("tenure") && <th className="p-3.5 text-center">Term (Start – End)</th>}
-                {visibleColumns.has("lockIn") && <th className="p-3.5 text-center">Lock-In</th>}
-                {visibleColumns.has("deposit") && <th className="p-3.5 text-right">Security Deposit</th>}
-                {visibleColumns.has("status") && <th className="p-3.5 text-center">Status / Approval</th>}
-                <th className="p-3.5 text-center sticky right-0 z-30 bg-slate-50 border-l border-slate-200">Actions</th>
+                {visibleColumns.has("cam") && <th className="p-3 text-right min-w-[90px] whitespace-nowrap">CAM PSF</th>}
+                {visibleColumns.has("gross") && <th className="p-3 text-right bg-amber-50/50 font-black text-amber-900 min-w-[130px] whitespace-nowrap">Monthly Gross</th>}
+                {visibleColumns.has("escalation") && <th className="p-3 text-center min-w-[100px] whitespace-nowrap">Escalation</th>}
+                {visibleColumns.has("tenure") && <th className="p-3 text-center min-w-[150px] whitespace-nowrap">Term (Start – End)</th>}
+                {visibleColumns.has("lockIn") && <th className="p-3 text-center min-w-[90px] whitespace-nowrap">Lock-In</th>}
+                {visibleColumns.has("deposit") && <th className="p-3 text-right min-w-[120px] whitespace-nowrap">Security Deposit</th>}
+                {visibleColumns.has("status") && <th className="p-3 text-center min-w-[110px] whitespace-nowrap">Status</th>}
+                <th className="p-3 text-center sticky right-0 z-30 bg-slate-50 border-l border-slate-200 min-w-[90px] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
 
@@ -1016,7 +1158,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                     }`}
                   >
                     {/* Space & Unit (Sticky Column) */}
-                    <td className="p-3.5 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200">
+                    <td className="p-3.5 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div
                           className={`w-2.5 h-2.5 rounded-full shrink-0 ${
@@ -1024,145 +1166,105 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                           }`}
                         />
                         <div>
-                          <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                          <div className="font-extrabold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
                             <span>{row.unitNumber}</span>
-                            <span className="text-[10px] text-slate-400 font-normal">Flr {row.floorNumber}</span>
+                            {!/^(ground|floor|\d+[a-z]{0,2}\s*floor)/i.test(row.unitNumber?.trim() || "") && (
+                              <span className="text-[10px] text-slate-400 font-normal">Flr {row.floorNumber}</span>
+                            )}
                           </div>
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider block capitalize">{row.spaceType}</span>
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider block capitalize font-medium">{row.spaceType}</span>
                         </div>
                       </div>
                     </td>
 
                     {/* Occupant / Tenant */}
                     {visibleColumns.has("tenant") && (
-                      <td className="p-3.5">
+                      <td className="p-3 whitespace-nowrap">
                         {row.isVacant ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-amber-800 font-extrabold italic">— Vacant Space —</span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                              Available
-                            </span>
-                          </div>
+                          <span className="text-amber-700 text-xs font-semibold italic">— Vacant —</span>
                         ) : (
-                          <div>
-                            <span className="font-extrabold text-slate-900 block">{row.tenantName}</span>
-                            <span className="text-[10px] text-slate-400 font-normal">{row.propertyName}</span>
-                          </div>
+                          <div className="font-bold text-slate-900 text-xs">{row.tenantName}</div>
                         )}
                       </td>
                     )}
 
                     {/* Contract Code */}
                     {visibleColumns.has("code") && (
-                      <td className="p-3.5 font-mono text-[11px] font-bold text-slate-700">
+                      <td className="p-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">
                         {row.isVacant ? "—" : row.leaseCode}
                       </td>
                     )}
 
                     {/* Contract Type & Direction */}
                     {visibleColumns.has("type") && (
-                      <td className="p-3.5">
+                      <td className="p-3 whitespace-nowrap">
                         {row.isVacant ? (
-                          <span className="text-[11px] text-slate-400 font-normal">Ready to Market</span>
+                          <span className="text-[10px] text-slate-400">Available</span>
                         ) : (
-                          <div className="space-y-0.5">
-                            {getContractTypeBadge(row.contractType, row.direction)}
-                            <span className="block text-[9px] font-mono text-slate-400 uppercase">
-                              {row.billingModel} model · {row.direction}
-                            </span>
-                          </div>
+                          getContractTypeBadge(row.contractType, row.direction)
                         )}
                       </td>
                     )}
 
                     {/* Chargeable Area */}
                     {visibleColumns.has("area") && (
-                      <td className="p-3.5 text-right font-mono font-bold text-slate-900">
-                        {row.chargeableArea.toLocaleString()} sq ft
-                        <span className="text-[10px] text-slate-400 block font-normal">
-                          Carpet: {row.carpetArea.toLocaleString()}
-                        </span>
+                      <td className="p-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                        {row.chargeableArea.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">sqft</span>
                       </td>
                     )}
 
                     {/* Base Rent PSF */}
                     {visibleColumns.has("ratePsf") && (
-                      <td className="p-3.5 text-right font-mono font-bold text-slate-800">
+                      <td className="p-3 text-right font-mono font-semibold text-slate-800 whitespace-nowrap">
                         ₹{row.baseRentPsf}
-                        {row.isVacant && <span className="text-[9px] text-amber-700 block font-normal">Market Rate</span>}
                       </td>
                     )}
 
                     {/* Monthly Base Rent */}
                     {visibleColumns.has("rent") && (
-                      <td className="p-3.5 text-right font-mono font-extrabold text-[#0F8B7D]">
-                        {row.isVacant ? (
-                          <span className="text-slate-400 font-normal">₹0</span>
-                        ) : (
-                          formatINR(row.monthlyRent)
-                        )}
-                        {row.isVacant && (
-                          <span className="text-[10px] text-amber-700 font-bold block">
-                            Pot: {formatINR(row.potentialMonthlyRent)}
-                          </span>
-                        )}
+                      <td className="p-3 text-right font-mono font-bold text-teal-700 whitespace-nowrap">
+                        {row.isVacant ? <span className="text-slate-300 font-normal">—</span> : formatINR(row.monthlyRent)}
                       </td>
                     )}
 
                     {/* CAM Rate */}
                     {visibleColumns.has("cam") && (
-                      <td className="p-3.5 text-right font-mono text-slate-600">
-                        ₹{row.camRatePsf} PSF
-                        {!row.isVacant && row.camMonthly > 0 && (
-                          <span className="text-[10px] text-slate-400 block font-normal">{formatINR(row.camMonthly)}</span>
-                        )}
+                      <td className="p-3 text-right font-mono text-slate-600 whitespace-nowrap">
+                        ₹{row.camRatePsf}
                       </td>
                     )}
 
                     {/* Total Monthly Gross */}
                     {visibleColumns.has("gross") && (
-                      <td className="p-3.5 text-right font-mono font-black text-amber-950 bg-amber-50/40">
-                        {row.isVacant ? "—" : formatINR(row.totalMonthlyGross)}
-                        {!row.isVacant && <span className="text-[9px] text-amber-700 block font-normal">incl. GST</span>}
+                      <td className="p-3 text-right font-mono font-bold text-amber-900 bg-amber-50/30 whitespace-nowrap">
+                        {row.isVacant ? <span className="text-slate-300 font-normal">—</span> : formatINR(row.totalMonthlyGross)}
                       </td>
                     )}
 
                     {/* Escalation */}
                     {visibleColumns.has("escalation") && (
-                      <td className="p-3.5 text-center font-mono text-[11px] text-slate-700">
-                        {row.isVacant ? (
-                          "—"
-                        ) : (
-                          <div>
-                            <span className="font-bold text-teal-800">+{row.escalationPct}%</span>
-                            <span className="text-[10px] text-slate-400 block font-normal">per {row.escalationFrequencyMonths}m</span>
-                          </div>
-                        )}
+                      <td className="p-3 text-center font-mono text-xs text-slate-700 whitespace-nowrap">
+                        {row.isVacant ? "—" : <span className="text-teal-700 font-semibold">+{row.escalationPct}%</span>}
                       </td>
                     )}
 
                     {/* Tenure */}
                     {visibleColumns.has("tenure") && (
-                      <td className="p-3.5 text-center text-[11px] text-slate-700">
+                      <td className="p-3 text-center font-mono text-[11px] text-slate-600 whitespace-nowrap">
                         {row.isVacant ? (
-                          <span className="text-amber-800 text-[10px] font-bold">{row.daysVacant} Days Vacant</span>
+                          <span className="text-amber-700 text-[10px]">{row.daysVacant}d vacant</span>
                         ) : (
-                          <div>
-                            <span className="font-bold text-slate-800">{row.startDate?.slice(0, 7)} – {row.endDate?.slice(0, 7)}</span>
-                            <span className="text-[10px] text-slate-400 block font-normal">{row.endDate}</span>
-                          </div>
+                          `${row.startDate ? row.startDate.slice(0, 10) : "—"} → ${row.endDate ? row.endDate.slice(0, 10) : "—"}`
                         )}
                       </td>
                     )}
 
                     {/* Lock-In */}
                     {visibleColumns.has("lockIn") && (
-                      <td className="p-3.5 text-center text-[11px]">
-                        {row.isVacant ? (
-                          "—"
-                        ) : (
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
-                            {row.lockInEndDate || "36 Months"}
+                      <td className="p-3 text-center text-xs whitespace-nowrap">
+                        {row.isVacant ? "—" : (
+                          <span className="text-slate-600 font-medium">
+                            {row.lockInMonths ? `${row.lockInMonths} mo` : (row.lockInEndDate || "—")}
                           </span>
                         )}
                       </td>
@@ -1170,27 +1272,22 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
 
                     {/* Security Deposit */}
                     {visibleColumns.has("deposit") && (
-                      <td className="p-3.5 text-right font-mono text-slate-700">
-                        {row.isVacant ? (
-                          "—"
-                        ) : (
-                          <div>
-                            <span className="font-bold text-slate-900">{formatINR(row.securityDepositPaid)}</span>
-                            <span className="text-[10px] text-slate-400 block font-normal">{row.securityDepositMonths} Months</span>
-                          </div>
+                      <td className="p-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                        {row.isVacant ? "—" : (
+                          <span className="font-semibold text-slate-900">{formatINR(row.securityDepositPaid)}</span>
                         )}
                       </td>
                     )}
 
                     {/* Status / Approval */}
                     {visibleColumns.has("status") && (
-                      <td className="p-3.5 text-center">
+                      <td className="p-3.5 text-center whitespace-nowrap">
                         {getApprovalBadge(row)}
                       </td>
                     )}
 
                     {/* Actions (Sticky Right Column) */}
-                    <td className="p-3.5 text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-200">
+                    <td className="p-3.5 text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 border-l border-slate-200 whitespace-nowrap">
                       {row.isVacant ? (
                         <button
                           type="button"
@@ -1252,26 +1349,26 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
             {/* Pinned Totals Row (S-10 Requirement) */}
             <tfoot className="bg-slate-100 text-xs font-black text-slate-900 border-t-2 border-slate-300 sticky bottom-0 z-20 shadow-xs">
               <tr>
-                <td className="p-3 sticky left-0 z-30 bg-slate-100 border-r border-slate-200">
+                <td className="p-3 sticky left-0 z-30 bg-slate-100 border-r border-slate-200 whitespace-nowrap">
                   <div className="flex items-center gap-1.5 uppercase tracking-wider text-[11px] font-black text-slate-700">
                     <Layers size={13} className="text-teal-700" />
                     <span>Total (Filtered)</span>
                   </div>
                 </td>
                 {visibleColumns.has("tenant") && (
-                  <td className="p-3 text-[11px] text-slate-500 font-semibold">
+                  <td className="p-3 text-[11px] text-slate-500 font-semibold whitespace-nowrap">
                     {sortedRows.filter(r => !r.isVacant).length} Occupied · {sortedRows.filter(r => r.isVacant).length} Vacant
                   </td>
                 )}
-                {visibleColumns.has("code") && <td className="p-3 font-mono text-[11px] text-slate-400">—</td>}
-                {visibleColumns.has("type") && <td className="p-3 font-mono text-[11px] text-slate-400">—</td>}
+                {visibleColumns.has("code") && <td className="p-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">—</td>}
+                {visibleColumns.has("type") && <td className="p-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">—</td>}
                 {visibleColumns.has("area") && (
-                  <td className="p-3 text-right font-mono font-black text-slate-900">
+                  <td className="p-3 text-right font-mono font-black text-slate-900 whitespace-nowrap">
                     {sortedRows.reduce((acc, r) => acc + (r.chargeableArea || 0), 0).toLocaleString()} sq ft
                   </td>
                 )}
                 {visibleColumns.has("ratePsf") && (
-                  <td className="p-3 text-right font-mono text-slate-500 font-bold">
+                  <td className="p-3 text-right font-mono text-slate-500 font-bold whitespace-nowrap">
                     {(() => {
                       const totalArea = sortedRows.reduce((acc, r) => acc + (r.chargeableArea || 0), 0);
                       const totalRent = sortedRows.reduce((acc, r) => acc + (r.monthlyRent || 0), 0);
@@ -1280,30 +1377,30 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                   </td>
                 )}
                 {visibleColumns.has("rent") && (
-                  <td className="p-3 text-right font-mono font-black text-[#0F8B7D]">
+                  <td className="p-3 text-right font-mono font-black text-[#0F8B7D] whitespace-nowrap">
                     {formatINR(sortedRows.reduce((acc, r) => acc + (r.monthlyRent || 0), 0))}
                   </td>
                 )}
                 {visibleColumns.has("cam") && (
-                  <td className="p-3 text-right font-mono text-slate-600 font-bold">
+                  <td className="p-3 text-right font-mono text-slate-600 font-bold whitespace-nowrap">
                     {formatINR(sortedRows.reduce((acc, r) => acc + (r.camMonthly || 0), 0))}
                   </td>
                 )}
                 {visibleColumns.has("gross") && (
-                  <td className="p-3 text-right font-mono font-black text-amber-950 bg-amber-100/60">
+                  <td className="p-3 text-right font-mono font-black text-amber-950 bg-amber-100/60 whitespace-nowrap">
                     {formatINR(sortedRows.reduce((acc, r) => acc + (r.totalMonthlyGross || 0), 0))}
                   </td>
                 )}
-                {visibleColumns.has("escalation") && <td className="p-3 text-center text-slate-400">—</td>}
-                {visibleColumns.has("tenure") && <td className="p-3 text-center text-slate-400">—</td>}
-                {visibleColumns.has("lockIn") && <td className="p-3 text-center text-slate-400">—</td>}
+                {visibleColumns.has("escalation") && <td className="p-3 text-center text-slate-400 whitespace-nowrap">—</td>}
+                {visibleColumns.has("tenure") && <td className="p-3 text-center text-slate-400 whitespace-nowrap">—</td>}
+                {visibleColumns.has("lockIn") && <td className="p-3 text-center text-slate-400 whitespace-nowrap">—</td>}
                 {visibleColumns.has("deposit") && (
-                  <td className="p-3 text-right font-mono text-slate-800 font-bold">
+                  <td className="p-3 text-right font-mono text-slate-800 font-bold whitespace-nowrap">
                     {formatINR(sortedRows.reduce((acc, r) => acc + (r.securityDepositPaid || 0), 0))}
                   </td>
                 )}
-                {visibleColumns.has("status") && <td className="p-3 text-center text-slate-400">—</td>}
-                <td className="p-3 text-center sticky right-0 z-30 bg-slate-100 border-l border-slate-200">
+                {visibleColumns.has("status") && <td className="p-3 text-center text-slate-400 whitespace-nowrap">—</td>}
+                <td className="p-3 text-center sticky right-0 z-30 bg-slate-100 border-l border-slate-200 whitespace-nowrap">
                   <span className="text-[10px] text-slate-400 font-mono">{sortedRows.length} Rows</span>
                 </td>
               </tr>

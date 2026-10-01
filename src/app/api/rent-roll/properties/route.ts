@@ -228,12 +228,13 @@ export async function POST(req: Request) {
           seatCapacity: Number(u.seatCapacity) || undefined,
           standardRatePsf: Number(u.contractedRentPsf) || Number(u.askingRate) || 0,
           standardCamPsf: Number(u.camRatePsf) || Number(body.standardCamPsf) || 0,
-          status: (u.status as any) || "vacant"
+          status: (u.status === "occupied" && u.tenantName?.trim()) ? "occupied" : "vacant"
         };
 
-        // If unit is marked occupied with commercial lease terms, sync directly to live Rent Roll
-        if (u.status === "occupied" && (u.tenantName || u.contractedRentPsf)) {
-          const tenantName = (u.tenantName || "Corporate Tenant").trim();
+        // If unit is explicitly marked occupied with real tenant name, sync to Rent Roll
+        const cleanTenantName = (u.tenantName || "").trim();
+        if (u.status === "occupied" && cleanTenantName) {
+          const tenantName = cleanTenantName;
           let tenantObj = db.tenants.find(t => t.tradeName.toLowerCase() === tenantName.toLowerCase());
           if (!tenantObj) {
             const newTenantId = `TEN-${Date.now()}-${i + 1}`;
@@ -253,7 +254,10 @@ export async function POST(req: Request) {
               billingCity: newProp.city,
               billingState: newProp.state,
               billingPincode: newProp.pincode,
-              status: "active",
+              status: "invited",
+              portalLive: false,
+              inviteCode: `OFFICEX-${newProp.propertyCode}-${String(i + 1).padStart(2, '0')}`,
+              inviteStatus: "pending",
               creditLimit: (Number(u.contractedRentPsf) || 150) * spaceRow.chargeableArea * 12,
               paymentTermsDays: 15,
               createdAt: new Date().toISOString().split("T")[0]
@@ -341,7 +345,9 @@ export async function POST(req: Request) {
               ? leaseSummary.lockInEndDate.toISOString().split("T")[0]
               : new Date(Date.now() + 3 * 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
             noticePeriodDays: 90,
-            status: "active",
+            status: "pending_approval",
+            approvalStatus: "submitted",
+            isTermsPending: true,
             renewalStatus: "not_due",
             billingFrequency: "monthly",
             billingDueDay: 5,
@@ -349,7 +355,7 @@ export async function POST(req: Request) {
             tdsRate: 10,
             brokerName: "Direct Institutional Lease",
             brokeragePaid: 0,
-            notes: "Contracted commercial lease registered via Property Master",
+            notes: "Skipped terms during property creation - Pending tenant onboarding & acceptance",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
@@ -357,6 +363,17 @@ export async function POST(req: Request) {
           spaceRow.currentLeaseId = newLeaseId;
           spaceRow.status = "occupied";
           db.leases.unshift(newLease);
+
+          // Add active management alert for landlord
+          db.alerts = db.alerts || [];
+          db.alerts.unshift({
+            id: `ALT-${Date.now()}-${i + 1}`,
+            title: `${tenantName} — Invite & Terms Pending`,
+            message: `Tenant has not accepted portal invite yet. Commercial terms & signed deed pending confirmation.`,
+            severity: "warning",
+            triggerDate: new Date().toISOString().split("T")[0],
+            isRead: false
+          });
 
           // Add scheduled escalation
           db.escalations.push({

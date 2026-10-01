@@ -45,7 +45,8 @@ import {
   MessageSquare,
   Share2,
   RefreshCw,
-  CheckSquare
+  CheckSquare,
+  ChevronDown
 } from "lucide-react";
 import {
   AddressAutocomplete,
@@ -343,6 +344,11 @@ export default function CommercialPropertyMaster() {
   const [sanctionedPowerKva, setSanctionedPowerKva] = useState<number>(150);
   const [hvacSystemType, setHvacSystemType] = useState<string>("VRV/VRF Central Air Conditioning");
   const [parkingSlotsCount, setParkingSlotsCount] = useState<number>(25);
+
+  // Dynamic Furnished / Plug & Play Office Specs
+  const [buildingWorkstations, setBuildingWorkstations] = useState<number>(0);
+  const [buildingCabins, setBuildingCabins] = useState<number>(0);
+  const [buildingMeetingRooms, setBuildingMeetingRooms] = useState<number>(0);
 
   // Lease Scope Mode: "whole_tower" or "specific_floors"
   const [leaseScopeMode, setLeaseScopeMode] = useState<"whole_tower" | "specific_floors">("whole_tower");
@@ -686,6 +692,57 @@ export default function CommercialPropertyMaster() {
     setTotalCarpetArea(sumCpt);
   };
 
+  const handleHandoverConditionChange = (condition: "bare_shell" | "warm_shell" | "semi_furnished" | "furnished" | "plug_and_play") => {
+    setBuildingFitoutCondition(condition);
+
+    // 1. Dynamic HVAC System & Technical Spec adaptation
+    if (condition === "bare_shell") {
+      setHvacSystemType("Provisions Only (Tenant Fitout)");
+      setClearHeightFt(13); // Higher slab-to-slab height without false ceiling
+      setBuildingWorkstations(0);
+      setBuildingCabins(0);
+      setBuildingMeetingRooms(0);
+    } else if (condition === "warm_shell") {
+      if (hvacSystemType === "Provisions Only (Tenant Fitout)") {
+        setHvacSystemType("VRV/VRF Central Air Conditioning");
+      }
+      setClearHeightFt(11);
+      setBuildingWorkstations(0);
+      setBuildingCabins(0);
+      setBuildingMeetingRooms(0);
+    } else if (condition === "semi_furnished") {
+      if (hvacSystemType === "Provisions Only (Tenant Fitout)") {
+        setHvacSystemType("VRV/VRF Central Air Conditioning");
+      }
+      setClearHeightFt(10.5);
+    } else {
+      // furnished or plug_and_play
+      if (hvacSystemType === "Provisions Only (Tenant Fitout)") {
+        setHvacSystemType("VRV/VRF Central Air Conditioning");
+      }
+      setClearHeightFt(10);
+      // Auto-suggest benchmark workstations if currently 0
+      if (buildingWorkstations === 0 && totalChargeableArea > 0) {
+        setBuildingWorkstations(Math.round(totalChargeableArea / 85));
+        setBuildingCabins(Math.max(1, Math.round(totalChargeableArea / 5000)));
+        setBuildingMeetingRooms(Math.max(1, Math.round(totalChargeableArea / 10000)));
+      }
+    }
+
+    // 2. Cascade fitout condition and furniture counts to all existing units
+    const unitFitoutVal = condition === "furnished" ? "fully_fitted" : condition;
+    setUnits(prev => prev.map(u => ({
+      ...u,
+      fitoutCondition: unitFitoutVal as any,
+      ...(condition === "bare_shell" || condition === "warm_shell" ? {
+        seatCapacity: 0,
+        workstationCount: 0,
+        privateCabins: 0,
+        meetingRooms: 0
+      } : {})
+    })));
+  };
+
   const handleCreateSingleBuildingUnit = (forcedStatus?: "vacant" | "occupied", forcedTenant?: string, forcedRent?: number) => {
     setLeaseScopeMode("whole_tower");
     const bldgCode = towers[0]?.code || "T1";
@@ -697,6 +754,7 @@ export default function CommercialPropertyMaster() {
     const stat = forcedStatus || wholeTowerStatus;
     const tName = forcedTenant !== undefined ? forcedTenant : wholeTowerTenantName;
     const rPsf = forcedRent !== undefined ? forcedRent : (wholeTowerRentPsf || targetRentPsf || 150);
+    const isFurnished = buildingFitoutCondition === "furnished" || buildingFitoutCondition === "plug_and_play";
 
     const fullUnit: LeasableSpaceUnit = {
       id: `u-${Date.now()}`,
@@ -708,10 +766,13 @@ export default function CommercialPropertyMaster() {
       chargeableArea: area,
       carpetArea: carpet,
       askingRate: targetRentPsf || 150,
-      seatCapacity: 0,
+      seatCapacity: isFurnished ? buildingWorkstations : 0,
+      workstationCount: isFurnished ? buildingWorkstations : 0,
+      privateCabins: isFurnished ? buildingCabins : 0,
+      meetingRooms: isFurnished ? buildingMeetingRooms : 0,
       fitoutCondition: fitout as any,
       status: stat,
-      tenantName: stat === "occupied" ? (tName || "Single Corporate Occupant") : undefined,
+      tenantName: stat === "occupied" && tName?.trim() ? tName.trim() : undefined,
       contractedRentPsf: stat === "occupied" ? rPsf : undefined,
       camRatePsf: standardCamPsf || 0
     };
@@ -736,20 +797,28 @@ export default function CommercialPropertyMaster() {
     const perFloorArea = totalChargeableArea > 0 ? Math.round(totalChargeableArea / count) : 10000;
     const perFloorCarpet = Math.round(perFloorArea * 0.75);
     const fitout = buildingFitoutCondition === "furnished" ? "fully_fitted" : buildingFitoutCondition === "semi_furnished" ? "warm_shell" : buildingFitoutCondition;
+    const isFurnished = buildingFitoutCondition === "furnished" || buildingFitoutCondition === "plug_and_play";
+    const perFloorSeats = isFurnished && buildingWorkstations > 0 ? Math.round(buildingWorkstations / count) : 0;
+
+    const getFloorLabel = (idx: number) => {
+      if (idx === 1) return "Ground Floor";
+      return `Floor ${idx - 1}`;
+    };
 
     const generated: LeasableSpaceUnit[] = [];
     for (let f = 1; f <= count; f++) {
       generated.push({
         id: `u-floor-${f}-${Date.now()}`,
         spaceCode: `${propPrefix}-${bldgCode}-${String(f).padStart(2, "0")}-01`,
-        suiteNumber: f === 1 ? "Ground / 1st Floor" : `Floor ${f}`,
+        suiteNumber: getFloorLabel(f),
         buildingCode: bldgCode,
         floorNumber: f,
         spaceType: "office",
         chargeableArea: perFloorArea,
         carpetArea: perFloorCarpet,
         askingRate: targetRentPsf || 150,
-        seatCapacity: 0,
+        seatCapacity: perFloorSeats,
+        workstationCount: perFloorSeats,
         fitoutCondition: fitout as any,
         status: "vacant"
       });
@@ -765,7 +834,7 @@ export default function CommercialPropertyMaster() {
         return {
           ...u,
           status: newStatus,
-          tenantName: newStatus === "occupied" ? (tenantName || u.tenantName || "Corporate Tenant") : undefined,
+          tenantName: newStatus === "occupied" ? (tenantName !== undefined ? tenantName : (u.tenantName && u.tenantName !== "Corporate Tenant" ? u.tenantName : "")) : undefined,
           contractedRentPsf: newStatus === "occupied" ? (u.contractedRentPsf || u.askingRate || targetRentPsf || 150) : undefined
         };
       }
@@ -2177,147 +2246,210 @@ export default function CommercialPropertyMaster() {
                 </div>
               </div>
 
-              {/* Fitout / Handover Condition Selector */}
-              <div className="space-y-2 pt-2 border-t border-slate-200/70">
-                <label className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <CheckSquare size={13} className="text-[#0F8B7D]" />
-                    Building Fitout &amp; Handover Condition *
-                  </span>
-                  <span className="text-[10px] text-slate-400">Specifies handover condition to tenants</span>
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                  {[
-                    { id: "bare_shell", title: "Bare Shell", desc: "Unfurnished / Raw Concrete Slab & Open Ceiling" },
-                    { id: "warm_shell", title: "Warm Shell", desc: "Finished Screed, HVAC Ducts, Power Tapping & Toilets" },
-                    { id: "semi_furnished", title: "Semi-Furnished", desc: "Flooring, False Ceiling, Grid Lights & Basic Cabins" },
-                    { id: "furnished", title: "Fully Furnished", desc: "Complete Desks, Workstations, Partitions & Cabins" },
-                    { id: "plug_and_play", title: "Plug & Play", desc: "100% Ready with IT Cabling, Server Rack & Cafeteria" },
-                  ].map((item) => {
-                    const isSelected = buildingFitoutCondition === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setBuildingFitoutCondition(item.id as any)}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? "bg-teal-50/80 border-[#0F8B7D] ring-2 ring-[#0F8B7D]/20 shadow-2xs"
-                            : "bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/50"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <span className={`text-xs font-black ${isSelected ? "text-teal-950" : "text-slate-800"}`}>
-                              {item.title}
-                            </span>
-                            {isSelected && (
-                              <CheckCircle size={14} className="text-[#0F8B7D] shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                            {item.desc}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Technical Infrastructure (Height, DG backup, Power, HVAC, Parking) */}
-              <div className="pt-2 border-t border-slate-200/70">
-                <label className="text-[11px] font-bold text-slate-800 block mb-2">
-                  Building Utilities &amp; Engineering Specifications
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {/* Handover Condition & Utilities */}
+              <div className="pt-3 border-t border-slate-200/70 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-600 block">Clear Height</span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700">Handover Condition</label>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        buildingFitoutCondition === "bare_shell"
+                          ? "bg-slate-200 text-slate-700"
+                          : buildingFitoutCondition === "warm_shell"
+                          ? "bg-teal-50 text-[#0F8B7D] border border-teal-200"
+                          : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      }`}>
+                        {buildingFitoutCondition === "bare_shell" ? "Unfinished Slab" : buildingFitoutCondition === "warm_shell" ? "Base Core Fitout" : "Furnished"}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={buildingFitoutCondition}
+                        onChange={(e) => handleHandoverConditionChange(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0F8B7D] appearance-none pr-8 cursor-pointer"
+                      >
+                        <option value="warm_shell">Warm Shell</option>
+                        <option value="bare_shell">Bare Shell</option>
+                        <option value="semi_furnished">Semi-Furnished</option>
+                        <option value="furnished">Fully Furnished</option>
+                        <option value="plug_and_play">Plug &amp; Play</option>
+                      </select>
+                      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700">HVAC System</label>
+                      <span className="text-[10px] text-slate-400">
+                        {buildingFitoutCondition === "bare_shell" ? "Provisions Auto-set" : "Central Distribution"}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={hvacSystemType}
+                        onChange={(e) => setHvacSystemType(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0F8B7D] appearance-none pr-8 cursor-pointer"
+                      >
+                        <option value="VRV/VRF Central Air Conditioning">VRV / VRF Central AC</option>
+                        <option value="Water Cooled Chiller Plant">Central Chiller</option>
+                        <option value="Split Air Conditioning">Split Units</option>
+                        <option value="Provisions Only (Tenant Fitout)">Provisions Only (Tenant Fitout)</option>
+                      </select>
+                      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dynamic Condition Feedback / Specifications */}
+                {buildingFitoutCondition === "bare_shell" ? (
+                  <div className="p-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
+                    <Info size={14} className="text-slate-400 shrink-0" />
+                    <span>
+                      <strong>Bare Shell Mode:</strong> Space delivered as raw concrete slab. HVAC is set to tenant tap-off provisions; interior seats, cabins, and false ceilings are omitted.
+                    </span>
+                  </div>
+                ) : buildingFitoutCondition === "warm_shell" ? (
+                  <div className="p-2.5 rounded-xl bg-teal-50/60 border border-teal-100 text-[11px] text-teal-800 flex items-center gap-2">
+                    <Info size={14} className="text-[#0F8B7D] shrink-0" />
+                    <span>
+                      <strong>Warm Shell Mode:</strong> Base HVAC ducting, screed flooring, fire sprinkler network, and core restrooms provided. Floorplate is open for tenant interior setup.
+                    </span>
+                  </div>
+                ) : (
+                  /* Furnished / Plug & Play / Semi-Furnished Dynamic Fitout Specs */
+                  <div className="p-3 rounded-xl bg-teal-50/40 border border-teal-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Sparkles size={13} className="text-[#0F8B7D]" />
+                        Furnished Fitout Details (Applied to Inventory)
+                      </span>
+                      <span className="text-[10px] font-bold text-teal-700 bg-white px-2 py-0.5 rounded-full border border-teal-200">
+                        {buildingFitoutCondition === "plug_and_play" ? "Plug & Play" : buildingFitoutCondition === "semi_furnished" ? "Semi-Furnished" : "Fully Furnished"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                          Total Workstations / Seats
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 150"
+                          value={buildingWorkstations || ""}
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setBuildingWorkstations(val);
+                            setUnits(prev => prev.map(u => ({ ...u, seatCapacity: val, workstationCount: val })));
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                          Executive Cabins
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 6"
+                          value={buildingCabins || ""}
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setBuildingCabins(val);
+                            setUnits(prev => prev.map(u => ({ ...u, privateCabins: val })));
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                          Meeting / Conf Rooms
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 2"
+                          value={buildingMeetingRooms || ""}
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setBuildingMeetingRooms(val);
+                            setUnits(prev => prev.map(u => ({ ...u, meetingRooms: val })));
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">Clear Height</label>
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         placeholder="11"
                         value={clearHeightFt || ""}
                         onChange={(e) => setClearHeightFt(Number(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-medium text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
                       />
-                      <span className="text-[10px] text-slate-400 font-bold">Ft</span>
+                      <span className="text-xs text-slate-400">Ft</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-600 block">DG Power Backup</span>
-                    <div className="flex items-center gap-1">
+                    <label className="text-xs font-medium text-slate-600">Power Backup</label>
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         placeholder="100"
                         value={dgBackupPct}
                         onChange={(e) => setDgBackupPct(Number(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-medium text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
                       />
-                      <span className="text-[10px] text-slate-400 font-bold">%</span>
+                      <span className="text-xs text-slate-400">%</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-600 block">Sanctioned Power</span>
-                    <div className="flex items-center gap-1">
+                    <label className="text-xs font-medium text-slate-600">Power Capacity</label>
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         placeholder="150"
                         value={sanctionedPowerKva || ""}
                         onChange={(e) => setSanctionedPowerKva(Number(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-medium text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
                       />
-                      <span className="text-[10px] text-slate-400 font-bold">kVA</span>
+                      <span className="text-xs text-slate-400">kVA</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-600 block">Reserved Parking</span>
-                    <div className="flex items-center gap-1">
+                    <label className="text-xs font-medium text-slate-600">Reserved Parking</label>
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         placeholder="25"
                         value={parkingSlotsCount || ""}
                         onChange={(e) => setParkingSlotsCount(Number(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-slate-900"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-medium text-slate-800 focus:outline-none focus:border-[#0F8B7D]"
                       />
-                      <span className="text-[10px] text-slate-400 font-bold">Slots</span>
+                      <span className="text-xs text-slate-400">Slots</span>
                     </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-600 block">HVAC Cooling</span>
-                    <select
-                      value={hvacSystemType}
-                      onChange={(e) => setHvacSystemType(e.target.value)}
-                      className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900"
-                    >
-                      <option value="VRV/VRF Central Air Conditioning">VRV / VRF Central</option>
-                      <option value="Water Cooled Chiller Plant">Central Chiller</option>
-                      <option value="Split Air Conditioning">Split Units</option>
-                      <option value="Provisions Only (Tenant Fitout)">Provisions Only</option>
-                    </select>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* ════════════════════════════════════════════════════════════
-                PART 2: LEASE SCOPE SELECTION (Whole Tower vs Specific Floors)
+                PART 2: LEASE STRUCTURE
                ════════════════════════════════════════════════════════════ */}
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckSquare size={15} className="text-[#0F8B7D]" />
-                    Part 2 • How Much Part Do You Want to Put on Lease?
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Choose whether you are leasing the entire building/tower as a single block, or selecting individual floors/suites.
-                  </p>
-                </div>
+                <span className="text-xs font-bold text-slate-900">Leasing Structure</span>
 
                 {/* Scope Switcher Tabs */}
                 <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 self-start sm:self-auto">
@@ -2327,117 +2459,72 @@ export default function CommercialPropertyMaster() {
                       setLeaseScopeMode("whole_tower");
                       handleCreateSingleBuildingUnit();
                     }}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       leaseScopeMode === "whole_tower"
                         ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     <Building size={13} className={leaseScopeMode === "whole_tower" ? "text-[#0F8B7D]" : "text-slate-400"} />
-                    <span>Lease Whole Tower / Building</span>
+                    <span>Whole Building</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleSwitchToSpecificFloors}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       leaseScopeMode === "specific_floors"
                         ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     <Layers size={13} className={leaseScopeMode === "specific_floors" ? "text-[#0F8B7D]" : "text-slate-400"} />
-                    <span>Select Specific Floors / Suites</span>
+                    <span>Floor-by-Floor / Suites</span>
                   </button>
                 </div>
               </div>
 
               {/* ── OPTION A: WHOLE TOWER LEASING ── */}
               {leaseScopeMode === "whole_tower" && (
-                <div className="p-5 rounded-2xl bg-teal-50/40 border border-teal-200/80 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-teal-100 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-900">
-                          Single Space Lease: Entire Building ({totalChargeableArea.toLocaleString()} {areaLabel})
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 text-[10px] font-bold">
-                          All {totalFloorsCount} Floors Combined
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-0.5">
-                        The entire asset is contracted to one tenant or offered as a corporate headquarters / BTS campus.
-                      </p>
-                    </div>
-
-                    {/* Switch to specific floors button if user changes mind */}
-                    <button
-                      type="button"
-                      onClick={handleSwitchToSpecificFloors}
-                      className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto"
-                    >
-                      <Layers size={13} />
-                      <span>Switch to Floor-by-Floor Selection</span>
-                    </button>
-                  </div>
-
-                  {/* Occupancy Status for Whole Tower */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-800">Lease Status of the Building</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setWholeTowerStatus("vacant");
-                            handleCreateSingleBuildingUnit("vacant");
+                <div className="p-4 rounded-xl bg-slate-50/60 border border-slate-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Lease Status</label>
+                      <div className="relative">
+                        <select
+                          value={units[0]?.status || "vacant"}
+                          onChange={(e) => {
+                            const val = e.target.value as "vacant" | "occupied";
+                            setWholeTowerStatus(val);
+                            handleCreateSingleBuildingUnit(val, val === "occupied" ? (wholeTowerTenantName.trim() || undefined) : undefined);
                           }}
-                          className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
-                            units[0]?.status === "vacant"
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                          }`}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0F8B7D] appearance-none pr-8 cursor-pointer"
                         >
-                          <span className={`w-2 h-2 rounded-full ${units[0]?.status === "vacant" ? "bg-white" : "bg-emerald-500"}`} />
-                          <span>Vacant (Available for Lease)</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setWholeTowerStatus("occupied");
-                            handleCreateSingleBuildingUnit("occupied", wholeTowerTenantName || "Single Corporate Occupant");
-                          }}
-                          className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
-                            units[0]?.status === "occupied"
-                              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span className={`w-2 h-2 rounded-full ${units[0]?.status === "occupied" ? "bg-white" : "bg-blue-500"}`} />
-                          <span>Already Leased (Occupied)</span>
-                        </button>
+                          <option value="vacant">🟢 Vacant (Available)</option>
+                          <option value="occupied">🔵 Already Leased (Occupied)</option>
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                       </div>
                     </div>
 
                     {units[0]?.status === "occupied" ? (
-                      <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-teal-200">
+                      <>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700">Contracted Tenant Name *</label>
+                          <label className="text-xs font-bold text-slate-700">Tenant Name *</label>
                           <input
                             type="text"
-                            placeholder="e.g. Acme Tech Global"
+                            placeholder="e.g. Acme Tech"
                             value={units[0]?.tenantName || wholeTowerTenantName}
                             onChange={(e) => {
                               const val = e.target.value;
                               setWholeTowerTenantName(val);
                               setUnits(prev => prev.map(u => ({ ...u, tenantName: val })));
                             }}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700">Contracted Rent ({currency}/{areaLabel})</label>
+                          <label className="text-xs font-bold text-slate-700">Contracted Rent ({currency}/{areaLabel})</label>
                           <input
                             type="number"
                             placeholder="e.g. 150"
@@ -2447,14 +2534,14 @@ export default function CommercialPropertyMaster() {
                               setWholeTowerRentPsf(val);
                               setUnits(prev => prev.map(u => ({ ...u, contractedRentPsf: val })));
                             }}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
                           />
                         </div>
-                      </div>
+                      </>
                     ) : (
-                      <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-teal-200">
+                      <>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700">Asking Rent Target ({currency}/{areaLabel})</label>
+                          <label className="text-xs font-bold text-slate-700">Asking Rent ({currency}/{areaLabel})</label>
                           <input
                             type="number"
                             placeholder="e.g. 165"
@@ -2464,11 +2551,11 @@ export default function CommercialPropertyMaster() {
                               setTargetRentPsf(val);
                               setUnits(prev => prev.map(u => ({ ...u, askingRate: val })));
                             }}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700">Estimated CAM ({currency}/{areaLabel})</label>
+                          <label className="text-xs font-bold text-slate-700">Estimated CAM ({currency}/{areaLabel})</label>
                           <input
                             type="number"
                             placeholder="e.g. 18"
@@ -2478,10 +2565,10 @@ export default function CommercialPropertyMaster() {
                               setStandardCamPsf(val);
                               setUnits(prev => prev.map(u => ({ ...u, camRatePsf: val })));
                             }}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white"
                           />
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -2536,6 +2623,9 @@ export default function CommercialPropertyMaster() {
                             <th className="py-2.5 px-3">Leasable Area ({areaLabel})</th>
                             <th className="py-2.5 px-3">Carpet Area ({areaLabel})</th>
                             <th className="py-2.5 px-3">Handover Fitout</th>
+                            {(buildingFitoutCondition === "furnished" || buildingFitoutCondition === "plug_and_play" || buildingFitoutCondition === "semi_furnished") && (
+                              <th className="py-2.5 px-3">Seats / Workstations</th>
+                            )}
                             <th className="py-2.5 px-3">Lease Status</th>
                             <th className="py-2.5 px-3">Tenant / Rent</th>
                             <th className="py-2.5 px-3 text-right">Actions</th>
@@ -2545,10 +2635,18 @@ export default function CommercialPropertyMaster() {
                           {units.map((u) => (
                             <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                               {/* Floor / Suite Name */}
-                              <td className="py-2.5 px-3 font-bold text-slate-900">
+                              <td className="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">
                                 <input
                                   type="text"
-                                  value={u.suiteNumber}
+                                  value={
+                                    u.suiteNumber === "Ground / 1st Floor"
+                                      ? "Ground Floor"
+                                      : u.suiteNumber === "1st Floor" && (u.floorNumber === 2 || units.indexOf(u) === 1)
+                                      ? "Floor 1"
+                                      : u.suiteNumber === "2nd Floor" && (u.floorNumber === 3 || units.indexOf(u) === 2)
+                                      ? "Floor 2"
+                                      : u.suiteNumber
+                                  }
                                   onChange={(e) => handleUpdateUnitField(u.id, "suiteNumber", e.target.value)}
                                   className="w-32 px-2 py-1 rounded border border-transparent hover:border-slate-300 focus:border-[#0F8B7D] font-bold text-xs bg-transparent"
                                 />
@@ -2589,48 +2687,72 @@ export default function CommercialPropertyMaster() {
                                 </select>
                               </td>
 
-                              {/* Quick Leased vs Vacant status toggle */}
-                              <td className="py-2.5 px-3">
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleFloorStatus(u.id, "vacant")}
-                                    className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all ${
-                                      u.status === "vacant"
-                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs font-extrabold"
-                                        : "text-slate-400 hover:text-slate-700"
-                                    }`}
-                                  >
-                                    Vacant
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleFloorStatus(u.id, "occupied")}
-                                    className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all ${
-                                      u.status === "occupied"
-                                        ? "bg-blue-50 text-blue-700 border border-blue-300 shadow-2xs font-extrabold"
-                                        : "text-slate-400 hover:text-slate-700"
-                                    }`}
-                                  >
-                                    Leased
-                                  </button>
-                                </div>
+                              {/* Dynamic Seats Column for Furnished Mode */}
+                              {(buildingFitoutCondition === "furnished" || buildingFitoutCondition === "plug_and_play" || buildingFitoutCondition === "semi_furnished") && (
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      placeholder="0"
+                                      value={u.seatCapacity || ""}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value) || 0;
+                                        handleUpdateUnitField(u.id, "seatCapacity", val);
+                                        handleUpdateUnitField(u.id, "workstationCount", val);
+                                      }}
+                                      className="w-16 px-2 py-1 rounded border border-slate-200 bg-white font-mono font-bold text-xs text-slate-800"
+                                    />
+                                    <span className="text-[10px] text-slate-400">seats</span>
+                                  </div>
+                                </td>
+                              )}
+
+                              {/* Quick Leased vs Vacant status */}
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <select
+                                  value={u.status}
+                                  onChange={(e) => handleToggleFloorStatus(u.id, e.target.value as "vacant" | "occupied")}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                                    u.status === "vacant"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                      : "bg-blue-50 text-blue-700 border-blue-300"
+                                  }`}
+                                >
+                                  <option value="vacant">Vacant</option>
+                                  <option value="occupied">Leased</option>
+                                </select>
                               </td>
 
                               {/* Tenant Name if occupied, or asking rate if vacant */}
-                              <td className="py-2.5 px-3">
+                              <td className="py-2.5 px-3 whitespace-nowrap">
                                 {u.status === "occupied" ? (
-                                  <input
-                                    type="text"
-                                    placeholder="Tenant Name (e.g. Infosys)"
-                                    value={u.tenantName || ""}
-                                    onChange={(e) => handleUpdateUnitField(u.id, "tenantName", e.target.value)}
-                                    className="w-36 px-2 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-bold text-xs"
-                                  />
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="text"
+                                      placeholder="Tenant Name (e.g. Infosys)"
+                                      value={u.tenantName === "Corporate Tenant" ? "" : (u.tenantName || "")}
+                                      onChange={(e) => handleUpdateUnitField(u.id, "tenantName", e.target.value)}
+                                      className="w-32 px-2 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-bold text-xs"
+                                    />
+                                    <div className="flex items-center gap-0.5">
+                                      <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}</span>
+                                      <input
+                                        type="number"
+                                        placeholder="Rent"
+                                        value={u.contractedRentPsf || ""}
+                                        onChange={(e) => handleUpdateUnitField(u.id, "contractedRentPsf", Number(e.target.value) || 0)}
+                                        className="w-16 px-1.5 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-mono font-bold text-xs"
+                                      />
+                                    </div>
+                                  </div>
                                 ) : (
-                                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                    For Lease ({currency} {u.askingRate || targetRentPsf || 150}/mo)
-                                  </span>
+                                  <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                                    <span className="text-[11px] text-slate-400 font-medium">Asking:</span>
+                                    <span className="font-bold text-slate-800 font-mono">
+                                      {currency === "USD" ? "$" : "₹"}{u.askingRate || targetRentPsf || 150}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">/{areaLabel}/mo</span>
+                                  </div>
                                 )}
                               </td>
 
@@ -2674,7 +2796,7 @@ export default function CommercialPropertyMaster() {
                         const added: LeasableSpaceUnit = {
                           id: `u-custom-${Date.now()}`,
                           spaceCode: `SP-T1-${String(newFloorNum).padStart(2, "0")}-01`,
-                          suiteNumber: `Floor ${newFloorNum}`,
+                          suiteNumber: newFloorNum === 1 ? "Ground Floor" : `Floor ${newFloorNum - 1}`,
                           buildingCode: towers[0]?.code || "T1",
                           floorNumber: newFloorNum,
                           spaceType: "office",
@@ -2803,188 +2925,115 @@ export default function CommercialPropertyMaster() {
 
         {/* ── STEP 3: STATUTORY ASSET COMPLIANCE & REVIEW ── */}
         {currentStep === 3 && (
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
-            {/* Header / Audit Breadcrumbs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-5">
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in-50 duration-200">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
-                <div className="flex items-center gap-2 mb-1.5">
+                <div className="flex items-center gap-2 mb-1">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-[#0F8B7D] border border-teal-200">
-                    Step 3 of 3 • Statutory Verification
+                    Step 3 of 3
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400">
-                    Final Pre-Registration Compliance Audit
-                  </span>
+                  <span className="text-[11px] font-bold text-slate-500">Statutory Clearances &amp; Final Review</span>
                 </div>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <ShieldCheck size={20} className="text-[#0F8B7D]" />
+                <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-[#0F8B7D]" />
                   Statutory Building Clearances &amp; Master Review
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Attach statutory permits, specify clearance deadline dates, review legal title deeds, and verify space inventory before registering.
+                  Provide regulatory approvals, define standard lease terms, and review before registering the property.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                <div className="px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200/80 text-[#0F8B7D] text-xs font-bold flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-[#0F8B7D]" />
-                  <span>Statutory Verification</span>
-                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                  {uploadedDocs.length} {uploadedDocs.length === 1 ? "document" : "documents"} attached
+                </span>
               </div>
             </div>
 
-            {/* 1. Unified Municipal Clearances & Compliance Cards with Inline Uploads & Auto-Deadlines */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center border border-teal-100/80 shadow-2xs">
-                    <ShieldCheck size={19} />
+            {/* 1. Building Clearances & Statutory Documents */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F8B7D] flex items-center justify-center border border-teal-100">
+                    <ShieldCheck size={16} />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Municipal Clearances &amp; Statutory Document Uploads
+                      Building Clearances &amp; Certificates
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Upload compliance certificates directly with deadline / validity dates. Dates auto-populate when documents are attached.
+                      Specify sanction details, expiration dates, and attach supporting documentation.
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600 self-start sm:self-auto">
-                  Statutory Registry
-                </span>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* 1. Occupancy Certificate (OC) Card */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Occupancy Certificate (OC) */}
                 {(() => {
                   const ocDoc = uploadedDocs.find(d => d.category === "Occupancy Certificate (OC)" || d.category?.includes("Occupancy"));
                   return (
-                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                            <Building size={14} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 block">Occupancy Certificate (OC) *</span>
-                            <span className="text-[10px] text-slate-400">Urban Local Body Municipal Approval</span>
-                          </div>
+                          <Building size={15} className="text-[#0F8B7D]" />
+                          <span className="text-xs font-bold text-slate-800">Occupancy Certificate (OC)</span>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          occupancyCertStatus === "issued"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : occupancyCertStatus === "in_progress"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "bg-blue-50 text-blue-700 border border-blue-200"
-                        }`}>
-                          {occupancyCertStatus === "issued" ? "Fully Sanctioned" : occupancyCertStatus === "in_progress" ? "In Review" : "Provisional"}
-                        </span>
+                        <select
+                          value={occupancyCertStatus}
+                          onChange={(e) => setOccupancyCertStatus(e.target.value as any)}
+                          className="text-[11px] font-bold px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 focus:outline-none focus:border-[#0F8B7D]"
+                        >
+                          <option value="issued">Issued / Sanctioned</option>
+                          <option value="in_progress">In Review</option>
+                          <option value="provisional">Provisional</option>
+                        </select>
                       </div>
 
-                      {/* 3-State Segmented Control */}
-                      <div className="grid grid-cols-3 p-1 rounded-xl bg-slate-200/60 border border-slate-200/80 text-[11px] font-bold">
-                        <button
-                          type="button"
-                          onClick={() => setOccupancyCertStatus("issued")}
-                          className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                            occupancyCertStatus === "issued"
-                              ? "bg-white text-emerald-800 shadow-xs border border-emerald-200/80 font-black"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          Issued (OC)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOccupancyCertStatus("in_progress")}
-                          className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                            occupancyCertStatus === "in_progress"
-                              ? "bg-white text-amber-800 shadow-xs border border-amber-200/80 font-black"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          In Review
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOccupancyCertStatus("provisional")}
-                          className={`py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                            occupancyCertStatus === "provisional"
-                              ? "bg-white text-blue-800 shadow-xs border border-blue-200/80 font-black"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          Provisional
-                        </button>
-                      </div>
-
-                      {/* Sanction Ref & Deadline Validity Date */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                            {occupancyCertStatus === "issued"
-                              ? "OC Sanction Ref / Order No."
-                              : occupancyCertStatus === "in_progress"
-                              ? "Application File No."
-                              : "Provisional OC Ref"}
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Sanction / Order Ref
                           </label>
                           <input
                             type="text"
                             value={ocSanctionNumber}
                             onChange={(e) => setOcSanctionNumber(e.target.value)}
                             placeholder="e.g. BMC/EB/6211/WS/OC"
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-mono font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                         <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                              OC Validity Date
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const d = new Date();
-                                d.setFullYear(d.getFullYear() + 5);
-                                setOcValidityDate(d.toISOString().split("T")[0]);
-                              }}
-                              className="text-[9px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
-                            >
-                              +5 Years
-                            </button>
-                          </div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Validity Date
+                          </label>
                           <input
                             type="date"
                             value={ocValidityDate}
                             onChange={(e) => setOcValidityDate(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                       </div>
 
-                      {/* Integrated Document Upload / File Display */}
-                      <div className="pt-1 border-t border-slate-200/60">
+                      {/* File attachment */}
+                      <div>
                         {ocDoc ? (
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 border border-teal-200 text-xs">
-                            <div className="flex items-center gap-2 truncate mr-2">
-                              <FileText size={14} className="text-[#0F8B7D] shrink-0" />
-                              <span className="font-bold text-slate-900 truncate text-[11px]">{ocDoc.name}</span>
-                              <span className="text-[10px] text-teal-700 font-mono">({ocDoc.size})</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Verified</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveDoc(ocDoc.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                            <span className="font-medium text-slate-800 truncate text-[11px]">{ocDoc.name} ({ocDoc.size})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoc(ocDoc.id)}
+                              className="text-slate-400 hover:text-rose-600 p-0.5 ml-2 cursor-pointer"
+                              title="Remove"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-teal-300 hover:border-[#0F8B7D] bg-teal-50/40 hover:bg-teal-50 text-[11px] font-bold text-[#0F8B7D] cursor-pointer transition-all">
-                            <UploadCloud size={14} />
-                            <span>Upload OC Certificate (PDF / DWG) • Auto-sets +5Y</span>
+                          <label className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-slate-300 hover:border-[#0F8B7D] bg-white hover:bg-teal-50/30 text-[11px] font-semibold text-slate-600 hover:text-[#0F8B7D] cursor-pointer transition-colors">
+                            <UploadCloud size={13} /> Attach OC Certificate (PDF/DWG)
                             <input
                               type="file"
                               className="hidden"
@@ -2997,86 +3046,74 @@ export default function CommercialPropertyMaster() {
                   );
                 })()}
 
-                {/* 2. Fire Safety NOC Card */}
+                {/* 2. Fire Safety NOC */}
                 {(() => {
                   const fireDoc = uploadedDocs.find(d => d.category === "Fire Department NOC" || d.category?.includes("Fire"));
                   const st = getFireNocStatus();
                   return (
-                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-orange-100/70 text-orange-600 flex items-center justify-center">
-                            <Flame size={14} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 block">Fire Safety NOC Validity *</span>
-                            <span className="text-[10px] text-slate-400">Chief Fire Officer (CFO) Clearance</span>
-                          </div>
+                          <Flame size={15} className="text-orange-500" />
+                          <span className="text-xs font-bold text-slate-800">Fire Safety NOC (CFO)</span>
                         </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${st.color}`}>
                           {st.label}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                            NOC Expiry / Deadline Date
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            NOC Expiry Date
                           </label>
                           <input
                             type="date"
                             value={fireNocValidUntil}
                             onChange={(e) => setFireNocValidUntil(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                            Quick Expiry Presets
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Quick Presets
                           </label>
-                          <div className="flex items-center gap-1.5 pt-0.5">
+                          <div className="flex gap-1.5">
                             <button
                               type="button"
                               onClick={() => handleSetFireNocPreset(1)}
-                              className="flex-1 py-1.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors shadow-2xs cursor-pointer text-center"
+                              className="flex-1 py-1.5 rounded-lg bg-white border border-slate-200 text-[10px] font-bold text-slate-600 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors cursor-pointer"
                             >
-                              +1 Year (Annual)
+                              +1 Year
                             </button>
                             <button
                               type="button"
                               onClick={() => handleSetFireNocPreset(3)}
-                              className="flex-1 py-1.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-700 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors shadow-2xs cursor-pointer text-center"
+                              className="flex-1 py-1.5 rounded-lg bg-white border border-slate-200 text-[10px] font-bold text-slate-600 hover:border-[#0F8B7D] hover:text-[#0F8B7D] transition-colors cursor-pointer"
                             >
-                              +3 Years (High-Rise)
+                              +3 Years
                             </button>
                           </div>
                         </div>
                       </div>
 
-                      {/* Integrated Document Upload / File Display */}
-                      <div className="pt-1 border-t border-slate-200/60">
+                      {/* File attachment */}
+                      <div>
                         {fireDoc ? (
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 border border-orange-200 text-xs">
-                            <div className="flex items-center gap-2 truncate mr-2">
-                              <Flame size={14} className="text-orange-600 shrink-0" />
-                              <span className="font-bold text-slate-900 truncate text-[11px]">{fireDoc.name}</span>
-                              <span className="text-[10px] text-orange-700 font-mono">({fireDoc.size})</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Attached</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveDoc(fireDoc.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-orange-50 border border-orange-200 text-xs">
+                            <span className="font-medium text-slate-800 truncate text-[11px]">{fireDoc.name} ({fireDoc.size})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoc(fireDoc.id)}
+                              className="text-slate-400 hover:text-rose-600 p-0.5 ml-2 cursor-pointer"
+                              title="Remove"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/40 hover:bg-orange-50 text-[11px] font-bold text-orange-700 cursor-pointer transition-all">
-                            <UploadCloud size={14} />
-                            <span>Upload CFO Fire NOC (PDF / DWG) • Auto-sets +1Y</span>
+                          <label className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-slate-300 hover:border-orange-500 bg-white hover:bg-orange-50/30 text-[11px] font-semibold text-slate-600 hover:text-orange-600 cursor-pointer transition-colors">
+                            <UploadCloud size={13} /> Attach Fire NOC (PDF)
                             <input
                               type="file"
                               className="hidden"
@@ -3089,85 +3126,64 @@ export default function CommercialPropertyMaster() {
                   );
                 })()}
 
-                {/* 3. Sanctioned Plan / Blueprint Card */}
+                {/* 3. Sanctioned Floor Blueprint */}
                 {(() => {
                   const bpDoc = uploadedDocs.find(d => d.category === "Sanctioned Floor Blueprint" || d.category?.includes("Blueprint") || d.category?.includes("Sanction"));
                   return (
-                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                            <FileText size={14} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 block">Sanctioned Blueprint / IOD</span>
-                            <span className="text-[10px] text-slate-400">Town Planning Sanction Authority</span>
-                          </div>
+                          <FileText size={15} className="text-[#0F8B7D]" />
+                          <span className="text-xs font-bold text-slate-800">Sanctioned Floor Blueprint / IOD</span>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
                           Town Planning
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                            Building Sanction / IOD Order
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Sanction / IOD Order
                           </label>
                           <input
                             type="text"
                             value={sanctionedPlanRef}
                             onChange={(e) => setSanctionedPlanRef(e.target.value)}
                             placeholder="e.g. BMC/BP/2024/991/IOD"
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-mono font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                         <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                              Sanction Approval Date
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => setSanctionedPlanDate(new Date().toISOString().split("T")[0])}
-                              className="text-[9px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
-                            >
-                              Set Today
-                            </button>
-                          </div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Approval Date
+                          </label>
                           <input
                             type="date"
                             value={sanctionedPlanDate}
                             onChange={(e) => setSanctionedPlanDate(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                       </div>
 
-                      {/* Integrated Document Upload / File Display */}
-                      <div className="pt-1 border-t border-slate-200/60">
+                      {/* File attachment */}
+                      <div>
                         {bpDoc ? (
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 border border-teal-200 text-xs">
-                            <div className="flex items-center gap-2 truncate mr-2">
-                              <FileText size={14} className="text-[#0F8B7D] shrink-0" />
-                              <span className="font-bold text-slate-900 truncate text-[11px]">{bpDoc.name}</span>
-                              <span className="text-[10px] text-teal-700 font-mono">({bpDoc.size})</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Blueprint Attached</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveDoc(bpDoc.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                            <span className="font-medium text-slate-800 truncate text-[11px]">{bpDoc.name} ({bpDoc.size})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoc(bpDoc.id)}
+                              className="text-slate-400 hover:text-rose-600 p-0.5 ml-2 cursor-pointer"
+                              title="Remove"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-teal-300 hover:border-[#0F8B7D] bg-teal-50/40 hover:bg-teal-50 text-[11px] font-bold text-[#0F8B7D] cursor-pointer transition-all">
-                            <UploadCloud size={14} />
-                            <span>Upload Layout / Sanctioned Blueprint (CAD / PDF)</span>
+                          <label className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-slate-300 hover:border-[#0F8B7D] bg-white hover:bg-teal-50/30 text-[11px] font-semibold text-slate-600 hover:text-[#0F8B7D] cursor-pointer transition-colors">
+                            <UploadCloud size={13} /> Attach Blueprint (PDF / CAD)
                             <input
                               type="file"
                               className="hidden"
@@ -3180,85 +3196,64 @@ export default function CommercialPropertyMaster() {
                   );
                 })()}
 
-                {/* 4. Legal Title Deed & Non-Encumbrance Card */}
+                {/* 4. Title Deed & Ownership */}
                 {(() => {
                   const deedDoc = uploadedDocs.find(d => d.category === "Title & Ownership Deed" || d.category?.includes("Title") || d.category?.includes("Deed"));
                   return (
-                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3.5 transition-all hover:bg-slate-50">
+                    <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                            <ShieldCheck size={14} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 block">Title Deed &amp; Non-Encumbrance</span>
-                            <span className="text-[10px] text-slate-400">Sub-Registrar Ownership Document</span>
-                          </div>
+                          <ShieldCheck size={15} className="text-[#0F8B7D]" />
+                          <span className="text-xs font-bold text-slate-800">Title Deed &amp; Ownership / Khata</span>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
                           Sub-Registrar
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                            Registered Deed / Khata / Index II
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Registered Deed Ref
                           </label>
                           <input
                             type="text"
                             value={titleDeedRef}
                             onChange={(e) => setTitleDeedRef(e.target.value)}
                             placeholder="e.g. REG/MUM/2019/8821"
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-mono font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                         <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                              Execution / Record Date
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => setTitleDeedDate(new Date().toISOString().split("T")[0])}
-                              className="text-[9px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
-                            >
-                              Set Today
-                            </button>
-                          </div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                            Record Date
+                          </label>
                           <input
                             type="date"
                             value={titleDeedDate}
                             onChange={(e) => setTitleDeedDate(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
                           />
                         </div>
                       </div>
 
-                      {/* Integrated Document Upload / File Display */}
-                      <div className="pt-1 border-t border-slate-200/60">
+                      {/* File attachment */}
+                      <div>
                         {deedDoc ? (
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 border border-teal-200 text-xs">
-                            <div className="flex items-center gap-2 truncate mr-2">
-                              <FileText size={14} className="text-[#0F8B7D] shrink-0" />
-                              <span className="font-bold text-slate-900 truncate text-[11px]">{deedDoc.name}</span>
-                              <span className="text-[10px] text-teal-700 font-mono">({deedDoc.size})</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">Title Verified</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveDoc(deedDoc.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-xs">
+                            <span className="font-medium text-slate-800 truncate text-[11px]">{deedDoc.name} ({deedDoc.size})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoc(deedDoc.id)}
+                              className="text-slate-400 hover:text-rose-600 p-0.5 ml-2 cursor-pointer"
+                              title="Remove"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-teal-300 hover:border-[#0F8B7D] bg-teal-50/40 hover:bg-teal-50 text-[11px] font-bold text-[#0F8B7D] cursor-pointer transition-all">
-                            <UploadCloud size={14} />
-                            <span>Upload Title Deed / 7-12 Extract (PDF)</span>
+                          <label className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-slate-300 hover:border-[#0F8B7D] bg-white hover:bg-teal-50/30 text-[11px] font-semibold text-slate-600 hover:text-[#0F8B7D] cursor-pointer transition-colors">
+                            <UploadCloud size={13} /> Attach Title Deed (PDF)
                             <input
                               type="file"
                               className="hidden"
@@ -3271,540 +3266,205 @@ export default function CommercialPropertyMaster() {
                   );
                 })()}
               </div>
-            </div>
 
-            {/* 2. Compliance Document Vault & Title Deeds */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center border border-teal-100/80 shadow-2xs">
-                    <UploadCloud size={19} />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Property Compliance &amp; Legal Title Document Vault
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      Upload municipal sanctions, fire NOCs, sanctioned layouts, or property deeds for institutional compliance.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-                    {uploadedDocs.length} {uploadedDocs.length === 1 ? "File" : "Files"} Attached
-                  </span>
-                  <label className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs shrink-0">
-                    <UploadCloud size={14} /> Attach Documents
-                    <input
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => handleFileUpload(e)}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Category Filter Chips */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                {[
-                  { id: "all", label: `All Files (${uploadedDocs.length})` },
-                  { id: "Occupancy Certificate (OC)", label: "Occupancy Cert (OC)" },
-                  { id: "Fire Department NOC", label: "Fire Dept NOC" },
-                  { id: "Sanctioned Floor Blueprint", label: "Sanctioned Blueprint" },
-                  { id: "Title & Ownership Deed", label: "Title Deeds / Khata" }
-                ].map(cat => {
-                  const count = cat.id === "all" ? uploadedDocs.length : uploadedDocs.filter(d => d.category === cat.id).length;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setActiveDocCategory(cat.id)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                        activeDocCategory === cat.id
-                          ? "bg-teal-50 text-[#0F8B7D] border border-teal-200 shadow-2xs"
-                          : "bg-slate-50 text-slate-600 border border-slate-200/80 hover:bg-slate-100"
-                      }`}
-                    >
-                      {cat.label} {cat.id !== "all" && count > 0 && <span className="ml-1 text-[10px] text-[#0F8B7D]">({count})</span>}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Modern Interactive Dropzone */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => handleDropFiles(e)}
-                className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 flex flex-col items-center justify-center text-center transition-all ${
-                  isDragging
-                    ? "border-[#0F8B7D] bg-teal-50/50 scale-[0.99]"
-                    : "border-slate-200 hover:border-[#0F8B7D]/60 hover:bg-teal-50/20"
-                }`}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center mb-2.5 border border-teal-100 shadow-2xs">
-                  <UploadCloud size={24} />
-                </div>
-                <strong className="text-xs font-bold text-slate-900 block">
-                  Drag and drop compliance documents here, or click to browse
-                </strong>
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  Supports PDF, CAD/DWG, DXF, PNG, JPG up to 25 MB per file
-                </span>
-
-                {/* Quick Upload Action Buttons for Specific Legal Documents */}
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-4 pt-3 border-t border-slate-100 w-full max-w-xl">
-                  {[
-                    "Occupancy Certificate (OC)",
-                    "Fire Department NOC",
-                    "Sanctioned Floor Blueprint",
-                    "Title & Ownership Deed"
-                  ].map(category => (
-                    <label
-                      key={category}
-                      className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-teal-50 border border-slate-200 hover:border-teal-200 text-slate-700 hover:text-[#0F8B7D] text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
-                    >
-                      <Plus size={11} /> {category}
-                      <input
-                        type="file"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, category)}
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Uploaded Documents List */}
-              {uploadedDocs.length > 0 && (
-                <div className="space-y-3 pt-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {uploadedDocs
-                      .filter(d => activeDocCategory === "all" || d.category === activeDocCategory)
-                      .map(doc => {
-                        const isPdf = doc.name.toLowerCase().endsWith(".pdf");
-                        const isCad = doc.name.toLowerCase().includes(".dwg") || doc.name.toLowerCase().includes(".dxf");
-                        const isImg = doc.name.toLowerCase().endsWith(".png") || doc.name.toLowerCase().endsWith(".jpg") || doc.name.toLowerCase().endsWith(".jpeg");
-
-                        return (
-                          <div
-                            key={doc.id}
-                            className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 flex items-center justify-between text-xs hover:bg-slate-50 hover:border-slate-300 transition-all shadow-2xs"
+              {/* Extra general attachments if any */}
+              {(() => {
+                const otherDocs = uploadedDocs.filter(d =>
+                  !d.category?.includes("Occupancy") &&
+                  !d.category?.includes("Fire") &&
+                  !d.category?.includes("Blueprint") &&
+                  !d.category?.includes("Sanction") &&
+                  !d.category?.includes("Title") &&
+                  !d.category?.includes("Deed")
+                );
+                return (
+                  <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {otherDocs.map(doc => (
+                        <div key={doc.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs">
+                          <FileText size={12} className="text-slate-500" />
+                          <span className="text-[11px] font-medium text-slate-700 truncate max-w-[150px]">{doc.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDoc(doc.id)}
+                            className="text-slate-400 hover:text-rose-600 cursor-pointer ml-1"
                           >
-                            <div className="flex items-center gap-3 truncate mr-2">
-                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-                                isPdf
-                                  ? "bg-rose-50 text-rose-600 border-rose-100"
-                                  : isCad
-                                  ? "bg-cyan-50 text-cyan-700 border-cyan-100"
-                                  : isImg
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                  : "bg-teal-50 text-[#0F8B7D] border-teal-100"
-                              }`}>
-                                <FileText size={17} />
-                              </div>
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
 
-                              <div className="truncate">
-                                <span className="font-bold text-slate-900 block truncate text-xs">{doc.name}</span>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">
-                                    {doc.category || "General Compliance"}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {doc.size} • {doc.uploadedAt}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                <Check size={11} /> Verified
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveDoc(doc.id)}
-                                className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors cursor-pointer"
-                                title="Remove Document"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                    <span className="text-[11px] text-slate-400">
-                      Files are securely stored in AES-256 encrypted institutional compliance vault.
-                    </span>
                     <label className="text-xs font-bold text-[#0F8B7D] hover:underline cursor-pointer flex items-center gap-1">
-                      <Plus size={13} /> Add More Files
+                      <Plus size={13} /> Attach Additional Documents
                       <input
                         type="file"
                         multiple
                         className="hidden"
-                        onChange={(e) => handleFileUpload(e)}
+                        onChange={(e) => handleFileUpload(e, "General Compliance")}
                       />
                     </label>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
-            {/* 3. Commercial Rent Roll & Lease Accounting Policy (Client UAT Spec) */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center border border-teal-100/80 shadow-2xs">
-                    <Receipt size={19} />
+            {/* 2. Default Lease & Billing Policies */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F8B7D] flex items-center justify-center border border-teal-100">
+                    <Receipt size={16} />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Commercial Rent Roll &amp; Lease Accounting Policy
+                      Default Lease Policies
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Standard CAM billing, lease escalation compounding, and security deposit escrow rules applied across this asset.
+                      Baseline CAM, escalation, and security deposit standards for new leases.
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600 self-start sm:self-auto">
-                  Rent Roll Master Rules
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* CAM */}
+                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Standard CAM ({currency === "USD" ? "$" : "₹"}/{areaLabel}/month)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 18"
+                    value={standardCamPsf || ""}
+                    onChange={(e) => setStandardCamPsf(Number(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">Common Area Maintenance rate</span>
+                </div>
+
+                {/* Escalation */}
+                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Default Escalation
+                  </label>
+                  <select
+                    value={defaultEscalation}
+                    onChange={(e) => setDefaultEscalation(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                  >
+                    <option value="15_every_36">15% every 36 Months</option>
+                    <option value="5_annual">5% Annual Compounding</option>
+                    <option value="none">Fixed (No Escalation)</option>
+                  </select>
+                  <span className="text-[10px] text-slate-400 mt-1 block">Standard Indian CRE compounding</span>
+                </div>
+
+                {/* Security Deposit */}
+                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Security Deposit (Months)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="6"
+                    value={defaultSecurityDepositMonths || 6}
+                    onChange={(e) => setDefaultSecurityDepositMonths(Number(e.target.value) || 6)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D]"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">Escrow deposit collateral</span>
+                </div>
+              </div>
+
+              {/* Broker discovery toggle */}
+              <div className="pt-2 flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium text-xs">
+                  Allow verified IPC broker discovery for vacant units (Optional)
                 </span>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* 1. Default Building CAM Rate */}
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3 transition-all hover:bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                        <DollarSign size={14} />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">Standard CAM Rate</span>
-                        <span className="text-[10px] text-slate-400">Common Area Maintenance</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
-                      Billed Monthly
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                      CAM Charge ({currency === "USD" ? "$" : "₹"}/{areaLabel}/month)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 18"
-                      value={standardCamPsf || ""}
-                      onChange={(e) => setStandardCamPsf(Number(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>Power, HVAC &amp; Housekeeping</span>
-                    <span className="font-semibold text-slate-500">Pass-through Expense</span>
-                  </div>
-                </div>
-
-                {/* 2. Standard Escalation Schedule */}
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3 transition-all hover:bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                        <Sliders size={14} />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">Default Escalation Rule</span>
-                        <span className="text-[10px] text-slate-400">Compounded Growth Forecast</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                      UAT Spec 4.5
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                      Benchmark Lease Escalation
-                    </label>
-                    <select
-                      value={defaultEscalation}
-                      onChange={(e) => setDefaultEscalation(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
-                    >
-                      <option value="15_every_36">15% every 36 Months (Standard Indian Institutional CRE)</option>
-                      <option value="5_annual">5% Compounded Annually (Grade-A IT Park)</option>
-                      <option value="none">Fixed Base Rent (No Escalation)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>Compounded in 3-Yr Forecast</span>
-                    <span className="font-semibold text-slate-500">Commercial Standard</span>
-                  </div>
-                </div>
-
-                {/* 3. Security Deposit Escrow Standard */}
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between space-y-3 transition-all hover:bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-100/60 text-[#0F8B7D] flex items-center justify-center">
-                        <Lock size={14} />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">Security Deposit Escrow</span>
-                        <span className="text-[10px] text-slate-400">Tenant Financial Collateral</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                      Standard Escrow
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
-                      Default Deposit Multiplier (Months)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="6"
-                      value={defaultSecurityDepositMonths || 6}
-                      onChange={(e) => setDefaultSecurityDepositMonths(Number(e.target.value) || 6)}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-[#0F8B7D] focus:ring-1 focus:ring-[#0F8B7D]/20 shadow-2xs"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>Held in Bank Escrow / BG</span>
-                    <span className="font-semibold text-slate-500">Standard 6 Months</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Optional Broker Discovery Toggle (Subtle / Secondary) */}
-              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <Globe size={16} className={syndicateToMarketplace ? "text-[#0F8B7D]" : "text-slate-400"} />
-                  <div>
-                    <span className="font-bold text-slate-800 block text-xs">
-                      Optional: Allow Verified IPC Broker Discovery for Unleased Space
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Leave disabled for 100% confidential internal rent roll operation. Enable only if you wish to receive tenant broker leads for vacant units.
-                    </span>
-                  </div>
-                </div>
-
                 <button
                   type="button"
                   role="switch"
                   aria-checked={syndicateToMarketplace}
                   onClick={() => setSyndicateToMarketplace(!syndicateToMarketplace)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none self-end sm:self-center ${
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                     syndicateToMarketplace ? "bg-[#0F8B7D]" : "bg-slate-200"
                   }`}
                 >
                   <span
                     aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      syndicateToMarketplace ? "translate-x-5" : "translate-x-0"
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      syndicateToMarketplace ? "translate-x-4" : "translate-x-0"
                     }`}
                   />
                 </button>
               </div>
             </div>
 
-            {/* Master Summary Card / Pre-Flight Audit Dossier */}
-            <div className="p-5 sm:p-6 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-4 text-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+            {/* 3. Review Summary */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-3 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#0F8B7D] animate-pulse" />
-                  <h3 className="font-black text-slate-900 uppercase tracking-wider text-[11px]">
-                    Institutional Asset Dossier Pre-Flight Audit
+                  <div className="w-2 h-2 rounded-full bg-[#0F8B7D]" />
+                  <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                    Asset Summary Review
                   </h3>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-[#0F8B7D]">
-                    Grade {grade} • {propertyType.toUpperCase()}
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700 uppercase">
-                    {operationalStatus.replace("_", " ")}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {/* Basic specs */}
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Property Name</span>
-                  <strong className="text-slate-900 text-xs block truncate mt-0.5">{assetName || "Untitled Asset"}</strong>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Property Code</span>
-                  <strong className="text-slate-900 text-xs font-mono block mt-0.5">{propertyCode || "-"}</strong>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Super Area</span>
-                  <strong className="text-slate-900 text-xs font-mono block mt-0.5">{totalChargeableArea.toLocaleString()} {areaLabel}</strong>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Carpet Area (Loading)</span>
-                  <strong className="text-slate-900 text-xs font-mono block mt-0.5">
-                    {totalCarpetArea ? `${totalCarpetArea.toLocaleString()} ${areaLabel}` : "—"} ({loadingPct}%)
-                  </strong>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Towers &amp; Stacking</span>
-                  <strong className="text-slate-900 text-xs font-mono block mt-0.5">
-                    {!hasMultipleTowers ? "Single Building (Main)" : `${towers.length} Towers / Wings`}
-                  </strong>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Inventory Defined</span>
-                  <strong className="text-slate-900 text-xs font-mono block mt-0.5">
-                    {units.length} Units ({units.reduce((s, u) => s + u.chargeableArea, 0).toLocaleString()} {areaLabel})
-                  </strong>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Unit &amp; Currency</span>
-                  <span className="text-slate-800 font-semibold block mt-0.5">
-                    {areaUnit === "sqm" ? "Sq. Meters" : "Sq. Feet"} • {currency}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Geo Coordinates</span>
-                  <span className="text-slate-800 font-mono text-[11px] block mt-0.5">
-                    {geoLat && geoLng ? `${geoLat}, ${geoLng}` : "Not pinned"}
-                  </span>
-                </div>
-
-                {/* Legal & Tax Credentials Box */}
-                <div className="col-span-2 sm:col-span-4 p-4 rounded-xl bg-white border border-slate-200/80 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <ShieldCheck size={15} className="text-[#0F8B7D]" />
-                      Ownership Constitution &amp; Statutory Credentials
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-[10px] font-bold uppercase">
-                      {entityType.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                    {/* 1. Corporate Identification */}
-                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                      <span className="text-slate-400 block text-[10px] font-medium">
-                        {(entityType === "pvt_ltd" || entityType === "public_ltd")
-                          ? "Corporate ID (CIN)"
-                          : entityType === "llp"
-                          ? "LLPIN Identifier"
-                          : "MCA Corporate Status"}
-                      </span>
-                      <strong className="text-slate-900 text-xs font-mono block truncate mt-0.5">
-                        {(entityType === "pvt_ltd" || entityType === "public_ltd")
-                          ? (cinNumber || "—")
-                          : entityType === "llp"
-                          ? (llpinNumber || "—")
-                          : entityType === "trust_reit"
-                          ? (cinNumber || "Trust Registered")
-                          : "Exempt (No MCA CIN)"}
-                      </strong>
-                    </div>
-
-                    {/* 2. Income Tax PAN */}
-                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                      <span className="text-slate-400 block text-[10px] font-medium">Income Tax PAN (Sec 194-I)</span>
-                      <strong className="text-slate-900 text-xs font-mono block mt-0.5">
-                        {panNumber || "—"}
-                      </strong>
-                    </div>
-
-                    {/* 3. GSTIN */}
-                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                      <span className="text-slate-400 block text-[10px] font-medium">GSTIN (18% Commercial Rent)</span>
-                      <strong className="text-slate-900 text-xs font-mono block truncate mt-0.5">
-                        {gstExempted || (!propertyGstin && (entityType === "proprietorship" || entityType === "partnership" || entityType === "individual"))
-                          ? "Unregistered (Tenant RCM Applies)"
-                          : propertyGstin || "—"}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-2 p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">GST Jurisdiction &amp; Location</span>
-                  <span className="text-slate-800 font-semibold block mt-0.5">
-                    {address ? `${address}, ` : ""}{city}, {state} ({pincode})
-                  </span>
-                </div>
-                <div className="col-span-2 sm:col-span-4 p-3 rounded-xl bg-white border border-slate-200/80">
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Invoicing SPV Entity</span>
-                  <span className="text-slate-800 font-semibold block mt-0.5">
-                    {selectedSpvId === "custom" ? customSpvName || "Custom SPV" : spvs.find(s => s.id === selectedSpvId)?.spvName || "Default Entity"}
-                    {` (${selectedSpvId === "custom" ? customSpvGstin || "No GSTIN" : spvs.find(s => s.id === selectedSpvId)?.gstin || "No GSTIN"})`}
-                  </span>
-                </div>
-
-                <div className="col-span-2 sm:col-span-4 p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]">
-                  <div className="flex flex-wrap items-center gap-3 text-slate-600 font-medium">
-                    <span>
-                      OC: <strong className="text-slate-900">{occupancyCertStatus.replace("_", " ").toUpperCase()}</strong> {ocSanctionNumber ? `(${ocSanctionNumber})` : ""}
-                    </span>
-                    <span>•</span>
-                    <span>
-                      Fire NOC: <strong className="text-slate-900">{fireNocValidUntil || "Not specified"}</strong>
-                    </span>
-                    <span>•</span>
-                    <span>
-                      Sanctioned Plan: <strong className="text-slate-900">{sanctionedPlanRef || "Not specified"}</strong>
-                    </span>
-                  </div>
-                  <span className="text-[#0F8B7D] font-bold flex items-center gap-1.5 self-start sm:self-auto">
-                    <FileText size={14} />
-                    {uploadedDocs.length} Compliance Documents in Vault
-                  </span>
-                </div>
-              </div>
-
-              {/* Legal Confirmation Notice */}
-              <div className="p-3 rounded-xl bg-teal-50/50 border border-teal-100 flex items-start gap-2.5 text-[11px] text-teal-900">
-                <Info size={15} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                <span>
-                  <strong>Master Attestation:</strong> By registering this commercial asset, the property owner/asset manager confirms that all declared leasable floor boundaries, municipal approvals, and tax identifiers conform to statutory town planning guidelines and the commercial lease deed registry.
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-[#0F8B7D]">
+                  Grade {grade} • {propertyType.toUpperCase()}
                 </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Asset Name &amp; Code</span>
+                  <strong className="text-slate-900 text-xs block truncate mt-0.5">{assetName || "Untitled Asset"}</strong>
+                  <span className="text-[10px] text-slate-500 font-mono">{propertyCode || "-"}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Total Area</span>
+                  <strong className="text-slate-900 text-xs font-mono block mt-0.5">
+                    {totalChargeableArea.toLocaleString()} {areaLabel}
+                  </strong>
+                  <span className="text-[10px] text-slate-500">{units.length} Leasable Units</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Entity / Ownership</span>
+                  <strong className="text-slate-900 text-xs block truncate mt-0.5">
+                    {selectedSpvId === "custom" ? customSpvName || "Custom SPV" : spvs.find(s => s.id === selectedSpvId)?.spvName || entityType.replace("_", " ").toUpperCase()}
+                  </strong>
+                  <span className="text-[10px] text-slate-500 font-mono">PAN: {panNumber || "—"}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Compliance</span>
+                  <strong className="text-slate-900 text-xs block mt-0.5">
+                    OC: {occupancyCertStatus.toUpperCase()}
+                  </strong>
+                  <span className="text-[10px] text-teal-700 font-medium">{uploadedDocs.length} documents uploaded</span>
+                </div>
               </div>
             </div>
 
             {/* Footer Navigation */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setCurrentStep(2)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <ArrowLeft size={14} /> Back to Area &amp; Space Inventory
+                <ArrowLeft size={14} /> Back to Spaces
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleRegisterProperty}
-                className="px-8 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 transition-all cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>Registering Commercial Asset...</>
                 ) : (
                   <>
-                    <CheckCircle2 size={16} />
+                    <CheckCircle2 size={15} />
                     Register Commercial Asset Master
                   </>
                 )}

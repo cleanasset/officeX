@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getRentRollDb, saveRentRollDb, recordAuditLog, SpaceEntity } from "@/lib/rent-roll-store";
 
 export async function GET(req: Request) {
@@ -6,9 +7,27 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
     const status = searchParams.get("status");
+    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+
+    if (!ownerEmail) {
+      try {
+        const cookieStore = await cookies();
+        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+      } catch {}
+    }
 
     const db = getRentRollDb();
-    let spaces = db.spaces || [];
+    let properties = db.properties || [];
+
+    if (ownerEmail) {
+      properties = properties.filter(p => 
+        (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || 
+        p.ownerUserId === ownerEmail
+      );
+    }
+
+    const validPropIds = new Set(properties.map(p => p.id));
+    let spaces = (db.spaces || []).filter(s => validPropIds.has(s.propertyId));
 
     if (propertyId && propertyId !== "ALL") {
       spaces = spaces.filter(s => s.propertyId === propertyId);

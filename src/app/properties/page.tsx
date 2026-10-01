@@ -42,6 +42,11 @@ export default async function PropertyDashboard() {
     if (rentRollDb.properties && rentRollDb.properties.length > 0) {
       const existingNames = new Set(allProperties.map(p => (p.name || "").toLowerCase().trim()));
       for (const p of rentRollDb.properties) {
+        if (userEmail) {
+          const isOwner = (p.ownerEmail || "").toLowerCase().trim() === userEmail ||
+                          (p.ownerUserId || "").toLowerCase().trim() === userEmail;
+          if (!isOwner) continue;
+        }
         const cleanName = (p.name || "").toLowerCase().trim();
         if (!existingNames.has(cleanName)) {
           allProperties.push({

@@ -108,7 +108,7 @@ const isDeprecatedMockLease = (l: any) => {
   const propName = (l.propertyName || "").toLowerCase().trim();
   const tenant = (l.tenantName || "").toLowerCase().trim();
   if (DEPRECATED_PROP_NAMES.has(propName)) return true;
-  if (tenant.includes("hdfc bank corporate") || tenant.includes("tcs digital solutions") || tenant.includes("deloitte shared services")) return true;
+  if (tenant.includes("hdfc bank corporate") || tenant.includes("tcs digital solutions") || tenant.includes("deloitte shared services") || tenant.includes("single corporate occupant") || tenant.includes("corporate tenant")) return true;
   return false;
 };
 
@@ -492,7 +492,7 @@ function RentRollPageInner() {
           if (p) mergedMap.set(p.id, p);
         });
         localProps.forEach((p: any) => {
-          if (p && (!p.ownerEmail || (email && p.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+          if (p && email && p.ownerEmail && p.ownerEmail.toLowerCase() === email.toLowerCase()) {
             mergedMap.set(p.id, p);
           }
         });
@@ -509,7 +509,7 @@ function RentRollPageInner() {
           if (l) mergedMap.set(l.id || l.tenantName, l);
         });
         localLeases.forEach((l: any) => {
-          if (l && (!l.ownerEmail || (email && l.ownerEmail.toLowerCase() === email.toLowerCase()))) {
+          if (l && email && l.ownerEmail && l.ownerEmail.toLowerCase() === email.toLowerCase()) {
             mergedMap.set(l.id || l.tenantName, l);
           }
         });
@@ -677,31 +677,6 @@ function RentRollPageInner() {
         onOpenManageProperties={() => setIsManagePropertiesOpen(true)}
       />
 
-      {/* ──── INTERACTIVE TAB BAR (Scrollable on Mobile & Compact on Desktop) ──── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 px-0.5 scrollbar-none border-b border-slate-200/80 -mt-1">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.id);
-                router.replace(`/properties/rent-roll?tab=${tab.id}`, { scroll: false });
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                isActive
-                  ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold"
-                  : "bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 border border-slate-200/70"
-              }`}
-            >
-              <Icon size={13} className={isActive ? "text-white" : "text-slate-400"} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Action Feedback Banner */}
       {actionFeedback && (

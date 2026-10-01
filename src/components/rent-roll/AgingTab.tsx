@@ -72,87 +72,87 @@ export const AgingTab: React.FC<AgingTabProps> = ({ agingData, onOpenRecordPayme
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ──── AGING BUCKET CARDS ──── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {/* Current */}
-        <div className="bg-white border border-gray-200 p-4 rounded-2xl shadow-xs">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Current (Not Due)</span>
-          <div className="text-lg font-black text-gray-900 mt-1">{formatINR(summary.current)}</div>
-          <span className="text-[10px] text-gray-400 font-medium">Due within grace period</span>
+        <div className="bg-white border border-slate-200 p-3.5 rounded-xl shadow-xs">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current</span>
+          <div className="text-lg font-black text-slate-900 mt-0.5">{formatINR(summary.current)}</div>
+          <span className="text-[10px] text-slate-400">Not due</span>
         </div>
 
         {/* 1-30 Days */}
-        <div className="bg-white border border-amber-200 p-4 rounded-2xl shadow-xs bg-amber-50/20">
-          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">1–30 Days Overdue</span>
-          <div className="text-lg font-black text-amber-900 mt-1">{formatINR(summary.bucket0to30)}</div>
-          <span className="text-[10px] text-amber-700 font-medium">First reminder cycle</span>
+        <div className="bg-white border border-amber-200 p-3.5 rounded-xl shadow-xs bg-amber-50/20">
+          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">1–30 Days</span>
+          <div className="text-lg font-black text-amber-900 mt-0.5">{formatINR(summary.bucket0to30)}</div>
+          <span className="text-[10px] text-amber-700">Initial cycle</span>
         </div>
 
         {/* 31-60 Days */}
-        <div className="bg-white border border-orange-200 p-4 rounded-2xl shadow-xs bg-orange-50/20">
-          <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">31–60 Days Overdue</span>
-          <div className="text-lg font-black text-orange-900 mt-1">{formatINR(summary.bucket31to60)}</div>
-          <span className="text-[10px] text-orange-700 font-medium">Escalation notice</span>
+        <div className="bg-white border border-orange-200 p-3.5 rounded-xl shadow-xs bg-orange-50/20">
+          <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">31–60 Days</span>
+          <div className="text-lg font-black text-orange-900 mt-0.5">{formatINR(summary.bucket31to60)}</div>
+          <span className="text-[10px] text-orange-700">Notice sent</span>
         </div>
 
         {/* 61-90 Days */}
-        <div className="bg-white border border-rose-200 p-4 rounded-2xl shadow-xs bg-rose-50/20">
-          <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">61–90 Days Overdue</span>
-          <div className="text-lg font-black text-rose-900 mt-1">{formatINR(summary.bucket61to90)}</div>
-          <span className="text-[10px] text-rose-700 font-medium">Dunning notice stage</span>
+        <div className="bg-white border border-rose-200 p-3.5 rounded-xl shadow-xs bg-rose-50/20">
+          <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">61–90 Days</span>
+          <div className="text-lg font-black text-rose-900 mt-0.5">{formatINR(summary.bucket61to90)}</div>
+          <span className="text-[10px] text-rose-700">Follow-up</span>
         </div>
 
         {/* 90+ Days */}
-        <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl shadow-xs">
-          <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider">90+ Days Overdue</span>
-          <div className="text-lg font-black text-rose-700 mt-1">{formatINR(summary.bucket90Plus)}</div>
-          <span className="text-[10px] text-rose-600 font-bold">Critical default risk</span>
+        <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-xl shadow-xs">
+          <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider">90+ Days</span>
+          <div className="text-lg font-black text-rose-700 mt-0.5">{formatINR(summary.bucket90Plus)}</div>
+          <span className="text-[10px] text-rose-600 font-bold">Critical</span>
         </div>
 
         {/* Total Outstanding */}
-        <div className="bg-white border border-amber-300 p-4 rounded-2xl shadow-xs bg-amber-50/30">
-          <span className="text-[10px] font-black text-amber-900 uppercase tracking-wider">Total Outstanding</span>
-          <div className="text-lg font-black text-amber-950 mt-1">{formatINR(summary.totalOutstanding)}</div>
-          <span className="text-[10px] text-amber-800 font-semibold">{summary.invoicesCount} Invoices Pending</span>
+        <div className="bg-white border border-amber-300 p-3.5 rounded-xl shadow-xs bg-amber-50/30">
+          <span className="text-[10px] font-black text-amber-900 uppercase tracking-wider">Total Arrears</span>
+          <div className="text-lg font-black text-amber-950 mt-0.5">{formatINR(summary.totalOutstanding)}</div>
+          <span className="text-[10px] text-amber-800 font-semibold">{summary.invoicesCount} Invoices</span>
         </div>
       </div>
 
       {/* Reminder notification toast */}
       {reminderSentTenant && (
-        <div className="p-3.5 bg-teal-50 border border-teal-200 text-[#0F8B7D] text-xs font-bold rounded-2xl flex items-center justify-between shadow-xs animate-fadeIn">
-          <span>Official Dunning notice &amp; automated payment link dispatched to {reminderSentTenant}.</span>
-          <span className="text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded-md font-bold">Sent</span>
+        <div className="p-3 bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold rounded-xl flex items-center justify-between shadow-xs">
+          <span>Dunning notice dispatched to {reminderSentTenant}.</span>
+          <span className="text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded font-bold">Sent</span>
         </div>
       )}
 
       {/* ──── TENANT-WISE AGING BREAKDOWN TABLE ──── */}
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
-        <div className="p-4 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+        <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Accounts Receivable Aging by Tenant</h3>
-            <p className="text-xs text-gray-500 font-medium">Click a tenant to expand invoice-level line items and trigger reminders</p>
+            <h3 className="text-xs font-bold text-slate-900">Arrears by Tenant</h3>
+            <p className="text-[11px] text-slate-400">Click a tenant to expand invoice details</p>
           </div>
           <button
             onClick={onOpenRecordPayment}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-2xs cursor-pointer"
+            className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg transition-colors shadow-2xs cursor-pointer"
           >
-            Record Payment Receipt
+            Record Receipt
           </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
-            <thead className="bg-gray-50/95 text-gray-600 font-bold tracking-wider border-b border-gray-200 uppercase text-[10px]">
+            <thead className="bg-slate-50 text-slate-500 font-extrabold tracking-wider border-b border-slate-200 uppercase text-[10px]">
               <tr>
-                <th className="p-3.5">Tenant &amp; Property</th>
-                <th className="p-3.5 text-right">Current</th>
-                <th className="p-3.5 text-right text-amber-700">1–30 Days</th>
-                <th className="p-3.5 text-right text-orange-700">31–60 Days</th>
-                <th className="p-3.5 text-right text-rose-700">61–90 Days</th>
-                <th className="p-3.5 text-right text-rose-800 font-black">90+ Days</th>
-                <th className="p-3.5 text-right text-amber-900 font-black bg-amber-50/40">Total Due</th>
-                <th className="p-3.5 text-center">Dunning Action</th>
+                <th className="p-3">Tenant &amp; Property</th>
+                <th className="p-3 text-right">Current</th>
+                <th className="p-3 text-right text-amber-700">1–30 Days</th>
+                <th className="p-3 text-right text-orange-700">31–60 Days</th>
+                <th className="p-3 text-right text-rose-700">61–90 Days</th>
+                <th className="p-3 text-right text-rose-800 font-black">90+ Days</th>
+                <th className="p-3 text-right text-amber-900 font-black bg-amber-50/40">Total Due</th>
+                <th className="p-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
@@ -171,49 +171,49 @@ export const AgingTab: React.FC<AgingTabProps> = ({ agingData, onOpenRecordPayme
                         onClick={() => setExpandedTenant(isExpanded ? null : t.tenantId)}
                         className="hover:bg-gray-50/80 transition-colors cursor-pointer"
                       >
-                        <td className="p-3.5 font-bold text-gray-900 flex items-center gap-2">
+                        <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
                           {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-[#0F8B7D]" />
+                            <ChevronDown className="w-3.5 h-3.5 text-teal-600" />
                           ) : (
-                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                           )}
                           <div>
-                            <div className="font-bold text-gray-950">{t.tenantName}</div>
-                            <div className="text-[11px] text-gray-500 font-normal">{t.propertyName}</div>
+                            <div className="font-bold text-slate-900 text-xs">{t.tenantName}</div>
+                            <div className="text-[10px] text-slate-400">{t.propertyName}</div>
                           </div>
                         </td>
 
-                        <td className="p-3.5 text-right font-mono text-gray-400">
+                        <td className="p-3 text-right font-mono text-slate-400">
                           {t.current > 0 ? formatINR(t.current) : "—"}
                         </td>
 
-                        <td className="p-3.5 text-right font-mono text-amber-700 font-semibold">
+                        <td className="p-3 text-right font-mono text-amber-700 font-semibold">
                           {t.bucket0to30 > 0 ? formatINR(t.bucket0to30) : "—"}
                         </td>
 
-                        <td className="p-3.5 text-right font-mono text-orange-700 font-semibold">
+                        <td className="p-3 text-right font-mono text-orange-700 font-semibold">
                           {t.bucket31to60 > 0 ? formatINR(t.bucket31to60) : "—"}
                         </td>
 
-                        <td className="p-3.5 text-right font-mono text-rose-600 font-bold">
+                        <td className="p-3 text-right font-mono text-rose-600 font-bold">
                           {t.bucket61to90 > 0 ? formatINR(t.bucket61to90) : "—"}
                         </td>
 
-                        <td className="p-3.5 text-right font-mono text-rose-700 font-black">
+                        <td className="p-3 text-right font-mono text-rose-700 font-bold">
                           {t.bucket90Plus > 0 ? formatINR(t.bucket90Plus) : "—"}
                         </td>
 
-                        <td className="p-3.5 text-right font-mono font-black text-amber-900 bg-amber-50/40">
+                        <td className="p-3 text-right font-mono font-bold text-amber-900 bg-amber-50/30">
                           {formatINR(t.totalOutstanding)}
                         </td>
 
-                        <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => handleSendReminder(t.tenantName)}
-                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 mx-auto transition-colors cursor-pointer"
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 mx-auto transition-colors cursor-pointer"
                           >
-                            <Send className="w-3 h-3 text-[#0F8B7D]" />
-                            <span>Send Demand</span>
+                            <Send className="w-3 h-3 text-teal-600" />
+                            <span>Demand</span>
                           </button>
                         </td>
                       </tr>

@@ -45,19 +45,27 @@ interface ProfileAndBankingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialTab?: "profile" | "banking" | "spvs" | "governance";
 }
 
 export const ProfileAndBankingModal: React.FC<ProfileAndBankingModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  initialTab = "banking"
 }) => {
-  const [activeTab, setActiveTab] = useState<"profile" | "banking" | "spvs" | "governance">("banking");
+  const [activeTab, setActiveTab] = useState<"profile" | "banking" | "spvs" | "governance">(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showAccountNum, setShowAccountNum] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialTab && isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
 
   // Profile / Organization State
   const [orgProfile, setOrgProfile] = useState({

@@ -78,6 +78,9 @@ interface DashboardData {
     monthlyRent: number;
     areaSqFt: number;
     sharePct: number;
+    portalLive?: boolean;
+    tenantStatus?: string;
+    isTermsPending?: boolean;
   }>;
   alerts: Array<{
     id: string;
@@ -223,138 +226,79 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         const isKycComplete = Boolean((org?.pan || org?.gstin) && (org?.bankAccountNumber || defaultEntity?.bankAccountNumber));
 
         return (
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:px-4 sm:py-3 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200/80 text-[#0F8B7D] flex items-center justify-center shrink-0">
-                  <CreditCard className="w-4 h-4" />
+          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-200/80 text-teal-600 flex items-center justify-center shrink-0">
+                  <CreditCard className="w-3.5 h-3.5" />
                 </div>
-                <div className="min-w-0 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-black text-slate-900 truncate">
-                    {displayOrgName}
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 truncate">
+                    {displayOrgName || "Portfolio Profile"}
                   </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${
                     isKycComplete
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                       : "bg-amber-50 text-amber-700 border-amber-200"
                   }`}>
                     <CheckCircle2 className="w-2.5 h-2.5" />
-                    {isKycComplete ? "Settlement KYC Active" : "KYC Pending"}
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-mono hidden md:inline">
-                    PAN: {org?.pan || defaultEntity?.pan || "—"} • GSTIN: {org?.gstin || defaultEntity?.gstin || "—"}
+                    {isKycComplete ? "KYC Active" : "Pending"}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowKycDetails(prev => !prev)}
-                  className="px-2.5 py-1 text-slate-600 hover:text-slate-900 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-1 text-slate-500 hover:text-slate-800 text-[11px] font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <span>{showKycDetails ? "Hide Settlement Info" : "View Bank & Tax Details"}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showKycDetails ? "rotate-180" : ""}`} />
+                  {showKycDetails ? "Hide" : "Details"}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showKycDetails ? "rotate-180" : ""}`} />
                 </button>
                 {onOpenProfileSettings && (
                   <button
                     type="button"
                     onClick={onOpenProfileSettings}
-                    className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                    className="p-1.5 bg-teal-50 hover:bg-teal-100 text-teal-600 border border-teal-200 rounded-lg transition-colors cursor-pointer"
                   >
                     <Pencil className="w-3 h-3" />
-                    <span className="hidden sm:inline">Edit</span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Collapsible Details Grid */}
+            {/* Collapsible Details */}
             {showKycDetails && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 mt-3 border-t border-slate-100 text-xs animate-in fade-in-50 duration-150">
-                {/* 1. Official Bank Account */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    Collection Bank Account
-                  </span>
-                  <div className="font-bold text-slate-900 text-xs truncate">
-                    {org?.bankName || defaultEntity?.bankName || (typeof window !== "undefined" ? localStorage.getItem("officex_bank_name") : "") || "Pending Bank Setup"}
-                  </div>
-                  <div className="font-mono text-xs font-semibold text-slate-700 mt-0.5 flex items-center justify-between">
-                    <span>
-                      {(org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
-                        ? (showAccount
-                            ? (org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
-                            : `•••• •••• ${(org?.bankAccountNumber || defaultEntity?.bankAccountNumber).slice(-4)}`)
-                        : "Not Configured"}
-                    </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2.5 mt-2.5 border-t border-slate-100 text-xs">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <p className="text-[9px] font-bold uppercase text-slate-400 mb-0.5">Bank Account</p>
+                  <p className="font-bold text-slate-900 text-[11px] truncate">{org?.bankName || defaultEntity?.bankName || "Pending"}</p>
+                  <p className="font-mono text-[11px] text-slate-600 mt-0.5 flex items-center justify-between">
+                    <span>{(org?.bankAccountNumber || defaultEntity?.bankAccountNumber)
+                      ? (showAccount ? (org?.bankAccountNumber || defaultEntity?.bankAccountNumber) : `•••• ${(org?.bankAccountNumber || defaultEntity?.bankAccountNumber).slice(-4)}`)
+                      : "—"}</span>
                     {(org?.bankAccountNumber || defaultEntity?.bankAccountNumber) && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAccount(!showAccount)}
-                        className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
-                        title={showAccount ? "Hide" : "Reveal"}
-                      >
+                      <button type="button" onClick={() => setShowAccount(!showAccount)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                         {showAccount ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                       </button>
                     )}
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
-                    <span>IFSC: <strong className="font-mono text-slate-800">{org?.bankIfsc || defaultEntity?.bankIfsc || "HDFC0000060"}</strong></span>
-                    <span className="text-[9px] text-teal-700 font-bold bg-teal-50 px-1 py-0.5 rounded">Escrow Direct</span>
-                  </div>
+                  </p>
                 </div>
-
-                {/* 2. Statutory PAN & GSTIN */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    Tax Registration IDs
-                  </span>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium">Entity PAN:</span>
-                    <span className="font-mono font-bold text-slate-900">{org?.pan || defaultEntity?.pan || "—"}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-slate-500 font-medium">State GSTIN:</span>
-                    <span className="font-mono font-bold text-slate-900 truncate max-w-[140px]">{org?.gstin || defaultEntity?.gstin || "—"}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
-                    <span>Billing Entities:</span>
-                    <span className="font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded text-[9px]">
-                      {billingEntities.length > 0 ? `${billingEntities.length} Entity/Entities` : "1 SPV"}
-                    </span>
-                  </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <p className="text-[9px] font-bold uppercase text-slate-400 mb-0.5">Tax IDs</p>
+                  <p className="text-[11px] text-slate-700">PAN: <strong className="text-slate-900 font-mono">{org?.pan || defaultEntity?.pan || "—"}</strong></p>
+                  <p className="text-[11px] text-slate-700 mt-0.5">GSTIN: <strong className="text-slate-900 font-mono truncate">{org?.gstin || defaultEntity?.gstin || "—"}</strong></p>
                 </div>
-
-                {/* 3. Authorized Signatory */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    Authorized Signatory
-                  </span>
-                  <div className="font-bold text-slate-900 text-xs truncate">
-                    {org?.contactPerson || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") : "") || "Portfolio Executive"}
-                  </div>
-                  <div className="text-slate-600 text-[11px] truncate mt-0.5 font-medium">
-                    {org?.contactEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "admin@officex.com"}
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
-                    <span>Phone:</span>
-                    <span className="font-semibold text-slate-800">{org?.contactPhone || "+91 98200 11223"}</span>
-                  </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <p className="text-[9px] font-bold uppercase text-slate-400 mb-0.5">Contact</p>
+                  <p className="font-bold text-slate-900 text-[11px] truncate">{org?.contactPerson || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") : "") || "—"}</p>
+                  <p className="text-[11px] text-slate-600 truncate mt-0.5">{org?.contactEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "—"}</p>
                 </div>
-
-                {/* 4. Registered Office */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    Registered Commercial Office
-                  </span>
-                  <div className="font-medium text-slate-800 text-[11px] line-clamp-2">
-                    {org?.address || (org?.city ? `${org.city}, ${org.state || "India"}` : "Commercial Headquarters")}
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
-                    <span>Currency: <strong className="text-slate-800">{org?.currency || "INR (₹)"}</strong></span>
-                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded">Active</span>
-                  </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <p className="text-[9px] font-bold uppercase text-slate-400 mb-0.5">Office</p>
+                  <p className="text-[11px] text-slate-700 line-clamp-2">{org?.address || (org?.city ? `${org.city}, ${org.state || "India"}` : "—")}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Currency: <strong>{org?.currency || "INR"}</strong></p>
                 </div>
               </div>
             )}
@@ -362,141 +306,42 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         );
       })()}
 
-      {/* ──── 8 PRIMARY KPI METRIC CARDS (Responsive 2-col on mobile, 4-col on desktop) ──── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* 1. Total Leases */}
-        <div
-          onClick={() => onNavigateTab("rentroll")}
-          className="bg-white border border-gray-200/90 hover:border-[#0F8B7D]/50 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Total Leases</span>
-            <span className="p-1.5 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Building2 className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <div className="text-2xl font-black text-gray-900 tracking-tight">{summary.totalLeasesCount}</div>
-            <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md">{summary.activeLeasesCount} Active</span>
-          </div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">
-            {summary.totalLeasesCount > 0 ? `Across ${summary.totalLeasesCount} Active Leases` : "No registered leases"}
-          </p>
-        </div>
-
-        {/* 2. Monthly Base Rent */}
-        <div
-          onClick={() => onNavigateTab("rentroll")}
-          className="bg-white border border-gray-200/90 hover:border-[#0F8B7D]/50 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Monthly Base Rent</span>
-            <span className="p-1.5 bg-teal-50 text-teal-600 rounded-xl group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-gray-900 tracking-tight">{formatINR(summary.totalMonthlyRent)}</div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Contractual Base Rent</p>
-        </div>
-
-        {/* 3. CAM / Month */}
-        <div
-          onClick={() => onNavigateTab("rentroll")}
-          className="bg-white border border-gray-200/90 hover:border-[#0F8B7D]/50 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">CAM Recovery / Mo</span>
-            <span className="p-1.5 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Layers className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-gray-900 tracking-tight">{formatINR(summary.totalCamMonthly)}</div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Maintenance Recoveries</p>
-        </div>
-
-        {/* 4. Monthly Total Billing */}
-        <div
-          onClick={() => onNavigateTab("invoices")}
-          className="bg-gradient-to-br from-white to-amber-50/40 border border-amber-200/80 hover:border-amber-400 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-amber-800">Monthly Gross Billing</span>
-            <span className="p-1.5 bg-amber-100 text-amber-700 rounded-xl group-hover:scale-110 transition-transform">
-              <Receipt className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-amber-900 tracking-tight">{formatINR(summary.totalMonthlyBilling)}</div>
-          <p className="text-[11px] text-amber-700 font-semibold mt-1.5">Rent + CAM + Utilities + GST 18%</p>
-        </div>
-
-        {/* 5. Total Outstanding */}
-        <div
-          onClick={() => onNavigateTab("aging")}
-          className="bg-white border border-rose-200/80 hover:border-rose-400 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-rose-700">Total Outstanding</span>
-            <span className="p-1.5 bg-rose-50 text-rose-600 rounded-xl group-hover:scale-110 transition-transform">
-              <AlertTriangle className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-rose-600 tracking-tight">{formatINR(summary.totalOutstanding)}</div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Across Overdue &amp; Issued Invoices</p>
-        </div>
-
-        {/* 6. Overdue Leases */}
-        <div
-          onClick={() => onNavigateTab("aging")}
-          className="bg-white border border-gray-200/90 hover:border-[#0F8B7D]/50 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Overdue Tenants</span>
-            <span className="p-1.5 bg-orange-50 text-orange-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Clock className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-gray-900 tracking-tight">{summary.overdueLeasesCount} Tenants</div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Awaiting Payment Settlement</p>
-        </div>
-
-        {/* 7. Expiring <= 90 Days */}
-        <div
-          onClick={() => onNavigateTab("rentroll")}
-          className="bg-white border border-gray-200/90 hover:border-[#0F8B7D]/50 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Expiring ≤ 90 Days</span>
-            <span className="p-1.5 bg-purple-50 text-purple-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Calendar className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <div className="text-2xl font-black text-purple-900 tracking-tight">{summary.expiring90Days}</div>
-            {summary.expiring30Days > 0 && (
-              <span className="text-xs font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">({summary.expiring30Days} ≤30d)</span>
-            )}
-          </div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Renewal Negotiation Required</p>
-        </div>
-
-        {/* 8. Escalations Due / Soon */}
-        <div
-          onClick={() => onNavigateTab("escalations")}
-          className="bg-white border border-gray-200/90 hover:border-[#0F8B7D]/50 p-4.5 rounded-2xl shadow-xs transition-all cursor-pointer group hover:shadow-sm"
-        >
-          <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Escalations Due</span>
-            <span className="p-1.5 bg-cyan-50 text-cyan-600 rounded-xl group-hover:scale-110 transition-transform">
-              <ArrowUpRight className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="text-2xl font-black text-cyan-900 tracking-tight">{summary.escalationsDueCount}</div>
-          <p className="text-[11px] text-gray-500 font-medium mt-1.5">Ready for 1-Click Application</p>
-        </div>
+      {/* Primary KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        {[
+          { label: "Total Leases", value: String(summary.totalLeasesCount), sub: `${summary.activeLeasesCount} active`, icon: Building2, iconBg: "bg-blue-50", iconColor: "text-blue-600", tab: "rentroll" },
+          { label: "Monthly Rent", value: formatINR(summary.totalMonthlyRent), sub: "Base rent", icon: TrendingUp, iconBg: "bg-teal-50", iconColor: "text-teal-600", tab: "rentroll" },
+          { label: "CAM / Month", value: formatINR(summary.totalCamMonthly), sub: "Maintenance", icon: Layers, iconBg: "bg-amber-50", iconColor: "text-amber-600", tab: "rentroll" },
+          { label: "Gross Billing", value: formatINR(summary.totalMonthlyBilling), sub: "Rent + CAM + GST", icon: Receipt, iconBg: "bg-amber-50", iconColor: "text-amber-700", tab: "invoices", highlight: true },
+          { label: "Outstanding", value: formatINR(summary.totalOutstanding), sub: "Overdue invoices", icon: AlertTriangle, iconBg: "bg-rose-50", iconColor: "text-rose-600", tab: "aging", danger: true },
+          { label: "Overdue Tenants", value: `${summary.overdueLeasesCount}`, sub: "Awaiting payment", icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-600", tab: "aging" },
+          { label: "Expiring ≤90d", value: String(summary.expiring90Days), sub: summary.expiring30Days > 0 ? `${summary.expiring30Days} within 30d` : "Renewal queue", icon: Calendar, iconBg: "bg-purple-50", iconColor: "text-purple-600", tab: "rentroll" },
+          { label: "Escalations Due", value: String(summary.escalationsDueCount), sub: "Ready to apply", icon: ArrowUpRight, iconBg: "bg-cyan-50", iconColor: "text-cyan-600", tab: "escalations" }
+        ].map((kpi, idx) => {
+          const Icon = kpi.icon;
+          return (
+            <div
+              key={idx}
+              onClick={() => onNavigateTab(kpi.tab)}
+              className={`bg-white border rounded-xl p-3.5 cursor-pointer group hover:shadow-sm transition-all ${
+                kpi.highlight ? "border-amber-200 hover:border-amber-400" : kpi.danger ? "border-rose-200 hover:border-rose-400" : "border-slate-200 hover:border-teal-400"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{kpi.label}</span>
+                <span className={`p-1 ${kpi.iconBg} ${kpi.iconColor} rounded-lg group-hover:scale-110 transition-transform`}>
+                  <Icon className="w-3.5 h-3.5" />
+                </span>
+              </div>
+              <p className={`text-xl font-black tracking-tight ${kpi.danger ? "text-rose-600" : "text-slate-900"}`}>{kpi.value}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{kpi.sub}</p>
+            </div>
+          );
+        })}
       </div>
 
-      {/* ──── STRATEGIC PORTFOLIO ANALYTICS (Occupancy, WALT, NOI & Cap Rate) ──── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Portfolio Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Occupancy Card */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div>
@@ -583,9 +428,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </div>
           </div>
 
-          <div className="text-[11px] text-gray-500 font-medium text-center mt-4">
-            Long-term institutional weighted stability index
-          </div>
+          <p className="text-[10px] text-slate-400 text-center mt-3">Weighted lease stability index</p>
         </div>
 
         {/* Net Operating Income & Cap Rate */}
@@ -633,8 +476,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
       </div>
 
-      {/* ──── TOP TENANTS BY REVENUE & LIVE MANAGEMENT ALERTS ──── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Top Tenants & Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top 5 Tenants by Revenue */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
@@ -657,9 +500,18 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               topTenants.map((t, idx) => (
                 <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                   <div className="flex items-center justify-between mb-1.5">
-                    <div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-bold text-gray-900">{t.tenantName}</span>
-                      <span className="text-[11px] text-gray-500 font-medium ml-2">({t.propertyName})</span>
+                      <span className="text-[10px] text-gray-400 font-medium">({t.propertyName})</span>
+                      {t.portalLive ? (
+                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          ● Portal Live
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Tenant has not accepted invitation yet">
+                          ○ Invite Pending
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs font-black text-teal-700">{formatINR(t.monthlyRent)}/mo</span>
                   </div>
