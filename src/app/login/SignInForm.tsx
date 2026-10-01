@@ -28,10 +28,8 @@ import {
   Check,
   Building,
   Loader2,
-  Users,
-  CreditCard
+  Users
 } from "lucide-react";
-import RentRollPaymentModal from "@/components/rent-roll/RentRollPaymentModal";
 import { setAuthCookie } from "@/lib/auth-storage";
 import {
   validateRedirect,
@@ -112,7 +110,6 @@ const LOGIN_COUNTRY_CODES = [
   const [identifierMode, setIdentifierMode] = useState<"email" | "mobile">("email");
   const [phoneCountryCode, setPhoneCountryCode] = useState<string>("+91");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
-  const [isRentRollPaymentOpen, setIsRentRollPaymentOpen] = useState(false);
   const [successUserName, setSuccessUserName] = useState("");
   const [isOnboardingNeeded, setIsOnboardingNeeded] = useState(false);
   const [identifier, setIdentifier] = useState("");
@@ -1233,35 +1230,6 @@ const LOGIN_COUNTRY_CODES = [
                       : "Search Grade-A commercial office spaces, list properties for lease, or manage brokerage client mandates."}
                   </p>
                 </div>
-
-                {isRentRollContext && (
-                  <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 text-slate-900 shadow-xs">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-[#0D7B6C] bg-white px-2 py-0.5 rounded border border-teal-300">
-                        Paid Commercial SaaS Module
-                      </span>
-                      <span className="text-xs font-mono font-black text-slate-900">
-                        ₹100<span className="text-[10px] font-medium text-slate-500">/mo</span>
-                      </span>
-                    </div>
-                    <h3 className="text-xs font-extrabold text-slate-900 leading-snug">
-                      Subscription Required for Dashboard Access
-                    </h3>
-                    <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                      Subscribed landlords enter their dashboard directly upon sign-in. If you haven&apos;t subscribed yet, activate via Razorpay below before signing in.
-                    </p>
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => setIsRentRollPaymentOpen(true)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                      >
-                        <CreditCard size={14} />
-                        <span>Activate Subscription (Payment Gateway)</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 <form onSubmit={handleIdentifierSubmit} className="space-y-4">
                   <div className="flex flex-col gap-1.5">
@@ -2442,13 +2410,6 @@ const LOGIN_COUNTRY_CODES = [
             )}
           </div>
         </div>
-      )}
-      {/* Rent Roll Payment Gateway Modal */}
-      <RentRollPaymentModal
-        isOpen={isRentRollPaymentOpen}
-        onClose={() => setIsRentRollPaymentOpen(false)}
-        defaultEmail={identifier.includes("@") ? identifier : ""}
-      />
     </div>
   );
 }
