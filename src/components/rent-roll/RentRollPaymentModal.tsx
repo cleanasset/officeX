@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
+import { setAuthCookie } from "@/lib/auth-storage";
 
 import {
   INDIAN_STATES,
@@ -84,6 +85,7 @@ export default function RentRollPaymentModal({
   const [signInIdentifier, setSignInIdentifier] = useState(defaultEmail);
   const [signInPassword, setSignInPassword] = useState("");
   const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [isGoogleSession, setIsGoogleSession] = useState(false);
 
   // Processing & Feedback
   const [isProcessing, setIsProcessing] = useState(false);
@@ -102,12 +104,17 @@ export default function RentRollPaymentModal({
   }, [initialMode, isOpen]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !email) {
+    if (typeof window !== "undefined") {
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "";
       const storedState = localStorage.getItem("officex_property_state") || localStorage.getItem("officex_user_state") || "";
       const storedCity = localStorage.getItem("officex_property_city") || localStorage.getItem("officex_user_city") || "";
       const storedPhone = localStorage.getItem("officex_user_phone") || localStorage.getItem("officex_user_mobile") || "";
+      const sessionActive = localStorage.getItem("officex_session_active") === "1" || sessionStorage.getItem("officex_session_active") === "1";
+
+      if (sessionActive || storedEmail) {
+        setIsGoogleSession(true);
+      }
 
       if (storedEmail) {
         setEmail(storedEmail);
@@ -136,8 +143,22 @@ export default function RentRollPaymentModal({
         }
       }
       if (storedPhone) setPhone(storedPhone);
+
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setIsGoogleSession(true);
+          const u = session.user;
+          const uEmail = u.email || "";
+          const uName = u.user_metadata?.full_name || u.user_metadata?.name || "";
+          if (uEmail) {
+            setEmail(uEmail);
+            setSignInIdentifier(uEmail);
+          }
+          if (uName) setPersonName(uName);
+        }
+      }).catch(() => {});
     }
-  }, [isOpen, email]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -173,9 +194,22 @@ export default function RentRollPaymentModal({
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    if (typeof window !== "undefined") {
+      setAuthCookie("officex_oauth_context", "rent-roll", 7200);
+      setAuthCookie("officex_oauth_role", "owner", 7200);
+      setAuthCookie("officex_oauth_redirect", "/properties/rent-roll", 7200);
+      setAuthCookie("officex_last_rent_roll", "1", 7200);
+      localStorage.setItem("officex_oauth_context", "rent-roll");
+      sessionStorage.setItem("officex_oauth_context", "rent-roll");
+      localStorage.setItem("officex_oauth_role", "owner");
+      sessionStorage.setItem("officex_oauth_role", "owner");
+      localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+      sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+    }
+
     const redirectUrl = typeof window !== "undefined"
-      ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent("/onboarding?role=owner")}`
-      : "http://localhost:3000/login?context=rent-roll&redirect=/onboarding?role=owner";
+      ? `${window.location.origin}/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`
+      : "http://localhost:3000/signup?context=rent-roll&role=owner&module=rent-roll&redirect=/properties/rent-roll";
 
     // In Sign-In mode: authenticate directly with Google
     if (mode === "signin") {
@@ -383,7 +417,7 @@ export default function RentRollPaymentModal({
       setErrorMsg("Please type your city name in the text box below.");
       return;
     }
-    if (!password || password.length < 6) {
+    if (!isGoogleSession && (!password || password.length < 6)) {
       setErrorMsg("Please create an account password (minimum 6 characters) so you can sign in anytime.");
       return;
     }
@@ -612,53 +646,67 @@ export default function RentRollPaymentModal({
             </div>
           )}
 
-          {/* GOOGLE 1-CLICK AUTH BUTTON */}
+          {/* GOOGLE 1-CLICK AUTH BUTTON OR STATUS */}
           <div>
-            <button
-              type="button"
-              onClick={handleGoogleAuthWithPayment}
-              disabled={isGoogleLoading}
-              className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-2xs"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>
-                {isGoogleLoading
-                  ? "Connecting..."
-                  : mode === "onboard"
-                  ? is100PercentDiscount
-                    ? "Continue with Google (100% Free · ₹0)"
-                    : "Continue with Google (Pay ₹100 & Unlock)"
-                  : "Sign in with Google"}
-              </span>
-            </button>
-
-            <div className="relative my-2.5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
-                <span className="bg-white px-2">
-                  {mode === "onboard" ? "or register your account" : "or sign in with password"}
+            {isGoogleSession ? (
+              <div className="w-full py-2.5 px-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 font-bold text-xs flex items-center justify-between shadow-2xs animate-fadeIn">
+                <div className="flex items-center gap-2 truncate">
+                  <CheckCircle size={15} className="text-[#0D7B6C] shrink-0" />
+                  <span className="truncate">Signed In with Google ({email || personName || "Google Account"})</span>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                  Verified
                 </span>
               </div>
-            </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleGoogleAuthWithPayment}
+                  disabled={isGoogleLoading}
+                  className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>
+                    {isGoogleLoading
+                      ? "Connecting..."
+                      : mode === "onboard"
+                      ? is100PercentDiscount
+                        ? "Continue with Google (100% Free · ₹0)"
+                        : "Continue with Google (Pay ₹100 & Unlock)"
+                      : "Sign in with Google"}
+                  </span>
+                </button>
+
+                <div className="relative my-2.5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
+                    <span className="bg-white px-2">
+                      {mode === "onboard" ? "or register your account" : "or sign in with password"}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* ===============================================================
@@ -703,8 +751,8 @@ export default function RentRollPaymentModal({
                 </div>
               </div>
 
-              {/* Row 2: Mobile Number & Password — Paired in 2-Column Balance */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Row 2: Mobile Number & (Optional Password) */}
+              {isGoogleSession ? (
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Mobile Number <span className="text-rose-500">*</span>
@@ -721,31 +769,50 @@ export default function RentRollPaymentModal({
                     <PhoneIcon size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
                   </div>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Mobile Number <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+91 98765 43210"
+                        required
+                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
+                      />
+                      <PhoneIcon size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Password <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      required
-                      className="w-full pl-8 pr-9 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
-                    />
-                    <KeyRound size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Password <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Min 6 characters"
+                        required
+                        className="w-full pl-8 pr-9 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
+                      />
+                      <KeyRound size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Row 3: Operating State & Operating City (State-First Cascading) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

@@ -32,6 +32,7 @@ import {
   CreditCard
 } from "lucide-react";
 import RentRollPaymentModal from "@/components/rent-roll/RentRollPaymentModal";
+import { setAuthCookie } from "@/lib/auth-storage";
 import {
   validateRedirect,
   maskIdentifier,
@@ -60,7 +61,12 @@ export default function SignInForm({
   const isRentRollContext =
     initialContext === "rent-roll" ||
     (initialRedirect ? initialRedirect.includes("rent-roll") : false) ||
-    (typeof window !== "undefined" && window.location.search.includes("rent-roll"));
+    (typeof window !== "undefined" && (
+      window.location.search.includes("rent-roll") ||
+      window.location.hash.includes("rent-roll") ||
+      localStorage.getItem("officex_oauth_context") === "rent-roll" ||
+      sessionStorage.getItem("officex_oauth_context") === "rent-roll"
+    ));
 
   const isOperateContext =
     !isRentRollContext && (
@@ -195,6 +201,8 @@ const LOGIN_COUNTRY_CODES = [
         if (session?.user) {
           const u = session.user;
           const cleanEmail = (u.email || "").toLowerCase();
+          const savedOAuthCtx = (typeof window !== "undefined" && (localStorage.getItem("officex_oauth_context") || sessionStorage.getItem("officex_oauth_context"))) || "";
+
           if (cleanEmail) {
             localStorage.setItem("officex_user_email", cleanEmail);
             sessionStorage.setItem("officex_user_email", cleanEmail);
@@ -209,6 +217,13 @@ const LOGIN_COUNTRY_CODES = [
           if (fullName) {
             localStorage.setItem("officex_user_name", fullName);
             sessionStorage.setItem("officex_user_name", fullName);
+          }
+
+          if (savedOAuthCtx === "rent-roll" || isRentRollContext) {
+            localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+            sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+            window.location.href = `/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
+            return;
           }
 
           const mockUser = findMockUser(cleanEmail);
@@ -231,6 +246,8 @@ const LOGIN_COUNTRY_CODES = [
       if (event === "SIGNED_IN" && session?.user) {
         const u = session.user;
         const cleanEmail = (u.email || "").toLowerCase();
+        const savedOAuthCtx = (typeof window !== "undefined" && (localStorage.getItem("officex_oauth_context") || sessionStorage.getItem("officex_oauth_context"))) || "";
+
         if (cleanEmail) {
           localStorage.setItem("officex_user_email", cleanEmail);
           sessionStorage.setItem("officex_user_email", cleanEmail);
@@ -245,6 +262,13 @@ const LOGIN_COUNTRY_CODES = [
         if (fullName) {
           localStorage.setItem("officex_user_name", fullName);
           sessionStorage.setItem("officex_user_name", fullName);
+        }
+
+        if (savedOAuthCtx === "rent-roll" || isRentRollContext) {
+          localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+          sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
+          window.location.href = `/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
+          return;
         }
 
         const mockUser = findMockUser(cleanEmail);
@@ -867,11 +891,25 @@ const LOGIN_COUNTRY_CODES = [
     setInfoMessage(lang === "hi" ? "Google से जुड़ रहा है..." : "Connecting to Google...");
 
     try {
-      const searchStr = typeof window !== "undefined" && window.location.search
-        ? window.location.search
-        : `?context=${isRentRollContext ? "rent-roll" : isOperateContext ? "operate" : isFmContext ? "fm" : "marketplace"}&redirect=${encodeURIComponent(safeRedirect)}`;
+      const activeCtx = isRentRollContext ? "rent-roll" : isOperateContext ? "operate" : isFmContext ? "fm" : "marketplace";
+      if (typeof window !== "undefined") {
+        setAuthCookie("officex_oauth_context", activeCtx, 7200);
+        localStorage.setItem("officex_oauth_context", activeCtx);
+        sessionStorage.setItem("officex_oauth_context", activeCtx);
+        if (isRentRollContext) {
+          setAuthCookie("officex_last_rent_roll", "1", 7200);
+          setAuthCookie("officex_oauth_role", "owner", 7200);
+          setAuthCookie("officex_oauth_redirect", "/properties/rent-roll", 7200);
+          localStorage.setItem("officex_oauth_role", "owner");
+          sessionStorage.setItem("officex_oauth_role", "owner");
+          localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+          sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+        }
+      }
+
+      const searchStr = `?context=${activeCtx}&redirect=${encodeURIComponent(safeRedirect)}`;
       const redirectUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/login${searchStr}`
+        ? (isRentRollContext ? `${window.location.origin}/signup${searchStr}&role=owner&module=rent-roll` : `${window.location.origin}/login${searchStr}`)
         : "http://localhost:3000/login";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({

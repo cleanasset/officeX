@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { setAuthCookie } from "@/lib/auth-storage";
 import {
   Building2,
   Receipt,
@@ -41,6 +42,18 @@ export default function RentRollLandingPage() {
   const router = useRouter();
   const [selectedSegment, setSelectedSegment] = useState<string>("owner");
   const [activeFlowTab, setActiveFlowTab] = useState<"existing" | "self_serve" | "managed">("self_serve");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setAuthCookie("officex_oauth_context", "rent-roll", 7200);
+      setAuthCookie("officex_oauth_redirect", "/properties/rent-roll", 7200);
+      setAuthCookie("officex_last_rent_roll", "1", 7200);
+      localStorage.setItem("officex_oauth_context", "rent-roll");
+      localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+      sessionStorage.setItem("officex_oauth_context", "rent-roll");
+      sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+    }
+  }, []);
 
   const segments = [
     {
@@ -112,13 +125,13 @@ export default function RentRollLandingPage() {
 
         <div className="flex items-center gap-3 text-xs">
           <Link
-            href="/login?context=rent-roll"
+            href="/login?context=rent-roll&redirect=/properties/rent-roll"
             className="px-4 py-2 rounded-xl text-slate-300 hover:text-white font-bold transition-colors"
           >
             Sign In (Existing User)
           </Link>
           <Link
-            href="/onboarding"
+            href="/signup?context=rent-roll&role=owner"
             className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-black shadow-lg shadow-teal-600/25 transition-all flex items-center gap-1.5"
           >
             <span>Launch Setup Wizard</span>

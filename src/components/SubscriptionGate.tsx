@@ -370,9 +370,15 @@ export default function SubscriptionGate({
                 type="button"
                 onClick={async () => {
                   try {
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_oauth_context", "rent-roll");
+                      sessionStorage.setItem("officex_oauth_context", "rent-roll");
+                      localStorage.setItem("officex_oauth_role", "owner");
+                      localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+                    }
                     const redirectUrl = typeof window !== "undefined"
-                      ? `${window.location.origin}/login?context=rent-roll&redirect=${encodeURIComponent(pathname)}`
-                      : "http://localhost:3000/login";
+                      ? `${window.location.origin}/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent(pathname || "/properties/rent-roll")}`
+                      : "http://localhost:3000/signup";
 
                     if (is100PercentDiscount) {
                       await persistSubscription(userEmail || "google-subscriber@officex.in", "RENTROLL12", `FREE_RENTROLL12_${Date.now()}`);

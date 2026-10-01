@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { setAuthCookie, getAuthCookie } from "@/lib/auth-storage";
 import { 
   Building, 
   Handshake, 
@@ -63,7 +64,11 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
     searchParams?.get("module") === "rent-roll" ||
     searchParams?.get("context") === "rent-roll" ||
     (initialRedirect ? initialRedirect.includes("rent-roll") : false) ||
-    (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("rent-roll") : false);
+    (searchParams?.get("redirect") ? searchParams.get("redirect")!.includes("rent-roll") : false) ||
+    (typeof window !== "undefined" && (
+      localStorage.getItem("officex_oauth_context") === "rent-roll" ||
+      sessionStorage.getItem("officex_oauth_context") === "rent-roll"
+    ));
 
   const isOperate =
     !isRentRoll && (
@@ -173,34 +178,51 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
   const [isGoogleSession, setIsGoogleSession] = useState(false);
 
-  // Sync with searchParams and localStorage (e.g. if arriving from Google OAuth)
+  // Sync with searchParams, cookies, and localStorage (e.g. if arriving from Google OAuth)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedName = localStorage.getItem("officex_user_name");
-      const savedEmail = localStorage.getItem("officex_user_email");
-      const savedMobile = localStorage.getItem("officex_user_mobile");
-      const sessionActive = localStorage.getItem("officex_session_active") === "1";
+      const savedName = localStorage.getItem("officex_user_name") || getAuthCookie("officex_user_name");
+      const savedEmail = localStorage.getItem("officex_user_email") || getAuthCookie("officex_user_email");
+      const savedMobile = localStorage.getItem("officex_user_mobile") || getAuthCookie("officex_user_mobile");
+      const sessionActive =
+        localStorage.getItem("officex_session_active") === "1" ||
+        getAuthCookie("officex_session_active") === "1" ||
+        getAuthCookie("officex_auth") === "1";
       if (savedName && !fullName) setFullName(savedName);
       if (savedEmail && !email) setEmail(savedEmail);
       if (savedMobile && !mobileNumber) setMobileNumber(savedMobile);
       if (sessionActive || savedEmail) setIsGoogleSession(true);
 
+      const applySession = (u: any) => {
+        if (!u) return;
+        setIsGoogleSession(true);
+        const uEmail = u.email || "";
+        const uName = u.user_metadata?.full_name || u.user_metadata?.name || "";
+        if (uEmail && !email) setEmail(uEmail);
+        if (uName && !fullName) setFullName(uName);
+      };
+
       // Check active Supabase auth session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
-          setIsGoogleSession(true);
-          const u = session.user;
-          const uEmail = u.email || "";
-          const uName = u.user_metadata?.full_name || u.user_metadata?.name || "";
-          if (uEmail && !email) setEmail(uEmail);
-          if (uName && !fullName) setFullName(uName);
+          applySession(session.user);
         }
       }).catch(() => {});
+
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          applySession(session.user);
+        }
+      });
 
       const stepParam = searchParams?.get("step");
       if (stepParam && ["1", "2", "3", "4", "5"].includes(stepParam)) {
         setStep(parseInt(stepParam, 10) as any);
       }
+
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
     }
   }, [searchParams]);
 
@@ -221,13 +243,27 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       const canonicalRedirect = initialRedirect || (
         isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
       );
-      const searchStr = typeof window !== "undefined" && window.location.search
-        ? window.location.search
-        : `?context=${isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "marketplace"}&redirect=${encodeURIComponent(canonicalRedirect)}`;
+      const activeCtx = isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "marketplace";
+      
+      if (typeof window !== "undefined") {
+        setAuthCookie("officex_oauth_context", activeCtx, 7200);
+        setAuthCookie("officex_oauth_role", selectedRole, 7200);
+        setAuthCookie("officex_oauth_redirect", canonicalRedirect, 7200);
+        if (isRentRoll) {
+          setAuthCookie("officex_last_rent_roll", "1", 7200);
+        }
+        localStorage.setItem("officex_oauth_context", activeCtx);
+        sessionStorage.setItem("officex_oauth_context", activeCtx);
+        localStorage.setItem("officex_oauth_role", selectedRole);
+        sessionStorage.setItem("officex_oauth_role", selectedRole);
+        localStorage.setItem("officex_oauth_redirect", canonicalRedirect);
+        sessionStorage.setItem("officex_oauth_redirect", canonicalRedirect);
+      }
 
+      const searchStr = `?context=${activeCtx}&role=${encodeURIComponent(selectedRole)}&redirect=${encodeURIComponent(canonicalRedirect)}`;
       const redirectUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/login${searchStr}`
-        : "http://localhost:3000/login";
+        ? `${window.location.origin}/signup${searchStr}`
+        : "http://localhost:3000/signup";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -312,20 +348,31 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
 
       if (!res.ok) {
         if (isGoogleSession && (res.status === 409 || data.error?.includes("already exists"))) {
-          // User already exists via Google OAuth - complete session and route to workspace
+          // User already registered via Google OAuth - advance seamlessly to Organization Setup
           if (typeof window !== "undefined") {
             localStorage.setItem("officex_user_mobile", cleanDigits);
             sessionStorage.setItem("officex_user_mobile", cleanDigits);
+            localStorage.setItem("officex_user_name", fullName.trim());
+            sessionStorage.setItem("officex_user_name", fullName.trim());
+            localStorage.setItem("officex_user_email", email.trim().toLowerCase());
+            sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
             localStorage.setItem("officex_session_active", "1");
             sessionStorage.setItem("officex_session_active", "1");
+            localStorage.setItem("officex_user_role", selectedRole);
+            sessionStorage.setItem("officex_user_role", selectedRole);
+            localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+            sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
             localStorage.setItem("officex_subscription", "active");
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
             document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+            document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+            document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
           }
-          const destination = initialRedirect || (
-            isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
-          );
-          window.location.href = destination;
+          setSuccessMsg("Google account verified! Proceeding to Organization Setup (Step 03)...");
+          setTimeout(() => {
+            setSuccessMsg(null);
+            setStep(3);
+          }, 400);
           return;
         }
         setError(data.error || "Registration failed. Please check your inputs.");
@@ -337,16 +384,27 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         if (typeof window !== "undefined") {
           localStorage.setItem("officex_user_mobile", cleanDigits);
           sessionStorage.setItem("officex_user_mobile", cleanDigits);
+          localStorage.setItem("officex_user_name", fullName.trim());
+          sessionStorage.setItem("officex_user_name", fullName.trim());
+          localStorage.setItem("officex_user_email", email.trim().toLowerCase());
+          sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
           localStorage.setItem("officex_session_active", "1");
           sessionStorage.setItem("officex_session_active", "1");
+          localStorage.setItem("officex_user_role", selectedRole);
+          sessionStorage.setItem("officex_user_role", selectedRole);
+          localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+          sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
           localStorage.setItem("officex_subscription", "active");
           document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
           document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+          document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         }
-        const destination = initialRedirect || (
-          isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
-        );
-        window.location.href = destination;
+        setSuccessMsg("Contact details saved! Proceeding to Organization Setup (Step 03)...");
+        setTimeout(() => {
+          setSuccessMsg(null);
+          setStep(3);
+        }, 400);
         return;
       }
 
@@ -597,10 +655,14 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    setSuccessMsg("Account created! Launching Role-Based Onboarding Suite...");
+    setSuccessMsg(isRentRoll ? "Account created! Launching your Rent Roll Workspace..." : "Account created! Launching Role-Based Onboarding Suite...");
     setTimeout(() => {
-      const roleParam = selectedRole === "owner" ? "owner" : selectedRole === "broker" ? "broker" : selectedRole === "vendor" ? "vendor" : "tenant";
-      router.push(`/onboarding?role=${encodeURIComponent(roleParam)}`);
+      if (isRentRoll) {
+        router.push("/properties/rent-roll");
+      } else {
+        const roleParam = selectedRole === "owner" ? "owner" : selectedRole === "broker" ? "broker" : selectedRole === "vendor" ? "vendor" : "tenant";
+        router.push(`/onboarding?role=${encodeURIComponent(roleParam)}`);
+      }
     }, 800);
   };
 
@@ -756,40 +818,57 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
               ================================================================= */}
           {step === 1 && (
             <div className="space-y-4">
-              {/* Google OAuth Button */}
-              <button
-                type="button"
-                onClick={() => handleOAuthSignUp("google")}
-                disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-center gap-3 shadow-2xs transition-all cursor-pointer disabled:opacity-60"
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </button>
+              {/* Google OAuth Status / Button */}
+              {isGoogleSession ? (
+                <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl text-xs flex items-center justify-between gap-2.5 shadow-2xs animate-fadeIn">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <CheckCircle2 size={18} className="text-[#0D7B6C] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-extrabold text-slate-900">Signed In with Google</p>
+                      <p className="text-[11px] text-slate-500 font-medium truncate">{email || fullName || "Google Account"}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                    Verified
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignUp("google")}
+                    disabled={isLoading}
+                    className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-center gap-3 shadow-2xs transition-all cursor-pointer disabled:opacity-60"
+                  >
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    <span>Continue with Google</span>
+                  </button>
 
-              <div className="relative flex items-center justify-center my-3">
-                <div className="border-t border-slate-200 w-full" />
-                <span className="bg-white px-2.5 text-[10px] uppercase font-bold tracking-wider text-slate-400 absolute">
-                  or register with work credentials
-                </span>
-              </div>
+                  <div className="relative flex items-center justify-center my-3">
+                    <div className="border-t border-slate-200 w-full" />
+                    <span className="bg-white px-2.5 text-[10px] uppercase font-bold tracking-wider text-slate-400 absolute">
+                      or register with work credentials
+                    </span>
+                  </div>
+                </>
+              )}
 
               <form onSubmit={handleCreateAccount} className="space-y-4 text-xs">
               {/* Full Legal Name */}
@@ -839,92 +918,75 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                 />
               </div>
 
-              {/* Google OAuth Banner */}
-              {isGoogleSession && (
-                <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                  <div className="flex items-center gap-2.5 truncate">
-                    <CheckCircle2 size={18} className="text-[#0D7B6C] shrink-0" />
-                    <div className="truncate">
-                      <p className="font-extrabold text-slate-900 truncate">Signed In with Google</p>
-                      <p className="text-[11px] text-slate-500 font-medium truncate">{email || fullName || "Google Account"}</p>
-                    </div>
-                  </div>
-                  <Link
-                    href={initialRedirect || (isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace")}
-                    className="px-3.5 py-1.5 bg-[#0D7B6C] hover:bg-[#0a6559] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs whitespace-nowrap self-start sm:self-auto cursor-pointer transition-all"
-                  >
-                    <span>Open Workspace →</span>
-                  </Link>
-                </div>
-              )}
-
               {/* Password Fields (Only for manual credentials) */}
               {!isGoogleSession && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      PASSWORD *
-                    </label>
-                    <div className="relative">
-                      <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        PASSWORD *
+                      </label>
+                      <div className="relative">
+                        <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        CONFIRM PASSWORD *
+                      </label>
+                      <div className="relative">
+                        <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      CONFIRM PASSWORD *
-                    </label>
-                    <div className="relative">
-                      <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        required
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
+                  {/* Password Strength Meter */}
+                  {password && (
+                    <div className="space-y-1">
+                      <div className="flex gap-1 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all ${passwordStrength >= 1 ? "w-1/3 bg-rose-500" : "w-0"}`} />
+                        <div className={`h-full transition-all ${passwordStrength >= 2 ? "w-1/3 bg-amber-500" : "w-0"}`} />
+                        <div className={`h-full transition-all ${passwordStrength >= 3 ? "w-1/3 bg-emerald-500" : "w-0"}`} />
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-500 block">
+                        {passwordStrength === 1 && "Weak — add numbers & uppercase"}
+                        {passwordStrength === 2 && "Good — add special characters"}
+                        {passwordStrength === 3 && "Strong enterprise password"}
+                      </span>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Password Strength Meter */}
-              {password && (
-                <div className="space-y-1">
-                  <div className="flex gap-1 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all ${passwordStrength >= 1 ? "w-1/3 bg-rose-500" : "w-0"}`} />
-                    <div className={`h-full transition-all ${passwordStrength >= 2 ? "w-1/3 bg-amber-500" : "w-0"}`} />
-                    <div className={`h-full transition-all ${passwordStrength >= 3 ? "w-1/3 bg-emerald-500" : "w-0"}`} />
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-500 block">
-                    {passwordStrength === 1 && "Weak — add numbers & uppercase"}
-                    {passwordStrength === 2 && "Good — add special characters"}
-                    {passwordStrength === 3 && "Strong enterprise password"}
-                  </span>
-                </div>
+                  )}
+                </>
               )}
 
               {/* Terms Checkbox */}
@@ -957,11 +1019,11 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                 {isLoading ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Creating Account & Dispatching OTP...</span>
+                    <span>Processing & Setting Up Workspace...</span>
                   </>
                 ) : (
                   <>
-                    <span>{isGoogleSession ? "Save Contact & Open Workspace" : "Create Account & Verify Contact"}</span>
+                    <span>{isGoogleSession ? "Continue to Organization Setup" : "Create Account & Verify Contact"}</span>
                     <ArrowRight size={15} />
                   </>
                 )}

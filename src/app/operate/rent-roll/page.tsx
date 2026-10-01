@@ -29,6 +29,7 @@ import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import RentRollPaymentModal from "@/components/rent-roll/RentRollPaymentModal";
+import { setAuthCookie } from "@/lib/auth-storage";
 
 export default function RentRollProductPage() {
   const router = useRouter();
@@ -41,6 +42,14 @@ export default function RentRollProductPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      setAuthCookie("officex_oauth_context", "rent-roll", 7200);
+      setAuthCookie("officex_oauth_redirect", "/properties/rent-roll", 7200);
+      setAuthCookie("officex_last_rent_roll", "1", 7200);
+      localStorage.setItem("officex_oauth_context", "rent-roll");
+      localStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+      sessionStorage.setItem("officex_oauth_context", "rent-roll");
+      sessionStorage.setItem("officex_oauth_redirect", "/properties/rent-roll");
+
       const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
       setIsLoggedIn(!!email);
       const isSub = email ? (

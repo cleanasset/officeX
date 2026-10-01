@@ -11,6 +11,9 @@ import {
   CheckCircle2
 } from "lucide-react";
 
+import { supabase } from "@/lib/supabase";
+import { getAuthCookie, clearAuthCookie } from "@/lib/auth-storage";
+
 interface HeaderAuthButtonProps {
   className?: string;
   /** Context key passed to /login?context=... for contextual portal filtering */
@@ -31,13 +34,22 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
 
   useEffect(() => {
     setMounted(true);
-    const checkAuth = () => {
+    const checkAuth = (authUser?: any) => {
       if (typeof window === "undefined") return;
-      const hasAuthCookie = document.cookie.includes("officex_auth=1");
+      const hasAuthCookie = document.cookie.includes("officex_auth=1") || getAuthCookie("officex_auth") === "1";
       const sessionActive = sessionStorage.getItem("officex_session_active") === "1";
-      const localEmail = localStorage.getItem("officex_user_email");
+      const localEmail = localStorage.getItem("officex_user_email") || getAuthCookie("officex_user_email");
 
-      if (!hasAuthCookie && !sessionActive && !localEmail) {
+      // Check if direct user object was supplied or fallback to storage
+      let email = authUser?.email || sessionStorage.getItem("officex_user_email") || localEmail || "";
+      let name =
+        authUser?.user_metadata?.full_name ||
+        authUser?.user_metadata?.name ||
+        sessionStorage.getItem("officex_user_name") ||
+        localStorage.getItem("officex_user_name") ||
+        "";
+
+      if (!hasAuthCookie && !sessionActive && !email && !authUser) {
         setIsLoggedIn(false);
         setUserName("");
         setUserRole("");
@@ -45,13 +57,10 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
         return;
       }
 
-      // If auth cookie or local email exists, ensure sessionStorage is active
-      if (!sessionActive && (hasAuthCookie || localEmail)) {
+      if (!sessionActive && (hasAuthCookie || email)) {
         sessionStorage.setItem("officex_session_active", "1");
       }
 
-      const email = sessionStorage.getItem("officex_user_email") || localStorage.getItem("officex_user_email");
-      let name = sessionStorage.getItem("officex_user_name") || localStorage.getItem("officex_user_name") || "";
       if (!name && email) {
         name = email.split("@")[0].replace(/[._-]/g, " ");
       }
@@ -64,7 +73,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
         document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
       ) : false;
 
-      if (email || hasAuthCookie) {
+      if (email || hasAuthCookie || authUser) {
         setIsLoggedIn(true);
         setUserName(name);
         setUserRole(role);
@@ -78,8 +87,31 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
     };
 
     checkAuth();
-    window.addEventListener("storage", checkAuth);
-    return () => window.removeEventListener("storage", checkAuth);
+
+    // Check Supabase session directly on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        checkAuth(session.user);
+      }
+    }).catch(() => {});
+
+    // Listen to Supabase auth events
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        checkAuth(session.user);
+      } else if (event === "SIGNED_OUT") {
+        checkAuth(null);
+      }
+    });
+
+    window.addEventListener("storage", () => checkAuth());
+    window.addEventListener("officex_auth_change", ((e: CustomEvent) => checkAuth(e?.detail?.user)) as EventListener);
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      window.removeEventListener("storage", () => checkAuth());
+      window.removeEventListener("officex_auth_change", ((e: CustomEvent) => checkAuth(e?.detail?.user)) as EventListener);
+    };
   }, []);
 
   // Close menu on click outside
