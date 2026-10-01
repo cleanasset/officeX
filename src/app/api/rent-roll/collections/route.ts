@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
     const validPropIds = new Set(properties.map(p => p.id));
     const validLeaseIds = new Set(db.leases.filter(l => validPropIds.has(l.propertyId)).map(l => l.id));
-    let collections = db.collections.filter(c => validLeaseIds.has(c.leaseId));
+    let collections = db.collections.filter(c => !c.leaseId || validLeaseIds.has(c.leaseId) || validLeaseIds.size === 0);
 
     if (propertyId && propertyId !== "ALL") {
       const propLeaseIds = new Set(db.leases.filter(l => l.propertyId === propertyId).map(l => l.id));

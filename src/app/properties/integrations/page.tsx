@@ -46,8 +46,37 @@ export default function IntegrationsPage() {
   const [settlementMode, setSettlementMode] = useState<"direct_bank" | "razorpay_route" | "byo_gateway">("direct_bank");
   const [customKeyId, setCustomKeyId] = useState("");
   const [customKeySecret, setCustomKeySecret] = useState("");
-  const [routeAccountId, setRouteAccountId] = useState("acc_ApexRealty_001");
   const [isSavedBank, setIsSavedBank] = useState(false);
+  const [isSavingSettlement, setIsSavingSettlement] = useState(false);
+
+  const handleSaveSettlement = async () => {
+    setIsSavingSettlement(true);
+    try {
+      const res = await fetch("/api/rent-roll/organization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          legalName: bankBeneficiary,
+          tradeName: bankBeneficiary,
+          bankName,
+          bankAccountNumber: bankAccount,
+          bankIfsc,
+          bankBranch,
+          upiVpa: bankUpi
+        })
+      });
+      if (res.ok) {
+        setIsSavedBank(true);
+        setTimeout(() => setIsSavedBank(false), 5000);
+      } else {
+        alert("Failed to save bank configuration.");
+      }
+    } catch (e: any) {
+      alert(`Error saving settlement: ${e.message}`);
+    } finally {
+      setIsSavingSettlement(false);
+    }
+  };
 
   // Penny Drop Live Bank Verification State
   const [isVerifyingBank, setIsVerifyingBank] = useState(false);
@@ -209,6 +238,21 @@ export default function IntegrationsPage() {
         if (data.config) {
           if (data.config.orgId) setZohoOrgId(data.config.orgId);
           if (data.config.domain) setZohoDomain(data.config.domain);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/rent-roll/organization")
+      .then((r) => r.json())
+      .then((data) => {
+        const org = data.organization || data;
+        if (org) {
+          if (org.name || org.tradeName) setBankBeneficiary(org.tradeName || org.name);
+          if (org.bankName) setBankName(org.bankName);
+          if (org.bankAccountNumber) setBankAccount(org.bankAccountNumber);
+          if (org.bankIfsc) setBankIfsc(org.bankIfsc);
+          if (org.bankBranch) setBankBranch(org.bankBranch);
+          if (org.upiVpa) setBankUpi(org.upiVpa);
         }
       })
       .catch(() => {});
@@ -879,13 +923,18 @@ export default function IntegrationsPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsSavedBank(true);
-                    setTimeout(() => setIsSavedBank(false), 4000);
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-black text-xs shadow-sm transition-all cursor-pointer"
+                  disabled={isSavingSettlement}
+                  onClick={handleSaveSettlement}
+                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
                 >
-                  Save Settlement Configuration
+                  {isSavingSettlement ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Settlement...</span>
+                    </>
+                  ) : (
+                    <span>Save Settlement Configuration</span>
+                  )}
                 </button>
               </div>
             </div>

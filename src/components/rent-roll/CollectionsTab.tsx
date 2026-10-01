@@ -126,7 +126,7 @@ export const CollectionsTab: React.FC<CollectionsTabProps> = ({
             <tbody className="divide-y divide-gray-100 font-medium">
               {filteredCollections.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-16 text-center text-gray-500">
+                  <td colSpan={12} className="py-16 text-center text-gray-500">
                     <FileCheck2 className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm font-bold text-gray-800">No payment receipts recorded</p>
                     <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">

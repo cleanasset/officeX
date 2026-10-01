@@ -67,9 +67,9 @@ export default function RentPaymentGateway() {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
-  const [selectedBank, setSelectedBank] = useState("HDFC Bank");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
+  const [customAmount, setCustomAmount] = useState<number | "">("");
   const [toast, setToast] = useState<string | null>(null);
 
   const fetchTenantData = useCallback(async () => {
@@ -118,6 +118,8 @@ export default function RentPaymentGateway() {
 
   const handleOpenPayModal = (inv: TenantInvoice) => {
     setSelectedInvoice(inv);
+    const balanceDue = inv.balanceDue > 0 ? inv.balanceDue : inv.netPayable;
+    setCustomAmount(balanceDue);
     setShowPayModal(true);
   };
 
@@ -132,7 +134,8 @@ export default function RentPaymentGateway() {
     setIsProcessing(true);
     try {
       const balanceDue = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
-      const actualReceived = Math.max(0, balanceDue - Number(wireTds || 0));
+      const baseAmount = (customAmount !== "" && Number(customAmount) > 0) ? Number(customAmount) : balanceDue;
+      const actualReceived = Math.max(0, baseAmount - Number(wireTds || 0));
 
       const payload = {
         invoiceId: selectedInvoice.id,
@@ -180,8 +183,9 @@ export default function RentPaymentGateway() {
     setIsProcessing(true);
 
     try {
-      const standardAmount = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
-      const amountToPay = overrideAmount !== undefined ? overrideAmount : standardAmount;
+      const balanceDue = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
+      const baseAmount = (customAmount !== "" && Number(customAmount) > 0) ? Number(customAmount) : balanceDue;
+      const amountToPay = overrideAmount !== undefined ? overrideAmount : baseAmount;
 
       await initiateRazorpayPayment({
         amount: Math.round(amountToPay * 100), // convert to paise
@@ -604,17 +608,59 @@ This is a computer-generated tax invoice receipt. No physical signature required
             </div>
 
             {/* Amount Banner */}
-            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Commercial Rent Dues</p>
-                <p className="text-xs font-bold text-gray-700">{selectedInvoice.invoiceNumber} · {selectedInvoice.billingMonth}</p>
-                <p className="text-[10px] text-gray-500">{selectedInvoice.propertyName}</p>
+            <div className="p-5 bg-slate-50 border-b border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Commercial Rent Dues</p>
+                  <p className="text-xs font-bold text-gray-700">{selectedInvoice.invoiceNumber} · {selectedInvoice.billingMonth}</p>
+                  <p className="text-[10px] text-gray-500">{selectedInvoice.propertyName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-gray-900">
+                    ₹{((customAmount !== "" && Number(customAmount) > 0) ? Number(customAmount) : (selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable)).toLocaleString("en-IN")}
+                  </p>
+                  <span className="text-[10px] text-emerald-600 font-bold">Zero Transaction Fee</span>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-black text-gray-900">
-                  ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")}
-                </p>
-                <span className="text-[10px] text-emerald-600 font-bold">Zero Transaction Fee</span>
+
+              {/* Quick Amount Selector / ₹1 Live Verification */}
+              <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Amount to Pay:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCustomAmount(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      customAmount === (selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable)
+                        ? "bg-slate-900 text-white"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    Full Due (₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomAmount(1)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                      customAmount === 1
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <span>⚡ ₹1 Quick Test</span>
+                  </button>
+                  <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 py-0.5">
+                    <span className="text-[10px] font-bold text-slate-400">₹</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="Custom"
+                      className="w-16 text-[10px] font-mono font-bold focus:outline-none text-slate-800"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -907,7 +953,7 @@ This is a computer-generated tax invoice receipt. No physical signature required
                     ) : (
                       <>
                         <Lock size={14} />
-                        <span>Pay ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")} via Razorpay</span>
+                        <span>Pay ₹{((customAmount !== "" && Number(customAmount) > 0) ? Number(customAmount) : (selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable)).toLocaleString("en-IN")} via Razorpay</span>
                       </>
                     )}
                   </button>
