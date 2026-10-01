@@ -45,7 +45,9 @@ import {
   Pencil,
   Headphones,
   Info,
-  Clock
+  Clock,
+  Pipette,
+  FastForward
 } from "lucide-react";
 import { formatINR } from "@/components/rent-roll/DashboardTab";
 import {
@@ -210,6 +212,7 @@ function OnboardingContent() {
   const [isAddingEntity, setIsAddingEntity] = useState(false);
   const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
   const [editEntity, setEditEntity] = useState<BillingEntityItem | null>(null);
+  const [collapsedEntityIds, setCollapsedEntityIds] = useState<string[]>([]);
   const [newEntity, setNewEntity] = useState<BillingEntityItem>({
     id: "",
     spvName: "",
@@ -270,28 +273,38 @@ function OnboardingContent() {
   };
 
   const handleStartEditEntity = (be: BillingEntityItem) => {
+    setCollapsedEntityIds(prev => prev.filter(id => id !== be.id));
     setEditingEntityId(be.id);
     setEditEntity({ ...be });
     setIsAddingEntity(false);
   };
 
-  const handleSaveEditEntity = () => {
-    if (!editEntity || !editEntity.spvName || !editEntity.gstin) {
+  const handleSaveEditEntity = (entityId?: string) => {
+    const targetId = entityId || editingEntityId;
+    const target = editEntity || (targetId ? billingEntities.find(b => b.id === targetId) : null) || billingEntities[0];
+    if (!target || !target.spvName || !target.gstin) {
       alert("Please provide the Legal SPV Name and 15-digit GSTIN.");
       return;
     }
-    if (!editEntity.bankName?.trim() || !editEntity.accountNumber?.trim() || !editEntity.ifscCode?.trim()) {
+    if (!target.bankName?.trim() || !target.accountNumber?.trim() || !target.ifscCode?.trim()) {
       alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding.");
       return;
     }
-    setBillingEntities(billingEntities.map(b =>
-      b.id === editEntity.id ? { ...editEntity, pan: editEntity.pan || editEntity.gstin.substring(2, 12) } : b
+    setBillingEntities(prev => prev.map(b =>
+      b.id === target.id ? { ...target, pan: target.pan || target.gstin.substring(2, 12) } : b
     ));
+    if (target.id) {
+      setCollapsedEntityIds(prev => Array.from(new Set([...prev, target.id])));
+    }
     setEditingEntityId(null);
     setEditEntity(null);
   };
 
-  const handleCancelEditEntity = () => {
+  const handleCancelEditEntity = (entityId?: string) => {
+    const targetId = entityId || editingEntityId;
+    if (targetId) {
+      setCollapsedEntityIds(prev => Array.from(new Set([...prev, targetId])));
+    }
     setEditingEntityId(null);
     setEditEntity(null);
   };
@@ -416,6 +429,38 @@ function OnboardingContent() {
     .map(w => w[0])
     .join("")
     .toUpperCase() || "CO";
+
+  // Safe color normalizer and contrast checker
+  const getSafeBrandColor = (raw: string): string => {
+    if (!raw) return "#0F8B7D";
+    let hex = raw.trim();
+    if (!hex.startsWith("#")) hex = `#${hex}`;
+    // 3 hex digits: #RGB -> #RRGGBB
+    if (/^#[0-9A-Fa-f]{3}$/.test(hex)) {
+      return `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+    }
+    // 6 hex digits
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+      return hex;
+    }
+    // 4 or 5 hex digits, pad with 0s to 6 digits
+    if (/^#[0-9A-Fa-f]{4,5}$/.test(hex)) {
+      return hex.padEnd(7, "0");
+    }
+    if (/^#[0-9A-Fa-f]{1,2}$/.test(hex)) {
+      return hex.padEnd(7, "0");
+    }
+    return "#0F8B7D";
+  };
+
+  const isLightColor = (raw: string) => {
+    const safe = getSafeBrandColor(raw).replace("#", "");
+    const r = parseInt(safe.substring(0, 2), 16) || 0;
+    const g = parseInt(safe.substring(2, 4), 16) || 0;
+    const b = parseInt(safe.substring(4, 6), 16) || 0;
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 180;
+  };
 
   const [domains, setDomains] = useState({
     senderBillingEmail: "",
@@ -543,10 +588,10 @@ function OnboardingContent() {
         }));
       }
 
-      if (storedProp || storedOrg) {
+      if (storedProp) {
         setPropertyData(prev => ({
           ...prev,
-          name: prev.name || storedProp || (storedOrg ? `${storedOrg} Center` : ""),
+          name: prev.name || storedProp,
           city: prev.city || storedPropCity || storedCity || "",
           totalArea: storedArea ? Number(storedArea) : prev.totalArea
         }));
@@ -589,20 +634,29 @@ function OnboardingContent() {
           .substring(0, 3)
           .toUpperCase() || "INV";
 
-        setBillingEntities([
-          {
-            id: `BE-${Date.now()}`,
-            spvName: orgData.legalName,
-            gstin: orgData.gstin || "",
-            pan: orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : ""),
-            invoicePrefix: `${cleanPrefix}-INV`,
-            bankName: "",
-            accountNumber: "",
-            ifscCode: "",
-            stateCode: orgData.state || "27 - Maharashtra",
-            isDefault: true
-          }
-        ]);
+        const primaryEntity: BillingEntityItem = {
+          id: `BE-${Date.now()}`,
+          spvName: orgData.legalName,
+          gstin: orgData.gstin || "",
+          pan: orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : ""),
+          invoicePrefix: `${cleanPrefix}-INV`,
+          bankName: "",
+          accountNumber: "",
+          ifscCode: "",
+          stateCode: orgData.state || "27 - Maharashtra",
+          isDefault: true
+        };
+        setBillingEntities([primaryEntity]);
+        setEditingEntityId(primaryEntity.id);
+        setEditEntity({ ...primaryEntity });
+        setCollapsedEntityIds([]);
+      } else {
+        const primary = billingEntities.find(b => b.isDefault) || billingEntities[0];
+        if (primary) {
+          setEditingEntityId(primary.id);
+          setEditEntity({ ...primary });
+          setCollapsedEntityIds([]);
+        }
       }
       // Auto-suggest branding and domains if empty
       if (!branding.portfolioDisplayName) {
@@ -620,28 +674,38 @@ function OnboardingContent() {
           subdomain: cleanSub
         }));
       }
-      // Auto-suggest property defaults if empty
-      if (!propertyData.name) {
-        const isWarehouse = orgData.segments[0] === "warehouse_owner";
-        setPropertyData(prev => ({
-          ...prev,
-          name: orgData.tradeName || `${orgData.legalName} ${isWarehouse ? "Logistics Park" : "Tower"}`,
-          city: orgData.city || prev.city,
-          state: orgData.state || prev.state,
-          address: orgData.primaryAddress || prev.address,
-          type: isWarehouse ? "Warehouse / Logistics Park" : prev.type
-        }));
-      }
+      // Option 1: Clean state — do NOT auto-create dummy/fallback properties from corporate office address.
+      // Commercial properties are only created if explicitly registered by the user.
     } else if (currentStep === 2) {
-      // Step 2: Validate mandatory bank details
-      const defaultEntity = billingEntities.find(b => b.isDefault) || billingEntities[0] || newEntity;
-      if (!defaultEntity.bankName?.trim() || !defaultEntity.accountNumber?.trim() || !defaultEntity.ifscCode?.trim()) {
-        alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding. Please fill in and save your bank details.");
+      // Step 2: Auto-save active editing entity into billingEntities
+      let currentEntities = [...billingEntities];
+      if (editEntity && editingEntityId) {
+        currentEntities = currentEntities.map(b =>
+          b.id === editingEntityId ? { ...editEntity, pan: editEntity.pan || editEntity.gstin.substring(2, 12) } : b
+        );
+        setBillingEntities(currentEntities);
+      }
+      const defaultEntity = currentEntities.find(b => b.isDefault) || currentEntities[0] || (editingEntityId ? editEntity : null) || newEntity;
+      if (!defaultEntity?.bankName?.trim() || !defaultEntity?.accountNumber?.trim() || !defaultEntity?.ifscCode?.trim()) {
+        alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding. Please fill in your bank details.");
         return;
       }
     }
     setCurrentStep((prev) => Math.min(5, prev + 1));
   };
+
+  // Auto-open primary billing entity in editable mode on Step 2 so users can see inputs directly
+  useEffect(() => {
+    if (currentStep === 2 && billingEntities.length > 0) {
+      if (!editingEntityId) {
+        const primary = billingEntities.find(b => b.isDefault) || billingEntities[0];
+        if (primary && !collapsedEntityIds.includes(primary.id)) {
+          setEditingEntityId(primary.id);
+          setEditEntity({ ...primary });
+        }
+      }
+    }
+  }, [currentStep, billingEntities, editingEntityId, collapsedEntityIds]);
 
   // Handle Download Templates
   const handleDownloadSample = (model: "area" | "seat" | "fm") => {
@@ -693,8 +757,8 @@ function OnboardingContent() {
             address: orgData.primaryAddress,
             currency: fySettings.currency || "INR"
           },
-          property: {
-            name: propertyData.name || orgData.tradeName || `${orgData.legalName} Tower`,
+          property: propertyData.name?.trim() ? {
+            name: propertyData.name.trim(),
             address: propertyData.address || orgData.primaryAddress,
             city: propertyData.city || orgData.city,
             state: propertyData.state || orgData.state,
@@ -702,7 +766,7 @@ function OnboardingContent() {
             totalArea: Number(propertyData.totalArea) || 50000,
             unitsCount: Number(propertyData.unitsCount) || 6,
             grade: propertyData.grade || "A"
-          },
+          } : null,
           taxProfiles,
           branding: {
             portfolioDisplayName: branding.portfolioDisplayName || orgData.tradeName || orgData.legalName,
@@ -768,14 +832,13 @@ function OnboardingContent() {
           localStorage.setItem("officex_property_area", String(commitData.property.totalArea || 50000));
           localStorage.setItem("officex_user_properties", JSON.stringify([commitData.property]));
         } else {
-          const fallbackProp = {
-            id: `PROP-${Date.now()}`,
-            name: propertyData.name || orgData.tradeName || `${orgData.legalName} Tower`,
-            city: propertyData.city || orgData.city,
-            totalArea: Number(propertyData.totalArea) || 50000
-          };
-          localStorage.setItem("officex_property_name", fallbackProp.name);
-          localStorage.setItem("officex_user_properties", JSON.stringify([fallbackProp]));
+          // Option 1: Clean 0-property state — no dummy/fallback property
+          localStorage.removeItem("officex_property_name");
+          localStorage.removeItem("officex_property_id");
+          localStorage.removeItem("officex_property_city");
+          localStorage.removeItem("officex_property_area");
+          sessionStorage.removeItem("officex_property_name");
+          localStorage.setItem("officex_user_properties", JSON.stringify([]));
         }
 
         if (commitData?.contracts && Array.isArray(commitData.contracts)) {
@@ -992,6 +1055,8 @@ function OnboardingContent() {
                         <AddressAutocomplete
                           label="Registered Office Address"
                           value={orgData.primaryAddress}
+                          state={orgData.state}
+                          city={orgData.city}
                           onChange={(val) => setOrgData((prev) => ({ ...prev, primaryAddress: val }))}
                           onSelectLocation={(loc) => {
                             setOrgData((prev) => ({
@@ -1001,40 +1066,12 @@ function OnboardingContent() {
                               state: loc.state || prev.state,
                             }));
                           }}
-                          placeholder="Registered Office address..."
+                          placeholder={orgData.city ? `Search office address in ${orgData.city}, ${orgData.state}...` : "Registered Office address..."}
                         />
                       </div>
 
-                      {/* Contact Phone with Country Code Selector */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">
-                            Primary Mobile / Contact Phone *
-                          </label>
-                          <div className="flex gap-2">
-                            <select
-                              value={contactCountryCode}
-                              onChange={(e) => setContactCountryCode(e.target.value)}
-                              aria-label="Country Code"
-                              className="w-24 px-2 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold focus:bg-white focus:border-[#0F8B7D] shrink-0 cursor-pointer shadow-2xs"
-                            >
-                              {ONBOARDING_COUNTRY_CODES.map((c) => (
-                                <option key={c.code} value={c.code}>
-                                  {c.flag} {c.code}
-                                </option>
-                              ))}
-                            </select>
-                            <input
-                              type="tel"
-                              maxLength={10}
-                              placeholder="9876543210"
-                              value={contactMobileNumber}
-                              onChange={(e) => setContactMobileNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold tracking-wider focus:bg-white focus:border-[#0F8B7D]"
-                            />
-                          </div>
-                        </div>
-
+                      {/* Tax Identifiers (PAN & GSTIN) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-bold text-slate-700">PAN Number *</label>
@@ -1201,20 +1238,22 @@ function OnboardingContent() {
                                   .replace(/[^A-Za-z]/g, "")
                                   .substring(0, 3)
                                   .toUpperCase() || "INV";
-                                setBillingEntities([
-                                  {
-                                    id: `BE-${Date.now()}`,
-                                    spvName: orgData.legalName,
-                                    gstin: orgData.gstin || "",
-                                    pan: orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : ""),
-                                    invoicePrefix: `${cleanPrefix}-INV`,
-                                    bankName: "",
-                                    accountNumber: "",
-                                    ifscCode: "",
-                                    stateCode: orgData.state || "27 - Maharashtra",
-                                    isDefault: true
-                                  }
-                                ]);
+                                const newEntityItem: BillingEntityItem = {
+                                  id: `BE-${Date.now()}`,
+                                  spvName: orgData.legalName,
+                                  gstin: orgData.gstin || "",
+                                  pan: orgData.pan || (orgData.gstin ? orgData.gstin.substring(2, 12) : ""),
+                                  invoicePrefix: `${cleanPrefix}-INV`,
+                                  bankName: "",
+                                  accountNumber: "",
+                                  ifscCode: "",
+                                  stateCode: orgData.state || "27 - Maharashtra",
+                                  isDefault: true
+                                };
+                                setBillingEntities([newEntityItem]);
+                                setEditingEntityId(newEntityItem.id);
+                                setEditEntity({ ...newEntityItem });
+                                setCollapsedEntityIds([]);
                               } else {
                                 setIsAddingEntity(true);
                               }
@@ -1226,7 +1265,19 @@ function OnboardingContent() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {billingEntities.map((be) => (
+                          {billingEntities.map((be) => {
+                            const isEditing = (editingEntityId === be.id) || (!collapsedEntityIds.includes(be.id) && (be.isDefault || billingEntities.length === 1));
+                            const activeEntity = (editingEntityId === be.id && editEntity) ? editEntity : be;
+
+                            const updateCurrentEntity = (updates: Partial<BillingEntityItem>) => {
+                              setBillingEntities(prev => prev.map(item => item.id === be.id ? { ...item, ...updates } : item));
+                              setEditEntity(prev => prev && prev.id === be.id ? { ...prev, ...updates } : { ...be, ...updates });
+                              if (editingEntityId !== be.id) {
+                                setEditingEntityId(be.id);
+                              }
+                            };
+
+                            return (
                             <div
                               key={be.id}
                               className={`p-4 rounded-2xl border transition-all ${
@@ -1235,8 +1286,8 @@ function OnboardingContent() {
                                   : "bg-slate-50 border-slate-200"
                               }`}
                             >
-                              {editingEntityId === be.id && editEntity ? (
-                                /* ── Inline Edit Form ── */
+                              {isEditing ? (
+                                /* ── Inline Edit Form (Directly Visible) ── */
                                 <div className="space-y-3 animate-fadeIn">
                                   <div className="flex items-center justify-between">
                                     <span className="font-bold text-xs text-teal-950 flex items-center gap-1.5">
@@ -1249,7 +1300,7 @@ function OnboardingContent() {
                                     </span>
                                     <button
                                       type="button"
-                                      onClick={handleCancelEditEntity}
+                                      onClick={() => handleCancelEditEntity(be.id)}
                                       className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
                                     >
                                       Cancel
@@ -1260,8 +1311,8 @@ function OnboardingContent() {
                                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Company Legal Name *</label>
                                       <input
                                         type="text"
-                                        value={editEntity.spvName}
-                                        onChange={(e) => setEditEntity({ ...editEntity, spvName: e.target.value })}
+                                        value={activeEntity.spvName || ""}
+                                        onChange={(e) => updateCurrentEntity({ spvName: e.target.value })}
                                         className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
                                       />
                                     </div>
@@ -1270,27 +1321,27 @@ function OnboardingContent() {
                                         label="State (GST)"
                                         required
                                         returnCodeFormat={true}
-                                        value={editEntity.stateCode}
-                                        onChange={(val) => setEditEntity({ ...editEntity, stateCode: val })}
+                                        value={activeEntity.stateCode || ""}
+                                        onChange={(val) => updateCurrentEntity({ stateCode: val })}
                                         placeholder="Select your state..."
                                       />
                                     </div>
                                     <div>
                                       <div className="flex items-center justify-between mb-0.5">
                                         <label className="block text-[11px] font-bold text-slate-700">15-Digit GST Number *</label>
-                                        <span className={`text-[10px] font-mono font-bold ${editEntity.gstin.length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
-                                          {editEntity.gstin.length}/15
+                                        <span className={`text-[10px] font-mono font-bold ${(activeEntity.gstin || "").length === 15 ? "text-emerald-600" : "text-slate-400"}`}>
+                                          {(activeEntity.gstin || "").length}/15
                                         </span>
                                       </div>
                                       <input
                                         type="text"
                                         maxLength={15}
                                         placeholder="27ABCDE1234F1Z5"
-                                        value={editEntity.gstin}
+                                        value={activeEntity.gstin || ""}
                                         onChange={(e) => {
                                           const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
-                                          const autoPan = cleaned.length >= 12 ? cleaned.substring(2, 12) : editEntity.pan;
-                                          setEditEntity({ ...editEntity, gstin: cleaned, pan: autoPan });
+                                          const autoPan = cleaned.length >= 12 ? cleaned.substring(2, 12) : activeEntity.pan;
+                                          updateCurrentEntity({ gstin: cleaned, pan: autoPan });
                                         }}
                                         className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold tracking-wider uppercase focus:border-[#0F8B7D]"
                                       />
@@ -1303,8 +1354,8 @@ function OnboardingContent() {
                                       <input
                                         type="text"
                                         maxLength={8}
-                                        value={editEntity.invoicePrefix}
-                                        onChange={(e) => setEditEntity({ ...editEntity, invoicePrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 8) })}
+                                        value={activeEntity.invoicePrefix || ""}
+                                        onChange={(e) => updateCurrentEntity({ invoicePrefix: e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "").slice(0, 8) })}
                                         className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-teal-700 uppercase focus:border-[#0F8B7D]"
                                       />
                                     </div>
@@ -1316,8 +1367,8 @@ function OnboardingContent() {
                                       <input
                                         type="text"
                                         placeholder="e.g. HDFC Bank"
-                                        value={editEntity.bankName}
-                                        onChange={(e) => setEditEntity({ ...editEntity, bankName: e.target.value })}
+                                        value={activeEntity.bankName || ""}
+                                        onChange={(e) => updateCurrentEntity({ bankName: e.target.value })}
                                         className="w-full p-2 bg-white border border-slate-200 rounded-xl focus:border-[#0F8B7D]"
                                       />
                                     </div>
@@ -1330,24 +1381,24 @@ function OnboardingContent() {
                                         type="text"
                                         maxLength={18}
                                         placeholder="e.g. 50200012345678"
-                                        value={editEntity.accountNumber}
-                                        onChange={(e) => setEditEntity({ ...editEntity, accountNumber: e.target.value.replace(/[^0-9]/g, "").slice(0, 18) })}
+                                        value={activeEntity.accountNumber || ""}
+                                        onChange={(e) => updateCurrentEntity({ accountNumber: e.target.value.replace(/[^0-9]/g, "").slice(0, 18) })}
                                         className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono focus:border-[#0F8B7D]"
                                       />
                                     </div>
                                     <div>
                                       <div className="flex items-center justify-between mb-0.5">
                                         <label className="block text-[11px] font-bold text-slate-700">Bank IFSC Code</label>
-                                        <span className={`text-[10px] font-mono font-bold ${editEntity.ifscCode.length === 11 ? "text-emerald-600" : "text-slate-400"}`}>
-                                          {editEntity.ifscCode.length}/11
+                                        <span className={`text-[10px] font-mono font-bold ${(activeEntity.ifscCode || "").length === 11 ? "text-emerald-600" : "text-slate-400"}`}>
+                                          {(activeEntity.ifscCode || "").length}/11
                                         </span>
                                       </div>
                                       <input
                                         type="text"
                                         maxLength={11}
                                         placeholder="e.g. HDFC0001234"
-                                        value={editEntity.ifscCode}
-                                        onChange={(e) => setEditEntity({ ...editEntity, ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) })}
+                                        value={activeEntity.ifscCode || ""}
+                                        onChange={(e) => updateCurrentEntity({ ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11) })}
                                         className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono uppercase focus:border-[#0F8B7D]"
                                       />
                                     </div>
@@ -1355,15 +1406,15 @@ function OnboardingContent() {
                                   <div className="flex justify-end gap-2 pt-1">
                                     <button
                                       type="button"
-                                      onClick={handleCancelEditEntity}
-                                      className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer"
+                                      onClick={() => handleCancelEditEntity(be.id)}
+                                      className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-50 transition-colors"
                                     >
                                       Discard
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={handleSaveEditEntity}
-                                      className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer"
+                                      onClick={() => handleSaveEditEntity(be.id)}
+                                      className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
                                     >
                                       Save Changes
                                     </button>
@@ -1438,7 +1489,8 @@ function OnboardingContent() {
                                 </>
                               )}
                           </div>
-                        ))}
+                            );
+                          })}
                       </div>
                     )}
 
@@ -1809,7 +1861,7 @@ function OnboardingContent() {
                               <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-400">
                                 <div
                                   className="w-6 h-6 rounded-md flex items-center justify-center font-black text-[9px] text-white flex-shrink-0"
-                                  style={{ backgroundColor: branding.brandColor }}
+                                  style={{ backgroundColor: getSafeBrandColor(branding.brandColor) }}
                                 >
                                   {logoInitials}
                                 </div>
@@ -1819,8 +1871,11 @@ function OnboardingContent() {
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1">Brand Accent Colour</label>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[11px] font-bold text-slate-700">Brand Accent Colour</label>
+                              <span className="text-[10px] text-slate-400">Pick swatch or select custom colour</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
                               {[
                                 { hex: "#0F8B7D", name: "OfficeX Teal" },
                                 { hex: "#1E3A8A", name: "Corporate Navy" },
@@ -1834,20 +1889,47 @@ function OnboardingContent() {
                                   type="button"
                                   onClick={() => setBranding({ ...branding, brandColor: c.hex })}
                                   className={`w-7 h-7 rounded-full cursor-pointer transition-all border-2 ${
-                                    branding.brandColor === c.hex ? "border-slate-900 scale-110 shadow-sm" : "border-transparent"
+                                    getSafeBrandColor(branding.brandColor).toUpperCase() === c.hex.toUpperCase() ? "border-slate-900 scale-110 shadow-sm" : "border-transparent"
                                   }`}
                                   style={{ backgroundColor: c.hex }}
                                   title={c.name}
                                 />
                               ))}
-                              <input
-                                type="text"
-                                maxLength={7}
-                                placeholder="#0F8B7D"
-                                value={branding.brandColor}
-                                onChange={(e) => setBranding({ ...branding, brandColor: e.target.value.slice(0, 7) })}
-                                className="w-20 p-1 text-xs font-mono font-bold border border-slate-200 rounded text-center ml-2"
-                              />
+
+                              {/* Interactive Visual Color Selector */}
+                              <div className="relative flex items-center">
+                                <label
+                                  htmlFor="brand-color-selector"
+                                  className="w-7 h-7 rounded-full border-2 border-slate-300 shadow-2xs cursor-pointer flex items-center justify-center overflow-hidden hover:scale-110 transition-transform relative"
+                                  style={{ backgroundColor: getSafeBrandColor(branding.brandColor) }}
+                                  title="Open Visual Color Selector"
+                                >
+                                  <Pipette size={12} className={isLightColor(branding.brandColor) ? "text-slate-900" : "text-white"} />
+                                  <input
+                                    id="brand-color-selector"
+                                    type="color"
+                                    value={getSafeBrandColor(branding.brandColor).slice(0, 7)}
+                                    onChange={(e) => setBranding({ ...branding, brandColor: e.target.value.toUpperCase() })}
+                                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                  />
+                                </label>
+                              </div>
+
+                              {/* Hex Input with permanent # prefix (safely handles any code) */}
+                              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white px-2 py-1 shadow-2xs focus-within:border-[#0F8B7D]">
+                                <span className="text-slate-400 font-mono text-xs font-bold mr-0.5">#</span>
+                                <input
+                                  type="text"
+                                  maxLength={6}
+                                  placeholder="0F8B7D"
+                                  value={(branding.brandColor || "").replace("#", "").toUpperCase()}
+                                  onChange={(e) => {
+                                    const cleaned = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 6);
+                                    setBranding({ ...branding, brandColor: cleaned ? `#${cleaned}` : "" });
+                                  }}
+                                  className="w-16 text-xs font-mono font-bold text-slate-800 outline-none uppercase"
+                                />
+                              </div>
                             </div>
                           </div>
 
@@ -1872,24 +1954,34 @@ function OnboardingContent() {
                           {branding.previewTab === "invoice" && (
                             <div className="border border-slate-200 rounded-xl p-3 bg-white space-y-2.5">
                               <div
-                                className="p-2.5 rounded-lg text-white flex items-center justify-between"
-                                style={{ backgroundColor: branding.brandColor }}
+                                className={`p-2.5 rounded-lg flex items-center justify-between transition-colors ${
+                                  isLightColor(branding.brandColor) ? "text-slate-900 border border-slate-200" : "text-white"
+                                }`}
+                                style={{ backgroundColor: getSafeBrandColor(branding.brandColor) }}
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center overflow-hidden">
+                                  <div className={`w-6 h-6 rounded flex items-center justify-center overflow-hidden ${
+                                    isLightColor(branding.brandColor) ? "bg-black/10 text-slate-900" : "bg-white/20 text-white"
+                                  }`}>
                                     {branding.logoPreview ? (
                                       <img src={branding.logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
                                     ) : (
                                       <span className="font-black text-xs">{logoInitials}</span>
                                     )}
                                   </div>
-                                  <span className="font-extrabold text-xs">{branding.portfolioDisplayName}</span>
+                                  <span className="font-extrabold text-xs">
+                                    {branding.portfolioDisplayName || orgData.tradeName || orgData.legalName || "My Portfolio"}
+                                  </span>
                                 </div>
-                                <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded">TAX INVOICE</span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                  isLightColor(branding.brandColor) ? "bg-black/10 text-slate-900" : "bg-white/20 text-white"
+                                }`}>
+                                  TAX INVOICE
+                                </span>
                               </div>
                               <div className="text-[10px] text-slate-500 border-b border-slate-100 pb-1.5 flex justify-between">
-                                <span>{billingEntities[0]?.spvName}</span>
-                                <span className="font-mono font-bold">GSTIN: {billingEntities[0]?.gstin}</span>
+                                <span>{billingEntities[0]?.spvName || orgData.legalName || "Entity"}</span>
+                                <span className="font-mono font-bold">GSTIN: {billingEntities[0]?.gstin || orgData.gstin || "—"}</span>
                               </div>
                               <div className="text-[9px] text-slate-400 italic">
                                 &quot;{branding.invoiceHeaderMemo}&quot;
@@ -1909,8 +2001,10 @@ function OnboardingContent() {
                               <div className="p-2 bg-white rounded border border-slate-200 text-[10px] text-slate-600">
                                 Dear TechNova Solutions, your commercial tax invoice is ready.
                                 <div
-                                  className="mt-2 py-1 px-3 text-center text-white rounded font-bold text-xs"
-                                  style={{ backgroundColor: branding.brandColor }}
+                                  className={`mt-2 py-1 px-3 text-center rounded font-bold text-xs ${
+                                    isLightColor(branding.brandColor) ? "text-slate-900 border border-slate-300" : "text-white"
+                                  }`}
+                                  style={{ backgroundColor: getSafeBrandColor(branding.brandColor) }}
                                 >
                                   Pay ₹24,24,200 via Razorpay Portal
                                 </div>
@@ -1928,8 +2022,10 @@ function OnboardingContent() {
                                 Welcome, <strong>Ananya Deshmukh</strong> (TechNova Cloud)
                               </div>
                               <div
-                                className="p-2 rounded text-[11px] font-bold text-white text-center"
-                                style={{ backgroundColor: branding.brandColor }}
+                                className={`p-2 rounded text-[11px] font-bold text-center ${
+                                  isLightColor(branding.brandColor) ? "text-slate-900" : "text-white"
+                                }`}
+                                style={{ backgroundColor: getSafeBrandColor(branding.brandColor) }}
                               >
                                 View 3 Outstanding Invoices &amp; Receipts
                               </div>
@@ -2174,6 +2270,25 @@ function OnboardingContent() {
                       </p>
                     </div>
 
+                    {/* Skip Whole Step 4 Banner (Skips all 9 sub-steps) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-50 to-teal-50 border border-teal-200/80 rounded-2xl shadow-2xs">
+                      <div className="flex items-center gap-2.5">
+                        <Sparkles className="w-4 h-4 text-[#0F8B7D] shrink-0" />
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 block">Want to skip lease spreadsheet ingestion for now?</span>
+                          <span className="text-[11px] text-slate-600">You can skip the entire 9-step ingestion pipeline and proceed straight to Step 5 (Final Review & Go-Live). You can add properties and leases anytime from your live dashboard.</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(5)}
+                        className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 transition-all"
+                      >
+                        <FastForward size={14} />
+                        <span>Skip for Now (Skip All 9 Steps)</span>
+                      </button>
+                    </div>
+
                     {/* 9 Mini Steps Sub-tabs */}
                     <div className="grid grid-cols-3 sm:grid-cols-9 gap-1 text-center text-[10px] font-bold">
                       {[
@@ -2358,14 +2473,14 @@ function OnboardingContent() {
                               </button>
                             </div>
 
-                            {/* SKIP BUTTON ON THE RIGHT WITH PROMINENT HIGHLIGHT */}
+                            {/* SKIP BUTTON ON THE RIGHT (SKIPS ALL 9 SUB-STEPS TO STEP 5) */}
                             <button
                               type="button"
                               onClick={() => setCurrentStep(5)}
                               className="px-5 py-2.5 rounded-xl border-2 border-teal-600 bg-teal-50 hover:bg-teal-100 text-teal-900 font-extrabold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
                             >
-                              <span>Skip Data Ingestion — Add Leases Later on Dashboard</span>
-                              <ArrowRight size={14} className="text-teal-700" />
+                              <FastForward size={14} className="text-teal-700" />
+                              <span>Skip for Now (Skip All 9 Steps) → Review &amp; Launch</span>
                             </button>
                           </div>
 
@@ -2465,7 +2580,14 @@ function OnboardingContent() {
                           </div>
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(5)}
+                            className="text-xs text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer flex items-center gap-1"
+                          >
+                            <FastForward size={12} /> Skip for Now (Skip All 9 Steps)
+                          </button>
                           <button
                             type="button"
                             onClick={() => setImportWorkflowStep(3)}
@@ -2524,7 +2646,14 @@ function OnboardingContent() {
                           </table>
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(5)}
+                            className="text-xs text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer flex items-center gap-1"
+                          >
+                            <FastForward size={12} /> Skip for Now (Skip All 9 Steps)
+                          </button>
                           <button
                             type="button"
                             onClick={() => setImportWorkflowStep(4)}
@@ -2556,7 +2685,14 @@ function OnboardingContent() {
                           </div>
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(5)}
+                            className="text-xs text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer flex items-center gap-1"
+                          >
+                            <FastForward size={12} /> Skip for Now (Skip All 9 Steps)
+                          </button>
                           <button
                             type="button"
                             onClick={() => setImportWorkflowStep(5)}
@@ -2612,7 +2748,14 @@ function OnboardingContent() {
                           </div>
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(5)}
+                            className="text-xs text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer flex items-center gap-1"
+                          >
+                            <FastForward size={12} /> Skip for Now (Skip All 9 Steps)
+                          </button>
                           <button
                             type="button"
                             onClick={() => setImportWorkflowStep(6)}
@@ -2643,7 +2786,14 @@ function OnboardingContent() {
                           <div className="text-[11px] text-slate-500">No unresolved exceptions found. Ready for Two-Step Approval sign-off.</div>
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(5)}
+                            className="text-xs text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer flex items-center gap-1"
+                          >
+                            <FastForward size={12} /> Skip for Now (Skip All 9 Steps)
+                          </button>
                           <button
                             type="button"
                             onClick={() => setImportWorkflowStep(7)}
@@ -2829,18 +2979,24 @@ function OnboardingContent() {
                               {orgData.segments[0] === "warehouse_owner" ? "Warehouse / Logistics Park" : orgData.segments[0] === "flex_operator" ? "Flexible Workspace" : "Commercial Office Landlord"}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Primary Asset:</span>
-                            <span className="font-bold text-[#0F8B7D]">{propertyData.name || "Commercial Tower"}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-500">Commercial Assets:</span>
+                            <span className={propertyData.name?.trim() ? "font-bold text-[#0F8B7D]" : "text-slate-500 italic text-[11px]"}>
+                              {propertyData.name?.trim() ? propertyData.name.trim() : "0 added (Skipped — register anytime from dashboard)"}
+                            </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Asset Location:</span>
-                            <span className="font-semibold text-slate-700">{propertyData.city || orgData.city || "Mumbai"}, {propertyData.state || orgData.state || "Maharashtra"}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Leasable Area:</span>
-                            <span className="font-bold font-mono text-slate-900">{Number(propertyData.totalArea || 50000).toLocaleString()} sq ft ({propertyData.unitsCount || 6} Units)</span>
-                          </div>
+                          {propertyData.name?.trim() ? (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Asset Location:</span>
+                                <span className="font-semibold text-slate-700">{propertyData.city || orgData.city || "Mumbai"}, {propertyData.state || orgData.state || "Maharashtra"}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Leasable Area:</span>
+                                <span className="font-bold font-mono text-slate-900">{Number(propertyData.totalArea || 50000).toLocaleString()} sq ft ({propertyData.unitsCount || 6} Units)</span>
+                              </div>
+                            </>
+                          ) : null}
                         </div>
                       </div>
 
@@ -2976,7 +3132,26 @@ function OnboardingContent() {
               <ArrowLeft className="w-4 h-4" /> Previous Step
             </button>
 
-            {currentStep < 5 ? (
+            {currentStep === 4 ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(5)}
+                  className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-bold text-xs cursor-pointer flex items-center gap-1.5 transition-colors"
+                >
+                  <FastForward size={14} className="text-amber-700" />
+                  <span>Skip for Now (Skip All 9 Steps)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl font-bold text-xs cursor-pointer flex items-center gap-2 shadow-2xs transition-all"
+                >
+                  <span>Continue to Step 5</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            ) : currentStep < 5 ? (
               <button
                 type="button"
                 onClick={handleNextStep}

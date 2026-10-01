@@ -39,6 +39,8 @@ interface AddressAutocompleteProps {
   label?: string;
   required?: boolean;
   disabled?: boolean;
+  state?: string;
+  city?: string;
 }
 
 export function AddressAutocomplete({
@@ -50,6 +52,8 @@ export function AddressAutocomplete({
   label,
   required = false,
   disabled = false,
+  state = "",
+  city = "",
 }: AddressAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<GeocodeLocation[]>([]);
@@ -84,7 +88,9 @@ export function AddressAutocomplete({
     }
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/geocode?q=${encodeURIComponent(text.trim())}`);
+      const cityParam = city ? `&city=${encodeURIComponent(city.trim())}` : "";
+      const stateParam = state ? `&state=${encodeURIComponent(state.trim())}` : "";
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(text.trim())}${cityParam}${stateParam}`);
       if (res.ok) {
         const data = await res.json();
         setSuggestions(data.results || []);
@@ -95,7 +101,7 @@ export function AddressAutocomplete({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [city, state]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

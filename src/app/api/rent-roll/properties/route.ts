@@ -82,7 +82,8 @@ export async function GET(req: Request) {
         (ownerEmail && (p.ownerEmail || "").toLowerCase().trim() === ownerEmail) ||
         (ownerUserId && p.ownerUserId === ownerUserId)
       );
-      scopedProps = owned.length > 0 ? owned : allDbProps;
+      const isDemoUser = (ownerEmail && ownerEmail.includes("demo")) || isDemo;
+      scopedProps = isDemoUser && owned.length === 0 ? allDbProps : owned;
     } else {
       scopedProps = allDbProps;
     }

@@ -10,6 +10,7 @@ import {
   Smartphone, ExternalLink, Copy, Info, CheckSquare, Trash2
 } from "lucide-react";
 import ComplianceOperationsCenter from "@/components/compliance/ComplianceOperationsCenter";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 interface VisitorManagementConsoleProps {
   portalRole?: "tenant" | "security" | "fm" | "admin";
@@ -1011,13 +1012,12 @@ export default function VisitorManagementConsole({
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Mobile Number (For WhatsApp Pass) *</label>
-                <input
+                <CountryPhoneInput
+                  label="MOBILE NUMBER (FOR WHATSAPP PASS)"
                   required
                   value={form.mobile}
-                  onChange={e => setForm({ ...form, mobile: e.target.value })}
-                  placeholder="+91 98200..."
-                  className="mt-1 w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
+                  onChange={(val) => setForm({ ...form, mobile: val })}
+                  placeholder="98200 12345"
                 />
               </div>
 

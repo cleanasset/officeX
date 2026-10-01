@@ -28,6 +28,7 @@ import {
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 import { setAuthCookie } from "@/lib/auth-storage";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 import {
   INDIAN_STATES,
@@ -751,41 +752,27 @@ export default function RentRollPaymentModal({
                 </div>
               </div>
 
-              {/* Row 2: Mobile Number & (Optional Password) */}
+              {/* Row 2: Mobile Number with Country Code & (Optional Password) */}
               {isGoogleSession ? (
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Mobile Number <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 98765 43210"
-                      required
-                      className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
-                    />
-                    <PhoneIcon size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                  </div>
+                  <CountryPhoneInput
+                    label="Mobile Number"
+                    required
+                    value={phone}
+                    onChange={(val) => setPhone(val)}
+                    placeholder="98765 43210"
+                  />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-start">
                   <div>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">
-                      Mobile Number <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 98765 43210"
-                        required
-                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0D7B6C]/20 focus:border-[#0D7B6C] outline-none"
-                      />
-                      <PhoneIcon size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                    </div>
+                    <CountryPhoneInput
+                      label="Mobile Number"
+                      required
+                      value={phone}
+                      onChange={(val) => setPhone(val)}
+                      placeholder="98765 43210"
+                    />
                   </div>
 
                   <div>

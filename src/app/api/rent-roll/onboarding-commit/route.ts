@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     const userEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
 
-    if (property && property.name) {
+    if (property && property.name && property.name.trim()) {
       const propId = property.id || `PROP-${Date.now()}`;
       const totalArea = Number(property.totalArea) || 50000;
       const cleanCode = property.name.replace(/[^A-Za-z0-9]/g, "").substring(0, 4).toUpperCase();
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
         id: propId,
         orgId: db.organization.id,
         propertyCode: `PRP-${cleanCode}`,
-        name: property.name,
+        name: property.name.trim(),
         type: property.type || "Commercial Asset",
         address: property.address || db.organization.address,
         city: property.city || db.organization.city,
@@ -140,44 +140,10 @@ export async function POST(req: Request) {
       // Remove any duplicate with the same id
       db.properties = db.properties.filter(p => p.id !== propId);
       db.properties.unshift(newProp);
-    } else if (db.properties.length > 0) {
-      // Use the first property
-      committedProperty = db.properties[0];
-      if (userEmail && (!committedProperty.ownerEmail || committedProperty.ownerEmail.includes("officex.com"))) {
-        committedProperty.ownerEmail = userEmail;
-      }
     } else {
-      // Create primary property based on organization details
-      const propId = `PROP-${Date.now()}`;
-      const propName = `${orgName} Tower`;
-      const totalArea = 50000;
-
-      const autoProp: PropertyEntity = {
-        id: propId,
-        orgId: db.organization.id,
-        propertyCode: "PRP-MAIN",
-        name: propName,
-        type: "Commercial Office",
-        address: db.organization.address || "Main Commercial Street",
-        city: db.organization.city || "Mumbai",
-        state: db.organization.state || "Maharashtra",
-        microMarket: "Prime Commercial",
-        pincode: "400001",
-        grade: "A",
-        totalArea,
-        chargeableArea: totalArea,
-        carpetArea: Math.round(totalArea * 0.8),
-        occupancyTargetPct: 95,
-        ownerName: orgName,
-        ownerCompany: orgName,
-        ownerEmail: userEmail || "owner@officex.com",
-        status: "operational",
-        sourceSystem: "onboarding_auto",
-        version: 1,
-        dataQualityStatus: "passed"
-      };
-      committedProperty = autoProp;
-      db.properties.unshift(autoProp);
+      // Option 1: Clean 0-property state — do NOT auto-create a dummy fallback property
+      // If user skipped adding a property during onboarding, start clean with 0 properties.
+      committedProperty = null;
     }
 
     // 5. Ingest Uploaded CSV Rows if provided

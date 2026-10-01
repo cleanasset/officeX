@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
+import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 interface SubscriptionGateProps {
   children: React.ReactNode;
@@ -464,16 +465,12 @@ export default function SubscriptionGate({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  Mobile Number <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#0F8B7D]/20 focus:border-[#0F8B7D] outline-none"
+                <CountryPhoneInput
+                  label="Mobile Number"
                   required
+                  value={phone}
+                  onChange={(val) => setPhone(val)}
+                  placeholder="98765 43210"
                 />
               </div>
             </div>

@@ -26,6 +26,8 @@ function cleanCityName(rawCity: string, rawState: string): string {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
+  const targetCity = (searchParams.get("city") || "").trim();
+  const targetState = (searchParams.get("state") || "").trim();
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
 
@@ -236,8 +238,20 @@ export async function GET(request: Request) {
   ).trim();
 
   const searchVariants = [cleanQ];
+  if (targetCity) {
+    if (targetState) {
+      searchVariants.unshift(`${cleanQ}, ${targetCity}, ${targetState}`);
+    }
+    searchVariants.unshift(`${cleanQ}, ${targetCity}`);
+  } else if (targetState) {
+    searchVariants.unshift(`${cleanQ}, ${targetState}`);
+  }
+
   if (decomposedQ && decomposedQ.length >= 3 && decomposedQ.toLowerCase() !== cleanQ.toLowerCase()) {
     searchVariants.push(decomposedQ);
+    if (targetCity) {
+      searchVariants.push(`${decomposedQ}, ${targetCity}`);
+    }
   }
 
   const commaParts = cleanQ.split(",").map(s => s.trim()).filter(Boolean);
@@ -270,22 +284,29 @@ export async function GET(request: Request) {
     );
   }
 
-  // C) Global Nominatim Geocoder (Worldwide — No country codes, Full address details)
-  const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-    cleanQ
-  )}&addressdetails=1&limit=15`;
-  fetchTasks.push(
-    fetch(nomUrl, {
-      headers: {
-        "User-Agent": "OfficeX-Global-Commercial-System/1.0",
-        "Accept-Language": "en"
-      },
-      next: { revalidate: 3600 }
-    })
-      .then(r => r.json())
-      .then(data => ({ engine: "nom", data }))
-      .catch(err => ({ engine: "nom", error: err }))
-  );
+  // C) Global Nominatim Geocoder (Localized by target city/state when available)
+  const nomQueries = [cleanQ];
+  if (targetCity) {
+    nomQueries.unshift(`${cleanQ}, ${targetCity}${targetState ? `, ${targetState}` : ""}`);
+  }
+
+  for (const nq of nomQueries) {
+    const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      nq
+    )}&addressdetails=1&limit=15`;
+    fetchTasks.push(
+      fetch(nomUrl, {
+        headers: {
+          "User-Agent": "OfficeX-Global-Commercial-System/1.0",
+          "Accept-Language": "en"
+        },
+        next: { revalidate: 3600 }
+      })
+        .then(r => r.json())
+        .then(data => ({ engine: "nom", data }))
+        .catch(err => ({ engine: "nom", error: err }))
+    );
+  }
 
   const taskResults = await Promise.all(fetchTasks);
 
@@ -416,6 +437,9 @@ export async function GET(request: Request) {
     .split(/[\s,.-]+/)
     .filter(t => t.length > 1 && !["plot", "flat", "unit", "office", "shop", "floor", "suite", "room", "door", "near", "opp", "opposite"].includes(t));
 
+  const normCity = targetCity.toLowerCase();
+  const normState = targetState.toLowerCase();
+
   const scoredResults = results.map(item => {
     const text = `${item.buildingName} ${item.displayName} ${item.area || ""} ${item.city || ""} ${item.state || ""} ${item.country || ""}`.toLowerCase();
     let matches = 0;
@@ -426,7 +450,28 @@ export async function GET(request: Request) {
 
     // Bonus for matching first keyword in building name
     if (qTokens[0] && item.buildingName.toLowerCase().includes(qTokens[0])) {
-      score += 0.25;
+      score += 0.5;
+    }
+
+    // Heavy priority boost for matching target city & state
+    const itemCity = (item.city || "").toLowerCase();
+    const itemState = (item.state || "").toLowerCase();
+    const fullText = (item.fullAddress || item.displayName || "").toLowerCase();
+
+    if (normCity) {
+      if (itemCity.includes(normCity) || fullText.includes(normCity)) {
+        score += 20.0; // Top priority for selected city (e.g. Ahmedabad)
+      } else {
+        score -= 10.0; // Demote results from other cities
+      }
+    }
+
+    if (normState) {
+      if (itemState.includes(normState) || fullText.includes(normState)) {
+        score += 10.0; // High priority for selected state (e.g. Gujarat)
+      } else if (normCity && !itemCity.includes(normCity)) {
+        score -= 15.0; // Severely penalize other states (e.g. Kerala, Hyderabad, Tamil Nadu)
+      }
     }
 
     // Bonus for having full GPS coordinates
