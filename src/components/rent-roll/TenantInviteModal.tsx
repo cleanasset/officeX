@@ -105,7 +105,9 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   const code = property?.inviteCode || `OX-${propIdClean.padStart(4, "7")}`;
 
   const effectiveLocation = property?.location || (property?.city ? `${property.city}, ${property.state || ""}` : "Commercial Asset Location");
-  const baseUrl = "https://www.officex.pro";
+  const baseUrl = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost")
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro");
   const propertyIdParam = property?.id ? `&propertyId=${encodeURIComponent(property.id)}` : "";
   const ownerParam = property?.ownerName ? `&owner=${encodeURIComponent(property.ownerName)}` : "";
   const locationParam = effectiveLocation ? `&location=${encodeURIComponent(effectiveLocation)}` : "";

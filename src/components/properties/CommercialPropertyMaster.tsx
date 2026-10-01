@@ -3963,7 +3963,9 @@ export default function CommercialPropertyMaster() {
                 {(() => {
                   const propId = successProperty.id || propertyCode || "PROP-DEFAULT";
                   const unitsParam = selectedShareUnits.length > 0 ? selectedShareUnits.join(",") : "all";
-                  const origin = "https://www.officex.pro";
+                  const origin = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost")
+                    ? window.location.origin
+                    : (process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro");
                   const shareUrl = `${origin}/tenant/join?propertyId=${encodeURIComponent(propId)}&building=${encodeURIComponent(assetName)}&units=${encodeURIComponent(unitsParam)}&location=${encodeURIComponent(`${city}, ${state}`)}`;
                   
                   const selectedUnitsDisplay = selectedShareUnits.length > 0 ? selectedShareUnits.join(", ") : "All Leasable Units";

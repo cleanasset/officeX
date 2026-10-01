@@ -379,7 +379,7 @@ export default function SubscriptionGate({
                     }
                     const redirectUrl = typeof window !== "undefined"
                       ? `${window.location.origin}/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent(pathname || "/properties/rent-roll")}`
-                      : "http://localhost:3000/signup";
+                      : "https://www.officex.pro/signup";
 
                     if (is100PercentDiscount) {
                       await persistSubscription(userEmail || "google-subscriber@officex.in", "RENTROLL12", `FREE_RENTROLL12_${Date.now()}`);

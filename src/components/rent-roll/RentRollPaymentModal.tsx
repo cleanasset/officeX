@@ -210,7 +210,7 @@ export default function RentRollPaymentModal({
 
     const redirectUrl = typeof window !== "undefined"
       ? `${window.location.origin}/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`
-      : "http://localhost:3000/signup?context=rent-roll&role=owner&module=rent-roll&redirect=/properties/rent-roll";
+      : "https://www.officex.pro/signup?context=rent-roll&role=owner&module=rent-roll&redirect=/properties/rent-roll";
 
     // In Sign-In mode: authenticate directly with Google
     if (mode === "signin") {

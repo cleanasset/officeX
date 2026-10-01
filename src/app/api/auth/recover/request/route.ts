@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       // 2. Trigger real Supabase Auth reset password email
       try {
         const { error: supaErr } = await supabase.auth.resetPasswordForEmail(normalized, {
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login?reset=true`,
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.officex.pro'}/login?reset=true`,
         });
         if (supaErr) {
           console.warn(`[RECOVER] Supabase resetPasswordForEmail notice for ${normalized}:`, supaErr.message);

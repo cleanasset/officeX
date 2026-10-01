@@ -263,7 +263,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       const searchStr = `?context=${activeCtx}&role=${encodeURIComponent(selectedRole)}&redirect=${encodeURIComponent(canonicalRedirect)}`;
       const redirectUrl = typeof window !== "undefined"
         ? `${window.location.origin}/signup${searchStr}`
-        : "http://localhost:3000/signup";
+        : "https://www.officex.pro/signup";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",

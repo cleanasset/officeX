@@ -910,7 +910,7 @@ const LOGIN_COUNTRY_CODES = [
       const searchStr = `?context=${activeCtx}&redirect=${encodeURIComponent(safeRedirect)}`;
       const redirectUrl = typeof window !== "undefined"
         ? (isRentRollContext ? `${window.location.origin}/signup${searchStr}&role=owner&module=rent-roll` : `${window.location.origin}/login${searchStr}`)
-        : "http://localhost:3000/login";
+        : "https://www.officex.pro/login";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
