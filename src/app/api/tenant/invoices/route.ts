@@ -59,12 +59,32 @@ export async function GET(req: Request) {
     const totalOutstanding = pendingInvoices.reduce((acc, curr) => acc + (curr.balanceDue || 0), 0);
     const nextDueInvoice = pendingInvoices.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0] || null;
 
+    // Resolve Landlord settlement bank details for receiving rent directly
+    const firstLease = leases[0];
+    const property = firstLease ? db.properties.find(p => p.id === firstLease.propertyId) : db.properties[0];
+    const billingEntity = firstLease?.billingEntityId 
+      ? db.billingEntities.find(b => b.id === firstLease.billingEntityId)
+      : (db.billingEntities[0] || null);
+
+    const landlordBank = {
+      beneficiaryName: billingEntity?.legalName || property?.ownerName || db.organization.name || "Commercial Property SPV",
+      bankName: billingEntity?.bankName || "HDFC Bank Ltd",
+      accountNumber: billingEntity?.bankAccountNumber || "50200088991122",
+      ifsc: billingEntity?.bankIfsc || "HDFC0000060",
+      branch: billingEntity?.bankBranch || "BKC Special Financial Services Branch",
+      upiVpa: "landlord.rent@hdfcbank",
+      gstin: billingEntity?.gstin || "27AAFCO1234F1Z5",
+      pan: billingEntity?.pan || "AAFCO1234F",
+      accountType: "Current Account"
+    };
+
     return NextResponse.json({
       tenant: activeTenant || null,
       leases,
       invoices,
       pendingInvoices,
       collections,
+      landlordBank,
       summary: {
         totalOutstanding,
         pendingCount: pendingInvoices.length,

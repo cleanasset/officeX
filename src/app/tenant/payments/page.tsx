@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { 
   CreditCard, Download, ShieldCheck, CheckCircle, X, 
   QrCode, Smartphone, Building, Lock, Check, Loader2, ArrowRight,
-  AlertCircle, RefreshCw, FileText
+  AlertCircle, RefreshCw, FileText, Building2, Copy, CheckCircle2
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
@@ -57,7 +57,12 @@ export default function RentPaymentGateway() {
   // Active invoice selected for payment
   const [selectedInvoice, setSelectedInvoice] = useState<TenantInvoice | null>(null);
   const [showPayModal, setShowPayModal] = useState(false);
-  const [payMethod, setPayMethod] = useState<"upi" | "card" | "netbanking">("upi");
+  const [payMethod, setPayMethod] = useState<"wire" | "upi" | "gateway">("wire");
+  const [landlordBank, setLandlordBank] = useState<any>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [wireUtr, setWireUtr] = useState("");
+  const [wireTds, setWireTds] = useState<number>(0);
+  const [wireDate, setWireDate] = useState(new Date().toISOString().split("T")[0]);
   const [upiId, setUpiId] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
@@ -88,6 +93,9 @@ export default function RentPaymentGateway() {
         setCollections(data.collections || []);
         setTenantInfo(data.tenant || null);
         setSummary(data.summary || null);
+        if (data.landlordBank) {
+          setLandlordBank(data.landlordBank);
+        }
 
         // Select the first pending/overdue invoice by default
         const pending = (data.invoices || []).find((i: TenantInvoice) => i.status !== "paid");
@@ -111,6 +119,60 @@ export default function RentPaymentGateway() {
   const handleOpenPayModal = (inv: TenantInvoice) => {
     setSelectedInvoice(inv);
     setShowPayModal(true);
+  };
+
+  const handleDirectWirePayment = async () => {
+    if (!selectedInvoice) return;
+    if (!wireUtr.trim()) {
+      setToast("Please enter your Bank Transfer UTR / Transaction Reference Number.");
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const balanceDue = selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable;
+      const actualReceived = Math.max(0, balanceDue - Number(wireTds || 0));
+
+      const payload = {
+        invoiceId: selectedInvoice.id,
+        leaseId: selectedInvoice.leaseId,
+        amountReceived: actualReceived,
+        tdsDeducted: Number(wireTds || 0),
+        paymentMode: "neft",
+        referenceNumber: wireUtr.trim().toUpperCase(),
+        paymentDate: wireDate || new Date().toISOString().split("T")[0],
+        bankAccount: landlordBank?.bankName || "HDFC Bank Ltd",
+        notes: `Direct Corporate Bank Wire (NEFT/RTGS) to Landlord Account [${landlordBank?.accountNumber || ""}] | UTR: ${wireUtr.trim().toUpperCase()}`
+      };
+
+      const res = await fetch("/api/rent-roll/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setIsPaidSuccess(true);
+        setTimeout(() => {
+          setShowPayModal(false);
+          setIsPaidSuccess(false);
+          setWireUtr("");
+          setToast(`Payment recorded directly to Landlord! ₹${actualReceived.toLocaleString("en-IN")} settled with UTR: ${wireUtr.trim().toUpperCase()}`);
+          fetchTenantData();
+          setTimeout(() => setToast(null), 6000);
+        }, 1200);
+      } else {
+        const err = await res.json();
+        setToast(`Error recording transfer: ${err.error}`);
+        setTimeout(() => setToast(null), 5000);
+      }
+    } catch (err: any) {
+      setToast(`Network error: ${err.message}`);
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleRazorpayPayment = async (overrideAmount?: number) => {
@@ -561,165 +623,309 @@ This is a computer-generated tax invoice receipt. No physical signature required
               <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 rounded-2xl mb-5">
                 <button
                   type="button"
+                  onClick={() => setPayMethod("wire")}
+                  className={`py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    payMethod === "wire" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
+                  }`}
+                >
+                  <Building2 size={13} className="text-[#0F8B7D]" />
+                  <span>Bank Wire (NEFT)</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPayMethod("upi")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     payMethod === "upi" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   <Smartphone size={13} />
-                  <span>UPI / QR</span>
+                  <span>Landlord UPI QR</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPayMethod("card")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    payMethod === "card" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
+                  onClick={() => setPayMethod("gateway")}
+                  className={`py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    payMethod === "gateway" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   <CreditCard size={13} />
-                  <span>Cards</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPayMethod("netbanking")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    payMethod === "netbanking" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
-                  }`}
-                >
-                  <Building size={13} />
-                  <span>Netbanking</span>
+                  <span>Cards / Gateway</span>
                 </button>
               </div>
 
-              {/* Method 1: UPI / QR */}
+              {/* Method 1: Direct Corporate Bank Wire (NEFT / RTGS / IMPS) */}
+              {payMethod === "wire" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-teal-50/60 border border-teal-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 size={15} className="text-[#0F8B7D]" />
+                        <p className="text-xs font-bold text-slate-900">Landlord Registered Bank Account</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        Direct to Owner • 0% Fee
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs bg-white p-3.5 rounded-xl border border-teal-100 font-mono">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-sans font-bold uppercase">Beneficiary Name</span>
+                        <span className="font-bold text-slate-800 text-[11px] select-all truncate block">{landlordBank?.beneficiaryName || "Commercial Property SPV"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-sans font-bold uppercase">Bank &amp; Branch</span>
+                        <span className="font-bold text-slate-800 text-[11px] truncate block">{landlordBank?.bankName || "HDFC Bank"} ({landlordBank?.branch || "BKC"})</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 font-sans font-bold uppercase">Account Number</span>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              navigator.clipboard.writeText(landlordBank?.accountNumber || "50200088991122");
+                              setCopiedField("acc");
+                              setTimeout(() => setCopiedField(null), 2000);
+                            }}
+                            className="text-[9px] text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                          >
+                            {copiedField === "acc" ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                        <span className="font-black text-slate-900 text-xs tracking-wider select-all">{landlordBank?.accountNumber || "50200088991122"}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 font-sans font-bold uppercase">IFSC Code</span>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              navigator.clipboard.writeText(landlordBank?.ifsc || "HDFC0000060");
+                              setCopiedField("ifsc");
+                              setTimeout(() => setCopiedField(null), 2000);
+                            }}
+                            className="text-[9px] text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                          >
+                            {copiedField === "ifsc" ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                        <span className="font-black text-slate-900 text-xs tracking-wider select-all">{landlordBank?.ifsc || "HDFC0000060"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* UTR Entry */}
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        1. BANK TRANSFER UTR / TRANSACTION REF NUMBER *
+                      </label>
+                      <input
+                        type="text"
+                        value={wireUtr}
+                        onChange={(e) => setWireUtr(e.target.value)}
+                        placeholder="e.g. HDFC00029384910 or CMS9928172"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-xs uppercase focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">Enter the reference generated from your corporate netbanking (NEFT/RTGS/IMPS)</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                          2. TDS DEDUCTED (SEC 194-I)
+                        </label>
+                        <input
+                          type="number"
+                          value={wireTds || ""}
+                          onChange={(e) => setWireTds(Number(e.target.value))}
+                          placeholder="e.g. 25000"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                          TRANSFER DATE
+                        </label>
+                        <input
+                          type="date"
+                          value={wireDate}
+                          onChange={(e) => setWireDate(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isProcessing || isPaidSuccess || !wireUtr.trim()}
+                      onClick={handleDirectWirePayment}
+                      className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-black text-xs shadow-lg shadow-teal-700/20 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          <span>Verifying &amp; Settling Rent Roll...</span>
+                        </>
+                      ) : isPaidSuccess ? (
+                        <>
+                          <CheckCircle size={16} className="text-emerald-300" />
+                          <span>Rent Settled Direct to Landlord!</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={15} />
+                          <span>Submit UTR &amp; Settle Invoice Directly to Landlord</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Method 2: Landlord UPI / QR */}
               {payMethod === "upi" && (
                 <div className="space-y-4">
                   <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200 flex items-center gap-4">
-                    <div className="w-20 h-20 bg-white rounded-xl border border-teal-200 p-1 flex items-center justify-center shrink-0">
-                      <QrCode size={64} className="text-gray-800" />
+                    <div className="w-24 h-24 bg-white rounded-xl border border-teal-200 p-1 flex items-center justify-center shrink-0">
+                      <QrCode size={80} className="text-gray-800" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-900">Scan &amp; Pay via Any UPI App</p>
+                      <p className="text-xs font-bold text-gray-900">Scan &amp; Pay directly to Landlord</p>
                       <p className="text-[10px] text-gray-500 mt-0.5">GooglePay, PhonePe, Paytm, BHIM</p>
-                      <span className="inline-block mt-2 text-[10px] font-mono text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded font-bold">
-                        officex.nodal@hdfcbank
-                      </span>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[11px] font-mono text-teal-800 bg-teal-100/70 px-2 py-1 rounded font-bold">
+                          {landlordBank?.upiVpa || "landlord.rent@hdfcbank"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(landlordBank?.upiVpa || "landlord.rent@hdfcbank");
+                            setCopiedField("vpa");
+                            setTimeout(() => setCopiedField(null), 2000);
+                          }}
+                          className="text-[10px] text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                        >
+                          {copiedField === "vpa" ? "Copied!" : "Copy"}
+                        </button>
+                      </div>
+                      <span className="text-[9px] text-slate-500 mt-1 block">Account Holder: {landlordBank?.beneficiaryName || "Commercial Property SPV"}</span>
                     </div>
-                  </div>
-
-                  <div className="relative flex py-1 items-center">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="flex-shrink mx-3 text-[10px] text-gray-400 font-bold uppercase">Or enter Corporate UPI ID</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
                   </div>
 
                   <div>
+                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                      ENTER 12-DIGIT UPI TRANSACTION REF / UTR
+                    </label>
                     <input
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      placeholder="e.g. finance@tcs.icici"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-600"
+                      value={wireUtr}
+                      onChange={(e) => setWireUtr(e.target.value)}
+                      placeholder="e.g. 429188491029"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono font-bold focus:outline-none focus:border-teal-600"
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    disabled={isProcessing || isPaidSuccess || !wireUtr.trim()}
+                    onClick={handleDirectWirePayment}
+                    className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-black text-xs shadow-lg shadow-teal-700/20 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={15} />
+                    )}
+                    <span>Confirm UPI Transfer to Landlord</span>
+                  </button>
                 </div>
               )}
 
-              {/* Method 2: Cards */}
-              {payMethod === "card" && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Corporate Card Number</label>
-                    <input
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      placeholder="4532 ···· ···· 8920"
-                      className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
-                    />
+              {/* Method 3: Cards & Netbanking via Razorpay Route */}
+              {payMethod === "gateway" && (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-900 text-xs">
+                    <p className="font-bold flex items-center gap-1.5 text-[11px]">
+                      <ShieldCheck size={14} className="text-blue-700" />
+                      Razorpay Route Marketplace Settlement
+                    </p>
+                    <p className="text-[10px] text-blue-700 mt-1 leading-relaxed">
+                      Funds are automatically routed and settled directly into the Landlord&apos;s registered bank account (<span className="font-bold">{landlordBank?.bankName || "HDFC Bank"} A/C ••••{landlordBank?.accountNumber ? landlordBank.accountNumber.slice(-4) : "1122"}</span>) within T+1 banking days.
+                    </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+
+                  {/* Card Form */}
+                  <div className="space-y-3">
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Expiry (MM/YY)</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Corporate Card Number</label>
                       <input
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(e.target.value)}
-                        placeholder="12/28"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                        placeholder="4532 ···· ···· 8920"
                         className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
                       />
                     </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">CVV</label>
-                      <input
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value)}
-                        placeholder="•••"
-                        type="password"
-                        maxLength={4}
-                        className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Expiry (MM/YY)</label>
+                        <input
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(e.target.value)}
+                          placeholder="12/28"
+                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">CVV</label>
+                        <input
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value)}
+                          placeholder="•••"
+                          type="password"
+                          maxLength={4}
+                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Submit CTA */}
+                  <button
+                    disabled={isProcessing || isPaidSuccess}
+                    onClick={() => handleRazorpayPayment()}
+                    className="w-full mt-4 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-lg shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Communicating with Razorpay Escrow...</span>
+                      </>
+                    ) : isPaidSuccess ? (
+                      <>
+                        <CheckCircle size={16} className="text-emerald-300" />
+                        <span>Payment Verified &amp; Settled to Landlord!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={14} />
+                        <span>Pay ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")} via Razorpay</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isProcessing || isPaidSuccess}
+                    onClick={() => handleRazorpayPayment(1)}
+                    className="w-full py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50/50 text-blue-700 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>⚡ Test Live ₹1 Verification</span>
+                  </button>
                 </div>
               )}
-
-              {/* Method 3: Netbanking */}
-              {payMethod === "netbanking" && (
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Select Corporate Bank</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {["HDFC Bank Corporate", "ICICI Bank Corporate", "SBI Corporate", "Axis Bank Corporate", "Kotak Mahindra", "IndusInd Bank"].map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setSelectedBank(b)}
-                        className={`p-3 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
-                          selectedBank === b 
-                            ? "border-blue-600 bg-blue-50/50 text-blue-700" 
-                            : "border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Submit CTA */}
-              <button
-                disabled={isProcessing || isPaidSuccess}
-                onClick={() => handleRazorpayPayment()}
-                className="w-full mt-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Communicating with Razorpay Escrow...</span>
-                  </>
-                ) : isPaidSuccess ? (
-                  <>
-                    <CheckCircle size={16} className="text-emerald-300" />
-                    <span>Payment Verified &amp; Rent Roll Settled!</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock size={14} />
-                    <span>Authorize Payment of ₹{(selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable).toLocaleString("en-IN")}</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                disabled={isProcessing || isPaidSuccess}
-                onClick={() => handleRazorpayPayment(1)}
-                className="w-full mt-2.5 py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50/50 text-blue-700 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <span>⚡ Test Live ₹1 Real Payment Verification</span>
-              </button>
 
               <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400">
                 <ShieldCheck size={12} className="text-emerald-600" />
-                <span>256-bit SSL Encrypted · RBI Regulated Nodal Escrow Route</span>
+                <span>Direct Landlord Settlement · RBI Regulated Guidelines Compliant</span>
               </div>
             </div>
           </div>

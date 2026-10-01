@@ -33,8 +33,21 @@ import {
 } from "lucide-react";
 
 export default function IntegrationsPage() {
-  const [activeTab, setActiveTab] = useState<"tally" | "zoho" | "sap" | "quickbooks" | "guides" | "logs">("tally");
+  const [activeTab, setActiveTab] = useState<"settlement" | "tally" | "zoho" | "sap" | "quickbooks" | "guides" | "logs">("settlement");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Landlord Settlement Bank State
+  const [bankBeneficiary, setBankBeneficiary] = useState("Apex Realty Commercial SPV 1 Pvt Ltd");
+  const [bankName, setBankName] = useState("HDFC Bank Ltd");
+  const [bankBranch, setBankBranch] = useState("BKC Special Financial Services Branch");
+  const [bankAccount, setBankAccount] = useState("50200088991122");
+  const [bankIfsc, setBankIfsc] = useState("HDFC0000060");
+  const [bankUpi, setBankUpi] = useState("apexrealty.rent@hdfcbank");
+  const [settlementMode, setSettlementMode] = useState<"direct_bank" | "razorpay_route" | "byo_gateway">("direct_bank");
+  const [customKeyId, setCustomKeyId] = useState("");
+  const [customKeySecret, setCustomKeySecret] = useState("");
+  const [routeAccountId, setRouteAccountId] = useState("acc_ApexRealty_001");
+  const [isSavedBank, setIsSavedBank] = useState(false);
 
   // Tally Live State
   const [tallyUrl, setTallyUrl] = useState("http://localhost:9000");
@@ -338,6 +351,22 @@ export default function IntegrationsPage() {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs font-bold overflow-x-auto">
         <button
           type="button"
+          onClick={() => setActiveTab("settlement")}
+          className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === "settlement"
+              ? "bg-[#0F8B7D] text-white shadow-xs font-black"
+              : "bg-teal-50 text-teal-850 hover:bg-teal-100 border border-teal-200"
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>Rent Settlement &amp; Bank Account</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-white text-teal-800 font-black">
+            Owner Payouts
+          </span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab("tally")}
           className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === "tally"
@@ -417,6 +446,247 @@ export default function IntegrationsPage() {
           <span>Audit &amp; Transmission Logs</span>
         </button>
       </div>
+
+      {/* ──── TAB: LANDLORD SETTLEMENT & GATEWAY ROUTING ──── */}
+      {activeTab === "settlement" && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-black">
+                    <Building className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">
+                      Property Owner Settlement Bank &amp; Gateway Routing
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Configure where tenant rent payments land. Ensures 100% direct landlord settlement in compliance with RBI regulations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {isSavedBank && (
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Settlement Account Saved!</span>
+                </div>
+              )}
+            </div>
+
+            {/* 3 Settlement Collection Modes */}
+            <div className="space-y-3">
+              <label className="text-xs font-black text-slate-800 uppercase tracking-wider block">
+                Select Tenant Rent Collection Architecture:
+              </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div
+                  onClick={() => setSettlementMode("direct_bank")}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    settlementMode === "direct_bank"
+                      ? "border-[#0F8B7D] bg-teal-50/50 shadow-xs ring-1 ring-[#0F8B7D]"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-black text-xs text-slate-900">Direct Corporate Wire + UPI</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800">
+                      0% Fee • Recommended
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Tenants transfer directly to your designated bank account (NEFT/RTGS/IMPS/UPI) with zero gateway commission. Tenant submits UTR for instant invoice reconciliation.
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setSettlementMode("razorpay_route")}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    settlementMode === "razorpay_route"
+                      ? "border-[#0F8B7D] bg-teal-50/50 shadow-xs ring-1 ring-[#0F8B7D]"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-black text-xs text-slate-900">Razorpay Route (Sub-Merchant)</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-100 text-blue-800">
+                      Auto T+1 Split
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Online cards and netbanking payments made on OfficeX automatically split and settle directly into your linked bank account via RBI-compliant escrow.
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setSettlementMode("byo_gateway")}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    settlementMode === "byo_gateway"
+                      ? "border-[#0F8B7D] bg-teal-50/50 shadow-xs ring-1 ring-[#0F8B7D]"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-black text-xs text-slate-900">Custom Gateway Keys (BYO)</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-purple-100 text-purple-800">
+                      Your Own Razorpay
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Use your company&apos;s own Razorpay Key ID and Secret. Checkouts execute directly under your merchant ID with zero OfficeX involvement.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Account Fields */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 space-y-4">
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-[#0F8B7D]" />
+                <span>Receiving Bank Details (Shown to Tenants on Tax Invoices &amp; Payment Gateway)</span>
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    Beneficiary Entity / Legal Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={bankBeneficiary}
+                    onChange={(e) => setBankBeneficiary(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    Bank Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    Account Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={bankAccount}
+                    onChange={(e) => setBankAccount(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    IFSC Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={bankIfsc}
+                    onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    Branch Name
+                  </label>
+                  <input
+                    type="text"
+                    value={bankBranch}
+                    onChange={(e) => setBankBranch(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    Owner Direct UPI VPA (for QR code payments)
+                  </label>
+                  <input
+                    type="text"
+                    value={bankUpi}
+                    onChange={(e) => setBankUpi(e.target.value)}
+                    placeholder="e.g. apex.rent@hdfcbank"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+              </div>
+
+              {settlementMode === "razorpay_route" && (
+                <div className="pt-3 border-t border-slate-200">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                    Razorpay Route Sub-Merchant Account ID (acc_xxxx)
+                  </label>
+                  <input
+                    type="text"
+                    value={routeAccountId}
+                    onChange={(e) => setRouteAccountId(e.target.value)}
+                    placeholder="acc_..."
+                    className="w-full max-w-md px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                  />
+                </div>
+              )}
+
+              {settlementMode === "byo_gateway" && (
+                <div className="pt-3 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                      Your Razorpay Key ID
+                    </label>
+                    <input
+                      type="text"
+                      value={customKeyId}
+                      onChange={(e) => setCustomKeyId(e.target.value)}
+                      placeholder="rzp_live_..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">
+                      Your Razorpay Key Secret
+                    </label>
+                    <input
+                      type="password"
+                      value={customKeySecret}
+                      onChange={(e) => setCustomKeySecret(e.target.value)}
+                      placeholder="••••••••••••••••"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500">
+                  Changes automatically apply to newly issued invoices and tenant checkout modals.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSavedBank(true);
+                    setTimeout(() => setIsSavedBank(false), 4000);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white font-black text-xs shadow-sm transition-all cursor-pointer"
+                >
+                  Save Settlement Configuration
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ──── TAB 1: TALLY PRIME CONNECTOR ──── */}
       {activeTab === "tally" && (
