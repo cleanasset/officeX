@@ -664,55 +664,83 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* ──── TOP STATUTORY CONTROL RIBBON (Canonical Section 3 & 4.1 Reconciler) ──── */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Leasable Area</span>
-          <span className="text-sm font-black text-slate-900 mt-0.5 block">{totalLeasableArea.toLocaleString()} sq ft</span>
-          <span className="text-[10px] text-slate-500 block mt-0.5">100% Reconciled Space</span>
+      {/* ──── TOP STATUTORY KPI SUMMARY CARDS ──── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
+            <span>Total Leasable Area</span>
+            <Building2 size={13} className="text-slate-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+            {totalLeasableArea.toLocaleString()} <span className="text-xs font-semibold text-slate-400">sq ft</span>
+          </p>
+          <span className="text-[11px] font-semibold text-slate-500 block mt-0.5">100% Reconciled Space</span>
         </div>
 
-        <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-teal-700 block tracking-wider">Occupied Area</span>
-          <span className="text-sm font-black text-[#0F8B7D] mt-0.5 block">{occupiedArea.toLocaleString()} sq ft</span>
-          <span className="text-[10px] text-teal-700 font-bold block mt-0.5">{occupancyPct}% Occupancy Rate</span>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-teal-600">
+            <span>Occupied Area</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-[#0F8B7D] tracking-tight mt-1">
+            {occupiedArea.toLocaleString()} <span className="text-xs font-semibold text-teal-600/70">sq ft</span>
+          </p>
+          <span className="text-[11px] font-bold text-teal-700 block mt-0.5">{occupancyPct}% Occupancy Rate</span>
         </div>
 
-        <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-amber-800 block tracking-wider">Vacant Area</span>
-          <span className="text-sm font-black text-amber-900 mt-0.5 block">{vacantArea.toLocaleString()} sq ft</span>
-          <span className="text-[10px] text-amber-700 block mt-0.5">{unifiedRows.filter(r => r.isVacant).length} Units Ready to Lease</span>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-amber-600">
+            <span>Vacant Area</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-amber-900 tracking-tight mt-1">
+            {vacantArea.toLocaleString()} <span className="text-xs font-semibold text-amber-600/70">sq ft</span>
+          </p>
+          <span className="text-[11px] font-bold text-amber-700 block mt-0.5">{unifiedRows.filter(r => r.isVacant).length} Units Ready to Lease</span>
         </div>
 
-        <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-emerald-800 block tracking-wider">In-Place Rent Roll</span>
-          <span className="text-sm font-black text-emerald-900 mt-0.5 block">{formatINR(inPlaceMonthlyRent)} / mo</span>
-          <span className="text-[10px] text-emerald-700 block mt-0.5">Active Contracted Rent</span>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-emerald-600">
+            <span>In-Place Rent Roll</span>
+            <TrendingUp size={13} className="text-emerald-500" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight mt-1">
+            {formatINR(inPlaceMonthlyRent)}<span className="text-xs font-semibold text-emerald-600/70"> /mo</span>
+          </p>
+          <span className="text-[11px] font-semibold text-emerald-700 block mt-0.5">Active Contracted Rent</span>
         </div>
 
-        <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-indigo-800 block tracking-wider">Potential Vacant Rent</span>
-          <span className="text-sm font-black text-indigo-900 mt-0.5 block">{formatINR(potentialVacantRent)} / mo</span>
-          <span className="text-[10px] text-indigo-600 block mt-0.5">At Standard Market Rates</span>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-indigo-500">
+            <span>Potential Vacant Rent</span>
+            <Sparkles size={13} className="text-indigo-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight mt-1">
+            {formatINR(potentialVacantRent)}<span className="text-xs font-semibold text-slate-400"> /mo</span>
+          </p>
+          <span className="text-[11px] font-semibold text-slate-500 block mt-0.5">Standard Market Rates</span>
         </div>
 
-        <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-purple-800 block tracking-wider">Inventory Breakdown</span>
-          <span className="text-sm font-black text-purple-900 mt-0.5 block">
-            {unifiedRows.filter(r => !r.isVacant).length} Leased · {unifiedRows.filter(r => r.isVacant).length} Vacant
-          </span>
-          <span className="text-[10px] text-purple-700 block mt-0.5">WALE: 3.84 Years</span>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:shadow-xs transition-shadow">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-purple-600">
+            <span>Inventory Breakdown</span>
+            <Layers size={13} className="text-purple-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+            {unifiedRows.filter(r => !r.isVacant).length} <span className="text-xs font-medium text-slate-400">Leased</span> · {unifiedRows.filter(r => r.isVacant).length} <span className="text-xs font-medium text-slate-400">Vac</span>
+          </p>
+          <span className="text-[11px] font-bold text-purple-700 block mt-0.5">WALE: 3.84 Years</span>
         </div>
       </div>
 
       {/* ──── CONTROL FILTER TABS & ACTIONS BAR ──── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+        {/* Tier 1: Segmented Filter Tabs (Smooth horizontal scrolling on mobile/tablet) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 text-xs">
           <button
             type="button"
             onClick={() => setFilterMode("all")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
               filterMode === "all" ? "bg-[#0F8B7D] text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
@@ -721,8 +749,8 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode("occupied")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-              filterMode === "occupied" ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+              filterMode === "occupied" ? "bg-teal-700 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             Occupied Contracts ({unifiedRows.filter(r => !r.isVacant).length})
@@ -730,8 +758,8 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode("vacant")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-              filterMode === "vacant" ? "bg-amber-600 text-white shadow-xs" : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200"
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+              filterMode === "vacant" ? "bg-amber-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             Vacant Spaces ({unifiedRows.filter(r => r.isVacant).length})
@@ -739,7 +767,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode("payable")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
               filterMode === "payable" ? "bg-purple-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
@@ -748,7 +776,7 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode("pending_approval")}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
               filterMode === "pending_approval" ? "bg-rose-600 text-white shadow-xs" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
@@ -756,160 +784,165 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
           </button>
         </div>
 
-        {/* View Mode & Add Action & Saved Views & Column Chooser */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Search Bar (RR-VW-04) */}
-          <div className="relative min-w-[200px]">
-            <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+        {/* Tier 2: Search Bar & Utilities */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search unit, occupant, code..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F8B7D] focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F8B7D] focus:bg-white transition-all"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={12} />
               </button>
             )}
           </div>
 
-          {/* Saved Views Picker (RR-VW-05) */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowSavedViewsMenu(!showSavedViewsMenu)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
-            >
-              <Bookmark size={13} className="text-[#0F8B7D]" />
-              <span className="hidden sm:inline">View:</span>
-              <span>{SAVED_VIEWS.find((v) => v.id === activeSavedView)?.name.slice(0, 14) || "Standard"}...</span>
-            </button>
-            {showSavedViewsMenu && (
-              <div className="absolute right-0 sm:left-0 mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1">
-                <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400">Canonical Saved Views (RR-VW-05)</div>
-                {SAVED_VIEWS.map((view) => (
-                  <button
-                    key={view.id}
-                    onClick={() => handleSelectSavedView(view)}
-                    className={`w-full text-left p-2 rounded-xl text-xs transition-colors cursor-pointer ${
-                      activeSavedView === view.id ? "bg-teal-50 text-[#0F8B7D] font-bold" : "hover:bg-slate-50 text-slate-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{view.name}</span>
-                      {activeSavedView === view.id && <Check size={12} className="text-[#0F8B7D]" />}
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-normal mt-0.5">{view.description}</p>
-                  </button>
-                ))}
+          {/* Right utilities group */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+            {/* View Mode Toggle */}
+            {onViewModeChange && (
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onViewModeChange("current")}
+                  className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                    viewMode === "current" ? "bg-white text-slate-900 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  title="Current active contracts as of current date"
+                >
+                  In-Place
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onViewModeChange("contracted")}
+                  className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                    viewMode === "contracted" ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  title="Contracted + future signed contracts"
+                >
+                  Contracted
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onViewModeChange("forecast")}
+                  className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                    viewMode === "forecast" ? "bg-indigo-600 text-white shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  title="Forecast including deals weighted by probability"
+                >
+                  Forecast
+                </button>
               </div>
             )}
-          </div>
 
-          {/* Column Chooser (RR-VW-05) */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowColumnChooser(!showColumnChooser)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
-            >
-              <SlidersHorizontal size={13} className="text-slate-600" />
-              <span>Columns</span>
-            </button>
-            {showColumnChooser && (
-              <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 max-h-80 overflow-y-auto">
-                <div className="text-[10px] font-bold uppercase text-slate-400 pb-1 border-b border-slate-100 flex items-center justify-between">
-                  <span>Toggle Columns</span>
-                  <button
-                    onClick={() => setVisibleColumns(new Set(ALL_COLUMNS.map((c) => c.id).concat(["unit", "actions"])))}
-                    className="text-[#0F8B7D] font-bold hover:underline lowercase text-[10px]"
-                  >
-                    Reset all
-                  </button>
-                </div>
-                {ALL_COLUMNS.map((col) => {
-                  const isChecked = visibleColumns.has(col.id);
-                  return (
-                    <label
-                      key={col.id}
-                      className="flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900 cursor-pointer select-none py-0.5"
+            {/* Saved Views Picker */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowSavedViewsMenu(!showSavedViewsMenu)}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
+              >
+                <Bookmark size={13} className="text-[#0F8B7D]" />
+                <span className="hidden md:inline">View:</span>
+                <span>{SAVED_VIEWS.find((v) => v.id === activeSavedView)?.name.slice(0, 12) || "Standard"}...</span>
+              </button>
+              {showSavedViewsMenu && (
+                <div className="absolute right-0 sm:left-0 mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1">
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400">Canonical Saved Views (RR-VW-05)</div>
+                  {SAVED_VIEWS.map((view) => (
+                    <button
+                      key={view.id}
+                      onClick={() => handleSelectSavedView(view)}
+                      className={`w-full text-left p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                        activeSavedView === view.id ? "bg-teal-50 text-[#0F8B7D] font-bold" : "hover:bg-slate-50 text-slate-700"
+                      }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleColumn(col.id)}
-                        className="rounded border-slate-300 text-[#0F8B7D] focus:ring-[#0F8B7D]"
-                      />
-                      <span>{col.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
+                      <div className="flex items-center justify-between">
+                        <span>{view.name}</span>
+                        {activeSavedView === view.id && <Check size={12} className="text-[#0F8B7D]" />}
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-normal mt-0.5">{view.description}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Column Chooser */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowColumnChooser(!showColumnChooser)}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold flex items-center gap-1.5 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs"
+              >
+                <SlidersHorizontal size={13} className="text-slate-600" />
+                <span className="hidden sm:inline">Columns</span>
+              </button>
+              {showColumnChooser && (
+                <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 max-h-80 overflow-y-auto">
+                  <div className="text-[10px] font-bold uppercase text-slate-400 pb-1 border-b border-slate-100 flex items-center justify-between">
+                    <span>Toggle Columns</span>
+                    <button
+                      onClick={() => setVisibleColumns(new Set(ALL_COLUMNS.map((c) => c.id).concat(["unit", "actions"])))}
+                      className="text-[#0F8B7D] font-bold hover:underline lowercase text-[10px]"
+                    >
+                      Reset all
+                    </button>
+                  </div>
+                  {ALL_COLUMNS.map((col) => {
+                    const isChecked = visibleColumns.has(col.id);
+                    return (
+                      <label
+                        key={col.id}
+                        className="flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900 cursor-pointer select-none py-0.5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleColumn(col.id)}
+                          className="rounded border-slate-300 text-[#0F8B7D] focus:ring-[#0F8B7D]"
+                        />
+                        <span>{col.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Tally Prime XML Export */}
+            <a
+              href="/api/rent-roll/export/tally"
+              download
+              className="px-2.5 py-1.5 rounded-xl border border-indigo-200 text-xs font-semibold flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 transition-colors shadow-2xs cursor-pointer shrink-0"
+              title="Export to Tally XML"
+            >
+              <FileSpreadsheet size={13} className="text-indigo-600" />
+              <span className="hidden md:inline">Tally Vouchers</span>
+              <span className="md:hidden">XML</span>
+            </a>
+
+            {/* Primary Action Button */}
+            {onOpenAddLease && (
+              <button
+                type="button"
+                onClick={onOpenAddLease}
+                className="px-3.5 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap shrink-0 transition-all"
+              >
+                <Plus size={14} />
+                <span>New Contract</span>
+              </button>
             )}
           </div>
-
-          {/* Tally Prime XML Export (RR-INT-01 / OI-5) */}
-          <a
-            href="/api/rent-roll/export/tally"
-            download
-            className="px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 transition-colors shadow-2xs cursor-pointer"
-            title="Export Rent Roll Sales & Receipt Vouchers to Tally Prime XML"
-          >
-            <FileSpreadsheet size={13} className="text-indigo-600" />
-            <span className="hidden md:inline">Tally Vouchers (XML)</span>
-            <span className="md:hidden">Tally XML</span>
-          </a>
-
-          {onViewModeChange && (
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-              <button
-                type="button"
-                onClick={() => onViewModeChange("current")}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
-                  viewMode === "current" ? "bg-white text-slate-900 shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                }`}
-                title="Current active contracts as of current date"
-              >
-                In-Place
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange("contracted")}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
-                  viewMode === "contracted" ? "bg-[#0F8B7D] text-white shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                }`}
-                title="Contracted + future signed contracts"
-              >
-                Contracted
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange("forecast")}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
-                  viewMode === "forecast" ? "bg-indigo-600 text-white shadow-2xs font-extrabold" : "text-slate-500 hover:text-slate-800"
-                }`}
-                title="Forecast including deals weighted by probability"
-              >
-                Forecast
-              </button>
-            </div>
-          )}
-
-          {onOpenAddLease && (
-            <button
-              type="button"
-              onClick={onOpenAddLease}
-              className="px-3 py-1.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
-            >
-              <Plus size={14} />
-              <span>New Contract</span>
-            </button>
-          )}
         </div>
       </div>
 
