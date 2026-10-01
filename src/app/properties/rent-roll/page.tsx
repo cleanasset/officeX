@@ -49,7 +49,7 @@ import { AccountingIntegrationsModal } from "@/components/rent-roll/AccountingIn
 
 import { LeaseDetailDrawer } from "@/components/rent-roll/LeaseDetailDrawer";
 import { TaxInvoiceDrawer } from "@/components/rent-roll/TaxInvoiceDrawer";
-import { AddLeaseModal } from "@/components/rent-roll/AddLeaseModal";
+import { ContractWizardModal } from "@/components/rent-roll/ContractWizardModal";
 import { RecordPaymentModal } from "@/components/rent-roll/RecordPaymentModal";
 import { ServeNoticeModal } from "@/components/rent-roll/ServeNoticeModal";
 import { AddExpenseModal } from "@/components/rent-roll/AddExpenseModal";
@@ -889,7 +889,7 @@ function RentRollPageInner() {
         />
       )}
 
-      <AddLeaseModal
+      <ContractWizardModal
         properties={properties}
         preSelectedSpace={preSelectedSpaceForLease}
         isOpen={isAddLeaseOpen}

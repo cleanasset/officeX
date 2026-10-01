@@ -1215,6 +1215,66 @@ export const MasterGridTab: React.FC<MasterGridTabProps> = ({
                 ))
               )}
             </tbody>
+
+            {/* Pinned Totals Row (S-10 Requirement) */}
+            <tfoot className="bg-slate-100 text-xs font-black text-slate-900 border-t-2 border-slate-300 sticky bottom-0 z-20 shadow-xs">
+              <tr>
+                <td className="p-3 sticky left-0 z-30 bg-slate-100 border-r border-slate-200">
+                  <div className="flex items-center gap-1.5 uppercase tracking-wider text-[11px] font-black text-slate-700">
+                    <Layers size={13} className="text-teal-700" />
+                    <span>Total (Filtered)</span>
+                  </div>
+                </td>
+                {visibleColumns.has("tenant") && (
+                  <td className="p-3 text-[11px] text-slate-500 font-semibold">
+                    {sortedRows.filter(r => !r.isVacant).length} Occupied · {sortedRows.filter(r => r.isVacant).length} Vacant
+                  </td>
+                )}
+                {visibleColumns.has("code") && <td className="p-3 font-mono text-[11px] text-slate-400">—</td>}
+                {visibleColumns.has("type") && <td className="p-3 font-mono text-[11px] text-slate-400">—</td>}
+                {visibleColumns.has("area") && (
+                  <td className="p-3 text-right font-mono font-black text-slate-900">
+                    {sortedRows.reduce((acc, r) => acc + (r.chargeableArea || 0), 0).toLocaleString()} sq ft
+                  </td>
+                )}
+                {visibleColumns.has("ratePsf") && (
+                  <td className="p-3 text-right font-mono text-slate-500 font-bold">
+                    {(() => {
+                      const totalArea = sortedRows.reduce((acc, r) => acc + (r.chargeableArea || 0), 0);
+                      const totalRent = sortedRows.reduce((acc, r) => acc + (r.monthlyRent || 0), 0);
+                      return totalArea > 0 ? `Avg ₹${(totalRent / totalArea).toFixed(2)}` : "—";
+                    })()}
+                  </td>
+                )}
+                {visibleColumns.has("rent") && (
+                  <td className="p-3 text-right font-mono font-black text-[#0F8B7D]">
+                    {formatINR(sortedRows.reduce((acc, r) => acc + (r.monthlyRent || 0), 0))}
+                  </td>
+                )}
+                {visibleColumns.has("cam") && (
+                  <td className="p-3 text-right font-mono text-slate-600 font-bold">
+                    {formatINR(sortedRows.reduce((acc, r) => acc + (r.camMonthly || 0), 0))}
+                  </td>
+                )}
+                {visibleColumns.has("gross") && (
+                  <td className="p-3 text-right font-mono font-black text-amber-950 bg-amber-100/60">
+                    {formatINR(sortedRows.reduce((acc, r) => acc + (r.totalMonthlyGross || 0), 0))}
+                  </td>
+                )}
+                {visibleColumns.has("escalation") && <td className="p-3 text-center text-slate-400">—</td>}
+                {visibleColumns.has("tenure") && <td className="p-3 text-center text-slate-400">—</td>}
+                {visibleColumns.has("lockIn") && <td className="p-3 text-center text-slate-400">—</td>}
+                {visibleColumns.has("deposit") && (
+                  <td className="p-3 text-right font-mono text-slate-800 font-bold">
+                    {formatINR(sortedRows.reduce((acc, r) => acc + (r.securityDepositPaid || 0), 0))}
+                  </td>
+                )}
+                {visibleColumns.has("status") && <td className="p-3 text-center text-slate-400">—</td>}
+                <td className="p-3 text-center sticky right-0 z-30 bg-slate-100 border-l border-slate-200">
+                  <span className="text-[10px] text-slate-400 font-mono">{sortedRows.length} Rows</span>
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
