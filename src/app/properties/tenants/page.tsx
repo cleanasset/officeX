@@ -56,7 +56,8 @@ export interface TenantRecord {
   contactEmail: string;
   contactPhone: string;
   billingAddress?: string;
-  status: "active" | "under_notice" | "kyc_pending" | "expired" | "invited";
+  status: "active" | "under_notice" | "kyc_pending" | "expired" | "invited" | "contract_pending";
+  portalLive?: boolean;
   kycVerified: boolean;
   outstandingDue: number;
   inviteCode?: string;
@@ -101,7 +102,7 @@ export default function TenantDirectoryPage() {
   const [isAddTenantOpen, setIsAddTenantOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isNoPropertyWarningOpen, setIsNoPropertyWarningOpen] = useState(false);
-  const [inviteProperty, setInviteProperty] = useState<{ id: string; name: string; inviteCode?: string } | null>(null);
+  const [inviteProperty, setInviteProperty] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const handleOpenAddTenant = () => {
@@ -221,7 +222,12 @@ export default function TenantDirectoryPage() {
             contactEmail: t.contactEmail || "-",
             contactPhone: t.contactPhone || "-",
             billingAddress: t.billingAddress || "-",
-            status: t.hasOverdue ? "under_notice" : "active",
+            status: t.hasOverdue
+              ? "under_notice"
+              : (t.status === "invited" || !t.portalLive || (t.activeLeasesCount || 0) === 0)
+              ? "contract_pending"
+              : "active",
+            portalLive: Boolean(t.portalLive && (t.activeLeasesCount || 0) > 0),
             kycVerified: !!t.gstin && t.gstin !== "-",
             outstandingDue: t.outstanding || 0,
             inviteCode: t.inviteCode || `OX-${7000 + idx}`
@@ -338,7 +344,8 @@ export default function TenantDirectoryPage() {
       }
       // Status filter
       if (statusFilter !== "ALL") {
-        if (statusFilter === "active" && t.status !== "active") return false;
+        if (statusFilter === "active" && (t.status !== "active" || !t.portalLive)) return false;
+        if (statusFilter === "contract_pending" && t.status !== "contract_pending" && t.status !== "invited") return false;
         if (statusFilter === "under_notice" && t.status !== "under_notice") return false;
         if (statusFilter === "kyc_pending" && t.kycVerified) return false;
       }
@@ -595,6 +602,7 @@ export default function TenantDirectoryPage() {
           <div className="flex items-center gap-1 p-1 bg-gray-100/70 rounded-xl border border-gray-200/60 overflow-x-auto">
             {[
               { id: "ALL", label: "All Statuses" },
+              { id: "contract_pending", label: "Contract Pending" },
               { id: "active", label: "Active Leases" },
               { id: "under_notice", label: "Under Notice" },
               { id: "kyc_pending", label: "KYC Pending" }
@@ -722,21 +730,21 @@ export default function TenantDirectoryPage() {
 
                         {/* Status */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          {t.status === "active" ? (
+                          {t.status === "active" && t.portalLive ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live (Portal Active)
                             </span>
-                          ) : (t.status === "invited" || (t as any).inviteStatus === "pending") ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Invite Pending
+                          ) : (t.status === "contract_pending" || t.status === "invited" || !t.portalLive) ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Contract Pending
                             </span>
                           ) : t.status === "under_notice" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Under Notice
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                              Pending Setup
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Contract Pending
                             </span>
                           )}
                         </td>
@@ -776,7 +784,14 @@ export default function TenantDirectoryPage() {
                                 setInviteProperty({
                                   id: prop.id,
                                   name: prop.name,
-                                  inviteCode: t.inviteCode
+                                  inviteCode: t.inviteCode,
+                                  allocatedUnits: t.unitNumber,
+                                  unitNumber: t.unitNumber,
+                                  tenantName: t.tradeName || t.legalName,
+                                  contactEmail: t.contactEmail,
+                                  contactPhone: t.contactPhone,
+                                  monthlyRent: t.monthlyRent,
+                                  totalArea: t.chargeableArea
                                 });
                               }}
                               className="p-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] transition-colors cursor-pointer"
@@ -787,7 +802,22 @@ export default function TenantDirectoryPage() {
                             <button
                               type="button"
                               onClick={() => {
-                                router.push(`/properties/rent-roll?tab=rentroll&action=add-lease`);
+                                const params = new URLSearchParams();
+                                params.set("tab", "rentroll");
+                                params.set("action", "add-lease");
+                                if (t.id) params.set("tenantId", t.id);
+                                if (t.tradeName || t.legalName) params.set("tenantName", t.tradeName || t.legalName);
+                                if (t.propertyId) params.set("propertyId", t.propertyId);
+                                if (t.unitNumber && t.unitNumber !== "Suite 101") params.set("unitNumber", t.unitNumber);
+                                if (t.chargeableArea) params.set("chargeableArea", String(t.chargeableArea));
+                                if (t.monthlyRent) params.set("monthlyRent", String(t.monthlyRent));
+                                if (t.camRatePsf) params.set("camRatePsf", String(t.camRatePsf));
+                                if (t.pan && t.pan !== "-") params.set("pan", t.pan);
+                                if (t.gstin && t.gstin !== "-") params.set("gstin", t.gstin);
+                                if (t.startDate && t.startDate !== "-") params.set("startDate", t.startDate);
+                                if (t.endDate && t.endDate !== "-") params.set("endDate", t.endDate);
+                                if (t.escalationPct) params.set("escalationPct", String(t.escalationPct));
+                                router.push(`/properties/rent-roll?${params.toString()}`);
                               }}
                               className="px-2.5 py-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
                               title="Open Contract Wizard to lease space or configure terms"
@@ -969,7 +999,14 @@ export default function TenantDirectoryPage() {
                 setInviteProperty({
                   id: prop.id,
                   name: prop.name,
-                  inviteCode: selectedTenant.inviteCode
+                  inviteCode: selectedTenant.inviteCode,
+                  allocatedUnits: selectedTenant.unitNumber,
+                  unitNumber: selectedTenant.unitNumber,
+                  tenantName: selectedTenant.tradeName || selectedTenant.legalName,
+                  contactEmail: selectedTenant.contactEmail,
+                  contactPhone: selectedTenant.contactPhone,
+                  monthlyRent: selectedTenant.monthlyRent,
+                  totalArea: selectedTenant.chargeableArea
                 });
               }}
               className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
@@ -999,7 +1036,22 @@ export default function TenantDirectoryPage() {
           }}
           onSwitchToContractWizard={(data) => {
             setIsAddTenantOpen(false);
-            router.push(`/properties/rent-roll?tab=rentroll&action=add-lease`);
+            const params = new URLSearchParams();
+            params.set("tab", "rentroll");
+            params.set("action", "add-lease");
+            const tName = data.tenant?.tradeName || data.tenant?.legalName || "";
+            if (tName) params.set("tenantName", tName);
+            if (data.propertyId) params.set("propertyId", data.propertyId);
+            if (data.space?.unitNumber) params.set("unitNumber", data.space.unitNumber);
+            if (data.space?.chargeableArea) params.set("chargeableArea", String(data.space.chargeableArea));
+            if (data.commercials?.monthlyRent) params.set("monthlyRent", String(data.commercials.monthlyRent));
+            if (data.commercials?.camRatePsf) params.set("camRatePsf", String(data.commercials.camRatePsf));
+            if (data.tenant?.pan) params.set("pan", data.tenant.pan);
+            if (data.tenant?.gstin) params.set("gstin", data.tenant.gstin);
+            if (data.commercials?.startDate) params.set("startDate", data.commercials.startDate);
+            if (data.commercials?.endDate) params.set("endDate", data.commercials.endDate);
+            if (data.commercials?.escalationPct) params.set("escalationPct", String(data.commercials.escalationPct));
+            router.push(`/properties/rent-roll?${params.toString()}`);
           }}
           properties={properties}
         />
@@ -1010,11 +1062,7 @@ export default function TenantDirectoryPage() {
         <TenantInviteModal
           isOpen={!!inviteProperty}
           onClose={() => setInviteProperty(null)}
-          property={{
-            id: inviteProperty.id,
-            name: inviteProperty.name,
-            inviteCode: inviteProperty.inviteCode
-          }}
+          property={inviteProperty}
           onSuccess={() => setInviteProperty(null)}
         />
       )}

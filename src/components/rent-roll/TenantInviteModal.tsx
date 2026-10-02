@@ -43,6 +43,10 @@ interface TenantInviteModalProps {
     monthlyRent?: number;
     camMonthly?: number;
     totalArea?: number;
+    tenantId?: string;
+    tenantName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
   } | null;
   onSuccess?: () => void;
 }
@@ -87,7 +91,7 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [inviteSentSuccess, setInviteSentSuccess] = useState(false);
 
-  // Keep allocatedUnit in sync if property changes
+  // Keep allocatedUnit and tenant details in sync if property changes
   React.useEffect(() => {
     if (property) {
       setAllocatedUnit(property.allocatedUnits || property.units || property.unitNumber || "Entire Building / All Floors");
@@ -97,6 +101,10 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
       }
       if (property.camMonthly) setCamMonthly(String(property.camMonthly));
       if (property.totalArea) setChargeableArea(String(property.totalArea));
+      if (property.tenantName) setTenantName(property.tenantName);
+      if (property.contactEmail) setContactEmail(property.contactEmail);
+      if (property.contactPhone) setContactPhone(property.contactPhone);
+      if (property.allocatedUnits || property.unitNumber) setUnitNumber(property.allocatedUnits || property.unitNumber || "Ground Floor");
     }
   }, [property]);
 
@@ -112,6 +120,9 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   const ownerParam = property?.ownerName ? `&owner=${encodeURIComponent(property.ownerName)}` : "";
   const locationParam = effectiveLocation ? `&location=${encodeURIComponent(effectiveLocation)}` : "";
   const unitsParam = allocatedUnit ? `&units=${encodeURIComponent(allocatedUnit)}` : "";
+  const tenantParam = (property?.tenantName || tenantName) ? `&tenant=${encodeURIComponent(property?.tenantName || tenantName)}` : "";
+  const tenantEmailParam = (property?.contactEmail || contactEmail) ? `&email=${encodeURIComponent(property?.contactEmail || contactEmail)}` : "";
+  const tenantPhoneParam = (property?.contactPhone || contactPhone) ? `&phone=${encodeURIComponent(property?.contactPhone || contactPhone)}` : "";
   const rentParam = monthlyRent ? `&rent=${encodeURIComponent(monthlyRent)}` : "";
   const camParam = camMonthly ? `&cam=${encodeURIComponent(camMonthly)}` : "";
   const depositParam = securityDeposit ? `&deposit=${encodeURIComponent(securityDeposit)}` : "";
@@ -121,7 +132,7 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
   const docParam = contractDoc ? `&doc=${encodeURIComponent(contractDoc)}` : "";
 
   const inviteUrl = property
-    ? `${baseUrl}/tenant/join?code=${encodeURIComponent(code)}&building=${encodeURIComponent(property.name)}${propertyIdParam}${ownerParam}${locationParam}${unitsParam}${rentParam}${camParam}${depositParam}${areaParam}${tenureParam}${escalationParam}${docParam}`
+    ? `${baseUrl}/tenant/join?code=${encodeURIComponent(code)}&building=${encodeURIComponent(property.name)}${propertyIdParam}${ownerParam}${locationParam}${unitsParam}${tenantParam}${tenantEmailParam}${tenantPhoneParam}${rentParam}${camParam}${depositParam}${areaParam}${tenureParam}${escalationParam}${docParam}`
     : "";
 
   React.useEffect(() => {

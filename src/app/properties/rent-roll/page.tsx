@@ -145,13 +145,61 @@ function RentRollPageInner() {
     }
   }, [tabFromUrl]);
 
-  // Open Add Tenant modal when action=add-tenant is in URL
+  // Open Modals when action is in URL (e.g. action=add-tenant or action=add-lease/contract)
   const actionFromUrl = searchParams.get("action");
   useEffect(() => {
     if (actionFromUrl === "add-tenant") {
       setIsAddTenantOpen(true);
+    } else if (actionFromUrl === "add-lease" || actionFromUrl === "contract") {
+      const tenantIdParam = searchParams.get("tenantId") || "";
+      const tenantNameParam = searchParams.get("tenantName") || "";
+      const gstinParam = searchParams.get("gstin") || "";
+      const panParam = searchParams.get("pan") || "";
+      const propertyIdParam = searchParams.get("propertyId") || "";
+      const unitNumberParam = searchParams.get("unitNumber") || "";
+      const areaParam = Number(searchParams.get("chargeableArea")) || 0;
+      const rentParam = Number(searchParams.get("monthlyRent")) || 0;
+      const camParam = Number(searchParams.get("camRatePsf")) || 0;
+      const startParam = searchParams.get("startDate");
+      const endParam = searchParams.get("endDate");
+      const escParam = Number(searchParams.get("escalationPct")) || 0;
+
+      if (tenantIdParam || tenantNameParam) {
+        setPreSelectedTenantForWizard({
+          id: tenantIdParam,
+          name: tenantNameParam,
+          tradeName: tenantNameParam,
+          legalName: tenantNameParam,
+          gstin: gstinParam && gstinParam !== "-" ? gstinParam : "",
+          pan: panParam && panParam !== "-" ? panParam : ""
+        });
+      }
+
+      if (propertyIdParam || unitNumberParam) {
+        setPreSelectedSpaceForLease({
+          propertyId: propertyIdParam,
+          unitNumber: unitNumberParam,
+          spaceCode: unitNumberParam,
+          chargeableArea: areaParam || 1000,
+          baseRentPsf: (areaParam > 0 && rentParam > 0) ? Math.round(rentParam / areaParam) : 150,
+          camRatePsf: camParam || 18
+        });
+      }
+
+      if (areaParam > 0 || rentParam > 0 || startParam) {
+        setInitialCommercialsForWizard({
+          baseRentPsf: (areaParam > 0 && rentParam > 0) ? Math.round(rentParam / areaParam) : (rentParam || 150),
+          camRatePsf: camParam || 18,
+          chargeableArea: areaParam,
+          startDate: (startParam && startParam !== "-") ? startParam : undefined,
+          endDate: (endParam && endParam !== "-") ? endParam : undefined,
+          escalationPct: escParam || 5
+        });
+      }
+
+      setIsAddLeaseOpen(true);
     }
-  }, [actionFromUrl]);
+  }, [actionFromUrl, searchParams]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -742,6 +790,50 @@ function RentRollPageInner() {
         </div>
       )}
 
+      {/* Action Required: Tenant Name Modification Alert Banner */}
+      {alerts.filter(a => (a.alertType === "compliance" || a.title?.toLowerCase().includes("name")) && !a.isRead).map(al => (
+        <div key={al.id} className="p-3.5 px-4 bg-teal-50/95 border border-teal-200 text-teal-950 rounded-2xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-teal-100 text-[#0F8B7D] flex items-center justify-center shrink-0">
+              <Users size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900">{al.title}</span>
+                <span className="px-2 py-0.5 rounded-full bg-teal-200 text-teal-900 text-[10px] font-bold uppercase tracking-wide">
+                  Rent Roll Notice
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-700 mt-0.5">{al.message}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <button
+              onClick={() => setActiveTab("tenants")}
+              className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            >
+              Review in Tenant Directory
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  await fetch("/api/rent-roll/alerts", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ alertId: al.id })
+                  });
+                  fetchAllData();
+                } catch {}
+              }}
+              className="text-slate-400 hover:text-slate-600 p-1 text-xs cursor-pointer font-bold"
+              title="Acknowledge & Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      ))}
+
       {/* ──── MAIN BODY CONTENT ──── */}
       <div className="w-full">
         {activeTab === "dashboard" && (
@@ -875,13 +967,48 @@ function RentRollPageInner() {
             onOpenAddTenant={() => setIsAddTenantOpen(true)}
             onOpenContractWizard={(t) => {
               setPreSelectedTenantForWizard(t);
+              const lease = leases.find(l => l.tenantId === t.id);
+              if (lease) {
+                setPreSelectedSpaceForLease({
+                  propertyId: lease.propertyId,
+                  unitNumber: lease.unitNumber,
+                  spaceCode: lease.unitNumber,
+                  chargeableArea: lease.chargeableArea,
+                  baseRentPsf: lease.baseRentPsf,
+                  camRatePsf: lease.camRatePsf
+                });
+                setInitialCommercialsForWizard({
+                  baseRentPsf: lease.baseRentPsf,
+                  camRatePsf: lease.camRatePsf,
+                  chargeableArea: lease.chargeableArea,
+                  startDate: lease.startDate,
+                  endDate: lease.endDate,
+                  securityDepositMonths: lease.securityDepositMonths,
+                  escalationPct: lease.escalationPct
+                });
+              } else if (t.totalArea || t.totalMonthlyRent) {
+                setInitialCommercialsForWizard({
+                  baseRentPsf: (t.totalArea && t.totalMonthlyRent) ? Math.round(t.totalMonthlyRent / t.totalArea) : 150,
+                  camRatePsf: 18,
+                  chargeableArea: t.totalArea || 1000
+                });
+              }
               setIsAddLeaseOpen(true);
             }}
             onShareInviteLink={(t) => {
               const origin = typeof window !== "undefined" ? window.location.origin : "";
-              const inviteLink = `${origin}/tenant/join?code=${t.tenantCode || t.id}`;
+              const lease = leases.find(l => l.tenantId === t.id);
+              const unit = lease?.unitNumber || t.unitNumber || "Ground Floor";
+              const prop = properties.find(p => p.id === (lease?.propertyId || t.propertyId));
+              const propParam = prop?.name ? `&building=${encodeURIComponent(prop.name)}` : "";
+              const unitParam = unit ? `&units=${encodeURIComponent(unit)}` : "";
+              const tenantParam = t.tradeName ? `&tenant=${encodeURIComponent(t.tradeName)}` : "";
+              const emailParam = t.contactEmail ? `&email=${encodeURIComponent(t.contactEmail)}` : "";
+              const phoneParam = t.contactPhone ? `&phone=${encodeURIComponent(t.contactPhone)}` : "";
+              const inviteCode = (t as any).inviteCode || t.tenantCode || t.id;
+              const inviteLink = `${origin}/tenant/join?code=${encodeURIComponent(inviteCode)}${propParam}${unitParam}${tenantParam}${emailParam}${phoneParam}`;
               navigator.clipboard?.writeText(inviteLink);
-              setActionFeedback(`Portal invite link for ${t.tradeName} copied to clipboard!`);
+              setActionFeedback(`Portal invite link for ${t.tradeName} (${unit}) copied to clipboard!`);
               setTimeout(() => setActionFeedback(null), 4000);
             }}
             onSelectTenant={(t) => {

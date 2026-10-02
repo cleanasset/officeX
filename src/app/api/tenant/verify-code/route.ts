@@ -23,9 +23,81 @@ export async function GET(req: NextRequest) {
 
     const codeDigits = code.replace(/\D/g, "");
 
-    // 1. Search in Rent Roll Database store
+    // 1. Search in Rent Roll Database store (Tenants, Leases, and Properties)
     try {
       const rrDb = getRentRollDb();
+      
+      // 1A. Check if code or query matches an onboarded tenant
+      if (rrDb.tenants && rrDb.tenants.length > 0) {
+        const matchedTenant = rrDb.tenants.find(t =>
+          (code && t.inviteCode && t.inviteCode.toUpperCase() === code) ||
+          (code && t.tenantCode && t.tenantCode.toUpperCase() === code) ||
+          (code && t.id.toUpperCase() === code) ||
+          (code && t.contactEmail && t.contactEmail.toUpperCase() === code) ||
+          (codeDigits && t.id.includes(codeDigits)) ||
+          (codeDigits && t.tenantCode && t.tenantCode.includes(codeDigits)) ||
+          (codeDigits && t.inviteCode && t.inviteCode.includes(codeDigits)) ||
+          (unitsParam && rrDb.leases?.some(l => l.tenantId === t.id && l.unitNumber?.toLowerCase() === unitsParam.toLowerCase()))
+        );
+
+        if (matchedTenant) {
+          const matchedLease = (rrDb.leases || []).find(l => l.tenantId === matchedTenant.id || l.tenantName?.toLowerCase() === matchedTenant.tradeName.toLowerCase());
+          const matchedProp = (rrDb.properties || []).find(p =>
+            p.id === matchedTenant.propertyId ||
+            p.id === matchedLease?.propertyId ||
+            (propIdParam && p.id === propIdParam) ||
+            p.units?.some((u: any) => u.tenantName?.toLowerCase() === matchedTenant.tradeName.toLowerCase())
+          ) || rrDb.properties?.[0];
+
+          const unitFromProp = matchedProp?.units?.find((u: any) =>
+            u.tenantName?.toLowerCase() === matchedTenant.tradeName.toLowerCase() ||
+            (matchedLease?.unitNumber && u.suiteNumber === matchedLease.unitNumber)
+          );
+
+          const allocatedUnit = unitsParam || matchedLease?.unitNumber || unitFromProp?.suiteNumber || "Ground Floor";
+          const area = areaParam ? Number(areaParam) : (matchedLease?.chargeableArea || unitFromProp?.chargeableArea || 10000);
+          const rent = rentParam ? Number(rentParam) : (matchedLease?.monthlyRent || (unitFromProp ? (unitFromProp.askingRate || 150) * (unitFromProp.chargeableArea || 1000) : 150000));
+          const loc = matchedProp?.address
+            ? `${matchedProp.address}, ${matchedProp.city || ""}, ${matchedProp.state || ""}`
+            : (matchedProp?.city ? `${matchedProp.city}, ${matchedProp.state || ""}` : locationParam || "Commercial Hub");
+
+          return NextResponse.json({
+            success: true,
+            tenant: {
+              id: matchedTenant.id,
+              tradeName: matchedTenant.tradeName,
+              legalName: matchedTenant.legalName || matchedTenant.tradeName,
+              contactPerson: matchedTenant.contactPerson || "Authorized Representative",
+              contactEmail: matchedTenant.contactEmail || "",
+              contactPhone: matchedTenant.contactPhone || "",
+              pan: matchedTenant.pan || "",
+              gstin: matchedTenant.gstin || "",
+              unitNumber: allocatedUnit,
+              status: matchedTenant.status || "invited",
+              inviteCode: matchedTenant.inviteCode || code
+            },
+            property: {
+              id: matchedProp?.id || propIdParam || "PROP-ACTIVE",
+              name: matchedProp?.name || matchedLease?.propertyName || buildingParam || "Commercial Building",
+              ownerName: matchedProp?.ownerName || matchedProp?.ownerCompany || rrDb.organization.name || ownerParam || "Commercial Property Owner",
+              location: loc,
+              grade: matchedProp?.grade || "Grade A",
+              totalArea: `${Number(matchedProp?.totalArea || area).toLocaleString()} sqft`,
+              allocatedUnits: allocatedUnit,
+              monthlyRent: rent,
+              camMonthly: camParam ? Number(camParam) : (matchedLease?.camMonthly || 0),
+              securityDeposit: depositParam ? Number(depositParam) : (matchedLease?.securityDepositAmount || rent * 3),
+              chargeableArea: area,
+              leaseTenureYears: tenureParam ? Number(tenureParam) : 3,
+              escalationPct: escalationParam ? Number(escalationParam) : (matchedLease?.escalationPct || 15),
+              contractDoc: docParam || "Commercial Lease Agreement (Pending Execution)",
+              inviteCode: matchedTenant.inviteCode || code || matchedProp?.propertyCode
+            }
+          });
+        }
+      }
+
+      // 1B. Check if code or query matches a property
       if (rrDb.properties && rrDb.properties.length > 0) {
         const found = rrDb.properties.find(p => 
           (propIdParam && p.id === propIdParam) ||
@@ -39,8 +111,37 @@ export async function GET(req: NextRequest) {
             ? `${found.address}, ${found.city}, ${found.state}`
             : (found.city ? `${found.city}, ${found.state || ""}` : locationParam || "Commercial Hub");
 
+          // Find allocated unit from property units if available
+          let matchedUnit = unitsParam ? found.units?.find((u: any) => u.suiteNumber?.toLowerCase() === unitsParam.toLowerCase()) : null;
+          if (!matchedUnit && found.units && found.units.length > 0) {
+            matchedUnit = found.units[0];
+          }
+
+          const matchedTenantName = matchedUnit?.tenantName;
+          const tenantObj = matchedTenantName
+            ? rrDb.tenants?.find(t => t.tradeName.toLowerCase() === matchedTenantName.toLowerCase())
+            : null;
+
+          const allocatedUnit = unitsParam || matchedUnit?.suiteNumber || (found as any).unitNumber || "Ground Floor";
+          const rent = rentParam ? Number(rentParam) : (matchedUnit ? (matchedUnit.askingRate || 150) * (matchedUnit.chargeableArea || 1000) : 150000);
+
           return NextResponse.json({
             success: true,
+            ...(tenantObj ? {
+              tenant: {
+                id: tenantObj.id,
+                tradeName: tenantObj.tradeName,
+                legalName: tenantObj.legalName || tenantObj.tradeName,
+                contactPerson: tenantObj.contactPerson || "Authorized Representative",
+                contactEmail: tenantObj.contactEmail || "",
+                contactPhone: tenantObj.contactPhone || "",
+                pan: tenantObj.pan || "",
+                gstin: tenantObj.gstin || "",
+                unitNumber: allocatedUnit,
+                status: tenantObj.status || "invited",
+                inviteCode: tenantObj.inviteCode || code
+              }
+            } : {}),
             property: {
               id: found.id,
               name: found.name,
@@ -48,14 +149,14 @@ export async function GET(req: NextRequest) {
               location: loc,
               grade: found.grade || "Grade A",
               totalArea: areaParam ? `${Number(areaParam).toLocaleString()} sqft` : `${Number(found.totalArea || 50000).toLocaleString()} sqft`,
-              allocatedUnits: unitsParam || (found as any).unitNumber || "Entire Leased Premises",
-              monthlyRent: rentParam ? Number(rentParam) : 250000,
+              allocatedUnits: allocatedUnit,
+              monthlyRent: rent,
               camMonthly: camParam ? Number(camParam) : 45000,
-              securityDeposit: depositParam ? Number(depositParam) : (rentParam ? Number(rentParam) * 3 : 750000),
-              chargeableArea: areaParam ? Number(areaParam) : 5000,
+              securityDeposit: depositParam ? Number(depositParam) : (rent * 3),
+              chargeableArea: areaParam ? Number(areaParam) : (matchedUnit?.chargeableArea || 5000),
               leaseTenureYears: tenureParam ? Number(tenureParam) : 3,
               escalationPct: escalationParam ? Number(escalationParam) : 5,
-              contractDoc: docParam || "Standard Commercial Lease Agreement (Executed)",
+              contractDoc: docParam || "Commercial Lease Agreement (Pending Execution)",
               inviteCode: code || found.propertyCode || `OX-${codeDigits.padStart(4, "7")}`
             }
           });

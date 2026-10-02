@@ -52,7 +52,11 @@ function TenantJoinContent() {
   const buildingParam = searchParams?.get("building") || searchParams?.get("property") || "";
   const ownerParam = searchParams?.get("owner") || searchParams?.get("ownerName") || "";
   const locationParam = searchParams?.get("location") || "";
-  const unitsParam = searchParams?.get("units") || searchParams?.get("unit") || "";
+  const unitsParam = searchParams?.get("units") || searchParams?.get("unit") || searchParams?.get("unitNumber") || searchParams?.get("floor") || "";
+  const tenantParam = searchParams?.get("tenant") || searchParams?.get("tenantName") || searchParams?.get("company") || searchParams?.get("companyName") || "";
+  const nameParam = searchParams?.get("name") || searchParams?.get("contactPerson") || searchParams?.get("fullName") || "";
+  const emailParam = searchParams?.get("email") || searchParams?.get("contactEmail") || "";
+  const phoneParam = searchParams?.get("phone") || searchParams?.get("mobile") || searchParams?.get("contactPhone") || "";
   const rentParam = searchParams?.get("rent") || "";
   const camParam = searchParams?.get("cam") || "";
   const depositParam = searchParams?.get("deposit") || "";
@@ -72,7 +76,7 @@ function TenantJoinContent() {
   const [agreedArea, setAgreedArea] = useState<number>(Number(areaParam) || 5000);
   const [agreedTenure, setAgreedTenure] = useState<number>(Number(tenureParam) || 3);
   const [agreedEscalation, setAgreedEscalation] = useState<number>(Number(escalationParam) || 5);
-  const [contractDocName, setContractDocName] = useState<string>(docParam || "Standard Commercial Lease Agreement (Executed)");
+  const [contractDocName, setContractDocName] = useState<string>(docParam || "Commercial Lease Agreement (Pending Execution)");
 
   // Initialize previewProperty immediately if URL parameters are available
   const [previewProperty, setPreviewProperty] = useState<PropertyPreview | null>(
@@ -91,17 +95,19 @@ function TenantJoinContent() {
           chargeableArea: Number(areaParam) || 5000,
           leaseTenureYears: Number(tenureParam) || 3,
           escalationPct: Number(escalationParam) || 5,
-          contractDoc: docParam || "Standard Commercial Lease Agreement (Executed)",
+          contractDoc: docParam || "Commercial Lease Agreement (Pending Execution)",
           inviteCode: codeParam.toUpperCase() || "OX-ACTIVE"
         }
       : null
   );
 
   // Tenant confirmation form fields
-  const [companyName, setCompanyName] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [companyName, setCompanyName] = useState(tenantParam || "");
+  const [fullName, setFullName] = useState(nameParam || "");
+  const [email, setEmail] = useState(emailParam || "");
+  const [mobile, setMobile] = useState(phoneParam || "");
+  const [originalTenantName, setOriginalTenantName] = useState(tenantParam || "");
+  const [verifiedTenantId, setVerifiedTenantId] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -164,6 +170,18 @@ function TenantJoinContent() {
           if (data.property.leaseTenureYears) setAgreedTenure(Number(data.property.leaseTenureYears));
           if (data.property.escalationPct) setAgreedEscalation(Number(data.property.escalationPct));
           if (data.property.contractDoc) setContractDocName(data.property.contractDoc);
+
+          if (data.tenant) {
+            if (data.tenant.tradeName || data.tenant.legalName) {
+              setCompanyName(data.tenant.legalName || data.tenant.tradeName);
+              setOriginalTenantName(data.tenant.tradeName || data.tenant.legalName);
+            }
+            if (data.tenant.contactPerson) setFullName(data.tenant.contactPerson);
+            if (data.tenant.contactEmail) setEmail(data.tenant.contactEmail);
+            if (data.tenant.contactPhone) setMobile(data.tenant.contactPhone);
+            if (data.tenant.id) setVerifiedTenantId(data.tenant.id);
+            if (data.tenant.unitNumber) setUnitNumber(data.tenant.unitNumber);
+          }
 
           if (unitsParam) {
             setUnitNumber(unitsParam);
@@ -323,36 +341,48 @@ function TenantJoinContent() {
     }
 
     const effectiveTenantName = companyName.trim() || fullName.trim() || "Tenant Occupier";
+    const hasNameChanged = Boolean(
+      originalTenantName &&
+      originalTenantName.trim().toLowerCase() !== effectiveTenantName.toLowerCase()
+    );
 
     setIsLoading(true);
 
     try {
-      // 1. Register tenant in Rent Roll database
+      // 1. Register or update tenant in Rent Roll database with audit notification
       await fetch("/api/rent-roll/tenants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          tenantId: verifiedTenantId,
+          originalTradeName: originalTenantName,
+          nameChanged: hasNameChanged,
           tradeName: effectiveTenantName,
           legalName: companyName.trim() || effectiveTenantName,
           contactPerson: fullName.trim(),
           contactEmail: email.trim().toLowerCase(),
           contactPhone: mobile.trim() || "+91 98000 00000",
           industry: companyName.trim() ? "Corporate Occupier" : "Individual / Professional Tenant",
-          status: "active"
+          propertyId: previewProperty.id,
+          propertyName: previewProperty.name,
+          unitNumber: unitNumber,
+          status: "invited",
+          portalLive: true
         })
       });
 
-      // 2. Attach active lease to this building's Rent Roll
+      // 2. Attach or update pending lease to this building's Rent Roll (contract is pending execution, not active)
       try {
         const leaseRes = await fetch("/api/rent-roll/leases", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            tenantId: verifiedTenantId,
             propertyId: previewProperty.id,
             propertyName: previewProperty.name,
             tenantName: effectiveTenantName,
             unitNumber: unitNumber || "Entire Premises",
-            floorNumber: 4,
+            floorNumber: unitNumber.toLowerCase().includes("ground") ? 1 : 2,
             chargeableArea: agreedArea,
             carpetArea: Math.round(agreedArea * 0.8),
             monthlyRent: agreedRent,
@@ -361,7 +391,12 @@ function TenantJoinContent() {
             startDate: new Date().toISOString().split("T")[0],
             endDate: new Date(Date.now() + agreedTenure * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
             escalationPct: agreedEscalation,
-            status: "active"
+            status: "pending_approval",
+            approvalStatus: "submitted",
+            isTermsPending: false,
+            notes: hasNameChanged
+              ? `Tenant verified portal profile. Name modified from "${originalTenantName}" to "${effectiveTenantName}". Commercial lease agreement execution pending.`
+              : "Tenant verified portal profile. Commercial lease agreement execution pending."
           })
         });
 
@@ -380,7 +415,8 @@ function TenantJoinContent() {
                 monthlyRent: agreedRent,
                 camMonthly: agreedCam,
                 totalMonthlyGross: agreedRent + agreedCam,
-                status: "active",
+                status: "pending_approval",
+                approvalStatus: "submitted",
                 leaseStartDate: new Date().toISOString().split("T")[0],
                 leaseEndDate: new Date(Date.now() + agreedTenure * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
               });
