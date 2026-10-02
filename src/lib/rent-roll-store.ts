@@ -180,6 +180,9 @@ export interface TenantEntity {
   portalLive?: boolean;
   inviteCode?: string;
   inviteStatus?: string;
+  propertyId?: string;
+  propertyName?: string;
+  unitNumber?: string;
   creditLimit: number;
   paymentTermsDays: number;
   notes?: string;
