@@ -562,7 +562,7 @@ export interface AlertEntity {
   alertType: string;
   title: string;
   message: string;
-  entityType: "lease" | "invoice" | "collection" | "property";
+  entityType: "lease" | "invoice" | "collection" | "property" | "tenant" | string;
   entityId?: string;
   severity: "info" | "warning" | "critical";
   isRead: boolean;
