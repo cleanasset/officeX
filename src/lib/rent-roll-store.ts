@@ -318,6 +318,8 @@ export interface LeaseEntity {
   terminationReason?: string;
   signedAgreementUrl?: string;
   isTermsPending?: boolean;
+  hasPendingDocument?: boolean;
+  agreementDocumentPending?: boolean;
   notes?: string;
   makerId?: string;
   createdBy?: string;
