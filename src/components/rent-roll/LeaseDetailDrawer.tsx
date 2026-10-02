@@ -64,7 +64,11 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
     : (process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro");
 
   const unitParam = `${lease.unitNumber || ""}${lease.floorNumber ? ` (Floor ${lease.floorNumber})` : ""}`;
-  const tenantPortalUrl = `${baseUrl}/tenant/join?code=${encodeURIComponent(lease.leaseCode)}&building=${encodeURIComponent(lease.propertyName || "")}&propertyId=${encodeURIComponent(lease.propertyId || "")}&units=${encodeURIComponent(unitParam)}&tenant=${encodeURIComponent(lease.tenantName || "")}&rent=${encodeURIComponent(lease.monthlyRent || 0)}&cam=${encodeURIComponent(lease.camMonthly || 0)}&deposit=${encodeURIComponent(lease.securityDepositPaid || lease.securityDepositAmount || 0)}&area=${encodeURIComponent(lease.chargeableArea || 0)}&escalation=${encodeURIComponent(lease.escalationPct || 0)}`;
+  const contactNameParam = (lease as any).contactPerson || (lease as any).contactName || (lease as any).name || "";
+  const contactEmailParam = (lease as any).contactEmail || (lease as any).email || "";
+  const contactPhoneParam = (lease as any).contactPhone || (lease as any).phone || "";
+
+  const tenantPortalUrl = `${baseUrl}/tenant/join?code=${encodeURIComponent(lease.leaseCode)}&building=${encodeURIComponent(lease.propertyName || "")}&propertyId=${encodeURIComponent(lease.propertyId || "")}&units=${encodeURIComponent(unitParam)}&tenant=${encodeURIComponent(lease.tenantName || "")}&rent=${encodeURIComponent(lease.monthlyRent || 0)}&cam=${encodeURIComponent(lease.camMonthly || 0)}&deposit=${encodeURIComponent(lease.securityDepositPaid || lease.securityDepositAmount || 0)}&area=${encodeURIComponent(lease.chargeableArea || 0)}&escalation=${encodeURIComponent(lease.escalationPct || 0)}${contactNameParam ? `&name=${encodeURIComponent(contactNameParam)}` : ""}${contactEmailParam ? `&email=${encodeURIComponent(contactEmailParam)}` : ""}${contactPhoneParam ? `&phone=${encodeURIComponent(contactPhoneParam)}` : ""}`;
 
   useEffect(() => {
     if (typeof window !== "undefined" && lease) {

@@ -906,7 +906,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
 
     const currentProp = properties.find(p => p.id === propertyId);
     const spaceUnitsParam = selectedSpaces.map(s => s.spaceCode).join(", ") || "Suite Commercial";
-    const shareUrl = `${baseUrl}/tenant/join?code=${encodeURIComponent(completedContract.leaseCode)}&building=${encodeURIComponent(currentProp?.name || "")}&propertyId=${encodeURIComponent(propertyId || "")}&units=${encodeURIComponent(spaceUnitsParam)}&tenant=${encodeURIComponent(completedContract.tenantName)}&rent=${encodeURIComponent(liveSummary.monthlyBaseRent || 0)}&cam=${encodeURIComponent(liveSummary.monthlyCAM || 0)}&deposit=${encodeURIComponent(securityDepositHeld || securityDepositRequired || 0)}&area=${encodeURIComponent(totalArea || 0)}&escalation=${encodeURIComponent(escalationPct || 0)}`;
+    const shareUrl = `${baseUrl}/tenant/join?code=${encodeURIComponent(completedContract.leaseCode)}&building=${encodeURIComponent(currentProp?.name || "")}&propertyId=${encodeURIComponent(propertyId || "")}&units=${encodeURIComponent(spaceUnitsParam)}&tenant=${encodeURIComponent(completedContract.tenantName)}&name=${encodeURIComponent(completedContract.tenantName)}&rent=${encodeURIComponent(liveSummary.monthlyBaseRent || 0)}&cam=${encodeURIComponent(liveSummary.monthlyCAM || 0)}&deposit=${encodeURIComponent(securityDepositHeld || securityDepositRequired || 0)}&area=${encodeURIComponent(totalArea || 0)}&escalation=${encodeURIComponent(escalationPct || 0)}`;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">

@@ -24,6 +24,7 @@ import {
   FileText
 } from "lucide-react";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
+import { formatINR, formatINRAbbreviated } from "@/lib/rent-roll/calculations";
 
 interface PropertyPreview {
   id: string;
@@ -172,15 +173,30 @@ function TenantJoinContent() {
           if (data.property.contractDoc) setContractDocName(data.property.contractDoc);
 
           if (data.tenant) {
-            if (data.tenant.tradeName || data.tenant.legalName) {
-              setCompanyName(data.tenant.legalName || data.tenant.tradeName);
-              setOriginalTenantName(data.tenant.tradeName || data.tenant.legalName);
+            const comp = data.tenant.legalName || data.tenant.tradeName || tenantParam;
+            if (comp) {
+              setCompanyName(comp);
+              setOriginalTenantName(comp);
             }
             if (data.tenant.contactPerson) setFullName(data.tenant.contactPerson);
+            else if (nameParam) setFullName(nameParam);
+
             if (data.tenant.contactEmail) setEmail(data.tenant.contactEmail);
+            else if (emailParam) setEmail(emailParam);
+
             if (data.tenant.contactPhone) setMobile(data.tenant.contactPhone);
+            else if (phoneParam) setMobile(phoneParam);
+
             if (data.tenant.id) setVerifiedTenantId(data.tenant.id);
             if (data.tenant.unitNumber) setUnitNumber(data.tenant.unitNumber);
+          } else {
+            if (tenantParam) {
+              setCompanyName(tenantParam);
+              setOriginalTenantName(tenantParam);
+            }
+            if (nameParam) setFullName(nameParam);
+            if (emailParam) setEmail(emailParam);
+            if (phoneParam) setMobile(phoneParam);
           }
 
           if (unitsParam) {
@@ -291,12 +307,25 @@ function TenantJoinContent() {
     setIsVerifying(false);
   }, [buildingParam, propertyIdParam, ownerParam, locationParam, unitsParam]);
 
-  // Initial load check
+  // Sync search parameters into form state
   useEffect(() => {
-    if (unitsParam && (!unitNumber || unitNumber === "Suite 401")) {
+    if (tenantParam) {
+      setCompanyName(prev => prev || tenantParam);
+      setOriginalTenantName(prev => prev || tenantParam);
+    }
+    if (nameParam) setFullName(prev => prev || nameParam);
+    if (emailParam) setEmail(prev => prev || emailParam);
+    if (phoneParam) setMobile(prev => prev || phoneParam);
+    if (unitsParam && (!unitNumber || unitNumber === "Suite 401" || unitNumber === "Entire Building / All Floors")) {
       setUnitNumber(unitsParam);
     }
-  }, [unitsParam]);
+    if (rentParam) setAgreedRent(Number(rentParam));
+    if (camParam) setAgreedCam(Number(camParam));
+    if (depositParam) setAgreedDeposit(Number(depositParam));
+    if (areaParam) setAgreedArea(Number(areaParam));
+    if (tenureParam) setAgreedTenure(Number(tenureParam));
+    if (escalationParam) setAgreedEscalation(Number(escalationParam));
+  }, [tenantParam, nameParam, emailParam, phoneParam, unitsParam, rentParam, camParam, depositParam, areaParam, tenureParam, escalationParam]);
 
   useEffect(() => {
     if (inviteCode && inviteCode.length >= 4) {
@@ -553,7 +582,7 @@ function TenantJoinContent() {
               {/* Step 1: Code Input Field */}
               <div>
                 <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  1. ENTER 6-CHARACTER INVITATION CODE *
+                  1. INVITATION / CONTRACT CODE *
                 </label>
                 <div className="relative">
                   <KeyRound size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
@@ -562,9 +591,9 @@ function TenantJoinContent() {
                     required
                     value={inviteCode}
                     onChange={handleCodeChange}
-                    placeholder="e.g. OX-8841"
-                    maxLength={10}
-                    className="w-full pl-10 pr-24 py-3 rounded-xl border border-slate-300 bg-slate-50 font-mono font-black text-base uppercase tracking-widest text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    placeholder="e.g. CTR-TES-BUI-1-01-572"
+                    maxLength={35}
+                    className="w-full pl-10 pr-24 py-3 rounded-xl border border-slate-300 bg-slate-50 font-mono font-black text-sm uppercase tracking-wider text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
                   />
                   <div className="absolute right-2.5 top-2.5">
                     {isVerifying ? (
@@ -611,63 +640,114 @@ function TenantJoinContent() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Property Owner / Landlord</span>
-                      <span className="font-bold text-slate-900 block truncate mt-0.5">
+                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-center">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Property Owner / Landlord
+                      </span>
+                      <span className="font-bold text-slate-900 block mt-0.5 text-xs truncate" title={previewProperty.ownerName}>
                         {previewProperty.ownerName}
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Asset Location</span>
-                      <span className="font-bold text-slate-900 block truncate mt-0.5 flex items-center gap-1">
+                    <div className="p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-center">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Asset Location
+                      </span>
+                      <span className="font-bold text-slate-900 block mt-0.5 text-xs flex items-center gap-1" title={previewProperty.location}>
                         <MapPin size={11} className="text-[#0F8B7D] shrink-0" />
-                        {previewProperty.location}
+                        <span className="truncate">{previewProperty.location}</span>
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 sm:col-span-1">
-                      <span className="text-[9px] font-bold text-teal-700 uppercase block">Allocated Leased Part</span>
-                      <span className="font-black text-teal-950 block truncate mt-0.5">
+                    <div className="p-2.5 rounded-xl bg-teal-50/80 border border-teal-200/90 shadow-2xs flex flex-col justify-center sm:col-span-1">
+                      <span className="text-[9px] font-bold text-teal-700 uppercase tracking-wider block">
+                        Allocated Leased Part
+                      </span>
+                      <span className="font-black text-teal-950 block mt-0.5 text-xs truncate" title={previewProperty.allocatedUnits || unitNumber}>
                         {previewProperty.allocatedUnits || unitNumber || "Entire Premises"}
                       </span>
                     </div>
 
                     {/* Financial Terms & Digital Lease Contract Banner */}
-                    <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-2.5 sm:col-span-3 shadow-inner mt-1">
+                    <div className="p-3.5 rounded-2xl bg-slate-900 text-white space-y-2.5 sm:col-span-3 shadow-inner mt-1 border border-slate-800">
                       <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
                         <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
                           <DollarSign size={13} /> Agreed Commercial Lease Terms
                         </span>
                         <span className="text-[10px] font-bold text-slate-300">
-                          {agreedTenure} Yrs Tenure ({agreedEscalation}% p.a.)
+                          {agreedTenure} Yrs Tenure ({agreedEscalation}% p.a. Escalation)
                         </span>
                       </div>
+
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Monthly Base Rent</span>
-                          <span className="font-black text-white text-sm">₹{agreedRent.toLocaleString()}</span>
+                        {/* Monthly Base Rent */}
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between hover:bg-white/[0.08] transition-colors">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Base Rent
+                          </span>
+                          <div className="my-0.5">
+                            <span className="font-black text-white text-sm sm:text-base tracking-tight block">
+                              {formatINRAbbreviated(agreedRent)}
+                            </span>
+                            <span className="text-[10px] text-teal-300 font-mono font-medium block">
+                              {formatINR(agreedRent, false)} / mo
+                            </span>
+                          </div>
                         </div>
-                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Monthly CAM</span>
-                          <span className="font-bold text-teal-300 text-xs">₹{agreedCam.toLocaleString()}</span>
+
+                        {/* Monthly CAM */}
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between hover:bg-white/[0.08] transition-colors">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Monthly CAM
+                          </span>
+                          <div className="my-0.5">
+                            <span className="font-black text-teal-300 text-sm sm:text-base tracking-tight block">
+                              {formatINRAbbreviated(agreedCam)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono font-medium block">
+                              {formatINR(agreedCam, false)} / mo
+                            </span>
+                          </div>
                         </div>
-                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Security Deposit</span>
-                          <span className="font-bold text-white text-xs">₹{agreedDeposit.toLocaleString()}</span>
+
+                        {/* Security Deposit */}
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between hover:bg-white/[0.08] transition-colors">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Security Deposit
+                          </span>
+                          <div className="my-0.5">
+                            <span className="font-black text-white text-sm sm:text-base tracking-tight block">
+                              {formatINRAbbreviated(agreedDeposit)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono font-medium block">
+                              {agreedRent > 0 ? `${Math.round(agreedDeposit / agreedRent)} Month Basis` : formatINR(agreedDeposit, false)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Leased Area</span>
-                          <span className="font-bold text-white text-xs">{agreedArea.toLocaleString()} sqft</span>
+
+                        {/* Leased Area */}
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col justify-between hover:bg-white/[0.08] transition-colors">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Leased Area
+                          </span>
+                          <div className="my-0.5">
+                            <span className="font-black text-white text-sm sm:text-base tracking-tight block">
+                              {agreedArea.toLocaleString('en-IN')} <span className="text-xs font-normal text-slate-300">sqft</span>
+                            </span>
+                            <span className="text-[10px] text-teal-300 font-mono font-medium block">
+                              {agreedRent > 0 && agreedArea > 0 ? `₹${Math.round(agreedRent / agreedArea)} psf/mo` : "Chargeable Area"}
+                            </span>
+                          </div>
                         </div>
                       </div>
+
                       <div className="pt-1.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-1 text-[10px] text-slate-300">
                         <span className="flex items-center gap-1.5">
                           <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
                           <span className="truncate max-w-[280px]">Contract: {contractDocName}</span>
                         </span>
                         <span className="text-teal-300 font-bold bg-teal-500/20 px-2 py-0.5 rounded">
-                          GST 18% HSN 997212
+                          SAC 997212 • GST 18%
                         </span>
                       </div>
                     </div>
@@ -722,7 +802,7 @@ function TenantJoinContent() {
                   {/* WhatsApp Mobile */}
                   <div>
                     <CountryPhoneInput
-                      label="YOUR MOBILE NUMBER *"
+                      label="YOUR MOBILE NUMBER"
                       required
                       value={mobile}
                       onChange={(val) => setMobile(val)}
