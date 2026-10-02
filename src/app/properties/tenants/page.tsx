@@ -56,7 +56,7 @@ export interface TenantRecord {
   contactEmail: string;
   contactPhone: string;
   billingAddress?: string;
-  status: "active" | "under_notice" | "kyc_pending" | "expired";
+  status: "active" | "under_notice" | "kyc_pending" | "expired" | "invited";
   kycVerified: boolean;
   outstandingDue: number;
   inviteCode?: string;

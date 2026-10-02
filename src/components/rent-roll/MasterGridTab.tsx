@@ -232,6 +232,7 @@ export interface RentRollGridRow {
   // Tenure
   startDate?: string;
   endDate?: string;
+  lockInMonths?: number;
   lockInEndDate?: string;
   noticePeriodDays?: number;
   

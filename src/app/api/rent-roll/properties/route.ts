@@ -235,10 +235,10 @@ export async function POST(req: Request) {
         const cleanTenantName = (u.tenantName || "").trim();
         if (u.status === "occupied" && cleanTenantName) {
           const tenantName = cleanTenantName;
-          let tenantObj = db.tenants.find(t => t.tradeName.toLowerCase() === tenantName.toLowerCase());
+          let tenantObj: TenantEntity | undefined = db.tenants.find(t => t.tradeName.toLowerCase() === tenantName.toLowerCase());
           if (!tenantObj) {
             const newTenantId = `TEN-${Date.now()}-${i + 1}`;
-            tenantObj = {
+            const createdTenant: TenantEntity = {
               id: newTenantId,
               orgId: newProp.orgId,
               tenantCode: `TNT-${Math.floor(100 + Math.random() * 900)}`,
@@ -262,7 +262,8 @@ export async function POST(req: Request) {
               paymentTermsDays: 15,
               createdAt: new Date().toISOString().split("T")[0]
             };
-            db.tenants.push(tenantObj);
+            db.tenants.push(createdTenant);
+            tenantObj = createdTenant;
           }
 
           const numChargeable = spaceRow.chargeableArea;
@@ -311,8 +312,8 @@ export async function POST(req: Request) {
             spaceId: spaceRow.id,
             unitNumber: spaceRow.unitNumber,
             floorNumber: spaceRow.floorNumber,
-            tenantId: tenantObj.id,
-            tenantName: tenantObj.tradeName,
+            tenantId: tenantObj!.id,
+            tenantName: tenantObj!.tradeName,
             leaseCode,
             startDate,
             endDate,
@@ -368,10 +369,14 @@ export async function POST(req: Request) {
           db.alerts = db.alerts || [];
           db.alerts.unshift({
             id: `ALT-${Date.now()}-${i + 1}`,
+            orgId: newProp.orgId,
+            alertType: "compliance",
+            entityType: "lease",
             title: `${tenantName} — Invite & Terms Pending`,
             message: `Tenant has not accepted portal invite yet. Commercial terms & signed deed pending confirmation.`,
             severity: "warning",
             triggerDate: new Date().toISOString().split("T")[0],
+            createdAt: new Date().toISOString(),
             isRead: false
           });
 

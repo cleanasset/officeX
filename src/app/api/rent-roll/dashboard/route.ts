@@ -84,7 +84,7 @@ export async function GET(req: Request) {
 
     // Receivables & Invoices as of asOfDate
     const asOfInvoices = invoices.filter(i => {
-      const invDate = (i.issueDate || i.invoiceDate || i.createdAt || "2099-12-31").split("T")[0];
+      const invDate = (i.invoiceDate || i.issueDate || i.createdAt || "2099-12-31").split("T")[0];
       return invDate <= asOfDate;
     });
     const totalOutstanding = asOfInvoices.reduce((sum, i) => sum + (i.balanceDue || 0), 0);

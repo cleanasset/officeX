@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
     if (asOfDate) {
       invoices = invoices.filter(i => {
-        const invDate = (i.issueDate || i.invoiceDate || i.createdAt || "2099-12-31").split("T")[0];
+        const invDate = (i.invoiceDate || i.issueDate || i.createdAt || "2099-12-31").split("T")[0];
         return invDate <= asOfDate;
       });
     }

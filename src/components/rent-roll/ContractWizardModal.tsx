@@ -59,7 +59,7 @@ export interface DynamicUtilityComponent {
 }
 
 interface ContractWizardModalProps {
-  properties: Array<{ id: string; name: string; city: string; state?: string }>;
+  properties: Array<{ id: string; name: string; city: string; state?: string; ownerCompany?: string; ownerName?: string }>;
   preSelectedSpace?: any | null;
   preSelectedTenant?: any | null;
   initialCommercials?: {
@@ -92,7 +92,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Available occupants & spaces fetched dynamically
-  const [existingTenants, setExistingTenants] = useState<Array<{ id: string; name: string; gstin?: string; pan?: string }>>([]);
+  const [existingTenants, setExistingTenants] = useState<Array<{ id: string; name: string; gstin?: string; pan?: string; portalLive?: boolean; status?: string }>>([]);
   const [availableSpaces, setAvailableSpaces] = useState<Array<{ id: string; spaceCode: string; area: number; floorNumber: number; askingRate?: number }>>([]);
   const [isLoadingMeta, setIsLoadingMeta] = useState<boolean>(false);
 
@@ -610,11 +610,11 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
 
     if (hvacModel === "fixed_psf" && hvacRatePsf > 0) {
       charges.push({
-        component: "hvac",
+        component: "services",
         calcBasis: "per_area",
         rate: hvacRatePsf,
         isIncluded: false,
-        invoiceGroup: "hvac",
+        invoiceGroup: "services",
         gstRate: 18,
       });
     }
@@ -625,7 +625,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
         calcBasis: "fixed",
         rate: waterFixedMonthly,
         isIncluded: false,
-        invoiceGroup: "utilities",
+        invoiceGroup: "water",
         gstRate: 18,
       });
     }
@@ -643,11 +643,11 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
 
       if (monthlyAmt > 0) {
         charges.push({
-          component: comp.category,
+          component: (comp.category === "hvac" ? "services" : (["electricity", "water", "parking", "rent", "cam", "services"].includes(comp.category) ? comp.category : "extras")) as any,
           calcBasis: comp.billingType === "per_sqft" ? "per_area" : (comp.billingType === "per_kva" ? "per_seat" : "fixed"),
           rate: comp.billingType === "per_sqft" || comp.billingType === "per_kva" ? comp.rate : monthlyAmt,
           isIncluded: comp.billingType === "cam_included",
-          invoiceGroup: comp.billingMode === "combined_electricity" ? "electricity" : comp.category,
+          invoiceGroup: (comp.billingMode === "combined_electricity" ? "electricity" : (comp.category === "hvac" ? "services" : comp.category === "water" ? "water" : comp.category === "electricity" ? "electricity" : "extras")) as any,
           gstRate: 18,
         });
       }

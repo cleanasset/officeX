@@ -59,8 +59,7 @@ export async function GET(req: Request) {
       const tenantLeases = db.leases.filter(l => 
         l.tenantId === t.id && 
         l.status !== "terminated" && 
-        l.status !== "expired" && 
-        l.status !== "cancelled"
+        l.status !== "expired"
       );
       const primaryLease = tenantLeases[0] || db.leases.find(l => l.tenantId === t.id);
       

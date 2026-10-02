@@ -176,7 +176,10 @@ export interface TenantEntity {
   billingCity: string;
   billingState: string;
   billingPincode: string;
-  status: "active" | "inactive" | "prospect" | "blacklisted";
+  status: "active" | "inactive" | "prospect" | "blacklisted" | "invited";
+  portalLive?: boolean;
+  inviteCode?: string;
+  inviteStatus?: string;
   creditLimit: number;
   paymentTermsDays: number;
   notes?: string;
@@ -314,6 +317,7 @@ export interface LeaseEntity {
   terminationDate?: string;
   terminationReason?: string;
   signedAgreementUrl?: string;
+  isTermsPending?: boolean;
   notes?: string;
   makerId?: string;
   createdBy?: string;
@@ -385,6 +389,7 @@ export interface InvoiceEntity {
   invoiceNumber: string;
   fyYear: string;
   invoiceDate: string;
+  issueDate?: string;
   dueDate: string;
   periodStart: string;
   periodEnd: string;
@@ -450,6 +455,7 @@ export interface CollectionEntity {
   propertyName: string;
   receiptNumber: string;
   paymentDate: string;
+  depositDate?: string;
   paymentMode: "neft_rtgs" | "upi" | "cheque" | "ach" | "credit_card";
   referenceNumber: string; // UTR
   amountReceived: number;
