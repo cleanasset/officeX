@@ -16,6 +16,8 @@ export interface AlertNotification {
   title: string;
   message: string;
   entityType: string;
+  alertType?: string;
+  propertyId?: string;
   severity: "info" | "warning" | "critical";
   isRead: boolean;
   triggerDate: string;

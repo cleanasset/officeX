@@ -42,6 +42,10 @@ export interface TenantSummary {
   totalMonthlyBilling: number;
   outstanding: number;
   hasOverdue: boolean;
+  propertyId?: string;
+  propertyName?: string;
+  unitNumber?: string;
+  floorNumber?: number;
 }
 
 interface TenantsTabProps {
