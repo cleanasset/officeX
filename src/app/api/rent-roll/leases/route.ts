@@ -362,7 +362,18 @@ export async function POST(req: Request) {
       concessions = [],
       depositTransactions = [],
       contractClauses = [],
-      approvalStatus
+      approvalStatus,
+      hvacModel = "cam_included",
+      hvacWorkingHours = "08:00 AM - 08:00 PM (Mon-Sat)",
+      hvacOvertimeRate = 0,
+      hvacFixedMonthly = 0,
+      electricityBillingType = "sub_metered",
+      powerLoadKva = 0,
+      dgBackupType = "100_percent",
+      dgRatePerUnit = 0,
+      waterBillingType = "cam_included",
+      utilityTerms,
+      utilityComponents = [],
     } = body;
 
     if (!propertyId || !tenantName || !startDate || !endDate || !monthlyRent || !chargeableArea) {
@@ -517,6 +528,27 @@ export async function POST(req: Request) {
       concessions,
       depositTransactions,
       contractClauses,
+      hvacModel,
+      hvacWorkingHours,
+      hvacOvertimeRate: Number(hvacOvertimeRate || 0),
+      hvacFixedMonthly: Number(hvacFixedMonthly || 0),
+      electricityBillingType,
+      powerLoadKva: Number(powerLoadKva || 0),
+      dgBackupType,
+      dgRatePerUnit: Number(dgRatePerUnit || 0),
+      waterBillingType,
+      utilityTerms: utilityTerms || {
+        hvacModel,
+        hvacWorkingHours,
+        hvacOvertimeRate: Number(hvacOvertimeRate || 0),
+        hvacFixedMonthly: Number(hvacFixedMonthly || 0),
+        electricityBillingType,
+        powerLoadKva: Number(powerLoadKva || 0),
+        dgBackupType,
+        dgRatePerUnit: Number(dgRatePerUnit || 0),
+        waterBillingType,
+      },
+      utilityComponents: Array.isArray(utilityComponents) ? utilityComponents : [],
       documents: [
         {
           id: `DOC-${Date.now()}`,

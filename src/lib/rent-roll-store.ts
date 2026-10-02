@@ -327,6 +327,27 @@ export interface LeaseEntity {
   charges?: ContractChargeEntity[];
   rentSteps?: RentStepEntity[];
   documents?: ContractDocumentEntity[];
+  hvacModel?: "cam_included" | "chilled_water_meter" | "fixed_psf" | "tenant_vrv" | string;
+  hvacWorkingHours?: string;
+  hvacOvertimeRate?: number;
+  hvacFixedMonthly?: number;
+  electricityBillingType?: "sub_metered" | "direct_discom" | "fixed_monthly" | string;
+  powerLoadKva?: number;
+  dgBackupType?: "100_percent" | "essential_only" | "none" | string;
+  dgRatePerUnit?: number;
+  waterBillingType?: "cam_included" | "fixed_monthly" | "sub_metered" | string;
+  utilityTerms?: {
+    hvacModel?: string;
+    hvacWorkingHours?: string;
+    hvacOvertimeRate?: number;
+    hvacFixedMonthly?: number;
+    electricityBillingType?: string;
+    powerLoadKva?: number;
+    dgBackupType?: string;
+    dgRatePerUnit?: number;
+    waterBillingType?: string;
+  };
+  utilityComponents?: any[];
   importBatchId?: string;
   createdAt: string;
   updatedAt: string;

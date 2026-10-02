@@ -27,7 +27,11 @@ import {
   TrendingUp,
   UserCheck,
   Zap,
-  Info
+  Info,
+  Edit3,
+  Share2,
+  Copy,
+  MessageSquare
 } from "lucide-react";
 import {
   calculateContractSummary,
@@ -42,6 +46,17 @@ import {
   ConcessionCalc,
   DepositCalc
 } from "@/lib/rent-roll/calculations";
+
+export interface DynamicUtilityComponent {
+  id: string;
+  name: string;
+  category: "electricity" | "dg_power" | "dg_rent" | "blended_power" | "hvac" | "water" | "custom";
+  billingType: "metered_actuals" | "blended_tariff" | "per_sqft" | "per_kva" | "fixed_monthly" | "cam_included" | "direct_discom";
+  rate: number;
+  unitLabel: string;
+  billingMode: "separate_bill" | "combined_electricity" | "with_cam" | "with_rent";
+  isEnabled: boolean;
+}
 
 interface ContractWizardModalProps {
   properties: Array<{ id: string; name: string; city: string; state?: string }>;
@@ -78,9 +93,14 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [occupantGstin, setOccupantGstin] = useState<string>("");
   const [occupantPan, setOccupantPan] = useState<string>("");
   const [isNewOccupant, setIsNewOccupant] = useState<boolean>(false);
+  const [copiedInviteLink, setCopiedInviteLink] = useState<boolean>(false);
   const [selectedSpaces, setSelectedSpaces] = useState<Array<{ spaceId: string; spaceCode: string; areaLet: number; seatsAllocated?: number }>>([]);
-  const [billingEntityName, setBillingEntityName] = useState<string>("Default Entity (27AAB...)");
+  const initialProp = properties.find(p => p.id === (preSelectedSpace?.propertyId || properties[0]?.id));
+  const [billingEntitiesList, setBillingEntitiesList] = useState<Array<{ id: string; name: string; gstin?: string }>>([]);
+  const [billingEntityName, setBillingEntityName] = useState<string>(initialProp?.ownerCompany || initialProp?.ownerName || initialProp?.name || "testing ltd");
+  const [isCustomBillingEntity, setIsCustomBillingEntity] = useState<boolean>(false);
   const [brokerName, setBrokerName] = useState<string>("Direct");
+  const [isCustomBroker, setIsCustomBroker] = useState<boolean>(false);
 
   // STEP 2: Terms & Dates
   const todayStr = new Date().toISOString().split("T")[0];
@@ -102,6 +122,48 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [tdsApplicable, setTdsApplicable] = useState<boolean>(true);
   const [tdsRate, setTdsRate] = useState<number>(10);
 
+  const applyTenurePreset = (years: number, defaultLockIn: number) => {
+    const start = commencementDate ? new Date(commencementDate) : new Date();
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + years);
+    const endStr = end.toISOString().split("T")[0];
+    setExpiryDate(endStr);
+    setLockInMonths(defaultLockIn);
+    setLockInAppliesTo("Both");
+    setNoticePeriodMonths(3);
+    setBillingFrequency("monthly");
+    setInvoiceDay(1);
+    setDueDays(7);
+    setTdsRate(10);
+  };
+
+  const handleCommencementDateChange = (newStart: string) => {
+    setCommencementDate(newStart);
+    if (!rentCommencementDate || rentCommencementDate === commencementDate) {
+      setRentCommencementDate(newStart);
+    }
+    if (newStart && expiryDate) {
+      const dStart = new Date(newStart);
+      const dEnd = new Date(expiryDate);
+      if (dEnd > dStart) {
+        const diffMonths = Math.max(1, Math.round((dEnd.getTime() - dStart.getTime()) / (30.4375 * 24 * 60 * 60 * 1000)));
+        setLockInMonths(Math.min(diffMonths, 36));
+      }
+    }
+  };
+
+  const handleExpiryDateChange = (newExpiry: string) => {
+    setExpiryDate(newExpiry);
+    if (commencementDate && newExpiry) {
+      const dStart = new Date(commencementDate);
+      const dEnd = new Date(newExpiry);
+      if (dEnd > dStart) {
+        const diffMonths = Math.max(1, Math.round((dEnd.getTime() - dStart.getTime()) / (30.4375 * 24 * 60 * 60 * 1000)));
+        setLockInMonths(Math.min(diffMonths, 36));
+      }
+    }
+  };
+
   // STEP 3: Billing Model & Charges
   const [billingModel, setBillingModel] = useState<"area" | "seat" | "hybrid" | "fixed" | "revenue_share" | "charges_only">("area");
   const [pricingPlanName, setPricingPlanName] = useState<string>("Enterprise Dedicated Cabin");
@@ -114,6 +176,209 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [parkingSlots, setParkingSlots] = useState<number>(0);
   const [parkingSlotRate, setParkingSlotRate] = useState<number>(0);
   const [utilityFixedMonthly, setUtilityFixedMonthly] = useState<number>(0);
+
+  // UTILITIES, HVAC & ELECTRICITY CLAUSES (§4.8 Operations)
+  const [hvacModel, setHvacModel] = useState<"cam_included" | "chilled_water_meter" | "fixed_psf" | "tenant_vrv">("cam_included");
+  const [hvacWorkingHours, setHvacWorkingHours] = useState<string>("08:00 AM - 08:00 PM (Mon-Sat)");
+  const [hvacOvertimeRate, setHvacOvertimeRate] = useState<number>(850);
+  const [hvacRatePsf, setHvacRatePsf] = useState<number>(0);
+  const [electricityBillingType, setElectricityBillingType] = useState<"sub_metered" | "direct_discom" | "fixed_monthly">("sub_metered");
+  const [powerLoadKva, setPowerLoadKva] = useState<number>(50);
+  const [dgBackupType, setDgBackupType] = useState<"100_percent" | "essential_only" | "none">("100_percent");
+  const [dgRatePerUnit, setDgRatePerUnit] = useState<number>(24);
+  const [waterBillingType, setWaterBillingType] = useState<"cam_included" | "fixed_monthly" | "sub_metered">("cam_included");
+  const [waterFixedMonthly, setWaterFixedMonthly] = useState<number>(0);
+
+  // Dynamic Utility & Power Charge Components (Flexible Add/Remove)
+  const [utilityComponents, setUtilityComponents] = useState<DynamicUtilityComponent[]>([
+    {
+      id: "util_grid",
+      name: "Grid Electricity (State DISCOM)",
+      category: "electricity",
+      billingType: "metered_actuals",
+      rate: 11.5,
+      unitLabel: "₹ / kWh",
+      billingMode: "combined_electricity",
+      isEnabled: true,
+    },
+    {
+      id: "util_dg_run",
+      name: "DG Power Consumption (Fuel / kWh)",
+      category: "dg_power",
+      billingType: "metered_actuals",
+      rate: 24.0,
+      unitLabel: "₹ / kWh",
+      billingMode: "combined_electricity",
+      isEnabled: true,
+    },
+    {
+      id: "util_dg_rent",
+      name: "DG Standby Capacity / Fixed Rent",
+      category: "dg_rent",
+      billingType: "per_kva",
+      rate: 150,
+      unitLabel: "₹ / kVA / mo",
+      billingMode: "combined_electricity",
+      isEnabled: false,
+    },
+    {
+      id: "util_hvac",
+      name: "Central Air Conditioning (HVAC)",
+      category: "hvac",
+      billingType: "cam_included",
+      rate: 0,
+      unitLabel: "Included in CAM",
+      billingMode: "with_cam",
+      isEnabled: true,
+    },
+    {
+      id: "util_water",
+      name: "Water Supply & Sewage",
+      category: "water",
+      billingType: "cam_included",
+      rate: 0,
+      unitLabel: "Included in CAM",
+      billingMode: "with_cam",
+      isEnabled: true,
+    },
+  ]);
+
+  const toggleUtilityComponent = (id: string) => {
+    setUtilityComponents(prev => prev.map(c => c.id === id ? { ...c, isEnabled: !c.isEnabled } : c));
+  };
+
+  const updateUtilityComponent = (id: string, updates: Partial<DynamicUtilityComponent>) => {
+    setUtilityComponents(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const updated = { ...c, ...updates };
+      if (updates.billingType) {
+        switch (updates.billingType) {
+          case "metered_actuals":
+            updated.unitLabel = "₹ / kWh";
+            break;
+          case "blended_tariff":
+            updated.unitLabel = "₹ / kWh (Blended)";
+            break;
+          case "per_kva":
+            updated.unitLabel = "₹ / kVA / mo";
+            break;
+          case "per_sqft":
+            updated.unitLabel = "₹ / sq ft / mo";
+            break;
+          case "fixed_monthly":
+            updated.unitLabel = "₹ / month";
+            break;
+          case "cam_included":
+            updated.unitLabel = "Included in CAM";
+            break;
+          case "direct_discom":
+            updated.unitLabel = "Direct DISCOM";
+            break;
+        }
+      }
+      return updated;
+    }));
+  };
+
+  const removeUtilityComponent = (id: string) => {
+    setUtilityComponents(prev => prev.filter(c => c.id !== id));
+  };
+
+  const addUtilityComponent = (presetKey: string) => {
+    const newId = `util_${Date.now()}`;
+    let newComp: DynamicUtilityComponent;
+
+    switch (presetKey) {
+      case "dg_rent":
+        newComp = {
+          id: newId,
+          name: "DG Standby Capacity / Fixed Rent",
+          category: "dg_rent",
+          billingType: "per_kva",
+          rate: 150,
+          unitLabel: "₹ / kVA / mo",
+          billingMode: "combined_electricity",
+          isEnabled: true,
+        };
+        break;
+      case "blended_power":
+        newComp = {
+          id: newId,
+          name: "Blended Power Tariff (Grid + DG combined)",
+          category: "blended_power",
+          billingType: "blended_tariff",
+          rate: 16.5,
+          unitLabel: "₹ / kWh (Blended)",
+          billingMode: "combined_electricity",
+          isEnabled: true,
+        };
+        break;
+      case "solar_wheeling":
+        newComp = {
+          id: newId,
+          name: "Green Power / Solar Wheeling Surcharge",
+          category: "custom",
+          billingType: "metered_actuals",
+          rate: 5.5,
+          unitLabel: "₹ / kWh",
+          billingMode: "combined_electricity",
+          isEnabled: true,
+        };
+        break;
+      case "ev_charging":
+        newComp = {
+          id: newId,
+          name: "EV Charging Infrastructure Surcharge",
+          category: "custom",
+          billingType: "metered_actuals",
+          rate: 14.0,
+          unitLabel: "₹ / kWh",
+          billingMode: "separate_bill",
+          isEnabled: true,
+        };
+        break;
+      case "ups_rent":
+        newComp = {
+          id: newId,
+          name: "Central UPS Clean Power Backup Rent",
+          category: "custom",
+          billingType: "per_kva",
+          rate: 200,
+          unitLabel: "₹ / kVA / mo",
+          billingMode: "separate_bill",
+          isEnabled: true,
+        };
+        break;
+      case "fixed_operational":
+        newComp = {
+          id: newId,
+          name: "Facility Operations & Maintenance Fee",
+          category: "custom",
+          billingType: "fixed_monthly",
+          rate: 2500,
+          unitLabel: "₹ / month",
+          billingMode: "separate_bill",
+          isEnabled: true,
+        };
+        break;
+      default:
+        newComp = {
+          id: newId,
+          name: "Custom Utility Charge",
+          category: "custom",
+          billingType: "metered_actuals",
+          rate: 10.0,
+          unitLabel: "₹ / unit",
+          billingMode: "combined_electricity",
+          isEnabled: true,
+        };
+    }
+
+    setUtilityComponents(prev => [...prev, newComp]);
+    setShowAddUtilityMenu(false);
+  };
+
+  const [showAddUtilityMenu, setShowAddUtilityMenu] = useState<boolean>(false);
 
   // STEP 4: Escalation & Concessions
   const [escalationPct, setEscalationPct] = useState<number>(15);
@@ -151,17 +416,39 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
     fetch("/api/rent-roll/tenants")
       .then(res => res.json())
       .then(data => {
-        if (data.success && Array.isArray(data.tenants)) {
-          setExistingTenants(data.tenants.map((t: any) => ({
+        const rawList = Array.isArray(data) ? data : (data?.tenants || []);
+        if (Array.isArray(rawList)) {
+          setExistingTenants(rawList.map((t: any) => ({
             id: t.id,
-            name: t.name || t.legalName || "Unnamed Tenant",
+            name: t.tradeName || t.legalName || t.name || "Unnamed Tenant",
             gstin: t.gstin || "",
             pan: t.pan || "",
+            inviteCode: t.inviteCode || "",
+            portalLive: t.portalLive ?? false,
           })));
         }
       })
       .catch(() => {})
       .finally(() => setIsLoadingMeta(false));
+
+    // Fetch billing entities
+    fetch("/api/rent-roll/billing-entities")
+      .then(res => res.json())
+      .then(data => {
+        const rawList = Array.isArray(data) ? data : (data?.entities || []);
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const mapped = rawList.map((be: any) => ({
+            id: be.id,
+            name: be.legalName || be.spvName || be.tradeName || "Primary SPV",
+            gstin: be.gstin || "",
+          }));
+          setBillingEntitiesList(mapped);
+          if (!billingEntityName || billingEntityName === "Landlord Company") {
+            setBillingEntityName(mapped[0].name);
+          }
+        }
+      })
+      .catch(() => {});
 
     // Fetch spaces for property
     if (propertyId) {
@@ -268,8 +555,53 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
       });
     }
 
+    if (hvacModel === "fixed_psf" && hvacRatePsf > 0) {
+      charges.push({
+        component: "hvac",
+        calcBasis: "per_area",
+        rate: hvacRatePsf,
+        isIncluded: false,
+        invoiceGroup: "hvac",
+        gstRate: 18,
+      });
+    }
+
+    if (waterBillingType === "fixed_monthly" && waterFixedMonthly > 0) {
+      charges.push({
+        component: "water",
+        calcBasis: "fixed",
+        rate: waterFixedMonthly,
+        isIncluded: false,
+        invoiceGroup: "utilities",
+        gstRate: 18,
+      });
+    }
+
+    // Dynamic Utility Components recurring calculation (DG rent, fixed power, etc.)
+    utilityComponents.filter(c => c.isEnabled).forEach(comp => {
+      let monthlyAmt = 0;
+      if (comp.billingType === "fixed_monthly" && comp.rate > 0) {
+        monthlyAmt = comp.rate;
+      } else if (comp.billingType === "per_sqft" && comp.rate > 0) {
+        monthlyAmt = round(comp.rate * (totalArea || 1), 2);
+      } else if (comp.billingType === "per_kva" && comp.rate > 0) {
+        monthlyAmt = round(comp.rate * (powerLoadKva || 1), 2);
+      }
+
+      if (monthlyAmt > 0) {
+        charges.push({
+          component: comp.category,
+          calcBasis: comp.billingType === "per_sqft" ? "per_area" : (comp.billingType === "per_kva" ? "per_seat" : "fixed"),
+          rate: comp.billingType === "per_sqft" || comp.billingType === "per_kva" ? comp.rate : monthlyAmt,
+          isIncluded: comp.billingType === "cam_included",
+          invoiceGroup: comp.billingMode === "combined_electricity" ? "electricity" : comp.category,
+          gstRate: 18,
+        });
+      }
+    });
+
     return charges;
-  }, [billingModel, baseRentPsf, camRatePsf, camIsIncluded, parkingSlots, parkingSlotRate, utilityFixedMonthly]);
+  }, [billingModel, baseRentPsf, camRatePsf, camIsIncluded, parkingSlots, parkingSlotRate, utilityFixedMonthly, hvacModel, hvacRatePsf, waterBillingType, waterFixedMonthly, utilityComponents, powerLoadKva, totalArea]);
 
   // Live calculation results
   const liveSummary = useMemo(() => {
@@ -439,6 +771,29 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
         charges: contractChargesList,
         rentSteps,
         spaces: selectedSpaces,
+        hvacModel,
+        hvacWorkingHours,
+        hvacOvertimeRate,
+        hvacFixedMonthly: hvacModel === "fixed_psf" ? round(hvacRatePsf * totalArea, 2) : 0,
+        electricityBillingType,
+        powerLoadKva,
+        dgBackupType,
+        dgRatePerUnit,
+        waterBillingType,
+        waterFixedMonthly,
+        utilityTerms: {
+          hvacModel,
+          hvacWorkingHours,
+          hvacOvertimeRate,
+          hvacFixedMonthly: hvacModel === "fixed_psf" ? round(hvacRatePsf * totalArea, 2) : 0,
+          electricityBillingType,
+          powerLoadKva,
+          dgBackupType,
+          dgRatePerUnit,
+          waterBillingType,
+          waterFixedMonthly,
+        },
+        utilityComponents,
       };
 
       const res = await fetch("/api/rent-roll/leases", {
@@ -538,11 +893,19 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
           </div>
         </div>
 
-        {/* MAIN BODY: 2-COLUMN GRID (LEFT: STEP FORM, RIGHT: STICKY LIVE SUMMARY) */}
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50/40">
+        {/* MAIN BODY: 2-COLUMN GRID ON STEP 1, FOCUSED FULL-WIDTH ON STEPS 2-7 */}
+        <div className={`flex-1 overflow-y-auto p-6 bg-slate-50/40 ${
+          currentStep === 1 
+            ? "grid grid-cols-1 lg:grid-cols-12 gap-6" 
+            : "flex justify-center"
+        }`}>
           
-          {/* LEFT 8 COLUMNS: STEP FORMS */}
-          <div className="lg:col-span-8 space-y-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+          {/* STEP FORM CONTAINER */}
+          <div className={`${
+            currentStep === 1 
+              ? "lg:col-span-8" 
+              : "w-full max-w-4xl"
+          } space-y-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs self-start`}>
             {errorMsg && (
               <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-800 font-medium">
                 <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
@@ -576,88 +939,191 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Contract Deed Type*</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Contract Deed Type*</label>
+                      <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
+                        Receivable (Tenant pays Landlord)
+                      </span>
+                    </div>
                     <select
                       value={contractType}
                       onChange={e => setContractType(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 outline-none bg-white"
                     >
-                      <option value="lease_deed">Registered Lease Deed</option>
-                      <option value="leave_and_licence">Leave &amp; Licence Agreement</option>
-                      <option value="managed_office_agreement">Managed Office Agreement</option>
-                      <option value="coworking_membership">Coworking Space Membership</option>
-                      <option value="service_charge_agreement">Service Charge Agreement</option>
-                      <option value="head_lease">Head Lease (Payable to Landlord)</option>
+                      <option value="lease_deed">Registered Lease Deed (Standard 3–9+ Yrs)</option>
+                      <option value="leave_and_licence">Leave &amp; Licence Agreement (1–5 Yrs)</option>
+                      <option value="commercial_tenancy">Commercial Tenancy Agreement</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Occupant Selection (Pre-fill without re-typing) */}
                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                       <UserCheck size={14} className="text-teal-600" />
                       Occupant / Tenant Master*
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsNewOccupant(!isNewOccupant);
-                        setOccupantId("");
-                      }}
-                      className="text-[11px] font-bold text-teal-700 hover:text-teal-900 cursor-pointer"
-                    >
-                      {isNewOccupant ? "← Choose Existing Tenant" : "+ New Tenant Record"}
-                    </button>
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-200/70 text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewOccupant(false);
+                        }}
+                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                          !isNewOccupant
+                            ? "bg-white text-slate-900 shadow-2xs font-bold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Choose Registered ({existingTenants.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewOccupant(true);
+                          setOccupantId("");
+                        }}
+                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                          isNewOccupant
+                            ? "bg-white text-slate-900 shadow-2xs font-bold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        + Invite via Link / Add New
+                      </button>
+                    </div>
                   </div>
 
                   {!isNewOccupant ? (
                     <div>
-                      <select
-                        value={occupantId}
-                        onChange={e => handleSelectExistingTenant(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 outline-none bg-white"
-                      >
-                        <option value="">Select registered occupant or company...</option>
-                        {existingTenants.map(t => (
-                          <option key={t.id} value={t.id}>{t.name} {t.gstin ? `(${t.gstin})` : ""}</option>
-                        ))}
-                      </select>
+                      {existingTenants.length > 0 ? (
+                        <select
+                          value={occupantId}
+                          onChange={e => handleSelectExistingTenant(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 outline-none bg-white"
+                        >
+                          <option value="">Select registered occupant or company...</option>
+                          {existingTenants.map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} {t.gstin ? `(${t.gstin})` : ""} {t.portalLive ? "• Live" : "• Invite Pending"}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs space-y-2">
+                          <p className="font-semibold">No registered tenants in your portal yet.</p>
+                          <p className="text-[11px] text-slate-600">
+                            You can switch to <strong>Invite via Link / Add New</strong> to name your tenant and generate a sharable onboarding link.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsNewOccupant(true);
+                              setOccupantId("");
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs cursor-pointer transition-colors"
+                          >
+                            + Invite Tenant via Link Now
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Legal Company Name*</label>
-                        <input
-                          type="text"
-                          value={occupantName}
-                          onChange={e => setOccupantName(e.target.value)}
-                          placeholder="e.g. Acme FinTech Pvt Ltd"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
-                        />
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Company / Tenant Name*</label>
+                          <input
+                            type="text"
+                            value={occupantName}
+                            onChange={e => setOccupantName(e.target.value)}
+                            placeholder="e.g. Acme Technologies Pvt Ltd"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">GSTIN (Optional)</label>
+                          <input
+                            type="text"
+                            value={occupantGstin}
+                            onChange={e => setOccupantGstin(e.target.value.toUpperCase())}
+                            placeholder="27AABCT1234K1Z2"
+                            maxLength={15}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">PAN (Optional)</label>
+                          <input
+                            type="text"
+                            value={occupantPan}
+                            onChange={e => setOccupantPan(e.target.value.toUpperCase())}
+                            placeholder="AABCT1234K"
+                            maxLength={10}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase bg-white"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">GSTIN (15 Digits)</label>
-                        <input
-                          type="text"
-                          value={occupantGstin}
-                          onChange={e => setOccupantGstin(e.target.value.toUpperCase())}
-                          placeholder="27AABCT1234K1Z2"
-                          maxLength={15}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">PAN (10 Chars)</label>
-                        <input
-                          type="text"
-                          value={occupantPan}
-                          onChange={e => setOccupantPan(e.target.value.toUpperCase())}
-                          placeholder="AABCT1234K"
-                          maxLength={10}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase"
-                        />
-                      </div>
+
+                      {/* Instant Tenant Onboarding Link Sharing Box */}
+                      {(() => {
+                        const origin = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost")
+                          ? window.location.origin
+                          : (process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro");
+                        const selectedProp = properties.find(p => p.id === propertyId);
+                        const currentPropName = selectedProp?.name || "Commercial Building";
+                        const spaceUnitsParam = selectedSpaces.map(s => s.spaceCode).join(", ") || "Selected Space";
+                        const shareUrl = `${origin}/tenant/join?propertyId=${encodeURIComponent(propertyId)}&building=${encodeURIComponent(currentPropName)}&units=${encodeURIComponent(spaceUnitsParam)}&tenant=${encodeURIComponent(occupantName || "Tenant")}`;
+                        const whatsappMsg = `🏢 *Commercial Lease Invitation - ${currentPropName}*\n📍 *Unit:* ${spaceUnitsParam}\n\nPlease click the link below to complete your tenant onboarding & verify your lease:\n${shareUrl}`;
+
+                        const handleCopy = () => {
+                          navigator.clipboard.writeText(shareUrl);
+                          setCopiedInviteLink(true);
+                          setTimeout(() => setCopiedInviteLink(false), 2500);
+                        };
+
+                        return (
+                          <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/90 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-teal-900 flex items-center gap-1.5">
+                                <Share2 size={13} className="text-teal-700" />
+                                Instant Tenant Onboarding Link
+                              </span>
+                              <span className="text-[10px] text-teal-700 font-semibold bg-white px-2 py-0.5 rounded-full border border-teal-200">
+                                Becomes Live on Tenant Acceptance
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-600">
+                              Share this link with your tenant via WhatsApp or Email. Once they open it and submit their company KYC details, they are registered and marked as <strong>Portal Live</strong> automatically.
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                readOnly
+                                value={shareUrl}
+                                className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-teal-200 text-[11px] font-mono text-slate-700 select-all focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleCopy}
+                                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                              >
+                                {copiedInviteLink ? <Check size={13} /> : <Copy size={13} />}
+                                <span>{copiedInviteLink ? "Copied!" : "Copy Link"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMsg)}`, "_blank")}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                              >
+                                <MessageSquare size={13} />
+                                <span>WhatsApp</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -694,26 +1160,117 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                   </div>
                 </div>
 
-                {/* Broker & Billing Entity */}
+                {/* Broker & Billing Entity (Both Direct Selection Dropdowns) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Billing Entity (Issuer)</label>
-                    <input
-                      type="text"
-                      value={billingEntityName}
-                      onChange={e => setBillingEntityName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
-                    />
+                    <label className="block text-xs font-semibold text-slate-700 mb-0.5">
+                      Billing Entity (Landlord Company)
+                    </label>
+                    <p className="text-[10px] text-slate-500 mb-1.5">
+                      Select legal entity issuing the rent tax invoice
+                    </p>
+                    {!isCustomBillingEntity ? (
+                      <select
+                        value={billingEntityName}
+                        onChange={(e) => {
+                          if (e.target.value === "custom") {
+                            setIsCustomBillingEntity(true);
+                            setBillingEntityName("");
+                          } else {
+                            setBillingEntityName(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 outline-none bg-white cursor-pointer"
+                      >
+                        {billingEntitiesList.map((be) => (
+                          <option key={be.id} value={be.name}>
+                            {be.name} {be.gstin ? `(${be.gstin})` : ""}
+                          </option>
+                        ))}
+                        {initialProp?.ownerCompany && !billingEntitiesList.some(b => b.name === initialProp.ownerCompany) && (
+                          <option value={initialProp.ownerCompany}>{initialProp.ownerCompany} (Property Owner)</option>
+                        )}
+                        {billingEntitiesList.length === 0 && !initialProp?.ownerCompany && (
+                          <option value="testing ltd">testing ltd (Primary Entity)</option>
+                        )}
+                        <option value="custom">+ Other / Custom Entity...</option>
+                      </select>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={billingEntityName}
+                          onChange={e => setBillingEntityName(e.target.value)}
+                          placeholder="Type company / entity name..."
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomBillingEntity(false);
+                            if (billingEntitiesList.length > 0) setBillingEntityName(billingEntitiesList[0].name);
+                          }}
+                          className="px-2.5 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
+
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Broker / Channel Partner</label>
-                    <input
-                      type="text"
-                      value={brokerName}
-                      onChange={e => setBrokerName(e.target.value)}
-                      placeholder="e.g. JLL, CBRE, Direct"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
-                    />
+                    <label className="block text-xs font-semibold text-slate-700 mb-0.5">
+                      Transaction Broker / Channel Partner
+                    </label>
+                    <p className="text-[10px] text-slate-500 mb-1.5">
+                      Select sourcing agent or brokerage firm
+                    </p>
+                    {!isCustomBroker ? (
+                      <select
+                        value={brokerName}
+                        onChange={(e) => {
+                          if (e.target.value === "custom") {
+                            setIsCustomBroker(true);
+                            setBrokerName("");
+                          } else {
+                            setBrokerName(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 outline-none bg-white cursor-pointer"
+                      >
+                        <option value="Direct">Direct (No Broker / In-House)</option>
+                        <option value="JLL">JLL (Jones Lang LaSalle)</option>
+                        <option value="CBRE">CBRE South Asia</option>
+                        <option value="Colliers">Colliers International</option>
+                        <option value="Cushman & Wakefield">Cushman &amp; Wakefield</option>
+                        <option value="Knight Frank">Knight Frank India</option>
+                        <option value="Savills">Savills India</option>
+                        <option value="Local Channel Partner">Local Channel Partner</option>
+                        <option value="custom">+ Other (Specify Custom Broker)...</option>
+                      </select>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={brokerName}
+                          onChange={e => setBrokerName(e.target.value)}
+                          placeholder="Type broker or agency name..."
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomBroker(false);
+                            setBrokerName("Direct");
+                          }}
+                          className="px-2.5 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -722,9 +1279,40 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
             {/* STEP 2: TERMS & DATES */}
             {currentStep === 2 && (
               <div className="space-y-4 animate-in fade-in-50">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-bold text-slate-900">Step 2 — Contract Tenure, Key Dates &amp; Tax Terms</h3>
-                  <p className="text-xs text-slate-500">Set commencement, rent start, lock-in, notice periods and billing schedule</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Step 2 — Contract Tenure, Key Dates &amp; Commercial Terms</h3>
+                    <p className="text-xs text-slate-500">Pick a tenure preset or set dates. All institutional clauses auto-fill automatically.</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl shrink-0">
+                    <span className="text-[10px] font-bold text-slate-500 px-1 uppercase">Tenure:</span>
+                    {[
+                      { label: "1 Year", years: 1, lockIn: 12 },
+                      { label: "3 Years", years: 3, lockIn: 36 },
+                      { label: "5 Years", years: 5, lockIn: 36 },
+                      { label: "9 Years", years: 9, lockIn: 36 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => applyTenurePreset(preset.years, preset.lockIn)}
+                        className="px-2 py-1 rounded-lg text-[11px] font-bold bg-white text-slate-700 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 transition-all cursor-pointer shadow-2xs"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Auto-filled standard callout banner */}
+                <div className="p-2.5 rounded-xl bg-teal-50/70 border border-teal-200/80 text-[11px] text-teal-900 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-teal-600 shrink-0" />
+                    <span><strong>Auto-Selected Standards:</strong> Lock-in, 10% TDS (Sec 194-I), 3-Mo Notice, Monthly billing on 1st &amp; 7-day payment window are pre-configured.</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-teal-200 shrink-0">
+                    Customizable Below
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -734,7 +1322,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                       type="date"
                       value={signingDate}
                       onChange={e => setSigningDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
                     />
                   </div>
                   <div>
@@ -743,7 +1331,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                       type="date"
                       value={handoverDate}
                       onChange={e => setHandoverDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
                     />
                   </div>
                   <div>
@@ -751,8 +1339,8 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                     <input
                       type="date"
                       value={commencementDate}
-                      onChange={e => setCommencementDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
+                      onChange={e => handleCommencementDateChange(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white font-medium"
                     />
                   </div>
                 </div>
@@ -764,7 +1352,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                       type="date"
                       value={rentCommencementDate}
                       onChange={e => setRentCommencementDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white font-medium"
                     />
                   </div>
                   <div>
@@ -772,8 +1360,8 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                     <input
                       type="date"
                       value={expiryDate}
-                      onChange={e => setExpiryDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
+                      onChange={e => handleExpiryDateChange(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white font-medium"
                     />
                   </div>
                   <div>
@@ -1024,6 +1612,311 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                         min={0}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none"
                       />
+                    </div>
+                  </div>
+
+                  {/* FLEXIBLE UTILITIES, HVAC & ELECTRICITY BUILDER */}
+                  <div className="pt-3 border-t border-slate-200/80 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm border border-amber-200 shadow-2xs">
+                          ⚡
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                            <span>Utility &amp; Power Charge Components</span>
+                            <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                              Flexible Billing
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            Configure electricity &amp; DG combined or separate, optional DG capacity rent, or add custom utility meters
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add Component Dropdown */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddUtilityMenu(prev => !prev)}
+                          className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>+ Add Component</span>
+                        </button>
+
+                        {showAddUtilityMenu && (
+                          <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20 animate-in fade-in-50 text-xs">
+                            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              Choose Component Template
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("dg_rent")}
+                              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-slate-700 font-medium"
+                            >
+                              <span className="text-amber-600 font-bold">⚡</span> DG Capacity / Standby Rent
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("blended_power")}
+                              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-slate-700 font-medium"
+                            >
+                              <span className="text-teal-600 font-bold">🔄</span> Blended Grid + DG Single Tariff
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("solar_wheeling")}
+                              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-slate-700 font-medium"
+                            >
+                              <span className="text-emerald-600 font-bold">☀️</span> Solar / Green Power Wheeling
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("ev_charging")}
+                              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-slate-700 font-medium"
+                            >
+                              <span className="text-blue-600 font-bold">🚗</span> EV Charging Point Sub-Meter
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("ups_rent")}
+                              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-slate-700 font-medium"
+                            >
+                              <span className="text-indigo-600 font-bold">🔋</span> Central UPS Clean Power Rent
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("fixed_operational")}
+                              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-slate-700 font-medium"
+                            >
+                              <span className="text-slate-600 font-bold">🛠️</span> Facility Operations Flat Fee
+                            </button>
+                            <div className="border-t border-slate-100 my-1" />
+                            <button
+                              type="button"
+                              onClick={() => addUtilityComponent("custom")}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 text-slate-800 font-bold"
+                            >
+                              <Plus size={13} /> Custom Utility Line Item
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Operational Core Parameters (Load, DG Backup, AC Hours) */}
+                    <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          Connected Load (kVA)
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="1"
+                            value={powerLoadKva === 0 ? "" : powerLoadKva}
+                            onChange={(e) => setPowerLoadKva(Math.max(1, parseInt(e.target.value) || 0))}
+                            placeholder="50"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-900 bg-white"
+                          />
+                          <span className="text-[10px] font-bold text-slate-500 shrink-0">kVA</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          DG Backup Provision
+                        </label>
+                        <select
+                          value={dgBackupType}
+                          onChange={(e) => setDgBackupType(e.target.value as any)}
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs font-medium bg-white"
+                        >
+                          <option value="100_percent">100% Full Uninterrupted</option>
+                          <option value="essential_only">Essential / Common (70%)</option>
+                          <option value="none">No DG Backup (Tenant UPS)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          AC Working Hours
+                        </label>
+                        <input
+                          type="text"
+                          value={hvacWorkingHours}
+                          onChange={(e) => setHvacWorkingHours(e.target.value)}
+                          placeholder="08:00 AM - 08:00 PM (Mon-Sat)"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-medium bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          Overtime AC Rate
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-bold text-slate-500">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={hvacOvertimeRate === 0 ? "" : hvacOvertimeRate}
+                            onChange={(e) => setHvacOvertimeRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                            placeholder="850"
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-900 bg-white"
+                          />
+                          <span className="text-[10px] text-slate-400 shrink-0">/hr</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dynamic Component Cards List */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span>Active Utility &amp; Power Components ({utilityComponents.length})</span>
+                        <span className="text-[11px] font-normal text-slate-500">
+                          Toggle switch to enable/disable or click trash to remove
+                        </span>
+                      </div>
+
+                      {utilityComponents.length === 0 ? (
+                        <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                          <p className="text-xs font-semibold text-slate-600">No utility charge components added.</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Click "+ Add Component" above to configure electricity, DG, or utility terms.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {utilityComponents.map((comp) => {
+                            const isZeroCharge = comp.billingType === "cam_included" || comp.billingType === "direct_discom";
+                            return (
+                              <div
+                                key={comp.id}
+                                className={`p-3 rounded-xl border transition-all ${
+                                  comp.isEnabled
+                                    ? "bg-white border-slate-200 shadow-2xs ring-1 ring-slate-100"
+                                    : "bg-slate-50/60 border-slate-200 opacity-60"
+                                }`}
+                              >
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
+                                  {/* Left: Toggle & Name */}
+                                  <div className="md:col-span-4 flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={comp.isEnabled}
+                                      onChange={() => toggleUtilityComponent(comp.id)}
+                                      className="rounded border-slate-300 text-teal-600 h-4 w-4 cursor-pointer shrink-0"
+                                      title="Enable / Disable this component"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <input
+                                        type="text"
+                                        value={comp.name}
+                                        onChange={(e) => updateUtilityComponent(comp.id, { name: e.target.value })}
+                                        className="w-full text-xs font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-teal-600 focus:outline-none bg-transparent py-0.5"
+                                        placeholder="Component Name..."
+                                      />
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                                          comp.category === "electricity" ? "bg-amber-100 text-amber-800" :
+                                          comp.category === "dg_power" ? "bg-orange-100 text-orange-800" :
+                                          comp.category === "dg_rent" ? "bg-purple-100 text-purple-800" :
+                                          comp.category === "blended_power" ? "bg-teal-100 text-teal-800" :
+                                          comp.category === "hvac" ? "bg-sky-100 text-sky-800" :
+                                          "bg-slate-100 text-slate-700"
+                                        }`}>
+                                          {comp.category.replace(/_/g, " ")}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                          {comp.isEnabled ? "Active" : "Disabled"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Middle 1: Billing Type Selector */}
+                                  <div className="md:col-span-3">
+                                    <select
+                                      value={comp.billingType}
+                                      onChange={(e) => updateUtilityComponent(comp.id, { billingType: e.target.value as any })}
+                                      className="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white cursor-pointer"
+                                    >
+                                      <option value="metered_actuals">Metered (Actuals ₹/kWh)</option>
+                                      <option value="blended_tariff">Blended Power (Grid+DG Combined)</option>
+                                      <option value="per_kva">Per kVA Capacity (₹/kVA/mo)</option>
+                                      <option value="per_sqft">Per Sq Ft (₹/sq ft/mo)</option>
+                                      <option value="fixed_monthly">Fixed Lumpsum (₹/month)</option>
+                                      <option value="cam_included">Included in CAM</option>
+                                      <option value="direct_discom">Direct DISCOM (Tenant Pays)</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Middle 2: Rate Input */}
+                                  <div className="md:col-span-2">
+                                    {isZeroCharge ? (
+                                      <div className="text-[11px] font-semibold text-slate-400 italic py-1 px-2 bg-slate-100 rounded-lg text-center">
+                                        No Direct Fee
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs font-bold text-slate-500">₹</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="any"
+                                          value={comp.rate === 0 ? "" : comp.rate}
+                                          onChange={(e) => updateUtilityComponent(comp.id, { rate: Math.max(0, parseFloat(e.target.value) || 0) })}
+                                          placeholder="0.00"
+                                          className="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-900 bg-white"
+                                        />
+                                        <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                                          {comp.billingType === "per_kva" ? "/kVA" : comp.billingType === "per_sqft" ? "/psf" : comp.billingType === "fixed_monthly" ? "/mo" : "/kWh"}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Middle 3: Invoicing Bundling (Together vs Separate) */}
+                                  <div className="md:col-span-2">
+                                    <select
+                                      value={comp.billingMode}
+                                      onChange={(e) => updateUtilityComponent(comp.id, { billingMode: e.target.value as any })}
+                                      className="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-[11px] font-medium focus:border-teal-600 outline-none bg-white cursor-pointer"
+                                      title="Specify whether this is combined on the electricity invoice or billed separately"
+                                    >
+                                      <option value="combined_electricity">⚡ Billed with Electricity</option>
+                                      <option value="separate_bill">📄 Separate Utility Bill</option>
+                                      <option value="with_cam">🏢 Included with CAM</option>
+                                      <option value="with_rent">🏠 Included with Rent</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Right: Remove Button */}
+                                  <div className="md:col-span-1 flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => removeUtilityComponent(comp.id)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                      title="Remove this utility component"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Helpful Landlord Clarification Note */}
+                      <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
+                        <Info size={14} className="text-amber-700 shrink-0 mt-0.5" />
+                        <div>
+                          <strong>Customizable Real Estate Standards:</strong> If your building charges Electricity &amp; DG together, keep both set to <em>"Billed with Electricity"</em>. If you bill DG separately or do not charge DG capacity rent, set them to <em>"Separate Bill"</em>, uncheck, or click trash to remove.
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1389,6 +2282,76 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                   </div>
                 </div>
 
+                {/* Utilities & HVAC Operational Review Banner */}
+                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200/80 text-xs space-y-2.5">
+                  <div className="flex items-center justify-between text-amber-950 font-bold text-[11px] uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5">
+                      <span>⚡</span> Agreed Utilities &amp; Operational Annexure
+                    </span>
+                    <span className="text-[10px] text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded-md font-semibold">
+                      {utilityComponents.filter(c => c.isEnabled).length} Active Components
+                    </span>
+                  </div>
+
+                  {/* Core specs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                    <div className="bg-white p-2 rounded-lg border border-amber-100">
+                      <span className="text-slate-400 block text-[10px]">Connected Power</span>
+                      <span className="font-bold text-slate-800">{powerLoadKva} kVA</span>
+                      <span className="text-[9px] text-slate-500 block">Sanctioned load</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg border border-amber-100">
+                      <span className="text-slate-400 block text-[10px]">DG Backup</span>
+                      <span className="font-bold text-slate-800">
+                        {dgBackupType === "100_percent" ? "100% Uninterrupted" : dgBackupType === "essential_only" ? "Essential (70%)" : "No DG Backup"}
+                      </span>
+                      <span className="text-[9px] text-slate-500 block">Generator SLA</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg border border-amber-100">
+                      <span className="text-slate-400 block text-[10px]">AC Operating Hours</span>
+                      <span className="font-bold text-slate-800 truncate block">{hvacWorkingHours}</span>
+                      <span className="text-[9px] text-slate-500 block">Standard delivery</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg border border-amber-100">
+                      <span className="text-slate-400 block text-[10px]">Overtime AC</span>
+                      <span className="font-bold text-slate-800">
+                        {hvacOvertimeRate > 0 ? `₹${hvacOvertimeRate}/hr` : "No Charge"}
+                      </span>
+                      <span className="text-[9px] text-slate-500 block">After standard hrs</span>
+                    </div>
+                  </div>
+
+                  {/* Active Dynamic Components List */}
+                  <div className="space-y-1.5 pt-1 border-t border-amber-200/60">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Agreed Utility Invoicing Structure
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {utilityComponents.filter(c => c.isEnabled).map((c) => (
+                        <div key={c.id} className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                          <div className="min-w-0 pr-2">
+                            <div className="font-semibold text-slate-800 truncate text-[11px]">{c.name}</div>
+                            <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-slate-700">
+                                {c.billingType === "cam_included" ? "Included in CAM" : c.billingType === "direct_discom" ? "Direct DISCOM" : `₹${c.rate} ${c.unitLabel}`}
+                              </span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                            c.billingMode === "combined_electricity"
+                              ? "bg-amber-50 text-amber-800 border border-amber-200"
+                              : c.billingMode === "separate_bill"
+                              ? "bg-blue-50 text-blue-800 border border-blue-200"
+                              : "bg-slate-100 text-slate-700"
+                          }`}>
+                            {c.billingMode === "combined_electricity" ? "⚡ Billed with Electricity" : c.billingMode === "separate_bill" ? "📄 Separate Bill" : "🏢 CAM/Rent"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Approver comments */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Maker / Submitter Notes for Approval</label>
@@ -1458,108 +2421,188 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
             </div>
           </div>
 
-          {/* RIGHT 4 COLUMNS: STICKY LIVE FINANCIAL SUMMARY */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="sticky top-0 bg-white rounded-2xl border border-teal-200/80 p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-teal-600" />
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Calculation</span>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-                  D-01 to D-30
-                </span>
-              </div>
-
-              {/* Occupant & Space pill */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">Demised Asset</div>
-                <div className="font-bold text-slate-900 truncate">
-                  {occupantName || "Occupant Not Specified"}
-                </div>
-                <div className="text-slate-600 flex items-center justify-between pt-1">
-                  <span>{selectedSpaces.length} Units ({totalArea.toLocaleString("en-IN")} sq ft)</span>
-                  <span className="font-mono text-teal-700 font-bold uppercase">{billingModel}</span>
-                </div>
-              </div>
-
-              {/* Financial Metrics */}
-              <div className="space-y-2 text-xs">
-                {liveSummary.monthlyBaseRent === 0 && (
-                  <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200 text-amber-900 text-[10px] flex items-center gap-1.5 leading-tight">
-                    <AlertTriangle size={13} className="text-amber-600 shrink-0" />
-                    <span>Terms skipped during creation. Rates show as pending until entered or accepted.</span>
+          {/* RIGHT 4 COLUMNS: STICKY LIVE FINANCIAL SUMMARY (ONLY ON STEP 1) */}
+          {currentStep === 1 && (
+            <div className="lg:col-span-4 space-y-4">
+              <div className="sticky top-0 bg-white rounded-2xl border border-teal-200/80 p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-teal-600" />
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Calculation</span>
                   </div>
-                )}
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Effective Rate</span>
-                  <span className={`font-bold ${liveSummary.effectiveRate > 0 ? "text-slate-800" : "text-amber-600 font-mono text-[11px]"}`}>
-                    {liveSummary.effectiveRate > 0 ? `₹${liveSummary.effectiveRate.toFixed(2)} psf/mo` : "Pending Entry"}
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center gap-1">
+                    <Edit3 size={11} /> Editable by Landlord
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Monthly Base Rent (D-01)</span>
-                  <span className={`font-bold ${liveSummary.monthlyBaseRent > 0 ? "text-slate-900" : "text-amber-600"}`}>
-                    {liveSummary.monthlyBaseRent > 0 ? formatINR(liveSummary.monthlyBaseRent) : "₹0.00 (Pending)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">CAM (Monthly D-04)</span>
-                  <span className={`font-semibold ${liveSummary.camMonthly > 0 ? "text-slate-700" : "text-slate-400"}`}>
-                    {liveSummary.camMonthly > 0 ? liveSummary.camText : "₹0.00 (Unset)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Total Monthly Gross (D-05)</span>
-                  <span className={`font-bold text-sm ${liveSummary.grossMonthlyRecurring > 0 ? "text-teal-700" : "text-slate-400"}`}>
-                    {liveSummary.grossMonthlyRecurring > 0 ? formatINR(liveSummary.grossMonthlyRecurring) : "₹0.00 (Pending)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Annual Contracted Rev</span>
-                  <span className={`font-bold ${liveSummary.annualisedBaseRent > 0 ? "text-slate-900" : "text-slate-400"}`}>
-                    {liveSummary.annualisedBaseRent > 0 ? formatINR(liveSummary.annualisedBaseRent) : "₹0.00 (Pending)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Deposit Required (D-13)</span>
-                  <span className={`font-semibold ${liveSummary.depositRequired > 0 ? "text-slate-800" : "text-slate-400"}`}>
-                    {liveSummary.depositRequired > 0 ? formatINR(liveSummary.depositRequired) : "₹0.00 (Pending)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Deposit Shortfall</span>
-                  <span className={`font-bold ${liveSummary.depositShortfall > 0 ? "text-rose-600" : "text-emerald-700"}`}>
-                    {liveSummary.depositShortfall > 0 ? formatINR(liveSummary.depositShortfall) : "₹0 (Covered)"}
-                  </span>
-                </div>
-                {liveSummary.nextEscalationDate && (
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-slate-500">Next Escalation (D-08)</span>
-                    <span className="font-medium text-amber-700">
-                      {liveSummary.nextEscalationDate} (+{formatINR(liveSummary.nextEscalationUplift)}/mo)
-                    </span>
-                  </div>
-                )}
-              </div>
 
-              {/* Status & Validation Chip */}
-              <div className="pt-2 flex items-center justify-between text-[11px]">
-                <span className={`px-2 py-1 rounded-md font-bold flex items-center gap-1 ${
-                  validationErrors.length === 0 ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-800 border border-rose-200"
-                }`}>
-                  {validationErrors.length === 0 ? (
-                    <><CheckCircle2 size={12} className="text-emerald-600" /> Ready to Submit</>
-                  ) : (
-                    <><AlertTriangle size={12} className="text-rose-600" /> {validationErrors.length} Errors</>
+                {/* Occupant & Space pill */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                  <div className="text-slate-500 text-[10px] font-semibold uppercase">Demised Asset</div>
+                  <div className="font-bold text-slate-900 truncate">
+                    {occupantName || "Occupant Not Specified"}
+                  </div>
+                  <div className="text-slate-600 flex items-center justify-between pt-1">
+                    <span>{selectedSpaces.length} Units ({totalArea.toLocaleString("en-IN")} sq ft)</span>
+                    <span className="font-mono text-teal-700 font-bold uppercase">{billingModel}</span>
+                  </div>
+                </div>
+
+                {/* Directly Editable Financial Inputs for Landlord */}
+                <div className="space-y-2.5 text-xs">
+                  {liveSummary.monthlyBaseRent === 0 && (
+                    <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200 text-amber-900 text-[10px] flex items-center gap-1.5 leading-tight">
+                      <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                      <span>Enter or edit your commercial terms below. Calculations update in real time.</span>
+                    </div>
                   )}
-                </span>
-                <span className="text-slate-400 font-medium">
-                  {validationWarnings.length} Warnings
-                </span>
+
+                  {/* Base Rent Input */}
+                  <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                        <span>Base Rent psf</span>
+                        <span className="text-[9px] text-slate-400 font-normal">(/sq ft/mo)</span>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-bold text-slate-500">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={baseRentPsf === 0 ? "" : baseRentPsf}
+                          onChange={(e) => setBaseRentPsf(Math.max(0, parseFloat(e.target.value) || 0))}
+                          placeholder="0.00"
+                          className="w-20 px-2 py-1 text-right font-bold text-slate-900 border border-slate-300 rounded-lg focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-xs bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-0.5 text-slate-500">
+                      <span>Monthly Base Rent:</span>
+                      <span className="font-bold text-slate-900 font-mono">
+                        {liveSummary.monthlyBaseRent > 0 ? formatINR(liveSummary.monthlyBaseRent) : "₹0.00 (Pending)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* CAM Input */}
+                  <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                        <span>CAM Rate psf</span>
+                        <span className="text-[9px] text-slate-400 font-normal">(Maintenance)</span>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-bold text-slate-500">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={camRatePsf === 0 ? "" : camRatePsf}
+                          onChange={(e) => setCamRatePsf(Math.max(0, parseFloat(e.target.value) || 0))}
+                          placeholder="0.00"
+                          className="w-20 px-2 py-1 text-right font-bold text-slate-900 border border-slate-300 rounded-lg focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-xs bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-0.5 text-slate-500">
+                      <span>Monthly CAM:</span>
+                      <span className="font-semibold text-slate-700 font-mono">
+                        {liveSummary.monthlyCAM > 0 ? formatINR(liveSummary.monthlyCAM) : "₹0.00"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Deposit Months & Escalation Inputs */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        Deposit
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={depositMonths === 0 ? "" : depositMonths}
+                          onChange={(e) => setDepositMonths(Math.max(0, parseInt(e.target.value) || 0))}
+                          placeholder="0"
+                          className="w-full px-2 py-1 text-right font-bold text-slate-900 border border-slate-300 rounded-lg focus:border-teal-600 text-xs bg-white"
+                        />
+                        <span className="text-[10px] text-slate-500 font-medium">mos</span>
+                      </div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200">
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        Escalation
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={escalationPct === 0 ? "" : escalationPct}
+                          onChange={(e) => setEscalationPct(Math.max(0, parseFloat(e.target.value) || 0))}
+                          placeholder="0"
+                          className="w-full px-2 py-1 text-right font-bold text-slate-900 border border-slate-300 rounded-lg focus:border-teal-600 text-xs bg-white"
+                        />
+                        <span className="text-[10px] text-slate-500 font-medium">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Computed Totals */}
+                  <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-200/80 space-y-1.5 mt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600 font-medium">Effective Rate:</span>
+                      <span className="font-bold text-slate-900">
+                        {liveSummary.effectiveRate > 0 ? `₹${liveSummary.effectiveRate.toFixed(2)} psf/mo` : "₹0.00 psf"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-700 font-bold">Total Monthly Gross (D-05):</span>
+                      <span className="font-extrabold text-teal-800 text-sm font-mono">
+                        {formatINR(liveSummary.grossMonthlyRecurring)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-teal-100 text-slate-600">
+                      <span>Annual Contracted Rev:</span>
+                      <span className="font-bold text-slate-800 font-mono">
+                        {formatINR(liveSummary.annualisedBaseRent)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-600">
+                      <span>Deposit Required (D-13):</span>
+                      <span className="font-bold text-slate-800 font-mono">
+                        {formatINR(liveSummary.depositRequired)}
+                      </span>
+                    </div>
+                    {liveSummary.nextEscalationDate && (
+                      <div className="flex items-center justify-between text-[11px] text-amber-800 pt-0.5">
+                        <span>Next Escalation (+{escalationPct}%):</span>
+                        <span className="font-bold font-mono">
+                          +{formatINR(liveSummary.nextEscalationUplift)}/mo
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status & Validation Chip */}
+                <div className="pt-2 flex items-center justify-between text-[11px]">
+                  <span className={`px-2 py-1 rounded-md font-bold flex items-center gap-1 ${
+                    validationErrors.length === 0 ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-800 border border-rose-200"
+                  }`}>
+                    {validationErrors.length === 0 ? (
+                      <><CheckCircle2 size={12} className="text-emerald-600" /> Ready to Submit</>
+                    ) : (
+                      <><AlertTriangle size={12} className="text-rose-600" /> {validationErrors.length} Errors</>
+                    )}
+                  </span>
+                  <span className="text-slate-400 font-medium">
+                    {validationWarnings.length} Warnings
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
