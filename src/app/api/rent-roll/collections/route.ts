@@ -10,6 +10,7 @@ export async function GET(req: Request) {
     const propertyId = searchParams.get("propertyId");
     const leaseId = searchParams.get("leaseId");
     const search = searchParams.get("search")?.toLowerCase();
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
 
     if (!ownerEmail) {
@@ -51,6 +52,13 @@ export async function GET(req: Request) {
         c.referenceNumber?.toLowerCase().includes(search) ||
         c.invoiceNumber?.toLowerCase().includes(search)
       );
+    }
+
+    if (asOfDate) {
+      collections = collections.filter(c => {
+        const colDate = (c.paymentDate || c.depositDate || c.createdAt || "2099-12-31").split("T")[0];
+        return colDate <= asOfDate;
+      });
     }
 
     return NextResponse.json(collections);

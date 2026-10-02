@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
     const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
@@ -33,6 +34,10 @@ export async function GET(req: Request) {
     const validPropIds = new Set(properties.map(p => p.id));
     let spaces = db.spaces.filter(s => validPropIds.has(s.propertyId));
     let leases = db.leases.filter(l => validPropIds.has(l.propertyId) && (l.status === "active" || l.status === "under_notice"));
+
+    if (asOfDate) {
+      leases = leases.filter(l => l.startDate <= asOfDate && l.endDate >= asOfDate);
+    }
 
     if (propertyId && propertyId !== "ALL") {
       properties = properties.filter(p => p.id === propertyId);

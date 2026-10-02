@@ -58,7 +58,9 @@ export async function GET(req: Request) {
 
     // Space-Centric Metrics (RR-VW-01)
     const totalSpacesCount = spaces.length;
-    const occupiedSpacesCount = spaces.filter(s => s.status === "occupied" || activeLeases.some(l => l.spaceId === s.id)).length;
+    const occupiedSpacesCount = spaces.filter(s => 
+      activeLeases.some(l => l.spaceId === s.id || (l.unitNumber && s.unitNumber && l.unitNumber.toLowerCase() === s.unitNumber.toLowerCase()))
+    ).length;
     const vacantSpacesCount = Math.max(0, totalSpacesCount - occupiedSpacesCount);
 
     const totalPortfolioArea = properties.reduce((sum, p) => sum + p.totalArea, 0) || spaces.reduce((sum, s) => sum + s.chargeableArea, 0);
@@ -77,12 +79,16 @@ export async function GET(req: Request) {
 
     // Potential vacant rent
     const potentialVacantRent = spaces
-      .filter(s => s.status === "vacant" && !activeLeases.some(l => l.spaceId === s.id))
+      .filter(s => !activeLeases.some(l => l.spaceId === s.id || (l.unitNumber && s.unitNumber && l.unitNumber.toLowerCase() === s.unitNumber.toLowerCase())))
       .reduce((sum, s) => sum + (s.potentialMonthlyRent || Math.round(s.chargeableArea * (s.standardRatePsf || 150))), 0);
 
-    // Receivables & Invoices
-    const totalOutstanding = invoices.reduce((sum, i) => sum + (i.balanceDue || 0), 0);
-    const overdueInvoices = invoices.filter(i => i.status === "overdue");
+    // Receivables & Invoices as of asOfDate
+    const asOfInvoices = invoices.filter(i => {
+      const invDate = (i.issueDate || i.invoiceDate || i.createdAt || "2099-12-31").split("T")[0];
+      return invDate <= asOfDate;
+    });
+    const totalOutstanding = asOfInvoices.reduce((sum, i) => sum + (i.balanceDue || 0), 0);
+    const overdueInvoices = asOfInvoices.filter(i => i.status === "overdue" || (i.dueDate && i.dueDate < asOfDate && (i.balanceDue || 0) > 0));
     const overdueLeaseIds = new Set(overdueInvoices.map(i => i.leaseId));
 
     // Expiry & Alert Pipeline
@@ -131,10 +137,14 @@ export async function GET(req: Request) {
       monthlyRent: l.monthlyRent,
       expiryDate: l.endDate,
       status: l.status,
-    })));
+    })), now);
 
     // Net Operating Income (Monthly & Annual)
-    const totalMonthlyExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const asOfExpenses = expenses.filter(e => {
+      const expDate = (e.expenseDate || e.createdAt || "2099-12-31").split("T")[0];
+      return expDate <= asOfDate;
+    });
+    const totalMonthlyExpenses = asOfExpenses.reduce((sum, e) => sum + e.amount, 0);
     const noiMonthly = calculateNOI({
       grossRevenue: totalMonthlyBilling,
       totalExpenses: totalMonthlyExpenses
@@ -144,7 +154,7 @@ export async function GET(req: Request) {
     const capRateData = calculateCapRate(noiMonthly.noi * 12, totalPortfolioAssetValue);
 
     // Aging Buckets
-    const agingData = calculateAgingBuckets(invoices.map(i => ({
+    const agingData = calculateAgingBuckets(asOfInvoices.map(i => ({
       id: i.id,
       invoiceNumber: i.invoiceNumber,
       tenantName: i.tenantName,
@@ -155,7 +165,7 @@ export async function GET(req: Request) {
       amountPaid: i.amountPaid,
       balanceDue: i.balanceDue,
       status: i.status
-    })));
+    })), now);
 
     // Top 5 Tenants by Rent
     const topTenants = [...activeLeases]

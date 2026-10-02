@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     const clientAccountId = searchParams.get("clientAccountId");
     const billingEntityId = searchParams.get("billingEntityId");
     const search = searchParams.get("search")?.toLowerCase();
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
 
     if (!ownerEmail) {
@@ -57,6 +58,13 @@ export async function GET(req: Request) {
         i.propertyName.toLowerCase().includes(search) ||
         i.leaseCode.toLowerCase().includes(search)
       );
+    }
+
+    if (asOfDate) {
+      invoices = invoices.filter(i => {
+        const invDate = (i.issueDate || i.invoiceDate || i.createdAt || "2099-12-31").split("T")[0];
+        return invDate <= asOfDate;
+      });
     }
 
     return NextResponse.json(invoices);

@@ -397,7 +397,7 @@ function RentRollPageInner() {
       const asOfDateParam = asOfDate ? `asOfDate=${encodeURIComponent(asOfDate)}` : "";
 
       const makeQuery = (extra: string[] = []) => {
-        const parts = [emailParam, ...extra].filter(Boolean);
+        const parts = [emailParam, asOfDateParam, ...extra].filter(Boolean);
         return parts.length > 0 ? `?${parts.join("&")}` : "";
       };
 
@@ -422,7 +422,7 @@ function RentRollPageInner() {
       ] = await Promise.all([
         fetch(`/api/rent-roll/properties${makeQuery([clientAccountParam, billingEntityParam])}`),
         fetch(`/api/rent-roll/spaces${makeQuery([propParam])}`),
-        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam, clientAccountParam, billingEntityParam, viewModeParam, asOfDateParam])}`),
+        fetch(`/api/rent-roll/leases${makeQuery([propParam, statusParam, searchParam, clientAccountParam, billingEntityParam, viewModeParam])}`),
         fetch(`/api/rent-roll/dashboard${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
         fetch(`/api/rent-roll/invoices${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
         fetch(`/api/rent-roll/collections${makeQuery([propParam, clientAccountParam, billingEntityParam])}`),
@@ -512,6 +512,11 @@ function RentRollPageInner() {
         });
         localLeases.forEach((l: any) => {
           if (l && email && l.ownerEmail && l.ownerEmail.toLowerCase() === email.toLowerCase()) {
+            if (asOfDate) {
+              const start = (l.startDate || "2000-01-01").split("T")[0];
+              const end = (l.endDate || "2099-12-31").split("T")[0];
+              if (start > asOfDate || end < asOfDate) return;
+            }
             mergedMap.set(l.id || l.tenantName, l);
           }
         });
@@ -866,6 +871,16 @@ function RentRollPageInner() {
           <TenantsTab
             tenants={tenants}
             onOpenAddTenant={() => setIsAddTenantOpen(true)}
+            onOpenContractWizard={() => {
+              setIsAddLeaseOpen(true);
+            }}
+            onShareInviteLink={(t) => {
+              const origin = typeof window !== "undefined" ? window.location.origin : "";
+              const inviteLink = `${origin}/tenant/join?code=${t.tenantCode || t.id}`;
+              navigator.clipboard?.writeText(inviteLink);
+              setActionFeedback(`Portal invite link for ${t.tradeName} copied to clipboard!`);
+              setTimeout(() => setActionFeedback(null), 4000);
+            }}
             onSelectTenant={(t) => {
               const lease = leases.find(l => l.tenantId === t.id);
               if (lease) setSelectedLeaseForDrawer(lease);

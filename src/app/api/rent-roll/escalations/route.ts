@@ -8,6 +8,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const propertyId = searchParams.get("propertyId");
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
     const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
@@ -32,7 +33,11 @@ export async function GET(req: Request) {
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
-    const validLeaseIds = new Set(db.leases.filter(l => validPropIds.has(l.propertyId)).map(l => l.id));
+    let validLeases = db.leases.filter(l => validPropIds.has(l.propertyId));
+    if (asOfDate) {
+      validLeases = validLeases.filter(l => l.startDate <= asOfDate && l.endDate >= asOfDate);
+    }
+    const validLeaseIds = new Set(validLeases.map(l => l.id));
     let escalations = db.escalations.filter(e => validLeaseIds.has(e.leaseId));
 
     if (status && status !== "ALL") {

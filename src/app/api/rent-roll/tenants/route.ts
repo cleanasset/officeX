@@ -35,7 +35,11 @@ export async function GET(req: Request) {
     const userLeases = db.leases.filter(l => validPropIds.has(l.propertyId));
     const userTenantIds = new Set(userLeases.map(l => l.tenantId));
 
-    let tenants = db.tenants.filter(t => userTenantIds.size === 0 || userTenantIds.has(t.id));
+    let tenants = db.tenants.filter(t => {
+      if (userTenantIds.has(t.id)) return true;
+      if (!t.orgId || t.orgId === db.organization.id || userTenantIds.size === 0) return true;
+      return false;
+    });
 
     if (status && status !== "ALL") {
       tenants = tenants.filter(t => t.status === status);

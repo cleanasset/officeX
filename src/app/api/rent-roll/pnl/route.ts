@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
     const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
@@ -40,7 +41,14 @@ export async function GET(req: Request) {
       expenses = expenses.filter(e => e.propertyId === propertyId);
     }
 
-    const activeLeases = leases.filter(l => l.status === "active" || l.status === "under_notice");
+    let activeLeases = leases.filter(l => l.status === "active" || l.status === "under_notice");
+    if (asOfDate) {
+      activeLeases = activeLeases.filter(l => l.startDate <= asOfDate && l.endDate >= asOfDate);
+      expenses = expenses.filter(e => {
+        const expDate = (e.expenseDate || e.createdAt || "2099-12-31").split("T")[0];
+        return expDate <= asOfDate;
+      });
+    }
 
     // Revenue streams
     const monthlyBaseRent = activeLeases.reduce((sum, l) => sum + l.monthlyRent, 0);

@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Plus,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Share2
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -47,12 +48,16 @@ interface TenantsTabProps {
   tenants: TenantSummary[];
   onOpenAddTenant: () => void;
   onSelectTenant: (tenant: TenantSummary) => void;
+  onOpenContractWizard?: (tenant: TenantSummary) => void;
+  onShareInviteLink?: (tenant: TenantSummary) => void;
 }
 
 export const TenantsTab: React.FC<TenantsTabProps> = ({
   tenants,
   onOpenAddTenant,
   onSelectTenant,
+  onOpenContractWizard,
+  onShareInviteLink,
 }) => {
   const [search, setSearch] = useState<string>("");
 
@@ -175,6 +180,27 @@ export const TenantsTab: React.FC<TenantsTabProps> = ({
                   <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                   <span className="truncate">{t.contactEmail}</span>
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2.5 flex items-center gap-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => onOpenContractWizard?.(t)}
+                  className="flex-1 py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] font-bold text-[11px] rounded-lg border border-teal-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                >
+                  <FileText className="w-3 h-3" />
+                  <span>{t.activeLeasesCount > 0 ? "Contract Wizard" : "Allocate Space & Lease"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onShareInviteLink?.(t)}
+                  className="py-1.5 px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold text-[11px] rounded-lg border border-gray-200 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Share Tenant Portal Invite Link"
+                >
+                  <Share2 className="w-3 h-3 text-teal-600" />
+                  <span>Invite Link</span>
+                </button>
               </div>
             </div>
           ))}

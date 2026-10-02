@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
     const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
@@ -37,6 +38,13 @@ export async function GET(req: Request) {
       invoices = invoices.filter(i => i.propertyId === propertyId);
     }
 
+    if (asOfDate) {
+      invoices = invoices.filter(i => {
+        const invDate = (i.issueDate || i.invoiceDate || i.createdAt || "2099-12-31").split("T")[0];
+        return invDate <= asOfDate;
+      });
+    }
+
     const agingInputs = invoices.map(i => ({
       id: i.id,
       invoiceNumber: i.invoiceNumber,
@@ -50,8 +58,9 @@ export async function GET(req: Request) {
       status: i.status
     }));
 
-    const summary = calculateAgingBuckets(agingInputs);
-    const now = new Date();
+    const referenceDate = asOfDate ? new Date(asOfDate) : new Date();
+    const summary = calculateAgingBuckets(agingInputs, referenceDate);
+    const now = referenceDate;
 
     // Group overdue invoices by tenant
     const tenantMap = new Map<string, {

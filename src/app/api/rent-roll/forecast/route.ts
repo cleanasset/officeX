@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
+    const asOfDate = searchParams.get("asOfDate");
     let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
     const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
@@ -37,6 +38,7 @@ export async function GET(req: Request) {
       leases = leases.filter(l => l.propertyId === propertyId);
     }
 
+    const startDate = asOfDate ? new Date(asOfDate) : new Date();
     const forecast = generate12MonthForecast(leases.map(l => ({
       monthlyRent: l.monthlyRent,
       camMonthly: l.camMonthly,
@@ -47,7 +49,7 @@ export async function GET(req: Request) {
       escalationFrequencyMonths: l.escalationFrequencyMonths,
       nextEscalationDate: l.nextEscalationDate,
       status: l.status,
-    })));
+    })), startDate);
 
     const annualProjectedGross = round2(forecast.reduce((sum, item) => sum + item.projectedGross, 0));
     const annualProjectedBase = round2(forecast.reduce((sum, item) => sum + item.projectedBaseRent, 0));

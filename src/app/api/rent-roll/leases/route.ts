@@ -71,7 +71,14 @@ export async function GET(req: Request) {
     } else if (viewMode === "contracted") {
       leases = leases.filter(l => l.status !== "terminated" && l.status !== "expired");
     } else if (viewMode === "forecast") {
-      const activeDeals = (db.deals || []).filter(d => validPropIds.has(d.propertyId) && d.stage !== "lost");
+      const activeDeals = (db.deals || []).filter(d => {
+        if (!validPropIds.has(d.propertyId) || d.stage === "lost") return false;
+        if (asOfDate) {
+          const commDate = d.targetCommencementDate || "2027-01-01";
+          if (commDate > asOfDate) return false;
+        }
+        return true;
+      });
       activeDeals.forEach(deal => {
         const prop = properties.find(p => p.id === deal.propertyId);
         const monthlyRent = Math.round((deal.proposedAreaSqft || 10000) * (deal.targetRentPsf || 200));
