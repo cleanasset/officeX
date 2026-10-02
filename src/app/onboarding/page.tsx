@@ -931,6 +931,10 @@ function OnboardingContent() {
           localStorage.setItem("officex_active_leases", JSON.stringify(commitData.contracts));
         }
 
+        if (commitData?.tenants && Array.isArray(commitData.tenants)) {
+          localStorage.setItem("officex_active_tenants", JSON.stringify(commitData.tenants));
+        }
+
         document.cookie = "officex_onboarding_completed=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=31536000; SameSite=Lax";
         document.cookie = "officex_auth=1; path=/; max-age=31536000; SameSite=Lax";

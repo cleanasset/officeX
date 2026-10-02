@@ -61,6 +61,16 @@ export interface DynamicUtilityComponent {
 interface ContractWizardModalProps {
   properties: Array<{ id: string; name: string; city: string; state?: string }>;
   preSelectedSpace?: any | null;
+  preSelectedTenant?: any | null;
+  initialCommercials?: {
+    baseRentPsf?: number;
+    camRatePsf?: number;
+    chargeableArea?: number;
+    startDate?: string;
+    endDate?: string;
+    securityDepositMonths?: number;
+    escalationPct?: number;
+  } | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -70,6 +80,8 @@ interface ContractWizardModalProps {
 export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   properties,
   preSelectedSpace,
+  preSelectedTenant,
+  initialCommercials,
   isOpen,
   onClose,
   onSuccess,
@@ -407,6 +419,47 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   // STEP 7: Review & Approver Notes
   const [makerComments, setMakerComments] = useState<string>("");
   const [approvalStatus, setApprovalStatus] = useState<"active" | "submitted">("active");
+
+  // Sync pre-selected tenant, space, and commercials from AddTenantModal or Tenant Directory
+  useEffect(() => {
+    if (!isOpen) return;
+    if (preSelectedTenant) {
+      if (preSelectedTenant.id && preSelectedTenant.id.startsWith("TEN-")) {
+        setOccupantId(preSelectedTenant.id);
+        setIsNewOccupant(false);
+      } else {
+        setIsNewOccupant(true);
+      }
+      setOccupantName(preSelectedTenant.tradeName || preSelectedTenant.name || preSelectedTenant.legalName || "");
+      if (preSelectedTenant.gstin) setOccupantGstin(preSelectedTenant.gstin);
+      if (preSelectedTenant.pan) setOccupantPan(preSelectedTenant.pan);
+    }
+    if (preSelectedSpace) {
+      if (preSelectedSpace.propertyId) setPropertyId(preSelectedSpace.propertyId);
+      if (preSelectedSpace.id || preSelectedSpace.unitNumber) {
+        setSelectedSpaces([{
+          spaceId: preSelectedSpace.id || `SPC-${preSelectedSpace.unitNumber}`,
+          spaceCode: preSelectedSpace.unitNumber || preSelectedSpace.spaceCode || "Unit",
+          areaLet: preSelectedSpace.chargeableArea || 1000,
+        }]);
+      }
+      if (preSelectedSpace.baseRentPsf) setBaseRentPsf(Number(preSelectedSpace.baseRentPsf));
+      if (preSelectedSpace.camRatePsf) setCamRatePsf(Number(preSelectedSpace.camRatePsf));
+    }
+    if (initialCommercials) {
+      if (initialCommercials.baseRentPsf) setBaseRentPsf(Number(initialCommercials.baseRentPsf));
+      if (initialCommercials.camRatePsf) setCamRatePsf(Number(initialCommercials.camRatePsf));
+      if (initialCommercials.startDate) {
+        setCommencementDate(initialCommercials.startDate);
+        setSigningDate(initialCommercials.startDate);
+        setHandoverDate(initialCommercials.startDate);
+        setRentCommencementDate(initialCommercials.startDate);
+      }
+      if (initialCommercials.endDate) setExpiryDate(initialCommercials.endDate);
+      if (initialCommercials.securityDepositMonths) setDepositMonths(Number(initialCommercials.securityDepositMonths));
+      if (initialCommercials.escalationPct) setEscalationPct(Number(initialCommercials.escalationPct));
+    }
+  }, [preSelectedTenant, preSelectedSpace, initialCommercials, isOpen]);
 
   // Fetch tenants and spaces when property changes
   useEffect(() => {

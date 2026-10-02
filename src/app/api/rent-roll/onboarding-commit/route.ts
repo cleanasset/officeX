@@ -24,6 +24,7 @@ export async function POST(req: Request) {
       branding = {},
       domainConfig = {},
       users = [],
+      tenants: stagedTenants = [],
       property = null,
       uploadedRows = [],
       makerCheckerLease = true,
@@ -75,6 +76,72 @@ export async function POST(req: Request) {
 
     if (users.length > 0) {
       db.config.users = users;
+
+      // Automatically register any users added with role "occupant" as Tenant Entities
+      const occupantUsers = users.filter((u: any) => u.role === "occupant");
+      occupantUsers.forEach((u: any, idx: number) => {
+        const uName = (u.name || "").trim();
+        if (!uName) return;
+        const exists = db.tenants.some(t => 
+          t.tradeName.toLowerCase() === uName.toLowerCase() || 
+          (u.email && t.contactEmail?.toLowerCase() === u.email.toLowerCase())
+        );
+        if (!exists) {
+          db.tenants.unshift({
+            id: `TEN-${Date.now()}-${idx}`,
+            orgId: db.organization.id,
+            tenantCode: `TNT-${Math.floor(100 + Math.random() * 900)}`,
+            tradeName: uName,
+            legalName: `${uName} Pvt Ltd`,
+            industry: "Commercial Occupant",
+            pan: "AABCT9988F",
+            gstin: "27AABCT9988F1Z2",
+            contactPerson: uName,
+            contactEmail: u.email || `contact@${uName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+            contactPhone: "+91 98000 00000",
+            billingAddress: organization.primaryAddress || organization.address || "Commercial Premises",
+            billingCity: organization.city || "Ahmedabad",
+            billingState: organization.state || "Gujarat",
+            billingPincode: "380001",
+            status: "active",
+            creditLimit: 5000000,
+            paymentTermsDays: 15,
+            createdAt: new Date().toISOString()
+          });
+        }
+      });
+    }
+
+    // Also register explicitly staged tenants if provided
+    if (Array.isArray(stagedTenants) && stagedTenants.length > 0) {
+      stagedTenants.forEach((st: any, idx: number) => {
+        const sName = (st.tradeName || st.name || "").trim();
+        if (!sName) return;
+        const exists = db.tenants.some(t => t.tradeName.toLowerCase() === sName.toLowerCase());
+        if (!exists) {
+          db.tenants.unshift({
+            id: st.id || `TEN-${Date.now()}-${idx}`,
+            orgId: db.organization.id,
+            tenantCode: st.tenantCode || `TNT-${Math.floor(100 + Math.random() * 900)}`,
+            tradeName: sName,
+            legalName: st.legalName || `${sName} Pvt Ltd`,
+            industry: st.industry || "Commercial Occupant",
+            pan: st.pan || "AABCT9988F",
+            gstin: st.gstin || "27AABCT9988F1Z2",
+            contactPerson: st.contactPerson || sName,
+            contactEmail: st.contactEmail || `contact@${sName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+            contactPhone: st.contactPhone || "+91 98000 00000",
+            billingAddress: st.billingAddress || organization.primaryAddress || "Commercial Premises",
+            billingCity: st.billingCity || organization.city || "Ahmedabad",
+            billingState: st.billingState || organization.state || "Gujarat",
+            billingPincode: st.billingPincode || "380001",
+            status: "active",
+            creditLimit: 5000000,
+            paymentTermsDays: 15,
+            createdAt: new Date().toISOString()
+          });
+        }
+      });
     }
     if (chargeTypesList.length > 0) {
       db.config.chargeTypesList = chargeTypesList;
@@ -312,7 +379,8 @@ export async function POST(req: Request) {
       property: committedProperty,
       spacesCount: db.spaces.length,
       contractsCount: db.leases.length,
-      billingEntities: db.billingEntities
+      billingEntities: db.billingEntities,
+      tenants: db.tenants
     });
   } catch (error: any) {
     console.error("POST /api/rent-roll/onboarding-commit error:", error);

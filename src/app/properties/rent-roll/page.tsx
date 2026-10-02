@@ -199,6 +199,8 @@ function RentRollPageInner() {
   }>({});
   const [isProfileBankingOpen, setIsProfileBankingOpen] = useState<boolean>(false);
   const [preSelectedSpaceForLease, setPreSelectedSpaceForLease] = useState<any | null>(null);
+  const [preSelectedTenantForWizard, setPreSelectedTenantForWizard] = useState<any | null>(null);
+  const [initialCommercialsForWizard, setInitialCommercialsForWizard] = useState<any | null>(null);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [collections, setCollections] = useState<CollectionReceipt[]>([]);
   const [escalations, setEscalations] = useState<EscalationRecord[]>([]);
@@ -871,7 +873,8 @@ function RentRollPageInner() {
           <TenantsTab
             tenants={tenants}
             onOpenAddTenant={() => setIsAddTenantOpen(true)}
-            onOpenContractWizard={() => {
+            onOpenContractWizard={(t) => {
+              setPreSelectedTenantForWizard(t);
               setIsAddLeaseOpen(true);
             }}
             onShareInviteLink={(t) => {
@@ -941,10 +944,14 @@ function RentRollPageInner() {
       <ContractWizardModal
         properties={properties}
         preSelectedSpace={preSelectedSpaceForLease}
+        preSelectedTenant={preSelectedTenantForWizard}
+        initialCommercials={initialCommercialsForWizard}
         isOpen={isAddLeaseOpen}
         onClose={() => {
           setIsAddLeaseOpen(false);
           setPreSelectedSpaceForLease(null);
+          setPreSelectedTenantForWizard(null);
+          setInitialCommercialsForWizard(null);
         }}
         onSuccess={() => {
           fetchAllData();
@@ -1018,6 +1025,22 @@ function RentRollPageInner() {
             const currentTab = searchParams.get("tab") || "dashboard";
             router.replace(`/properties/rent-roll?tab=${currentTab}`, { scroll: false });
           }
+        }}
+        onSwitchToContractWizard={(data) => {
+          setIsAddTenantOpen(false);
+          setPreSelectedTenantForWizard(data.tenant);
+          if (data.space?.unitNumber) {
+            setPreSelectedSpaceForLease({
+              propertyId: data.propertyId,
+              unitNumber: data.space.unitNumber,
+              floorNumber: data.space.floorNumber,
+              chargeableArea: data.space.chargeableArea,
+              baseRentPsf: data.space.baseRentPsf,
+              camRatePsf: data.space.camRatePsf,
+            });
+          }
+          setInitialCommercialsForWizard(data.commercials);
+          setIsAddLeaseOpen(true);
         }}
         properties={properties}
       />

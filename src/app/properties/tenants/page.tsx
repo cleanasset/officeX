@@ -25,6 +25,7 @@ import {
   KeyRound
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AddTenantModal } from "@/components/rent-roll/AddTenantModal";
 import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal";
@@ -90,6 +91,7 @@ const SEED_PROP_NAMES = new Set([
 ]);
 
 export default function TenantDirectoryPage() {
+  const router = useRouter();
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [properties, setProperties] = useState<Array<{ id: string; name: string; city?: string }>>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("ALL");
@@ -184,6 +186,8 @@ export default function TenantDirectoryPage() {
           const filteredT = isDemoAccount
             ? tData
             : tData.filter((t: any) => {
+                if (validPropIds.size === 0) return true;
+                if (!t.propertyId && (!t.leasedProperties || t.leasedProperties.length === 0)) return true;
                 const propMatch =
                   (t.propertyId && validPropIds.has(t.propertyId)) ||
                   (t.propertyName && validPropNames.has(t.propertyName.toLowerCase().trim())) ||
@@ -220,7 +224,7 @@ export default function TenantDirectoryPage() {
             status: t.hasOverdue ? "under_notice" : "active",
             kycVerified: !!t.gstin && t.gstin !== "-",
             outstandingDue: t.outstanding || 0,
-            inviteCode: `OX-${7000 + idx}`
+            inviteCode: t.inviteCode || `OX-${7000 + idx}`
           }));
         }
       }
@@ -228,9 +232,49 @@ export default function TenantDirectoryPage() {
       // ignore
     }
 
-    // 3. Merge Real Active Leases Created by User in Session
+    // 3. Merge Real Active Leases & Local Tenants Created by User in Session
     if (typeof window !== "undefined") {
       try {
+        const localTenants = JSON.parse(localStorage.getItem("officex_active_tenants") || "[]");
+        if (Array.isArray(localTenants) && localTenants.length > 0) {
+          const existingNames = new Set(loadedTenants.map((t) => t.tradeName.toLowerCase()));
+          for (const lt of localTenants) {
+            if (lt && lt.tradeName && !existingNames.has(lt.tradeName.toLowerCase())) {
+              loadedTenants.unshift({
+                id: lt.id || `LOCAL-T-${Date.now()}`,
+                tenantCode: lt.tenantCode || `OX-T-${Math.floor(1000 + Math.random() * 9000)}`,
+                tradeName: lt.tradeName || lt.legalName || "Occupant",
+                legalName: lt.legalName || lt.tradeName || "Occupant Entity",
+                industry: lt.industry || "Enterprise",
+                propertyId: lt.propertyId || loadedProps[0]?.id || "",
+                propertyName: lt.propertyName || loadedProps[0]?.name || "Commercial Space",
+                unitNumber: lt.unitNumber || "Suite 101",
+                floorNumber: lt.floorNumber || 1,
+                chargeableArea: Number(lt.totalArea) || Number(lt.chargeableArea) || 0,
+                carpetArea: Math.round((Number(lt.totalArea) || Number(lt.chargeableArea) || 0) * 0.8),
+                monthlyRent: Number(lt.totalMonthlyRent) || Number(lt.monthlyRent) || 0,
+                camRatePsf: Number(lt.camRatePsf) || 18,
+                monthlyCam: Math.round((Number(lt.totalArea) || Number(lt.chargeableArea) || 0) * 18),
+                totalMonthlyBilling: Number(lt.totalMonthlyBilling) || Number(lt.totalMonthlyRent) || 0,
+                securityDeposit: (Number(lt.totalMonthlyRent) || 0) * 3,
+                startDate: lt.startDate || "-",
+                endDate: lt.endDate || "-",
+                escalationPct: 5,
+                pan: lt.pan || "-",
+                gstin: lt.gstin || "-",
+                contactPerson: lt.contactPerson || "-",
+                contactEmail: lt.contactEmail || "-",
+                contactPhone: lt.contactPhone || "-",
+                billingAddress: lt.billingAddress || "-",
+                status: lt.hasOverdue ? "under_notice" : "active",
+                kycVerified: !!lt.gstin && lt.gstin !== "-",
+                outstandingDue: lt.outstanding || 0,
+                inviteCode: lt.inviteCode || `OX-${Math.floor(7000 + Math.random() * 1000)}`
+              });
+            }
+          }
+        }
+
         const localLeases = JSON.parse(localStorage.getItem("officex_active_leases") || "[]");
         if (Array.isArray(localLeases) && localLeases.length > 0) {
           const mappedFromLocal: TenantRecord[] = localLeases
@@ -742,6 +786,17 @@ export default function TenantDirectoryPage() {
                             </button>
                             <button
                               type="button"
+                              onClick={() => {
+                                router.push(`/properties/rent-roll?tab=rentroll&action=add-lease`);
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                              title="Open Contract Wizard to lease space or configure terms"
+                            >
+                              <FileText size={12} />
+                              <span>Contract</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setSelectedTenant(t)}
                               className="px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-bold text-[11px] hover:bg-gray-50 transition-colors cursor-pointer"
                             >
@@ -941,6 +996,10 @@ export default function TenantDirectoryPage() {
           onSuccess={() => {
             setIsAddTenantOpen(false);
             loadData();
+          }}
+          onSwitchToContractWizard={(data) => {
+            setIsAddTenantOpen(false);
+            router.push(`/properties/rent-roll?tab=rentroll&action=add-lease`);
           }}
           properties={properties}
         />

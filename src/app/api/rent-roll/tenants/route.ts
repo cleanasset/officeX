@@ -55,10 +55,26 @@ export async function GET(req: Request) {
     }
 
     const enriched = tenants.map(t => {
-      const activeLeases = db.leases.filter(l => l.tenantId === t.id && l.status === "active");
-      const totalArea = activeLeases.reduce((sum, l) => sum + l.chargeableArea, 0);
-      const totalMonthlyRent = activeLeases.reduce((sum, l) => sum + l.monthlyRent, 0);
-      const totalMonthlyBilling = activeLeases.reduce((sum, l) => sum + l.totalMonthlyGross, 0);
+      // Find all leases for this tenant (active, pending_approval, executed, draft)
+      const tenantLeases = db.leases.filter(l => 
+        l.tenantId === t.id && 
+        l.status !== "terminated" && 
+        l.status !== "expired" && 
+        l.status !== "cancelled"
+      );
+      const primaryLease = tenantLeases[0] || db.leases.find(l => l.tenantId === t.id);
+      
+      const totalArea = tenantLeases.reduce((sum, l) => sum + (Number(l.chargeableArea) || 0), 0);
+      const totalMonthlyRent = tenantLeases.reduce((sum, l) => sum + (Number(l.monthlyRent) || 0), 0);
+      const totalMonthlyBilling = tenantLeases.reduce((sum, l) => sum + (Number(l.totalMonthlyGross) || Number(l.monthlyRent) || 0), 0);
+
+      const leasedProps = Array.from(new Set(tenantLeases.map(l => l.propertyName).filter(Boolean)));
+      if (leasedProps.length === 0 && primaryLease?.propertyName) {
+        leasedProps.push(primaryLease.propertyName);
+      }
+      if (leasedProps.length === 0 && properties.length === 1) {
+        leasedProps.push(properties[0].name);
+      }
 
       const tenantInvoices = db.invoices.filter(i => i.tenantId === t.id);
       const outstanding = tenantInvoices.reduce((sum, i) => sum + (i.balanceDue || 0), 0);
@@ -66,8 +82,12 @@ export async function GET(req: Request) {
 
       return {
         ...t,
-        activeLeasesCount: activeLeases.length,
-        leasedProperties: Array.from(new Set(activeLeases.map(l => l.propertyName))),
+        propertyId: primaryLease?.propertyId || (properties.length === 1 ? properties[0].id : ""),
+        propertyName: primaryLease?.propertyName || (properties.length === 1 ? properties[0].name : ""),
+        unitNumber: primaryLease?.unitNumber || "Suite 101",
+        floorNumber: primaryLease?.floorNumber || 1,
+        activeLeasesCount: tenantLeases.length,
+        leasedProperties: leasedProps,
         totalArea,
         totalMonthlyRent,
         totalMonthlyBilling,

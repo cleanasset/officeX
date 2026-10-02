@@ -41,6 +41,12 @@ export interface AddTenantModalProps {
     [key: string]: any;
   }>;
   defaultPropertyId?: string;
+  onSwitchToContractWizard?: (data: {
+    propertyId: string;
+    tenant: any;
+    space: any;
+    commercials: any;
+  }) => void;
 }
 
 export const AddTenantModal: React.FC<AddTenantModalProps> = ({
@@ -48,7 +54,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
   onClose,
   onSuccess,
   properties = [],
-  defaultPropertyId
+  defaultPropertyId,
+  onSwitchToContractWizard,
 }) => {
   const [availableProps, setAvailableProps] = useState<any[]>(properties);
   const [selectedPropId, setSelectedPropId] = useState<string>(defaultPropertyId || "");
@@ -443,6 +450,33 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto text-xs font-medium text-slate-700">
+            {/* Quick Switch Banner: Connect both forms without double entry */}
+            {onSwitchToContractWizard && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 px-4 bg-teal-50/70 border border-teal-200/90 rounded-2xl text-xs">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-teal-950">Prefer the full 7-step Contract Wizard?</span>
+                    <span className="text-teal-700 ml-1 block sm:inline text-[11px]">Transfer these details directly without re-typing.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSwitchToContractWizard({
+                      propertyId: selectedPropId,
+                      tenant: { tradeName, legalName, industry, gstin, pan, contactPerson, contactEmail, contactPhone, billingState, billingCity },
+                      space: { id: selectedSpaceId, unitNumber, floorNumber, chargeableArea, baseRentPsf, camRatePsf },
+                      commercials: { baseRentPsf, camRatePsf, chargeableArea, startDate, endDate, securityDepositMonths, escalationPct }
+                    });
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <span>Open in Contract Wizard →</span>
+                </button>
+              </div>
+            )}
+
             {/* Target Commercial Building & Live Vacancy Capacity */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -912,18 +946,34 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
+                {onSwitchToContractWizard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSwitchToContractWizard({
+                        propertyId: selectedPropId,
+                        tenant: { tradeName, legalName, industry, gstin, pan, contactPerson, contactEmail, contactPhone, billingState, billingCity },
+                        space: { id: selectedSpaceId, unitNumber, floorNumber, chargeableArea, baseRentPsf, camRatePsf },
+                        commercials: { baseRentPsf, camRatePsf, chargeableArea, startDate, endDate, securityDepositMonths, escalationPct }
+                      });
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl border border-teal-300 bg-teal-50/80 hover:bg-teal-100 text-teal-800 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <span>Full Contract Wizard →</span>
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={isSubmitting || hasAreaError}
-                  className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-[#0D7B6C]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-[#0D7B6C]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
                 >
                   {isSubmitting ? (
                     <>
