@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Building,
@@ -59,9 +59,36 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
 
   const isDocumentPending = !lease.documents || lease.documents.length === 0 || (lease as any).hasPendingDocument || (lease as any).agreementDocumentPending;
 
-  const tenantPortalUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/tenant/payments?leaseId=${lease.id || ""}&code=${lease.leaseCode}`
-    : `https://officex.app/tenant/payments?code=${lease.leaseCode}`;
+  const baseUrl = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost") && !window.location.origin.includes("127.0.0.1")
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro");
+
+  const unitParam = `${lease.unitNumber || ""}${lease.floorNumber ? ` (Floor ${lease.floorNumber})` : ""}`;
+  const tenantPortalUrl = `${baseUrl}/tenant/join?code=${encodeURIComponent(lease.leaseCode)}&building=${encodeURIComponent(lease.propertyName || "")}&propertyId=${encodeURIComponent(lease.propertyId || "")}&units=${encodeURIComponent(unitParam)}&tenant=${encodeURIComponent(lease.tenantName || "")}&rent=${encodeURIComponent(lease.monthlyRent || 0)}&cam=${encodeURIComponent(lease.camMonthly || 0)}&deposit=${encodeURIComponent(lease.securityDepositPaid || lease.securityDepositAmount || 0)}&area=${encodeURIComponent(lease.chargeableArea || 0)}&escalation=${encodeURIComponent(lease.escalationPct || 0)}`;
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && lease) {
+      try {
+        const invites = JSON.parse(localStorage.getItem("officex_building_invites") || "{}");
+        invites[lease.leaseCode] = {
+          id: lease.propertyId,
+          name: lease.propertyName,
+          ownerName: localStorage.getItem("officex_user_name") || "Property Owner",
+          allocatedUnits: unitParam,
+          monthlyRent: lease.monthlyRent,
+          camMonthly: lease.camMonthly || 0,
+          securityDeposit: lease.securityDepositPaid || lease.securityDepositAmount || 0,
+          chargeableArea: lease.chargeableArea,
+          leaseTenureYears: 3,
+          escalationPct: lease.escalationPct || 5,
+          inviteCode: lease.leaseCode,
+        };
+        localStorage.setItem("officex_building_invites", JSON.stringify(invites));
+      } catch (e) {
+        console.warn("Failed to cache invite:", e);
+      }
+    }
+  }, [lease, unitParam]);
 
   const handleCopyLink = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {

@@ -26,8 +26,58 @@ export async function GET(req: NextRequest) {
     // 1. Search in Rent Roll Database store (Tenants, Leases, and Properties)
     try {
       const rrDb = getRentRollDb();
+
+      // 1A. Check if code matches a lease directly
+      if (rrDb.leases && rrDb.leases.length > 0) {
+        const matchedLease = rrDb.leases.find(l =>
+          (code && l.leaseCode && l.leaseCode.toUpperCase() === code) ||
+          (code && l.id && l.id.toUpperCase() === code)
+        );
+        if (matchedLease) {
+          const matchedTenant = rrDb.tenants?.find(t => t.id === matchedLease.tenantId || t.tradeName.toLowerCase() === matchedLease.tenantName.toLowerCase());
+          const matchedProp = (rrDb.properties || []).find(p => p.id === matchedLease.propertyId) || rrDb.properties?.[0];
+          const allocatedUnit = unitsParam || `${matchedLease.unitNumber}${matchedLease.floorNumber ? ` (Floor ${matchedLease.floorNumber})` : ""}`;
+          const loc = matchedProp?.address
+            ? `${matchedProp.address}, ${matchedProp.city || ""}, ${matchedProp.state || ""}`
+            : (matchedProp?.city ? `${matchedProp.city}, ${matchedProp.state || ""}` : locationParam || "Commercial Hub");
+
+          return NextResponse.json({
+            success: true,
+            tenant: {
+              id: matchedTenant?.id || matchedLease.tenantId,
+              tradeName: matchedTenant?.tradeName || matchedLease.tenantName,
+              legalName: matchedTenant?.legalName || matchedLease.tenantName,
+              contactPerson: matchedTenant?.contactPerson || "Authorized Representative",
+              contactEmail: matchedTenant?.contactEmail || "",
+              contactPhone: matchedTenant?.contactPhone || "",
+              pan: matchedTenant?.pan || "",
+              gstin: matchedTenant?.gstin || "",
+              unitNumber: allocatedUnit,
+              status: matchedTenant?.status || "invited",
+              inviteCode: matchedLease.leaseCode
+            },
+            property: {
+              id: matchedProp?.id || matchedLease.propertyId || "PROP-ACTIVE",
+              name: matchedProp?.name || matchedLease.propertyName || buildingParam || "Commercial Building",
+              ownerName: matchedProp?.ownerName || matchedProp?.ownerCompany || rrDb.organization.name || "Commercial Property Owner",
+              location: loc,
+              grade: matchedProp?.grade || "Grade A",
+              totalArea: `${Number(matchedProp?.totalArea || matchedLease.chargeableArea).toLocaleString()} sqft`,
+              allocatedUnits: allocatedUnit,
+              monthlyRent: matchedLease.monthlyRent,
+              camMonthly: matchedLease.camMonthly || 0,
+              securityDeposit: matchedLease.securityDepositPaid || matchedLease.securityDepositAmount || 0,
+              chargeableArea: matchedLease.chargeableArea,
+              leaseTenureYears: tenureParam ? Number(tenureParam) : 3,
+              escalationPct: matchedLease.escalationPct || 15,
+              contractDoc: docParam || "Commercial Lease Agreement",
+              inviteCode: matchedLease.leaseCode
+            }
+          });
+        }
+      }
       
-      // 1A. Check if code or query matches an onboarded tenant
+      // 1B. Check if code or query matches an onboarded tenant
       if (rrDb.tenants && rrDb.tenants.length > 0) {
         const matchedTenant = rrDb.tenants.find(t =>
           (code && t.inviteCode && t.inviteCode.toUpperCase() === code) ||

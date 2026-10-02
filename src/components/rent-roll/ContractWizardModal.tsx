@@ -900,9 +900,13 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   ];
 
   if (completedContract) {
-    const shareUrl = typeof window !== "undefined"
-      ? `${window.location.origin}/tenant/payments?code=${completedContract.leaseCode}`
-      : `https://officex.app/tenant/payments?code=${completedContract.leaseCode}`;
+    const baseUrl = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost") && !window.location.origin.includes("127.0.0.1")
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro");
+
+    const currentProp = properties.find(p => p.id === propertyId);
+    const spaceUnitsParam = selectedSpaces.map(s => s.spaceCode).join(", ") || "Suite Commercial";
+    const shareUrl = `${baseUrl}/tenant/join?code=${encodeURIComponent(completedContract.leaseCode)}&building=${encodeURIComponent(currentProp?.name || "")}&propertyId=${encodeURIComponent(propertyId || "")}&units=${encodeURIComponent(spaceUnitsParam)}&tenant=${encodeURIComponent(completedContract.tenantName)}&rent=${encodeURIComponent(liveSummary.monthlyBaseRent || 0)}&cam=${encodeURIComponent(liveSummary.monthlyCAM || 0)}&deposit=${encodeURIComponent(securityDepositHeld || securityDepositRequired || 0)}&area=${encodeURIComponent(totalArea || 0)}&escalation=${encodeURIComponent(escalationPct || 0)}`;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
