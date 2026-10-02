@@ -419,6 +419,13 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   // STEP 7: Review & Approver Notes
   const [makerComments, setMakerComments] = useState<string>("");
   const [approvalStatus, setApprovalStatus] = useState<"active" | "submitted">("active");
+  const [completedContract, setCompletedContract] = useState<{
+    leaseCode: string;
+    tenantName: string;
+    leaseId?: string;
+    hasDocument: boolean;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Sync pre-selected tenant, space, and commercials from AddTenantModal or Tenant Directory
   useEffect(() => {
@@ -847,6 +854,9 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
           waterFixedMonthly,
         },
         utilityComponents,
+        agreementDocumentName: uploadedAgreementName || undefined,
+        agreementStatus,
+        documentVisibility,
       };
 
       const res = await fetch("/api/rent-roll/leases", {
@@ -860,8 +870,18 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
         throw new Error(data.error || "Failed to create contract");
       }
 
-      onSuccess();
-      onClose();
+      if (isDraftMode) {
+        onSuccess();
+        onClose();
+      } else {
+        setCompletedContract({
+          leaseCode: data.lease?.leaseCode || "CTR-NEW",
+          tenantName: occupantName.trim(),
+          leaseId: data.lease?.id,
+          hasDocument: Boolean(uploadedAgreementName),
+        });
+        onSuccess();
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "An unexpected error occurred.");
     } finally {
@@ -869,20 +889,114 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
     }
   };
 
+  const WIZARD_STEPS = [
+    { num: 1, label: "Parties & Space", short: "Parties & Space" },
+    { num: 2, label: "Terms & Dates", short: "Terms & Dates" },
+    { num: 3, label: "Billing & Charges", short: "Billing" },
+    { num: 4, label: "Escalations", short: "Escalation" },
+    { num: 5, label: "Deposits & Clauses", short: "Deposits" },
+    { num: 6, label: "Documents", short: "Documents" },
+    { num: 7, label: "Review & Submit", short: "Review & Submit" }
+  ];
+
+  if (completedContract) {
+    const shareUrl = typeof window !== "undefined"
+      ? `${window.location.origin}/tenant/payments?code=${completedContract.leaseCode}`
+      : `https://officex.app/tenant/payments?code=${completedContract.leaseCode}`;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 sm:p-8 space-y-6 text-center animate-in zoom-in-95 duration-150">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+            <CheckCircle2 size={36} />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs font-mono font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
+              {completedContract.leaseCode}
+            </span>
+            <h2 className="text-xl font-black text-slate-900 pt-2">Contract Registered Successfully!</h2>
+            <p className="text-xs text-slate-500">
+              Commercial lease for <strong className="text-slate-800">{completedContract.tenantName}</strong> has been committed to the active rent roll.
+            </p>
+          </div>
+
+          {!completedContract.hasDocument && (
+            <div className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-2xl text-left flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-900">
+                <strong className="block font-bold text-amber-950">Important: Executed Lease Deed Pending</strong>
+                You created this contract without attaching the signed lease document. A pending legal alert has been placed on this contract in your rent roll dashboard.
+              </div>
+            </div>
+          )}
+
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-left">
+            <label className="block text-xs font-bold text-slate-700">Share Portal Access with Tenant</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={shareUrl}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 font-mono select-all outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl);
+                  setCopiedLink(true);
+                  setTimeout(() => setCopiedLink(false), 2000);
+                }}
+                className="px-4 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                {copiedLink ? <Check size={14} /> : <Share2 size={14} />}
+                <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
+              </button>
+            </div>
+            <div className="pt-2 flex items-center gap-2">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Hello ${completedContract.tenantName}, here is your lease contract portal link: ${shareUrl}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2 text-center bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors"
+              >
+                Share via WhatsApp
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent(`Commercial Lease Access - ${completedContract.leaseCode}`)}&body=${encodeURIComponent(`Dear ${completedContract.tenantName},\n\nPlease access your lease contract portal using this link:\n${shareUrl}`)}`}
+                className="flex-1 py-2 text-center bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-colors"
+              >
+                Share via Email
+              </a>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-md"
+          >
+            Done &amp; View Rent Roll
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden text-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 overflow-hidden animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 w-full max-w-6xl h-[92vh] max-h-[920px] flex flex-col overflow-hidden text-slate-800 animate-in zoom-in-95 duration-150">
         
-        {/* MODAL HEADER */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        {/* MODAL HEADER - FIXED */}
+        <div className="shrink-0 px-5 sm:px-6 py-3.5 border-b border-slate-200/80 flex items-center justify-between bg-white z-20">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shadow-2xs">
-              <FileCheck2 size={22} />
+            <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0F8B7D] shadow-2xs shrink-0">
+              <FileCheck2 size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-900">New Commercial Contract Wizard</h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">New Commercial Contract Wizard</h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
                   S-21 Contract Engine
                 </span>
               </div>
@@ -894,71 +1008,75 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
               type="button"
               onClick={() => handleSubmit(true)}
               disabled={isSubmitting}
-              className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+              className="hidden sm:inline-flex px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition-colors shadow-2xs"
             >
               Save Draft
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors"
+              className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              title="Close Wizard"
             >
               <X size={18} />
             </button>
           </div>
         </div>
 
-        {/* STEP PROGRESS BAR */}
-        <div className="bg-white border-b border-slate-100 px-6 py-2.5 overflow-x-auto">
-          <div className="flex items-center justify-between min-w-[700px] text-xs font-semibold">
-            {[
-              { num: 1, label: "Parties & Space" },
-              { num: 2, label: "Terms & Dates" },
-              { num: 3, label: "Billing & Charges" },
-              { num: 4, label: "Escalations" },
-              { num: 5, label: "Deposits & Clauses" },
-              { num: 6, label: "Documents" },
-              { num: 7, label: "Review & Submit" }
-            ].map(step => {
+        {/* STEP PROGRESS BAR - CONNECTED MODERN STEPPER */}
+        <div className="shrink-0 bg-slate-50/80 border-b border-slate-200/80 px-3 sm:px-6 py-2 overflow-x-auto scrollbar-none z-10">
+          <div className="flex items-center gap-1 sm:gap-1.5 max-w-full mx-auto justify-between lg:justify-center">
+            {WIZARD_STEPS.map((step, idx) => {
               const isActive = currentStep === step.num;
               const isPast = currentStep > step.num;
               return (
-                <button
-                  key={step.num}
-                  type="button"
-                  onClick={() => setCurrentStep(step.num)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-teal-600 text-white shadow-2xs font-bold"
-                      : isPast
-                      ? "text-teal-700 bg-teal-50 hover:bg-teal-100/70"
-                      : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                    isActive ? "bg-white text-teal-700 font-extrabold" : isPast ? "bg-teal-200 text-teal-800" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {isPast ? <Check size={12} /> : step.num}
-                  </span>
-                  <span>{step.label}</span>
-                </button>
+                <React.Fragment key={step.num}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(step.num)}
+                    className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer select-none shrink-0 ${
+                      isActive
+                        ? "bg-[#0F8B7D] text-white shadow-xs font-bold ring-2 ring-teal-500/20"
+                        : isPast
+                        ? "bg-teal-50/90 text-teal-800 hover:bg-teal-100/80 border border-teal-200/70 font-semibold"
+                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 font-medium"
+                    }`}
+                  >
+                    <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 font-bold ${
+                      isActive
+                        ? "bg-white text-[#0F8B7D]"
+                        : isPast
+                        ? "bg-teal-200 text-teal-900"
+                        : "bg-slate-200/80 text-slate-600"
+                    }`}>
+                      {isPast ? <Check size={11} strokeWidth={3} /> : step.num}
+                    </span>
+                    <span className="hidden xl:inline whitespace-nowrap">{step.label}</span>
+                    <span className="xl:hidden inline whitespace-nowrap">{step.short}</span>
+                  </button>
+                  {idx < WIZARD_STEPS.length - 1 && (
+                    <div className={`w-2 sm:w-3.5 h-0.5 shrink-0 rounded-full transition-colors ${
+                      isPast ? "bg-teal-300" : "bg-slate-200"
+                    }`} />
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
         </div>
 
-        {/* MAIN BODY: 2-COLUMN GRID ON STEP 1, FOCUSED FULL-WIDTH ON STEPS 2-7 */}
-        <div className={`flex-1 overflow-y-auto p-6 bg-slate-50/40 ${
-          currentStep === 1 
+        {/* MAIN BODY: 2-COLUMN GRID ON COMMERCIAL STEPS 1-4, FOCUSED FULL-WIDTH ON STEPS 5-7 */}
+        <div className={`flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/40 ${
+          currentStep <= 4 
             ? "grid grid-cols-1 lg:grid-cols-12 gap-6" 
             : "flex justify-center"
         }`}>
           
           {/* STEP FORM CONTAINER */}
           <div className={`${
-            currentStep === 1 
+            currentStep <= 4 
               ? "lg:col-span-8" 
               : "w-full max-w-4xl"
-          } space-y-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs self-start`}>
+          } space-y-5 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs self-start`}>
             {errorMsg && (
               <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-800 font-medium">
                 <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
@@ -1517,7 +1635,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
             {currentStep === 3 && (
               <div className="space-y-4 animate-in fade-in-50">
                 <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-bold text-slate-900">Step 3 — Billing Model &amp; Commercial Charges</h3>
+                  <h3 className="text-sm font-bold text-slate-900">Step 3 — Billing Model & Commercial Charges</h3>
                   <p className="text-xs text-slate-500">Configure area, seat or hybrid fee basis and component line items</p>
                 </div>
 
@@ -1536,14 +1654,19 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                       <div
                         key={model.id}
                         onClick={() => setBillingModel(model.id as any)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
                           billingModel === model.id
-                            ? "bg-teal-50 border-teal-600 text-teal-900 shadow-2xs font-semibold ring-1 ring-teal-600"
-                            : "bg-white border-slate-200 hover:border-slate-300 text-slate-700"
+                            ? "bg-teal-50/90 border-[#0F8B7D] text-teal-950 shadow-xs ring-2 ring-teal-500/20"
+                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 text-slate-700"
                         }`}
                       >
-                        <div className="font-bold text-xs">{model.title}</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{model.desc}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-xs">{model.title}</div>
+                          {billingModel === model.id && (
+                            <CheckCircle2 size={14} className="text-[#0F8B7D]" />
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-1 leading-snug">{model.desc}</div>
                       </div>
                     ))}
                   </div>
@@ -2130,8 +2253,9 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                         onChange={e => {
                           const m = Number(e.target.value);
                           setDepositMonths(m);
-                          if (liveSummary.monthlyBaseRent > 0) {
-                            setSecurityDepositRequired(round(liveSummary.monthlyBaseRent * m, 2));
+                          const rent = liveSummary.monthlyBaseRent || (totalArea * baseRentPsf) || 0;
+                          if (rent > 0) {
+                            setSecurityDepositRequired(round(rent * m, 2));
                           }
                         }}
                         min={0}
@@ -2227,16 +2351,16 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
             {currentStep === 6 && (
               <div className="space-y-4 animate-in fade-in-50">
                 <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-bold text-slate-900">Step 6 — Document Vault &amp; Legal Evidence</h3>
-                  <p className="text-xs text-slate-500">Upload executed agreement, term sheets, BG and NOCs (PDF/Word up to 25MB)</p>
+                  <h3 className="text-sm font-bold text-slate-900">Step 6 — Upload Agreement &amp; Documents</h3>
+                  <p className="text-xs text-slate-500">Upload the signed lease contract, draft copy, or stamp paper (Optional)</p>
                 </div>
 
                 <div className="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-slate-50/50">
                   <UploadCloud size={32} className="mx-auto text-teal-600 mb-2" />
                   <div className="text-xs font-bold text-slate-800">
-                    {uploadedAgreementName ? `Selected: ${uploadedAgreementName}` : "Click or drag & drop executed lease agreement"}
+                    {uploadedAgreementName ? `Uploaded: ${uploadedAgreementName}` : "Click or drag & drop lease agreement here"}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Supports PDF, DOCX, JPG scanned stamp papers (Max 25MB)</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Supports PDF, Word (DOCX), or scanned stamp paper images (Up to 25MB)</p>
                   <input
                     type="file"
                     className="hidden"
@@ -2252,31 +2376,31 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                     htmlFor="doc-upload"
                     className="inline-block mt-3 px-4 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs"
                   >
-                    Select File
+                    Choose File
                   </label>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Execution Status</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Agreement Status</label>
                     <select
                       value={agreementStatus}
                       onChange={e => setAgreementStatus(e.target.value as any)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
                     >
-                      <option value="draft">Draft / Under Negotiation</option>
-                      <option value="executed">Executed &amp; Stamp Duty Paid</option>
+                      <option value="draft">Draft / Still Under Negotiation (Not signed yet)</option>
+                      <option value="executed">Signed &amp; Registered (Executed copy)</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Tenant Portal Visibility</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Who can view this file?</label>
                     <select
                       value={documentVisibility}
                       onChange={e => setDocumentVisibility(e.target.value as any)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
                     >
-                      <option value="occupant_visible">Occupant Visible (Downloadable by Tenant)</option>
-                      <option value="internal">Internal Only (Staff Vault)</option>
+                      <option value="occupant_visible">Show to Tenant (Tenant can view &amp; download in their app)</option>
+                      <option value="internal">Internal Only (Hidden from tenant; staff only)</option>
                     </select>
                   </div>
                 </div>
@@ -2434,48 +2558,10 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                 </div>
               </div>
             )}
-
-            {/* NAVIGATION BUTTONS */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                disabled={currentStep === 1}
-                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <ArrowLeft size={14} /> Back
-              </button>
-
-              <div className="flex items-center gap-2">
-                {currentStep < 7 ? (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(prev => Math.min(7, prev + 1))}
-                    className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
-                  >
-                    Next <ArrowRight size={14} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={isSubmitting || validationErrors.length > 0}
-                    onClick={() => handleSubmit(false)}
-                    className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md transition-all active:scale-95"
-                  >
-                    {isSubmitting ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <CheckCircle2 size={16} />
-                    )}
-                    Commit &amp; Register Contract
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* RIGHT 4 COLUMNS: STICKY LIVE FINANCIAL SUMMARY (ONLY ON STEP 1) */}
-          {currentStep === 1 && (
+          {/* RIGHT 4 COLUMNS: STICKY LIVE FINANCIAL SUMMARY (STEPS 1-4) */}
+          {currentStep <= 4 && (
             <div className="lg:col-span-4 space-y-4">
               <div className="sticky top-0 bg-white rounded-2xl border border-teal-200/80 p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2656,6 +2742,60 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
               </div>
             </div>
           )}
+        </div>
+
+        {/* FIXED STICKY FOOTER */}
+        <div className="shrink-0 bg-white border-t border-slate-200/90 px-4 sm:px-6 py-3 flex items-center justify-between z-20 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
+          <button
+            type="button"
+            disabled={currentStep === 1}
+            onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+            className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span>Step {currentStep} of 7</span>
+            <span>·</span>
+            <span className="text-slate-800 font-bold">
+              {WIZARD_STEPS[currentStep - 1]?.label}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              disabled={isSubmitting}
+              className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold cursor-pointer transition-colors shadow-2xs"
+            >
+              Save Draft
+            </button>
+            {currentStep < 7 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(prev => Math.min(7, prev + 1))}
+                className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+              >
+                <span>Next: {WIZARD_STEPS[currentStep]?.label}</span> <ArrowRight size={14} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isSubmitting || validationErrors.length > 0}
+                onClick={() => handleSubmit(false)}
+                className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md transition-all active:scale-95"
+              >
+                {isSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle2 size={16} />
+                )}
+                Commit & Register Contract
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

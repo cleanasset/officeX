@@ -143,7 +143,7 @@
       "standardRatePsf": 150,
       "standardCamPsf": 0,
       "status": "occupied",
-      "currentLeaseId": "LEASE-1790893283372-1"
+      "currentLeaseId": "LEASE-716"
     },
     {
       "id": "u-floor-2-1790892585240",
@@ -214,6 +214,178 @@
   ],
   "deals": [],
   "leases": [
+    {
+      "id": "LEASE-716",
+      "orgId": "org-officex-001",
+      "clientAccountId": "CLI-DEFAULT",
+      "billingEntityId": "SPV-PRIMARY",
+      "propertyId": "PROP-1790893283368",
+      "propertyName": "test building 1",
+      "spaceId": "pre_space",
+      "unitNumber": "Ground Floor",
+      "floorNumber": 1,
+      "tenantId": "TEN-1790893283368-1",
+      "tenantName": "tanent 1 ground",
+      "leaseCode": "CTR-TES-BUI-1-01-572",
+      "direction": "receivable",
+      "contractType": "lease_deed",
+      "approvalStatus": "active",
+      "startDate": "2026-10-02",
+      "endDate": "2029-10-01",
+      "fitoutPeriodDays": 0,
+      "rentFreePeriodDays": 0,
+      "carpetArea": 7000,
+      "chargeableArea": 10000,
+      "monthlyRent": 15000000,
+      "baseRentPsf": 1500,
+      "camRatePsf": 120,
+      "camMonthly": 1200000,
+      "utilityFixedMonthly": 0,
+      "parkingChargesMonthly": 0,
+      "signageChargesMonthly": 0,
+      "otherChargesMonthly": 0,
+      "totalMonthlyGross": 16200000,
+      "annualRentGross": 194400000,
+      "securityDepositMonths": 1,
+      "securityDepositAmount": 15000000,
+      "securityDepositPaid": 15000000,
+      "securityDepositBank": "Corporate Bank Guarantee",
+      "securityDepositBgReference": "BG-2026-LEASE-716",
+      "escalationPct": 5,
+      "escalationFrequencyMonths": 36,
+      "nextEscalationDate": "2029-10-02",
+      "lockInMonths": 36,
+      "lockInEndDate": "2029-10-02",
+      "noticePeriodDays": 90,
+      "status": "active",
+      "renewalStatus": "not_due",
+      "billingFrequency": "monthly",
+      "billingModel": "area",
+      "billingDueDay": 5,
+      "gstRate": 18,
+      "tdsRate": 10,
+      "brokerName": "Direct",
+      "brokeragePaid": 0,
+      "notes": "Standard Commercial Contract",
+      "createdBy": "Leasing Executive",
+      "makerId": "USR-MAKER-01",
+      "spacesCovered": [
+        {
+          "spaceId": "pre_space",
+          "unitNumber": "Ground Floor",
+          "areaSqft": 10000,
+          "floorNumber": 1
+        }
+      ],
+      "concessions": [],
+      "depositTransactions": [],
+      "contractClauses": [],
+      "hvacModel": "cam_included",
+      "hvacWorkingHours": "08:00 AM - 08:00 PM (Mon-Sat)",
+      "hvacOvertimeRate": 850,
+      "hvacFixedMonthly": 0,
+      "electricityBillingType": "sub_metered",
+      "powerLoadKva": 50,
+      "dgBackupType": "100_percent",
+      "dgRatePerUnit": 24,
+      "waterBillingType": "cam_included",
+      "utilityTerms": {
+        "hvacModel": "cam_included",
+        "hvacWorkingHours": "08:00 AM - 08:00 PM (Mon-Sat)",
+        "hvacOvertimeRate": 850,
+        "hvacFixedMonthly": 0,
+        "electricityBillingType": "sub_metered",
+        "powerLoadKva": 50,
+        "dgBackupType": "100_percent",
+        "dgRatePerUnit": 24,
+        "waterBillingType": "cam_included",
+        "waterFixedMonthly": 0
+      },
+      "utilityComponents": [
+        {
+          "id": "util_grid",
+          "name": "Grid Electricity (State DISCOM)",
+          "category": "electricity",
+          "billingType": "metered_actuals",
+          "rate": 11.5,
+          "unitLabel": "₹ / kWh",
+          "billingMode": "combined_electricity",
+          "isEnabled": true
+        },
+        {
+          "id": "util_dg_run",
+          "name": "DG Power Consumption (Fuel / kWh)",
+          "category": "dg_power",
+          "billingType": "metered_actuals",
+          "rate": 24,
+          "unitLabel": "₹ / kWh",
+          "billingMode": "combined_electricity",
+          "isEnabled": true
+        },
+        {
+          "id": "util_dg_rent",
+          "name": "DG Standby Capacity / Fixed Rent",
+          "category": "dg_rent",
+          "billingType": "per_kva",
+          "rate": 150,
+          "unitLabel": "₹ / kVA / mo",
+          "billingMode": "combined_electricity",
+          "isEnabled": false
+        },
+        {
+          "id": "util_hvac",
+          "name": "Central Air Conditioning (HVAC)",
+          "category": "hvac",
+          "billingType": "cam_included",
+          "rate": 0,
+          "unitLabel": "Included in CAM",
+          "billingMode": "with_cam",
+          "isEnabled": true
+        },
+        {
+          "id": "util_water",
+          "name": "Water Supply & Sewage",
+          "category": "water",
+          "billingType": "cam_included",
+          "rate": 0,
+          "unitLabel": "Included in CAM",
+          "billingMode": "with_cam",
+          "isEnabled": true
+        }
+      ],
+      "documents": [
+        {
+          "id": "DOC-1790931883735",
+          "contractId": "LEASE-716",
+          "documentType": "agreement",
+          "title": "Executed lease_deed - tanent 1 ground",
+          "versionNumber": 1,
+          "fileUrl": "/sample-lease-agreement.pdf",
+          "fileName": "Executed_Contract_CTR-TES-BUI-1-01-572.pdf",
+          "fileSizeBytes": 2450000,
+          "status": "executed",
+          "isExecuted": true,
+          "executionDate": "2026-10-02",
+          "uploadedBy": "Org Super Admin",
+          "createdAt": "2026-10-02T09:04:43.735Z"
+        }
+      ],
+      "createdAt": "2026-10-02T09:04:43.736Z",
+      "updatedAt": "2026-10-02T09:04:43.736Z",
+      "rentSteps": [
+        {
+          "id": "STEP-LEASE-716-1",
+          "contractId": "LEASE-716",
+          "stepNumber": 1,
+          "effectiveDate": "2026-10-02",
+          "baseRatePsf": 1500,
+          "monthlyBaseRent": 15000000,
+          "escalationPct": 0,
+          "stepType": "fixed_pct",
+          "status": "applied"
+        }
+      ]
+    },
     {
       "id": "LEASE-1790893283374-2",
       "orgId": "00000000-0000-0000-0000-000000000001",
@@ -353,7 +525,63 @@
       "notes": "Auto-scheduled escalation from commercial property master registration"
     }
   ],
-  "invoices": [],
+  "invoices": [
+    {
+      "id": "INV-1790931883737-121",
+      "orgId": "org-officex-001",
+      "billingEntityId": "SPV-PRIMARY",
+      "clientAccountId": "CLI-DEFAULT",
+      "leaseId": "LEASE-716",
+      "leaseCode": "CTR-TES-BUI-1-01-572",
+      "propertyId": "PROP-1790893283368",
+      "propertyName": "test building 1",
+      "tenantId": "TEN-1790893283368-1",
+      "tenantName": "tanent 1 ground",
+      "invoiceNumber": "INV-2026-3633",
+      "fyYear": "2026-2027",
+      "invoiceDate": "2026-10-02",
+      "dueDate": "2026-10-09",
+      "periodStart": "2026-10-02",
+      "periodEnd": "2026-10-09",
+      "invoiceType": "consolidated",
+      "baseRent": 15000000,
+      "camCharges": 1200000,
+      "utilityCharges": 0,
+      "otherCharges": 0,
+      "subtotal": 16200000,
+      "gstRate": 18,
+      "gstAmount": 2916000,
+      "grossTotal": 19116000,
+      "tdsDeducted": 1500000,
+      "netPayable": 17616000,
+      "amountPaid": 0,
+      "balanceDue": 17616000,
+      "status": "issued",
+      "lineItems": [
+        {
+          "id": "LINE-1790931883737-1",
+          "chargeType": "base_rent",
+          "description": "Commercial Office Rent — Ground Floor",
+          "quantity": 10000,
+          "rate": 1500,
+          "amount": 15000000,
+          "gstRate": 18,
+          "sacCode": "997212"
+        },
+        {
+          "id": "LINE-1790931883737-2",
+          "chargeType": "cam",
+          "description": "Common Area Maintenance (CAM)",
+          "quantity": 10000,
+          "rate": 120,
+          "amount": 1200000,
+          "gstRate": 18,
+          "sacCode": "997212"
+        }
+      ],
+      "createdAt": "2026-10-02T09:04:43.737Z"
+    }
+  ],
   "billingRuns": [],
   "collections": [],
   "paymentAllocations": [],
@@ -380,6 +608,21 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "AUD-1790931883745-637",
+      "entityName": "Contract",
+      "action": "CREATE_CONTRACT",
+      "newValues": {
+        "code": "CTR-TES-BUI-1-01-572",
+        "tenant": "tanent 1 ground",
+        "property": "test building 1",
+        "contractType": "lease_deed",
+        "direction": "receivable",
+        "monthlyRent": 15000000
+      },
+      "changedBy": "Org Admin",
+      "timestamp": "2026-10-02T09:04:43.745Z"
+    },
     {
       "id": "AUD-1790886535966-775",
       "entityName": "ZohoBooksIntegration",

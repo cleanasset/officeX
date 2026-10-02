@@ -21,7 +21,9 @@ import {
   XCircle,
   Percent,
   Check,
-  ArrowRight
+  ArrowRight,
+  Share2,
+  Copy
 } from "lucide-react";
 import { EnrichedLease } from "./MasterGridTab";
 import { formatINR } from "./DashboardTab";
@@ -50,8 +52,24 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
   const [docSuccess, setDocSuccess] = useState("");
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
   const [approvalMessage, setApprovalMessage] = useState("");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   if (!lease) return null;
+
+  const isDocumentPending = !lease.documents || lease.documents.length === 0 || (lease as any).hasPendingDocument || (lease as any).agreementDocumentPending;
+
+  const tenantPortalUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/tenant/payments?leaseId=${lease.id || ""}&code=${lease.leaseCode}`
+    : `https://officex.app/tenant/payments?code=${lease.leaseCode}`;
+
+  const handleCopyLink = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(tenantPortalUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const getContractTypeLabel = (type?: string) => {
     switch (type) {
@@ -199,13 +217,57 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={onClose}
-              className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 rounded-xl transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0F8B7D] hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                title="Share link with tenant"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Share with Tenant</span>
+                <span className="sm:hidden inline">Share</span>
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
+
+          {/* Missing Document Notification Banner */}
+          {isDocumentPending && (
+            <div className="p-3.5 bg-amber-50 border-b border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+                <div>
+                  <div className="font-extrabold text-amber-950">Important: Executed Lease Deed Pending</div>
+                  <div className="text-[11px] text-amber-800">
+                    This contract was created without attaching the signed lease document. Upload the agreement or share the link with the tenant.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("documents")}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+                >
+                  Upload Deed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(true)}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Share Link
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Maker-Checker Verification Alert Strip */}
           {isPendingApproval && (
@@ -573,79 +635,65 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                     <span className="text-[10px] text-gray-400 font-semibold">Statutory &amp; Legal Repository</span>
                   </div>
 
-                  {((lease.documents && lease.documents.length > 0) ? lease.documents : [
-                    {
-                      id: "DOC-DEF-1",
-                      title: "Signed Commercial Lease Deed",
-                      documentType: "agreement",
-                      fileName: `${lease.leaseCode}_Executed_Lease_Deed.pdf`,
-                      status: "executed",
-                      executionDate: lease.startDate,
-                      uploadedBy: "Legal & Leasing Team"
-                    },
-                    {
-                      id: "DOC-DEF-2",
-                      title: "Letter of Intent (LOI) & Term Sheet",
-                      documentType: "term_sheet",
-                      fileName: `${lease.leaseCode}_Binding_Term_Sheet.pdf`,
-                      status: "executed",
-                      executionDate: lease.startDate,
-                      uploadedBy: "Commercial Broker"
-                    },
-                    {
-                      id: "DOC-DEF-3",
-                      title: "Bank Guarantee Receipt (Security Deposit)",
-                      documentType: "deposit_receipt",
-                      fileName: `BG_${lease.leaseCode}_Security_Deposit.pdf`,
-                      status: "executed",
-                      executionDate: lease.startDate,
-                      uploadedBy: "Finance Ops"
-                    }
-                  ]).map((doc: any) => (
-                    <div key={doc.id} className="p-3.5 bg-gray-50/80 hover:bg-gray-100/70 border border-gray-200 rounded-2xl flex items-center justify-between transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-extrabold text-gray-900 text-xs">{doc.title}</span>
-                            {doc.version && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-100 text-purple-800">
-                                v{doc.version}
-                              </span>
-                            )}
-                            {doc.isCurrent === false && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-gray-200 text-gray-600">
-                                Superseded
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-gray-500 font-mono mt-0.5">
-                            {doc.fileName} • {doc.uploadedBy}
-                          </div>
-                        </div>
+                  {(!lease.documents || lease.documents.length === 0) ? (
+                    <div className="p-6 bg-amber-50/70 border-2 border-dashed border-amber-200 rounded-2xl text-center space-y-2.5">
+                      <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center mx-auto">
+                        <AlertTriangle className="w-5 h-5" />
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          doc.isCurrent === false
-                            ? "bg-gray-100 text-gray-500 border-gray-300"
-                            : "bg-teal-50 text-teal-700 border-teal-200"
-                        }`}>
-                          {doc.isCurrent === false ? "Superseded" : (doc.status || "Verified")}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => alert(`Downloading verified contract document: ${doc.fileName}`)}
-                          className="p-1.5 bg-white hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-                          title="Download Document"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
+                      <div>
+                        <div className="text-xs font-bold text-amber-950">No Lease Agreement Uploaded Yet</div>
+                        <p className="text-[11px] text-amber-800 max-w-sm mx-auto mt-0.5">
+                          This contract was registered without attaching a signed copy. Upload the executed lease deed below or share the link with the tenant to complete compliance.
+                        </p>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    lease.documents.map((doc: any) => (
+                      <div key={doc.id} className="p-3.5 bg-gray-50/80 hover:bg-gray-100/70 border border-gray-200 rounded-2xl flex items-center justify-between transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-extrabold text-gray-900 text-xs">{doc.title}</span>
+                              {doc.version && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-100 text-purple-800">
+                                  v{doc.version}
+                                </span>
+                              )}
+                              {doc.isCurrent === false && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-gray-200 text-gray-600">
+                                  Superseded
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-gray-500 font-mono mt-0.5">
+                              {doc.fileName} • {doc.uploadedBy}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                            doc.isCurrent === false
+                              ? "bg-gray-100 text-gray-500 border-gray-300"
+                              : "bg-teal-50 text-teal-700 border-teal-200"
+                          }`}>
+                            {doc.isCurrent === false ? "Superseded" : (doc.status || "Verified")}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => alert(`Downloading verified contract document: ${doc.fileName}`)}
+                            className="p-1.5 bg-white hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                            title="Download Document"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 {/* Upload New Document Form */}
@@ -709,6 +757,77 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
             Serve Notice
           </button>
         </div>
+
+        {/* SHARE WITH TENANT MODAL */}
+        {showShareModal && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm">Share Contract with Tenant</h3>
+                    <p className="text-[11px] text-gray-500">{lease.tenantName} • {lease.leaseCode}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {isDocumentPending && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Important:</strong> Executed lease deed has not been uploaded yet. The tenant will be able to review commercial terms and upload their signed counterpart.
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Tenant Portal Access Link</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={tenantPortalUrl}
+                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-mono select-all outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="px-3.5 py-2 bg-[#0F8B7D] hover:bg-teal-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedLink ? "Copied!" : "Copy"}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center gap-2">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Hello ${lease.tenantName}, please access your commercial lease portal for ${lease.propertyName} (${lease.leaseCode}): ${tenantPortalUrl}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 text-center bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors"
+                >
+                  Send via WhatsApp
+                </a>
+                <a
+                  href={`mailto:?subject=${encodeURIComponent(`Lease Contract & Portal Access - ${lease.leaseCode}`)}&body=${encodeURIComponent(`Dear ${lease.tenantName},\n\nPlease access your lease commercial details and documents for ${lease.propertyName} using the following link:\n${tenantPortalUrl}\n\nRegards,\nProperty Management`)}`}
+                  className="flex-1 py-2 text-center bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors"
+                >
+                  Send via Email
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

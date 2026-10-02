@@ -556,7 +556,9 @@ export async function POST(req: Request) {
         waterBillingType,
       },
       utilityComponents: Array.isArray(utilityComponents) ? utilityComponents : [],
-      documents: [
+      hasPendingDocument: !body.agreementDocumentName,
+      agreementDocumentPending: !body.agreementDocumentName,
+      documents: body.agreementDocumentName ? [
         {
           id: `DOC-${Date.now()}`,
           contractId: newLeaseId,
@@ -564,15 +566,15 @@ export async function POST(req: Request) {
           title: `Executed ${contractType} - ${tenantObj.tradeName}`,
           versionNumber: 1,
           fileUrl: "/sample-lease-agreement.pdf",
-          fileName: `Executed_Contract_${generatedLeaseCode}.pdf`,
+          fileName: body.agreementDocumentName,
           fileSizeBytes: 2450000,
-          status: "executed",
-          isExecuted: true,
+          status: body.agreementStatus || "executed",
+          isExecuted: body.agreementStatus === "executed",
           executionDate: startDate,
-          uploadedBy: "Org Super Admin",
+          uploadedBy: body.createdBy || "Org Super Admin",
           createdAt: new Date().toISOString()
         }
-      ],
+      ] : [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
