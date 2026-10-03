@@ -279,19 +279,6 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
           />
         </div>
 
-        {/* Alerts Bell */}
-        {showAlerts && unreadAlertsCount > 0 && (
-          <button
-            onClick={onOpenAlerts}
-            className="relative p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-amber-600 rounded-lg transition-colors cursor-pointer"
-          >
-            <Bell className="w-3.5 h-3.5" />
-            <span className="absolute -top-1 -right-1 px-1 bg-rose-500 text-white rounded-full text-[7px] font-bold min-w-[12px] text-center leading-[14px]">
-              {unreadAlertsCount}
-            </span>
-          </button>
-        )}
-
         {/* Add Lease CTA */}
         {showAddLease && onOpenAddLease && (
           <button

@@ -178,11 +178,16 @@ export async function POST(req: Request) {
         billingCity: billingCity || existing.billingCity,
         billingState: billingState || existing.billingState,
         billingPincode: billingPincode || existing.billingPincode,
-        status: status || existing.status || "invited",
-        portalLive: portalLive !== undefined ? portalLive : existing.portalLive,
+        status: (portalLive || status === "active") ? "active" : (status || existing.status || "active"),
+        portalLive: true,
         inviteStatus: "accepted",
         propertyId: propertyId || existing.propertyId
       };
+
+      // Clear any "Invite Pending" alerts for this tenant
+      if (db.alerts) {
+        db.alerts = db.alerts.filter(a => !(a.title && (a.title.includes(existing.tradeName) || a.title.includes(prevName) || (existing.inviteCode && a.title.includes(existing.inviteCode))) && a.title.includes("Invite Pending")));
+      }
 
       // If tenant modified their name during onboarding/join, trigger notification for Rent Roll Dashboard
       if (hasNameChanged && prevName.toLowerCase() !== tradeName.trim().toLowerCase()) {

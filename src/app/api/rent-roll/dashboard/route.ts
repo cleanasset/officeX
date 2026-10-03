@@ -198,6 +198,8 @@ export async function GET(req: Request) {
       organization: db.organization,
       branding: db.config?.branding,
       billingEntities: db.billingEntities || [],
+      properties: db.properties || [],
+      tenants: db.tenants || [],
       summary: {
         totalLeasesCount: leases.length,
         activeLeasesCount: activeLeases.length,

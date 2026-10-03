@@ -229,7 +229,7 @@ export async function POST(req: Request) {
     }
 
     // Default Action: Billing Run (RR-BIL-01)
-    const { leaseId, billingMonth, dueDate, invoiceType = "consolidated" } = body;
+    const { leaseId, billingMonth, dueDate, invoiceType = "consolidated", customOverrides } = body;
 
     const targetLeases = leaseId
       ? db.leases.filter(l => l.id === leaseId && (l.status === "active" || l.status === "under_notice"))
@@ -249,11 +249,16 @@ export async function POST(req: Request) {
       const billingEntity = db.billingEntities.find(b => b.id === (lease.billingEntityId || prop?.billingEntityId)) || db.billingEntities[0];
       const prefix = billingEntity?.invoicePrefix || "APX-INV";
 
+      const override = customOverrides?.[lease.id] || customOverrides?.[lease.leaseCode] || customOverrides?.[lease.tenantName];
+      const effectiveBaseRent = override?.baseRent !== undefined ? Number(override.baseRent) : lease.monthlyRent;
+      const effectiveCam = override?.camCharges !== undefined ? Number(override.camCharges) : (lease.camMonthly || 0);
+      const effectiveUtility = override?.utilityCharges !== undefined ? Number(override.utilityCharges) : (lease.utilityFixedMonthly || 0);
+
       if (invoiceType === "separate") {
         // Multi-invoice: Separate Base Rent and CAM invoices (RR-BIL-02)
         // 1. Base Rent Invoice
         const rentCalc = calculateInvoice({
-          baseRent: lease.monthlyRent,
+          baseRent: effectiveBaseRent,
           camCharges: 0,
           utilityCharges: 0,
           otherCharges: 0,
@@ -300,8 +305,8 @@ export async function POST(req: Request) {
         // 2. CAM Invoice (No TDS on CAM)
         const camCalc = calculateInvoice({
           baseRent: 0,
-          camCharges: lease.camMonthly,
-          utilityCharges: lease.utilityFixedMonthly || 0,
+          camCharges: effectiveCam,
+          utilityCharges: effectiveUtility,
           otherCharges: lease.otherChargesMonthly || 0,
           gstRate: 18,
           tdsRate: 0, // CAM exempt from 194I
@@ -328,8 +333,8 @@ export async function POST(req: Request) {
           periodEnd: dueDateStr,
           invoiceType: "cam",
           baseRent: 0,
-          camCharges: lease.camMonthly,
-          utilityCharges: lease.utilityFixedMonthly || 0,
+          camCharges: effectiveCam,
+          utilityCharges: effectiveUtility,
           otherCharges: lease.otherChargesMonthly || 0,
           subtotal: camCalc.subtotal,
           gstRate: 18,
@@ -348,9 +353,9 @@ export async function POST(req: Request) {
       } else {
         // Consolidated GST Tax Invoice
         const calc = calculateInvoice({
-          baseRent: lease.monthlyRent,
-          camCharges: lease.camMonthly,
-          utilityCharges: lease.utilityFixedMonthly,
+          baseRent: effectiveBaseRent,
+          camCharges: effectiveCam,
+          utilityCharges: effectiveUtility,
           otherCharges: lease.otherChargesMonthly || 0,
           gstRate: lease.gstRate || 18,
           tdsRate: lease.tdsRate || 10,

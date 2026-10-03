@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Building,
@@ -23,7 +23,13 @@ import {
   Check,
   ArrowRight,
   Share2,
-  Copy
+  Copy,
+  Upload,
+  Sparkles,
+  AlertOctagon,
+  CheckSquare,
+  Square,
+  RefreshCcw
 } from "lucide-react";
 import { EnrichedLease } from "./MasterGridTab";
 import { formatINR } from "./DashboardTab";
@@ -47,8 +53,15 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"commercials" | "escalations" | "legal" | "clauses" | "documents">("commercials");
   const [docUploadTitle, setDocUploadTitle] = useState("");
-  const [docUploadType, setDocUploadType] = useState("amendment");
+  const [docUploadType, setDocUploadType] = useState("agreement");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [isParsingDeed, setIsParsingDeed] = useState(false);
+  const [deedDiscrepancies, setDeedDiscrepancies] = useState<any[]>([]);
+  const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
+  const [showDiscrepancyModal, setShowDiscrepancyModal] = useState(false);
+  const [selectedDiscrepancies, setSelectedDiscrepancies] = useState<Record<string, boolean>>({});
   const [docSuccess, setDocSuccess] = useState("");
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
   const [approvalMessage, setApprovalMessage] = useState("");
@@ -162,36 +175,239 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
     }
   };
 
-  const handleUploadDoc = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!docUploadTitle) return;
+  const handleTriggerUpload = () => {
+    setActiveTab("documents");
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 150);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, "");
+    if (!docUploadTitle) {
+      setDocUploadTitle(cleanTitle);
+    }
+    setDocUploadType("agreement");
+
+    // Automatically parse deed and check for discrepancies with entered contract
+    setIsParsingDeed(true);
+    setDeedDiscrepancies([]);
+    setHasDiscrepancy(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const parseRes = await fetch("/api/rent-roll/parse-deed", {
+        method: "POST",
+        body: formData
+      });
+
+      if (parseRes.ok) {
+        const parseData = await parseRes.json();
+        const ext = parseData.extracted || {};
+        const items: any[] = [];
+
+        // 1. Monthly Rent
+        if (ext.monthlyRent !== undefined && ext.monthlyRent > 0) {
+          items.push({
+            key: "monthlyRent",
+            label: "Monthly Base Rent",
+            enteredDisplay: formatINR(lease.monthlyRent),
+            deedDisplay: formatINR(ext.monthlyRent),
+            rawValue: ext.monthlyRent,
+            isMatch: lease.monthlyRent === ext.monthlyRent
+          });
+        }
+
+        // 2. Security Deposit
+        const currentDeposit = lease.securityDepositPaid || lease.securityDepositAmount || 0;
+        if (ext.securityDeposit !== undefined && ext.securityDeposit > 0) {
+          items.push({
+            key: "securityDeposit",
+            label: "Security Deposit",
+            enteredDisplay: formatINR(currentDeposit),
+            deedDisplay: formatINR(ext.securityDeposit),
+            rawValue: ext.securityDeposit,
+            isMatch: currentDeposit === ext.securityDeposit
+          });
+        }
+
+        // 3. Leased Area
+        if (ext.chargeableArea !== undefined && ext.chargeableArea > 0) {
+          items.push({
+            key: "chargeableArea",
+            label: "Chargeable Area",
+            enteredDisplay: `${lease.chargeableArea?.toLocaleString()} sqft`,
+            deedDisplay: `${ext.chargeableArea?.toLocaleString()} sqft`,
+            rawValue: ext.chargeableArea,
+            isMatch: lease.chargeableArea === ext.chargeableArea
+          });
+        }
+
+        // CAM Charges
+        if (ext.camMonthly !== undefined && ext.camMonthly > 0) {
+          const currentCam = lease.camMonthly || 0;
+          items.push({
+            key: "camMonthly",
+            label: "Monthly CAM Charges",
+            enteredDisplay: formatINR(currentCam),
+            deedDisplay: formatINR(ext.camMonthly),
+            rawValue: ext.camMonthly,
+            isMatch: currentCam === ext.camMonthly
+          });
+        }
+
+        // 4. Escalation %
+        if (ext.escalationPct !== undefined && ext.escalationPct > 0) {
+          items.push({
+            key: "escalationPct",
+            label: "Annual Escalation",
+            enteredDisplay: `${lease.escalationPct}%`,
+            deedDisplay: `${ext.escalationPct}%`,
+            rawValue: ext.escalationPct,
+            isMatch: lease.escalationPct === ext.escalationPct
+          });
+        }
+
+        // 5. Lock-in Period
+        if (ext.lockInMonths !== undefined && ext.lockInMonths > 0) {
+          items.push({
+            key: "lockInMonths",
+            label: "Lock-in Period",
+            enteredDisplay: `${lease.lockInMonths} Months`,
+            deedDisplay: `${ext.lockInMonths} Months`,
+            rawValue: ext.lockInMonths,
+            isMatch: lease.lockInMonths === ext.lockInMonths
+          });
+        }
+
+        // 6. Tenant Name
+        if (ext.tenantName && ext.tenantName.trim()) {
+          const isNameMatch = lease.tenantName.toLowerCase().includes(ext.tenantName.toLowerCase()) ||
+                              ext.tenantName.toLowerCase().includes(lease.tenantName.toLowerCase());
+          items.push({
+            key: "tenantName",
+            label: "Tenant Company Name",
+            enteredDisplay: lease.tenantName,
+            deedDisplay: ext.tenantName,
+            rawValue: ext.tenantName,
+            isMatch: isNameMatch
+          });
+        }
+
+        const mismatches = items.filter(d => !d.isMatch);
+        setDeedDiscrepancies(items);
+        setHasDiscrepancy(mismatches.length > 0);
+
+        // Pre-select all mismatched items for reconciliation
+        const initialSelected: Record<string, boolean> = {};
+        mismatches.forEach(d => {
+          initialSelected[d.key] = true;
+        });
+        setSelectedDiscrepancies(initialSelected);
+
+        if (mismatches.length > 0) {
+          setShowDiscrepancyModal(true);
+        }
+      }
+    } catch (parseErr) {
+      console.warn("Deed parsing note:", parseErr);
+    } finally {
+      setIsParsingDeed(false);
+    }
+  };
+
+  const handleConfirmVaultWithReconciliation = async (shouldUpdateContract: boolean) => {
     setIsUploadingDoc(true);
     try {
+      const fileName = selectedFile?.name || `${lease.leaseCode}_${(docUploadTitle || "Executed_Lease_Agreement").replace(/\s+/g, "_")}.pdf`;
+      const fileSizeBytes = selectedFile?.size || 2450000;
+
+      const updatePayload: Record<string, any> = {};
+      if (shouldUpdateContract && deedDiscrepancies) {
+        deedDiscrepancies.forEach(d => {
+          if (selectedDiscrepancies[d.key]) {
+            updatePayload[d.key] = d.rawValue;
+          }
+        });
+      }
+
       const res = await fetch("/api/rent-roll/leases", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leaseId: lease.id,
           action: "add_document",
+          updateContractTerms: Object.keys(updatePayload).length > 0 ? updatePayload : undefined,
           document: {
-            title: docUploadTitle,
-            documentType: docUploadType,
-            fileName: `${lease.leaseCode}_${docUploadTitle.replace(/\s+/g, "_")}.pdf`,
-            fileUrl: "/sample-agreements/contract-doc.pdf"
+            title: docUploadTitle || fileName.replace(/\.[^/.]+$/, ""),
+            documentType: docUploadType || "agreement",
+            fileName: fileName,
+            fileSizeBytes: fileSizeBytes,
+            fileUrl: "/sample-agreements/contract-doc.pdf",
+            uploadedBy: "Property Owner"
           }
         })
       });
+
       if (res.ok) {
-        setDocSuccess("Document vaulted successfully!");
+        const data = await res.json();
+        setShowDiscrepancyModal(false);
+        setDocSuccess(
+          shouldUpdateContract
+            ? "Contract terms reconciled with Deed & document vaulted successfully!"
+            : "Lease document vaulted with existing entered values preserved."
+        );
         setDocUploadTitle("");
+        setSelectedFile(null);
+        setDeedDiscrepancies([]);
+        setHasDiscrepancy(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        
+        if (data.document) {
+          if (!lease.documents) lease.documents = [];
+          lease.documents.unshift(data.document);
+          (lease as any).hasPendingDocument = false;
+          (lease as any).agreementDocumentPending = false;
+        }
+
+        // Apply reconciled values to local lease object
+        if (shouldUpdateContract && data.lease) {
+          Object.assign(lease, data.lease);
+        }
+
         if (onLeaseUpdated) onLeaseUpdated();
-        setTimeout(() => setDocSuccess(""), 3500);
+        setTimeout(() => setDocSuccess(""), 4500);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Failed to vault document");
       }
     } catch (err) {
       console.error(err);
+      alert("Error saving reconciled document");
     } finally {
       setIsUploadingDoc(false);
     }
+  };
+
+  const handleUploadDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docUploadTitle && !selectedFile) {
+      alert("Please choose a deed file or enter a document title");
+      return;
+    }
+
+    // If mismatches exist and user hasn't reviewed modal, show modal
+    if (hasDiscrepancy && deedDiscrepancies.some(d => !d.isMatch)) {
+      setShowDiscrepancyModal(true);
+      return;
+    }
+
+    await handleConfirmVaultWithReconciliation(false);
   };
 
   const isPendingApproval = lease.approvalStatus === "submitted" || lease.status === "pending_approval";
@@ -284,10 +500,11 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setActiveTab("documents")}
-                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+                  onClick={handleTriggerUpload}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5"
                 >
-                  Upload Deed
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Deed</span>
                 </button>
                 <button
                   type="button"
@@ -752,18 +969,99 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                   )}
                 </div>
 
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                />
+
                 {/* Upload New Document Form */}
                 <form onSubmit={handleUploadDoc} className="p-4 bg-teal-50/50 border border-teal-200 rounded-2xl space-y-3">
-                  <div className="font-bold text-teal-950 text-xs">Vault New Contract Document / Addendum</div>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="font-bold text-teal-950 text-xs flex items-center justify-between">
+                    <span>Vault Executed Agreement / Addendum</span>
+                    <span className="text-[10px] text-teal-700 font-normal">PDF or DOCX</span>
+                  </div>
+
+                  {/* File Selector Dropzone */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-4 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                      selectedFile
+                        ? "bg-emerald-50/80 border-emerald-300 text-emerald-900"
+                        : "bg-white border-teal-200 hover:border-teal-400 hover:bg-teal-50/40 text-slate-600"
+                    }`}
+                  >
+                    {isParsingDeed ? (
+                      <div className="space-y-1.5 py-1">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto animate-pulse">
+                          <Sparkles className="w-4 h-4 animate-spin" />
+                        </div>
+                        <div className="font-bold text-xs text-indigo-950">
+                          Scanning Deed clauses &amp; auditing terms...
+                        </div>
+                        <div className="text-[10px] text-indigo-700 font-mono">
+                          Checking rent, deposit, lock-in &amp; escalation
+                        </div>
+                      </div>
+                    ) : selectedFile ? (
+                      <div className="space-y-1">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="font-bold text-xs text-emerald-950 truncate max-w-xs">{selectedFile.name}</div>
+                        <div className="text-[10px] text-emerald-700">
+                          {(selectedFile.size / 1024).toFixed(0)} KB • Click to change file
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="w-8 h-8 rounded-full bg-teal-100 text-[#0F8B7D] flex items-center justify-center mx-auto">
+                          <Upload className="w-4 h-4" />
+                        </div>
+                        <div className="font-bold text-xs text-slate-800">
+                          Click to select signed Lease Deed (PDF, DOCX)
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Automatic AI audit checks for discrepancies with contract
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Discrepancy Notification Strip */}
+                  {hasDiscrepancy && (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-2 text-xs animate-fadeIn">
+                      <div className="flex items-center gap-2 text-amber-900">
+                        <AlertOctagon className="w-4 h-4 text-amber-600 shrink-0" />
+                        <div>
+                          <span className="font-extrabold text-amber-950 block">Deed Discrepancy Detected</span>
+                          <span className="text-[11px] text-amber-800">
+                            {deedDiscrepancies.filter(d => !d.isMatch).length} values in the uploaded deed differ from entered contract terms.
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowDiscrepancyModal(true)}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg cursor-pointer shrink-0 shadow-2xs"
+                      >
+                        Review Differences
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="text-[11px] font-semibold text-teal-900">Document Title</label>
                       <input
                         type="text"
-                        placeholder="e.g. First Escalation Addendum"
+                        placeholder="e.g. Executed Lease Deed"
                         value={docUploadTitle}
                         onChange={e => setDocUploadTitle(e.target.value)}
-                        className="w-full mt-1 p-2 bg-white border border-teal-200 rounded-xl text-xs"
+                        className="w-full mt-1 p-2 bg-white border border-teal-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
                         required
                       />
                     </div>
@@ -772,9 +1070,9 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                       <select
                         value={docUploadType}
                         onChange={e => setDocUploadType(e.target.value)}
-                        className="w-full mt-1 p-2 bg-white border border-teal-200 rounded-xl text-xs"
+                        className="w-full mt-1 p-2 bg-white border border-teal-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
                       >
-                        <option value="agreement">Lease Agreement</option>
+                        <option value="agreement">Lease Agreement (Executed Deed)</option>
                         <option value="amendment">Escalation / Rate Amendment</option>
                         <option value="term_sheet">LOI / Term Sheet</option>
                         <option value="deposit_bg">Security Deposit BG</option>
@@ -786,9 +1084,19 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                   <button
                     type="submit"
                     disabled={isUploadingDoc}
-                    className="w-full py-2 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full py-2.5 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs"
                   >
-                    {isUploadingDoc ? "Vaulting..." : "+ Upload & Vault Document"}
+                    {isUploadingDoc ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Vaulting Document to Contract...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload &amp; Vault Document</span>
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -880,6 +1188,160 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                 >
                   Send via Email
                 </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DEED VS ENTERED CONTRACT DISCREPANCY AUDIT MODAL */}
+        {showDiscrepancyModal && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-gray-200 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <AlertOctagon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-gray-900 text-base">
+                      Contract vs. Uploaded Deed Audit
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Differences found between entered contract and <span className="font-mono text-gray-700 font-semibold">{selectedFile?.name}</span>.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDiscrepancyModal(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Alert Notification Pill */}
+              <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    {deedDiscrepancies.filter(d => !d.isMatch).length} Discrepanc{deedDiscrepancies.filter(d => !d.isMatch).length === 1 ? "y" : "ies"} Detected
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  The commercial figures extracted from your legal deed do not match what is registered in the rent roll. Review below and choose whether to auto-update the contract to match the deed.
+                </p>
+              </div>
+
+              {/* Discrepancy Comparison Table */}
+              <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-2xs">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50/90 text-gray-600 font-bold text-[11px] border-b border-gray-200">
+                    <tr>
+                      <th className="py-2.5 px-3 w-8 text-center">Sync</th>
+                      <th className="py-2.5 px-3">Parameter</th>
+                      <th className="py-2.5 px-3">Entered by Owner</th>
+                      <th className="py-2.5 px-3 bg-teal-50/40 text-teal-950">In Uploaded Deed</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {deedDiscrepancies.map((item) => (
+                      <tr
+                        key={item.key}
+                        className={`transition-colors ${
+                          !item.isMatch ? "bg-amber-50/30 hover:bg-amber-50/60" : "hover:bg-gray-50/50"
+                        }`}
+                      >
+                        <td className="py-2.5 px-3 text-center">
+                          {!item.isMatch ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedDiscrepancies(prev => ({
+                                  ...prev,
+                                  [item.key]: !prev[item.key]
+                                }));
+                              }}
+                              className="cursor-pointer text-teal-700"
+                            >
+                              {selectedDiscrepancies[item.key] ? (
+                                <CheckSquare className="w-4 h-4 text-[#0F8B7D]" />
+                              ) : (
+                                <Square className="w-4 h-4 text-gray-300" />
+                              )}
+                            </button>
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-emerald-600 mx-auto" />
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-gray-800">
+                          {item.label}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-gray-600">
+                          {item.enteredDisplay}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-teal-900 bg-teal-50/20">
+                          {item.deedDisplay}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          {!item.isMatch ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200">
+                              Mismatch
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              Match
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => handleConfirmVaultWithReconciliation(true)}
+                  disabled={isUploadingDoc}
+                  className="w-full py-3 bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isUploadingDoc ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Reconciling &amp; Vaulting Document...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-teal-200" />
+                      <span>
+                        Reconcile &amp; Update Contract to Match Deed ({Object.values(selectedDiscrepancies).filter(Boolean).length} terms)
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmVaultWithReconciliation(false)}
+                    disabled={isUploadingDoc}
+                    className="flex-1 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Keep Entered Values &amp; Vault As-Is
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscrepancyModal(false)}
+                    className="px-4 py-2 text-gray-500 hover:text-gray-800 text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>

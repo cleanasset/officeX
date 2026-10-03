@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRentRollDb } from "@/lib/rent-roll-store";
+import { getRentRollDb, saveRentRollDb } from "@/lib/rent-roll-store";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
@@ -35,6 +35,17 @@ export async function GET(req: NextRequest) {
         );
         if (matchedLease) {
           const matchedTenant = rrDb.tenants?.find(t => t.id === matchedLease.tenantId || t.tradeName.toLowerCase() === matchedLease.tenantName.toLowerCase());
+          
+          if (matchedTenant) {
+            matchedTenant.portalLive = true;
+            matchedTenant.inviteStatus = "accepted";
+            matchedTenant.status = "active";
+            if (rrDb.alerts) {
+              rrDb.alerts = rrDb.alerts.filter(a => !(a.title && (a.title.includes(matchedTenant.tradeName) || a.title.includes(matchedTenant.tenantCode) || (matchedTenant.inviteCode && a.title.includes(matchedTenant.inviteCode))) && a.title.includes("Invite Pending")));
+            }
+            saveRentRollDb(rrDb);
+          }
+
           const matchedProp = (rrDb.properties || []).find(p => p.id === matchedLease.propertyId) || rrDb.properties?.[0];
           const allocatedUnit = unitsParam || `${matchedLease.unitNumber}${matchedLease.floorNumber ? ` (Floor ${matchedLease.floorNumber})` : ""}`;
           const loc = matchedProp?.address
@@ -91,6 +102,14 @@ export async function GET(req: NextRequest) {
         );
 
         if (matchedTenant) {
+          matchedTenant.portalLive = true;
+          matchedTenant.inviteStatus = "accepted";
+          matchedTenant.status = "active";
+          if (rrDb.alerts) {
+            rrDb.alerts = rrDb.alerts.filter(a => !(a.title && (a.title.includes(matchedTenant.tradeName) || a.title.includes(matchedTenant.tenantCode) || (matchedTenant.inviteCode && a.title.includes(matchedTenant.inviteCode))) && a.title.includes("Invite Pending")));
+          }
+          saveRentRollDb(rrDb);
+
           const matchedLease = (rrDb.leases || []).find(l => l.tenantId === matchedTenant.id || l.tenantName?.toLowerCase() === matchedTenant.tradeName.toLowerCase());
           const matchedProp = (rrDb.properties || []).find(p =>
             p.id === matchedTenant.propertyId ||

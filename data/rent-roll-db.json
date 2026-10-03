@@ -179,10 +179,10 @@
       "billingCity": "Ahmedabad",
       "billingState": "Gujarat",
       "billingPincode": "380009",
-      "status": "invited",
-      "portalLive": false,
+      "status": "active",
+      "portalLive": true,
       "inviteCode": "OFFICEX-T1-GND",
-      "inviteStatus": "pending",
+      "inviteStatus": "accepted",
       "creditLimit": 18000000,
       "paymentTermsDays": 15,
       "createdAt": "2026-10-01"
@@ -203,10 +203,10 @@
       "billingCity": "Ahmedabad",
       "billingState": "Gujarat",
       "billingPincode": "380009",
-      "status": "invited",
-      "portalLive": false,
+      "status": "active",
+      "portalLive": true,
       "inviteCode": "OFFICEX-T1-FL1",
-      "inviteStatus": "pending",
+      "inviteStatus": "accepted",
       "creditLimit": 24000000,
       "paymentTermsDays": 15,
       "createdAt": "2026-10-01"
@@ -353,23 +353,9 @@
           "isEnabled": true
         }
       ],
-      "documents": [
-        {
-          "id": "DOC-1790931883735",
-          "contractId": "LEASE-716",
-          "documentType": "agreement",
-          "title": "Executed lease_deed - tanent 1 ground",
-          "versionNumber": 1,
-          "fileUrl": "/sample-lease-agreement.pdf",
-          "fileName": "Executed_Contract_CTR-TES-BUI-1-01-572.pdf",
-          "fileSizeBytes": 2450000,
-          "status": "executed",
-          "isExecuted": true,
-          "executionDate": "2026-10-02",
-          "uploadedBy": "Org Super Admin",
-          "createdAt": "2026-10-02T09:04:43.735Z"
-        }
-      ],
+      "hasPendingDocument": true,
+      "agreementDocumentPending": true,
+      "documents": [],
       "createdAt": "2026-10-02T09:04:43.736Z",
       "updatedAt": "2026-10-02T09:04:43.736Z",
       "rentSteps": [
@@ -591,20 +577,20 @@
   "notices": [],
   "alerts": [
     {
-      "id": "ALT-TEN-01",
-      "title": "tanent 1 ground — Invite Pending",
-      "message": "Tenant has not accepted portal invite (Code: OFFICEX-T1-GND). Commercial terms & deed pending confirmation.",
-      "severity": "warning",
-      "triggerDate": "2026-10-01",
-      "isRead": false
+      "id": "ALT-TEN-01-ACTIVE",
+      "title": "tanent 1 ground — Portal Active",
+      "message": "Tenant has joined through portal invite and confirmed access. Active commercial lease.",
+      "severity": "info",
+      "triggerDate": "2026-10-03",
+      "isRead": true
     },
     {
-      "id": "ALT-TEN-02",
-      "title": "tenant 2 first — Invite Pending",
-      "message": "Tenant has not accepted portal invite (Code: OFFICEX-T1-FL1). Commercial terms & deed pending confirmation.",
-      "severity": "warning",
-      "triggerDate": "2026-10-01",
-      "isRead": false
+      "id": "ALT-TEN-02-ACTIVE",
+      "title": "tenant 2 first — Portal Active",
+      "message": "Tenant has joined through portal invite and confirmed access. Active commercial lease.",
+      "severity": "info",
+      "triggerDate": "2026-10-03",
+      "isRead": true
     }
   ],
   "auditLogs": [

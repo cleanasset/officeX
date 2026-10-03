@@ -23,6 +23,8 @@ export interface InvoiceItem {
   leaseId: string;
   leaseCode: string;
   propertyName: string;
+  propertyId?: string;
+  unitNumber?: string;
   tenantId: string;
   tenantName: string;
   invoiceDate: string;

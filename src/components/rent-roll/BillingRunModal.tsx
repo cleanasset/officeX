@@ -4,19 +4,18 @@ import React, { useState, useEffect } from "react";
 import {
   X,
   Receipt,
-  CheckCircle2,
   AlertTriangle,
-  Layers,
-  Calendar,
-  AlertCircle,
   FileCheck2,
-  Sparkles,
-  RefreshCw,
   Send,
+  Calendar,
   Building2,
-  Check,
-  ChevronRight,
-  Info
+  CheckCircle2,
+  AlertCircle,
+  Pencil,
+  RotateCcw,
+  Sparkles,
+  Layers,
+  Sliders
 } from "lucide-react";
 import { formatINR } from "./DashboardTab";
 
@@ -39,6 +38,12 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
   const [dueDate, setDueDate] = useState<string>("2026-10-08");
   const [isConsolidated, setIsConsolidated] = useState<boolean>(false);
   const [status, setStatus] = useState<"draft" | "approved" | "issuing" | "issued">("draft");
+  const [activeTab, setActiveTab] = useState<"summary" | "customize">("summary");
+
+  const [leases, setLeases] = useState<any[]>([]);
+  const [customOverrides, setCustomOverrides] = useState<Record<string, { baseRent: number; camCharges: number }>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Pre-check warnings & blocks
   const [preChecks, setPreChecks] = useState([
@@ -65,23 +70,68 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
     }
   ]);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Group Breakdown totals
-  const groupStats = [
-    { group: "Base Rent", count: activeLeasesCount || 12, taxable: 11240000, gst: 2023200, gross: 13263200 },
-    { group: "CAM Charges", count: activeLeasesCount || 12, taxable: 1280000, gst: 230400, gross: 1510400 },
-    { group: "Electricity (Fixed/Meter)", count: 4, taxable: 310000, gst: 55800, gross: 365800 },
-    { group: "Parking Allocations", count: 6, taxable: 24000, gst: 4320, gross: 28320 },
-  ];
-
-  const totalInvoices = isConsolidated ? activeLeasesCount : groupStats.reduce((acc, g) => acc + g.count, 0);
-  const totalTaxable = groupStats.reduce((acc, g) => acc + g.taxable, 0);
-  const totalGst = groupStats.reduce((acc, g) => acc + g.gst, 0);
-  const totalGross = totalTaxable + totalGst;
+  // Load real active leases from rent roll store
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch("/api/rent-roll/leases")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const active = data.filter((l: any) => l.status === "active" || l.status === "under_notice");
+          setLeases(active);
+          const initialMap: Record<string, { baseRent: number; camCharges: number }> = {};
+          active.forEach((l: any) => {
+            initialMap[l.id] = {
+              baseRent: l.monthlyRent || 0,
+              camCharges: l.camMonthly || 0
+            };
+          });
+          setCustomOverrides(initialMap);
+        }
+      })
+      .catch(err => console.warn("Note loading leases for billing run:", err));
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Compute live totals based on customizations
+  const activeCount = leases.length || activeLeasesCount || 2;
+  let totalCustomTaxable = 0;
+
+  if (leases.length > 0) {
+    leases.forEach(l => {
+      const ov = customOverrides[l.id];
+      const r = ov?.baseRent !== undefined ? ov.baseRent : (l.monthlyRent || 0);
+      const c = ov?.camCharges !== undefined ? ov.camCharges : (l.camMonthly || 0);
+      totalCustomTaxable += (r + c);
+    });
+  } else {
+    totalCustomTaxable = 12520000;
+  }
+
+  const totalGst = Math.round(totalCustomTaxable * 0.18);
+  const totalGross = totalCustomTaxable + totalGst;
+  const totalInvoices = isConsolidated ? activeCount : activeCount * 2;
+
+  const handleOverrideChange = (leaseId: string, field: "baseRent" | "camCharges", value: number) => {
+    setCustomOverrides(prev => ({
+      ...prev,
+      [leaseId]: {
+        ...prev[leaseId],
+        [field]: Math.max(0, value || 0)
+      }
+    }));
+  };
+
+  const handleResetLease = (lease: any) => {
+    setCustomOverrides(prev => ({
+      ...prev,
+      [lease.id]: {
+        baseRent: lease.monthlyRent || 0,
+        camCharges: lease.camMonthly || 0
+      }
+    }));
+  };
 
   const handleRunBilling = async (actionType: "approve" | "issue") => {
     setIsSubmitting(true);
@@ -97,6 +147,7 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
           dueDate,
           invoiceType: isConsolidated ? "consolidated" : "separate",
           action: actionType,
+          customOverrides: Object.keys(customOverrides).length > 0 ? customOverrides : undefined
         }),
       });
 
@@ -121,7 +172,7 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/70 backdrop-blur-xs flex justify-center items-center p-3 sm:p-5 animate-in fade-in">
       <div className="w-full max-w-4xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         
-        {/* HEADER (S-40 Wireframe) */}
+        {/* HEADER */}
         <div className="p-5 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
@@ -137,7 +188,7 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-medium">
-                Automated GST tax invoice generation &amp; reconciliation (S-40 / RR-BIL-01)
+                Automated GST tax invoice generation, custom amount editing &amp; reconciliation
               </p>
             </div>
           </div>
@@ -158,53 +209,57 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
               onChange={e => setPeriod(e.target.value)}
               className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-900 bg-white"
             >
-              <option value="October 2026">October 2026</option>
-              <option value="November 2026">November 2026</option>
-              <option value="December 2026">December 2026</option>
+              <option>October 2026</option>
+              <option>November 2026</option>
+              <option>December 2026</option>
+              <option>September 2026</option>
             </select>
           </div>
+
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">Invoice Date</label>
             <input
               type="date"
               value={invoiceDate}
               onChange={e => setInvoiceDate(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-medium text-slate-800 bg-white"
+              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-semibold text-slate-900 bg-white"
             />
           </div>
+
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">Due Date</label>
             <input
               type="date"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-medium text-slate-800 bg-white"
+              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-semibold text-slate-900 bg-white"
             />
           </div>
-          <div className="flex flex-col justify-end">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-700 pb-2">
+
+          <div className="flex items-center pt-4">
+            <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-slate-700 select-none">
               <input
                 type="checkbox"
                 checked={isConsolidated}
                 onChange={e => setIsConsolidated(e.target.checked)}
-                className="rounded border-slate-300 text-teal-600"
+                className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
               />
-              Consolidate per Contract
+              <span>Consolidate per Contract</span>
             </label>
           </div>
         </div>
 
-        {/* BODY */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs">
+        {/* BODY WORKFLOW */}
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
           {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl font-medium flex items-center gap-2">
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl font-medium flex items-center gap-2 text-xs">
               <AlertCircle size={16} className="text-rose-600 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
-          {/* PRE-CHECKS STRIP (S-40 Requirement) */}
-          <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2.5">
+          {/* PRE-CHECKS STRIP */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-amber-900">
               <span className="flex items-center gap-1.5">
                 <AlertTriangle size={14} className="text-amber-600" />
@@ -212,7 +267,7 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
               </span>
               <span className="text-[10px] text-amber-700 font-mono">All Critical Blockers Clear</span>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {preChecks.map(check => (
                 <div key={check.id} className="flex items-center justify-between p-2 rounded-xl bg-white/80 border border-amber-100 text-xs">
                   <span className="text-slate-700">{check.text}</span>
@@ -239,8 +294,8 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
             </div>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
               <span className="text-[10px] font-bold uppercase text-slate-400 block">Taxable Value</span>
-              <span className="text-base font-black text-slate-900 mt-0.5 block">{formatINR(totalTaxable)}</span>
-              <span className="text-[10px] text-emerald-700 font-semibold">100% Matches Rent Roll</span>
+              <span className="text-base font-black text-slate-900 mt-0.5 block">{formatINR(totalCustomTaxable)}</span>
+              <span className="text-[10px] text-emerald-700 font-semibold">Live Calculated</span>
             </div>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
               <span className="text-[10px] font-bold uppercase text-slate-400 block">Statutory GST (18%)</span>
@@ -250,35 +305,166 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
             <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl">
               <span className="text-[10px] font-bold uppercase text-teal-700 block">Gross Billing Volume</span>
               <span className="text-base font-black text-[#0F8B7D] mt-0.5 block">{formatINR(totalGross)}</span>
-              <span className="text-[10px] text-teal-700 font-semibold">Reconciled · Diff: ₹0</span>
+              <span className="text-[10px] text-teal-700 font-semibold">Total to be Billed</span>
             </div>
           </div>
 
-          {/* INVOICE GROUP BREAKDOWN (S-40 Table) */}
-          <div className="border border-slate-200 rounded-2xl overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase text-[10px]">
-                <tr>
-                  <th className="px-4 py-2.5">Invoice Charge Group</th>
-                  <th className="px-4 py-2.5 text-center">Invoices</th>
-                  <th className="px-4 py-2.5 text-right">Taxable Amount</th>
-                  <th className="px-4 py-2.5 text-right">GST (18%)</th>
-                  <th className="px-4 py-2.5 text-right">Gross Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {groupStats.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-2.5 font-bold text-slate-800">{item.group}</td>
-                    <td className="px-4 py-2.5 text-center font-mono">{item.count}</td>
-                    <td className="px-4 py-2.5 text-right font-mono">{formatINR(item.taxable)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-slate-600">{formatINR(item.gst)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-bold text-teal-800">{formatINR(item.gross)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* VIEW SWITCHER: SUMMARY OR EDIT INDIVIDUAL AMOUNTS */}
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2 pt-1">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveTab("summary")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "summary"
+                    ? "bg-white text-slate-900 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Charge Group Summary
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("customize")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === "customize"
+                    ? "bg-[#0F8B7D] text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Pencil className="w-3 h-3" />
+                <span>Customize Tenant Invoices (Edit Amounts)</span>
+              </button>
+            </div>
+
+            {activeTab === "customize" && (
+              <span className="text-[11px] text-teal-800 font-medium bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
+                ✏️ Edit base rent or CAM values below before generating invoices
+              </span>
+            )}
           </div>
+
+          {/* TAB 1: SUMMARY TABLE */}
+          {activeTab === "summary" && (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase text-[10px]">
+                  <tr>
+                    <th className="px-4 py-2.5">Invoice Charge Group</th>
+                    <th className="px-4 py-2.5 text-center">Invoices</th>
+                    <th className="px-4 py-2.5 text-right">Taxable Amount</th>
+                    <th className="px-4 py-2.5 text-right">GST (18%)</th>
+                    <th className="px-4 py-2.5 text-right">Gross Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  <tr className="hover:bg-slate-50/60">
+                    <td className="px-4 py-2.5 font-bold text-slate-800">Base Rent</td>
+                    <td className="px-4 py-2.5 text-center font-mono">{activeCount}</td>
+                    <td className="px-4 py-2.5 text-right font-mono">{formatINR(totalCustomTaxable * 0.9)}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-slate-600">{formatINR(Math.round(totalCustomTaxable * 0.9 * 0.18))}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-teal-800">{formatINR(Math.round(totalCustomTaxable * 0.9 * 1.18))}</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50/60">
+                    <td className="px-4 py-2.5 font-bold text-slate-800">CAM Charges</td>
+                    <td className="px-4 py-2.5 text-center font-mono">{activeCount}</td>
+                    <td className="px-4 py-2.5 text-right font-mono">{formatINR(totalCustomTaxable * 0.1)}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-slate-600">{formatINR(Math.round(totalCustomTaxable * 0.1 * 0.18))}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-teal-800">{formatINR(Math.round(totalCustomTaxable * 0.1 * 1.18))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB 2: EDIT INDIVIDUAL TENANT AMOUNTS */}
+          {activeTab === "customize" && (
+            <div className="space-y-3">
+              {leases.length === 0 ? (
+                <div className="p-6 text-center text-slate-500 text-xs bg-slate-50 rounded-2xl border border-slate-200">
+                  No active commercial leases available to customize.
+                </div>
+              ) : (
+                leases.map((l) => {
+                  const ov = customOverrides[l.id] || { baseRent: l.monthlyRent || 0, camCharges: l.camMonthly || 0 };
+                  const sub = ov.baseRent + ov.camCharges;
+                  const gst = Math.round(sub * 0.18);
+                  const gross = sub + gst;
+
+                  return (
+                    <div
+                      key={l.id}
+                      className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3 transition-all hover:border-teal-300"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-teal-100 text-[#0F8B7D] flex items-center justify-center font-bold text-xs">
+                            <Building2 className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <span className="font-extrabold text-slate-900 text-xs">{l.tenantName}</span>
+                            <span className="text-[10px] text-slate-500 ml-2 font-mono">
+                              {l.propertyName} • {l.unitNumber || "Suite"} ({l.chargeableArea?.toLocaleString()} sqft)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-mono font-bold text-teal-800">
+                            Total: {formatINR(gross)} (incl. GST)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleResetLease(l)}
+                            className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200 transition-colors cursor-pointer"
+                            title="Reset to default contract values"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* EDITABLE INPUTS */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Monthly Base Rent (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={ov.baseRent}
+                            onChange={e => handleOverrideChange(l.id, "baseRent", Number(e.target.value))}
+                            className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Monthly CAM Charges (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={ov.camCharges}
+                            onChange={e => handleOverrideChange(l.id, "camCharges", Number(e.target.value))}
+                            className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Statutory GST (18%)
+                          </label>
+                          <div className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-100/80 font-mono text-slate-700">
+                            {formatINR(gst)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* FOOTER ACTIONS */}
@@ -288,32 +474,34 @@ export const BillingRunModal: React.FC<BillingRunModalProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <button
-              type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
-              type="button"
-              disabled={isSubmitting}
               onClick={() => handleRunBilling("approve")}
-              className="px-4 py-2 rounded-xl border border-teal-600 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl border border-teal-600 text-teal-700 font-bold hover:bg-teal-50 transition-colors cursor-pointer disabled:opacity-50"
             >
               Approve Run
             </button>
             <button
-              type="button"
-              disabled={isSubmitting}
               onClick={() => handleRunBilling("issue")}
-              className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold flex items-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-95"
+              disabled={isSubmitting}
+              className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c6e63] text-white font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Issuing Invoices...</span>
+                </>
               ) : (
-                <Send size={14} />
+                <>
+                  <Send size={14} />
+                  <span>Issue Invoices (Send Links)</span>
+                </>
               )}
-              <span>Issue Invoices (Send Links)</span>
             </button>
           </div>
         </div>

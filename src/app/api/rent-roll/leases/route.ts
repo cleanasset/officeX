@@ -737,3 +737,145 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { leaseId, action, document, approvedBy, rejectionReason } = body;
+
+    if (!leaseId) {
+      return NextResponse.json({ error: "Missing leaseId" }, { status: 400 });
+    }
+
+    const db = getRentRollDb();
+    const leaseIdx = db.leases.findIndex(l => l.id === leaseId);
+    if (leaseIdx < 0) {
+      return NextResponse.json({ error: "Lease not found" }, { status: 404 });
+    }
+
+    const targetLease = db.leases[leaseIdx];
+
+    if (action === "add_document") {
+      if (!targetLease.documents) targetLease.documents = [];
+
+      const docObj = {
+        id: `DOC-${Date.now()}`,
+        contractId: leaseId,
+        documentType: document?.documentType || "agreement",
+        title: document?.title || `Executed Lease Agreement - ${targetLease.tenantName}`,
+        versionNumber: targetLease.documents.length + 1,
+        fileUrl: document?.fileUrl || "/sample-lease-agreement.pdf",
+        fileName: document?.fileName || `${targetLease.leaseCode}_Executed_Deed.pdf`,
+        fileSizeBytes: document?.fileSizeBytes || 2450000,
+        status: "executed",
+        isExecuted: true,
+        executionDate: new Date().toISOString().split("T")[0],
+        uploadedBy: document?.uploadedBy || approvedBy || "Property Owner",
+        createdAt: new Date().toISOString()
+      };
+
+      targetLease.documents.unshift(docObj as any);
+      targetLease.hasPendingDocument = false;
+      targetLease.agreementDocumentPending = false;
+      targetLease.status = "active";
+
+      // If user reconciled terms from the uploaded deed, update lease financials
+      if (body.updateContractTerms) {
+        const u = body.updateContractTerms;
+        if (u.monthlyRent) {
+          targetLease.monthlyRent = Number(u.monthlyRent);
+          targetLease.totalMonthlyGross = Number(u.monthlyRent) + (targetLease.camMonthly || 0);
+          targetLease.annualRentGross = targetLease.totalMonthlyGross * 12;
+          if (targetLease.chargeableArea && targetLease.chargeableArea > 0) {
+            targetLease.baseRentPsf = Math.round((targetLease.monthlyRent / targetLease.chargeableArea) * 100) / 100;
+          }
+        }
+        if (u.securityDeposit) {
+          targetLease.securityDepositPaid = Number(u.securityDeposit);
+          targetLease.securityDepositAmount = Number(u.securityDeposit);
+        }
+        if (u.camMonthly !== undefined) {
+          targetLease.camMonthly = Number(u.camMonthly);
+          targetLease.totalMonthlyGross = (targetLease.monthlyRent || 0) + Number(u.camMonthly);
+          targetLease.annualRentGross = targetLease.totalMonthlyGross * 12;
+          if (targetLease.chargeableArea && targetLease.chargeableArea > 0) {
+            targetLease.camRatePsf = Math.round((targetLease.camMonthly / targetLease.chargeableArea) * 100) / 100;
+          }
+        }
+        if (u.chargeableArea) {
+          targetLease.chargeableArea = Number(u.chargeableArea);
+          if (targetLease.monthlyRent && targetLease.chargeableArea > 0) {
+            targetLease.baseRentPsf = Math.round((targetLease.monthlyRent / targetLease.chargeableArea) * 100) / 100;
+          }
+        }
+        if (u.escalationPct) targetLease.escalationPct = Number(u.escalationPct);
+        if (u.lockInMonths) targetLease.lockInMonths = Number(u.lockInMonths);
+        if (u.tenantName) {
+          const oldName = targetLease.tenantName;
+          targetLease.tenantName = u.tenantName.trim();
+          const t = db.tenants.find(ten => ten.id === targetLease.tenantId || ten.tradeName === oldName);
+          if (t) {
+            t.tradeName = u.tenantName.trim();
+            t.legalName = u.tenantName.trim();
+          }
+        }
+      }
+
+      // Also resolve any pending alert for missing document
+      if (db.alerts) {
+        db.alerts = db.alerts.filter(a => !(a.title.includes(targetLease.leaseCode) && a.title.includes("Document")));
+      }
+
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Contract",
+        action: "ADD_DOCUMENT",
+        newValues: {
+          code: targetLease.leaseCode,
+          documentTitle: docObj.title,
+          fileName: docObj.fileName
+        },
+        changedBy: approvedBy || "Property Owner"
+      });
+
+      return NextResponse.json({ success: true, lease: targetLease, document: docObj });
+    }
+
+    if (action === "approve") {
+      targetLease.approvalStatus = "active";
+      targetLease.status = "active";
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Contract",
+        action: "APPROVE_CONTRACT",
+        newValues: { code: targetLease.leaseCode, status: "active" },
+        changedBy: approvedBy || "Finance Controller"
+      });
+
+      return NextResponse.json({ success: true, lease: targetLease });
+    }
+
+    if (action === "reject") {
+      targetLease.approvalStatus = "rejected";
+      targetLease.status = "draft";
+      targetLease.notes = `${targetLease.notes || ""} | Rejected by checker: ${rejectionReason || "Terms verification failed"}`;
+      saveRentRollDb(db);
+
+      recordAuditLog({
+        entityName: "Contract",
+        action: "REJECT_CONTRACT",
+        newValues: { code: targetLease.leaseCode, reason: rejectionReason },
+        changedBy: approvedBy || "Finance Controller"
+      });
+
+      return NextResponse.json({ success: true, lease: targetLease });
+    }
+
+    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+  } catch (err: any) {
+    console.error("PATCH /api/rent-roll/leases error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
