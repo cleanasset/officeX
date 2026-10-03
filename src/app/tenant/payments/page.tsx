@@ -79,9 +79,11 @@ export default function RentPaymentGateway() {
       if (typeof window !== "undefined") {
         const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
         const storedOrg = localStorage.getItem("officex_active_org") || sessionStorage.getItem("officex_active_org") || "";
+        const storedTenantId = localStorage.getItem("officex_tenant_id") || sessionStorage.getItem("officex_tenant_id") || "";
         const params = new URLSearchParams();
-        if (storedEmail) params.set("email", storedEmail);
+        if (storedTenantId) params.set("tenantId", storedTenantId);
         if (storedOrg) params.set("name", storedOrg);
+        if (storedEmail) params.set("email", storedEmail);
         if (params.toString()) {
           queryParam = `?${params.toString()}`;
         }

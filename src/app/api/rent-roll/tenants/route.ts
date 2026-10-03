@@ -140,8 +140,8 @@ export async function POST(req: Request) {
       portalLive
     } = body;
 
-    if (!tradeName || !contactPerson || !contactEmail || !contactPhone) {
-      return NextResponse.json({ error: "Missing required tenant fields" }, { status: 400 });
+    if (!tradeName) {
+      return NextResponse.json({ error: "Missing required tenant tradeName" }, { status: 400 });
     }
 
     const db = getRentRollDb();
@@ -171,9 +171,9 @@ export async function POST(req: Request) {
         industry: industry || existing.industry || "Commercial Occupant",
         pan: pan || existing.pan || "",
         gstin: gstin || existing.gstin || "",
-        contactPerson: contactPerson.trim() || existing.contactPerson,
-        contactEmail: contactEmail.trim().toLowerCase() || existing.contactEmail,
-        contactPhone: contactPhone.trim() || existing.contactPhone,
+        contactPerson: (contactPerson || "").trim() || existing.contactPerson || "",
+        contactEmail: (contactEmail || "").trim().toLowerCase() || existing.contactEmail || "",
+        contactPhone: (contactPhone || "").trim() || existing.contactPhone || "",
         billingAddress: billingAddress || existing.billingAddress,
         billingCity: billingCity || existing.billingCity,
         billingState: billingState || existing.billingState,
@@ -244,9 +244,9 @@ export async function POST(req: Request) {
       gstin: gstin || "",
       tan: tan || "",
       cin: cin || "",
-      contactPerson,
-      contactEmail,
-      contactPhone,
+      contactPerson: (contactPerson || "").trim(),
+      contactEmail: (contactEmail || "").trim().toLowerCase(),
+      contactPhone: (contactPhone || "").trim(),
       billingAddress: billingAddress || "",
       billingCity: billingCity || "",
       billingState: billingState || "",

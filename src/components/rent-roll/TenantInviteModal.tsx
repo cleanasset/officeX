@@ -201,9 +201,9 @@ export const TenantInviteModal: React.FC<TenantInviteModalProps> = ({
         body: JSON.stringify({
           tradeName: tenantName.trim(),
           legalName: tenantName.trim(),
-          contactPerson: "Authorized Occupier",
-          contactEmail: contactEmail.trim() || `${tenantName.toLowerCase().replace(/\s+/g, "")}@workspace.in`,
-          contactPhone: contactPhone.trim() || "+91 98000 00000",
+          contactPerson: "",
+          contactEmail: contactEmail.trim(),
+          contactPhone: contactPhone.trim(),
           industry: "Corporate Occupier",
           status: "active"
         })

@@ -11,17 +11,21 @@ export async function GET(req: Request) {
     const db = getRentRollDb();
 
     // Look up specific tenant by ID, email, or name
+    // Look up specific tenant by ID, email, or name with graceful fallback
     let activeTenant = null;
     if (requestedTenantId) {
       activeTenant = db.tenants.find((t) => t.id === requestedTenantId || t.tenantCode === requestedTenantId);
-    } else if (requestedEmail) {
-      activeTenant = db.tenants.find((t) => t.contactEmail?.toLowerCase() === requestedEmail);
-    } else if (requestedName) {
+    }
+    if (!activeTenant && requestedName) {
       activeTenant = db.tenants.find(
         (t) => t.tradeName?.toLowerCase() === requestedName.toLowerCase() ||
                t.legalName?.toLowerCase() === requestedName.toLowerCase()
       );
-    } else {
+    }
+    if (!activeTenant && requestedEmail) {
+      activeTenant = db.tenants.find((t) => t.contactEmail && t.contactEmail.toLowerCase() === requestedEmail);
+    }
+    if (!activeTenant) {
       // Fallback to the first tenant with an active lease for default tenant portal view
       activeTenant = db.tenants.find((t) => db.leases.some((l) => l.tenantId === t.id)) || db.tenants[0] || null;
     }

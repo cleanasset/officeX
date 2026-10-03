@@ -83,6 +83,9 @@ interface LeasableSpaceUnit {
   fitoutCondition: "bare_shell" | "warm_shell" | "fully_fitted" | "plug_and_play";
   status: "vacant" | "occupied" | "reserved" | "under_fitout" | "not_leasable";
   tenantName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  contactPerson?: string;
   contractedRentPsf?: number;
   camRatePsf?: number;
   leaseStartDate?: string;
@@ -2726,22 +2729,40 @@ export default function CommercialPropertyMaster() {
                               {/* Tenant Name if occupied, or asking rate if vacant */}
                               <td className="py-2.5 px-3 whitespace-nowrap">
                                 {u.status === "occupied" ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <input
-                                      type="text"
-                                      placeholder="Tenant Name (e.g. Infosys)"
-                                      value={u.tenantName === "Corporate Tenant" ? "" : (u.tenantName || "")}
-                                      onChange={(e) => handleUpdateUnitField(u.id, "tenantName", e.target.value)}
-                                      className="w-32 px-2 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-bold text-xs"
-                                    />
-                                    <div className="flex items-center gap-0.5">
-                                      <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}</span>
+                                  <div className="space-y-1 py-0.5">
+                                    <div className="flex items-center gap-1.5">
                                       <input
-                                        type="number"
-                                        placeholder="Rent"
-                                        value={u.contractedRentPsf || ""}
-                                        onChange={(e) => handleUpdateUnitField(u.id, "contractedRentPsf", Number(e.target.value) || 0)}
-                                        className="w-16 px-1.5 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-mono font-bold text-xs"
+                                        type="text"
+                                        placeholder="Tenant Company (e.g. Infosys)"
+                                        value={u.tenantName === "Corporate Tenant" ? "" : (u.tenantName || "")}
+                                        onChange={(e) => handleUpdateUnitField(u.id, "tenantName", e.target.value)}
+                                        className="w-36 px-2 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-bold text-xs"
+                                      />
+                                      <div className="flex items-center gap-0.5">
+                                        <span className="text-[10px] text-slate-400 font-bold">{currency === "USD" ? "$" : "₹"}</span>
+                                        <input
+                                          type="number"
+                                          placeholder="Rent"
+                                          value={u.contractedRentPsf || ""}
+                                          onChange={(e) => handleUpdateUnitField(u.id, "contractedRentPsf", Number(e.target.value) || 0)}
+                                          className="w-16 px-1.5 py-1 rounded border border-blue-200 bg-blue-50/50 text-blue-900 font-mono font-bold text-xs"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="email"
+                                        placeholder="Email (Optional)"
+                                        value={u.tenantEmail || ""}
+                                        onChange={(e) => handleUpdateUnitField(u.id, "tenantEmail", e.target.value)}
+                                        className="w-28 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] placeholder:text-slate-400 text-slate-700 bg-white"
+                                      />
+                                      <input
+                                        type="tel"
+                                        placeholder="Phone (Optional)"
+                                        value={u.tenantPhone || ""}
+                                        onChange={(e) => handleUpdateUnitField(u.id, "tenantPhone", e.target.value)}
+                                        className="w-24 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] placeholder:text-slate-400 text-slate-700 font-mono bg-white"
                                       />
                                     </div>
                                   </div>

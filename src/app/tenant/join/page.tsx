@@ -103,10 +103,14 @@ function TenantJoinContent() {
   );
 
   // Tenant confirmation form fields
+  const isDummyName = (val?: string) => !val || val === "Authorized Representative" || val === "Authorized Signatory";
+  const isDummyEmail = (val?: string) => !val || val === "admin@tenant.com" || val.startsWith("leasing@");
+  const isDummyPhone = (val?: string) => !val || val === "+91 98000 00000" || val === "9800000000" || val === "+91 9800000000";
+
   const [companyName, setCompanyName] = useState(tenantParam || "");
-  const [fullName, setFullName] = useState(nameParam || "");
-  const [email, setEmail] = useState(emailParam || "");
-  const [mobile, setMobile] = useState(phoneParam || "");
+  const [fullName, setFullName] = useState(!isDummyName(nameParam) ? (nameParam || "") : "");
+  const [email, setEmail] = useState(!isDummyEmail(emailParam) ? (emailParam || "") : "");
+  const [mobile, setMobile] = useState(!isDummyPhone(phoneParam) ? (phoneParam || "") : "");
   const [originalTenantName, setOriginalTenantName] = useState(tenantParam || "");
   const [verifiedTenantId, setVerifiedTenantId] = useState<string | null>(null);
 
@@ -178,14 +182,29 @@ function TenantJoinContent() {
               setCompanyName(comp);
               setOriginalTenantName(comp);
             }
-            if (data.tenant.contactPerson) setFullName(data.tenant.contactPerson);
-            else if (nameParam) setFullName(nameParam);
+            if (!isDummyName(data.tenant.contactPerson)) {
+              setFullName(data.tenant.contactPerson);
+            } else if (!isDummyName(nameParam)) {
+              setFullName(nameParam);
+            } else {
+              setFullName("");
+            }
 
-            if (data.tenant.contactEmail) setEmail(data.tenant.contactEmail);
-            else if (emailParam) setEmail(emailParam);
+            if (!isDummyEmail(data.tenant.contactEmail)) {
+              setEmail(data.tenant.contactEmail);
+            } else if (!isDummyEmail(emailParam)) {
+              setEmail(emailParam);
+            } else {
+              setEmail("");
+            }
 
-            if (data.tenant.contactPhone) setMobile(data.tenant.contactPhone);
-            else if (phoneParam) setMobile(phoneParam);
+            if (!isDummyPhone(data.tenant.contactPhone)) {
+              setMobile(data.tenant.contactPhone);
+            } else if (!isDummyPhone(phoneParam)) {
+              setMobile(phoneParam);
+            } else {
+              setMobile("");
+            }
 
             if (data.tenant.id) setVerifiedTenantId(data.tenant.id);
             if (data.tenant.unitNumber) setUnitNumber(data.tenant.unitNumber);
@@ -194,9 +213,14 @@ function TenantJoinContent() {
               setCompanyName(tenantParam);
               setOriginalTenantName(tenantParam);
             }
-            if (nameParam) setFullName(nameParam);
-            if (emailParam) setEmail(emailParam);
-            if (phoneParam) setMobile(phoneParam);
+            if (!isDummyName(nameParam)) setFullName(nameParam);
+            else setFullName("");
+
+            if (!isDummyEmail(emailParam)) setEmail(emailParam);
+            else setEmail("");
+
+            if (!isDummyPhone(phoneParam)) setMobile(phoneParam);
+            else setMobile("");
           }
 
           if (unitsParam) {
@@ -390,7 +414,7 @@ function TenantJoinContent() {
           legalName: companyName.trim() || effectiveTenantName,
           contactPerson: fullName.trim(),
           contactEmail: email.trim().toLowerCase(),
-          contactPhone: mobile.trim() || "+91 98000 00000",
+          contactPhone: mobile.trim(),
           industry: companyName.trim() ? "Corporate Occupier" : "Individual / Professional Tenant",
           propertyId: previewProperty.id,
           propertyName: previewProperty.name,
@@ -473,6 +497,8 @@ function TenantJoinContent() {
         localStorage.setItem("officex_dashboard", "/tenant/payments");
         localStorage.setItem("officex_user_email", email.trim().toLowerCase());
         localStorage.setItem("officex_user_name", fullName.trim());
+        localStorage.setItem("officex_tenant_id", verifiedTenantId || "TEN-1790893283368-1");
+        sessionStorage.setItem("officex_tenant_id", verifiedTenantId || "TEN-1790893283368-1");
         localStorage.setItem("officex_active_org", companyName.trim() || effectiveTenantName);
         localStorage.setItem("officex_tenant_building", previewProperty.name);
         localStorage.setItem("officex_tenant_owner", previewProperty.ownerName);

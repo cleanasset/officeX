@@ -372,13 +372,23 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-200">
                     <span className="text-[10px] uppercase font-bold text-gray-500">Base Monthly Rent</span>
-                    <div className="text-xl font-black text-[#0F8B7D] mt-0.5">{formatINR(lease.monthlyRent)}</div>
+                    <div className="text-xl font-black text-[#0F8B7D] mt-0.5 flex items-baseline gap-1.5 flex-wrap">
+                      <span>{formatINR(lease.monthlyRent)}</span>
+                      {lease.monthlyRent && lease.monthlyRent >= 100000 && (
+                        <span className="text-xs font-semibold text-gray-500 font-mono">(₹{lease.monthlyRent.toLocaleString("en-IN")})</span>
+                      )}
+                    </div>
                     <span className="text-[11px] text-gray-500 font-mono font-medium">₹{lease.baseRentPsf} / sqft / month</span>
                   </div>
 
                   <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-200">
                     <span className="text-[10px] uppercase font-bold text-gray-500">CAM Recovery / Month</span>
-                    <div className="text-xl font-black text-gray-900 mt-0.5">{formatINR(lease.camMonthly)}</div>
+                    <div className="text-xl font-black text-gray-900 mt-0.5 flex items-baseline gap-1.5 flex-wrap">
+                      <span>{formatINR(lease.camMonthly)}</span>
+                      {lease.camMonthly && lease.camMonthly >= 100000 && (
+                        <span className="text-xs font-semibold text-gray-500 font-mono">(₹{lease.camMonthly.toLocaleString("en-IN")})</span>
+                      )}
+                    </div>
                     <span className="text-[11px] text-gray-500 font-mono font-medium">₹{lease.camRatePsf} / sqft / month</span>
                   </div>
 
@@ -390,8 +400,13 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
 
                   <div className="p-4 bg-amber-50/40 rounded-2xl border border-amber-200">
                     <span className="text-[10px] uppercase font-bold text-amber-800">Total Monthly Gross</span>
-                    <div className="text-xl font-black text-amber-900 mt-0.5">{formatINR(lease.totalMonthlyGross)}</div>
-                    <span className="text-[11px] text-amber-700 font-medium">incl. 18% GST</span>
+                    <div className="text-xl font-black text-amber-900 mt-0.5 flex items-baseline gap-1.5 flex-wrap">
+                      <span>{formatINR(lease.totalMonthlyGross)}</span>
+                      {lease.totalMonthlyGross && lease.totalMonthlyGross >= 100000 && (
+                        <span className="text-xs font-semibold text-amber-700/80 font-mono">(₹{lease.totalMonthlyGross.toLocaleString("en-IN")})</span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-amber-700 font-medium">Monthly billing total</span>
                   </div>
                 </div>
 
@@ -409,7 +424,12 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                     </div>
                     <div>
                       <span className="text-gray-500 text-[10px] uppercase font-semibold">Annual Gross Rent:</span>
-                      <p className="font-bold text-amber-900 font-mono">{formatINR(lease.annualRentGross)}</p>
+                      <p className="font-bold text-amber-900 font-mono">
+                        {formatINR(lease.annualRentGross)}
+                        {lease.annualRentGross && lease.annualRentGross >= 100000 && (
+                          <span className="text-[11px] font-medium text-amber-700/80 ml-1">(₹{lease.annualRentGross.toLocaleString("en-IN")})</span>
+                        )}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -452,7 +472,12 @@ export const LeaseDetailDrawer: React.FC<LeaseDetailDrawerProps> = ({
                   <div className="grid grid-cols-2 gap-3 text-xs pt-3 border-t border-gray-200">
                     <div>
                       <span className="text-gray-500 text-[10px] uppercase font-semibold">Current Base Rent:</span>
-                      <p className="font-bold text-gray-900 font-mono">{formatINR(lease.monthlyRent)}/mo</p>
+                      <p className="font-bold text-gray-900 font-mono">
+                        {formatINR(lease.monthlyRent)}/mo
+                        {lease.monthlyRent && lease.monthlyRent >= 100000 && (
+                          <span className="text-[11px] font-normal text-gray-500 ml-1">(₹{lease.monthlyRent.toLocaleString("en-IN")})</span>
+                        )}
+                      </p>
                     </div>
                     <div>
                       <span className="text-gray-500 text-[10px] uppercase font-semibold">Next Escalation Date:</span>

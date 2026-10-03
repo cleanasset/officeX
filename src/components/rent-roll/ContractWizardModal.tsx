@@ -92,7 +92,7 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Available occupants & spaces fetched dynamically
-  const [existingTenants, setExistingTenants] = useState<Array<{ id: string; name: string; gstin?: string; pan?: string; portalLive?: boolean; status?: string }>>([]);
+  const [existingTenants, setExistingTenants] = useState<Array<{ id: string; name: string; gstin?: string; pan?: string; portalLive?: boolean; status?: string; contactPerson?: string; contactEmail?: string; contactPhone?: string }>>([]);
   const [availableSpaces, setAvailableSpaces] = useState<Array<{ id: string; spaceCode: string; area: number; floorNumber: number; askingRate?: number }>>([]);
   const [isLoadingMeta, setIsLoadingMeta] = useState<boolean>(false);
 
@@ -102,6 +102,9 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
   const [direction, setDirection] = useState<"receivable" | "payable">("receivable");
   const [occupantId, setOccupantId] = useState<string>("");
   const [occupantName, setOccupantName] = useState<string>("");
+  const [occupantContactPerson, setOccupantContactPerson] = useState<string>("");
+  const [occupantContactEmail, setOccupantContactEmail] = useState<string>("");
+  const [occupantContactPhone, setOccupantContactPhone] = useState<string>("");
   const [occupantGstin, setOccupantGstin] = useState<string>("");
   const [occupantPan, setOccupantPan] = useState<string>("");
   const [isNewOccupant, setIsNewOccupant] = useState<boolean>(false);
@@ -483,6 +486,9 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
             name: t.tradeName || t.legalName || t.name || "Unnamed Tenant",
             gstin: t.gstin || "",
             pan: t.pan || "",
+            contactPerson: t.contactPerson || "",
+            contactEmail: t.contactEmail || "",
+            contactPhone: t.contactPhone || "",
             inviteCode: t.inviteCode || "",
             portalLive: t.portalLive ?? false,
           })));
@@ -765,6 +771,9 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
       setOccupantName(found.name);
       if (found.gstin) setOccupantGstin(found.gstin);
       if (found.pan) setOccupantPan(found.pan);
+      if (found.contactPerson) setOccupantContactPerson(found.contactPerson);
+      if (found.contactEmail) setOccupantContactEmail(found.contactEmail);
+      if (found.contactPhone) setOccupantContactPhone(found.contactPhone);
       setIsNewOccupant(false);
     }
   };
@@ -796,6 +805,9 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
         propertyId,
         tenantName: occupantName.trim(),
         tenantGstin: occupantGstin.trim() || undefined,
+        contactPerson: occupantContactPerson.trim() || undefined,
+        contactEmail: occupantContactEmail.trim().toLowerCase() || undefined,
+        contactPhone: occupantContactPhone.trim() || undefined,
         unitNumber: selectedSpaces.map(s => s.spaceCode).join(", ") || "Main Suite",
         spaceId: primarySpace?.spaceId,
         chargeableArea: totalArea,
@@ -1206,38 +1218,73 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Company / Tenant Name*</label>
-                          <input
-                            type="text"
-                            value={occupantName}
-                            onChange={e => setOccupantName(e.target.value)}
-                            placeholder="e.g. Acme Technologies Pvt Ltd"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
-                          />
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Company / Tenant Name*</label>
+                            <input
+                              type="text"
+                              value={occupantName}
+                              onChange={e => setOccupantName(e.target.value)}
+                              placeholder="e.g. Acme Technologies Pvt Ltd"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Contact Person Name (Optional)</label>
+                            <input
+                              type="text"
+                              value={occupantContactPerson}
+                              onChange={e => setOccupantContactPerson(e.target.value)}
+                              placeholder="Leave blank if not available"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Contact Email Address (Optional)</label>
+                            <input
+                              type="email"
+                              value={occupantContactEmail}
+                              onChange={e => setOccupantContactEmail(e.target.value)}
+                              placeholder="Leave blank if not available"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:border-teal-600 outline-none bg-white"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">GSTIN (Optional)</label>
-                          <input
-                            type="text"
-                            value={occupantGstin}
-                            onChange={e => setOccupantGstin(e.target.value.toUpperCase())}
-                            placeholder="27AABCT1234K1Z2"
-                            maxLength={15}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">PAN (Optional)</label>
-                          <input
-                            type="text"
-                            value={occupantPan}
-                            onChange={e => setOccupantPan(e.target.value.toUpperCase())}
-                            placeholder="AABCT1234K"
-                            maxLength={10}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase bg-white"
-                          />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Mobile / Contact Number (Optional)</label>
+                            <input
+                              type="tel"
+                              value={occupantContactPhone}
+                              onChange={e => setOccupantContactPhone(e.target.value)}
+                              placeholder="Leave blank if not available"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">GSTIN (Optional)</label>
+                            <input
+                              type="text"
+                              value={occupantGstin}
+                              onChange={e => setOccupantGstin(e.target.value.toUpperCase())}
+                              placeholder="27AABCT1234K1Z2"
+                              maxLength={15}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">PAN (Optional)</label>
+                            <input
+                              type="text"
+                              value={occupantPan}
+                              onChange={e => setOccupantPan(e.target.value.toUpperCase())}
+                              placeholder="AABCT1234K"
+                              maxLength={10}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:border-teal-600 outline-none uppercase bg-white"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -1249,7 +1296,16 @@ export const ContractWizardModal: React.FC<ContractWizardModalProps> = ({
                         const selectedProp = properties.find(p => p.id === propertyId);
                         const currentPropName = selectedProp?.name || "Commercial Building";
                         const spaceUnitsParam = selectedSpaces.map(s => s.spaceCode).join(", ") || "Selected Space";
-                        const shareUrl = `${origin}/tenant/join?propertyId=${encodeURIComponent(propertyId)}&building=${encodeURIComponent(currentPropName)}&units=${encodeURIComponent(spaceUnitsParam)}&tenant=${encodeURIComponent(occupantName || "Tenant")}`;
+                        const urlParams = new URLSearchParams({
+                          propertyId: propertyId || "",
+                          building: currentPropName,
+                          units: spaceUnitsParam,
+                          tenant: occupantName || "Tenant"
+                        });
+                        if (occupantContactPerson?.trim()) urlParams.set("name", occupantContactPerson.trim());
+                        if (occupantContactEmail?.trim()) urlParams.set("email", occupantContactEmail.trim());
+                        if (occupantContactPhone?.trim()) urlParams.set("phone", occupantContactPhone.trim());
+                        const shareUrl = `${origin}/tenant/join?${urlParams.toString()}`;
                         const whatsappMsg = `🏢 *Commercial Lease Invitation - ${currentPropName}*\n📍 *Unit:* ${spaceUnitsParam}\n\nPlease click the link below to complete your tenant onboarding & verify your lease:\n${shareUrl}`;
 
                         const handleCopy = () => {

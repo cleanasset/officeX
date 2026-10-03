@@ -423,9 +423,9 @@ export async function POST(req: Request) {
         industry: "Commercial Tenant",
         pan: "AABCT9999X",
         gstin: "27AABCT9999X1Z1",
-        contactPerson: "Authorized Signatory",
-        contactEmail: "admin@tenant.com",
-        contactPhone: "+91 98000 00000",
+        contactPerson: (body.contactPerson || body.tenantContactPerson || "").trim(),
+        contactEmail: (body.contactEmail || body.tenantEmail || "").trim(),
+        contactPhone: (body.contactPhone || body.tenantPhone || "").trim(),
         billingAddress: prop.address,
         billingCity: prop.city,
         billingState: prop.state,
@@ -436,6 +436,10 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString().split('T')[0]
       };
       db.tenants.push(tenantObj);
+    } else {
+      if (body.contactPerson) tenantObj.contactPerson = body.contactPerson.trim();
+      if (body.contactEmail || body.tenantEmail) tenantObj.contactEmail = (body.contactEmail || body.tenantEmail).trim();
+      if (body.contactPhone || body.tenantPhone) tenantObj.contactPhone = (body.contactPhone || body.tenantPhone).trim();
     }
 
     const numChargeable = Number(chargeableArea);

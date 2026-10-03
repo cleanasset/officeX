@@ -247,9 +247,9 @@ export async function POST(req: Request) {
               industry: "Commercial Occupant",
               pan: newProp.panNumber || "AAACR1234F",
               gstin: newProp.gstin && newProp.gstin !== "UNREGISTERED" ? newProp.gstin : "27AAACR1234F1Z5",
-              contactPerson: "Authorized Representative",
-              contactEmail: `leasing@${tenantName.toLowerCase().replace(/[^a-z0-9]/g, "") || "tenant"}.com`,
-              contactPhone: "+91 98000 00000",
+              contactPerson: (u.contactPerson || u.tenantContactPerson || "").trim(),
+              contactEmail: (u.tenantEmail || u.contactEmail || "").trim(),
+              contactPhone: (u.tenantPhone || u.contactPhone || "").trim(),
               billingAddress: newProp.address,
               billingCity: newProp.city,
               billingState: newProp.state,
@@ -264,6 +264,10 @@ export async function POST(req: Request) {
             };
             db.tenants.push(createdTenant);
             tenantObj = createdTenant;
+          } else {
+            if (u.contactPerson) tenantObj.contactPerson = u.contactPerson.trim();
+            if (u.tenantEmail || u.contactEmail) tenantObj.contactEmail = (u.tenantEmail || u.contactEmail).trim();
+            if (u.tenantPhone || u.contactPhone) tenantObj.contactPhone = (u.tenantPhone || u.contactPhone).trim();
           }
 
           const numChargeable = spaceRow.chargeableArea;

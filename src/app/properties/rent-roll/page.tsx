@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Building2,
@@ -147,7 +147,25 @@ function RentRollPageInner() {
 
   // Open Modals when action is in URL (e.g. action=add-tenant or action=add-lease/contract)
   const actionFromUrl = searchParams.get("action");
+  const hasHandledActionRef = useRef<string | null>(null);
+
+  const clearModalUrlParams = useCallback(() => {
+    hasHandledActionRef.current = null;
+    const currentTab = searchParams.get("tab") || activeTab || "dashboard";
+    router.replace(`/properties/rent-roll?tab=${currentTab}`, { scroll: false });
+  }, [searchParams, activeTab, router]);
+
   useEffect(() => {
+    if (!actionFromUrl) {
+      hasHandledActionRef.current = null;
+      return;
+    }
+    // Prevent re-triggering modal on tab switches or component re-renders
+    if (hasHandledActionRef.current === actionFromUrl) {
+      return;
+    }
+    hasHandledActionRef.current = actionFromUrl;
+
     if (actionFromUrl === "add-tenant") {
       setIsAddTenantOpen(true);
     } else if (actionFromUrl === "add-lease" || actionFromUrl === "contract") {
@@ -1079,11 +1097,13 @@ function RentRollPageInner() {
           setPreSelectedSpaceForLease(null);
           setPreSelectedTenantForWizard(null);
           setInitialCommercialsForWizard(null);
+          clearModalUrlParams();
         }}
         onSuccess={() => {
           fetchAllData();
           setActionFeedback("Contract successfully created and registered in rent roll.");
           setTimeout(() => setActionFeedback(null), 5000);
+          clearModalUrlParams();
         }}
         onOpenAddProperty={() => router.push("/properties/add")}
       />
@@ -1141,17 +1161,11 @@ function RentRollPageInner() {
         isOpen={isAddTenantOpen}
         onClose={() => {
           setIsAddTenantOpen(false);
-          if (searchParams.get("action") === "add-tenant") {
-            const currentTab = searchParams.get("tab") || "dashboard";
-            router.replace(`/properties/rent-roll?tab=${currentTab}`, { scroll: false });
-          }
+          clearModalUrlParams();
         }}
         onSuccess={() => {
           fetchAllData();
-          if (searchParams.get("action") === "add-tenant") {
-            const currentTab = searchParams.get("tab") || "dashboard";
-            router.replace(`/properties/rent-roll?tab=${currentTab}`, { scroll: false });
-          }
+          clearModalUrlParams();
         }}
         onSwitchToContractWizard={(data) => {
           setIsAddTenantOpen(false);
