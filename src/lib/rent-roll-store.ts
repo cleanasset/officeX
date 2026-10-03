@@ -32,6 +32,7 @@ export interface OrgEntity {
   bankBranch?: string;
   accountType?: string;
   escrowNodalVerified?: boolean;
+  upiVpa?: string;
   contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -65,6 +66,7 @@ export interface BillingEntity {
   bankAccountNumber?: string;
   bankIfsc?: string;
   bankBranch?: string;
+  upiVpa?: string;
   invoicePrefix: string;
   isDefault: boolean;
 }

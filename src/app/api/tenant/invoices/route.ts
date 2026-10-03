@@ -70,16 +70,17 @@ export async function GET(req: Request) {
       ? db.billingEntities.find(b => b.id === firstLease.billingEntityId)
       : (db.billingEntities[0] || null);
 
+    const org = db.organization || ({} as any);
     const landlordBank = {
-      beneficiaryName: billingEntity?.legalName || property?.ownerName || db.organization.name || "Commercial Property SPV",
-      bankName: billingEntity?.bankName || "HDFC Bank Ltd",
-      accountNumber: billingEntity?.bankAccountNumber || "50200088991122",
-      ifsc: billingEntity?.bankIfsc || "HDFC0000060",
-      branch: billingEntity?.bankBranch || "BKC Special Financial Services Branch",
-      upiVpa: "landlord.rent@hdfcbank",
-      gstin: billingEntity?.gstin || "27AAFCO1234F1Z5",
-      pan: billingEntity?.pan || "AAFCO1234F",
-      accountType: "Current Account"
+      beneficiaryName: org.tradeName || org.name || billingEntity?.legalName || "testing groups",
+      bankName: org.bankName || billingEntity?.bankName || "HDFC Bank Ltd",
+      accountNumber: org.bankAccountNumber || billingEntity?.bankAccountNumber || "718737648998178299",
+      ifsc: org.bankIfsc || billingEntity?.bankIfsc || "HDFC1212211",
+      branch: org.bankBranch || billingEntity?.bankBranch || "Ahmedabad Main Branch",
+      upiVpa: (org as any).upiVpa || (db as any).config?.upiVpa || `${org.bankAccountNumber || "718737648998178299"}@hdfcbank`,
+      gstin: org.gstin || billingEntity?.gstin || "123SASDFW123DS1",
+      pan: org.pan || billingEntity?.pan || "3SASDFW123",
+      accountType: org.accountType || "Current Account"
     };
 
     return NextResponse.json({

@@ -55,6 +55,7 @@ export async function POST(req: Request) {
       bankAccountNumber: body.bankAccountNumber || db.organization.bankAccountNumber || "",
       bankIfsc: (body.bankIfsc || db.organization.bankIfsc || "").toUpperCase().trim(),
       bankBranch: body.bankBranch || db.organization.bankBranch || "",
+      upiVpa: body.upiVpa || (db.organization as any).upiVpa || "",
       accountType: body.accountType || db.organization.accountType || "Current Account",
       escrowNodalVerified: body.escrowNodalVerified ?? db.organization.escrowNodalVerified ?? true,
       contactPerson: body.contactPerson || db.organization.contactPerson || "",

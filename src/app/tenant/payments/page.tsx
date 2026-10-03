@@ -70,6 +70,8 @@ export default function RentPaymentGateway() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
   const [customAmount, setCustomAmount] = useState<number | "">("");
+  const [customUpiVpa, setCustomUpiVpa] = useState<string>("");
+  const [isEditingVpa, setIsEditingVpa] = useState<boolean>(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const fetchTenantData = useCallback(async () => {
@@ -831,62 +833,119 @@ This is a computer-generated tax invoice receipt. No physical signature required
               )}
 
               {/* Method 2: Landlord UPI / QR */}
-              {payMethod === "upi" && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200 flex items-center gap-4">
-                    <div className="w-24 h-24 bg-white rounded-xl border border-teal-200 p-1 flex items-center justify-center shrink-0">
-                      <QrCode size={80} className="text-gray-800" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-900">Scan &amp; Pay directly to Landlord</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">GooglePay, PhonePe, Paytm, BHIM</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-teal-800 bg-teal-100/70 px-2 py-1 rounded font-bold">
-                          {landlordBank?.upiVpa || "landlord.rent@hdfcbank"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(landlordBank?.upiVpa || "landlord.rent@hdfcbank");
-                            setCopiedField("vpa");
-                            setTimeout(() => setCopiedField(null), 2000);
-                          }}
-                          className="text-[10px] text-[#0F8B7D] font-bold hover:underline cursor-pointer"
-                        >
-                          {copiedField === "vpa" ? "Copied!" : "Copy"}
-                        </button>
+              {payMethod === "upi" && (() => {
+                const effectiveAmount = (customAmount !== "" && Number(customAmount) > 0)
+                  ? Number(customAmount)
+                  : (selectedInvoice ? (selectedInvoice.balanceDue > 0 ? selectedInvoice.balanceDue : selectedInvoice.netPayable) : 1);
+                const effectiveVpa = customUpiVpa.trim() || landlordBank?.upiVpa || "718737648998178299@hdfcbank";
+                const upiLink = `upi://pay?pa=${effectiveVpa}&pn=${encodeURIComponent(landlordBank?.beneficiaryName || "testing groups")}&am=${effectiveAmount}&cu=INR&tn=${encodeURIComponent(`Rent ${selectedInvoice?.invoiceNumber || "Invoice"}`)}`;
+                const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
+
+                return (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200 flex flex-col sm:flex-row items-center gap-4">
+                      {/* Live Scannable QR Code */}
+                      <div className="w-28 h-28 bg-white rounded-xl border border-teal-200 p-1.5 flex items-center justify-center shrink-0 shadow-2xs">
+                        <img
+                          src={qrImg}
+                          alt="Real Scannable UPI QR Code"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
                       </div>
-                      <span className="text-[9px] text-slate-500 mt-1 block">Account Holder: {landlordBank?.beneficiaryName || "Commercial Property SPV"}</span>
+                      <div className="flex-1 w-full text-center sm:text-left">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">Scan &amp; Pay directly to Landlord</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">GooglePay, PhonePe, Paytm, BHIM</p>
+                          </div>
+                          <span className="text-[9px] font-extrabold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full border border-teal-200">
+                            Live NPCI QR (₹{effectiveAmount.toLocaleString("en-IN")})
+                          </span>
+                        </div>
+
+                        {/* VPA Display & Inline Editor */}
+                        <div className="mt-2.5">
+                          {isEditingVpa ? (
+                            <div className="flex items-center gap-1.5 justify-center sm:justify-start">
+                              <input
+                                type="text"
+                                value={customUpiVpa}
+                                onChange={(e) => setCustomUpiVpa(e.target.value)}
+                                placeholder="Enter your real UPI ID (e.g. name@okhdfcbank)"
+                                className="px-2.5 py-1 text-xs rounded-lg border border-teal-400 bg-white font-mono text-slate-800 focus:outline-none w-full max-w-[240px]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingVpa(false)}
+                                className="px-2.5 py-1 bg-[#0F8B7D] hover:bg-teal-800 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                              <span className="text-[11px] font-mono text-teal-900 bg-teal-100/90 px-2 py-1 rounded-lg font-bold border border-teal-200">
+                                {effectiveVpa}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(effectiveVpa);
+                                  setCopiedField("vpa");
+                                  setTimeout(() => setCopiedField(null), 2000);
+                                }}
+                                className="text-[10px] text-[#0F8B7D] font-bold hover:underline cursor-pointer"
+                              >
+                                {copiedField === "vpa" ? "Copied!" : "Copy"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCustomUpiVpa(effectiveVpa);
+                                  setIsEditingVpa(true);
+                                }}
+                                className="text-[10px] text-teal-700 hover:text-teal-900 underline font-semibold cursor-pointer"
+                              >
+                                ⚙️ Use Your Own UPI ID
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <span className="text-[9px] text-slate-500 mt-1.5 block">
+                          Account Holder: <strong className="text-slate-800">{landlordBank?.beneficiaryName || "testing groups"}</strong>
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                      ENTER 12-DIGIT UPI TRANSACTION REF / UTR
-                    </label>
-                    <input
-                      value={wireUtr}
-                      onChange={(e) => setWireUtr(e.target.value)}
-                      placeholder="e.g. 429188491029"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono font-bold focus:outline-none focus:border-teal-600"
-                    />
-                  </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                        ENTER 12-DIGIT UPI TRANSACTION REF / UTR
+                      </label>
+                      <input
+                        value={wireUtr}
+                        onChange={(e) => setWireUtr(e.target.value)}
+                        placeholder="e.g. 429188491029"
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-mono font-bold focus:outline-none focus:border-teal-600"
+                      />
+                    </div>
 
-                  <button
-                    type="button"
-                    disabled={isProcessing || isPaidSuccess || !wireUtr.trim()}
-                    onClick={handleDirectWirePayment}
-                    className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-black text-xs shadow-lg shadow-teal-700/20 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
-                  >
-                    {isProcessing ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <CheckCircle2 size={15} />
-                    )}
-                    <span>Confirm UPI Transfer to Landlord</span>
-                  </button>
-                </div>
-              )}
+                    <button
+                      type="button"
+                      disabled={isProcessing || isPaidSuccess || !wireUtr.trim()}
+                      onClick={handleDirectWirePayment}
+                      className="w-full py-3.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white font-black text-xs shadow-lg shadow-teal-700/20 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                    >
+                      {isProcessing ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <CheckCircle2 size={15} />
+                      )}
+                      <span>Confirm UPI Transfer to Landlord</span>
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Method 3: Cards & Netbanking via Razorpay Route */}
               {payMethod === "gateway" && (
