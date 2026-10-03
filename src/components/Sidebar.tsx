@@ -31,7 +31,11 @@ import {
   Activity,
   CheckCircle,
   Truck,
-  Zap
+  Zap,
+  Landmark,
+  Server,
+  Cloud,
+  CreditCard
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -75,12 +79,19 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
         { name: "CAM Pools & True-Up", href: "/properties/rent-roll?tab=cam-pools", tabKey: "cam-pools", icon: Sparkles },
         { name: "Tenants & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
         { name: "Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
-        { name: "Accounting & Sync", href: "/properties/integrations", tabKey: "integrations", icon: Zap },
         { name: "Audit Trail", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
       ]
     },
-    { name: "Accounting & Integrations", href: "/properties/integrations", icon: Zap, badge: "Tally / Zoho" },
-    { name: "Visitor Management", href: "/properties/visitors", icon: Users },
+    { 
+      name: "Banking & Accounting", 
+      href: "/properties/banking", 
+      icon: Landmark
+    },
+    { 
+      name: "Visitor Management", 
+      href: "/properties/visitors", 
+      icon: Users
+    },
     { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
   ],
 
@@ -319,11 +330,12 @@ export default function Sidebar() {
 
           {activeMenu.map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
+            const itemPath = item.href.split("?")[0];
             const isItemActive = hasSubItems
-              ? pathname.startsWith("/properties/rent-roll")
+              ? pathname.startsWith(itemPath)
               : pathname === item.href || (item.href !== `/${currentPortalKey}` && item.href !== "/properties" && pathname.startsWith(item.href));
             const Icon = item.icon;
-            const isExpanded = expandedSubMenus[item.name] ?? (isItemActive || pathname.includes("/properties/rent-roll"));
+            const isExpanded = expandedSubMenus[item.name] ?? isItemActive;
 
             if (hasSubItems) {
               return (
@@ -334,6 +346,9 @@ export default function Sidebar() {
                         ...prev,
                         [item.name]: !isExpanded
                       }));
+                      if (!isItemActive) {
+                        router.push(item.href);
+                      }
                     }}
                     className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
                       isItemActive
@@ -343,6 +358,11 @@ export default function Sidebar() {
                   >
                     <Icon size={16} className={isItemActive ? "text-white" : "text-gray-500"} />
                     <span className="truncate flex-1 font-bold tracking-wide">{item.name}</span>
+                    {item.badge && !isItemActive && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-teal-50 text-teal-700 border border-teal-200/60">
+                        {item.badge}
+                      </span>
+                    )}
                     {isExpanded ? (
                       <ChevronDown size={14} className={isItemActive ? "text-white" : "text-gray-400"} />
                     ) : (
@@ -355,8 +375,10 @@ export default function Sidebar() {
                     <div className="ml-3 pl-2.5 border-l-2 border-gray-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
                       {item.subItems.map((sub) => {
                         const SubIcon = sub.icon || ChevronRight;
+                        const subPath = sub.href.split("?")[0];
+                        const subTab = new URLSearchParams(sub.href.split("?")[1] || "").get("tab");
                         const isSubActive =
-                          pathname === "/properties/rent-roll" && activeTabParam === sub.tabKey;
+                          pathname === subPath && (!subTab || activeTabParam === subTab || (!searchParams.get("tab") && subTab === "dashboard" && subPath === "/properties/rent-roll") || (!searchParams.get("tab") && subTab === "banking" && subPath === "/properties/banking"));
 
                         return (
                           <Link

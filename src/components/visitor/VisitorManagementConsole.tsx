@@ -21,7 +21,7 @@ interface VisitorManagementConsoleProps {
 
 export default function VisitorManagementConsole({
   portalRole = "tenant",
-  defaultProperty = "Devasya Gold - Commercial Tower",
+  defaultProperty = "test building 1",
   initialTab,
   initialModule = "visitors"
 }: VisitorManagementConsoleProps) {
@@ -37,6 +37,14 @@ export default function VisitorManagementConsole({
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [selectedProperty, setSelectedProperty] = useState(defaultProperty);
   const [searchTerm, setSearchTerm] = useState("");
+  const [availableTenants, setAvailableTenants] = useState<{ id: string; name: string }[]>([]);
+
+  // Update selectedProperty whenever defaultProperty changes
+  useEffect(() => {
+    if (defaultProperty) {
+      setSelectedProperty(defaultProperty);
+    }
+  }, [defaultProperty]);
 
   // Modals & States
   const [selectedVisitForBadge, setSelectedVisitForBadge] = useState<any | null>(null);
@@ -53,12 +61,12 @@ export default function VisitorManagementConsole({
     email: "",
     company: "",
     visitorType: "client",
-    hostName: "Ravi Mehta",
-    tenantName: "Godrej Capital",
+    hostName: "",
+    tenantName: "",
     purpose: "Meeting",
     visitStart: "",
     visitEnd: "",
-    accessZone: "Floor 14 - Executive Suite",
+    accessZone: "All Commercial Floors",
     vehicleRegistration: "",
     consentFlag: true,
     requiresApproval: false
@@ -146,6 +154,26 @@ export default function VisitorManagementConsole({
   useEffect(() => {
     fetchVisits();
   }, [searchTerm]);
+
+  useEffect(() => {
+    fetch("/api/rent-roll/tenants")
+      .then((r) => r.json())
+      .then((data) => {
+        const list = (data.tenants || []).map((t: any) => ({
+          id: t.id,
+          name: t.tradeName || t.legalName || t.name
+        }));
+        if (list.length > 0) {
+          setAvailableTenants(list);
+          setForm((prev) => ({
+            ...prev,
+            tenantName: prev.tenantName || list[0].name,
+            hostName: prev.hostName || `${list[0].name} Office`
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (currentRole === "tenant" && typeof window !== "undefined") {
@@ -622,7 +650,18 @@ export default function VisitorManagementConsole({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {visitsList.map(v => (
+                    {visitsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-500">
+                          <Users className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                          <p className="font-bold text-slate-700 text-sm">No scheduled visits for today</p>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Click &quot;+ Pre-Register Visitor&quot; to issue your first pass or register a walk-in at reception.
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      visitsList.map(v => (
                       <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-3">
                           <span className="font-bold text-slate-900 block">{v.visitorName}</span>
@@ -675,7 +714,8 @@ export default function VisitorManagementConsole({
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                   </tbody>
                 </table>
               </div>
@@ -955,10 +995,19 @@ export default function VisitorManagementConsole({
                   name="walkinHost"
                   className="mt-1 w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
                 >
-                  <option>Ravi Mehta (Godrej Capital)</option>
-                  <option>Priya Sharma (Apex Ventures)</option>
-                  <option>Anita Saxena (TCS Lead)</option>
-                  <option>Kailash Verma (Building Management FM)</option>
+                  {availableTenants.length > 0 ? (
+                    availableTenants.map((t) => (
+                      <option key={t.id} value={`${t.name} (${t.name})`}>
+                        {t.name}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="tanent 1 ground (tanent 1 ground)">tanent 1 ground</option>
+                      <option value="tenant 2 first (tenant 2 first)">tenant 2 first</option>
+                    </>
+                  )}
+                  <option value="Building Management (Facilities &amp; Security)">Building Management (Facilities &amp; Security)</option>
                 </select>
               </div>
 
@@ -1055,10 +1104,19 @@ export default function VisitorManagementConsole({
                   onChange={e => setForm({ ...form, tenantName: e.target.value })}
                   className="mt-1 w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-[#0F8B7D]"
                 >
-                  <option>Godrej Capital</option>
-                  <option>Apex Ventures</option>
-                  <option>Tata Consultancy Services</option>
-                  <option>Building Management</option>
+                  {availableTenants.length > 0 ? (
+                    availableTenants.map((t) => (
+                      <option key={t.id} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="tanent 1 ground">tanent 1 ground</option>
+                      <option value="tenant 2 first">tenant 2 first</option>
+                    </>
+                  )}
+                  <option value="Building Management">Building Management</option>
                 </select>
               </div>
 
@@ -1223,45 +1281,55 @@ export default function VisitorManagementConsole({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {insideOccupants.map(v => (
-                  <tr key={v.id} className="hover:bg-slate-50/70">
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-slate-900 block">{v.visitorName}</span>
-                      <span className="text-[11px] text-slate-500">{v.company} · {v.mobile}</span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-slate-800 block">{v.hostName}</span>
-                      <span className="text-[10px] text-slate-500">{v.tenantName}</span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="text-slate-700 font-medium">
-                        {v.checkinAt ? new Date(v.checkinAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="font-medium text-slate-700">{v.zone}</span>
-                    </td>
-                    <td className="py-3 px-3">
-                      {v.isOverstay || v.status === "overstay" ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 animate-pulse">
-                          Overstay Violation
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800">
-                          Within Validity
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right space-x-1.5 whitespace-nowrap">
-                      <button
-                        onClick={() => handleCheckOut(v.id)}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white text-[11px] font-bold rounded-lg cursor-pointer shadow-2xs"
-                      >
-                        Check Out
-                      </button>
+                {insideOccupants.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 text-center text-slate-400">
+                      <UserCheck size={28} className="mx-auto text-slate-300 mb-2" />
+                      <p className="font-bold text-slate-700 text-xs">No active visitors currently inside</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">All checked-in guests have exited premises.</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  insideOccupants.map(v => (
+                    <tr key={v.id} className="hover:bg-slate-50/70">
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-slate-900 block">{v.visitorName}</span>
+                        <span className="text-[11px] text-slate-500">{v.company} · {v.mobile}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-slate-800 block">{v.hostName}</span>
+                        <span className="text-[10px] text-slate-500">{v.tenantName}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="text-slate-700 font-medium">
+                          {v.checkinAt ? new Date(v.checkinAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-medium text-slate-700">{v.zone}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        {v.isOverstay || v.status === "overstay" ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 animate-pulse">
+                            Overstay Violation
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800">
+                            Within Validity
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right space-x-1.5 whitespace-nowrap">
+                        <button
+                          onClick={() => handleCheckOut(v.id)}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white text-[11px] font-bold rounded-lg cursor-pointer shadow-2xs"
+                        >
+                          Check Out
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1283,16 +1351,22 @@ export default function VisitorManagementConsole({
             </p>
 
             <div className="space-y-3">
-              {visitsList.filter(v => v.visitorType === "contractor").map(c => (
-                <div key={c.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between font-bold text-xs">
-                    <span className="text-slate-900">{c.visitorName} ({c.company})</span>
-                    <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-black">WO Linked</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-1">Work: <strong>{c.purpose}</strong></p>
-                  <p className="text-[11px] text-slate-500">Supervisor: {c.hostName} · Plant Zone: {c.zone}</p>
+              {visitsList.filter(v => v.visitorType === "contractor").length === 0 ? (
+                <div className="p-6 rounded-xl border border-slate-200 bg-slate-50 text-center text-slate-400 text-xs">
+                  No technical contractors currently registered.
                 </div>
-              ))}
+              ) : (
+                visitsList.filter(v => v.visitorType === "contractor").map(c => (
+                  <div key={c.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+                    <div className="flex items-center justify-between font-bold text-xs">
+                      <span className="text-slate-900">{c.visitorName} ({c.company})</span>
+                      <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-black">WO Linked</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-1">Work: <strong>{c.purpose}</strong></p>
+                    <p className="text-[11px] text-slate-500">Supervisor: {c.hostName} · Plant Zone: {c.zone}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -1306,16 +1380,22 @@ export default function VisitorManagementConsole({
             </p>
 
             <div className="space-y-3">
-              {visitsList.filter(v => v.visitorType === "delivery").map(d => (
-                <div key={d.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between font-bold text-xs">
-                    <span className="text-slate-900">{d.company} — {d.visitorName}</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Delivered ✓</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-1">Recipient: <strong>{d.hostName}</strong> ({d.tenantName})</p>
-                  <p className="text-[11px] text-slate-500">Vehicle: {d.vehicle || "Motorcycle Delivery"} · Ref: BD-4491</p>
+              {visitsList.filter(v => v.visitorType === "delivery").length === 0 ? (
+                <div className="p-6 rounded-xl border border-slate-200 bg-slate-50 text-center text-slate-400 text-xs">
+                  No incoming courier or parcel deliveries logged.
                 </div>
-              ))}
+              ) : (
+                visitsList.filter(v => v.visitorType === "delivery").map(d => (
+                  <div key={d.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+                    <div className="flex items-center justify-between font-bold text-xs">
+                      <span className="text-slate-900">{d.company} — {d.visitorName}</span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Delivered ✓</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-1">Recipient: <strong>{d.hostName}</strong> ({d.tenantName})</p>
+                    <p className="text-[11px] text-slate-500">Vehicle: {d.vehicle || "Motorcycle Delivery"} · Ref: BD-4491</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1379,30 +1459,39 @@ export default function VisitorManagementConsole({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {insideOccupants.map(o => (
-                  <tr key={o.id} className="hover:bg-red-50/30">
-                    <td className="py-3 px-3 font-bold text-slate-900">{o.visitorName} ({o.company})</td>
-                    <td className="py-3 px-3 text-slate-600">{o.mobile}</td>
-                    <td className="py-3 px-3 text-slate-700">{o.hostName} · {o.tenantName}</td>
-                    <td className="py-3 px-3 font-bold text-slate-800">{o.zone}</td>
-                    <td className="py-3 px-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        o.evacuationStatus === "SAFE" ? "bg-emerald-100 text-emerald-800" :
-                        o.evacuationStatus === "MISSING" ? "bg-red-100 text-red-800 animate-bounce" : "bg-amber-100 text-amber-800"
-                      }`}>
-                        {o.evacuationStatus || "UNACCOUNTED"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => handleToggleRollCallStatus(o.id, o.evacuationStatus || "UNACCOUNTED")}
-                        className="px-3 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white font-bold text-[11px] cursor-pointer"
-                      >
-                        Change Status
-                      </button>
+                {insideOccupants.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                      <p className="font-bold text-xs">No active occupants inside building</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Premises are clear.</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  insideOccupants.map(o => (
+                    <tr key={o.id} className="hover:bg-red-50/30">
+                      <td className="py-3 px-3 font-bold text-slate-900">{o.visitorName} ({o.company})</td>
+                      <td className="py-3 px-3 text-slate-600">{o.mobile}</td>
+                      <td className="py-3 px-3 text-slate-700">{o.hostName} · {o.tenantName}</td>
+                      <td className="py-3 px-3 font-bold text-slate-800">{o.zone}</td>
+                      <td className="py-3 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          o.evacuationStatus === "SAFE" ? "bg-emerald-100 text-emerald-800" :
+                          o.evacuationStatus === "MISSING" ? "bg-red-100 text-red-800 animate-bounce" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {o.evacuationStatus || "UNACCOUNTED"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          onClick={() => handleToggleRollCallStatus(o.id, o.evacuationStatus || "UNACCOUNTED")}
+                          className="px-3 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white font-bold text-[11px] cursor-pointer"
+                        >
+                          Change Status
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
