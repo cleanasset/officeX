@@ -450,9 +450,9 @@ export async function POST(req: Request) {
               property_id: propRow.id,
               space_number: sp.unitNumber || "Unit 101",
               chargeable_area: sp.chargeableArea || 5000,
-              base_rent_psf: sp.baseRentPsf || 150,
-              cam_rate_psf: sp.camRatePsf || 25,
-              status: sp.status === "occupied" ? "leased" : "available"
+              base_rent_psf: sp.standardRatePsf || 150,
+              cam_rate_psf: sp.standardCamPsf || 25,
+              status: sp.status === "occupied" || sp.status === "leased" ? "leased" : "available"
             }).maybeSingle();
           }
         }
