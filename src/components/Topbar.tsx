@@ -17,6 +17,7 @@ import {
   LogOut,
   Building2
 } from "lucide-react";
+import { performClientLogout } from "@/lib/auth-client";
 
 export default function Topbar() {
   const pathname = usePathname();
@@ -107,27 +108,7 @@ export default function Topbar() {
 
   // Sign out handler
   const handleSignOut = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (e) {
-      // Ignore
-    }
-
-    if (typeof window !== "undefined") {
-      sessionStorage.clear();
-      localStorage.removeItem("officex_session_active");
-      localStorage.removeItem("officex_user_email");
-      localStorage.removeItem("officex_user_role");
-      localStorage.removeItem("officex_dashboard");
-      localStorage.removeItem("officex_active_org");
-      localStorage.removeItem("officex_active_portal");
-
-      document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-    }
-
-    window.location.href = "/login";
+    await performClientLogout("/login");
   };
 
   return (

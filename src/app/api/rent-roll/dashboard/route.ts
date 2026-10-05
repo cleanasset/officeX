@@ -8,20 +8,20 @@ import {
   calculateCapRate,
   calculateAgingBuckets,
   computeFullLeaseSummary,
-  round2
-} from "@/lib/rent-roll-engine";
+import { round2 } from "@/lib/rent-roll-engine";
+import { getCleanUserEmail } from "@/lib/auth-utils";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const propertyId = searchParams.get("propertyId");
     const asOfDate = searchParams.get("asOfDate") || new Date().toISOString().split("T")[0];
-    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    let ownerEmail = getCleanUserEmail(searchParams.get("ownerEmail"));
 
     if (!ownerEmail) {
       try {
         const cookieStore = await cookies();
-        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+        ownerEmail = getCleanUserEmail(cookieStore.get("officex_user_email")?.value);
       } catch {}
     }
 
@@ -34,6 +34,9 @@ export async function GET(req: Request) {
         p.ownerUserId === ownerEmail
       );
     }
+
+    const hasProperties = properties.length > 0;
+    const propertiesCount = properties.length;
 
     const validPropIds = new Set(properties.map(p => p.id));
     let spaces = (db.spaces || []).filter(s => validPropIds.has(s.propertyId));
@@ -195,10 +198,19 @@ export async function GET(req: Request) {
     };
 
     return NextResponse.json({
+      success: true,
+      hasProperties,
+      propertiesCount,
+      isNewUser: !hasProperties,
+      message: hasProperties
+        ? "Dashboard data computed successfully."
+        : (ownerEmail
+            ? `No commercial properties currently registered under ${ownerEmail}. Please register a property or launch the onboarding wizard.`
+            : "No commercial properties found."),
       organization: db.organization,
       branding: db.config?.branding,
       billingEntities: db.billingEntities || [],
-      properties: db.properties || [],
+      properties: properties,
       tenants: db.tenants || [],
       summary: {
         totalLeasesCount: leases.length,

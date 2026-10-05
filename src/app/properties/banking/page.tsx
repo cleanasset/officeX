@@ -303,7 +303,7 @@ export default function BankingDetailsPage() {
 
     // Fallback from localStorage
     try {
-      const localBank = localStorage.getItem("officex_saved_bank_details") || localStorage.getItem("officex_fake_bank_details");
+      const localBank = localStorage.getItem("officex_saved_bank_details");
       if (localBank) {
         const parsed = JSON.parse(localBank);
         if (parsed.bankBeneficiary) setBankBeneficiary(parsed.bankBeneficiary);

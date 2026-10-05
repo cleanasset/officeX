@@ -279,9 +279,9 @@ export default function RentPaymentGateway() {
 Certificate ID    : CERT-TAX-${Date.now().toString().slice(-6)}
 Generated Date    : ${new Date().toLocaleDateString("en-IN")}
 Tenant Entity     : ${tenantName}
-GSTIN             : ${tenantInfo?.gstin || "27AABCT9821P1ZM"}
-PAN               : ${tenantInfo?.pan || "AABCT9821P"}
-TAN               : MUMT12345F
+GSTIN             : ${tenantInfo?.gstin || "N/A (Not Registered)"}
+PAN               : ${tenantInfo?.pan || "N/A (Not Registered)"}
+TAN               : ${tenantInfo?.tan || "N/A"}
 
 --------------------------------------------------------------------------------
 SUMMARY OF LEASE DUES & GST LEVIED (FY 2025-26):

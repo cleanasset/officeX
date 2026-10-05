@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getRentRollDb, saveRentRollDb, recordAuditLog, LeaseEntity } from "@/lib/rent-roll-store";
 import { computeFullLeaseSummary, generateContractRentSteps, calculateInvoice } from "@/lib/rent-roll-engine";
+import { getCleanUserEmail } from "@/lib/auth-utils";
 
 export async function GET(req: Request) {
   try {
@@ -13,12 +14,12 @@ export async function GET(req: Request) {
     const asOfDate = searchParams.get("asOfDate");
     const direction = searchParams.get("direction"); // receivable vs payable
     const contractType = searchParams.get("contractType");
-    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    let ownerEmail = getCleanUserEmail(searchParams.get("ownerEmail"));
 
     if (!ownerEmail) {
       try {
         const cookieStore = await cookies();
-        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+        ownerEmail = getCleanUserEmail(cookieStore.get("officex_user_email")?.value);
       } catch {}
     }
 
@@ -419,17 +420,17 @@ export async function POST(req: Request) {
         orgId: db.organization.id,
         tenantCode: `TNT-${Math.floor(100 + Math.random() * 900)}`,
         tradeName: tenantName,
-        legalName: `${tenantName} India Pvt Ltd`,
-        industry: "Commercial Tenant",
-        pan: "AABCT9999X",
-        gstin: "27AABCT9999X1Z1",
+        legalName: body.legalName || `${tenantName} India Pvt Ltd`,
+        industry: body.industry || "Commercial Tenant",
+        pan: (body.pan || body.tenantPan || "").toUpperCase().trim(),
+        gstin: (body.gstin || body.tenantGstin || "").toUpperCase().trim(),
         contactPerson: (body.contactPerson || body.tenantContactPerson || "").trim(),
         contactEmail: (body.contactEmail || body.tenantEmail || "").trim(),
         contactPhone: (body.contactPhone || body.tenantPhone || "").trim(),
-        billingAddress: prop.address,
-        billingCity: prop.city,
-        billingState: prop.state,
-        billingPincode: prop.pincode,
+        billingAddress: body.billingAddress || prop.address || "",
+        billingCity: body.billingCity || prop.city || "",
+        billingState: body.billingState || prop.state || "",
+        billingPincode: body.billingPincode || prop.pincode || "",
         status: "active",
         creditLimit: monthlyRent * 12,
         paymentTermsDays: 15,

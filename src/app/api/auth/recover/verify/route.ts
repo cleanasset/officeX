@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
 import { supabase } from '@/lib/supabase';
+import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
 
 export async function POST(request: Request) {
   try {
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: csrf.error || 'CSRF validation failed.' }, { status: 403 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { identifier, code } = body;
 

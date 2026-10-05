@@ -92,19 +92,10 @@ export default function OAuthCallbackHandler() {
           localStorage.removeItem("officex_oauth_context");
           sessionStorage.removeItem("officex_oauth_context");
 
-          // Set Rent Roll subscription and roles
-          setAuthCookie("officex_subscription", "active", 31536000);
-          setAuthCookie("officex_user_role", "Property Owner & Asset Manager", 31536000);
+          // Set Rent Roll context and role (subscription requires coupon or checkout)
+          setAuthCookie("officex_user_role", "Property Owner & Asset Manager", 2592000);
           localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
           sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
-          localStorage.setItem("officex_subscription", "active");
-          sessionStorage.setItem("officex_subscription", "active");
-
-          if (email) {
-            setAuthCookie(`officex_sub_${email}`, "active", 31536000);
-            localStorage.setItem(`officex_sub_${email}`, "active");
-            sessionStorage.setItem(`officex_sub_${email}`, "active");
-          }
 
           // If already on /signup, let SignupForm manage the steps
           if (pathname === "/signup") return;

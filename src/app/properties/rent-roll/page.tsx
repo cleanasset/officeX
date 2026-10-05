@@ -63,6 +63,7 @@ import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal"
 import { OwnerStatementsModal } from "@/components/rent-roll/OwnerStatementsModal";
 import { ClientAccountsModal } from "@/components/rent-roll/ClientAccountsModal";
 import { MonthlyMisModal } from "@/components/rent-roll/MonthlyMisModal";
+import { isAuthenticated } from "@/lib/auth-client";
 import { DealsModal } from "@/components/rent-roll/DealsModal";
 import { BillingRunModal } from "@/components/rent-roll/BillingRunModal";
 import { AdjustmentNoteModal } from "@/components/rent-roll/AdjustmentNoteModal";
@@ -91,25 +92,24 @@ const DEPRECATED_PROP_NAMES = new Set([
   "shivalik shilp",
   "business hub",
   "test commercial tower",
-  "fortune sky",
   "signature tower b"
 ]);
 
 const isDeprecatedMockProperty = (p: any) => {
   if (!p) return true;
+  // User-created properties with owner metadata are never treated as mock
+  if (p.ownerEmail || p.ownerUserId || p.ownerCompany) return false;
   if (DEPRECATED_PROP_IDS.has(p.id)) return true;
   const name = (p.name || "").toLowerCase().trim();
-  if (DEPRECATED_PROP_NAMES.has(name)) return true;
-  if (name.includes("apex business") || name.includes("meridian tech") || name.includes("nexus hub")) return true;
+  if (DEPRECATED_PROP_NAMES.has(name) && (!p.createdAt || p.sourceSystem === "demo_seed")) return true;
   return false;
 };
 
 const isDeprecatedMockLease = (l: any) => {
   if (!l) return true;
-  const propName = (l.propertyName || "").toLowerCase().trim();
-  const tenant = (l.tenantName || "").toLowerCase().trim();
-  if (DEPRECATED_PROP_NAMES.has(propName)) return true;
-  if (tenant.includes("hdfc bank corporate") || tenant.includes("tcs digital solutions") || tenant.includes("deloitte shared services") || tenant.includes("single corporate occupant") || tenant.includes("corporate tenant")) return true;
+  // Real user created leases are never filtered out
+  if (l.ownerEmail || l.ownerUserId || (l.createdAt && l.sourceSystem !== "demo_seed")) return false;
+  if (DEPRECATED_PROP_IDS.has(l.propertyId)) return true;
   return false;
 };
 
@@ -122,10 +122,7 @@ function RentRollPageInner() {
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const hasSession =
-        localStorage.getItem("officex_session_active") === "1" ||
-        sessionStorage.getItem("officex_session_active") === "1" ||
-        document.cookie.includes("officex_auth=1");
+      const hasSession = isAuthenticated();
       if (!hasSession) {
         const fullPath = window.location.pathname + window.location.search;
         router.replace(`/login?context=rent-roll&redirect=${encodeURIComponent(fullPath)}`);

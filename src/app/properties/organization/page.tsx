@@ -73,8 +73,13 @@ export default function OrganizationProfilePage() {
   const primaryEntity = billingEntities.find((b: any) => b.isDefault) || billingEntities[0] || {};
   const branding = data?.config?.branding || {};
 
-  // Resolve values with fallback to local storage or defaults
-  const legalName = org.legalName || org.name || (typeof window !== "undefined" ? localStorage.getItem("officex_org_name") : "") || "Organization Name";
+  // Resolve values with fallback to active user session and verified organization
+  const userSavedEmail = typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "") : "";
+  const userSavedName = typeof window !== "undefined" ? (localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "") : "";
+  const userSavedPhone = typeof window !== "undefined" ? (localStorage.getItem("officex_user_mobile") || sessionStorage.getItem("officex_user_mobile") || "") : "";
+  const orgSavedName = typeof window !== "undefined" ? (localStorage.getItem("officex_org_name") || sessionStorage.getItem("officex_org_name") || "") : "";
+
+  const legalName = org.legalName || org.name || orgSavedName || (userSavedEmail ? `${userSavedEmail.split("@")[0].toUpperCase()} Commercial Realty` : "Commercial Asset Management");
   const tradeName = org.tradeName || legalName;
   const pan = (org.pan || primaryEntity.pan || "").toUpperCase();
   const gstin = (org.gstin || primaryEntity.gstin || "").toUpperCase();
@@ -83,15 +88,15 @@ export default function OrganizationProfilePage() {
   const state = org.state || primaryEntity.stateCode || "";
   const currency = org.currency || "INR (₹)";
 
-  const bankName = org.bankName || primaryEntity.bankName || "HDFC Bank";
+  const bankName = org.bankName || primaryEntity.bankName || "Not Configured";
   const bankAccountNumber = org.bankAccountNumber || primaryEntity.bankAccountNumber || "";
   const bankIfsc = (org.bankIfsc || primaryEntity.bankIfsc || "").toUpperCase();
-  const bankBranch = org.bankBranch || primaryEntity.bankBranch || "Corporate Banking Branch";
+  const bankBranch = org.bankBranch || primaryEntity.bankBranch || "Main Branch";
   const accountType = org.accountType || "Corporate Current Account";
 
-  const contactPerson = org.contactPerson || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") : "") || "Portfolio Executive";
-  const contactEmail = org.contactEmail || (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") : "") || "finance@domain.com";
-  const contactPhone = org.contactPhone || "+91 98765 43210";
+  const contactPerson = org.contactPerson || userSavedName || (userSavedEmail ? userSavedEmail.split("@")[0].replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Authorized Signatory");
+  const contactEmail = org.contactEmail || userSavedEmail || "";
+  const contactPhone = org.contactPhone || userSavedPhone || "Not Provided";
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">

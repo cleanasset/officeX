@@ -54,10 +54,10 @@ export default function TenantPortalHome() {
 
   const activeTenant = tenants.find(t => t.id === selectedTenantId) || tenants[0] || {
     id: "TEN-001",
-    legalName: "TechNova Solutions Pvt Ltd",
-    tradeName: "TechNova",
-    gstin: "27AABCT1234K1Z2",
-    contactEmail: "finance@technova.com"
+    legalName: "Commercial Occupant",
+    tradeName: "Occupant Entity",
+    gstin: "",
+    contactEmail: ""
   };
 
   const tenantInvoices = invoices.filter(
@@ -91,7 +91,7 @@ export default function TenantPortalHome() {
                   Occupant Portal
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">GSTIN: {activeTenant.gstin || "27AABCT1234K1Z2"}</p>
+              <p className="text-[11px] text-slate-500">GSTIN: {activeTenant.gstin || "Not Registered"}</p>
             </div>
           </div>
 

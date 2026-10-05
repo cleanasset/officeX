@@ -57,15 +57,16 @@ const SEED_PROP_NAMES = new Set([
   "nexus hub",
   "meridian tech park",
   "shivalik shilp",
-  "fortune sky",
   "signature tower b"
 ]);
 
 const isSeedOrMockProp = (p: any) => {
   if (!p) return true;
+  // User-created properties with owner metadata are never treated as mock
+  if (p.ownerEmail || p.ownerUserId || p.ownerCompany) return false;
   if (SEED_PROP_IDS.has(p.id)) return true;
   const name = (p.name || "").toLowerCase().trim();
-  if (SEED_PROP_NAMES.has(name)) return true;
+  if (SEED_PROP_NAMES.has(name) && (!p.createdAt || p.sourceSystem === "demo_seed")) return true;
   return false;
 };
 

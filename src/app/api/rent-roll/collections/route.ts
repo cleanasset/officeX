@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getRentRollDb, saveRentRollDb, recordAuditLog, CollectionEntity, PaymentAllocationEntity } from "@/lib/rent-roll-store";
 import { round2, allocatePaymentToInvoice } from "@/lib/rent-roll-engine";
+import { getCleanUserEmail } from "@/lib/auth-utils";
 
 export async function GET(req: Request) {
   try {
@@ -11,29 +12,34 @@ export async function GET(req: Request) {
     const leaseId = searchParams.get("leaseId");
     const search = searchParams.get("search")?.toLowerCase();
     const asOfDate = searchParams.get("asOfDate");
-    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    let ownerEmail = getCleanUserEmail(searchParams.get("ownerEmail"));
 
     if (!ownerEmail) {
       try {
         const cookieStore = await cookies();
-        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+        ownerEmail = getCleanUserEmail(cookieStore.get("officex_user_email")?.value);
       } catch {}
     }
 
     const db = getRentRollDb();
-    let properties = db.properties.filter(p => {
-      const lower = (p.name || "").toLowerCase().trim();
-      return lower !== "fortune sky" && lower !== "apex horizon tower" && lower !== "signature tower b";
-    });
+    let properties = db.properties;
 
     if (ownerEmail) {
-      const owned = properties.filter(p => (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || p.ownerUserId === ownerEmail);
-      if (owned.length > 0) properties = owned;
+      properties = properties.filter(p => 
+        (p.ownerEmail || "").toLowerCase().trim() === ownerEmail || 
+        p.ownerUserId === ownerEmail
+      );
+    } else {
+      properties = properties.filter(p => p.sourceSystem !== "demo_seed");
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
     const validLeaseIds = new Set(db.leases.filter(l => validPropIds.has(l.propertyId)).map(l => l.id));
-    let collections = db.collections.filter(c => !c.leaseId || validLeaseIds.has(c.leaseId) || validLeaseIds.size === 0);
+    
+    // Strict isolation: only show collections belonging to valid properties / leases
+    let collections = ownerEmail && properties.length === 0
+      ? []
+      : db.collections.filter(c => (c.leaseId ? validLeaseIds.has(c.leaseId) : validPropIds.has(c.propertyId || "")));
 
     if (propertyId && propertyId !== "ALL") {
       const propLeaseIds = new Set(db.leases.filter(l => l.propertyId === propertyId).map(l => l.id));

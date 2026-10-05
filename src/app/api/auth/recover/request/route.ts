@@ -3,11 +3,17 @@ import { detectIdentifierType, maskIdentifier, normalizeIdentifier } from '@/lib
 import { generateAndStoreOtp } from '@/lib/otp-store';
 import { sendOtpEmail } from '@/lib/email-service';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
 
 export async function POST(request: Request) {
   try {
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: csrf.error || 'CSRF validation failed.' }, { status: 403 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { identifier } = body;
 
@@ -29,62 +35,64 @@ export async function POST(request: Request) {
     const normalized = normalizeIdentifier(identifier);
     const masked = maskIdentifier(normalized);
 
-    // Generate real cryptographic OTP
-    const { code: otp, error: otpError } = generateAndStoreOtp(normalized);
-    if (otpError) {
-      return NextResponse.json({ error: otpError }, { status: 429 });
-    }
-
-    // If identifier is email, dispatch via Supabase Auth and SMTP
-    if (type === 'email') {
-      // 1. Ensure user is registered & confirmed in Supabase so Supabase sends recovery email
-      if (supabaseAdmin) {
-        try {
-          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-          const existingUser = usersData?.users?.find(
-            (u) => u.email?.toLowerCase() === normalized.toLowerCase()
-          );
-          if (!existingUser) {
-            await supabaseAdmin.auth.admin.createUser({
-              email: normalized,
-              email_confirm: true,
-            });
-            console.log(`[RECOVER] Created confirmed user in Supabase Auth for ${normalized}`);
-          } else if (!existingUser.email_confirmed_at) {
+    // Check if account exists in Supabase Auth
+    let userExists = false;
+    if (supabaseAdmin) {
+      try {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const existingUser = usersData?.users?.find(
+          (u) => (type === 'email' && u.email?.toLowerCase() === normalized.toLowerCase()) ||
+                 (type === 'phone' && (u.phone === normalized || u.phone === `+91${normalized}`))
+        );
+        if (existingUser) {
+          userExists = true;
+          if (!existingUser.email_confirmed_at && type === 'email') {
             await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
               email_confirm: true,
             });
           }
-        } catch (adminErr) {
-          console.warn('[RECOVER] Supabase admin user check error:', adminErr);
         }
+      } catch (adminErr) {
+        console.warn('[RECOVER] Supabase admin user check error:', adminErr);
+      }
+    }
+
+    // Only dispatch recovery codes if user account actually exists
+    if (userExists) {
+      // Generate real cryptographic OTP
+      const { code: otp, error: otpError } = generateAndStoreOtp(normalized);
+      if (otpError) {
+        return NextResponse.json({ error: otpError }, { status: 429 });
       }
 
-      // 2. Trigger real Supabase Auth reset password email
-      try {
-        const { error: supaErr } = await supabase.auth.resetPasswordForEmail(normalized, {
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.officex.pro'}/login?reset=true`,
+      if (type === 'email') {
+        // Trigger real Supabase Auth reset password email
+        try {
+          await supabase.auth.resetPasswordForEmail(normalized, {
+            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.officex.pro'}/login?reset=true`,
+          });
+        } catch (e) {
+          console.warn('[RECOVER] Supabase reset exception:', e);
+        }
+
+        // Dispatch real 6-digit cryptographic OTP email
+        const emailRes = await sendOtpEmail({
+          to: normalized,
+          otp,
+          purpose: 'recovery',
         });
-        if (supaErr) {
-          console.warn(`[RECOVER] Supabase resetPasswordForEmail notice for ${normalized}:`, supaErr.message);
-        } else {
-          console.log(`[RECOVER] Real Supabase resetPasswordForEmail dispatched to ${normalized}`);
+        if (!emailRes.success) {
+          console.warn(`[RECOVER] Email dispatch notice for ${masked}: ${emailRes.error}`);
         }
-      } catch (e) {
-        console.warn(`[RECOVER] Supabase reset exception:`, e);
+      } else {
+        // Phone recovery
+        const e164 = normalized.startsWith('+') ? normalized : `+91${normalized}`;
+        try {
+          await supabase.auth.signInWithOtp({ phone: e164 });
+        } catch (smsErr) {
+          console.warn('[RECOVER] SMS dispatch error for phone:', smsErr);
+        }
       }
-
-      // 2. Dispatch real 6-digit cryptographic OTP email
-      const emailRes = await sendOtpEmail({
-        to: normalized,
-        otp,
-        purpose: 'recovery',
-      });
-      if (!emailRes.success) {
-        console.warn(`[RECOVER] Email dispatch notice for ${normalized}: ${emailRes.error}`);
-      }
-    } else {
-      console.log(`[RECOVER SMS/WA] Dispatched OTP to ${normalized}: [${otp}]`);
     }
 
     // Uniform response to protect against account enumeration

@@ -1,33 +1,48 @@
 import { NextResponse } from 'next/server';
-import { findMockUser, MOCK_USERS } from '@/lib/auth-utils';
 
 export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    // Check if user is logged in via cookie or headers
     const cookieHeader = request.headers.get('cookie') || '';
     const emailCookie = cookieHeader
       .split(';')
       .find((c) => c.trim().startsWith('officex_user_email='));
     const email = emailCookie ? decodeURIComponent(emailCookie.split('=')[1].trim()) : null;
 
-    const user = email ? findMockUser(email) : MOCK_USERS['owner@officex.in'];
+    const authCookie = cookieHeader
+      .split(';')
+      .find((c) => c.trim().startsWith('officex_auth='));
+    const isAuthed = !!authCookie && authCookie.split('=')[1].trim() !== '';
 
-    if (!user) {
+    if (!email || !isAuthed) {
       return NextResponse.json(
         { error: 'No active session or memberships found.' },
         { status: 401 }
       );
     }
 
+    const defaultMembership = {
+      id: `mem_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      orgId: 'org_officex',
+      orgName: 'Commercial Asset Management',
+      role: 'Property Owner & Asset Manager',
+      roleCode: 'OWNER',
+      workspaceTitle: 'Commercial Rent Roll Desk',
+      workspaceUrl: '/properties/rent-roll',
+      propertyScope: 'Active Portfolio',
+      badge: 'Asset Owner',
+      badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
+      isLastUsed: true
+    };
+
     return NextResponse.json({
       success: true,
-      user_id: user.id,
-      name: user.name,
-      identifier: user.identifier,
-      preferred_context: user.preferredContextId || user.memberships[0]?.id,
-      memberships: user.memberships
+      user_id: `usr_${email}`,
+      name: email.split('@')[0] || 'Member',
+      identifier: email,
+      preferred_context: defaultMembership.id,
+      memberships: [defaultMembership]
     });
   } catch (error) {
     console.error('Error in /api/me/contexts:', error);

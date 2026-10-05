@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ShieldCheck, ArrowRight, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { isAuthenticated } from "@/lib/auth-client";
 
 export interface ProfileCompletionMeterProps {
   role?: "owner" | "broker" | "vendor" | "pm" | "tenant";
@@ -82,9 +83,7 @@ export default function ProfileCompletionMeter({
 
   const isCompletedSession = typeof window !== "undefined" && Boolean(
     localStorage.getItem("officex_onboarding_completed") === "1" ||
-    sessionStorage.getItem("officex_onboarding_completed") === "1" ||
-    localStorage.getItem("officex_session_active") === "1" ||
-    sessionStorage.getItem("officex_session_active") === "1"
+    isAuthenticated()
   );
 
   if (data.isFullyVerified || isCompletedSession) {

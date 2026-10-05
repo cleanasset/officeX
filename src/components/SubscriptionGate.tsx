@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
+import { isAuthenticated, getCookie } from "@/lib/auth-client";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 interface SubscriptionGateProps {
@@ -76,9 +77,9 @@ export default function SubscriptionGate({
       if (cleanEmail) {
         localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
         sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
-        document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=31536000; SameSite=Lax`;
+        document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
       }
-      document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
       localStorage.setItem("officex_payment_id", paymentId);
       localStorage.setItem("officex_order_id", `ORD_${paymentId}`);
     }
@@ -101,9 +102,9 @@ export default function SubscriptionGate({
     const checkSubscriptionState = async () => {
       if (typeof window === "undefined") return;
 
-      const email = (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "").toLowerCase().trim();
-      const name = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "Member";
-      const role = localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role") || "Property Owner";
+      const email = (getCookie("officex_user_email") || localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      const name = localStorage.getItem("officex_user_name") || getCookie("officex_user_name") || "Member";
+      const role = getCookie("officex_user_role") || localStorage.getItem("officex_user_role") || "Property Owner";
       
       setUserEmail(email);
       setUserName(name);
@@ -119,16 +120,12 @@ export default function SubscriptionGate({
       setIsLoggedIn(true);
 
       // Check active subscription or session
-      const subGlobal = localStorage.getItem("officex_subscription") === "active" ||
-        sessionStorage.getItem("officex_subscription") === "active" ||
-        document.cookie.includes("officex_subscription=active");
-      const hasAuth = localStorage.getItem("officex_session_active") === "1" ||
-        sessionStorage.getItem("officex_session_active") === "1" ||
-        document.cookie.includes("officex_auth=1");
+      const subGlobal = getCookie("officex_subscription") === "active" ||
+        localStorage.getItem("officex_subscription") === "active";
+      const hasAuth = isAuthenticated();
 
       const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
-        sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
-        document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`);
+        getCookie(`officex_sub_${encodeURIComponent(email)}`) === "active";
 
       if (subEmailLocal || subGlobal || hasAuth) {
         setIsSubscribed(true);

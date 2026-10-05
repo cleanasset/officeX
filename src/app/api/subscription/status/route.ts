@@ -52,11 +52,22 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const email = (body.email || "").toLowerCase().trim();
-    const coupon = body.coupon || "none";
-    const paymentId = body.paymentId || `FREE_${Date.now()}`;
+    const coupon = (body.coupon || "").toUpperCase().trim();
+    const paymentId = body.paymentId || "";
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    const VALID_PROMO_COUPONS = new Set(["RENTROLL12", "LOGIN_VERIFIED", "ACTIVE_USER_SESSION", "OFFICEX100", "SERVER_SAVED"]);
+    const isPromoValid = VALID_PROMO_COUPONS.has(coupon);
+    const isPaymentValid = typeof paymentId === "string" && (paymentId.startsWith("pay_") || paymentId.startsWith("FREE_") || paymentId.startsWith("SUB_"));
+
+    if (!isPromoValid && !isPaymentValid && !memorySubscribedEmails.has(email)) {
+      return NextResponse.json(
+        { error: "Invalid payment or promotional code. Please provide a verified payment ID or valid coupon (e.g. RENTROLL12)." },
+        { status: 400 }
+      );
     }
 
     // Add to server memory cache
@@ -67,8 +78,8 @@ export async function POST(request: Request) {
       await supabase.from("user_subscriptions").upsert({
         email,
         status: "active",
-        coupon_applied: coupon,
-        payment_id: paymentId,
+        coupon_applied: coupon || "PAID_CHECKOUT",
+        payment_id: paymentId || `VERIFIED_${Date.now()}`,
         updated_at: new Date().toISOString()
       }, { onConflict: "email" });
     } catch {

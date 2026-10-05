@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
+import { persistDbToCloud, fetchDbFromCloud } from "./cloud-db-sync";
 
 export interface StatutoryCertificate {
   id: string;
@@ -48,18 +50,63 @@ export interface ComplianceDatabase {
   ppmSchedule: PPMAssetRecord[];
 }
 
-const DB_PATH = path.join(process.cwd(), "data", "compliance-db.json");
+const SEED_PATH = path.join(process.cwd(), "data", "compliance-db.json");
+const TMP_PATH = path.join(os.tmpdir(), "compliance-db.json");
+
+function getStoragePath(): string {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    if (!fs.existsSync(TMP_PATH) && fs.existsSync(SEED_PATH)) {
+      try {
+        fs.copyFileSync(SEED_PATH, TMP_PATH);
+      } catch {
+        // Fallback to SEED_PATH
+      }
+    }
+    return fs.existsSync(TMP_PATH) ? TMP_PATH : SEED_PATH;
+  }
+  return SEED_PATH;
+}
+
+let inMemoryCache: ComplianceDatabase | null = null;
 
 export function getComplianceDb(): ComplianceDatabase {
-  if (!fs.existsSync(DB_PATH)) {
-    throw new Error(`Compliance database not found at ${DB_PATH}`);
+  if (inMemoryCache) {
+    return inMemoryCache;
   }
-  const raw = fs.readFileSync(DB_PATH, "utf-8");
-  return JSON.parse(raw);
+
+  const p = getStoragePath();
+  if (fs.existsSync(p)) {
+    try {
+      const raw = fs.readFileSync(p, "utf-8");
+      inMemoryCache = JSON.parse(raw);
+      return inMemoryCache!;
+    } catch {
+      // Fallback below
+    }
+  }
+
+  if (fs.existsSync(SEED_PATH)) {
+    const raw = fs.readFileSync(SEED_PATH, "utf-8");
+    inMemoryCache = JSON.parse(raw);
+    return inMemoryCache!;
+  }
+
+  throw new Error(`Compliance database not found at ${SEED_PATH}`);
 }
 
 export function saveComplianceDb(data: ComplianceDatabase): void {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
+  inMemoryCache = data;
+  const p = getStoragePath();
+  try {
+    fs.writeFileSync(p, JSON.stringify(data, null, 2), "utf-8");
+  } catch (fsErr) {
+    console.warn("[COMPLIANCE] Local file write notice:", fsErr);
+  }
+
+  // Cloud PostgreSQL persistence
+  persistDbToCloud(data, "compliance_db").catch((err) => {
+    console.warn("[COMPLIANCE] Cloud persistence notice:", err);
+  });
 }
 
 export function parseDate(d: string | Date): Date {
@@ -72,7 +119,7 @@ export function diffInDays(target: Date, reference: Date = new Date()): number {
 }
 
 // Compute dynamic enriched certificate with calculated days remaining and live status
-export function enrichCertificate(cert: StatutoryCertificate, referenceDate: Date = new Date("2026-09-16")): StatutoryCertificate {
+export function enrichCertificate(cert: StatutoryCertificate, referenceDate: Date = new Date()): StatutoryCertificate {
   const exp = parseDate(cert.expiryDateObj || cert.expiry);
   const days = diffInDays(exp, referenceDate);
 

@@ -3,18 +3,19 @@ import { cookies } from "next/headers";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { getRentRollDb, saveRentRollDb, PropertyEntity, SpaceEntity, LeaseEntity, TenantEntity, EscalationEntity, ensureSpacesAndContractsForProperties } from "@/lib/rent-roll-store";
 import { computeFullLeaseSummary } from "@/lib/rent-roll-engine";
+import { getCleanUserEmail } from "@/lib/auth-utils";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    let ownerEmail = searchParams.get("ownerEmail")?.toLowerCase().trim();
+    let ownerEmail = getCleanUserEmail(searchParams.get("ownerEmail"));
     const ownerUserId = searchParams.get("ownerUserId")?.trim();
     const isDemo = searchParams.get("demo") === "1" || searchParams.get("fixtures") === "1";
 
     if (!ownerEmail && !ownerUserId) {
       try {
         const cookieStore = await cookies();
-        ownerEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+        ownerEmail = getCleanUserEmail(cookieStore.get("officex_user_email")?.value);
       } catch {}
     }
 
@@ -160,11 +161,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Property name is required" }, { status: 400 });
     }
 
-    let effectiveEmail = (ownerEmail || "").toLowerCase().trim();
+    let effectiveEmail = getCleanUserEmail(ownerEmail);
     if (!effectiveEmail) {
       try {
         const cookieStore = await cookies();
-        effectiveEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+        effectiveEmail = getCleanUserEmail(cookieStore.get("officex_user_email")?.value);
       } catch {}
     }
 

@@ -96,7 +96,7 @@ export default function ComplianceTrackerDashboard() {
     fetchCertificates();
     if (typeof window !== "undefined") {
       const orgName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_active_org");
-      if (orgName) setPropertyName(orgName);
+      if (orgName && !propertyName) setPropertyName(orgName);
     }
   }, [fetchCertificates]);
 
@@ -134,10 +134,11 @@ export default function ComplianceTrackerDashboard() {
   };
 
   const handleGoToCurrent = () => {
-    setCalendarYear(2026);
-    setCalendarMonth(8); // Sep 2026
-    setSelectedDateForDocket(16); // Sep 16, 2026
-    showToast("Switched calendar view to September 2026 (Live Audit Period)");
+    const today = new Date();
+    setCalendarYear(today.getFullYear());
+    setCalendarMonth(today.getMonth());
+    setSelectedDateForDocket(today.getDate());
+    showToast(`Switched calendar view to ${today.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`);
   };
 
   const handleSelectMonthPill = (year: number, monthIndex: number) => {

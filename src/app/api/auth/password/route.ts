@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
-import { findMockUser, normalizeIdentifier } from '@/lib/auth-utils';
+import { normalizeIdentifier } from '@/lib/auth-utils';
 import { supabase } from '@/lib/supabase';
+import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
 
 export async function POST(request: Request) {
   try {
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: csrf.error || 'CSRF validation failed.' }, { status: 403 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { identifier, password } = body;
 
@@ -24,141 +30,66 @@ export async function POST(request: Request) {
     }
 
     const norm = normalizeIdentifier(identifier);
-    const user = findMockUser(norm);
 
-    // Fallback demo passwords for mock directory accounts
-    const VALID_PASSWORDS = [
-      'OfficeX@2026',
-      'password',
-      'password123',
-      'OfficeX@123',
-      'Demo@2026',
-      'Admin@123'
-    ];
-
-    // 1. Authenticate with real Supabase Auth
-    if (norm.includes('@')) {
-      try {
-        const { data: supaAuth, error: supaErr } = await supabase.auth.signInWithPassword({
-          email: norm,
-          password
-        });
-        if (!supaErr && supaAuth?.user) {
-          const userRole = supaAuth.user.user_metadata?.role || user?.memberships?.[0]?.role || 'Commercial Member';
-          const memberships = user?.memberships || [
-            {
-              id: 'mem_user_portal',
-              orgId: 'org_officex',
-              orgName: 'Commercial Asset Management',
-              role: userRole,
-              roleCode: 'OWNER',
-              workspaceTitle: 'Commercial Rent Roll Desk',
-              workspaceUrl: '/properties/rent-roll',
-              propertyScope: 'Active Commercial Portfolio',
-              badge: 'Owner',
-              badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-              isLastUsed: true
-            }
-          ];
-
-          const response = NextResponse.json({
-            success: true,
-            user: {
-              identifier: norm,
-              role: userRole
-            },
-            memberships
-          });
-
-          response.cookies.set('officex_auth', '1', {
-            path: '/',
-            httpOnly: false,
-            sameSite: 'lax',
-            maxAge: 86400 * 7
-          });
-
-          return response;
-        }
-
-        // If Supabase specifically rejected invalid credentials, reject immediately
-        if (supaErr && (supaErr.status === 400 || supaErr.message?.toLowerCase().includes('invalid login'))) {
-          // If not in mock users, or if mock password also doesn't match
-          if (!user || !VALID_PASSWORDS.includes(password)) {
-            return NextResponse.json(
-              { error: 'Incorrect password. Please verify your password and try again.' },
-              { status: 401 }
-            );
-          }
-        }
-      } catch (e) {
-        console.warn('[PASSWORD] Supabase auth check error:', e);
-      }
+    // Require email for password-based authentication
+    if (!norm.includes('@')) {
+      return NextResponse.json(
+        { error: 'Mobile sign-in uses one-time verification codes. Please choose "Sign in with one-time code".' },
+        { status: 400 }
+      );
     }
 
-    if (user) {
-      if (!VALID_PASSWORDS.includes(password)) {
-        return NextResponse.json(
-          {
-            error: 'Incorrect password. Use demo password OfficeX@2026 or click "Email me a one-time code instead".'
-          },
-          { status: 401 }
-        );
-      }
-    } else {
-      // For any dynamic/unregistered test credentials
-      if (password.length < 6) {
-        return NextResponse.json(
-          { error: 'Password must be at least 6 characters.' },
-          { status: 400 }
-        );
-      }
+    // Authenticate with real Supabase Auth
+    const { data: supaAuth, error: supaErr } = await supabase.auth.signInWithPassword({
+      email: norm,
+      password
+    });
+
+    if (supaErr || !supaAuth?.user) {
+      return NextResponse.json(
+        { error: supaErr?.message || 'Incorrect password. Please verify your credentials or sign in with a one-time code.' },
+        { status: 401 }
+      );
     }
 
-    // If privileged user requiring MFA, validate credentials first, then prompt MFA
-    if (user?.requiresMfa) {
-      return NextResponse.json({
-        success: true,
-        mfa_required: true,
-        message: 'Authenticator MFA challenge required for administrative access.'
-      });
-    }
+    const supaUser = supaAuth.user;
+    const userRole = supaUser.user_metadata?.role || 'Property Owner & Asset Manager';
+    const userName = supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || norm.split('@')[0] || 'Member';
 
-    const memberships = user?.memberships || [
+    const memberships = [
       {
-        id: 'mem_default',
-        orgId: 'org_default',
-        orgName: 'Commercial Asset Desk',
-        role: 'Property Owner & Asset Manager',
-        roleCode: 'OWNER',
-        workspaceTitle: 'Commercial Asset Desk',
-        workspaceUrl: '/properties',
-        propertyScope: '5 properties · Mumbai & Bengaluru',
-        badge: 'Asset Owner',
+        id: `mem_${supaUser.id.slice(0, 8)}`,
+        orgId: 'org_officex',
+        orgName: 'Commercial Asset Management',
+        role: userRole,
+        roleCode: (supaUser.user_metadata?.roleCode as any) || 'OWNER',
+        workspaceTitle: 'Commercial Rent Roll Desk',
+        workspaceUrl: '/properties/rent-roll',
+        propertyScope: 'Active Commercial Portfolio',
+        badge: 'Owner',
         badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
         isLastUsed: true
       }
     ];
 
-    const defaultWorkspace = memberships[0].workspaceUrl;
-    const defaultRole = memberships[0].role;
-
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user?.id || `usr_${Date.now()}`,
-        name: user?.name || 'Enterprise Member',
+        id: supaUser.id,
+        name: userName,
         identifier: norm,
-        role: defaultRole
+        role: userRole
       },
       memberships,
-      needs_context_choice: memberships.length > 1,
-      redirect_url: defaultWorkspace
+      needs_context_choice: false,
+      redirect_url: '/properties/rent-roll'
     });
 
-    // Set secure session cookies
+    // Secure HttpOnly session cookie
     response.cookies.set('officex_auth', '1', {
       path: '/',
-      httpOnly: false,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });
@@ -166,19 +97,29 @@ export async function POST(request: Request) {
     response.cookies.set('officex_session_active', '1', {
       path: '/',
       httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });
 
-    response.cookies.set('officex_user_role', defaultRole, {
+    response.cookies.set('officex_user_email', encodeURIComponent(norm), {
       path: '/',
       httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 86400 * 7
+    });
+
+    response.cookies.set('officex_user_role', userRole, {
+      path: '/',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in /api/auth/password:', error);
     return NextResponse.json(
       { error: 'Authentication failed. Please try again.' },

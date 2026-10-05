@@ -827,6 +827,7 @@ function OnboardingContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          userEmail: (typeof window !== "undefined" && (localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email"))) || "",
           organization: {
             legalName: orgData.legalName,
             tradeName: orgData.tradeName || orgData.legalName,
@@ -935,9 +936,8 @@ function OnboardingContent() {
           localStorage.setItem("officex_active_tenants", JSON.stringify(commitData.tenants));
         }
 
-        document.cookie = "officex_onboarding_completed=1; path=/; max-age=31536000; SameSite=Lax";
-        document.cookie = "officex_session_active=1; path=/; max-age=31536000; SameSite=Lax";
-        document.cookie = "officex_auth=1; path=/; max-age=31536000; SameSite=Lax";
+        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+        document.cookie = "officex_session_active=1; path=/; max-age=604800; SameSite=Lax";
       }
 
       setIsCommitted(true);
@@ -989,13 +989,16 @@ function OnboardingContent() {
           </span>
         </div>
 
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-3 text-xs">
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-medium">
             <Lock size={12} className="text-teal-600" />
             <span>Statutory Multi-Entity Encrypted Vault</span>
           </div>
-          <Link href="/login?context=rent-roll" className="text-slate-600 hover:text-slate-900 font-bold transition-colors">
-            Sign In
+          <Link
+            href="/properties/rent-roll"
+            className="px-3 py-1.5 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors shadow-xs"
+          >
+            Go to Dashboard &rarr;
           </Link>
         </div>
       </header>

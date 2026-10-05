@@ -80,16 +80,7 @@ const SEED_PROP_IDS = new Set([
   "PROP-1790659297701"
 ]);
 
-const SEED_PROP_NAMES = new Set([
-  "apex business tower",
-  "nexus hub",
-  "meridian tech park",
-  "shivalik shilp",
-  "business hub",
-  "test commercial tower",
-  "fortune sky",
-  "signature tower b"
-]);
+
 
 export default function TenantDirectoryPage() {
   const router = useRouter();

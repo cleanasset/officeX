@@ -3,38 +3,27 @@ import {
   detectIdentifierType,
   normalizeIdentifier,
   maskIdentifier,
-  ENTERPRISE_SSO_CONFIG,
-  findMockUser
+  ENTERPRISE_SSO_CONFIG
 } from '@/lib/auth-utils';
+import { checkRateLimit } from '@/lib/rate-limiter';
+import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
 
-// Rate limiting map: IP -> { count, resetAt }
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-
-  if (!entry || entry.resetAt < now) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 1000 }); // 1 minute window
-    return true;
-  }
-
-  if (entry.count >= 25) {
-    return false; // Exceeded 25 requests/minute
-  }
-
-  entry.count += 1;
-  return true;
-}
-
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-    if (!checkRateLimit(ip)) {
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: csrf.error || 'CSRF validation failed.' }, { status: 403 });
+    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    
+    // Check persistent rate limit: 25 attempts per minute per IP
+    const rateLimit = checkRateLimit(`discover_ip_${ip}`, 25, 60);
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: 'Too many sign-in attempts. Please wait 60 seconds before trying again.' },
+        { error: `Too many sign-in attempts. Please wait ${rateLimit.retryAfterSeconds} seconds before trying again.` },
         { status: 429 }
       );
     }
@@ -59,7 +48,15 @@ export async function POST(request: Request) {
 
     const normalized = normalizeIdentifier(rawIdentifier);
     const masked = maskIdentifier(normalized);
-    const matchedUser = findMockUser(rawIdentifier);
+
+    // Rate limit per target identifier as well to prevent brute force targeting a specific account
+    const idLimit = checkRateLimit(`discover_id_${normalized}`, 10, 60);
+    if (!idLimit.allowed) {
+      return NextResponse.json(
+        { error: `Too many attempts for this account. Please wait ${idLimit.retryAfterSeconds} seconds.` },
+        { status: 429 }
+      );
+    }
 
     // 1. If Email: check if domain has enterprise SSO enabled
     if (type === 'email') {
@@ -80,25 +77,20 @@ export async function POST(request: Request) {
         });
       }
 
-      // Check if user has password configured
-      const hasPassword = matchedUser ? matchedUser.hasPassword : true;
-      const requiresMfa = matchedUser ? matchedUser.requiresMfa : false;
-
+      // Default real behavior: offer password sign in with one-time code fallback
       return NextResponse.json({
         success: true,
         type: 'email',
-        next: hasPassword ? 'password' : 'code',
+        next: 'password',
         channel: 'email',
         masked: masked,
-        has_password: hasPassword,
-        mfa_required: requiresMfa,
+        has_password: true,
+        mfa_required: false,
         allow_code_fallback: true
       });
     }
 
     // 2. If Phone: Mobile OTP flow (WhatsApp first, SMS fallback)
-    const requiresMfa = matchedUser ? matchedUser.requiresMfa : false;
-
     return NextResponse.json({
       success: true,
       type: 'phone',
@@ -106,7 +98,7 @@ export async function POST(request: Request) {
       channel: 'whatsapp',
       fallback_channel: 'sms',
       masked: masked,
-      mfa_required: requiresMfa,
+      mfa_required: false,
       cooldown_seconds: 30
     });
   } catch (error) {

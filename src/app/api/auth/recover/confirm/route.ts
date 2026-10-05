@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
 
 export async function POST(request: Request) {
   try {
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: csrf.error || 'CSRF validation failed.' }, { status: 403 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { identifier, code, new_password, revoke_others = true } = body;
 
@@ -92,7 +98,8 @@ export async function POST(request: Request) {
     // Set initial session cookie
     response.cookies.set('officex_auth', '1', {
       path: '/',
-      httpOnly: false,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });

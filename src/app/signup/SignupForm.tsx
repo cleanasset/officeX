@@ -362,11 +362,8 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
             sessionStorage.setItem("officex_user_role", selectedRole);
             localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
             sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
-            localStorage.setItem("officex_subscription", "active");
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-            document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
             document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
-            document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
           }
           setSuccessMsg("Google account verified! Proceeding to Organization Setup (Step 03)...");
           setTimeout(() => {
@@ -394,11 +391,8 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
           sessionStorage.setItem("officex_user_role", selectedRole);
           localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
           sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
-          localStorage.setItem("officex_subscription", "active");
           document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-          document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
           document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
-          document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         }
         setSuccessMsg("Contact details saved! Proceeding to Organization Setup (Step 03)...");
         setTimeout(() => {

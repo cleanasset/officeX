@@ -93,17 +93,7 @@ export default function TenantHomepage() {
     const o = localStorage.getItem("officex_tenant_owner");
     const u = localStorage.getItem("officex_tenant_unit");
 
-    const DEMO_SEEDS = [
-      "fortune sky",
-      "signature tower b"
-    ];
-
-    if (b && !DEMO_SEEDS.includes(b.trim().toLowerCase())) {
-      setBuildingName(b);
-      if (o) setOwnerName(o);
-      if (u) setUnitNumber(u);
-    } else if (b && savedCode) {
-      // If tenant explicitly joined with an invite code, retain it
+    if (b) {
       setBuildingName(b);
       if (o) setOwnerName(o);
       if (u) setUnitNumber(u);

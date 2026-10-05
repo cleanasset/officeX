@@ -94,17 +94,17 @@ export async function POST(req: Request) {
             tradeName: uName,
             legalName: `${uName} Pvt Ltd`,
             industry: "Commercial Occupant",
-            pan: "AABCT9988F",
-            gstin: "27AABCT9988F1Z2",
+            pan: (u.pan || "").toUpperCase().trim(),
+            gstin: (u.gstin || "").toUpperCase().trim(),
             contactPerson: (u.contactPerson || "").trim(),
             contactEmail: (u.email || u.contactEmail || "").trim(),
             contactPhone: (u.phone || u.contactPhone || "").trim(),
             billingAddress: organization.primaryAddress || organization.address || "Commercial Premises",
-            billingCity: organization.city || "Ahmedabad",
-            billingState: organization.state || "Gujarat",
-            billingPincode: "380001",
+            billingCity: organization.city || "",
+            billingState: organization.state || "",
+            billingPincode: organization.pincode || "",
             status: "active",
-            creditLimit: 5000000,
+            creditLimit: 0,
             paymentTermsDays: 15,
             createdAt: new Date().toISOString()
           });
@@ -126,18 +126,18 @@ export async function POST(req: Request) {
             tradeName: sName,
             legalName: st.legalName || `${sName} Pvt Ltd`,
             industry: st.industry || "Commercial Occupant",
-            pan: st.pan || "AABCT9988F",
-            gstin: st.gstin || "27AABCT9988F1Z2",
+            pan: (st.pan || "").toUpperCase().trim(),
+            gstin: (st.gstin || "").toUpperCase().trim(),
             contactPerson: (st.contactPerson || "").trim(),
             contactEmail: (st.contactEmail || "").trim(),
             contactPhone: (st.contactPhone || "").trim(),
-            billingAddress: st.billingAddress || organization.primaryAddress || "Commercial Premises",
-            billingCity: st.billingCity || organization.city || "Ahmedabad",
-            billingState: st.billingState || organization.state || "Gujarat",
-            billingPincode: st.billingPincode || "380001",
+            billingAddress: st.billingAddress || organization.primaryAddress || organization.address || "Commercial Premises",
+            billingCity: st.billingCity || organization.city || "",
+            billingState: st.billingState || organization.state || "",
+            billingPincode: st.billingPincode || organization.pincode || "",
             status: "active",
-            creditLimit: 5000000,
-            paymentTermsDays: 15,
+            creditLimit: st.creditLimit || 0,
+            paymentTermsDays: st.paymentTermsDays || 15,
             createdAt: new Date().toISOString()
           });
         }
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
     // 4. Resolve Primary Property & Spaces
     let committedProperty: PropertyEntity | null = null;
     const cookieStore = await cookies();
-    const userEmail = (cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
+    const userEmail = (body.userEmail || body.ownerEmail || cookieStore.get("officex_user_email")?.value || "").toLowerCase().trim();
 
     if (property && property.name && property.name.trim()) {
       const propId = property.id || `PROP-${Date.now()}`;
@@ -254,19 +254,19 @@ export async function POST(req: Request) {
             orgId: db.organization.id,
             tenantCode: `T-${idx + 1}`,
             tradeName: tenantName,
-            legalName: `${tenantName} India Pvt Ltd`,
-            industry: "Technology / Corporate",
-            pan: "AABCT9988F",
-            gstin: "27AABCT9988F1Z2",
-            contactPerson: "Corporate Real Estate Head",
-            contactEmail: `admin@tenant${idx + 1}.com`,
-            contactPhone: "+91 98200 11223",
-            billingAddress: `${prop.address}, ${unit}`,
-            billingCity: prop.city,
-            billingState: prop.state || "Maharashtra",
-            billingPincode: prop.pincode || "400001",
+            legalName: r.legalName || `${tenantName} Pvt Ltd`,
+            industry: r.industry || "Commercial Occupant",
+            pan: (r.pan || "").toUpperCase().trim(),
+            gstin: (r.gstin || "").toUpperCase().trim(),
+            contactPerson: (r.contactPerson || "").trim(),
+            contactEmail: (r.contactEmail || "").trim(),
+            contactPhone: (r.contactPhone || "").trim(),
+            billingAddress: `${prop.address || ""}, ${unit}`.trim(),
+            billingCity: prop.city || "",
+            billingState: prop.state || "",
+            billingPincode: prop.pincode || "",
             status: "active",
-            creditLimit: 5000000,
+            creditLimit: 0,
             paymentTermsDays: 15,
             createdAt: new Date().toISOString()
           };

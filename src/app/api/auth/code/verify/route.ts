@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
-import { findMockUser, normalizeIdentifier } from '@/lib/auth-utils';
+import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
+import { supabase } from '@/lib/supabase';
+import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
 
 export async function POST(request: Request) {
   try {
+    const csrf = validateCsrf(request);
+    if (!csrf.valid) {
+      return NextResponse.json({ error: csrf.error || 'CSRF validation failed.' }, { status: 403 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { identifier, code } = body;
 
@@ -26,60 +33,76 @@ export async function POST(request: Request) {
     const norm = normalizeIdentifier(identifier);
 
     // Verify against real OTP generated for this user
+    let otpValid = false;
+    let otpError = 'Invalid or expired verification code.';
+
     const otpResult = verifyStoredOtp(norm, code);
-    if (!otpResult.valid) {
+    if (otpResult.valid) {
+      otpValid = true;
+    } else {
+      otpError = otpResult.error || otpError;
+      // If phone identifier, also attempt verification with Supabase phone OTP
+      if (norm.replace(/\D/g, '').length >= 10) {
+        const e164 = norm.startsWith('+') ? norm : `+91${norm}`;
+        try {
+          const { data: supaData, error: supaErr } = await supabase.auth.verifyOtp({
+            phone: e164,
+            token: code,
+            type: 'sms',
+          });
+          if (!supaErr && supaData?.session) {
+            otpValid = true;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    if (!otpValid) {
       return NextResponse.json(
-        { error: otpResult.error || 'Invalid or expired verification code.' },
+        { error: otpError },
         { status: 401 }
       );
     }
-    const user = findMockUser(norm);
 
-    // If privileged user requiring MFA (Assurance level 2)
-    if (user?.requiresMfa) {
-      return NextResponse.json({
-        success: true,
-        mfa_required: true,
-        message: 'Authenticator MFA required for this account.'
-      });
-    }
+    const defaultRole = 'Property Owner & Asset Manager';
+    const defaultWorkspace = '/properties';
 
-    const memberships = user?.memberships || [
+    const memberships = [
       {
-        id: 'mem_default',
-        orgId: 'org_default',
-        orgName: 'Enterprise Client Workspace',
-        role: 'Commercial Member',
-        roleCode: 'TENANT',
-        workspaceTitle: 'Operations & Property Portal',
-        workspaceUrl: '/properties',
-        propertyScope: 'All portfolio properties',
-        badge: 'Member',
+        id: `mem_${Date.now()}`,
+        orgId: 'org_officex',
+        orgName: 'Commercial Asset Management',
+        role: defaultRole,
+        roleCode: 'OWNER' as const,
+        workspaceTitle: 'Commercial Asset Desk',
+        workspaceUrl: defaultWorkspace,
+        propertyScope: 'Active Portfolio',
+        badge: 'Asset Owner',
         badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
         isLastUsed: true
       }
     ];
 
-    const defaultWorkspace = memberships[0].workspaceUrl;
-    const defaultRole = memberships[0].role;
-
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user?.id || `usr_${Date.now()}`,
-        name: user?.name || 'Enterprise Member',
+        id: `usr_${Date.now()}`,
+        name: norm.split('@')[0] || 'Member',
         identifier: norm,
         role: defaultRole
       },
       memberships,
-      needs_context_choice: memberships.length > 1,
+      needs_context_choice: false,
       redirect_url: defaultWorkspace
     });
 
-    // Set secure session cookies
+    // Set secure HttpOnly session cookie
     response.cookies.set('officex_auth', '1', {
       path: '/',
-      httpOnly: false, // Accessible to client-side scripts
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });
@@ -87,6 +110,15 @@ export async function POST(request: Request) {
     response.cookies.set('officex_session_active', '1', {
       path: '/',
       httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 86400 * 7
+    });
+
+    response.cookies.set('officex_user_email', encodeURIComponent(norm), {
+      path: '/',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });
@@ -94,6 +126,7 @@ export async function POST(request: Request) {
     response.cookies.set('officex_user_role', defaultRole, {
       path: '/',
       httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 86400 * 7
     });

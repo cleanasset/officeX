@@ -168,20 +168,13 @@ export interface WorkspaceMembership {
   isLastUsed?: boolean;
 }
 
-// Enterprise organizations configured with SSO
-export const ENTERPRISE_SSO_CONFIG: Record<string, { orgName: string; provider: string; ssoUrl: string }> = {
-  'dlf.in': { orgName: 'DLF Cybercity Developers', provider: 'Azure AD / Microsoft Entra', ssoUrl: 'https://login.microsoftonline.com/dlf.in' },
-  'tcs.com': { orgName: 'Tata Consultancy Services', provider: 'Okta Enterprise SSO', ssoUrl: 'https://tcs.okta.com' },
-  'infosys.com': { orgName: 'Infosys CRE Infrastructure', provider: 'PingFederate SAML', ssoUrl: 'https://sso.infosys.com' },
-  'cbre.com': { orgName: 'CBRE Global Commercial Services', provider: 'Microsoft Entra ID', ssoUrl: 'https://login.microsoftonline.com/cbre.com' },
-  'jll.com': { orgName: 'JLL Corporate Solutions', provider: 'Workday SAML 2.0', ssoUrl: 'https://jll.okta.com' },
-  'brookfieldproperties.com': { orgName: 'Brookfield Properties India', provider: 'Azure AD SAML', ssoUrl: 'https://login.microsoftonline.com/brookfield' }
-};
+// Enterprise organizations configured with SSO (Configured via admin dashboard SAML/OIDC integrations)
+export const ENTERPRISE_SSO_CONFIG: Record<string, { orgName: string; provider: string; ssoUrl: string }> = {};
 
-// Mock User Directory matching personas defined in Section 03 & 20
+// Mock User Directory has been completely decommissioned for production security
 export interface MockUserRecord {
   id: string;
-  identifier: string; // email or phone
+  identifier: string;
   name: string;
   requiresMfa: boolean;
   hasPassword: boolean;
@@ -189,266 +182,16 @@ export interface MockUserRecord {
   preferredContextId?: string;
 }
 
-export const MOCK_USERS: Record<string, MockUserRecord> = {
-  // Landlord & Asset Owner with multiple memberships across 2 orgs
-  'owner@officex.in': {
-    id: 'usr_owner_01',
-    identifier: 'owner@officex.in',
-    name: 'Ravi Singhal',
-    requiresMfa: false,
-    hasPassword: true,
-    preferredContextId: 'mem_acme_owner',
-    memberships: [
-      {
-        id: 'mem_acme_owner',
-        orgId: 'org_acme',
-        orgName: 'Commercial Asset Desk',
-        role: 'Property Owner & Asset Manager',
-        roleCode: 'OWNER',
-        workspaceTitle: 'Commercial Asset Desk',
-        workspaceUrl: '/properties',
-        propertyScope: '5 properties · Mumbai & Bengaluru',
-        badge: 'Asset Owner',
-        badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-        isLastUsed: true
-      },
-      {
-        id: 'mem_acme_leasing',
-        orgId: 'org_acme',
-        orgName: 'Commercial Asset Desk',
-        role: 'Commercial Leasing Director',
-        roleCode: 'LEASING',
-        workspaceTitle: 'Leasing & Occupancy Pipeline',
-        workspaceUrl: '/leasing',
-        propertyScope: 'All portfolio listings',
-        badge: 'Leasing',
-        badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-400/30'
-      },
-      {
-        id: 'mem_novatech_tenant',
-        orgId: 'org_novatech',
-        orgName: 'NovaTech Solutions India',
-        role: 'Executive Board Member',
-        roleCode: 'TENANT',
-        workspaceTitle: 'Enterprise Workplace Portal',
-        workspaceUrl: '/tenant',
-        propertyScope: 'Apex Business Tower · Floor 5A',
-        badge: 'Occupier',
-        badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-400/30'
-      }
-    ]
-  },
-  'ravi@acme.com': {
-    id: 'usr_owner_01',
-    identifier: 'ravi@acme.com',
-    name: 'Ravi Singhal',
-    requiresMfa: false,
-    hasPassword: true,
-    preferredContextId: 'mem_acme_owner',
-    memberships: [
-      {
-        id: 'mem_acme_owner',
-        orgId: 'org_acme',
-        orgName: 'Commercial Asset Desk',
-        role: 'Property Owner & Asset Manager',
-        roleCode: 'OWNER',
-        workspaceTitle: 'Commercial Asset Desk',
-        workspaceUrl: '/properties',
-        propertyScope: '5 properties · Mumbai & Bengaluru',
-        badge: 'Asset Owner',
-        badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-        isLastUsed: true
-      },
-      {
-        id: 'mem_acme_leasing',
-        orgId: 'org_acme',
-        orgName: 'Commercial Asset Desk',
-        role: 'Commercial Leasing Director',
-        roleCode: 'LEASING',
-        workspaceTitle: 'Leasing & Occupancy Pipeline',
-        workspaceUrl: '/leasing',
-        propertyScope: 'All portfolio listings',
-        badge: 'Leasing',
-        badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-400/30'
-      }
-    ]
-  },
-  // Mobile user: Facility Operations Manager
-  '+919876543210': {
-    id: 'usr_fm_01',
-    identifier: '+919876543210',
-    name: 'Sunil Verma',
-    requiresMfa: false,
-    hasPassword: false, // Code/OTP primary
-    preferredContextId: 'mem_apex_fm',
-    memberships: [
-      {
-        id: 'mem_apex_fm',
-        orgId: 'org_apex_fm',
-        orgName: 'Apex Facilities Management',
-        role: 'Facility Operations Manager',
-        roleCode: 'FM',
-        workspaceTitle: 'FM Command Centre',
-        workspaceUrl: '/ops',
-        propertyScope: 'Apex Business Tower & Nexus Park',
-        badge: 'FM Ops',
-        badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
-        isLastUsed: true
-      },
-      {
-        id: 'mem_acme_ops',
-        orgId: 'org_acme',
-        orgName: 'Commercial Asset Desk',
-        role: 'Vendor Operations Lead',
-        roleCode: 'VENDOR',
-        workspaceTitle: 'Service Vendor Hub',
-        workspaceUrl: '/vendor',
-        propertyScope: 'MEP Maintenance Contract',
-        badge: 'Vendor Hub',
-        badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/30'
-      }
-    ]
-  },
-  'facilitymanager@officex.in': {
-    id: 'usr_fm_01',
-    identifier: 'facilitymanager@officex.in',
-    name: 'Sunil Verma',
-    requiresMfa: false,
-    hasPassword: true,
-    preferredContextId: 'mem_apex_fm',
-    memberships: [
-      {
-        id: 'mem_apex_fm',
-        orgId: 'org_apex_fm',
-        orgName: 'Apex Facilities Management',
-        role: 'Facility Operations Manager',
-        roleCode: 'FM',
-        workspaceTitle: 'FM Command Centre',
-        workspaceUrl: '/ops',
-        propertyScope: 'Apex Business Tower & Nexus Park',
-        badge: 'FM Ops',
-        badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
-        isLastUsed: true
-      }
-    ]
-  },
-  // Corporate Tenant Admin
-  'tenant@officex.in': {
-    id: 'usr_tenant_01',
-    identifier: 'tenant@officex.in',
-    name: 'Pooja Iyer',
-    requiresMfa: false,
-    hasPassword: true,
-    memberships: [
-      {
-        id: 'mem_novatech_tenant',
-        orgId: 'org_novatech',
-        orgName: 'NovaTech Solutions HQ',
-        role: 'Corporate Workplace Admin',
-        roleCode: 'TENANT',
-        workspaceTitle: 'Enterprise Workplace Portal',
-        workspaceUrl: '/tenant',
-        propertyScope: 'Apex Business Tower · Wings A & B',
-        badge: 'Tenant Admin',
-        badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-400/30',
-        isLastUsed: true
-      }
-    ]
-  },
-  // Service Vendor
-  'vendor@officex.in': {
-    id: 'usr_vendor_01',
-    identifier: 'vendor@officex.in',
-    name: 'Karan Mehra',
-    requiresMfa: false,
-    hasPassword: true,
-    memberships: [
-      {
-        id: 'mem_sterling_vendor',
-        orgId: 'org_sterling_mep',
-        orgName: 'Sterling MEP Services Ltd',
-        role: 'Service Vendor Partner',
-        roleCode: 'VENDOR',
-        workspaceTitle: 'Vendor Operations & Bidding Hub',
-        workspaceUrl: '/vendor',
-        propertyScope: 'All Active Client Sites',
-        badge: 'Service Vendor',
-        badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/30',
-        isLastUsed: true
-      }
-    ]
-  },
-  // Super Admin - Mandatory MFA
-  'admin@officex.in': {
-    id: 'usr_admin_01',
-    identifier: 'admin@officex.in',
-    name: 'Deepak Sharma (Admin)',
-    requiresMfa: true, // Mandatory MFA required!
-    hasPassword: true,
-    memberships: [
-      {
-        id: 'mem_super_admin',
-        orgId: 'org_officex_core',
-        orgName: 'OfficeX Platform HQ',
-        role: 'Super Administrator',
-        roleCode: 'ADMIN',
-        workspaceTitle: 'Super Admin Console',
-        workspaceUrl: '/admin',
-        propertyScope: 'Global Platform Ecosystem',
-        badge: 'Super Admin',
-        badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-400/30',
-        isLastUsed: true
-      }
-    ]
-  },
-  // Leasing Broker
-  'broker@officex.in': {
-    id: 'usr_broker_01',
-    identifier: 'broker@officex.in',
-    name: 'Arjun Kapoor',
-    requiresMfa: false,
-    hasPassword: true,
-    memberships: [
-      {
-        id: 'mem_leasing_broker',
-        orgId: 'org_cbre',
-        orgName: 'Apex Capital Advisors & Leasing',
-        role: 'Senior Leasing Partner',
-        roleCode: 'LEASING',
-        workspaceTitle: 'Leasing Broker CRM',
-        workspaceUrl: '/leasing',
-        propertyScope: 'Commercial Agency Mandates',
-        badge: 'Leasing Broker',
-        badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-400/30',
-        isLastUsed: true
-      }
-    ]
-  }
-};
+export const MOCK_USERS: Record<string, MockUserRecord> = {};
 
 /**
- * Finds mock user by email or normalized mobile number.
+ * Returns null — all mock user accounts have been completely removed.
  */
 export function findMockUser(identifier: string): MockUserRecord | null {
-  const norm = normalizeIdentifier(identifier);
-  if (MOCK_USERS[norm]) return MOCK_USERS[norm];
-
-  // Try raw identifier
-  const clean = identifier.trim().toLowerCase();
-  if (MOCK_USERS[clean]) return MOCK_USERS[clean];
-
-  // Match 10-digit mobile if entered with or without +91
-  const digitsOnly = clean.replace(/[\s\-()+]/g, '');
-  if (digitsOnly.length === 10) {
-    const with91 = `+91${digitsOnly}`;
-    if (MOCK_USERS[with91]) return MOCK_USERS[with91];
-  }
-
   return null;
 }
 
 // Bilingual Localization Dictionary (English & Hindi)
-// Addresses QA Checklist Item 31: "Hindi language toggle: All sign-in strings and OTP message in Hindi"
 export const AUTH_LOCALES = {
   en: {
     title: 'Sign in to OfficeX',
@@ -563,3 +306,17 @@ export const AUTH_LOCALES = {
     backToLogin: 'साइन इन पर वापस जाएं'
   }
 };
+
+/**
+ * Safely extracts and decodes user email from cookie string or parameter.
+ * Handles URL decoding (%40 -> @) so that database lookups and ownership filters never fail.
+ */
+export function getCleanUserEmail(raw: string | null | undefined): string {
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw).toLowerCase().trim();
+  } catch {
+    return raw.toLowerCase().trim();
+  }
+}
+

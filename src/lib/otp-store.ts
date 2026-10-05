@@ -7,13 +7,53 @@ interface OtpRecord {
   createdAt: number;
 }
 
+import fs from "fs";
+import path from "path";
+import os from "os";
+
+const OTP_DIR = process.env.NODE_ENV === "production" || process.env.VERCEL
+  ? path.join(os.tmpdir(), "data")
+  : path.join(process.cwd(), "data");
+const OTP_FILE = path.join(OTP_DIR, "otps.json");
+
+function readOtpDiskStore(): Map<string, OtpRecord> {
+  const map = new Map<string, OtpRecord>();
+  try {
+    if (fs.existsSync(OTP_FILE)) {
+      const content = fs.readFileSync(OTP_FILE, "utf8");
+      const parsed = JSON.parse(content);
+      for (const [k, v] of Object.entries(parsed)) {
+        map.set(k, v as OtpRecord);
+      }
+    }
+  } catch (e) {
+    // Graceful fallback
+  }
+  return map;
+}
+
+function writeOtpDiskStore(map: Map<string, OtpRecord>) {
+  try {
+    if (!fs.existsSync(OTP_DIR)) {
+      fs.mkdirSync(OTP_DIR, { recursive: true });
+    }
+    const obj: Record<string, OtpRecord> = {};
+    for (const [k, v] of map.entries()) {
+      obj[k] = v;
+    }
+    fs.writeFileSync(OTP_FILE, JSON.stringify(obj, null, 2), "utf8");
+  } catch (e) {
+    // Graceful fallback
+  }
+}
+
 // Global OTP map preserved across Next.js API re-evaluations
 const globalForOtp = globalThis as unknown as {
   _officexOtpStore?: Map<string, OtpRecord>;
 };
 
 const otpStore: Map<string, OtpRecord> =
-  globalForOtp._officexOtpStore || new Map<string, OtpRecord>();
+  globalForOtp._officexOtpStore || readOtpDiskStore();
 
 if (process.env.NODE_ENV !== "production") {
   globalForOtp._officexOtpStore = otpStore;
@@ -51,6 +91,7 @@ export function generateAndStoreOtp(identifier: string): {
     attempts: 0,
     createdAt: now,
   });
+  writeOtpDiskStore(otpStore);
 
   return { code };
 }
@@ -62,7 +103,17 @@ export function verifyStoredOtp(
 ): { valid: boolean; error?: string } {
   const cleanId = normalizeIdentifier(identifier);
   const cleanCode = userCode.trim();
-  const existing = otpStore.get(cleanId);
+  let existing = otpStore.get(cleanId);
+
+  // If not found in current memory worker, read from disk
+  if (!existing) {
+    const diskMap = readOtpDiskStore();
+    existing = diskMap.get(cleanId);
+    if (existing) {
+      otpStore.set(cleanId, existing);
+    }
+  }
+
   const now = Date.now();
 
   if (!existing) {
@@ -74,6 +125,7 @@ export function verifyStoredOtp(
 
   if (now > existing.expiresAt) {
     otpStore.delete(cleanId);
+    writeOtpDiskStore(otpStore);
     return {
       valid: false,
       error: "Verification code has expired. Please request a new one.",
@@ -82,6 +134,7 @@ export function verifyStoredOtp(
 
   if (existing.attempts >= MAX_ATTEMPTS) {
     otpStore.delete(cleanId);
+    writeOtpDiskStore(otpStore);
     return {
       valid: false,
       error: "Too many failed attempts. For your security, this code has been invalidated. Please request a new one.",
@@ -90,6 +143,7 @@ export function verifyStoredOtp(
 
   if (existing.code !== cleanCode) {
     existing.attempts += 1;
+    writeOtpDiskStore(otpStore);
     const remaining = MAX_ATTEMPTS - existing.attempts;
     return {
       valid: false,
@@ -100,8 +154,15 @@ export function verifyStoredOtp(
   // Code is valid!
   if (consume) {
     otpStore.delete(cleanId);
+    writeOtpDiskStore(otpStore);
   } else {
+    const verifyCount = ((existing as any).verifyCount || 0) + 1;
+    (existing as any).verifyCount = verifyCount;
     (existing as any).verified = true;
+    if (verifyCount >= 3) {
+      otpStore.delete(cleanId);
+    }
+    writeOtpDiskStore(otpStore);
   }
   return { valid: true };
 }

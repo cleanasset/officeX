@@ -12,6 +12,7 @@ import {
   round2,
   generateContractRentSteps
 } from './rent-roll-engine';
+import { persistDbToCloud, fetchDbFromCloud } from './cloud-db-sync';
 
 export interface OrgEntity {
   id: string;
@@ -874,13 +875,27 @@ export interface RentRollDatabase {
   isCleanPortfolio?: boolean;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'rent-roll-db.json');
+const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const SEED_DATA_DIR = path.join(process.cwd(), 'data');
+const SEED_DB_FILE = path.join(SEED_DATA_DIR, 'rent-roll-db.json');
 
-// Ensure directory exists
+const RUNTIME_DATA_DIR = IS_SERVERLESS ? '/tmp/data' : SEED_DATA_DIR;
+const DB_FILE = path.join(RUNTIME_DATA_DIR, 'rent-roll-db.json');
+
+// Global memory cache preserving DB across function invocations
+let memoryDbInstance: RentRollDatabase | null = null;
+
+// Ensure directory exists and seed if running in /tmp
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(RUNTIME_DATA_DIR)) {
+      fs.mkdirSync(RUNTIME_DATA_DIR, { recursive: true });
+    }
+    if (IS_SERVERLESS && !fs.existsSync(DB_FILE) && fs.existsSync(SEED_DB_FILE)) {
+      fs.copyFileSync(SEED_DB_FILE, DB_FILE);
+    }
+  } catch (err) {
+    // Non-blocking fallback
   }
 }
 
@@ -3531,19 +3546,38 @@ export function ensureSpacesAndContractsForProperties(parsed: RentRollDatabase):
   return false;
 }
 
-// Read database
+// Read database with memory caching and serverless safety
 export function getRentRollDb(): RentRollDatabase {
+  if (memoryDbInstance) {
+    return memoryDbInstance;
+  }
+
   ensureDataDir();
-  if (!fs.existsSync(DB_FILE)) {
-    const initial = getEmptyDatabase();
-    fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
-    return initial;
+  let parsed: any = null;
+
+  if (fs.existsSync(DB_FILE)) {
+    try {
+      const raw = fs.readFileSync(DB_FILE, 'utf8');
+      parsed = JSON.parse(raw);
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!parsed && fs.existsSync(SEED_DB_FILE)) {
+    try {
+      const raw = fs.readFileSync(SEED_DB_FILE, 'utf8');
+      parsed = JSON.parse(raw);
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!parsed) {
+    parsed = getEmptyDatabase();
   }
 
   try {
-    const raw = fs.readFileSync(DB_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    
     // Ensure all canonical arrays exist
     if (!parsed.clientAccounts) parsed.clientAccounts = [];
     if (!parsed.billingEntities) parsed.billingEntities = [];
@@ -3582,11 +3616,20 @@ export function getRentRollDb(): RentRollDatabase {
       parsed.config.makerCheckerEnabled = true;
     }
 
-    return parsed;
+    memoryDbInstance = parsed;
+
+    // Trigger async cloud hydration check from Supabase PostgreSQL
+    fetchDbFromCloud().then(cloudDb => {
+      if (cloudDb && cloudDb.properties) {
+        memoryDbInstance = cloudDb;
+      }
+    }).catch(() => {});
+
+    return memoryDbInstance as RentRollDatabase;
   } catch (e) {
     console.error("Error reading rent roll DB, initializing clean empty DB:", e);
     const initial = getEmptyDatabase();
-    fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
+    memoryDbInstance = initial;
     return initial;
   }
 }
@@ -3813,10 +3856,19 @@ export function processRazorpayCheckoutInStore(params: {
 }
 
 
-// Save database
+// Save database with persistent write-through and cloud backup
 export function saveRentRollDb(db: RentRollDatabase): void {
+  memoryDbInstance = db;
   ensureDataDir();
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[STORE] Local file write warning (cached in memory):', err);
+  }
+  // Asynchronously persist to Supabase PostgreSQL for cross-deployment permanence
+  persistDbToCloud(db).catch(err => {
+    console.warn('[STORE] Cloud persistence notice:', err);
+  });
 }
 
 // Log audit entry

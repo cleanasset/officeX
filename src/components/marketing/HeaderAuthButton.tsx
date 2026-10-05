@@ -13,6 +13,7 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { getAuthCookie, clearAuthCookie } from "@/lib/auth-storage";
+import { performClientLogout } from "@/lib/auth-client";
 
 interface HeaderAuthButtonProps {
   className?: string;
@@ -125,28 +126,10 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSignOut = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.clear();
-      localStorage.removeItem("officex_user_email");
-      localStorage.removeItem("officex_user_name");
-      localStorage.removeItem("officex_user_role");
-      localStorage.removeItem("officex_user_mobile");
-      localStorage.removeItem("officex_user_phone");
-      localStorage.removeItem("officex_user");
-      localStorage.removeItem("officex_subscription");
-      localStorage.removeItem("officex_dashboard");
-      localStorage.removeItem("officex_active_portal");
-      localStorage.removeItem("officex_active_org");
-      document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-    }
+  const handleSignOut = async () => {
     setIsLoggedIn(false);
     setMenuOpen(false);
-    router.push("/");
-    window.location.reload();
+    await performClientLogout("/");
   };
 
   const loginHref = loginContext === "rent-roll"

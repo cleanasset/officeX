@@ -28,6 +28,7 @@ import {
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 import { setAuthCookie } from "@/lib/auth-storage";
+import { isAuthenticated } from "@/lib/auth-client";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 import {
@@ -111,7 +112,7 @@ export default function RentRollPaymentModal({
       const storedState = localStorage.getItem("officex_property_state") || localStorage.getItem("officex_user_state") || "";
       const storedCity = localStorage.getItem("officex_property_city") || localStorage.getItem("officex_user_city") || "";
       const storedPhone = localStorage.getItem("officex_user_phone") || localStorage.getItem("officex_user_mobile") || "";
-      const sessionActive = localStorage.getItem("officex_session_active") === "1" || sessionStorage.getItem("officex_session_active") === "1";
+      const sessionActive = isAuthenticated();
 
       if (sessionActive || storedEmail) {
         setIsGoogleSession(true);
@@ -238,7 +239,7 @@ export default function RentRollPaymentModal({
         localStorage.setItem("officex_payment_id", freePaymentId);
         localStorage.setItem("officex_subscription", "active");
         sessionStorage.setItem("officex_subscription", "active");
-        document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
         if (email.trim()) {
           const cleanEmail = email.trim().toLowerCase();
           localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
@@ -285,7 +286,7 @@ export default function RentRollPaymentModal({
             localStorage.setItem("officex_payment_id", response.razorpay_payment_id);
             localStorage.setItem("officex_subscription", "active");
             sessionStorage.setItem("officex_subscription", "active");
-            document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+            document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
             if (email.trim()) {
               const cleanEmail = email.trim().toLowerCase();
               localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
@@ -359,22 +360,17 @@ export default function RentRollPaymentModal({
       sessionStorage.setItem("officex_subscription", "active");
       localStorage.setItem(`officex_sub_${cleanEmail}`, "active");
       sessionStorage.setItem(`officex_sub_${cleanEmail}`, "active");
-      document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=31536000; SameSite=Lax`;
-      document.cookie = "officex_subscription=active; path=/; max-age=31536000; SameSite=Lax";
+      document.cookie = `officex_sub_${encodeURIComponent(cleanEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
+      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
 
-      // Session flags - Ensure onboarding is marked pending until form is completed
+      // Session flags - Mark onboarding completed and active org verified
       localStorage.setItem("officex_session_active", "1");
       sessionStorage.setItem("officex_session_active", "1");
-      localStorage.removeItem("officex_onboarding_completed");
-      sessionStorage.removeItem("officex_onboarding_completed");
-      document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+      localStorage.setItem("officex_onboarding_completed", "1");
+      sessionStorage.setItem("officex_onboarding_completed", "1");
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-
-      // Clean slate: ZERO dummy properties and ZERO fake leases
-      localStorage.setItem("officex_user_properties", "[]");
-      localStorage.setItem("officex_active_leases", "[]");
-      localStorage.removeItem("officex_property_name");
-      localStorage.removeItem("officex_active_org");
+      localStorage.setItem("officex_active_org", "org_officex");
+      sessionStorage.setItem("officex_active_org", "org_officex");
 
       localStorage.setItem("officex_payment_id", paymentId);
       localStorage.setItem("officex_order_id", `ORD_${paymentId}`);
@@ -438,10 +434,14 @@ export default function RentRollPaymentModal({
         "RENTROLL12",
         state
       );
-      setSuccessMsg("🎉 Account created & 100% Free Subscription Activated! Launching Property Owner Onboarding...");
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_onboarding_completed", "1");
+        sessionStorage.setItem("officex_onboarding_completed", "1");
+      }
+      setSuccessMsg("🎉 Account created & 100% Free Subscription Activated! Launching Rent Roll Dashboard...");
       setTimeout(() => {
         onClose();
-        router.push(`/onboarding?role=owner&state=${encodeURIComponent(state)}&city=${encodeURIComponent(effectiveCity)}`);
+        router.push("/properties/rent-roll");
       }, 1000);
       return;
     }
@@ -473,10 +473,14 @@ export default function RentRollPaymentModal({
             appliedCoupon || "none",
             state
           );
-          setSuccessMsg("Payment successful! Launching Property Owner Onboarding...");
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_onboarding_completed", "1");
+            sessionStorage.setItem("officex_onboarding_completed", "1");
+          }
+          setSuccessMsg("Payment successful! Launching Rent Roll Dashboard...");
           setTimeout(() => {
             onClose();
-            router.push(`/onboarding?role=owner&state=${encodeURIComponent(state)}&city=${encodeURIComponent(effectiveCity)}`);
+            router.push("/properties/rent-roll");
           }, 1000);
         },
         onFailure: (err) => {
