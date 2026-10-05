@@ -8,12 +8,9 @@ export default function UserManagementPortal() {
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "", passwordMode: "auto", properties: ["Apex Tower"] as string[] });
 
   const users = [
-    { id: "USR-001", name: "Rajesh Kumar", email: "rajesh@officex.in", role: "Property Manager", portal: "Property Portal", properties: "6 Properties", lastLogin: "2h ago", status: "Active" },
-    { id: "USR-002", name: "Ravi Menon", email: "ravi@officex.in", role: "Leasing Agent", portal: "Leasing Portal", properties: "4 Properties", lastLogin: "1d ago", status: "Active" },
-    { id: "USR-003", name: "Priya Sharma", email: "priya@tcs.com", role: "Tenant Admin", portal: "Tenant Portal", properties: "Apex Tower", lastLogin: "3h ago", status: "Active" },
-    { id: "USR-004", name: "Amit K.", email: "amit@officex.in", role: "Platform Auditor", portal: "Admin Portal", properties: "All Properties", lastLogin: "5d ago", status: "Suspended" },
-    { id: "USR-005", name: "Neha Singh", email: "neha@cleanpro.com", role: "Vendor Admin", portal: "Vendor Portal", properties: "—", lastLogin: "2d ago", status: "Active" },
-    { id: "USR-006", name: "Sanjay Gupta", email: "sanjay@officex.in", role: "Facility Manager", portal: "Property Portal", properties: "Orion Park", lastLogin: "1h ago", status: "Active" }
+    { id: "USR-001", name: "Medistation Lifecare", email: "medistationlifecare@gmail.com", role: "Property Owner & Asset Manager", portal: "Commercial Portfolio", properties: "Active Portfolio", lastLogin: "Active", status: "Active" },
+    { id: "USR-002", name: "Pooja Singhania", email: "pooja@singhaniagroup.in", role: "Commercial Asset Owner", portal: "Commercial Portfolio", properties: "Singhania Group Portfolio", lastLogin: "Active", status: "Active" },
+    { id: "USR-003", name: "Vikram Singhania", email: "vikram.test@singhaniarealty.in", role: "Commercial Asset Manager", portal: "Commercial Portfolio", properties: "Singhania Realty Portfolio", lastLogin: "Active", status: "Active" }
   ];
 
   const allProperties = ["All Properties", "Apex Tower", "Crystal Tower", "Orion Park", "Zenith Plaza"];
@@ -48,7 +45,7 @@ export default function UserManagementPortal() {
           </tbody>
         </table>
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-          <p className="text-[10px] text-gray-400">Showing 1-6 of 24 users</p>
+          <p className="text-[10px] text-gray-400">Showing 1-3 of 3 users</p>
           <div className="flex gap-2"><button className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 cursor-pointer">Previous</button><button className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 cursor-pointer">Next</button></div>
         </div>
       </div>

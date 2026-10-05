@@ -5,10 +5,9 @@ export const dynamic = "force-dynamic";
 
 // In-memory persistent fallback cache for subscribed emails
 const memorySubscribedEmails = new Set<string>([
-  "admin.cleanasset@gmail.com",
-  "owner@officex.in",
-  "jiya.scalezix@gmail.com",
-  "jiyapatel181224@gmail.com"
+  "medistationlifecare@gmail.com",
+  "pooja@singhaniagroup.in",
+  "vikram.test@singhaniarealty.in"
 ]);
 
 export async function GET(request: Request) {

@@ -173,16 +173,16 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   ]
 };
 
-const roleHomes: Record<string, { label: string; roleName: string; route: string; email: string }> = {
-  properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/properties", email: "owner@officex.in" },
-  ops: { label: "Facility Management", roleName: "Facility Management", route: "/ops", email: "facilitymanager@officex.in" },
-  tenant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/tenant", email: "tenant@officex.in" },
-  vendor: { label: "Facility Services", roleName: "Facility Services", route: "/vendor", email: "vendor@officex.in" },
-  leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/leasing", email: "broker@officex.in" },
-  marketplace: { label: "FM Procurement", roleName: "FM Procurement", route: "/marketplace", email: "procurement@officex.in" },
-  admin: { label: "Executive Control", roleName: "Executive Control", route: "/admin", email: "admin@officex.in" },
-  reporting: { label: "Workplace Analytics", roleName: "Workplace Analytics", route: "/reporting", email: "auditor@officex.in" },
-  public: { label: "Commercial Discovery", roleName: "Commercial Discovery", route: "/public/search", email: "guest@officex.in" }
+const roleHomes: Record<string, { label: string; roleName: string; route: string }> = {
+  properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/properties" },
+  ops: { label: "Facility Management", roleName: "Facility Management", route: "/ops" },
+  tenant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/tenant" },
+  vendor: { label: "Facility Services", roleName: "Facility Services", route: "/vendor" },
+  leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/leasing" },
+  marketplace: { label: "FM Procurement", roleName: "FM Procurement", route: "/marketplace" },
+  admin: { label: "Executive Control", roleName: "Executive Control", route: "/admin" },
+  reporting: { label: "Workplace Analytics", roleName: "Workplace Analytics", route: "/reporting" },
+  public: { label: "Commercial Discovery", roleName: "Commercial Discovery", route: "/public/search" }
 };
 
 // Mapping alias paths to corresponding portal keys

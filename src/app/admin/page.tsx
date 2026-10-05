@@ -534,15 +534,15 @@ export default function SuperAdminDashboard() {
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2">
                       <div className="flex justify-between text-slate-600">
                         <span>Full Name</span>
-                        <strong className="text-slate-900">Rajesh Kumar</strong>
+                        <strong className="text-slate-900">Vikram Singhania</strong>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Assigned Designation</span>
-                        <strong className="text-slate-900">Regional Operations Lead (Pune Hub)</strong>
+                        <strong className="text-slate-900">Commercial Asset Manager</strong>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Corporate Email</span>
-                        <strong className="text-[#0F8B7D]">rajesh.k@officex.in</strong>
+                        <strong className="text-[#0F8B7D]">vikram.test@singhaniarealty.in</strong>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Access Roles</span>

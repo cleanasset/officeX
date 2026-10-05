@@ -29,8 +29,7 @@ export default function Topbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Profile Menu State
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState("owner@officex.in");
+  const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
