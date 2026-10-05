@@ -220,10 +220,19 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         const defaultEntity = (billingEntities && billingEntities.length > 0)
           ? (billingEntities.find((b: any) => b.isDefault) || billingEntities[0])
           : null;
-        const displayOrgName = (org?.name && !org.name.includes("Acme"))
-          ? org.name
-          : (typeof window !== "undefined" ? (localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || localStorage.getItem("officex_portfolio_name")) : "") || "Commercial Portfolio Profile";
-        const isKycComplete = Boolean((org?.pan || org?.gstin) && (org?.bankAccountNumber || defaultEntity?.bankAccountNumber));
+        const rawOrg = org?.name || "";
+        const rawLocal = typeof window !== "undefined"
+          ? (localStorage.getItem("officex_active_org") || localStorage.getItem("officex_org_name") || "")
+          : "";
+        const isStale = (name: string) => !name || name.includes("testing groups") || name.includes("Acme");
+
+        const displayOrgName = !isStale(rawOrg)
+          ? rawOrg
+          : !isStale(rawLocal)
+          ? rawLocal
+          : "Commercial Portfolio Profile";
+
+        const isKycComplete = Boolean((org?.pan || org?.gstin) && (org?.bankAccountNumber || defaultEntity?.bankAccountNumber) && !isStale(rawOrg));
 
         return (
           <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">

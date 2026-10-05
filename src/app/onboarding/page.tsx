@@ -103,14 +103,20 @@ const PRESET_COLORS = [
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSegmentParam = searchParams.get("segment") as RoleType | null;
+  const rawRole = searchParams.get("segment") || searchParams.get("role") || searchParams.get("context") || "";
+  const initialSegmentParam: RoleType = 
+    rawRole === "flex_operator" || rawRole === "coworking" ? "flex_operator"
+    : rawRole === "fm_company" || rawRole === "vendor" || rawRole === "fm" ? "fm_company"
+    : rawRole === "pm_company" || rawRole === "pm" ? "pm_company"
+    : rawRole === "msp_operator" || rawRole === "msp" ? "msp_operator"
+    : "commercial_owner";
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isCommitted, setIsCommitted] = useState<boolean>(false);
 
   // ──── STEP 1: ROLE & COMPANY PROFILE ────
-  const [selectedRole, setSelectedRole] = useState<RoleType>(initialSegmentParam || "commercial_owner");
+  const [selectedRole, setSelectedRole] = useState<RoleType>(initialSegmentParam);
   const [orgData, setOrgData] = useState({
     legalName: "",
     tradeName: "",
@@ -179,17 +185,11 @@ function OnboardingContent() {
   // Prefill organization details from session on mount and detect existing users
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const isAlreadyOnboarded =
-        localStorage.getItem("officex_onboarding_completed") === "1" ||
-        sessionStorage.getItem("officex_onboarding_completed") === "1" ||
-        document.cookie.includes("officex_onboarding_completed=1") ||
-        (localStorage.getItem("officex_session_active") === "1" && localStorage.getItem("officex_property_id"));
+      const hasConfiguredProperty = localStorage.getItem("officex_property_id") && localStorage.getItem("officex_property_name");
+      const isCompleted = localStorage.getItem("officex_onboarding_completed") === "1" && hasConfiguredProperty;
 
-      if (isAlreadyOnboarded) {
-        setExistingUserMessage("User already exists! Your organization and properties are already configured. Please sign in to access your Rent Roll dashboard.");
-        setTimeout(() => {
-          router.push(`/login?context=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`);
-        }, 2500);
+      if (isCompleted) {
+        setExistingUserMessage("You already have an active commercial property in your portfolio. You can set up an additional entity below or view your Dashboard.");
       }
 
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";

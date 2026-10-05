@@ -26,21 +26,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error || "Invalid verification code." }, { status: 400 });
     }
 
-    // Confirm or create user in Supabase Auth
-    if (email && supabaseAdmin) {
+    // Confirm or create user in Supabase Auth & Postgres
+    if (email) {
       try {
-        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-        const existing = usersData?.users?.find(
-          (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-        );
-        if (existing) {
-          await supabaseAdmin.auth.admin.updateUserById(existing.id, { email_confirm: true });
-        } else {
-          await supabaseAdmin.auth.admin.createUser({
-            email: email.trim().toLowerCase(),
-            email_confirm: true,
-          });
+        let supaId: string | undefined;
+        if (supabaseAdmin) {
+          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+          const existing = usersData?.users?.find(
+            (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+          );
+          if (existing) {
+            supaId = existing.id;
+            await supabaseAdmin.auth.admin.updateUserById(existing.id, { email_confirm: true });
+          } else {
+            const { data: newUser } = await supabaseAdmin.auth.admin.createUser({
+              email: email.trim().toLowerCase(),
+              email_confirm: true,
+              user_metadata: { role: "property_manager" }
+            });
+            supaId = newUser?.user?.id;
+          }
         }
+
+        // Also insert into Postgres users table
+        await db.insert(users).values({
+          id: supaId || undefined,
+          email: email.trim().toLowerCase(),
+          fullName: email.split('@')[0],
+          role: "property_manager",
+          passwordHash: "SUPABASE_AUTH_MANAGED"
+        }).onConflictDoNothing();
       } catch (e) {
         console.warn("[VERIFY-OTP] Supabase sync notice:", e);
       }

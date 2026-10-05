@@ -366,10 +366,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
             document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
           }
-          setSuccessMsg("Google account verified! Proceeding to Organization Setup (Step 03)...");
+          setSuccessMsg("Google account verified! Launching your Setup Wizard...");
           setTimeout(() => {
             setSuccessMsg(null);
-            setStep(3);
+            router.push("/onboarding?context=rent-roll");
           }, 400);
           return;
         }
@@ -406,20 +406,25 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
           sessionStorage.setItem("officex_user_role", selectedRole);
           localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
           sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+          localStorage.setItem("officex_onboarding_completed", "0");
+          sessionStorage.setItem("officex_onboarding_completed", "0");
+          localStorage.removeItem("officex_property_name");
+          localStorage.removeItem("officex_property_id");
           document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
           document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = "officex_onboarding_completed=0; path=/; max-age=86400; SameSite=Lax";
         }
-        setSuccessMsg("Contact details saved! Proceeding to Organization Setup (Step 03)...");
+        setSuccessMsg("Contact details saved! Launching your Setup Wizard...");
         setTimeout(() => {
           setSuccessMsg(null);
-          setStep(3);
+          router.push("/onboarding?context=rent-roll");
         }, 400);
         return;
       }
 
       setStep(2);
       setResendCountdown(30);
-      setSuccessMsg("A 6-digit verification code has been dispatched to your work email.");
+      setSuccessMsg(data.devOtp ? `Verification code sent to email. (Code: ${data.devOtp})` : "A 6-digit verification code has been dispatched to your work email.");
     } catch (err: any) {
       console.error("Register error:", err);
       setError("Network error. Please try again.");
@@ -513,15 +518,18 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         localStorage.setItem("officex_phone_verified", "1");
         localStorage.setItem("officex_email_verified", "1");
 
+        localStorage.setItem("officex_onboarding_completed", "0");
+        sessionStorage.setItem("officex_onboarding_completed", "0");
+        document.cookie = "officex_onboarding_completed=0; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
       }
 
-      setSuccessMsg("Contact verified! Proceeding to Organization Master (S05/S06)...");
+      setSuccessMsg("Contact verified! Launching your Workspace Setup Wizard...");
       setTimeout(() => {
         setSuccessMsg(null);
-        setStep(3); // Advance to S05/S06: Organization Setup!
+        router.push(`/onboarding?context=rent-roll&redirect=${encodeURIComponent(initialRedirect || "/properties/rent-roll")}`);
       }, 500);
     } catch (err: any) {
       console.error("OTP error:", err);
@@ -664,10 +672,10 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    setSuccessMsg(isRentRoll ? "Account created! Launching your Rent Roll Workspace..." : "Account created! Launching Role-Based Onboarding Suite...");
+    setSuccessMsg(isRentRoll ? "Account created! Launching your Setup Wizard..." : "Account created! Launching Role-Based Onboarding Suite...");
     setTimeout(() => {
       if (isRentRoll) {
-        router.push("/properties/rent-roll");
+        router.push("/onboarding?context=rent-roll");
       } else {
         const roleParam = selectedRole === "owner" ? "owner" : selectedRole === "broker" ? "broker" : selectedRole === "vendor" ? "vendor" : "tenant";
         router.push(`/onboarding?role=${encodeURIComponent(roleParam)}`);

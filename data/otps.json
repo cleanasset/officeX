@@ -1,0 +1,8 @@
+{
+  "test_verify_unique_99@example.com": {
+    "code": "789808",
+    "expiresAt": 1791178388300,
+    "attempts": 0,
+    "createdAt": 1791177788300
+  }
+}

@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { generateAndStoreOtp } from "@/lib/otp-store";
 import { sendOtpEmail } from "@/lib/email-service";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -34,7 +35,43 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user already exists
+    // Check if user already exists in Postgres or Supabase Auth
+    let supaUserId: string | null = null;
+    if (supabaseAdmin) {
+      try {
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const existingAuth = usersData?.users?.find(
+          (u) => u.email?.toLowerCase() === cleanEmail
+        );
+        if (existingAuth) {
+          return NextResponse.json(
+            { error: "An account with this email already exists. Please Sign In." },
+            { status: 409 }
+          );
+        }
+
+        // Create user in Supabase Auth immediately with their password
+        const { data: newAuthUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+          email: cleanEmail,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: fullName.trim(),
+            mobile: `${mobileCountryCode}${cleanMobile}`,
+            role: "property_manager"
+          }
+        });
+
+        if (authErr) {
+          console.warn("[REGISTER] Supabase Auth createUser notice:", authErr.message);
+        } else if (newAuthUser?.user) {
+          supaUserId = newAuthUser.user.id;
+        }
+      } catch (authEx) {
+        console.warn("[REGISTER] Supabase Auth error:", authEx);
+      }
+    }
+
     try {
       const existingUser = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
       if (existingUser.length > 0) {
@@ -43,8 +80,17 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
+
+      // Insert into Postgres users table
+      await db.insert(users).values({
+        id: supaUserId || undefined,
+        email: cleanEmail,
+        fullName: fullName.trim(),
+        role: "property_manager",
+        passwordHash: "SUPABASE_AUTH_MANAGED"
+      });
     } catch (e) {
-      console.warn("DB check fallback:", e);
+      console.warn("DB user insert fallback:", e);
     }
 
     // Generate real 6-digit cryptographic verification code

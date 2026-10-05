@@ -350,40 +350,110 @@ export async function POST(req: Request) {
 
     saveRentRollDb(db);
 
-    // 7. Sync Property to Supabase/PostgreSQL if configured
+    // 7. Sync Organization & Property to Supabase/PostgreSQL Database
     try {
       const client = supabaseAdmin || supabase;
       if (client && committedProperty) {
-        await client.from("properties").upsert({
-          id: committedProperty.id,
-          name: committedProperty.name,
-          type: committedProperty.type,
-          address: committedProperty.address,
-          city: committedProperty.city,
-          state: committedProperty.state,
-          micro_market: committedProperty.microMarket,
-          pincode: committedProperty.pincode,
-          grade: committedProperty.grade,
-          total_area: committedProperty.totalArea,
-          owner_name: committedProperty.ownerName,
-          owner_company: committedProperty.ownerCompany,
-          owner_user_id: userEmail || "owner@officex.com"
-        });
+        const cookieStore = await cookies();
+        const userEmail = (
+          cookieStore.get("officex_user_email")?.value ||
+          body.userEmail ||
+          organization.email ||
+          ""
+        ).trim().toLowerCase();
 
-        // Provision user in Supabase Auth if not already existing
-        if (userEmail && userEmail.includes('@')) {
-          try {
-            await client.auth.admin.createUser({
-              email: userEmail,
-              email_confirm: true,
-              user_metadata: {
-                full_name: orgName,
-                organization: orgName,
-                role: "Commercial Owner"
+        // 1. Resolve active user UUID in public.users
+        let activeUserId: string | null = null;
+        if (userEmail) {
+          const { data: userRow } = await client
+            .from("users")
+            .select("id")
+            .eq("email", userEmail)
+            .maybeSingle();
+
+          if (userRow?.id) {
+            activeUserId = userRow.id;
+          } else if (supabaseAdmin) {
+            try {
+              const { data: newAuthUser } = await supabaseAdmin.auth.admin.createUser({
+                email: userEmail,
+                email_confirm: true,
+                user_metadata: { full_name: orgName, role: "property_manager" }
+              });
+              if (newAuthUser?.user?.id) {
+                activeUserId = newAuthUser.user.id;
+                await client.from("users").insert({
+                  id: activeUserId,
+                  email: userEmail,
+                  fullName: orgName,
+                  role: "property_manager",
+                  passwordHash: "SUPABASE_AUTH_MANAGED"
+                });
               }
-            });
-          } catch {
-            // User already registered - non-blocking
+            } catch {}
+          }
+        }
+
+        // 2. Insert Organization into Supabase Postgres
+        let orgId: string | null = null;
+        try {
+          const { data: orgRow } = await client.from("organizations").insert({
+            name: orgName,
+            pan: (db.organization.pan || "").toUpperCase() || null,
+            gstin: (db.organization.gstin || "").toUpperCase() || null,
+            address: db.organization.address || null,
+            city: db.organization.city || null,
+            state: db.organization.state || null,
+            currency: db.organization.currency || "INR"
+          }).select("id").maybeSingle();
+          if (orgRow?.id) orgId = orgRow.id;
+        } catch (orgErr) {
+          console.warn("[ONBOARDING] Postgres organization insert warning:", orgErr);
+        }
+
+        // 3. Insert Property into Supabase Postgres
+        const isUuid = committedProperty.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(committedProperty.id);
+        const { data: propRow, error: propErr } = await client.from("properties").insert({
+          id: isUuid ? committedProperty.id : undefined,
+          org_id: orgId || undefined,
+          name: committedProperty.name || "Primary Commercial Asset",
+          type: committedProperty.type || "Commercial Office",
+          address: committedProperty.address || committedProperty.city || "Commercial Street",
+          city: committedProperty.city || "Mumbai",
+          state: committedProperty.state || "Maharashtra",
+          micro_market: committedProperty.microMarket || "",
+          pincode: committedProperty.pincode || "400051",
+          grade: "A",
+          total_area: committedProperty.totalArea || 25000,
+          chargeable_area: committedProperty.chargeableArea || 25000,
+          owner_name: committedProperty.ownerName || orgName,
+          owner_company: committedProperty.ownerCompany || orgName,
+          owner_user_id: activeUserId || undefined
+        }).select().maybeSingle();
+
+        if (propErr) {
+          console.warn("[ONBOARDING] Postgres property insert notice:", propErr.message);
+        }
+
+        // 4. Link user to property in user_properties
+        if (activeUserId && propRow?.id) {
+          await client.from("user_properties").insert({
+            user_id: activeUserId,
+            property_id: propRow.id
+          }).maybeSingle();
+        }
+
+        // 5. Insert Spaces if present
+        if (propRow?.id && db.spaces.length > 0) {
+          for (const sp of db.spaces.slice(0, 5)) {
+            await client.from("spaces").insert({
+              property_id: propRow.id,
+              space_number: sp.unitNumber || "Unit 101",
+              chargeable_area: sp.chargeableArea || 5000,
+              base_rent_psf: sp.baseRentPsf || 150,
+              cam_rate_psf: sp.camRatePsf || 25,
+              status: sp.status === "occupied" ? "leased" : "available"
+            }).maybeSingle();
           }
         }
       }

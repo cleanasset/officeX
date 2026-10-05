@@ -555,16 +555,29 @@ function RentRollPageInner() {
         try {
           localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
         } catch {}
-        const mergedMap = new Map();
-        serverProps.forEach((p: any) => {
-          if (p) mergedMap.set(p.id, p);
-        });
-        localProps.forEach((p: any) => {
-          if (p && email && p.ownerEmail && p.ownerEmail.toLowerCase() === email.toLowerCase()) {
-            mergedMap.set(p.id, p);
-          }
-        });
-        setProperties(Array.from(mergedMap.values()));
+
+        if (serverProps.length === 0) {
+          try {
+            localStorage.removeItem("officex_user_properties");
+            localStorage.removeItem("officex_property_id");
+            localStorage.removeItem("officex_property_name");
+            localStorage.removeItem("officex_active_leases");
+            localStorage.removeItem("officex_active_org");
+            localStorage.removeItem("officex_org_name");
+          } catch {}
+          setProperties([]);
+        } else {
+          const mergedMap = new Map();
+          serverProps.forEach((p: any) => {
+            if (p) mergedMap.set(p.id, p);
+          });
+          localProps.forEach((p: any) => {
+            if (p && email && p.ownerEmail && p.ownerEmail.toLowerCase() === email.toLowerCase()) {
+              mergedMap.set(p.id, p);
+            }
+          });
+          setProperties(Array.from(mergedMap.values()));
+        }
       }
       if (leasesRes.ok) {
         const serverLeases = await leasesRes.json();
@@ -866,7 +879,7 @@ function RentRollPageInner() {
               </p>
             </div>
             <button
-              onClick={() => router.push("/properties/add?mode=primary")}
+              onClick={() => router.push("/onboarding?context=rent-roll")}
               className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
             >
               <span>Complete Primary Property Setup</span>
@@ -885,7 +898,7 @@ function RentRollPageInner() {
             }}
             onOpenGenerateInvoices={handleGenerateInvoicesBatch}
             propertiesCount={properties.length}
-            onOpenAddProperty={() => router.push("/properties/add")}
+            onOpenAddProperty={() => router.push(properties.length === 0 ? "/onboarding?context=rent-roll" : "/properties/add")}
             onOpenImportCsv={() => setIsImportModalOpen(true)}
             onOpenProfileSettings={() => setIsProfileBankingOpen(true)}
             organizationData={orgBranding}
