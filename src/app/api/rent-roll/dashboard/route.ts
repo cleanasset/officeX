@@ -8,7 +8,8 @@ import {
   calculateCapRate,
   calculateAgingBuckets,
   computeFullLeaseSummary,
-import { round2 } from "@/lib/rent-roll-engine";
+  round2
+} from "@/lib/rent-roll-engine";
 import { getCleanUserEmail } from "@/lib/auth-utils";
 
 export async function GET(req: Request) {

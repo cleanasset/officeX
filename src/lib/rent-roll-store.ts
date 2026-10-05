@@ -876,7 +876,7 @@ export interface RentRollDatabase {
 }
 
 const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-const SEED_DATA_DIR = path.join(process.cwd(), 'data');
+const SEED_DATA_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'data');
 const SEED_DB_FILE = path.join(SEED_DATA_DIR, 'rent-roll-db.json');
 
 const RUNTIME_DATA_DIR = IS_SERVERLESS ? '/tmp/data' : SEED_DATA_DIR;

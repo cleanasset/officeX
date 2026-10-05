@@ -3,7 +3,6 @@ import { detectIdentifierType, maskIdentifier, normalizeIdentifier } from '@/lib
 import { generateAndStoreOtp } from '@/lib/otp-store';
 import { sendOtpEmail } from '@/lib/email-service';
 import { supabase } from '@/lib/supabase';
-import { getRentRollData } from '@/lib/rent-roll-store';
 import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;

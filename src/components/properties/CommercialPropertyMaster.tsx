@@ -83,6 +83,9 @@ interface LeasableSpaceUnit {
   fitoutCondition: "bare_shell" | "warm_shell" | "fully_fitted" | "plug_and_play";
   status: "vacant" | "occupied" | "reserved" | "under_fitout" | "not_leasable";
   tenantName?: string;
+  tenantLegalName?: string;
+  tenantGstin?: string;
+  tenantPan?: string;
   tenantEmail?: string;
   tenantPhone?: string;
   contactPerson?: string;
@@ -93,6 +96,8 @@ interface LeasableSpaceUnit {
   escalationPct?: number;
   escalationFrequencyYears?: number;
   securityDepositMonths?: number;
+  rentAgreementFileName?: string;
+  rentAgreementDocUrl?: string;
   // Dynamic Fitout Inclusions (Item 9)
   workstationCount?: number;
   privateCabins?: number;
@@ -241,52 +246,41 @@ export default function CommercialPropertyMaster() {
       return;
     }
 
-    // Strict Statutory Identification Validation based on Entity Constitution
-    // 1. CIN / LLPIN Validation
-    if (entityType === "pvt_ltd" || entityType === "public_ltd") {
+    // Smart Statutory Validation: Validate format if provided, without blocking creation
+    // 1. CIN / LLPIN Validation (Optional)
+    if (cinNumber.trim()) {
       const cleanCin = cinNumber.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (!cleanCin) {
-        alert("Corporate Identification Number (CIN) is compulsory for Private Limited and Public Limited companies. Please provide a valid MCA CIN.");
+      if (cleanCin && !isCinValid(cleanCin)) {
+        alert(`Invalid Corporate Identification Number "${cinNumber}". Please check the 21-digit MCA CIN or leave blank.`);
         return;
       }
-      if (!isCinValid(cleanCin)) {
-        alert(`Invalid Corporate Identification Number "${cinNumber}". Please provide a valid 21-digit MCA CIN (or registration code).`);
-        return;
-      }
-    } else if (entityType === "llp") {
+    } else if (llpinNumber.trim()) {
       const cleanLlpin = llpinNumber.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (!cleanLlpin) {
-        alert("LLPIN (Limited Liability Partnership Identification Number) is compulsory for LLPs. Please provide the 7-character LLPIN (e.g. AAA-1234).");
+      if (cleanLlpin && !/^[A-Z0-9]{6,9}$/.test(cleanLlpin)) {
+        alert("LLPIN must be 6 to 9 alphanumeric characters (e.g. AAA-1234).");
         return;
       }
     }
 
-    // 2. PAN Validation (Compulsory for ALL entities under Section 194I)
+    // 2. PAN Validation (Validate format if provided)
     const cleanPan = panNumber.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (!cleanPan) {
-      alert("Income Tax PAN is compulsory for all commercial property landlords under Section 194-I of the Income Tax Act.");
-      return;
-    }
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (!panRegex.test(cleanPan)) {
-      alert(`Invalid Income Tax PAN "${panNumber}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
-      return;
-    }
-
-    // 3. GSTIN Validation (Compulsory for corporate entities unless exempted; optional for sole proprietors & individuals)
-    const cleanGst = propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const isCorporate = entityType === "pvt_ltd" || entityType === "public_ltd" || entityType === "llp" || entityType === "trust_reit";
-    if (isCorporate && !gstExempted) {
-      if (!cleanGst) {
-        alert(`15-digit GSTIN is compulsory for ${entityType === "llp" ? "LLPs" : "incorporated companies"} leasing commercial real estate. If turnover is under threshold, mark as GST Exempt.`);
+    if (cleanPan) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(cleanPan)) {
+        alert(`Invalid Income Tax PAN "${panNumber}". Income Tax PAN must be a valid 10-character code (e.g. ABCDE1234F).`);
         return;
       }
+    }
+
+    // 3. GSTIN Validation (Validate format if provided)
+    const cleanGst = propertyGstin.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (cleanGst && !gstExempted) {
       const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
       if (!gstRegex.test(cleanGst)) {
-        alert(`Invalid GSTIN "${propertyGstin}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5).`);
+        alert(`Invalid GSTIN "${propertyGstin}". GSTIN must be 15 characters (e.g. 27ABCDE1234F1Z5) or mark as GST Exempt.`);
         return;
       }
-      if (!cleanGst.includes(cleanPan)) {
+      if (cleanPan && !cleanGst.includes(cleanPan)) {
         const proceed = window.confirm(`Notice: Under Indian GST rules, characters 3 to 12 of GSTIN usually match the entity's 10-digit PAN.\n\nYour GSTIN is: "${cleanGst}"\nYour PAN is: "${cleanPan}"\n\nClick OK if you want to proceed with this GSTIN, or Cancel to correct.`);
         if (!proceed) return;
       }
@@ -1034,6 +1028,36 @@ export default function CommercialPropertyMaster() {
         // Zero dummy pre-feeded data: default to custom empty entry
         setSpvs([]);
         setSelectedSpvId("custom");
+      }
+
+      // Auto-fill Primary Property details from active session & sign-up
+      const autoPropName = (localStorage.getItem("officex_property_name") || localStorage.getItem("officex_active_org") || "").trim();
+      if (autoPropName && !assetName) {
+        setAssetName(autoPropName);
+      }
+      const autoCity = (localStorage.getItem("officex_property_city") || localStorage.getItem("officex_org_city") || localStorage.getItem("officex_user_city") || "").trim();
+      if (autoCity && !city) {
+        setCity(autoCity);
+      }
+      const autoState = (localStorage.getItem("officex_property_state") || localStorage.getItem("officex_org_state") || localStorage.getItem("officex_user_state") || "").trim();
+      if (autoState && !state) {
+        setState(autoState);
+      }
+      const autoAddress = (localStorage.getItem("officex_org_address") || localStorage.getItem("officex_user_address") || "").trim();
+      if (autoAddress && !address) {
+        setAddress(autoAddress);
+      }
+      const autoPan = (localStorage.getItem("officex_org_pan") || localStorage.getItem("officex_user_pan") || "").trim();
+      if (autoPan && !panNumber) {
+        setPanNumber(autoPan);
+      }
+      const autoGst = (localStorage.getItem("officex_property_gstin") || localStorage.getItem("officex_org_gstin") || localStorage.getItem("officex_user_gstin") || "").trim();
+      if (autoGst && !propertyGstin) {
+        setPropertyGstin(autoGst);
+      }
+      const autoArea = Number(localStorage.getItem("officex_leasable_area")) || 0;
+      if (autoArea > 0 && !totalChargeableArea) {
+        setTotalChargeableArea(autoArea);
       }
     }
   }, []);
@@ -2764,6 +2788,33 @@ export default function CommercialPropertyMaster() {
                                         onChange={(e) => handleUpdateUnitField(u.id, "tenantPhone", e.target.value)}
                                         className="w-24 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] placeholder:text-slate-400 text-slate-700 font-mono bg-white"
                                       />
+                                    </div>
+                                    <div className="flex items-center gap-1 pt-0.5">
+                                      <label className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-teal-300 hover:border-teal-500 bg-teal-50/50 hover:bg-teal-50 text-[10px] text-teal-800 font-bold cursor-pointer transition-colors max-w-[200px] truncate" title={u.rentAgreementFileName || "Upload Rent Agreement (PDF)"}>
+                                        <FileText size={10} className="text-[#0F8B7D] shrink-0" />
+                                        <span className="truncate">{u.rentAgreementFileName || "Upload Agreement (PDF)"}</span>
+                                        <input
+                                          type="file"
+                                          accept=".pdf,.doc,.docx"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            const f = e.target.files?.[0];
+                                            if (f) {
+                                              handleUpdateUnitField(u.id, "rentAgreementFileName", f.name);
+                                            }
+                                          }}
+                                        />
+                                      </label>
+                                      {u.rentAgreementFileName && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateUnitField(u.id, "rentAgreementFileName", undefined)}
+                                          className="text-[10px] text-rose-500 hover:text-rose-700 font-black p-0.5"
+                                          title="Remove agreement"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 ) : (

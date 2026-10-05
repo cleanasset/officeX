@@ -13,7 +13,7 @@ import os from "os";
 
 const OTP_DIR = process.env.NODE_ENV === "production" || process.env.VERCEL
   ? path.join(os.tmpdir(), "data")
-  : path.join(process.cwd(), "data");
+  : path.join(/*turbopackIgnore: true*/ process.cwd(), "data");
 const OTP_FILE = path.join(OTP_DIR, "otps.json");
 
 function readOtpDiskStore(): Map<string, OtpRecord> {

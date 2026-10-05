@@ -232,7 +232,7 @@ export interface VisitorComplianceDatabase {
 // File-backed Persistence Layer
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'visitor-compliance-db.json');
 
 function ensureDataDir() {

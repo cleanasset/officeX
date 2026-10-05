@@ -351,9 +351,9 @@ export async function POST(req: Request) {
               ? leaseSummary.lockInEndDate.toISOString().split("T")[0]
               : new Date(Date.now() + 3 * 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
             noticePeriodDays: 90,
-            status: "pending_approval",
-            approvalStatus: "submitted",
-            isTermsPending: true,
+            status: u.rentAgreementFileName ? "active" : "pending_approval",
+            approvalStatus: u.rentAgreementFileName ? "approved" : "submitted",
+            isTermsPending: !u.rentAgreementFileName,
             renewalStatus: "not_due",
             billingFrequency: "monthly",
             billingDueDay: 5,
@@ -361,7 +361,14 @@ export async function POST(req: Request) {
             tdsRate: 10,
             brokerName: "Direct Institutional Lease",
             brokeragePaid: 0,
-            notes: "Skipped terms during property creation - Pending tenant onboarding & acceptance",
+            rentAgreementFileName: u.rentAgreementFileName || undefined,
+            documents: u.rentAgreementFileName ? [{
+              id: `doc-${Date.now()}-${i + 1}`,
+              name: u.rentAgreementFileName,
+              type: "Lease Agreement",
+              uploadedAt: new Date().toISOString()
+            }] : [],
+            notes: u.rentAgreementFileName ? "Executed Lease Agreement attached during Property Setup" : "Created during property setup - Pending tenant onboarding & acceptance",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };

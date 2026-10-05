@@ -9,7 +9,7 @@ interface RateLimitEntry {
 // Storage path: /tmp in serverless/Vercel, or local data folder
 const DATA_DIR = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
   ? '/tmp'
-  : path.join(process.cwd(), 'data');
+  : path.join(/*turbopackIgnore: true*/ process.cwd(), 'data');
 
 const RATE_LIMIT_FILE = path.join(DATA_DIR, 'officex_ratelimit.json');
 

@@ -50,7 +50,7 @@ export interface ComplianceDatabase {
   ppmSchedule: PPMAssetRecord[];
 }
 
-const SEED_PATH = path.join(process.cwd(), "data", "compliance-db.json");
+const SEED_PATH = path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "compliance-db.json");
 const TMP_PATH = path.join(os.tmpdir(), "compliance-db.json");
 
 function getStoragePath(): string {

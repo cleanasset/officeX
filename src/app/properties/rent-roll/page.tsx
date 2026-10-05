@@ -851,6 +851,29 @@ function RentRollPageInner() {
 
       {/* ──── MAIN BODY CONTENT ──── */}
       <div className="w-full">
+        {properties.length === 0 && (
+          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-teal-50/90 via-emerald-50/80 to-white border border-teal-200/90 shadow-2xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
+            <div className="space-y-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-black uppercase tracking-wider">
+                Primary Property Setup Pending
+              </span>
+              <h3 className="text-base font-black text-slate-900">
+                Welcome to OfficeX! Please complete your Primary Property setup
+              </h3>
+              <p className="text-xs text-slate-600 max-w-2xl">
+                Add your primary commercial building, spaces, and optional active tenants to start tracking real-time occupancy, WALT, and rental cash flows.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push("/properties/add?mode=primary")}
+              className="px-5 py-2.5 bg-[#0F8B7D] hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Complete Primary Property Setup</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {activeTab === "dashboard" && (
           <DashboardTab
             data={dashboardData}

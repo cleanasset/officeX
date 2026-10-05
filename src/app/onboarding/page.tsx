@@ -757,18 +757,13 @@ function OnboardingContent() {
       // Option 1: Clean state — do NOT auto-create dummy/fallback properties from corporate office address.
       // Commercial properties are only created if explicitly registered by the user.
     } else if (currentStep === 2) {
-      // Step 2: Auto-save active editing entity into billingEntities
+      // Step 2: Auto-save active editing entity into billingEntities if user filled one
       let currentEntities = [...billingEntities];
       if (editEntity && editingEntityId) {
         currentEntities = currentEntities.map(b =>
           b.id === editingEntityId ? { ...editEntity, pan: editEntity.pan || editEntity.gstin.substring(2, 12) } : b
         );
         setBillingEntities(currentEntities);
-      }
-      const defaultEntity = currentEntities.find(b => b.isDefault) || currentEntities[0] || (editingEntityId ? editEntity : null) || newEntity;
-      if (!defaultEntity?.bankName?.trim() || !defaultEntity?.accountNumber?.trim() || !defaultEntity?.ifscCode?.trim()) {
-        alert("Bank account details (Bank Name, Account Number, and IFSC Code) are mandatory for Rent Roll onboarding. Please fill in your bank details.");
-        return;
       }
     }
     setCurrentStep((prev) => Math.min(5, prev + 1));
@@ -955,7 +950,7 @@ function OnboardingContent() {
 
   const steps = [
     { num: 1, title: "1. Organization", subtitle: "Entity, Asset & Address" },
-    { num: 2, title: "2. Billing & Bank", subtitle: "Mandatory Bank & GST" },
+    { num: 2, title: "2. Billing & Bank", subtitle: "SPV, GST & Bank (Optional)" },
     { num: 3, title: "3. Visual Branding", subtitle: "Logo & White-Label Domain" },
     { num: 4, title: "4. Data Ingestion", subtitle: "Properties & Leases" },
     { num: 5, title: "5. Review & Launch", subtitle: "Launch Rent Roll" }

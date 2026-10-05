@@ -19,7 +19,8 @@ import {
   ShieldAlert,
   ArrowRight,
   TrendingUp,
-  PieChart
+  PieChart,
+  FileText
 } from "lucide-react";
 import Link from "next/link";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
@@ -90,6 +91,7 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
     .split("T")[0];
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(threeYearsLaterStr);
+  const [rentAgreementFileName, setRentAgreementFileName] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -330,6 +332,13 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
           securityDepositMonths: Number(securityDepositMonths),
           startDate,
           endDate,
+          rentAgreementFileName: rentAgreementFileName || undefined,
+          documents: rentAgreementFileName ? [{
+            id: `doc-${Date.now()}`,
+            name: rentAgreementFileName,
+            type: "Lease Agreement",
+            uploadedAt: new Date().toISOString()
+          }] : [],
           escalationPct: Number(escalationPct),
           escalationFrequencyMonths: 12,
           lockInMonths: 12,
@@ -930,6 +939,40 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Rent Agreement Document Upload */}
+              <div className="pt-2">
+                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">
+                  Rent Agreement / Executed Lease Deed (PDF, Optional)
+                </label>
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-teal-300 bg-teal-50/50 hover:bg-teal-50 text-teal-800 text-xs font-semibold cursor-pointer transition-colors">
+                    <FileText size={14} className="text-[#0F8B7D]" />
+                    <span className="truncate">{rentAgreementFileName || "Upload Rent Agreement (PDF)"}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setRentAgreementFileName(file.name);
+                        }
+                      }}
+                    />
+                  </label>
+                  {rentAgreementFileName && (
+                    <button
+                      type="button"
+                      onClick={() => setRentAgreementFileName("")}
+                      className="px-2 py-1 text-xs text-rose-500 hover:text-rose-700 font-bold rounded-lg border border-rose-200 hover:bg-rose-50 cursor-pointer"
+                      title="Remove agreement"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Actions */}
@@ -954,22 +997,6 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                 >
                   Cancel
                 </button>
-                {onSwitchToContractWizard && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSwitchToContractWizard({
-                        propertyId: selectedPropId,
-                        tenant: { tradeName, legalName, industry, gstin, pan, contactPerson, contactEmail, contactPhone, billingState, billingCity },
-                        space: { id: selectedSpaceId, unitNumber, floorNumber, chargeableArea, baseRentPsf, camRatePsf },
-                        commercials: { baseRentPsf, camRatePsf, chargeableArea, startDate, endDate, securityDepositMonths, escalationPct }
-                      });
-                    }}
-                    className="px-3.5 py-2.5 rounded-xl border border-teal-300 bg-teal-50/80 hover:bg-teal-100 text-teal-800 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <span>Full Contract Wizard →</span>
-                  </button>
-                )}
                 <button
                   type="submit"
                   disabled={isSubmitting || hasAreaError}
