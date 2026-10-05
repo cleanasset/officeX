@@ -37,20 +37,16 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
     setMounted(true);
     const checkAuth = (authUser?: any) => {
       if (typeof window === "undefined") return;
-      const hasAuthCookie = document.cookie.includes("officex_auth=1") || getAuthCookie("officex_auth") === "1";
-      const sessionActive = sessionStorage.getItem("officex_session_active") === "1";
-      const localEmail = localStorage.getItem("officex_user_email") || getAuthCookie("officex_user_email");
+      const hasAuthCookie =
+        document.cookie.includes("officex_session_active=1") ||
+        document.cookie.includes("officex_auth=1") ||
+        document.cookie.includes("officex_auth=true") ||
+        getAuthCookie("officex_auth") === "1";
+      const sessionActive =
+        sessionStorage.getItem("officex_session_active") === "1" ||
+        localStorage.getItem("officex_session_active") === "1";
 
-      // Check if direct user object was supplied or fallback to storage
-      let email = authUser?.email || sessionStorage.getItem("officex_user_email") || localEmail || "";
-      let name =
-        authUser?.user_metadata?.full_name ||
-        authUser?.user_metadata?.name ||
-        sessionStorage.getItem("officex_user_name") ||
-        localStorage.getItem("officex_user_name") ||
-        "";
-
-      if (!hasAuthCookie && !sessionActive && !email && !authUser) {
+      if (!hasAuthCookie && !sessionActive && !authUser) {
         setIsLoggedIn(false);
         setUserName("");
         setUserRole("");
@@ -58,33 +54,38 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
         return;
       }
 
-      if (!sessionActive && (hasAuthCookie || email)) {
-        sessionStorage.setItem("officex_session_active", "1");
-      }
+      let email =
+        authUser?.email ||
+        sessionStorage.getItem("officex_user_email") ||
+        localStorage.getItem("officex_user_email") ||
+        getAuthCookie("officex_user_email") ||
+        "";
+      let name =
+        authUser?.user_metadata?.full_name ||
+        authUser?.user_metadata?.name ||
+        sessionStorage.getItem("officex_user_name") ||
+        localStorage.getItem("officex_user_name") ||
+        "";
 
       if (!name && email) {
         name = email.split("@")[0].replace(/[._-]/g, " ");
       }
       if (!name) name = "Member";
 
-      const role = sessionStorage.getItem("officex_user_role") || localStorage.getItem("officex_user_role") || "Commercial Owner";
-      const sub = email ? (
-        sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
-        localStorage.getItem(`officex_sub_${email}`) === "active" ||
-        document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
-      ) : false;
+      const role =
+        sessionStorage.getItem("officex_user_role") ||
+        localStorage.getItem("officex_user_role") ||
+        "Commercial Owner";
+      const sub = email
+        ? sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
+          localStorage.getItem(`officex_sub_${email}`) === "active" ||
+          document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
+        : false;
 
-      if (email || hasAuthCookie || authUser) {
-        setIsLoggedIn(true);
-        setUserName(name);
-        setUserRole(role);
-        setIsSubscribed(sub);
-      } else {
-        setIsLoggedIn(false);
-        setUserName("");
-        setUserRole("");
-        setIsSubscribed(false);
-      }
+      setIsLoggedIn(true);
+      setUserName(name);
+      setUserRole(role);
+      setIsSubscribed(sub);
     };
 
     checkAuth();

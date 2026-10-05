@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, CheckCircle, ArrowRight, Shield, LogOut } from "lucide-react";
 
+import { performClientLogout } from "@/lib/auth-client";
+
 interface UserLandingBannerProps {
   roleName: string;
   dashboardHref: string;
@@ -27,30 +29,20 @@ export default function UserLandingBanner({
     setIsClient(true);
     if (typeof window !== "undefined") {
       const email = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
+      const sessionActive =
+        sessionStorage.getItem("officex_session_active") === "1" ||
+        localStorage.getItem("officex_session_active") === "1" ||
+        document.cookie.includes("officex_session_active=1") ||
+        document.cookie.includes("officex_auth=1");
       const name = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "Member";
 
-      setIsLoggedIn(!!email);
+      setIsLoggedIn(!!email && sessionActive);
       setUserName(name);
     }
   }, []);
 
-  const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.clear();
-      localStorage.removeItem("officex_user_email");
-      localStorage.removeItem("officex_user_name");
-      localStorage.removeItem("officex_user_role");
-      localStorage.removeItem("officex_subscription");
-      localStorage.removeItem("officex_dashboard");
-      localStorage.removeItem("officex_active_portal");
-      localStorage.removeItem("officex_payment_id");
-      localStorage.removeItem("officex_order_id");
-      document.cookie = "officex_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_subscription=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      document.cookie = "officex_user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      setIsLoggedIn(false);
-      router.refresh();
-    }
+  const handleLogout = async () => {
+    await performClientLogout("/");
   };
 
   if (!isClient) return null;

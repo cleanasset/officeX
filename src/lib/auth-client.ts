@@ -1,3 +1,6 @@
+import { clearAuthCookie } from './auth-storage';
+import { supabase } from './supabase';
+
 /**
  * Client-Side Authentication and Session Management Utility
  * Provides thorough, atomic session cleanup on logout.
@@ -8,6 +11,10 @@
 
 // Keys that represent AUTH/SESSION state — cleared on logout
 const AUTH_SESSION_KEYS = [
+  'officex_user_email',
+  'officex_user_name',
+  'officex_user_mobile',
+  'officex_user_phone',
   'officex_subscription',
   'officex_session_active',
   'officex_email_verified',
@@ -27,9 +34,7 @@ const AUTH_KEY_PREFIXES = ['officex_sub_', 'sb-'];
 
 // Keys that represent USER DATA — preserved across logout
 const DATA_KEYS_TO_KEEP = new Set([
-  'officex_user_email',
-  'officex_user_name',
-  'officex_user_mobile',
+  'officex_remembered_email',
   'officex_org_name',
   'officex_onboarding_completed',
   'officex_user_properties',
@@ -72,24 +77,52 @@ export async function performClientLogout(redirectTo: string = '/login') {
       // Non-blocking
     }
 
-    // 2. Clear sessionStorage completely (session-scoped, fine to clear)
+    try {
+      // 2. Sign out Supabase auth session directly
+      await supabase.auth.signOut().catch(() => {});
+    } catch {
+      // Non-blocking
+    }
+
+    // 3. Clear sessionStorage completely (session-scoped)
     sessionStorage.clear();
 
-    // 3. Clear only auth/session keys from localStorage (preserve data caches)
-    const keysToRemove: string[] = [];
+    // 4. Remember email for login convenience without keeping active user session
+    const currentEmail = localStorage.getItem('officex_user_email');
+    if (currentEmail) {
+      localStorage.setItem('officex_remembered_email', currentEmail);
+    }
+
+    // 5. Clear only auth/session keys from localStorage (preserve data caches)
+    const keysToRemove: string[] = [
+      'officex_user_email',
+      'officex_user_name',
+      'officex_user_mobile',
+      'officex_user_role',
+      'officex_session_active',
+      'officex_auth',
+      'officex_subscription',
+      'officex_active_portal',
+      'officex_dashboard',
+      'officex_trusted_device'
+    ];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && isAuthKey(key)) {
+      if (key && (isAuthKey(key) || key.startsWith('sb-') || key.includes('token'))) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));
 
-    // 4. Expire client-accessible auth cookies
+    // 6. Expire client-accessible auth cookies with domain support
     const cookieNames = [
       'officex_auth',
       'officex_session_active',
       'officex_user_role',
+      'officex_user_email',
+      'officex_user_name',
+      'officex_user_mobile',
+      'officex_user_phone',
       'officex_subscription',
       'officex_active_portal',
       'officex_dashboard',
@@ -97,10 +130,15 @@ export async function performClientLogout(redirectTo: string = '/login') {
     ];
 
     cookieNames.forEach((name) => {
+      clearAuthCookie(name);
       document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax`;
     });
 
-    // 5. Navigate to login
+    // 7. Dispatch events so any open components immediately react
+    window.dispatchEvent(new CustomEvent('officex_auth_change', { detail: { user: null } }));
+    window.dispatchEvent(new Event('storage'));
+
+    // 8. Navigate to login or target
     window.location.href = redirectTo;
   }
 }

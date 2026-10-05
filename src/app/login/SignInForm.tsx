@@ -183,7 +183,7 @@ export default function SignInForm({
   // Sync initial identifier if prefilled in query or localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedEmail = localStorage.getItem("officex_user_email");
+      const savedEmail = localStorage.getItem("officex_user_email") || localStorage.getItem("officex_remembered_email");
       if (savedEmail && !identifier) {
         setIdentifier(savedEmail);
       }
