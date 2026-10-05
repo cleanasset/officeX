@@ -454,6 +454,7 @@ export interface BillingRunEntity {
 export interface CollectionEntity {
   id: string;
   orgId: string;
+  propertyId?: string;
   invoiceId?: string;
   invoiceNumber?: string;
   leaseId: string;
@@ -3817,6 +3818,7 @@ export function processRazorpayCheckoutInStore(params: {
     receipt.leaseId = inv.leaseId;
     receipt.leaseCode = inv.leaseCode;
     receipt.propertyName = inv.propertyName;
+    receipt.propertyId = inv.propertyId;
 
     const allocation = allocatePaymentToInvoice(unallocated, {
       baseRent: inv.baseRent,

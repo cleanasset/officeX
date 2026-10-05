@@ -34,12 +34,18 @@ export async function GET(req: Request) {
     }
 
     const validPropIds = new Set(properties.map(p => p.id));
+    const validPropNames = new Set(properties.map(p => (p.name || "").toLowerCase()));
     const validLeaseIds = new Set(db.leases.filter(l => validPropIds.has(l.propertyId)).map(l => l.id));
     
     // Strict isolation: only show collections belonging to valid properties / leases
     let collections = ownerEmail && properties.length === 0
       ? []
-      : db.collections.filter(c => (c.leaseId ? validLeaseIds.has(c.leaseId) : validPropIds.has(c.propertyId || "")));
+      : db.collections.filter(c => {
+          if (c.leaseId && validLeaseIds.has(c.leaseId)) return true;
+          if (c.propertyId && validPropIds.has(c.propertyId)) return true;
+          if (c.propertyName && validPropNames.has(c.propertyName.toLowerCase())) return true;
+          return false;
+        });
 
     if (propertyId && propertyId !== "ALL") {
       const propLeaseIds = new Set(db.leases.filter(l => l.propertyId === propertyId).map(l => l.id));
@@ -279,6 +285,7 @@ export async function POST(req: Request) {
       const multiReceipt: CollectionEntity = {
         id: newPaymentId,
         orgId: db.organization.id,
+        propertyId: lease.propertyId,
         invoiceNumber: allocatedInvoices.map(a => a.invoiceNumber).join(", "),
         leaseId: lease.id,
         leaseCode: lease.leaseCode,
@@ -353,6 +360,7 @@ export async function POST(req: Request) {
     const newReceipt: CollectionEntity = {
       id: newPaymentId,
       orgId: db.organization.id,
+      propertyId: lease.propertyId,
       invoiceId: invoice?.id,
       invoiceNumber: invoice?.invoiceNumber,
       leaseId: lease.id,
