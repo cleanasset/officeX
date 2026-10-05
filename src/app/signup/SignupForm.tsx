@@ -103,6 +103,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
   // 5 = Review & Launch (S10-S12)
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [selectedRole, setSelectedRole] = useState(defaultRole);
+  const [userAlreadyExists, setUserAlreadyExists] = useState(false);
 
   // Form Fields - S02 (Account Credentials)
   const [fullName, setFullName] = useState("");
@@ -372,6 +373,20 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
           }, 400);
           return;
         }
+
+        if (res.status === 409 || data.error?.toLowerCase().includes("already exist")) {
+          setUserAlreadyExists(true);
+          setError("User already exists. An account with this email/mobile is already registered. Redirecting to Login page...");
+          setIsLoading(false);
+          const loginTarget = isRentRoll
+            ? `/login?context=rent-roll&redirect=${encodeURIComponent(initialRedirect || "/properties/rent-roll")}&identifier=${encodeURIComponent(email.trim().toLowerCase())}`
+            : `/login?redirect=${encodeURIComponent(initialRedirect || "/properties")}&identifier=${encodeURIComponent(email.trim().toLowerCase())}`;
+          setTimeout(() => {
+            router.push(loginTarget);
+          }, 1800);
+          return;
+        }
+
         setError(data.error || "Registration failed. Please check your inputs.");
         setIsLoading(false);
         return;
@@ -788,8 +803,34 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
             </p>
           </div>
 
-          {/* Error Banner */}
-          {error && (
+          {/* User Already Exists Dedicated Banner */}
+          {userAlreadyExists ? (
+            <div
+              role="alert"
+              className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold space-y-2.5 animate-fadeIn shadow-xs"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle size={18} className="text-amber-600 shrink-0" />
+                <span className="font-extrabold text-sm text-amber-950">User Already Exists</span>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                An account with this email or mobile is already registered in OfficeX. Please sign in to access your Rent Roll and workspace.
+              </p>
+              <div className="pt-1">
+                <Link
+                  href={
+                    isRentRoll
+                      ? `/login?context=rent-roll&redirect=${encodeURIComponent(initialRedirect || "/properties/rent-roll")}&identifier=${encodeURIComponent(email || mobileNumber)}`
+                      : `/login?redirect=${encodeURIComponent(initialRedirect || "/properties")}&identifier=${encodeURIComponent(email || mobileNumber)}`
+                  }
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Go to Login Page</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+          ) : error ? (
             <div
               role="alert"
               className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2.5 animate-fadeIn"
@@ -797,7 +838,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
               <AlertCircle size={16} className="shrink-0 text-rose-600 mt-0.5" />
               <span className="leading-relaxed">{error}</span>
             </div>
-          )}
+          ) : null}
 
           {/* Success Banner */}
           {successMsg && (

@@ -692,23 +692,30 @@ export default function SignInForm({
     const isAlreadyOnboarded = typeof window !== "undefined" && (
       localStorage.getItem("officex_onboarding_completed") === "1" ||
       sessionStorage.getItem("officex_onboarding_completed") === "1" ||
-      document.cookie.includes("officex_onboarding_completed=1")
+      document.cookie.includes("officex_onboarding_completed=1") ||
+      (localStorage.getItem("officex_session_active") === "1" && localStorage.getItem("officex_property_id"))
     );
 
     let destination = "";
-    if (!isAlreadyOnboarded) {
-      destination = isRentRollContext
-        ? `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`
-        : `/onboarding?redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
+    if (isRentRollContext) {
+      // Existing user signing in to Rent Roll goes straight to Rent Roll dashboard
+      destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding"))
+        ? safeRedirect
+        : "/properties/rent-roll";
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_onboarding_completed", "1");
+        sessionStorage.setItem("officex_onboarding_completed", "1");
+        document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
+      }
+    } else if (!isAlreadyOnboarded) {
+      destination = `/onboarding?redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
     } else {
-      destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login"))
+      destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding"))
         ? safeRedirect
         : "";
 
       if (!destination || destination === "/") {
-        if (isRentRollContext) {
-          destination = "/properties/rent-roll";
-        } else if (isOperateContext) {
+        if (isOperateContext) {
           destination = "/operate";
         } else if (isFmContext) {
           destination = "/fm-marketplace";

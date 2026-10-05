@@ -174,9 +174,24 @@ function OnboardingContent() {
     agreementDate: new Date().toISOString().split("T")[0]
   });
 
-  // Prefill organization details from session on mount
+  const [existingUserMessage, setExistingUserMessage] = useState<string | null>(null);
+
+  // Prefill organization details from session on mount and detect existing users
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const isAlreadyOnboarded =
+        localStorage.getItem("officex_onboarding_completed") === "1" ||
+        sessionStorage.getItem("officex_onboarding_completed") === "1" ||
+        document.cookie.includes("officex_onboarding_completed=1") ||
+        (localStorage.getItem("officex_session_active") === "1" && localStorage.getItem("officex_property_id"));
+
+      if (isAlreadyOnboarded) {
+        setExistingUserMessage("User already exists! Your organization and properties are already configured. Please sign in to access your Rent Roll dashboard.");
+        setTimeout(() => {
+          router.push(`/login?context=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`);
+        }, 2500);
+      }
+
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
       const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "";
       const rememberedEmail = localStorage.getItem("officex_remembered_email") || "";
@@ -404,6 +419,32 @@ function OnboardingContent() {
       {/* ──── MAIN WIZARD CONTAINER ──── */}
       <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col justify-between">
         <div className="space-y-6">
+          {existingUserMessage && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <div>
+                  <p className="font-extrabold text-sm text-amber-950">User Already Exists</p>
+                  <p className="text-xs text-amber-800">{existingUserMessage}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href="/login?context=rent-roll&redirect=/properties/rent-roll"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                >
+                  Go to Login Page &rarr;
+                </Link>
+                <Link
+                  href="/properties/rent-roll"
+                  className="px-3 py-2 bg-white border border-amber-300 hover:bg-amber-100/50 text-amber-900 rounded-xl text-xs font-bold transition-all"
+                >
+                  Dashboard
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Step Progress Indicators */}
           <div className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-2xs">
             <div className="grid grid-cols-4 gap-2 text-center">
