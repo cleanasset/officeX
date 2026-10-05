@@ -21,6 +21,7 @@ export interface GeocodeLocation {
   buildingName?: string;
   displayName: string;
   fullAddress: string;
+  address?: string;
   area?: string;
   city: string;
   state: string;

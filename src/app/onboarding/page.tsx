@@ -563,7 +563,7 @@ function OnboardingContent() {
                           onSelectLocation={(loc) => {
                             setOrgData(prev => ({
                               ...prev,
-                              primaryAddress: loc.address,
+                              primaryAddress: loc.fullAddress || loc.displayName,
                               city: loc.city || prev.city,
                               state: loc.state || prev.state
                             }));
