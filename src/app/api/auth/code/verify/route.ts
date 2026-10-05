@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { validateCsrf } from '@/lib/csrf';
 
 export const revalidate = 0;
@@ -64,6 +64,22 @@ export async function POST(request: Request) {
         { error: otpError },
         { status: 401 }
       );
+    }
+
+    // Auto-provision user in Supabase Auth if service role client is configured
+    if (supabaseAdmin && norm.includes('@')) {
+      try {
+        await supabaseAdmin.auth.admin.createUser({
+          email: norm,
+          email_confirm: true,
+          user_metadata: {
+            role: 'Commercial Owner',
+            full_name: norm.split('@')[0]
+          }
+        });
+      } catch {
+        // User already exists in Supabase - non-blocking
+      }
     }
 
     const defaultRole = 'Property Owner & Asset Manager';

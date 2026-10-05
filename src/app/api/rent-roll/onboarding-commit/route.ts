@@ -369,6 +369,23 @@ export async function POST(req: Request) {
           owner_company: committedProperty.ownerCompany,
           owner_user_id: userEmail || "owner@officex.com"
         });
+
+        // Provision user in Supabase Auth if not already existing
+        if (userEmail && userEmail.includes('@')) {
+          try {
+            await client.auth.admin.createUser({
+              email: userEmail,
+              email_confirm: true,
+              user_metadata: {
+                full_name: orgName,
+                organization: orgName,
+                role: "Commercial Owner"
+              }
+            });
+          } catch {
+            // User already registered - non-blocking
+          }
+        }
       }
     } catch (pgErr) {
       console.warn("Postgres sync on onboarding commit warning:", pgErr);
