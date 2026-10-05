@@ -364,6 +364,16 @@ export async function POST(req: Request) {
             rentAgreementFileName: u.rentAgreementFileName || undefined,
             documents: u.rentAgreementFileName ? [{
               id: `doc-${Date.now()}-${i + 1}`,
+              contractId: newLeaseId,
+              documentType: "agreement",
+              title: `Executed Lease Agreement - ${tenantName}`,
+              versionNumber: 1,
+              fileUrl: "/sample-lease-agreement.pdf",
+              fileName: u.rentAgreementFileName,
+              status: "executed",
+              isExecuted: true,
+              executionDate: new Date().toISOString().split("T")[0],
+              createdAt: new Date().toISOString(),
               name: u.rentAgreementFileName,
               type: "Lease Agreement",
               uploadedAt: new Date().toISOString()

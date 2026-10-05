@@ -260,6 +260,9 @@ export interface ContractDocumentEntity {
   executionDate?: string;
   uploadedBy?: string;
   createdAt: string;
+  name?: string;
+  type?: string;
+  uploadedAt?: string;
 }
 
 export interface LeaseEntity {
@@ -323,6 +326,7 @@ export interface LeaseEntity {
   terminationDate?: string;
   terminationReason?: string;
   signedAgreementUrl?: string;
+  rentAgreementFileName?: string;
   isTermsPending?: boolean;
   hasPendingDocument?: boolean;
   agreementDocumentPending?: boolean;
