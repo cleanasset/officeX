@@ -3,6 +3,7 @@ import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { validateCsrf } from '@/lib/csrf';
+import { getRentRollDb } from '@/lib/rent-roll-store';
 
 export const revalidate = 0;
 
@@ -66,34 +67,82 @@ export async function POST(request: Request) {
       );
     }
 
-    // Auto-provision user in Supabase Auth if service role client is configured
-    if (supabaseAdmin && norm.includes('@')) {
+    // Auto-provision user in Supabase Auth & PostgreSQL database
+    let supaUserId: string | undefined;
+    const userEmail = norm.includes('@') ? norm : `${norm.replace(/\D/g, '')}@officex.pro`;
+    const userFullName = norm.split('@')[0] || 'Commercial Member';
+
+    if (supabaseAdmin) {
       try {
-        await supabaseAdmin.auth.admin.createUser({
-          email: norm,
-          email_confirm: true,
-          user_metadata: {
-            role: 'Commercial Owner',
-            full_name: norm.split('@')[0]
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const existingAuthUser = usersData?.users?.find(
+          (u) => u.email?.toLowerCase() === userEmail.toLowerCase()
+        );
+
+        if (existingAuthUser) {
+          supaUserId = existingAuthUser.id;
+          await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
+            email_confirm: true,
+            user_metadata: { role: 'Commercial Owner', full_name: userFullName }
+          });
+        } else {
+          const { data: newAuthUser } = await supabaseAdmin.auth.admin.createUser({
+            email: userEmail,
+            email_confirm: true,
+            user_metadata: {
+              role: 'Commercial Owner',
+              full_name: userFullName
+            }
+          });
+          if (newAuthUser?.user?.id) {
+            supaUserId = newAuthUser.user.id;
           }
-        });
-      } catch {
-        // User already exists in Supabase - non-blocking
+        }
+      } catch (authSyncErr) {
+        console.warn('[SUPABASE-SYNC] Supabase Auth admin operation exception:', authSyncErr);
       }
     }
 
-    const defaultRole = 'Property Owner & Asset Manager';
-    const defaultWorkspace = '/properties';
+    // Sync into PostgreSQL public.users table in Supabase
+    try {
+      const client = supabaseAdmin || supabase;
+      if (client) {
+        await client
+          .from('users')
+          .upsert(
+            {
+              id: supaUserId || undefined,
+              email: userEmail,
+              full_name: userFullName,
+              role: 'property_manager',
+              password_hash: 'SUPABASE_AUTH_MANAGED'
+            },
+            { onConflict: 'email' }
+          );
+      }
+    } catch (pgSyncErr) {
+      console.warn('[SUPABASE-SYNC] public.users sync exception:', pgSyncErr);
+    }
 
-    const memberships = [
+    const defaultRole = 'Property Owner & Asset Manager';
+
+    // Verify if user already has an active property / organization
+    const db = getRentRollDb();
+    const userOwnedProps = (db.properties || []).filter(p => 
+      p.ownerEmail && userEmail && p.ownerEmail.toLowerCase() === userEmail.toLowerCase()
+    );
+    const hasExistingOrg = Boolean(db.organization?.name && db.organization.name.trim() !== "");
+    const isNewUser = userOwnedProps.length === 0;
+
+    const memberships = isNewUser ? [] : [
       {
         id: `mem_${Date.now()}`,
-        orgId: 'org_officex',
-        orgName: 'Commercial Asset Management',
+        orgId: db.organization?.id || 'org_officex',
+        orgName: db.organization?.tradeName || db.organization?.name || 'Commercial Asset Management',
         role: defaultRole,
         roleCode: 'OWNER' as const,
         workspaceTitle: 'Commercial Asset Desk',
-        workspaceUrl: defaultWorkspace,
+        workspaceUrl: '/properties/rent-roll',
         propertyScope: 'Active Portfolio',
         badge: 'Asset Owner',
         badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
@@ -104,15 +153,20 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       success: true,
       user: {
-        id: `usr_${Date.now()}`,
-        name: norm.split('@')[0] || 'Member',
+        id: supaUserId || `usr_${Date.now()}`,
+        name: userFullName || norm.split('@')[0] || 'Member',
         identifier: norm,
         role: defaultRole
       },
       memberships,
       needs_context_choice: false,
-      redirect_url: defaultWorkspace
+      needs_onboarding: isNewUser,
+      redirect_url: isNewUser ? '/onboarding?context=rent-roll' : '/properties/rent-roll'
     });
+
+    if (isNewUser) {
+      response.cookies.set('officex_onboarding_completed', '0', { path: '/', maxAge: 86400 });
+    }
 
     // Set secure HttpOnly session cookie
     response.cookies.set('officex_auth', '1', {

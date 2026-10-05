@@ -98,6 +98,7 @@ interface DashboardTabProps {
   onOpenGenerateInvoices: () => void;
   propertiesCount?: number;
   onOpenAddProperty?: () => void;
+  onOpenAddTenant?: () => void;
   onOpenImportCsv?: () => void;
   onOpenProfileSettings?: () => void;
   organizationData?: any;
@@ -125,6 +126,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onOpenGenerateInvoices,
   propertiesCount = 0,
   onOpenAddProperty,
+  onOpenAddTenant,
   onOpenImportCsv,
   onOpenProfileSettings,
   organizationData,
@@ -132,16 +134,32 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 }) => {
   const [showAccount, setShowAccount] = React.useState(false);
   const [showKycDetails, setShowKycDetails] = React.useState(false);
-  if (!data) {
-    return (
-      <div className="p-16 text-center text-gray-400 flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-200">
-        <div className="w-8 h-8 border-2 border-[#0F8B7D] border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-sm font-semibold text-gray-600">Loading Portfolio Analytics Engine...</p>
-      </div>
-    );
-  }
 
-  const { summary, occupancy, walt, noi, topTenants, alerts } = data;
+  const fallbackData: DashboardData = {
+    summary: {
+      totalLeasesCount: 0,
+      activeLeasesCount: 0,
+      totalMonthlyRent: 0,
+      totalCamMonthly: 0,
+      totalMonthlyBilling: 0,
+      totalAnnualGross: 0,
+      totalOutstanding: 0,
+      overdueLeasesCount: 0,
+      expiring30Days: 0,
+      expiring90Days: 0,
+      expiredLeases: 0,
+      escalationsDueCount: 0,
+    },
+    occupancy: { totalArea: 0, occupiedArea: 0, vacantArea: 0, occupancyPct: 0, vacancyPct: 0 },
+    walt: { waltByAreaMonths: 0, waltByAreaYears: 0, waltByRevenueMonths: 0, waltByRevenueYears: 0, activeLeasesCount: 0 },
+    noi: { monthlyRevenue: 0, monthlyExpenses: 0, monthlyNOI: 0, oerPct: 0, annualNOI: 0, capRatePct: 0 },
+    aging: { current: 0, bucket0to30: 0, bucket31to60: 0, bucket61to90: 0, bucket90Plus: 0, totalOutstanding: 0, invoicesCount: 0 },
+    topTenants: [],
+    alerts: []
+  };
+
+  const activeData = data || fallbackData;
+  const { summary, occupancy, walt, noi, topTenants, alerts } = activeData;
 
   return (
     <div className="space-y-6">
@@ -157,10 +175,17 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </div>
             <h2 className="text-lg md:text-xl font-black text-white">Welcome to your Commercial Rent Roll Desk</h2>
             <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
-              No commercial properties are currently registered in your portfolio. Add your first commercial office building or import your existing Excel rent roll to unlock automated billing, step-up escalations, and NOI analytics.
+              No commercial properties are currently registered in your portfolio. Complete the guided 4-step onboarding form, add your first commercial building, or import your existing Excel rent roll.
             </p>
           </div>
           <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+            <a
+              href="/onboarding?context=rent-roll"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-black transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Launch Onboarding Form</span>
+            </a>
             {onOpenAddProperty && (
               <button
                 type="button"
@@ -168,6 +193,15 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-700 text-white text-xs font-black transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
               >
                 <span>+ Add Commercial Property</span>
+              </button>
+            )}
+            {onOpenAddTenant && (
+              <button
+                type="button"
+                onClick={onOpenAddTenant}
+                className="px-4 py-2.5 rounded-xl bg-teal-800/90 hover:bg-teal-700 text-white text-xs font-bold transition-all border border-teal-600/40 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>+ Add Tenant / Lease</span>
               </button>
             )}
             {onOpenImportCsv && (

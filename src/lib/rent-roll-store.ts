@@ -34,9 +34,26 @@ export interface OrgEntity {
   accountType?: string;
   escrowNodalVerified?: boolean;
   upiVpa?: string;
+  beneficiaryName?: string;
+  bankQrCodeUrl?: string;
+  bankVisibility?: "tenants_only" | "public";
+  approvedTenantEmails?: string[];
   contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
+}
+
+export interface BankAccessRequest {
+  id: string;
+  orgId: string;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  requesterCompany?: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string;
+  respondedAt?: string;
 }
 
 // Client Accounts (Multi-client operator layer: Owners whose portfolios a subscriber manages)
@@ -877,6 +894,7 @@ export interface RentRollDatabase {
       lastSyncMessage: string | null;
     };
   };
+  bankAccessRequests?: BankAccessRequest[];
   isCleanPortfolio?: boolean;
 }
 
@@ -939,6 +957,7 @@ export function getEmptyDatabase(): RentRollDatabase {
     notices: [],
     alerts: [],
     auditLogs: [],
+    bankAccessRequests: [],
     importBatches: [],
     mappingTemplates: [],
     flexCentres: [],

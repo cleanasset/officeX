@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import {
   Building2,
   TrendingUp,
@@ -55,6 +56,7 @@ interface RentRollHeaderProps {
   onOpenRecordPayment?: () => void;
   onOpenAddExpense?: () => void;
   onOpenAddTenant?: () => void;
+  onOpenAddProperty?: () => void;
   onOpenImportCsv?: () => void;
   onExportCsv: (type: string) => void;
   onRefresh: () => void;
@@ -116,6 +118,7 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
   onOpenRecordPayment,
   onOpenAddExpense,
   onOpenAddTenant,
+  onOpenAddProperty,
   onOpenImportCsv,
   onExportCsv,
   onRefresh,
@@ -279,6 +282,27 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
           />
         </div>
 
+        {/* Onboarding Wizard CTA */}
+        <Link
+          href="/onboarding?context=rent-roll"
+          className="px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+          title="Open Guided Onboarding Setup Wizard"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Onboarding Wizard</span>
+        </Link>
+
+        {/* Add Property CTA */}
+        {onOpenAddProperty && (
+          <button
+            onClick={onOpenAddProperty}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">+ Property</span>
+          </button>
+        )}
+
         {/* Add Lease CTA */}
         {showAddLease && onOpenAddLease && (
           <button
@@ -302,6 +326,18 @@ export const RentRollHeader: React.FC<RentRollHeaderProps> = ({
           {isActionsOpen && (
             <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-[11px] max-h-[70vh] overflow-y-auto">
               <div className="px-2 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quick Actions</div>
+
+              {onOpenAddProperty && (
+                <button onClick={() => { onOpenAddProperty(); setIsActionsOpen(false); }} className="w-full text-left px-2.5 py-2 hover:bg-slate-50 text-slate-700 rounded-lg font-medium flex items-center gap-2 cursor-pointer">
+                  <Building2 className="w-3.5 h-3.5 text-[#0F8B7D]" /> Add Commercial Property
+                </button>
+              )}
+
+              {onOpenAddTenant && (
+                <button onClick={() => { onOpenAddTenant(); setIsActionsOpen(false); }} className="w-full text-left px-2.5 py-2 hover:bg-slate-50 text-slate-700 rounded-lg font-medium flex items-center gap-2 cursor-pointer">
+                  <Users className="w-3.5 h-3.5 text-teal-600" /> Add Tenant Profile
+                </button>
+              )}
 
               {showRecordPayment && onOpenRecordPayment && (
                 <button onClick={() => { onOpenRecordPayment(); setIsActionsOpen(false); }} className="w-full text-left px-2.5 py-2 hover:bg-slate-50 text-slate-700 rounded-lg font-medium flex items-center gap-2 cursor-pointer">

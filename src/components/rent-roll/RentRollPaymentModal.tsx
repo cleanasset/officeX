@@ -371,8 +371,11 @@ export default function RentRollPaymentModal({
       localStorage.setItem("officex_onboarding_completed", "1");
       sessionStorage.setItem("officex_onboarding_completed", "1");
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-      localStorage.setItem("officex_active_org", "org_officex");
-      sessionStorage.setItem("officex_active_org", "org_officex");
+      const userLegalName = localStorage.getItem("officex_org_name") || localStorage.getItem("officex_user_name") || "";
+      if (userLegalName) {
+        localStorage.setItem("officex_active_org", userLegalName);
+        sessionStorage.setItem("officex_active_org", userLegalName);
+      }
 
       localStorage.setItem("officex_payment_id", paymentId);
       localStorage.setItem("officex_order_id", `ORD_${paymentId}`);

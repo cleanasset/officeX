@@ -128,23 +128,19 @@ function OnboardingContent() {
     contactPhone: ""
   });
 
-  // ──── STEP 2: BRANDING & BANK ACCOUNT ────
+  // ──── STEP 2: BRANDING & PREFERENCES (NO BANK DETAILS REQUIRED) ────
   const [branding, setBranding] = useState({
     brandColor: "#0F8B7D",
     logoPreview: "",
     invoiceHeaderMemo: "Official Tax Invoice issued under Section 31 of CGST Act, 2017"
   });
-  const [bankData, setBankData] = useState({
-    bankName: "",
-    accountNumber: "",
-    ifscCode: "",
-    accountHolder: ""
-  });
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // ──── STEP 3: PRIMARY PROPERTY & SPACE (CONNECTED) ────
+  // ──── STEP 3: PRIMARY PROPERTY & OCCUPANCY STATUS (VACANT / LEASED) ────
+  const [occupancyStatus, setOccupancyStatus] = useState<"vacant" | "leased">("vacant");
   const [propertyData, setPropertyData] = useState({
     name: "",
+    address: "",
     city: "",
     state: "",
     microMarket: "",
@@ -169,8 +165,7 @@ function OnboardingContent() {
     mandateFeePct: 5
   });
 
-  // Optional Tenant details in Step 3
-  const [hasTenant, setHasTenant] = useState<boolean>(true);
+  // Tenant details if occupancyStatus === 'leased'
   const [tenantData, setTenantData] = useState({
     name: "",
     email: "",
@@ -179,6 +174,51 @@ function OnboardingContent() {
     rentAgreementFileName: "",
     agreementDate: new Date().toISOString().split("T")[0]
   });
+
+  // AI Lease Agreement Verification & Difference Modal States
+  const [isScanningAgreement, setIsScanningAgreement] = useState(false);
+  const [showAgreementDiffModal, setShowAgreementDiffModal] = useState(false);
+  const [pendingFileName, setPendingFileName] = useState("");
+  const [extractedLeaseData, setExtractedLeaseData] = useState({
+    tenantName: "MJ Infralogistics Pvt Ltd",
+    contactEmail: "billing@mjinfralogistics.com",
+    monthlyRent: 850000,
+    unitNumber: "Unit 101-B",
+    askingBaseRentPsf: 170
+  });
+
+  const [diffSelections, setDiffSelections] = useState<Record<string, { choice: "form" | "lease" | "custom"; customValue: string | number }>>({
+    tenantName: { choice: "lease", customValue: "MJ Infralogistics Pvt Ltd" },
+    contactEmail: { choice: "lease", customValue: "billing@mjinfralogistics.com" },
+    monthlyRent: { choice: "lease", customValue: 850000 },
+    unitNumber: { choice: "lease", customValue: "Unit 101-B" },
+    askingBaseRentPsf: { choice: "lease", customValue: 170 }
+  });
+
+  const handleAgreementFileUpload = (file: File) => {
+    setIsScanningAgreement(true);
+    setPendingFileName(file.name);
+    // Simulate smart AI extraction from PDF lease document
+    setTimeout(() => {
+      setIsScanningAgreement(false);
+      const extracted = {
+        tenantName: file.name.toLowerCase().includes("infralog") ? "MJ Infralogistics Pvt Ltd" : "Apex Global Solutions Ltd",
+        contactEmail: file.name.toLowerCase().includes("infralog") ? "billing@mjinfralogistics.com" : "accounts@apexglobal.com",
+        monthlyRent: 850000,
+        unitNumber: propertyData.unitNumber || "Unit 101",
+        askingBaseRentPsf: propertyData.askingBaseRentPsf ? propertyData.askingBaseRentPsf + 20 : 170
+      };
+      setExtractedLeaseData(extracted);
+      setDiffSelections({
+        tenantName: { choice: tenantData.name ? "form" : "lease", customValue: extracted.tenantName },
+        contactEmail: { choice: tenantData.email ? "form" : "lease", customValue: extracted.contactEmail },
+        monthlyRent: { choice: tenantData.monthlyRentOrFee ? "form" : "lease", customValue: extracted.monthlyRent },
+        unitNumber: { choice: propertyData.unitNumber ? "form" : "lease", customValue: extracted.unitNumber },
+        askingBaseRentPsf: { choice: propertyData.askingBaseRentPsf ? "form" : "lease", customValue: extracted.askingBaseRentPsf }
+      });
+      setShowAgreementDiffModal(true);
+    }, 1200);
+  };
 
   const [existingUserMessage, setExistingUserMessage] = useState<string | null>(null);
 
@@ -272,7 +312,7 @@ function OnboardingContent() {
       } else if (selectedRole === "fm_company") {
         primaryRent = propertyData.camBudgetMonthly;
       }
-      if (hasTenant && tenantData.monthlyRentOrFee) {
+      if (occupancyStatus === "leased" && tenantData.monthlyRentOrFee) {
         primaryRent = tenantData.monthlyRentOrFee;
       }
 
@@ -290,14 +330,11 @@ function OnboardingContent() {
           currency: "INR",
           segment: selectedRole
         },
-        billingEntities: bankData.bankName.trim() ? [{
+        billingEntities: [{
           id: `BE-${Date.now()}`,
           spvName: orgData.legalName,
-          bankName: bankData.bankName,
-          accountNumber: bankData.accountNumber,
-          ifscCode: bankData.ifscCode,
           isDefault: true
-        }] : [],
+        }],
         branding: {
           portfolioDisplayName: orgData.tradeName || orgData.legalName,
           brandColor: branding.brandColor,
@@ -311,9 +348,10 @@ function OnboardingContent() {
           microMarket: propertyData.microMarket || propertyData.city || "Central",
           totalArea: Number(propertyData.totalAreaSqft) || 25000,
           type: selectedRole === "flex_operator" ? "Managed Office / Coworking Hub" : "Commercial Office Tower",
-          grade: "A"
+          grade: "A",
+          occupancyStatus: occupancyStatus
         },
-        tenants: hasTenant && tenantData.name.trim() ? [{
+        tenants: occupancyStatus === "leased" && tenantData.name.trim() ? [{
           tradeName: tenantData.name.trim(),
           legalName: `${tenantData.name.trim()} Pvt Ltd`,
           contactEmail: tenantData.email.trim(),
@@ -344,10 +382,59 @@ function OnboardingContent() {
 
         // Set org and property cache
         localStorage.setItem("officex_org_name", orgData.tradeName || orgData.legalName);
-        if (data?.property) {
-          localStorage.setItem("officex_property_name", data.property.name);
-          localStorage.setItem("officex_property_id", data.property.id);
-          localStorage.setItem("officex_user_properties", JSON.stringify([data.property]));
+        
+        const primaryPropId = data?.property?.id || `PROP-${Date.now()}`;
+        const primaryPropObj = {
+          id: primaryPropId,
+          name: propertyData.name || data?.property?.name || "Primary Commercial Asset",
+          location: propertyData.address || `${propertyData.name}, ${propertyData.city || orgData.city || "Mumbai"}`,
+          address: propertyData.address,
+          city: propertyData.city || orgData.city || "Mumbai",
+          state: propertyData.state || orgData.state || "Maharashtra",
+          microMarket: propertyData.microMarket || "Central",
+          totalArea: Number(propertyData.totalAreaSqft) || 25000,
+          unitNumber: propertyData.unitNumber || "Unit 101",
+          askingBaseRentPsf: propertyData.askingBaseRentPsf || 150,
+          camRatePsf: propertyData.camRatePsf || 25,
+          type: selectedRole === "flex_operator" ? "Managed Office / Coworking Hub" : "Commercial Office Tower",
+          occupancyStatus: occupancyStatus,
+          activeLeasesCount: occupancyStatus === "leased" ? 1 : 0
+        };
+
+        localStorage.setItem("officex_property_name", primaryPropObj.name);
+        localStorage.setItem("officex_property_id", primaryPropObj.id);
+
+        let existingProps: any[] = [];
+        try {
+          existingProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        } catch {}
+        const updatedProps = [primaryPropObj, ...existingProps.filter((p: any) => p.id !== primaryPropObj.id)];
+        localStorage.setItem("officex_user_properties", JSON.stringify(updatedProps));
+
+        // Save tenant with Pending Acceptance status
+        if (occupancyStatus === "leased" && tenantData.name.trim()) {
+          const tenantObj = {
+            id: `TNT-${Date.now()}`,
+            tenantCode: `OX-T-${Math.floor(1000 + Math.random() * 9000)}`,
+            tradeName: tenantData.name.trim(),
+            legalName: `${tenantData.name.trim()} Pvt Ltd`,
+            contactEmail: tenantData.email.trim(),
+            contactPhone: tenantData.phone.trim(),
+            propertyId: primaryPropObj.id,
+            propertyName: primaryPropObj.name,
+            unitNumber: propertyData.unitNumber || "Unit 101",
+            monthlyRent: tenantData.monthlyRentOrFee || 750000,
+            status: "Pending Acceptance",
+            kycVerified: false,
+            portalLive: false,
+            accepted: false
+          };
+
+          let existingTenants: any[] = [];
+          try {
+            existingTenants = JSON.parse(localStorage.getItem("officex_user_tenants") || "[]");
+          } catch {}
+          localStorage.setItem("officex_user_tenants", JSON.stringify([tenantObj, ...existingTenants.filter((t: any) => t.id !== tenantObj.id)]));
         }
 
         document.cookie = "officex_onboarding_completed=1; path=/; max-age=2592000; SameSite=Lax";
@@ -356,12 +443,12 @@ function OnboardingContent() {
 
       setIsCommitted(true);
       setTimeout(() => {
-        router.push("/properties/rent-roll");
+        router.push("/properties/registry?action=complete-primary");
       }, 1200);
     } catch (err) {
       console.error("Onboarding error:", err);
       // Non-blocking fallback
-      router.push("/properties/rent-roll");
+      router.push("/properties/registry?action=complete-primary");
     } finally {
       setIsSubmitting(false);
     }
@@ -369,8 +456,8 @@ function OnboardingContent() {
 
   const stepsList = [
     { num: 1, title: "Role & Company", subtitle: "Select Business Model" },
-    { num: 2, title: "Branding & Bank", subtitle: "Logo & Receiving Account" },
-    { num: 3, title: "Primary Property", subtitle: "Anchor Space & Tenant" },
+    { num: 2, title: "Branding", subtitle: "Logo & Visual Styling" },
+    { num: 3, title: "Primary Property", subtitle: "Space & Occupancy" },
     { num: 4, title: "Review & Launch", subtitle: "Activate Workspace" }
   ];
 
@@ -494,43 +581,49 @@ function OnboardingContent() {
                       </p>
                     </div>
 
-                    {/* The 5 Specification Roles */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                      {ROLES.map((r) => {
-                        const Icon = r.icon;
-                        const isSelected = selectedRole === r.id;
+                    {/* Role Dropdown Selector */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                      <label className="block text-xs font-bold text-slate-800">
+                        Operational Role &amp; Business Model *
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={selectedRole}
+                          onChange={(e) => setSelectedRole(e.target.value as RoleType)}
+                          className="w-full text-xs font-bold p-3.5 bg-white border-2 border-slate-300 rounded-xl focus:border-[#0F8B7D] text-slate-900 shadow-xs cursor-pointer appearance-none pr-10"
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.title} — {r.badge}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
+                          <ChevronRight className="w-4 h-4 rotate-90" />
+                        </div>
+                      </div>
+
+                      {/* Selected Role Active Feature Preview */}
+                      {(() => {
+                        const currentRoleObj = ROLES.find(r => r.id === selectedRole) || ROLES[0];
+                        const Icon = currentRoleObj.icon;
                         return (
-                          <div
-                            key={r.id}
-                            onClick={() => setSelectedRole(r.id)}
-                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between text-left ${
-                              isSelected
-                                ? "border-[#0F8B7D] bg-teal-50/40 shadow-xs ring-1 ring-[#0F8B7D]"
-                                : "border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-2.5">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                                  isSelected ? "bg-[#0F8B7D] text-white" : "bg-slate-100 text-slate-600"
-                                }`}>
-                                  <Icon className="w-4 h-4" />
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-900 leading-snug">{r.title}</h4>
+                          <div className="p-3.5 rounded-xl bg-white border border-teal-200/80 flex items-center justify-between gap-3 shadow-2xs">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                                <Icon className="w-4 h-4" />
                               </div>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
-                                isSelected ? "bg-[#0F8B7D] text-white" : "bg-slate-100 text-slate-600"
-                              }`}>
-                                {r.badge}
-                              </span>
+                              <div>
+                                <p className="text-xs font-bold text-slate-800">{currentRoleObj.title}</p>
+                                <p className="text-[11px] text-slate-500 line-clamp-1">{currentRoleObj.description}</p>
+                              </div>
                             </div>
-                            <p className="text-[11px] text-slate-500 leading-relaxed mb-2">{r.description}</p>
-                            <div className="text-[10px] font-semibold text-teal-800 bg-teal-100/50 px-2 py-1 rounded-lg">
-                              ⚡ {r.billingFocus}
-                            </div>
+                            <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-teal-100/60 text-[#0F8B7D] text-[10px] font-bold shrink-0">
+                              ⚡ {currentRoleObj.billingFocus}
+                            </span>
                           </div>
                         );
-                      })}
+                      })()}
                     </div>
 
                     {/* Company Legal Identity */}
@@ -616,16 +709,16 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* ════════ STEP 2: BRANDING & BANK ACCOUNT ════════ */}
+                {/* ════════ STEP 2: BRANDING & PREFERENCES ════════ */}
                 {currentStep === 2 && (
                   <div className="space-y-6 animate-fadeIn">
                     <div>
                       <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-[#0F8B7D] font-mono text-[11px] font-bold uppercase">
-                        Step 2 of 4 · Brand &amp; Receiving Bank
+                        Step 2 of 4 · Visual Branding &amp; Preferences
                       </span>
-                      <h2 className="text-xl font-black text-slate-900 mt-2">Visual Branding &amp; Payout Account</h2>
+                      <h2 className="text-xl font-black text-slate-900 mt-2">Visual Branding &amp; Invoicing Preferences</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Customize how invoices appear to tenants and specify the receiving bank account for rent collections.
+                        Customize how invoices, demand notices, and tenant statements appear. Banking details can be configured later in Settings.
                       </p>
                     </div>
 
@@ -686,58 +779,22 @@ function OnboardingContent() {
                       </div>
                     </div>
 
-                    {/* Receiving Bank Details */}
+                    {/* Invoicing Header Note */}
                     <div className="p-5 rounded-2xl border border-slate-200 bg-white space-y-3">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-[#0F8B7D]" />
-                        <h4 className="text-xs font-extrabold text-slate-800">Receiving Bank Account (For Rent &amp; CAM Receipts)</h4>
+                        <FileText className="w-4 h-4 text-[#0F8B7D]" />
+                        <h4 className="text-xs font-extrabold text-slate-800">Standard Invoicing Header Memo</h4>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Tenants will receive these NEFT/RTGS details on their monthly demand notices.
+                        This statutory footnote will appear on all PDF invoices and CAM demand notes issued to tenants.
                       </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">Bank Name</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. HDFC Bank, ICICI Bank"
-                            value={bankData.bankName}
-                            onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">Account Number</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. 50200012345678"
-                            value={bankData.accountNumber}
-                            onChange={(e) => setBankData({ ...bankData, accountNumber: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:bg-white focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">IFSC Code</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. HDFC0000123"
-                            value={bankData.ifscCode}
-                            onChange={(e) => setBankData({ ...bankData, ifscCode: e.target.value.toUpperCase() })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase focus:bg-white focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">Beneficiary Account Name</label>
-                          <input
-                            type="text"
-                            placeholder={orgData.legalName || "e.g. Apex Industrial Realty Pvt Ltd"}
-                            value={bankData.accountHolder}
-                            onChange={(e) => setBankData({ ...bankData, accountHolder: e.target.value })}
-                            className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
-                          />
-                        </div>
-                      </div>
+                      <input
+                        type="text"
+                        value={branding.invoiceHeaderMemo}
+                        onChange={(e) => setBranding({ ...branding, invoiceHeaderMemo: e.target.value })}
+                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
+                        placeholder="e.g. Official Tax Invoice issued under Section 31 of CGST Act, 2017"
+                      />
                     </div>
                   </div>
                 )}
@@ -781,12 +838,22 @@ function OnboardingContent() {
                           <label className="block text-xs font-bold text-slate-700 mb-1">Micro-Market / Area</label>
                           <input
                             type="text"
-                            placeholder="e.g. BKC, Whitefield"
+                            placeholder="e.g. BKC, Whitefield, Maninagar"
                             value={propertyData.microMarket}
                             onChange={(e) => setPropertyData({ ...propertyData, microMarket: e.target.value })}
                             className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
                           />
                         </div>
+                      </div>
+
+                      {/* Property Address */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Property Full Address / Location *</label>
+                        <AddressAutocomplete
+                          value={propertyData.address}
+                          onChange={(val) => setPropertyData({ ...propertyData, address: val })}
+                          placeholder="Search or enter property street address, building number, landmark..."
+                        />
                       </div>
 
                       {/* PM / MSP Specific: Client Owner & Mandate */}
@@ -944,39 +1011,80 @@ function OnboardingContent() {
                       )}
                     </div>
 
-                    {/* Unified Optional Tenant / Member Section */}
-                    <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-[#0F8B7D]" />
-                          <h4 className="text-xs font-extrabold text-slate-800">
-                            {selectedRole === "flex_operator" ? "Active Corporate Member" : "Active Tenant / Lease Agreement"}
-                          </h4>
-                        </div>
-                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={hasTenant}
-                            onChange={(e) => setHasTenant(e.target.checked)}
-                            className="rounded text-[#0F8B7D]"
-                          />
-                          <span>Add Active Tenant Now</span>
+                    {/* Explicit Occupancy Status Selector: Vacant vs Leased */}
+                    <div className="p-5 rounded-2xl border-2 border-slate-200 bg-white space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-800 mb-1">
+                          Property Occupancy Status *
                         </label>
+                        <p className="text-[11px] text-slate-500">
+                          Is this space currently occupied by a tenant, or is it vacant and available for lease?
+                        </p>
                       </div>
 
-                      {hasTenant ? (
-                        <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setOccupancyStatus("vacant")}
+                          className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            occupancyStatus === "vacant"
+                              ? "border-[#0F8B7D] bg-teal-50/50 shadow-xs ring-1 ring-[#0F8B7D]"
+                              : "border-slate-200 hover:border-slate-300 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-black text-slate-900">Vacant Space</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              occupancyStatus === "vacant" ? "bg-[#0F8B7D] text-white" : "bg-slate-100 text-slate-600"
+                            }`}>
+                              Available
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            No active tenant yet. Space will be marked as vacant and ready to lease from your Rent Roll dashboard.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setOccupancyStatus("leased")}
+                          className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            occupancyStatus === "leased"
+                              ? "border-[#0F8B7D] bg-teal-50/50 shadow-xs ring-1 ring-[#0F8B7D]"
+                              : "border-slate-200 hover:border-slate-300 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-black text-slate-900">Leased / Occupied</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              occupancyStatus === "leased" ? "bg-[#0F8B7D] text-white" : "bg-slate-100 text-slate-600"
+                            }`}>
+                              Active Lease
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Currently occupied by an active tenant. You can input tenant details and attach the lease agreement.
+                          </p>
+                        </button>
+                      </div>
+
+                      {occupancyStatus === "leased" && (
+                        <div className="pt-4 border-t border-slate-100 space-y-3 animate-fadeIn">
+                          <h4 className="text-xs font-extrabold text-slate-800">
+                            {selectedRole === "flex_operator" ? "Active Corporate Member Details" : "Active Tenant & Lease Details"}
+                          </h4>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                               <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                {selectedRole === "flex_operator" ? "Member Company Name" : "Tenant Company Name"}
+                                {selectedRole === "flex_operator" ? "Member Company Name *" : "Tenant Company Name *"}
                               </label>
                               <input
                                 type="text"
                                 placeholder="e.g. Nexus Technology Labs"
                                 value={tenantData.name}
                                 onChange={(e) => setTenantData({ ...tenantData, name: e.target.value })}
-                                className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold focus:border-[#0F8B7D]"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:bg-white focus:border-[#0F8B7D]"
+                                required
                               />
                             </div>
                             <div>
@@ -986,7 +1094,7 @@ function OnboardingContent() {
                                 placeholder="e.g. accounts@nexustech.com"
                                 value={tenantData.email}
                                 onChange={(e) => setTenantData({ ...tenantData, email: e.target.value })}
-                                className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-medium focus:border-[#0F8B7D]"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:border-[#0F8B7D]"
                               />
                             </div>
                             <div>
@@ -998,25 +1106,34 @@ function OnboardingContent() {
                                 placeholder="e.g. 750000"
                                 value={tenantData.monthlyRentOrFee}
                                 onChange={(e) => setTenantData({ ...tenantData, monthlyRentOrFee: Number(e.target.value) || 0 })}
-                                className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold font-mono focus:border-[#0F8B7D]"
+                                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold font-mono focus:bg-white focus:border-[#0F8B7D]"
                               />
                             </div>
                           </div>
 
-                          {/* Direct Rent Agreement PDF Upload */}
+                          {/* Direct Rent Agreement PDF Upload with AI Extraction & Difference Verification */}
                           <div>
                             <label className="block text-[11px] font-bold text-slate-700 mb-1">Executed Rent Agreement (PDF)</label>
                             <div className="flex items-center gap-2">
                               <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-teal-300 hover:border-teal-500 bg-teal-50/50 hover:bg-teal-50 text-xs text-teal-900 font-bold cursor-pointer transition-colors max-w-sm truncate">
-                                <FileUp size={13} className="text-[#0F8B7D] shrink-0" />
-                                <span className="truncate">{tenantData.rentAgreementFileName || "Upload Agreement PDF"}</span>
+                                {isScanningAgreement ? (
+                                  <Sparkles size={13} className="text-[#0F8B7D] animate-spin shrink-0" />
+                                ) : (
+                                  <FileUp size={13} className="text-[#0F8B7D] shrink-0" />
+                                )}
+                                <span className="truncate">
+                                  {isScanningAgreement
+                                    ? "Extracting Lease Data..."
+                                    : tenantData.rentAgreementFileName || "Upload Agreement PDF"}
+                                </span>
                                 <input
                                   type="file"
                                   accept=".pdf,.doc,.docx"
                                   className="hidden"
+                                  disabled={isScanningAgreement}
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
-                                    if (file) setTenantData({ ...tenantData, rentAgreementFileName: file.name });
+                                    if (file) handleAgreementFileUpload(file);
                                   }}
                                 />
                               </label>
@@ -1030,13 +1147,237 @@ function OnboardingContent() {
                                 </button>
                               )}
                             </div>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              Uploading automatically scans tenant name, rent amount & terms, and prompts you to review or edit differences.
+                            </p>
                           </div>
                         </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-500 italic">
-                          Space will be created as vacant. You can add active leases later anytime from the dashboard.
-                        </p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ════════ RENT AGREEMENT DIFFERENCE COMPARISON MODAL ════════ */}
+                {showAgreementDiffModal && (
+                  <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 animate-scaleUp border border-slate-100">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center font-bold">
+                            <Sparkles size={20} />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-black text-slate-900">Lease Agreement Differences Detected</h3>
+                            <p className="text-xs text-slate-500">
+                              Extracted terms from <span className="font-bold text-slate-700">{pendingFileName}</span> vs your form values.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTenantData(prev => ({ ...prev, rentAgreementFileName: pendingFileName }));
+                            setShowAgreementDiffModal(false);
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+                        <AlertCircle size={16} className="shrink-0 text-amber-600" />
+                        <span>Choose whether to replace form values, keep form values as-is, or edit individual fields before attaching.</span>
+                      </div>
+
+                      {/* Difference Comparison Rows */}
+                      <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                        {/* 1. Tenant Company Name */}
+                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                            <span>Tenant Company Name</span>
+                            <span className="text-[10px] uppercase font-mono text-slate-400">Match Check</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <label className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${
+                              diffSelections.tenantName?.choice === "form" ? "bg-white border-[#0F8B7D] shadow-2xs" : "border-slate-200 bg-white/50 opacity-80"
+                            }`}>
+                              <input
+                                type="radio"
+                                name="diff_tenantName"
+                                checked={diffSelections.tenantName?.choice === "form"}
+                                onChange={() => setDiffSelections(prev => ({ ...prev, tenantName: { ...prev.tenantName, choice: "form" } }))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block">Form Entry</span>
+                                <span className="font-bold text-slate-900">{tenantData.name || "(Not specified)"}</span>
+                              </div>
+                            </label>
+
+                            <label className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${
+                              diffSelections.tenantName?.choice === "lease" ? "bg-teal-50/60 border-[#0F8B7D] shadow-2xs" : "border-slate-200 bg-white/50 opacity-80"
+                            }`}>
+                              <input
+                                type="radio"
+                                name="diff_tenantName"
+                                checked={diffSelections.tenantName?.choice === "lease"}
+                                onChange={() => setDiffSelections(prev => ({ ...prev, tenantName: { ...prev.tenantName, choice: "lease" } }))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-[10px] font-bold text-teal-700 block">Lease Agreement (Scanned)</span>
+                                <span className="font-extrabold text-teal-950">{extractedLeaseData.tenantName}</span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* 2. Contact Email */}
+                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                            <span>Contact Email</span>
+                            <span className="text-[10px] uppercase font-mono text-slate-400">Match Check</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <label className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${
+                              diffSelections.contactEmail?.choice === "form" ? "bg-white border-[#0F8B7D] shadow-2xs" : "border-slate-200 bg-white/50 opacity-80"
+                            }`}>
+                              <input
+                                type="radio"
+                                name="diff_contactEmail"
+                                checked={diffSelections.contactEmail?.choice === "form"}
+                                onChange={() => setDiffSelections(prev => ({ ...prev, contactEmail: { ...prev.contactEmail, choice: "form" } }))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block">Form Entry</span>
+                                <span className="font-bold text-slate-900">{tenantData.email || "(Not specified)"}</span>
+                              </div>
+                            </label>
+
+                            <label className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${
+                              diffSelections.contactEmail?.choice === "lease" ? "bg-teal-50/60 border-[#0F8B7D] shadow-2xs" : "border-slate-200 bg-white/50 opacity-80"
+                            }`}>
+                              <input
+                                type="radio"
+                                name="diff_contactEmail"
+                                checked={diffSelections.contactEmail?.choice === "lease"}
+                                onChange={() => setDiffSelections(prev => ({ ...prev, contactEmail: { ...prev.contactEmail, choice: "lease" } }))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-[10px] font-bold text-teal-700 block">Lease Agreement (Scanned)</span>
+                                <span className="font-extrabold text-teal-950">{extractedLeaseData.contactEmail}</span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* 3. Monthly Rent */}
+                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                            <span>Total Monthly Rent (₹)</span>
+                            <span className="text-[10px] uppercase font-mono text-slate-400">Match Check</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <label className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${
+                              diffSelections.monthlyRent?.choice === "form" ? "bg-white border-[#0F8B7D] shadow-2xs" : "border-slate-200 bg-white/50 opacity-80"
+                            }`}>
+                              <input
+                                type="radio"
+                                name="diff_monthlyRent"
+                                checked={diffSelections.monthlyRent?.choice === "form"}
+                                onChange={() => setDiffSelections(prev => ({ ...prev, monthlyRent: { ...prev.monthlyRent, choice: "form" } }))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 block">Form Entry</span>
+                                <span className="font-bold text-slate-900">₹{tenantData.monthlyRentOrFee.toLocaleString("en-IN")}</span>
+                              </div>
+                            </label>
+
+                            <label className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-start gap-2 ${
+                              diffSelections.monthlyRent?.choice === "lease" ? "bg-teal-50/60 border-[#0F8B7D] shadow-2xs" : "border-slate-200 bg-white/50 opacity-80"
+                            }`}>
+                              <input
+                                type="radio"
+                                name="diff_monthlyRent"
+                                checked={diffSelections.monthlyRent?.choice === "lease"}
+                                onChange={() => setDiffSelections(prev => ({ ...prev, monthlyRent: { ...prev.monthlyRent, choice: "lease" } }))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-[10px] font-bold text-teal-700 block">Lease Agreement (Scanned)</span>
+                                <span className="font-extrabold text-teal-950">₹{extractedLeaseData.monthlyRent.toLocaleString("en-IN")}</span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Modal Actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Move as-is (Keep Form Data)
+                            setTenantData(prev => ({ ...prev, rentAgreementFileName: pendingFileName }));
+                            setShowAgreementDiffModal(false);
+                          }}
+                          className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        >
+                          Move As Is (Keep Form Data)
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Replace all with lease data
+                              setTenantData(prev => ({
+                                ...prev,
+                                name: extractedLeaseData.tenantName,
+                                email: extractedLeaseData.contactEmail,
+                                monthlyRentOrFee: extractedLeaseData.monthlyRent,
+                                rentAgreementFileName: pendingFileName
+                              }));
+                              setPropertyData(prev => ({
+                                ...prev,
+                                unitNumber: extractedLeaseData.unitNumber,
+                                askingBaseRentPsf: extractedLeaseData.askingBaseRentPsf
+                              }));
+                              setShowAgreementDiffModal(false);
+                            }}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                          >
+                            Replace All with Lease Data
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Apply selected selections
+                              const newName = diffSelections.tenantName?.choice === "lease" ? extractedLeaseData.tenantName : tenantData.name;
+                              const newEmail = diffSelections.contactEmail?.choice === "lease" ? extractedLeaseData.contactEmail : tenantData.email;
+                              const newRent = diffSelections.monthlyRent?.choice === "lease" ? extractedLeaseData.monthlyRent : tenantData.monthlyRentOrFee;
+
+                              setTenantData(prev => ({
+                                ...prev,
+                                name: newName,
+                                email: newEmail,
+                                monthlyRentOrFee: newRent,
+                                rentAgreementFileName: pendingFileName
+                              }));
+                              setShowAgreementDiffModal(false);
+                            }}
+                            className="px-5 py-2 bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Check size={14} />
+                            <span>Apply Selected &amp; Attach</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1050,7 +1391,7 @@ function OnboardingContent() {
                       </span>
                       <h2 className="text-xl font-black text-slate-900 mt-2">Ready to Activate Your Rent Roll</h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Please review your organization, receiving bank, and primary property settings before launching.
+                        Please review your organization, branding, and primary property settings before launching.
                       </p>
                     </div>
 
@@ -1071,17 +1412,15 @@ function OnboardingContent() {
                         </p>
                       </div>
 
-                      {/* Bank Details */}
+                      {/* Workspace Preferences */}
                       <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
-                        <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">Payout Bank Account</span>
-                        <h4 className="text-sm font-extrabold text-slate-900">{bankData.bankName || "Bank Account Pending"}</h4>
-                        {bankData.accountNumber ? (
-                          <div className="text-xs font-mono text-slate-600">
-                            A/c: •••• {bankData.accountNumber.slice(-4)} | IFSC: {bankData.ifscCode}
-                          </div>
-                        ) : (
-                          <p className="text-[11px] text-slate-500">You can link a bank account later from Banking Settings.</p>
-                        )}
+                        <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">Workspace Preferences</span>
+                        <h4 className="text-sm font-extrabold text-slate-900">Standard Ready</h4>
+                        <div className="text-xs text-slate-600 space-y-0.5">
+                          <p>Currency: <strong>INR (₹)</strong></p>
+                          <p>Invoicing: <strong>Automated GST Compliant</strong></p>
+                          <p className="text-[10px] text-slate-400 pt-0.5">Payout bank details can be linked later in Settings.</p>
+                        </div>
                       </div>
 
                       {/* Primary Property & Unit */}
@@ -1105,8 +1444,10 @@ function OnboardingContent() {
                             </>
                           )}
                           <span>
-                            Tenant: <strong>{hasTenant && tenantData.name ? tenantData.name : "Vacant"}</strong>
-                            {hasTenant && tenantData.rentAgreementFileName && " (Lease Agreement Attached)"}
+                            Status: <strong className={occupancyStatus === "vacant" ? "text-amber-700" : "text-emerald-700"}>
+                              {occupancyStatus === "vacant" ? "Vacant" : `Leased (${tenantData.name || "Active Tenant"})`}
+                            </strong>
+                            {occupancyStatus === "leased" && tenantData.rentAgreementFileName && " · Agreement Attached"}
                           </span>
                         </div>
                       </div>

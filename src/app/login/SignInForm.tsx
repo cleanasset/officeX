@@ -627,6 +627,17 @@ export default function SignInForm({
       // Subscription is NOT auto-activated — requires Razorpay payment
 
       const cleanVal = userEmailOrPhone.trim().toLowerCase();
+      const previousEmail = (typeof window !== "undefined" ? (localStorage.getItem("officex_user_email") || "") : "").toLowerCase().trim();
+      if (previousEmail && previousEmail !== cleanVal) {
+        // Clear previous user's cached onboarding and properties for a fresh new account login
+        localStorage.removeItem("officex_onboarding_completed");
+        sessionStorage.removeItem("officex_onboarding_completed");
+        localStorage.removeItem("officex_property_id");
+        localStorage.removeItem("officex_property_name");
+        localStorage.removeItem("officex_user_properties");
+        document.cookie = "officex_onboarding_completed=0; path=/; max-age=0";
+      }
+
       if (cleanVal.includes("@")) {
         sessionStorage.setItem("officex_user_email", cleanVal);
         localStorage.setItem("officex_user_email", cleanVal);
@@ -675,20 +686,7 @@ export default function SignInForm({
 
     const memList = availableMemberships !== undefined ? availableMemberships : memberships;
 
-    // Only prompt for workspace if the user genuinely has multiple distinct corporate memberships
-    if (memList.length > 1) {
-      setMemberships(memList);
-      setSelectedMembershipId(memList[0].id);
-      setStep("workspace_chooser");
-      return;
-    }
-
-    if (memList.length === 1) {
-      handleSelectWorkspace(memList[0]);
-      return;
-    }
-
-    // Route based on whether user has an active commercial property configured
+    // Check if user has an active commercial property configured or completed onboarding
     const hasActiveProperty = typeof window !== "undefined" && Boolean(
       localStorage.getItem("officex_property_id") ||
       (localStorage.getItem("officex_user_properties") && localStorage.getItem("officex_user_properties") !== "[]")
@@ -698,6 +696,19 @@ export default function SignInForm({
       (sessionStorage.getItem("officex_onboarding_completed") === "1" && hasActiveProperty) ||
       (document.cookie.includes("officex_onboarding_completed=1") && hasActiveProperty)
     );
+
+    // Only prompt for workspace if the user genuinely has multiple distinct corporate memberships
+    if (memList.length > 1) {
+      setMemberships(memList);
+      setSelectedMembershipId(memList[0].id);
+      setStep("workspace_chooser");
+      return;
+    }
+
+    if (memList.length === 1 && isAlreadyOnboarded) {
+      handleSelectWorkspace(memList[0]);
+      return;
+    }
 
     let destination = "";
     if (isRentRollContext) {
@@ -840,16 +851,29 @@ export default function SignInForm({
       // Non-blocking
     }
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_onboarding_completed", "1");
-      sessionStorage.setItem("officex_onboarding_completed", "1");
+    const hasActiveProperty = typeof window !== "undefined" && Boolean(
+      localStorage.getItem("officex_property_id") ||
+      (localStorage.getItem("officex_user_properties") && localStorage.getItem("officex_user_properties") !== "[]")
+    );
+    const isAlreadyOnboarded = typeof window !== "undefined" && (
+      (localStorage.getItem("officex_onboarding_completed") === "1" && hasActiveProperty) ||
+      (sessionStorage.getItem("officex_onboarding_completed") === "1" && hasActiveProperty) ||
+      (document.cookie.includes("officex_onboarding_completed=1") && hasActiveProperty)
+    );
+
+    let destination = "";
+    if (!isAlreadyOnboarded) {
+      destination = `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
+    } else {
+      destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup")) 
+        ? safeRedirect 
+        : (membership.workspaceUrl || "/properties/rent-roll");
     }
-    const destination = (initialRedirect && safeRedirect !== "/") ? safeRedirect : (membership.workspaceUrl || "/properties/rent-roll");
 
     setStep("signed_in_success");
     setTimeout(() => {
       window.location.href = destination;
-    }, 1000);
+    }, 800);
   };
 
   // --------------------------------------------------------------------------

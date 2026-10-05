@@ -506,6 +506,18 @@ function TenantJoinContent() {
         localStorage.setItem("officex_invite_code", previewProperty.inviteCode || inviteCode);
         localStorage.setItem("officex_onboarding_completed", "1");
 
+        // Mark tenant acceptance as completed in tenant registry
+        try {
+          const userTenants = JSON.parse(localStorage.getItem("officex_user_tenants") || "[]");
+          const updated = userTenants.map((t: any) => {
+            if (t.tradeName?.toLowerCase() === (companyName || effectiveTenantName).toLowerCase() || t.contactEmail?.toLowerCase() === email.toLowerCase()) {
+              return { ...t, status: "Active", accepted: true, portalLive: true, kycVerified: true };
+            }
+            return t;
+          });
+          localStorage.setItem("officex_user_tenants", JSON.stringify(updated));
+        } catch (e) {}
+
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = `officex_user_role=${encodeURIComponent("Tenant / Occupier")}; path=/; max-age=86400; SameSite=Lax`;
         document.cookie = "officex_dashboard=/tenant/payments; path=/; max-age=86400; SameSite=Lax";

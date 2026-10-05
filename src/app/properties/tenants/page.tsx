@@ -232,42 +232,48 @@ export default function TenantDirectoryPage() {
     // 3. Merge Real Active Leases & Local Tenants Created by User in Session
     if (typeof window !== "undefined") {
       try {
+        const userCreatedTenants = JSON.parse(localStorage.getItem("officex_user_tenants") || "[]");
         const localTenants = JSON.parse(localStorage.getItem("officex_active_tenants") || "[]");
-        if (Array.isArray(localTenants) && localTenants.length > 0) {
+        const combinedLocal = [...userCreatedTenants, ...localTenants];
+
+        if (Array.isArray(combinedLocal) && combinedLocal.length > 0) {
           const existingNames = new Set(loadedTenants.map((t) => t.tradeName.toLowerCase()));
-          for (const lt of localTenants) {
-            if (lt && lt.tradeName && !existingNames.has(lt.tradeName.toLowerCase())) {
+          for (const lt of combinedLocal) {
+            if (lt && (lt.tradeName || lt.name) && !existingNames.has((lt.tradeName || lt.name).toLowerCase())) {
+              const tenantName = lt.tradeName || lt.name || "Occupant";
               loadedTenants.unshift({
                 id: lt.id || `LOCAL-T-${Date.now()}`,
                 tenantCode: lt.tenantCode || `OX-T-${Math.floor(1000 + Math.random() * 9000)}`,
-                tradeName: lt.tradeName || lt.legalName || "Occupant",
-                legalName: lt.legalName || lt.tradeName || "Occupant Entity",
+                tradeName: tenantName,
+                legalName: lt.legalName || `${tenantName} Pvt Ltd`,
                 industry: lt.industry || "Enterprise",
                 propertyId: lt.propertyId || loadedProps[0]?.id || "",
                 propertyName: lt.propertyName || loadedProps[0]?.name || "Commercial Space",
                 unitNumber: lt.unitNumber || "Suite 101",
                 floorNumber: lt.floorNumber || 1,
-                chargeableArea: Number(lt.totalArea) || Number(lt.chargeableArea) || 0,
-                carpetArea: Math.round((Number(lt.totalArea) || Number(lt.chargeableArea) || 0) * 0.8),
-                monthlyRent: Number(lt.totalMonthlyRent) || Number(lt.monthlyRent) || 0,
+                chargeableArea: Number(lt.totalArea) || Number(lt.chargeableArea) || 5000,
+                carpetArea: Math.round((Number(lt.totalArea) || Number(lt.chargeableArea) || 5000) * 0.8),
+                monthlyRent: Number(lt.monthlyRent) || Number(lt.totalMonthlyRent) || 750000,
                 camRatePsf: Number(lt.camRatePsf) || 18,
-                monthlyCam: Math.round((Number(lt.totalArea) || Number(lt.chargeableArea) || 0) * 18),
-                totalMonthlyBilling: Number(lt.totalMonthlyBilling) || Number(lt.totalMonthlyRent) || 0,
-                securityDeposit: (Number(lt.totalMonthlyRent) || 0) * 3,
-                startDate: lt.startDate || "-",
+                monthlyCam: Math.round((Number(lt.totalArea) || 5000) * 18),
+                totalMonthlyBilling: Number(lt.totalMonthlyBilling) || Number(lt.monthlyRent) || 750000,
+                securityDeposit: (Number(lt.monthlyRent) || 750000) * 3,
+                startDate: lt.startDate || new Date().toISOString().split("T")[0],
                 endDate: lt.endDate || "-",
                 escalationPct: 5,
                 pan: lt.pan || "-",
                 gstin: lt.gstin || "-",
-                contactPerson: lt.contactPerson || "-",
-                contactEmail: lt.contactEmail || "-",
-                contactPhone: lt.contactPhone || "-",
+                contactPerson: lt.contactPerson || tenantName,
+                contactEmail: lt.contactEmail || lt.email || "-",
+                contactPhone: lt.contactPhone || lt.phone || "-",
                 billingAddress: lt.billingAddress || "-",
-                status: lt.hasOverdue ? "under_notice" : "active",
-                kycVerified: !!lt.gstin && lt.gstin !== "-",
+                status: lt.status === "Pending Acceptance" ? "contract_pending" : lt.status || "active",
+                portalLive: Boolean(lt.portalLive),
+                kycVerified: !!lt.kycVerified,
                 outstandingDue: lt.outstanding || 0,
                 inviteCode: lt.inviteCode || `OX-${Math.floor(7000 + Math.random() * 1000)}`
               });
+              existingNames.add(tenantName.toLowerCase());
             }
           }
         }

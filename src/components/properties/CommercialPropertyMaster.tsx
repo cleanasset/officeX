@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   Layers,
@@ -136,6 +136,10 @@ interface BillingSpvOption {
 
 export default function CommercialPropertyMaster() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetPropIdParam = searchParams.get("propertyId") || searchParams.get("id") || "";
+  const targetPropNameParam = searchParams.get("name") || "";
+  const [editingPropId, setEditingPropId] = useState<string | null>(targetPropIdParam || null);
 
   // Step 1: Asset & Legal Master (Identity, Entity Constitution, CIN/PAN & Towers)
   // Step 2: Area & Space Inventory (Chargeable vs Carpet & Units)
@@ -1003,8 +1007,8 @@ export default function CommercialPropertyMaster() {
 
       // Check real user organization identity from onboarding / session
       const realOrgName = (
-        localStorage.getItem("officex_active_org") ||
         localStorage.getItem("officex_org_name") ||
+        localStorage.getItem("officex_active_org") ||
         localStorage.getItem("officex_user_org") ||
         ""
       ).trim();
@@ -1014,8 +1018,13 @@ export default function CommercialPropertyMaster() {
         ""
       ).trim();
 
+      const isDummyOrg = !realOrgName ||
+        realOrgName.toLowerCase().startsWith("org_") ||
+        realOrgName.toLowerCase() === "org_officex" ||
+        realOrgName.toLowerCase().includes("apex commercial");
+
       // Only add to SPV list if it is a real user organization (no dummy fallback)
-      if (realOrgName && !realOrgName.toLowerCase().includes("apex commercial")) {
+      if (realOrgName && !isDummyOrg) {
         const userSpv: BillingSpvOption = {
           id: "SPV-PRIMARY",
           spvName: realOrgName,
@@ -1030,37 +1039,70 @@ export default function CommercialPropertyMaster() {
         setSelectedSpvId("custom");
       }
 
-      // Auto-fill Primary Property details from active session & sign-up
-      const autoPropName = (localStorage.getItem("officex_property_name") || localStorage.getItem("officex_active_org") || "").trim();
-      if (autoPropName && !assetName) {
-        setAssetName(autoPropName);
-      }
-      const autoCity = (localStorage.getItem("officex_property_city") || localStorage.getItem("officex_org_city") || localStorage.getItem("officex_user_city") || "").trim();
-      if (autoCity && !city) {
-        setCity(autoCity);
-      }
-      const autoState = (localStorage.getItem("officex_property_state") || localStorage.getItem("officex_org_state") || localStorage.getItem("officex_user_state") || "").trim();
-      if (autoState && !state) {
-        setState(autoState);
-      }
-      const autoAddress = (localStorage.getItem("officex_org_address") || localStorage.getItem("officex_user_address") || "").trim();
-      if (autoAddress && !address) {
-        setAddress(autoAddress);
-      }
-      const autoPan = (localStorage.getItem("officex_org_pan") || localStorage.getItem("officex_user_pan") || "").trim();
-      if (autoPan && !panNumber) {
-        setPanNumber(autoPan);
-      }
-      const autoGst = (localStorage.getItem("officex_property_gstin") || localStorage.getItem("officex_org_gstin") || localStorage.getItem("officex_user_gstin") || "").trim();
-      if (autoGst && !propertyGstin) {
-        setPropertyGstin(autoGst);
-      }
-      const autoArea = Number(localStorage.getItem("officex_leasable_area")) || 0;
-      if (autoArea > 0 && !totalChargeableArea) {
-        setTotalChargeableArea(autoArea);
+      // Pre-fill existing property details if editing or matching active property
+      let userProps: any[] = [];
+      try {
+        userProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+      } catch {}
+
+      const isEditMode = Boolean(targetPropIdParam || targetPropNameParam);
+
+      if (isEditMode) {
+        const matchedProp = userProps.find((p: any) => 
+          (targetPropIdParam && p.id === targetPropIdParam) ||
+          (targetPropNameParam && p.name?.toLowerCase().trim() === targetPropNameParam.toLowerCase().trim())
+        );
+
+        if (matchedProp) {
+          setEditingPropId(matchedProp.id);
+          if (matchedProp.name) setAssetName(matchedProp.name);
+          if (matchedProp.propertyCode || matchedProp.code || matchedProp.id) setPropertyCode(matchedProp.propertyCode || matchedProp.code || matchedProp.id);
+          if (matchedProp.address || matchedProp.location) setAddress(matchedProp.address || matchedProp.location);
+          if (matchedProp.city) setCity(matchedProp.city);
+          if (matchedProp.state) setState(matchedProp.state);
+          if (matchedProp.microMarket) setMicroMarket(matchedProp.microMarket);
+          if (matchedProp.pincode) setPincode(matchedProp.pincode);
+          if (matchedProp.type || matchedProp.propertyType) setPropertyType(matchedProp.type || matchedProp.propertyType);
+          if (matchedProp.grade) setGrade(matchedProp.grade);
+          if (matchedProp.panNumber) setPanNumber(matchedProp.panNumber);
+          if (matchedProp.gstin) setPropertyGstin(matchedProp.gstin);
+          if (matchedProp.entityType) setEntityType(matchedProp.entityType);
+          if (matchedProp.cinNumber) setCinNumber(matchedProp.cinNumber);
+          if (matchedProp.llpinNumber) setLlpinNumber(matchedProp.llpinNumber);
+          if (matchedProp.targetRentPsf || matchedProp.askingRate) setTargetRentPsf(Number(matchedProp.targetRentPsf || matchedProp.askingRate) || 0);
+          if (matchedProp.standardCamPsf || matchedProp.camRatePsf) setStandardCamPsf(Number(matchedProp.standardCamPsf || matchedProp.camRatePsf) || 0);
+          if (matchedProp.totalArea || matchedProp.chargeableArea || matchedProp.area) {
+            const areaVal = Number(String(matchedProp.totalArea || matchedProp.chargeableArea || matchedProp.area).replace(/[^0-9]/g, ""));
+            if (areaVal > 0) setTotalChargeableArea(areaVal);
+          }
+          if (matchedProp.carpetArea) setTotalCarpetArea(Number(matchedProp.carpetArea) || 0);
+          if (matchedProp.towers && Array.isArray(matchedProp.towers) && matchedProp.towers.length > 0) {
+            setTowers(matchedProp.towers);
+          }
+          if (matchedProp.units && Array.isArray(matchedProp.units) && matchedProp.units.length > 0) {
+            setUnits(matchedProp.units);
+          }
+        } else {
+          setEditingPropId(targetPropIdParam || null);
+          if (targetPropNameParam) setAssetName(targetPropNameParam);
+        }
+      } else {
+        // Mode = Add New Property (Start fresh, do NOT overwrite or clone primary property)
+        setEditingPropId(null);
+        setAssetName("");
+        setPropertyCode("");
+        setAddress("");
+        setTotalChargeableArea(0);
+        setTotalCarpetArea(0);
+        setTowers([]);
+        setUnits([]);
+        const autoCity = (localStorage.getItem("officex_org_city") || localStorage.getItem("officex_user_city") || "").trim();
+        if (autoCity) setCity(autoCity);
+        const autoState = (localStorage.getItem("officex_org_state") || localStorage.getItem("officex_user_state") || "").trim();
+        if (autoState) setState(autoState);
       }
     }
-  }, []);
+  }, [targetPropIdParam, targetPropNameParam]);
 
   // Sync tower area with total chargeable area
   useEffect(() => {
@@ -1183,10 +1225,13 @@ export default function CommercialPropertyMaster() {
           const calcMonthlyRent = occupiedUnits.reduce((sum, u) => sum + Math.round((Number(u.chargeableArea) || 0) * (Number(u.contractedRentPsf) || Number(u.askingRate) || 0)), 0);
           const calcBilling = occupiedUnits.reduce((sum, u) => sum + Math.round((Number(u.chargeableArea) || 0) * ((Number(u.contractedRentPsf) || Number(u.askingRate) || 0) + (Number(u.camRatePsf) || standardCamPsf || 0))), 0);
 
+          const isEditModeSave = Boolean(editingPropId || targetPropIdParam || targetPropNameParam);
+          const targetIdToSave = editingPropId || targetPropIdParam || (rrData && rrData.id ? rrData.id : null) || (isEditModeSave ? localStorage.getItem("officex_property_id") : null) || `PROP-${Date.now()}`;
           const createdItem = {
-            id: rrData.id || `PROP-${Date.now()}`,
+            id: targetIdToSave,
             name: assetName.trim(),
-            propertyCode: propertyCode.trim() || `PROP-${Date.now()}`,
+            isFullyRegistered: true,
+            propertyCode: propertyCode.trim() || targetIdToSave,
             type: propertyType,
             address: address.trim(),
             city: city.trim(),
@@ -1227,7 +1272,16 @@ export default function CommercialPropertyMaster() {
             totalBilling: rrData.totalBilling !== undefined ? rrData.totalBilling : calcBilling,
             createdAt: new Date().toISOString()
           };
-          localStorage.setItem("officex_user_properties", JSON.stringify([createdItem, ...currentList]));
+
+          // Deduplicate and upsert: remove any previous duplicate entries with matching ID or matching name
+          const deduplicatedList = currentList.filter((p: any) =>
+            p.id !== targetIdToSave &&
+            p.name?.toLowerCase().trim() !== assetName.trim().toLowerCase()
+          );
+
+          localStorage.setItem("officex_user_properties", JSON.stringify([createdItem, ...deduplicatedList]));
+          localStorage.setItem("officex_property_name", createdItem.name);
+          localStorage.setItem("officex_property_id", createdItem.id);
         } catch {}
 
         // Fire custom window event to immediately refresh any open dashboard
@@ -3618,49 +3672,72 @@ export default function CommercialPropertyMaster() {
                 </div>
               )}
 
-              {/* Action Required: Remaining Details Notification Popup */}
-              {units.some(u => u.status === "occupied") && (
-                <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-left space-y-2.5">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
-                      <AlertTriangle size={16} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-black text-slate-900">
-                          Action Required: Complete Lease Terms ({units.filter(u => u.status === "occupied").length} Occupied Units)
-                        </h4>
-                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase tracking-wider">
-                          Details Pending
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                        Commercial lease terms (Base Rent psf, Escalation %, Security Deposit, Lock-in) were skipped during property setup. These units are marked as <strong>Pending / Invited</strong> in your Rent Roll and will show as pending until filled or accepted once the tenant joins.
-                      </p>
-                      
-                      <div className="mt-2.5 flex flex-wrap gap-1.5">
-                        {units.filter(u => u.status === "occupied").map(u => (
-                          <span key={u.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-amber-200 text-[11px] font-mono text-slate-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                            <strong>{u.suiteNumber || u.spaceCode}</strong>: {u.tenantName || "Tenant Invite Pending"}
-                          </span>
-                        ))}
-                      </div>
+              {/* Action Required / Lease Completion Status */}
+              {(() => {
+                const pendingLeaseUnits = units.filter(u => u.status === "occupied" && (!u.contractedRentPsf || u.contractedRentPsf === 0 || !u.leaseStartDate));
+                if (pendingLeaseUnits.length > 0) {
+                  return (
+                    <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-left space-y-2.5">
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertTriangle size={16} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-black text-slate-900">
+                              Action Required: Complete Lease Terms ({pendingLeaseUnits.length} Occupied Units)
+                            </h4>
+                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase tracking-wider">
+                              Details Pending
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                            Commercial lease terms (Base Rent psf, Escalation %, Security Deposit, Lock-in) were skipped during property setup. These units are marked as <strong>Pending / Invited</strong> in your Rent Roll and will show as pending until filled or accepted once the tenant joins.
+                          </p>
+                          
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {pendingLeaseUnits.map(u => (
+                              <span key={u.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-amber-200 text-[11px] font-mono text-slate-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                <strong>{u.suiteNumber || u.spaceCode}</strong>: {u.tenantName || "Tenant Invite Pending"}
+                              </span>
+                            ))}
+                          </div>
 
-                      <div className="mt-3 flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => router.push("/properties/rent-roll?tab=rentroll")}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                        >
-                          <span>Complete Details in Rent Roll</span>
-                          <ArrowRight size={13} />
-                        </button>
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => router.push("/properties/rent-roll?tab=rentroll")}
+                              className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                            >
+                              <span>Complete Details in Rent Roll</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  );
+                } else if (units.length > 0) {
+                  return (
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-left flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-black text-emerald-900">Property Setup &amp; Lease Terms Complete</h4>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">Verified</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
+                          All building specifications, unit allocations, and contracted lease terms are fully registered and active.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Tenant Onboarding & WhatsApp Sharing Card with Unit Selector */}
               <div className="p-4 sm:p-5 rounded-2xl bg-teal-50/50 border border-teal-200/90 text-left space-y-3.5">

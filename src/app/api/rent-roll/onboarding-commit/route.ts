@@ -375,22 +375,35 @@ export async function POST(req: Request) {
             activeUserId = userRow.id;
           } else if (supabaseAdmin) {
             try {
-              const { data: newAuthUser } = await supabaseAdmin.auth.admin.createUser({
-                email: userEmail,
-                email_confirm: true,
-                user_metadata: { full_name: orgName, role: "property_manager" }
-              });
-              if (newAuthUser?.user?.id) {
-                activeUserId = newAuthUser.user.id;
-                await client.from("users").insert({
+              const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+              const existingAuth = usersData?.users?.find(
+                (u) => u.email?.toLowerCase() === userEmail.toLowerCase()
+              );
+              if (existingAuth) {
+                activeUserId = existingAuth.id;
+              } else {
+                const { data: newAuthUser } = await supabaseAdmin.auth.admin.createUser({
+                  email: userEmail,
+                  email_confirm: true,
+                  user_metadata: { full_name: orgName, role: "property_manager" }
+                });
+                if (newAuthUser?.user?.id) {
+                  activeUserId = newAuthUser.user.id;
+                }
+              }
+
+              if (activeUserId) {
+                await client.from("users").upsert({
                   id: activeUserId,
                   email: userEmail,
-                  fullName: orgName,
+                  full_name: orgName,
                   role: "property_manager",
-                  passwordHash: "SUPABASE_AUTH_MANAGED"
-                });
+                  password_hash: "SUPABASE_AUTH_MANAGED"
+                }, { onConflict: "email" });
               }
-            } catch {}
+            } catch (err) {
+              console.warn("[ONBOARDING] Supabase Auth/User provision notice:", err);
+            }
           }
         }
 

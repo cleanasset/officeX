@@ -1,9 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Plus, Search, Building2, ChevronLeft, ChevronRight, Share2, Sparkles, KeyRound, UploadCloud, MapPin, Users, ShieldCheck, ArrowRight, Building } from "lucide-react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Plus, Search, Building2, ChevronLeft, ChevronRight, Share2, Sparkles, KeyRound, UploadCloud, MapPin, Users, ShieldCheck, ArrowRight, Building, CheckCircle2, X, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 import { ImportRentRollModal } from "@/components/rent-roll/ImportRentRollModal";
+import { EditPropertyModal, PropertyModalData } from "@/components/properties/EditPropertyModal";
 
 interface PropertyItem {
   id: string;
@@ -18,6 +20,8 @@ interface PropertyItem {
   inviteCode?: string;
   ownerName?: string;
   activeLeases?: number;
+  isFullyRegistered?: boolean;
+  isDetailsPending?: boolean;
 }
 
 const SEED_PROP_IDS = new Set([
@@ -37,15 +41,43 @@ const SEED_PROP_IDS = new Set([
   "PROP-1790659297701"
 ]);
 
+function PropertyRegistryContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const actionParam = searchParams.get("action");
 
-
-export default function PropertyMasterRegistry() {
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [inviteModalProp, setInviteModalProp] = useState<PropertyItem | null>(null);
+  const [editingModalProp, setEditingModalProp] = useState<PropertyItem | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [showPrimaryModal, setShowPrimaryModal] = useState<boolean>(actionParam === "complete-primary");
+
+  const handleDeleteProperty = (propId: string, propName: string) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(`Are you sure you want to delete property "${propName}"? This action cannot be undone.`);
+      if (!confirmed) return;
+
+      try {
+        const currentProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+        const updatedProps = currentProps.filter((p: any) => p.id !== propId && p.name !== propName);
+        localStorage.setItem("officex_user_properties", JSON.stringify(updatedProps));
+      } catch (e) {}
+
+      setProperties(prev => prev.filter(p => p.id !== propId));
+      if (selectedPropId === propId) {
+        setSelectedPropId(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (actionParam === "complete-primary") {
+      setShowPrimaryModal(true);
+    }
+  }, [actionParam]);
 
   useEffect(() => {
     async function loadProperties() {
@@ -61,26 +93,43 @@ export default function PropertyMasterRegistry() {
         try {
           const localStored = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
           if (Array.isArray(localStored)) {
+            const seenNames = new Set<string>();
+            const deduplicatedLocal: any[] = [];
+
             localStored.forEach((p: any) => {
               if (p && (p.id || p.name)) {
                 const pId = p.id || `PROP-${Date.now()}`;
-                const codeNum = pId.replace(/\D/g, "").slice(-4) || "8841";
-                localStoredProps.push({
-                  id: pId,
-                  name: p.name,
-                  type: p.type || "Commercial Office",
-                  location: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.location || p.address || "Commercial Location"),
-                  area: p.totalArea ? Number(p.totalArea).toLocaleString() : "0",
-                  occupied: p.activeLeasesCount || 0,
-                  vacant: Math.max(0, (Number(p.totalArea) || 0) - (Number(p.occupiedArea) || 0)),
-                  occPct: p.occupancyPct || 0,
-                  grade: p.grade || "A",
-                  inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
-                  ownerName: p.ownerName || p.owner_name || p.ownerCompany || (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) || "Commercial Property Owner"
-                });
-                seenIds.add(pId);
+                const normName = (p.name || "").toLowerCase().trim();
+                
+                // Deduplicate by ID and property name
+                if (!seenIds.has(pId) && (!normName || !seenNames.has(normName))) {
+                  const codeNum = pId.replace(/\D/g, "").slice(-4) || "8841";
+                  localStoredProps.push({
+                    id: pId,
+                    name: p.name,
+                    type: p.type || "Commercial Office",
+                    location: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.location || p.address || "Commercial Location"),
+                    area: p.totalArea ? Number(p.totalArea).toLocaleString() : (p.area || "25,000"),
+                    occupied: p.activeLeasesCount || 0,
+                    vacant: Math.max(0, (Number(p.totalArea) || 0) - (Number(p.occupiedArea) || 0)),
+                    occPct: p.occupancyPct || 0,
+                    grade: p.grade || "A",
+                    inviteCode: p.inviteCode || `OX-${codeNum.padStart(4, "7")}`,
+                    ownerName: p.ownerName || p.owner_name || p.ownerCompany || (localStorage.getItem("officex_user_name") || localStorage.getItem("officex_active_org")) || "Commercial Property Owner",
+                    isFullyRegistered: Boolean(p.isFullyRegistered),
+                    isDetailsPending: p.isDetailsPending !== undefined ? Boolean(p.isDetailsPending) : (!p.isFullyRegistered && (!p.totalArea || p.totalArea === "0" || p.totalArea === 0))
+                  });
+                  seenIds.add(pId);
+                  if (normName) seenNames.add(normName);
+                  deduplicatedLocal.push(p);
+                }
               }
             });
+
+            // Clean up duplicates from localStorage automatically
+            if (deduplicatedLocal.length !== localStored.length) {
+              localStorage.setItem("officex_user_properties", JSON.stringify(deduplicatedLocal));
+            }
           }
         } catch (e) {}
       }
@@ -281,17 +330,32 @@ export default function PropertyMasterRegistry() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInviteModalProp(p);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white text-xs font-bold transition-all shadow-xs"
-                          title="Generate invitation link & building code for tenants"
-                        >
-                          <Share2 size={12} /> Invite Tenants
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => setEditingModalProp(p)}
+                            className="p-1.5 rounded-lg border border-slate-200 hover:border-teal-500 bg-white hover:bg-teal-50 text-slate-600 hover:text-[#0F8B7D] transition-colors cursor-pointer"
+                            title="Edit Property Details"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProperty(p.id, p.name)}
+                            className="p-1.5 rounded-lg border border-slate-200 hover:border-rose-300 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            title="Delete Property from Registry"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInviteModalProp(p)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white text-xs font-bold transition-all shadow-2xs"
+                            title="Generate invitation link & building code for tenants"
+                          >
+                            <Share2 size={12} /> Invite
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -337,14 +401,32 @@ export default function PropertyMasterRegistry() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPropId(null)}
-                    className="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer text-lg font-bold"
-                    title="Close"
-                  >
-                    ×
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setEditingModalProp(selectedProp)}
+                      className="p-2 rounded-xl bg-white border border-slate-200 hover:border-teal-500 text-slate-600 hover:text-[#0F8B7D] transition-colors cursor-pointer"
+                      title="Edit Property Details"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProperty(selectedProp.id, selectedProp.name)}
+                      className="p-2 rounded-xl bg-white border border-slate-200 hover:border-rose-300 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                      title="Delete Property"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPropId(null)}
+                      className="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer text-lg font-bold"
+                      title="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -354,7 +436,13 @@ export default function PropertyMasterRegistry() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Leasable</span>
-                    <strong className="text-sm font-mono font-black text-slate-900 block">{Number(selectedProp.area).toLocaleString()} sq ft</strong>
+                    <strong className="text-sm font-mono font-black text-slate-900 block">
+                      {(() => {
+                        const raw = String(selectedProp.area || "").replace(/[^0-9]/g, "");
+                        const num = Number(raw);
+                        return (num && !isNaN(num) && num > 0) ? num.toLocaleString("en-IN") : "25,000";
+                      })()} sq ft
+                    </strong>
                     <span className="text-[10px] text-slate-500 font-medium">Super Built-up Area</span>
                   </div>
                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
@@ -365,6 +453,26 @@ export default function PropertyMasterRegistry() {
                     </div>
                   </div>
                 </div>
+
+                {/* Complete Property Registration Callout if form details pending */}
+                {selectedProp.isDetailsPending && (
+                  <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs space-y-2.5">
+                    <div className="flex items-center gap-2 text-amber-900 font-bold">
+                      <Sparkles size={15} className="text-amber-600" />
+                      <span>Property Registration Details Pending</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      You initialized <strong className="font-extrabold">{selectedProp.name}</strong> from onboarding. Complete the detailed property setup form to configure units, floor plans, and contracts.
+                    </p>
+                    <Link
+                      href={`/properties/add?propertyId=${selectedProp.id}&name=${encodeURIComponent(selectedProp.name)}`}
+                      className="w-full py-2.5 rounded-xl bg-amber-800 hover:bg-amber-900 text-white text-xs font-black shadow-2xs text-center flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>Complete Add Property Form</span>
+                    </Link>
+                  </div>
+                )}
 
                 {/* 2. Building Details Card */}
                 <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 text-xs">
@@ -417,6 +525,35 @@ export default function PropertyMasterRegistry() {
 
               {/* Drawer Footer Actions */}
               <div className="p-6 border-t border-slate-100 bg-slate-50/60 space-y-2.5">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingModalProp(selectedProp)}
+                    className="py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Pencil size={13} className="text-[#0F8B7D]" />
+                    <span>Edit Property</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProperty(selectedProp.id, selectedProp.name)}
+                    className="py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete Property</span>
+                  </button>
+                </div>
+
+                {selectedProp.isDetailsPending && (
+                  <Link
+                    href={`/properties/add?propertyId=${selectedProp.id}&name=${encodeURIComponent(selectedProp.name)}`}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-teal-700 hover:from-amber-700 hover:to-teal-800 text-white text-xs font-black shadow-md text-center flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Complete Add Property Form</span>
+                  </Link>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setInviteModalProp(selectedProp)}
@@ -459,6 +596,110 @@ export default function PropertyMasterRegistry() {
           properties={properties.map((p) => ({ id: p.id, name: p.name, city: p.location || "Commercial" }))}
         />
       )}
+
+      {/* Edit Property Modal Popup */}
+      {editingModalProp && (
+        <EditPropertyModal
+          isOpen={Boolean(editingModalProp)}
+          onClose={() => setEditingModalProp(null)}
+          property={editingModalProp}
+          onSuccess={(updatedRecord) => {
+            setProperties((prev) =>
+              prev.map((p) =>
+                p.id === updatedRecord.id
+                  ? {
+                      ...p,
+                      name: updatedRecord.name,
+                      type: updatedRecord.type || p.type,
+                      location: updatedRecord.location || p.location,
+                      area: updatedRecord.area || p.area,
+                      grade: updatedRecord.grade || p.grade,
+                      isFullyRegistered: true,
+                      isDetailsPending: false
+                    }
+                  : p
+              )
+            );
+            setEditingModalProp(null);
+          }}
+        />
+      )}
+
+      {/* Complete Your Primary Property Registry Popup Modal */}
+      {showPrimaryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-100 animate-scaleUp">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center font-black">
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900">Complete Primary Property Registry</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
+                      Step 1 of Setup
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Your primary property from onboarding has been added to the master catalog.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPrimaryModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-extrabold text-slate-900">
+                  {properties[0]?.name || (typeof window !== "undefined" ? localStorage.getItem("officex_property_name") : "") || "Primary Commercial Asset"}
+                </h4>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 size={12} /> Primary Asset Registered
+                </span>
+              </div>
+              <p className="text-xs text-slate-600">
+                Location: <strong>{properties[0]?.location || "Commercial Location"}</strong>
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Now complete the full registry form to add floor plans, unit allocations, tenant agreements, and contract terms.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowPrimaryModal(false)}
+                className="px-4 py-2.5 text-slate-600 hover:text-slate-800 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                View Catalog First
+              </button>
+              <Link
+                href="/properties/add"
+                onClick={() => setShowPrimaryModal(false)}
+                className="px-6 py-2.5 bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Plus size={15} />
+                <span>Complete Detailed Property Form</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function PropertyMasterRegistry() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-slate-500 font-bold">Loading Property Registry...</div>}>
+      <PropertyRegistryContent />
+    </Suspense>
   );
 }

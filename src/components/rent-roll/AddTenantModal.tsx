@@ -96,6 +96,57 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Quick-Add Property Inline State (when 0 properties exist)
+  const [showInlineAddProp, setShowInlineAddProp] = useState(false);
+  const [quickPropName, setQuickPropName] = useState("");
+  const [quickPropCity, setQuickPropCity] = useState("Mumbai");
+  const [quickPropState, setQuickPropState] = useState("Maharashtra");
+  const [quickPropArea, setQuickPropArea] = useState<number>(50000);
+  const [isCreatingQuickProp, setIsCreatingQuickProp] = useState(false);
+
+  const handleQuickCreateProp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickPropName.trim()) {
+      setErrorMsg("Commercial property name is required.");
+      return;
+    }
+    setIsCreatingQuickProp(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/rent-roll/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: quickPropName.trim(),
+          city: quickPropCity,
+          state: quickPropState,
+          totalArea: quickPropArea || 50000,
+          chargeableArea: quickPropArea || 50000,
+          type: "Commercial Office Tower",
+          grade: "A"
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create property");
+      const created = data.property || data;
+      setAvailableProps([created, ...availableProps]);
+      setSelectedPropId(created.id);
+      setShowInlineAddProp(false);
+      if (typeof window !== "undefined") {
+        try {
+          const localProps = JSON.parse(localStorage.getItem("officex_user_properties") || "[]");
+          localStorage.setItem("officex_user_properties", JSON.stringify([created, ...localProps]));
+          localStorage.setItem("officex_property_name", created.name);
+          localStorage.setItem("officex_property_id", created.id);
+        } catch {}
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to create commercial property");
+    } finally {
+      setIsCreatingQuickProp(false);
+    }
+  };
+
   // Load properties on mount if not provided or sync with props
   useEffect(() => {
     if (properties.length > 0) {
@@ -442,31 +493,116 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
 
         {/* Form Body or Property-First Guard */}
         {availableProps.length === 0 ? (
-          <div className="p-8 text-center flex flex-col items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mb-4">
-              <Building2 size={32} />
-            </div>
-            <h4 className="text-base font-black text-slate-900">Add a Commercial Property First</h4>
-            <p className="text-xs text-slate-500 mt-2 max-w-md leading-relaxed">
-              In commercial real estate, every corporate tenant must be allocated to an existing registered property and vacant unit. Your portfolio currently has no registered properties.
-            </p>
-            <div className="flex items-center gap-3 mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <Link
-                href="/properties/add"
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-              >
-                <Plus size={15} />
-                <span>Register Commercial Property</span>
-              </Link>
-            </div>
+          <div className="p-6 sm:p-8 space-y-6">
+            {!showInlineAddProp ? (
+              <div className="text-center flex flex-col items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mb-4">
+                  <Building2 size={32} />
+                </div>
+                <h4 className="text-base font-black text-slate-900">Add a Commercial Property First</h4>
+                <p className="text-xs text-slate-500 mt-2 max-w-md leading-relaxed">
+                  Every commercial tenant lease must be mapped to a registered property and leasable unit. You can build your full property master or quick-add your first asset right now.
+                </p>
+                <div className="flex items-center gap-3 mt-6 flex-wrap justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineAddProp(true)}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Plus size={15} />
+                    <span>Quick Add Property Here</span>
+                  </button>
+                  <Link
+                    href="/properties/add"
+                    onClick={onClose}
+                    className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Building2 size={15} />
+                    <span>Full Property Builder →</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleQuickCreateProp} className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[#0F8B7D]" />
+                    <span className="text-xs font-black text-slate-900">Quick Property Registration</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineAddProp(false)}
+                    className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+                  >
+                    Back
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Commercial Property Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Prestige Tech Park - Tower 2"
+                      value={quickPropName}
+                      onChange={(e) => setQuickPropName(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">City *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Bengaluru"
+                      value={quickPropCity}
+                      onChange={(e) => setQuickPropCity(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">State *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Karnataka"
+                      value={quickPropState}
+                      onChange={(e) => setQuickPropState(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                      required
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Total Built-up / Leasable Area (Sq. Ft.)</label>
+                    <input
+                      type="number"
+                      placeholder="50000"
+                      value={quickPropArea}
+                      onChange={(e) => setQuickPropArea(Number(e.target.value))}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0F8B7D]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineAddProp(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingQuickProp}
+                    className="px-5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-teal-800 text-white text-xs font-black shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    {isCreatingQuickProp && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Create &amp; Add Tenant</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto text-xs font-medium text-slate-700">
