@@ -332,6 +332,22 @@ export async function POST(req: Request) {
 
     // 6. Ensure every property has full spaces & contracts
     ensureSpacesAndContractsForProperties(db);
+
+    // If tenant was added during onboarding, assign to primary property lease
+    if (committedProperty && Array.isArray(stagedTenants) && stagedTenants.length > 0) {
+      const firstTenant = stagedTenants[0];
+      const tenantRecord = db.tenants.find(t => t.tradeName.toLowerCase() === (firstTenant.tradeName || "").toLowerCase());
+      if (tenantRecord) {
+        const propLease = db.leases.find(l => l.propertyId === committedProperty?.id);
+        if (propLease) {
+          propLease.tenantId = tenantRecord.id;
+          propLease.tenantName = tenantRecord.tradeName;
+          propLease.status = "active";
+          propLease.approvalStatus = "active";
+        }
+      }
+    }
+
     saveRentRollDb(db);
 
     // 7. Sync Property to Supabase/PostgreSQL if configured

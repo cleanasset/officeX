@@ -688,35 +688,40 @@ export default function SignInForm({
       return;
     }
 
-    // Set active organization and mark onboarding complete for authenticated user
-    if (typeof window !== "undefined") {
-      localStorage.setItem("officex_active_org", "org_officex");
-      sessionStorage.setItem("officex_active_org", "org_officex");
-      localStorage.setItem("officex_onboarding_completed", "1");
-      sessionStorage.setItem("officex_onboarding_completed", "1");
-    }
+    // Route based on whether user has completed initial onboarding
+    const isAlreadyOnboarded = typeof window !== "undefined" && (
+      localStorage.getItem("officex_onboarding_completed") === "1" ||
+      sessionStorage.getItem("officex_onboarding_completed") === "1" ||
+      document.cookie.includes("officex_onboarding_completed=1")
+    );
 
-    // Direct dashboard destination for authenticated user (Never redirect to /signup)
-    let destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login"))
-      ? safeRedirect
-      : "";
+    let destination = "";
+    if (!isAlreadyOnboarded) {
+      destination = isRentRollContext
+        ? `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`
+        : `/onboarding?redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
+    } else {
+      destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login"))
+        ? safeRedirect
+        : "";
 
-    if (!destination || destination === "/") {
-      if (isRentRollContext) {
-        destination = "/properties/rent-roll";
-      } else if (isOperateContext) {
-        destination = "/operate";
-      } else if (isFmContext) {
-        destination = "/fm-marketplace";
-      } else {
-        const lowerRole = (typeof window !== "undefined" && (localStorage.getItem("officex_user_role") || roleName || initialRole || "owner") || "owner").toLowerCase();
-        destination = lowerRole.includes("broker")
-          ? "/leasing"
-          : lowerRole.includes("owner")
-            ? "/properties/rent-roll"
-            : lowerRole.includes("vendor") || lowerRole.includes("fm")
-              ? "/vendor"
-              : "/properties";
+      if (!destination || destination === "/") {
+        if (isRentRollContext) {
+          destination = "/properties/rent-roll";
+        } else if (isOperateContext) {
+          destination = "/operate";
+        } else if (isFmContext) {
+          destination = "/fm-marketplace";
+        } else {
+          const lowerRole = (typeof window !== "undefined" && (localStorage.getItem("officex_user_role") || roleName || initialRole || "owner") || "owner").toLowerCase();
+          destination = lowerRole.includes("broker")
+            ? "/leasing"
+            : lowerRole.includes("owner")
+              ? "/properties/rent-roll"
+              : lowerRole.includes("vendor") || lowerRole.includes("fm")
+                ? "/vendor"
+                : "/properties";
+        }
       }
     }
 
