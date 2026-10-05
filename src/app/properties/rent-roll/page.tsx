@@ -9,6 +9,7 @@ import {
   FileCheck2,
   Clock,
   ArrowUpRight,
+  ArrowRight,
   PieChart,
   Calendar,
   DollarSign,
