@@ -31,6 +31,7 @@ export default function Topbar() {
   // Profile Menu State
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // Generate breadcrumbs from pathname
