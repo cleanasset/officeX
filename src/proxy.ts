@@ -34,6 +34,19 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 301);
   }
 
+  // Check if user is authenticated via server-side auth cookie
+  const authCookie = request.cookies.get('officex_auth')?.value;
+  const isAuthenticatedUser = !!authCookie && authCookie !== '0' && authCookie !== '';
+
+  // If already authenticated and visiting /login, redirect to requested target or properties
+  if (pathname === '/login' && isAuthenticatedUser && !search.includes('logout=1')) {
+    const redirectParam = request.nextUrl.searchParams.get('redirect');
+    const targetUrl = redirectParam && redirectParam.startsWith('/')
+      ? new URL(redirectParam, request.url)
+      : new URL('/properties', request.url);
+    return NextResponse.redirect(targetUrl);
+  }
+
   // Explicitly allow all public marketing, audience, auth, and discovery routes
   if (
     pathname === '/' ||
@@ -64,13 +77,21 @@ export function proxy(request: NextRequest) {
     pathname.startsWith('/thank-you') ||
     pathname.startsWith('/calq')
   ) {
-    return NextResponse.next();
+    const publicResponse = NextResponse.next();
+    publicResponse.headers.set('X-Content-Type-Options', 'nosniff');
+    publicResponse.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    publicResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    return publicResponse;
   }
 
   const isProtected = protectedPaths.some((prefix) => pathname.startsWith(prefix));
 
   if (!isProtected) {
-    return NextResponse.next();
+    const unprotResponse = NextResponse.next();
+    unprotResponse.headers.set('X-Content-Type-Options', 'nosniff');
+    unprotResponse.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    unprotResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    return unprotResponse;
   }
 
   // Check for demo bypass
@@ -137,6 +158,9 @@ export function proxy(request: NextRequest) {
   const elapsedDays = Math.floor((Date.now() - startTime) / (1000 * 60 * 60 * 24));
   const daysRemaining = Math.max(0, 14 - elapsedDays);
   response.headers.set("x-officex-trial-days-remaining", String(daysRemaining));
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   return response;
 }
