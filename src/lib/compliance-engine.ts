@@ -50,21 +50,24 @@ export interface ComplianceDatabase {
   ppmSchedule: PPMAssetRecord[];
 }
 
-const SEED_PATH = path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "compliance-db.json");
+const DEFAULT_COMPLIANCE_DB: ComplianceDatabase = {
+  property: {
+    id: "",
+    name: "Commercial Portfolio",
+    city: "",
+    state: "",
+    address: "",
+    totalArea: 0,
+    grade: ""
+  },
+  certificates: [],
+  ppmSchedule: []
+};
+
 const TMP_PATH = path.join(os.tmpdir(), "compliance-db.json");
 
 function getStoragePath(): string {
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-    if (!fs.existsSync(TMP_PATH) && fs.existsSync(SEED_PATH)) {
-      try {
-        fs.copyFileSync(SEED_PATH, TMP_PATH);
-      } catch {
-        // Fallback to SEED_PATH
-      }
-    }
-    return fs.existsSync(TMP_PATH) ? TMP_PATH : SEED_PATH;
-  }
-  return SEED_PATH;
+  return TMP_PATH;
 }
 
 let inMemoryCache: ComplianceDatabase | null = null;
@@ -85,13 +88,8 @@ export function getComplianceDb(): ComplianceDatabase {
     }
   }
 
-  if (fs.existsSync(SEED_PATH)) {
-    const raw = fs.readFileSync(SEED_PATH, "utf-8");
-    inMemoryCache = JSON.parse(raw);
-    return inMemoryCache!;
-  }
-
-  throw new Error(`Compliance database not found at ${SEED_PATH}`);
+  inMemoryCache = JSON.parse(JSON.stringify(DEFAULT_COMPLIANCE_DB));
+  return inMemoryCache!;
 }
 
 export function saveComplianceDb(data: ComplianceDatabase): void {

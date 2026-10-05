@@ -4,6 +4,7 @@ import { generateAndStoreOtp } from '@/lib/otp-store';
 import { sendOtpEmail } from '@/lib/email-service';
 import { supabase } from '@/lib/supabase';
 import { validateCsrf } from '@/lib/csrf';
+import { getRentRollDb } from '@/lib/rent-roll-store';
 
 export const revalidate = 0;
 
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
 
       // Check if this phone belongs to a tenant or account with an email on file
       try {
-        const db = getRentRollData();
+        const db = getRentRollDb();
         const cleanDigits = normalized.replace(/\D/g, '');
         const matchedTenant = db.tenants?.find(t => 
           t.contactPhone && t.contactPhone.replace(/\D/g, '').endsWith(cleanDigits.slice(-10))
