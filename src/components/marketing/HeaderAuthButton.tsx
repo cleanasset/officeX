@@ -198,9 +198,9 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
             <div className="py-1.5 space-y-0.5">
               {/* Go to My Dashboard */}
               <Link
-                href={effectiveDashboardHref}
+                href="/operate"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
                   <LayoutDashboard size={13} className="stroke-[2.2]" />
@@ -213,9 +213,9 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
 
               {/* My Profile */}
               <Link
-                href="/properties/organization"
+                href="/operate"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
                   <User size={13} className="stroke-[2.2]" />

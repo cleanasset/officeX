@@ -119,7 +119,7 @@ export default function Footer() {
             </li>
             <li>
               <Link href="/operate/visitors" className="hover:text-white transition-colors">
-                Visitor Flow &amp; Turnstiles
+                Visitor Flow &amp; Speed Gates
               </Link>
             </li>
             <li>
@@ -129,7 +129,7 @@ export default function Footer() {
             </li>
             <li>
               <Link href="/operate/helpdesk" className="hover:text-white transition-colors">
-                Tenant Helpdesk &amp; Experience
+                Tenant Helpdesk &amp; Rooms
               </Link>
             </li>
             <li>

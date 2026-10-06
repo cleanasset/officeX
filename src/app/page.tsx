@@ -195,11 +195,6 @@ export default function LandingPage() {
   const [activeTimelineStep, setActiveTimelineStep] = useState<number>(4); // Default to escrow payment step
   const [isEnquirySlideInOpen, setIsEnquirySlideInOpen] = useState(false);
   const [enquiryPrefill, setEnquiryPrefill] = useState<{ audience?: string; modules?: string[] } | undefined>(undefined);
-
-  // Single Panoramic Hero Banner
-  // User requested: "its looking so awkward main thing is getting blured , i need some perfect banner image"
-  // Replaced with a pristine, crystal-clear Grade-A commercial atrium banner with zero blur smudges or blur cycling
-
   const openEnquiry = (prefill?: { audience?: string; modules?: string[] }) => {
     setEnquiryPrefill(prefill);
     setIsEnquirySlideInOpen(true);
@@ -768,39 +763,75 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 3. Operations Suite Dropdown */}
+          {/* 3. Property Management Link */}
+          <Link
+            href="/manage"
+            className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
+          >
+            Property Management
+          </Link>
+
+          {/* 4. Operations Suite Dropdown */}
           <div className="relative group py-2">
-            <Link href="/operate" className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer">
+            <Link 
+              href="/operate"
+              className="hover:text-[#0F8B7D] transition-colors flex items-center gap-1 cursor-pointer"
+            >
               <span>Operations Suite</span>
               <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
             </Link>
             <div className="absolute top-full left-0 w-[330px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
               <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
                 <span>CRE &amp; FM SaaS Modules</span>
-                <Link href="/operate" className="text-[#0F8B7D] hover:underline font-bold text-[10px]">
-                  View Hub &rarr;
+                <Link 
+                  href="/operate"
+                  className="text-[#0F8B7D] hover:underline font-bold text-[10px] cursor-pointer"
+                >
+                  View All &rarr;
                 </Link>
               </div>
               <div className="space-y-1">
-                <Link href="/operate/rent-roll" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <Link 
+                  href="/operate/rent-roll" 
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
                   <div className="text-xs font-bold text-slate-900">Rent Roll &amp; Billing Engine</div>
                   <div className="text-[11px] text-slate-500 font-normal">Auto escalations, CAM pooling, bank escrow</div>
                 </Link>
-                <Link href="/operate/compliance" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <Link 
+                  href="/operate/compliance" 
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
                   <div className="text-xs font-bold text-slate-900">Statutory Compliance Calendar</div>
                   <div className="text-[11px] text-slate-500 font-normal">48 Pre-configured commercial tower licenses</div>
                 </Link>
-                <Link href="/operate/ppm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <Link 
+                  href="/operate/ppm" 
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
                   <div className="text-xs font-bold text-slate-900">52-Week PPM &amp; CAFM</div>
                   <div className="text-[11px] text-slate-500 font-normal">Equipment servicing matrices &amp; QR passports</div>
                 </Link>
-                <Link href="/operate/visitors" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <Link 
+                  href="/operate/visitors" 
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
                   <div className="text-xs font-bold text-slate-900">Visitor Flow &amp; Speed-Gates</div>
                   <div className="text-[11px] text-slate-500 font-normal">WhatsApp QR passes &amp; turnstile integration</div>
                 </Link>
-                <Link href="/operate/lease-crm" className="block p-2 rounded-xl hover:bg-teal-50/60 transition-colors">
+                <Link 
+                  href="/operate/lease-crm" 
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
                   <div className="text-xs font-bold text-slate-900">Commercial Lease CRM</div>
                   <div className="text-[11px] text-slate-500 font-normal">Stacking plans, LOI generator, deal velocity</div>
+                </Link>
+                <Link 
+                  href="/operate/helpdesk" 
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
+                  <div className="text-xs font-bold text-slate-900">Tenant Helpdesk &amp; Rooms</div>
+                  <div className="text-[11px] text-slate-500 font-normal">10-Sec QR dispatch &amp; boardroom booking</div>
                 </Link>
               </div>
             </div>
@@ -889,6 +920,7 @@ export default function LandingPage() {
           </div>
           <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Find Office Spaces</Link>
           <Link href="/fm-marketplace" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">FM Services Marketplace</Link>
+          <Link href="/manage" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold hover:text-[#0F8B7D]">Property Management</Link>
           <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0F8B7D] flex items-center justify-between">
             <span>Operations Suite</span>
             <span className="text-xs bg-teal-100 px-2 py-0.5 rounded text-[#0F8B7D] font-bold">Rent Roll &amp; CAFM</span>
@@ -1325,12 +1357,13 @@ export default function LandingPage() {
                 href: "/intelligence",
                 iconType: "sparkle",
               },
-            ].map((card) => (
-              <Link
-                key={card.id}
-                href={card.href}
-                className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100"
-              >
+            ].map((card) => {
+              return (
+                <Link
+                  key={card.id}
+                  href={card.href}
+                  className="flex flex-col rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border border-slate-100 text-left w-full"
+                >
                 {/* Top Half: Photo */}
                 <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
                   <Image
@@ -1377,7 +1410,8 @@ export default function LandingPage() {
                   </div>
                 </div>
               </Link>
-            ))}
+            );
+          })}
           </div>
 
           {/* DIVIDER: "Powered by OFFICEX CORE" with Downward Chevron seamlessly touching lines */}
@@ -1701,10 +1735,10 @@ export default function LandingPage() {
                         <ArrowRight size={13} />
                       </Link>
                       <Link
-                        href={`/login?redirect=${encodeURIComponent(data.portalHref)}`}
+                        href="/operate"
                         className="w-full py-2.5 sm:py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                       >
-                        <span>Launch {data.portalName}</span>
+                        <span>Explore {data.portalName}</span>
                         <ArrowRight size={13} />
                       </Link>
                     </div>

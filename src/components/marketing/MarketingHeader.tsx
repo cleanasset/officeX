@@ -143,12 +143,13 @@ export default function MarketingHeader({
               </Link>
 
               {/* Live Portal Demo */}
-              <Link
-                href="/properties/rent-roll"
-                className="hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap flex items-center gap-1"
+              <button
+                type="button"
+                onClick={onSignInClick}
+                className="hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap flex items-center gap-1 cursor-pointer"
               >
                 <span>Live Portal Demo</span>
-              </Link>
+              </button>
             </>
           ) : isFmMarketplace ? (
             /* ========================================================================= */
@@ -298,6 +299,16 @@ export default function MarketingHeader({
                 </div>
               </div>
 
+              {/* Property Management */}
+              <Link
+                href="/manage"
+                className={`hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap ${
+                  pathname === "/manage" ? "text-[#0F8B7D] font-extrabold" : ""
+                }`}
+              >
+                Property Management
+              </Link>
+
               {/* Operations Suite Dropdown */}
               <div className="relative group py-2">
                 <Link
@@ -420,9 +431,16 @@ export default function MarketingHeader({
               <Link href="/operate" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">
                 Platform Overview
               </Link>
-              <Link href="/properties/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-base font-bold text-[#0D7B6C]">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (onSignInClick) onSignInClick();
+                }}
+                className="text-left text-base font-bold text-[#0D7B6C] cursor-pointer"
+              >
                 Live Portal Demo
-              </Link>
+              </button>
               <div className="py-2 border-y border-slate-100 flex flex-col gap-2">
                 <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Operating Modules</div>
                 <Link href="/operate/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">

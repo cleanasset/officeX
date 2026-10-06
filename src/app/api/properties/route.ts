@@ -242,38 +242,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Mirror to Rent Roll database so property immediately appears in Rent Roll system
-    try {
-      const { getRentRollDb, saveRentRollDb } = await import("@/lib/rent-roll-store");
-      const rDb = getRentRollDb();
-      const exists = rDb.properties.some((p: any) => p.name.toLowerCase() === name.trim().toLowerCase());
-      if (!exists) {
-        rDb.properties.push({
-          id: createdProperty.id,
-          orgId: rDb.organization.id,
-          name: createdProperty.name,
-          type: createdProperty.type || "Commercial Office",
-          address: createdProperty.address || "",
-          city: createdProperty.city || "Mumbai",
-          state: createdProperty.state || "Maharashtra",
-          microMarket: createdProperty.microMarket || createdProperty.city || "CBD",
-          pincode: createdProperty.pincode || "400001",
-          grade: sanitizedGrade,
-          totalArea: parseFloat(String(totalArea)) || 50000,
-          chargeableArea: parseFloat(String(totalArea)) || 50000,
-          occupancyTargetPct: 95,
-          ownerName: ownerName || createdProperty.ownerName || "",
-          ownerUserId: ownerUserId || createdProperty.ownerUserId || "",
-          ownerEmail: body.contactEmail || body.ownerEmail || "",
-          imageUrl: createdProperty.imageUrl,
-          assetValue: 0
-        });
-        saveRentRollDb(rDb);
-      }
-    } catch (rrErr) {
-      console.warn("Rent roll store sync note:", rrErr);
-    }
-
     return NextResponse.json(createdProperty);
   } catch (error: any) {
     console.error("Property creation error:", error);
@@ -336,22 +304,6 @@ export async function DELETE(req: Request) {
       await db.delete(userProperties).where(eq(userProperties.propertyId, id));
     } catch (e) {
       console.warn("Could not delete user properties:", e);
-    }
-
-    // Delete from Rent Roll Store database
-    try {
-      const { getRentRollDb, saveRentRollDb } = await import("@/lib/rent-roll-store");
-      const rDb = getRentRollDb();
-      rDb.properties = rDb.properties.filter(p => p.id !== id);
-      rDb.spaces = rDb.spaces.filter(s => s.propertyId !== id);
-      const removedLeases = new Set(rDb.leases.filter(l => l.propertyId === id).map(l => l.id));
-      rDb.leases = rDb.leases.filter(l => l.propertyId !== id);
-      rDb.escalations = rDb.escalations.filter(e => !removedLeases.has(e.leaseId));
-      rDb.invoices = rDb.invoices.filter(i => i.propertyId !== id && !removedLeases.has(i.leaseId));
-      rDb.expenses = rDb.expenses.filter(e => e.propertyId !== id);
-      saveRentRollDb(rDb);
-    } catch (e) {
-      console.warn("Rent roll store sync delete note:", e);
     }
 
     // Delete property from database

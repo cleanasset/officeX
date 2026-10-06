@@ -60,7 +60,7 @@ export default function OperatePage() {
       ],
       image: "/mockup-rentroll-clean.png",
       landingRoute: "/operate/rent-roll",
-      route: "/properties/rent-roll",
+      route: "/operate/rent-roll",
     },
     {
       id: "visitors",
@@ -75,7 +75,7 @@ export default function OperatePage() {
       ],
       image: "/mockup-visitors-clean.png",
       landingRoute: "/operate/visitors",
-      route: "/tenant/visitors",
+      route: "/operate/visitors",
     },
     {
       id: "compliance",
@@ -90,7 +90,7 @@ export default function OperatePage() {
       ],
       image: "/mockup-compliance-clean.png",
       landingRoute: "/operate/compliance",
-      route: "/compliance",
+      route: "/operate/compliance",
     },
     {
       id: "ppm",
@@ -105,7 +105,7 @@ export default function OperatePage() {
       ],
       image: "/mockup-ppm-clean.png",
       landingRoute: "/operate/ppm",
-      route: "/ops/ppm",
+      route: "/operate/ppm",
     },
     {
       id: "crm",
@@ -120,7 +120,7 @@ export default function OperatePage() {
       ],
       image: "/mockup-crm-clean.png",
       landingRoute: "/operate/lease-crm",
-      route: "/leasing/pipeline",
+      route: "/operate/lease-crm",
     },
     {
       id: "helpdesk",
@@ -135,7 +135,7 @@ export default function OperatePage() {
       ],
       image: "/mockup-helpdesk-clean.png",
       landingRoute: "/operate/helpdesk",
-      route: "/tenant/tickets",
+      route: "/operate/helpdesk",
     },
   ];
 
@@ -338,7 +338,7 @@ export default function OperatePage() {
                           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                         </Link>
                         <Link
-                          href={product.route}
+                          href={product.landingRoute}
                           className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-1.5"
                         >
                           <span>Live Portal Demo</span>
@@ -651,15 +651,16 @@ export default function OperatePage() {
             Join 450+ commercial properties managing operations, rent, and compliance on OfficeX.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/properties/rent-roll"
-              className="px-7 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-semibold rounded-xl text-sm shadow-sm transition-all flex items-center gap-2"
+            <button
+              type="button"
+              onClick={() => openEnquiry("Enterprise Onboarding")}
+              className="px-7 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-semibold rounded-xl text-sm shadow-sm transition-all flex items-center gap-2 cursor-pointer"
             >
               Launch Live Platform ↗
-            </Link>
+            </button>
             <button
               onClick={() => openEnquiry("Enterprise Onboarding")}
-              className="px-7 py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl text-sm border border-slate-200 transition-all"
+              className="px-7 py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl text-sm border border-slate-200 transition-all cursor-pointer"
             >
               Talk to Operations Team
             </button>

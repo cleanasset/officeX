@@ -31,7 +31,7 @@ import ComplianceOperationsCenter from "@/components/compliance/ComplianceOperat
 import VisitorManagementConsole from "@/components/visitor/VisitorManagementConsole";
 
 export default function ComplianceCalendarProductPage() {
-  const [viewMode, setViewMode] = useState<"workspace" | "overview">("workspace");
+  const [viewMode, setViewMode] = useState<"workspace" | "overview">("overview");
   const [activeModule, setActiveModule] = useState<"compliance" | "visitors">("compliance");
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);

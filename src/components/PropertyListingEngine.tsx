@@ -45,7 +45,6 @@ import {
 } from "lucide-react";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import PropertyTitleAutocomplete from "@/components/PropertyTitleAutocomplete";
-import { TenantInviteModal } from "@/components/rent-roll/TenantInviteModal";
 import {
   AddressAutocomplete,
   CityAutocomplete,
@@ -2503,17 +2502,6 @@ export default function PropertyListingEngine({
         </div>
       </div>
 
-      {/* Instant Tenant Invitation Modal right after registration */}
-      {createdPropForInvite && (
-        <TenantInviteModal
-          isOpen={Boolean(createdPropForInvite)}
-          onClose={() => {
-            setCreatedPropForInvite(null);
-            router.push(redirectPath || (portalRole === "broker" ? "/leasing" : "/properties/registry"));
-          }}
-          property={createdPropForInvite}
-        />
-      )}
     </div>
   );
 }

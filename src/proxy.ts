@@ -1,26 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { validateRedirect } from '@/lib/auth-utils';
 
-const protectedPaths = [
-  '/properties',
-  '/property',
-  '/portfolio',
-  '/ops',
-  '/operations',
-  '/tenant',
-  '/vendor',
-  '/admin',
-  '/leasing',
-  '/reporting',
-  '/reports',
-  '/dashboard',
-  '/discover',
-  '/app',
-  '/compliance'
-];
-
-export function proxy(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const host =
     request.headers.get('x-forwarded-host') ||
@@ -34,149 +15,40 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 301);
   }
 
-  // Check if user is authenticated via server-side auth cookie
-  const authCookie = request.cookies.get('officex_auth')?.value;
-  const isAuthenticatedUser = !!authCookie && authCookie !== '0' && authCookie !== '';
-
-  // If already authenticated and visiting /login, redirect to requested target or properties
-  if (pathname === '/login' && isAuthenticatedUser && !search.includes('logout=1')) {
-    const redirectParam = request.nextUrl.searchParams.get('redirect');
-    const targetUrl = redirectParam && redirectParam.startsWith('/')
-      ? new URL(redirectParam, request.url)
-      : new URL('/properties', request.url);
-    return NextResponse.redirect(targetUrl);
+  // Redirect legacy /rent-roll directly to the Rent Roll SaaS landing page
+  if (pathname === '/rent-roll' || pathname.startsWith('/rent-roll/')) {
+    return NextResponse.redirect(new URL('/operate/rent-roll', request.url));
   }
 
-  // Explicitly allow all public marketing, audience, auth, and discovery routes
+  // Allow dedicated Rent Roll 2.0 status page through (no dashboard access)
+  if (pathname === '/properties/rent-roll' || pathname.startsWith('/properties/rent-roll/')) {
+    const response = NextResponse.next();
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    return response;
+  }
+
+  // Redirect other legacy dashboard/portal routes directly to the Operate SaaS hub page
   if (
-    pathname === '/' ||
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/signup') ||
-    pathname.startsWith('/tenant/join') ||
+    pathname.startsWith('/properties') ||
+    pathname.startsWith('/portal') ||
     pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/public') ||
-    pathname.startsWith('/marketplace') ||
-    pathname.startsWith('/fm-marketplace') ||
-    pathname.startsWith('/audiences') ||
-    pathname.startsWith('/operate') ||
-    pathname.startsWith('/manage') ||
-    pathname.startsWith('/intelligence') ||
-    pathname.startsWith('/managed-services') ||
-    pathname.startsWith('/platform') ||
-    pathname.startsWith('/pricing') ||
-    pathname.startsWith('/resources') ||
-    pathname.startsWith('/support') ||
-    pathname.startsWith('/terms') ||
-    pathname.startsWith('/privacy') ||
-    pathname.startsWith('/about') ||
-    pathname.startsWith('/contact') ||
-    pathname.startsWith('/careers') ||
-    pathname.startsWith('/faq') ||
-    pathname.startsWith('/demo') ||
-    pathname.startsWith('/thank-you') ||
-    pathname.startsWith('/calq')
+    pathname.startsWith('/dashboard')
   ) {
-    const publicResponse = NextResponse.next();
-    publicResponse.headers.set('X-Content-Type-Options', 'nosniff');
-    publicResponse.headers.set('X-Frame-Options', 'SAMEORIGIN');
-    publicResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    return publicResponse;
+    return NextResponse.redirect(new URL('/operate', request.url));
   }
 
-  const isProtected = protectedPaths.some((prefix) => pathname.startsWith(prefix));
-
-  if (!isProtected) {
-    const unprotResponse = NextResponse.next();
-    unprotResponse.headers.set('X-Content-Type-Options', 'nosniff');
-    unprotResponse.headers.set('X-Frame-Options', 'SAMEORIGIN');
-    unprotResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    return unprotResponse;
-  }
-
-  // Check for demo bypass
-  const isDemo = search.includes("demo=1") || search.includes("fixtures=1") || search.includes("preview=true");
-
-  // Check for authentication in cookies
-  const allCookies = request.cookies.getAll();
-  const hasAuth = isDemo || allCookies.some(
-    (c) =>
-      c.name === 'officex_auth' ||
-      c.name === 'officex_session_active' ||
-      c.name === 'officex_user_email' ||
-      c.name === 'sb-access-token' ||
-      c.name === 'sb-refresh-token' ||
-      c.name.includes('-auth-token') ||
-      c.name.startsWith('sb-')
-  );
-
-  const requestHeaders = new Headers(request.headers);
-  const fullTarget = search ? `${pathname}${search}` : pathname;
-  requestHeaders.set('x-pathname', pathname);
-  requestHeaders.set('x-search', search);
-  requestHeaders.set('x-url', fullTarget);
-
-  if (!hasAuth) {
-    const loginUrl = new URL('/login', request.url);
-    const safeRedirect = validateRedirect(fullTarget, '/properties');
-    loginUrl.searchParams.set('redirect', safeRedirect);
-
-    // Automatically infer and attach the domain login context
-    if (pathname.startsWith('/properties/rent-roll') || safeRedirect.includes('rent-roll')) {
-      loginUrl.searchParams.set('context', 'rent-roll');
-    } else if (pathname.startsWith('/ops') || pathname.startsWith('/operations') || safeRedirect.includes('operate')) {
-      loginUrl.searchParams.set('context', 'operate');
-    } else if (pathname.startsWith('/vendor') || safeRedirect.includes('fm')) {
-      loginUrl.searchParams.set('context', 'fm');
-    } else if (pathname.startsWith('/leasing') || pathname.startsWith('/marketplace') || safeRedirect.includes('marketplace')) {
-      loginUrl.searchParams.set('context', 'marketplace');
-    } else if (pathname.startsWith('/properties')) {
-      loginUrl.searchParams.set('context', 'properties');
-    }
-
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // 14-Day Trial Tracking
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
-  let trialStart = request.cookies.get("officex_trial_start")?.value;
-  if (!trialStart) {
-    trialStart = new Date().toISOString();
-    response.cookies.set("officex_trial_start", trialStart, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 14,
-      sameSite: "lax",
-    });
-  }
-
-  const startTime = new Date(trialStart).getTime();
-  const elapsedDays = Math.floor((Date.now() - startTime) / (1000 * 60 * 60 * 24));
-  const daysRemaining = Math.max(0, 14 - elapsedDays);
-  response.headers.set("x-officex-trial-days-remaining", String(daysRemaining));
+  // All pages (marketing, SaaS modules, APIs, public) pass through directly
+  const response = NextResponse.next();
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
   return response;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - api (API routes handle their own auth)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
-
-export default proxy;
-

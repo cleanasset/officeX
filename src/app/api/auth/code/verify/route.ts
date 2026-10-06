@@ -3,7 +3,6 @@ import { normalizeIdentifier } from '@/lib/auth-utils';
 import { verifyStoredOtp } from '@/lib/otp-store';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { validateCsrf } from '@/lib/csrf';
-import { getRentRollDb } from '@/lib/rent-roll-store';
 
 export const revalidate = 0;
 
@@ -33,7 +32,6 @@ export async function POST(request: Request) {
 
     const norm = normalizeIdentifier(identifier);
 
-    // Verify against real OTP generated for this user
     let otpValid = false;
     let otpError = 'Invalid or expired verification code.';
 
@@ -42,7 +40,6 @@ export async function POST(request: Request) {
       otpValid = true;
     } else {
       otpError = otpResult.error || otpError;
-      // If phone identifier, also attempt verification with Supabase phone OTP
       if (norm.replace(/\D/g, '').length >= 10) {
         const e164 = norm.startsWith('+') ? norm : `+91${norm}`;
         try {
@@ -67,7 +64,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Auto-provision user in Supabase Auth & PostgreSQL database
     let supaUserId: string | undefined;
     const userEmail = norm.includes('@') ? norm : `${norm.replace(/\D/g, '')}@officex.pro`;
     const userFullName = norm.split('@')[0] || 'Commercial Member';
@@ -103,52 +99,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Sync into PostgreSQL public.users table in Supabase
-    try {
-      const client = supabaseAdmin || supabase;
-      if (client) {
-        await client
-          .from('users')
-          .upsert(
-            {
-              id: supaUserId || undefined,
-              email: userEmail,
-              full_name: userFullName,
-              role: 'property_manager',
-              password_hash: 'SUPABASE_AUTH_MANAGED'
-            },
-            { onConflict: 'email' }
-          );
-      }
-    } catch (pgSyncErr) {
-      console.warn('[SUPABASE-SYNC] public.users sync exception:', pgSyncErr);
-    }
-
     const defaultRole = 'Property Owner & Asset Manager';
-
-    // Verify if user already has an active property / organization
-    const db = getRentRollDb();
-    const userOwnedProps = (db.properties || []).filter(p => 
-      p.ownerEmail && userEmail && p.ownerEmail.toLowerCase() === userEmail.toLowerCase()
-    );
-    const hasExistingOrg = Boolean(db.organization?.name && db.organization.name.trim() !== "");
-    const isNewUser = userOwnedProps.length === 0;
-
-    const memberships = isNewUser ? [] : [
-      {
-        id: `mem_${Date.now()}`,
-        orgId: db.organization?.id || 'org_officex',
-        orgName: db.organization?.tradeName || db.organization?.name || 'Commercial Asset Management',
-        role: defaultRole,
-        roleCode: 'OWNER' as const,
-        workspaceTitle: 'Commercial Asset Desk',
-        workspaceUrl: '/properties/rent-roll',
-        propertyScope: 'Active Portfolio',
-        badge: 'Asset Owner',
-        badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-        isLastUsed: true
-      }
-    ];
 
     const response = NextResponse.json({
       success: true,
@@ -158,17 +109,12 @@ export async function POST(request: Request) {
         identifier: norm,
         role: defaultRole
       },
-      memberships,
+      memberships: [],
       needs_context_choice: false,
-      needs_onboarding: isNewUser,
-      redirect_url: isNewUser ? '/onboarding?context=rent-roll' : '/properties/rent-roll'
+      needs_onboarding: false,
+      redirect_url: '/operate'
     });
 
-    if (isNewUser) {
-      response.cookies.set('officex_onboarding_completed', '0', { path: '/', maxAge: 86400 });
-    }
-
-    // Set secure HttpOnly session cookie
     response.cookies.set('officex_auth', '1', {
       path: '/',
       httpOnly: true,
