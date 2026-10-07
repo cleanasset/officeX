@@ -302,6 +302,10 @@ export async function GET(req: Request) {
     if (status && status !== "all") {
       conditions.push(eq(contract.contract_status, status as any));
     }
+    const approvalStatus = searchParams.get("approval_status");
+    if (approvalStatus && approvalStatus !== "all") {
+      conditions.push(eq(contract.approval_status, approvalStatus as any));
+    }
     if (occupantId) {
       conditions.push(eq(contract.occupant_id, occupantId));
     }

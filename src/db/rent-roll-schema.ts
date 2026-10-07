@@ -2112,6 +2112,59 @@ export const invoice = pgTable(
   ]
 );
 
+// 1b. INVOICE LINE (§4.10, §0.2, §4.3)
+export const invoice_line = pgTable(
+  "invoice_line",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    org_id: uuid("org_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    client_account_id: uuid("client_account_id").references(
+      (): any => client_account.id,
+      { onDelete: "cascade" }
+    ),
+    invoice_id: uuid("invoice_id")
+      .notNull()
+      .references((): any => invoice.id, { onDelete: "cascade" }),
+    contract_charge_id: uuid("contract_charge_id").references(
+      (): any => contract_charge.id,
+      { onDelete: "set null" }
+    ),
+    charge_type_id: uuid("charge_type_id").references(
+      (): any => charge_type.id,
+      { onDelete: "set null" }
+    ),
+    description: text("description"),
+    quantity: numeric("quantity", { precision: 10, scale: 2 }).default("1.00"),
+    rate: numeric("rate", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    amount_inr: numeric("amount_inr", { precision: 14, scale: 2 }).default("0.00").notNull(),
+    tax_rate_percent: numeric("tax_rate_percent", { precision: 5, scale: 2 }).default("18.00"),
+    tax_amount_inr: numeric("tax_amount_inr", { precision: 14, scale: 2 }).default("0.00"),
+    escalation_amount_inr: numeric("escalation_amount_inr", { precision: 14, scale: 2 }).default("0.00"),
+    concession_amount_inr: numeric("concession_amount_inr", { precision: 14, scale: 2 }).default("0.00"),
+
+    // Common Audit & System Fields (§4.3)
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    created_by: uuid("created_by"),
+    updated_by: uuid("updated_by"),
+    version: integer("version").default(1).notNull(),
+    deleted_at: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("invoice_line_org_id_idx").on(table.org_id),
+    index("invoice_line_client_account_id_idx").on(table.client_account_id),
+    index("invoice_line_invoice_id_idx").on(table.invoice_id),
+    index("invoice_line_contract_charge_id_idx").on(table.contract_charge_id),
+    index("invoice_line_charge_type_id_idx").on(table.charge_type_id),
+  ]
+);
+
 // 2. PAYMENT (§5.9, RR-PAY-01)
 export const payment = pgTable(
   "payment",
@@ -2179,7 +2232,7 @@ export const payment_allocation = pgTable(
     invoice_id: uuid("invoice_id")
       .notNull()
       .references((): any => invoice.id, { onDelete: "cascade" }),
-    invoice_line_id: uuid("invoice_line_id"),
+    invoice_line_id: uuid("invoice_line_id").references((): any => invoice_line.id, { onDelete: "set null" }),
     amount_allocated_inr: numeric("amount_allocated_inr", { precision: 14, scale: 2 }).notNull(),
     allocation_date: date("allocation_date").notNull(),
     allocated_by: uuid("allocated_by"),
@@ -2254,6 +2307,9 @@ export const dispute = pgTable(
 export type Invoice = typeof invoice.$inferSelect;
 export type NewInvoice = typeof invoice.$inferInsert;
 
+export type InvoiceLine = typeof invoice_line.$inferSelect;
+export type NewInvoiceLine = typeof invoice_line.$inferInsert;
+
 export type Payment = typeof payment.$inferSelect;
 export type NewPayment = typeof payment.$inferInsert;
 
@@ -2265,5 +2321,6 @@ export type NewDispute = typeof dispute.$inferInsert;
 
 // Aliases
 export const invoices = invoice;
+export const invoiceLine = invoice_line;
 export const paymentAllocation = payment_allocation;
 

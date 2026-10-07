@@ -41,6 +41,7 @@ import {
   findMockUser
 } from "@/lib/auth-utils";
 import { supabase } from "@/lib/supabase";
+import RoleSelectorModal, { SpecRoleItem } from "@/components/auth/RoleSelectorModal";
 
 interface SignInFormProps {
   initialRedirect?: string;
@@ -133,6 +134,10 @@ export default function SignInForm({
   // Memberships for Context Chooser
   const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
   const [selectedMembershipId, setSelectedMembershipId] = useState<string>("");
+
+  // Role Selection Modal (§5.14)
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [fetchedRoles, setFetchedRoles] = useState<SpecRoleItem[]>([]);
 
   // No Workspace Setup State (Client Spec Section 17 & Table 52)
   const [setupMode, setSetupMode] = useState<"choose" | "create_org" | "enter_invite">("choose");
@@ -744,11 +749,48 @@ export default function SignInForm({
       }
     }
 
+    // PRIORITY 1: Fetch user roles after authentication (§5.14)
+    fetch("/api/users/me")
+      .then((res) => res.json())
+      .then((meData) => {
+        const roles: SpecRoleItem[] = meData?.roles || [];
+        if (roles.length === 1) {
+          // If 1 role: skip selector, go to dashboard directly
+          handleSelectRole(roles[0]);
+        } else if (roles.length > 1) {
+          // If >1 role: show role picker modal with 12 roles
+          setFetchedRoles(roles);
+          setIsRoleModalOpen(true);
+        } else {
+          setStep("signed_in_success");
+          setTimeout(() => {
+            window.location.href = destination || "/dashboard/owner";
+          }, 600);
+        }
+      })
+      .catch(() => {
+        setStep("signed_in_success");
+        setTimeout(() => {
+          window.location.href = destination || "/dashboard/owner";
+        }, 600);
+      });
+    return;
+  };
+
+  const handleSelectRole = (r: SpecRoleItem) => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("officex_user_role", r.label);
+      sessionStorage.setItem("officex_role_key", r.key);
+      localStorage.setItem("officex_user_role", r.label);
+      localStorage.setItem("officex_role_key", r.key);
+      document.cookie = `officex_user_role=${encodeURIComponent(r.label)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `officex_role_key=${encodeURIComponent(r.key)}; path=/; max-age=86400; SameSite=Lax`;
+    }
+    setIsRoleModalOpen(false);
     setStep("signed_in_success");
     setTimeout(() => {
-      window.location.href = destination;
-    }, 600);
-    return;
+      window.location.href = r.dashboardUrl || "/dashboard/owner";
+    }, 400);
   };
 
   // --------------------------------------------------------------------------
@@ -2403,6 +2445,15 @@ export default function SignInForm({
           </div>
         </div>
       )}
+
+      {/* Role Picker Modal (§5.14) */}
+      <RoleSelectorModal
+        isOpen={isRoleModalOpen}
+        roles={fetchedRoles}
+        onSelectRole={handleSelectRole}
+        onClose={() => setIsRoleModalOpen(false)}
+        canDismiss={false}
+      />
     </div>
   );
 }

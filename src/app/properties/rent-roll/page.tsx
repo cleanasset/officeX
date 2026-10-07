@@ -217,6 +217,13 @@ export default function RentRollRegisterPage() {
               <CreditCard className="w-3.5 h-3.5" />
               Payments & Collections (§5.9)
             </button>
+            <Link
+              href="/approvals"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold transition"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+              Approvals Inbox (§S-06)
+            </Link>
             <button
               onClick={() => setMultiClientOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold transition"

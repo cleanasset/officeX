@@ -15,9 +15,13 @@ import {
   FileText,
   Layers,
   LogOut,
-  Building2
+  Building2,
+  ChevronDown,
+  Receipt,
+  Briefcase
 } from "lucide-react";
 import { performClientLogout } from "@/lib/auth-client";
+import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 
 export default function Topbar() {
   const pathname = usePathname();
@@ -33,6 +37,13 @@ export default function Topbar() {
   const [userName, setUserName] = useState("");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Multi-Client Operator State (§2.1, §S-02)
+  const [clients, setClients] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [isOwnerStatementOpen, setIsOwnerStatementOpen] = useState(false);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
 
   // Generate breadcrumbs from pathname
   const pathParts = pathname.split("/").filter(Boolean);
@@ -79,6 +90,31 @@ export default function Topbar() {
     }
   }, [searchQuery]);
 
+  // Fetch Multi-Client accounts (§2.1)
+  useEffect(() => {
+    fetch("/api/multi-client/clients")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.clients && data.clients.length > 0) {
+          setClients(data.clients);
+          const savedId = typeof window !== "undefined" ? localStorage.getItem("officex_client_account_id") : null;
+          const found = data.clients.find((c: any) => c.id === savedId) || data.clients[0];
+          setSelectedClient(found);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectClient = (c: any) => {
+    setSelectedClient(c);
+    setIsClientDropdownOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_client_account_id", c.id);
+      document.cookie = `officex_client_account_id=${encodeURIComponent(c.id)}; path=/; max-age=86400; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent("officex-client-changed", { detail: { client: c } }));
+    }
+  };
+
   // Click outside listener for all dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -87,6 +123,9 @@ export default function Topbar() {
       }
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setIsProfileMenuOpen(false);
+      }
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
+        setIsClientDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -130,6 +169,66 @@ export default function Topbar() {
           <span className="text-slate-800 font-bold capitalize">
             {formattedBreadcrumb || "Commercial Portfolio"}
           </span>
+        </div>
+
+        {/* Multi-Client Operator Selector (§2.1, §S-02) */}
+        <div className="relative hidden lg:block" ref={clientDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-200 transition-colors cursor-pointer"
+          >
+            <Building2 size={13} className="text-[#0F8B7D]" />
+            <span className="text-slate-500 font-semibold">Viewing:</span>
+            <span className="truncate max-w-[150px]">{selectedClient?.client_name || "Self (Portfolio)"}</span>
+            <ChevronDown size={12} className="text-slate-500" />
+          </button>
+
+          {isClientDropdownOpen && (
+            <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 text-slate-800 animate-fadeIn">
+              <div className="p-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                <span>Switch Client Account</span>
+                <span className="text-teal-600 font-semibold">§2.1 Multi-Client</span>
+              </div>
+              <div className="py-1 space-y-1 max-h-56 overflow-y-auto">
+                {clients.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleSelectClient(c)}
+                    className={`w-full px-3 py-2 text-left text-xs rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+                      selectedClient?.id === c.id
+                        ? "bg-teal-50 text-teal-900 font-bold border border-teal-200"
+                        : "hover:bg-slate-50 text-slate-700 font-medium"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="text-sm">{c.is_self ? "🏢" : "💼"}</span>
+                      <span className="truncate">{c.client_name}</span>
+                    </div>
+                    {c.is_self && (
+                      <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-mono">
+                        Self
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-slate-100 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsClientDropdownOpen(false);
+                    setIsOwnerStatementOpen(true);
+                  }}
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Receipt size={13} className="text-teal-400" />
+                  <span>View Owner Statement (§S-55)</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -260,6 +359,14 @@ export default function Topbar() {
           )}
         </div>
       </div>
+
+      {/* Owner Statement Modal (§5.10 / Table 103) */}
+      <OwnerStatementModal
+        isOpen={isOwnerStatementOpen}
+        onClose={() => setIsOwnerStatementOpen(false)}
+        clientAccountId={selectedClient?.id}
+        clientName={selectedClient?.client_name}
+      />
     </header>
   );
 }

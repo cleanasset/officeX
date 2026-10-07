@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { contract, contractDocument, task, occupant, space } from "@/db/schema";
+import { contract, contractDocument, task, occupant, space, auditLogs } from "@/db/schema";
 import {
   validateMakerCannotApprove,
   validateContractActivationDocs,
@@ -24,6 +24,18 @@ export async function POST(
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const comment = body.comment || "Approved";
+
+    // 0. Role verification (§5.14): Property Manager cannot approve contracts; Approver, Finance Manager, or Owner required
+    const allowedApproverRoles = ["finance_manager", "finance", "approver", "owner", "client_principal", "super_admin", "org_admin"];
+    if (!allowedApproverRoles.includes(auth.role)) {
+      return NextResponse.json(
+        {
+          error: "Permission denied",
+          message: `Role '${auth.role}' is not authorized to approve contracts. Approver, Finance Manager, or Owner role required (§5.14). Property Managers cannot approve contracts.`,
+        },
+        { status: 403 }
+      );
+    }
 
     const [existing] = await db
       .select()
@@ -143,6 +155,19 @@ export async function POST(
           })
           .where(eq(space.id, existing.space_id));
       }
+    }
+
+    // 7. Audit log action with user_id and role
+    try {
+      await db.insert(auditLogs).values({
+        traceId: `APPR-${id.slice(0, 8)}-${Date.now()}`,
+        module: "Rent Roll Contracts",
+        action: `Contract ${existing.contract_code || id} approved by User ${auth.userId} (Role: ${auth.role}). Target status: ${targetStatus}. Comment: ${comment}`,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        severity: "info",
+      });
+    } catch (auditErr) {
+      console.warn("Audit logging non-fatal exception:", auditErr);
     }
 
     return NextResponse.json({

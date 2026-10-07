@@ -371,18 +371,8 @@ export const invoices = pgTable("invoices", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 
-export const invoiceLineItems = pgTable("invoice_line_items", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
-  description: varchar("description", { length: 255 }).notNull(),
-  hsnSacCode: varchar("hsn_sac_code", { length: 20 }).default("997212"),
-  quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1.00"),
-  rate: decimal("rate", { precision: 14, scale: 2 }).notNull(),
-  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
-  gstRate: decimal("gst_rate", { precision: 5, scale: 2 }).default("18.00"),
-  gstAmount: decimal("gst_amount", { precision: 14, scale: 2 }).notNull(),
-  totalAmount: decimal("total_amount", { precision: 14, scale: 2 }).notNull()
-});
+export { invoice_line, invoiceLine } from "./rent-roll-schema";
+export { invoice_line as invoiceLineItems } from "./rent-roll-schema";
 
 // Collections / Receipts Table
 export const collections = pgTable("collections", {
