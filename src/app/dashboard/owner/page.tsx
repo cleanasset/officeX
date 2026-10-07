@@ -23,263 +23,205 @@ import {
   RefreshCw,
   ChevronRight,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  MapPin,
+  ExternalLink,
+  ChevronDown,
+  Eye,
+  Check,
+  X,
+  CreditCard,
+  Briefcase
 } from "lucide-react";
+import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
+
+interface PropertySummary {
+  id: string;
+  name: string;
+  code: string;
+  location: string;
+  areaSqft: number;
+  occupiedSqft: number;
+  occupancyPct: number;
+  monthlyRevenue: number;
+  status: "Performing" | "Stabilized" | "At Risk";
+  lat?: number;
+  lng?: number;
+}
+
+interface OccupantRank {
+  rank: number;
+  name: string;
+  property: string;
+  space: string;
+  monthlyRent: number;
+  status: "Active" | "Expiring Soon" | "Expired";
+}
+
+interface ExpirationItem {
+  id: string;
+  occupant: string;
+  property: string;
+  space: string;
+  expiryDate: string;
+  daysLeft: number;
+  status: "renewed" | "under_negotiation" | "approaching" | "vacating";
+  renewalStatusText: string;
+}
 
 export default function OwnerDashboardPage() {
   const [scope, setScope] = useState("all");
-  const [period, setPeriod] = useState("Sep-2026");
+  const [period, setPeriod] = useState("Oct-2026");
   const [loading, setLoading] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState("10:45 AM");
+  const [lastRefreshed, setLastRefreshed] = useState("Just now");
+  const [statementModalOpen, setStatementModalOpen] = useState(false);
 
-  // Fetch register or collections data if available
+  // Dynamic Data States
+  const [properties, setProperties] = useState<PropertySummary[]>([
+    {
+      id: "PROP-01",
+      name: "Apex Business Tower",
+      code: "APX-01",
+      location: "BKC, Mumbai (19.0657° N, 72.8687° E)",
+      areaSqft: 125000,
+      occupiedSqft: 110000,
+      occupancyPct: 88.0,
+      monthlyRevenue: 10450000,
+      status: "Performing",
+    },
+    {
+      id: "PROP-02",
+      name: "Meridian Tech Park",
+      code: "MTP-02",
+      location: "Whitefield, Bengaluru (12.9698° N, 77.7500° E)",
+      areaSqft: 85000,
+      occupiedSqft: 68000,
+      occupancyPct: 80.0,
+      monthlyRevenue: 5440000,
+      status: "Stabilized",
+    },
+    {
+      id: "PROP-03",
+      name: "Cyber Tech City Tower B",
+      code: "CTC-03",
+      location: "HITEC City, Hyderabad (17.4435° N, 78.3772° E)",
+      areaSqft: 50000,
+      occupiedSqft: 34500,
+      occupancyPct: 69.0,
+      monthlyRevenue: 2760000,
+      status: "At Risk",
+    },
+  ]);
+
+  const [topOccupants, setTopOccupants] = useState<OccupantRank[]>([
+    { rank: 1, name: "Global Logistics Warehousing", property: "Apex Business Tower", space: "Floor 4, East", monthlyRent: 3480000, status: "Active" },
+    { rank: 2, name: "TechNova Financial Systems", property: "Meridian Tech Park", space: "Floor 3, Full", monthlyRent: 1862000, status: "Active" },
+    { rank: 3, name: "Innovate Technologies Ltd", property: "Apex Business Tower", space: "Suite 401", monthlyRent: 2500000, status: "Active" },
+    { rank: 4, name: "Apex Infotech Ltd", property: "Cyber Tech City Tower B", space: "Space U-101", monthlyRent: 250000, status: "Active" },
+    { rank: 5, name: "NextGen Digital Retail", property: "Meridian Tech Park", space: "Ground Floor Retail", monthlyRent: 840000, status: "Expiring Soon" },
+  ]);
+
+  const [expirations, setExpirations] = useState<ExpirationItem[]>([
+    { id: "EXP-01", occupant: "Skyline Designs Pvt Ltd", property: "Apex Business Tower", space: "Suite 204", expiryDate: "2026-10-28", daysLeft: 21, status: "approaching", renewalStatusText: "Notice Served (Expiring <30d)" },
+    { id: "EXP-02", occupant: "NextGen Digital Retail", property: "Meridian Tech Park", space: "GF-02 Retail", expiryDate: "2026-11-15", daysLeft: 39, status: "under_negotiation", renewalStatusText: "Term Sheet Under Review (30-60d)" },
+    { id: "EXP-03", occupant: "Brightpath Coworking", property: "Meridian Tech Park", space: "Floor 1 Flex", expiryDate: "2026-12-20", daysLeft: 74, status: "under_negotiation", renewalStatusText: "Early Renewal Discussed (>60d)" },
+  ]);
+
+  const [agingBuckets, setAgingBuckets] = useState({
+    b0_30: { count: 18, amount: 1820000 },
+    b31_60: { count: 7, amount: 960000 },
+    b61_90: { count: 3, amount: 410000 },
+    b90_plus: { count: 2, amount: 650000 },
+    totalOutstanding: 3840000,
+  });
+
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState([
+    { month: "Nov 25", collected: 125, pending: 15, projected: 0 },
+    { month: "Dec 25", collected: 132, pending: 18, projected: 0 },
+    { month: "Jan 26", collected: 130, pending: 12, projected: 0 },
+    { month: "Feb 26", collected: 135, pending: 14, projected: 0 },
+    { month: "Mar 26", collected: 142, pending: 16, projected: 0 },
+    { month: "Apr 26", collected: 138, pending: 20, projected: 0 },
+    { month: "May 26", collected: 140, pending: 15, projected: 0 },
+    { month: "Jun 26", collected: 145, pending: 14, projected: 0 },
+    { month: "Jul 26", collected: 144, pending: 18, projected: 0 },
+    { month: "Aug 26", collected: 148, pending: 16, projected: 0 },
+    { month: "Sep 26", collected: 143, pending: 22, projected: 0 },
+    { month: "Oct 26", collected: 121, pending: 38, projected: 25 },
+  ]);
+
   useEffect(() => {
-    fetchLiveMetrics();
+    fetchDashboardMetrics();
   }, [scope, period]);
 
-  const fetchLiveMetrics = async () => {
+  const fetchDashboardMetrics = async () => {
     try {
       setLoading(true);
-      // Attempt live fetch to keep dynamic
-      const res = await fetch("/api/rent-roll/register?view=current");
-      if (res.ok) {
-        const json = await res.json();
-        // Update live stats if available
+      // Fetch Aging data
+      const agingRes = await fetch("/api/collections/aging").catch(() => null);
+      if (agingRes && agingRes.ok) {
+        const json = await agingRes.json();
+        if (json.summary) {
+          setAgingBuckets({
+            b0_30: { count: json.summary.bucket_counts?.["0-30"] || 18, amount: json.summary.current_0_30_inr || 1820000 },
+            b31_60: { count: json.summary.bucket_counts?.["31-60"] || 7, amount: json.summary.overdue_31_60_inr || 960000 },
+            b61_90: { count: json.summary.bucket_counts?.["61-90"] || 3, amount: json.summary.overdue_61_90_inr || 410000 },
+            b90_plus: { count: json.summary.bucket_counts?.["90+"] || 2, amount: json.summary.overdue_90_plus_inr || 650000 },
+            totalOutstanding: json.summary.total_receivables_inr || 3840000,
+          });
+        }
       }
-      const now = new Date();
-      setLastRefreshed(
-        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      );
+
+      // Fetch Invoices count & KPIs
+      const invRes = await fetch("/api/invoices").catch(() => null);
+      if (invRes && invRes.ok) {
+        const json = await invRes.json();
+        if (json.kpis && json.kpis.overdue_inr > 0) {
+          setAgingBuckets(prev => ({
+            ...prev,
+            totalOutstanding: json.kpis.overdue_inr + (json.kpis.total_invoiced_inr - json.kpis.collections_realized_inr),
+          }));
+        }
+      }
+
+      setLastRefreshed(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
     } catch (e) {
-      // Graceful fallback to spec figures
+      console.error("Owner metrics fetch error:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const topKPIs = [
-    {
-      id: "K-01",
-      label: "Annual Contracted Revenue",
-      value: "₹17.16 Cr",
-      change: "+8.4%",
-      isPositive: true,
-      comparison: "vs. previous year",
-      drilldown: "/properties/rent-roll?view=current",
-      color: "text-slate-900",
-    },
-    {
-      id: "K-02",
-      label: "Billed This Month",
-      value: "₹1.43 Cr",
-      change: "+3.2%",
-      isPositive: true,
-      comparison: "vs. last month (Sep 2026)",
-      drilldown: "/properties/rent-roll?tab=invoices",
-      color: "text-emerald-700",
-    },
-    {
-      id: "K-03",
-      label: "Collected MTD",
-      value: "₹1.21 Cr",
-      change: "+5.1%",
-      isPositive: true,
-      comparison: "Cash ₹1.09 Cr + TDS ₹12.0 L",
-      drilldown: "/properties/rent-roll?tab=collections",
-      color: "text-blue-700",
-    },
-    {
-      id: "K-04",
-      label: "Outstanding Amount",
-      value: "₹38.40 L",
-      change: "-12.5%",
-      isPositive: true,
-      comparison: "2.68% of annual billing (Healthy)",
-      drilldown: "/dashboard/finance",
-      color: "text-rose-700",
-    },
-    {
-      id: "K-05",
-      label: "Collection Efficiency",
-      value: "84.6%",
-      change: "+2.1%",
-      isPositive: true,
-      comparison: "Target: ≥ 90% (Amber threshold)",
-      drilldown: "/dashboard/finance",
-      color: "text-amber-700",
-    },
-  ];
-
-  const secondaryKPIs = [
-    {
-      id: "K-06",
-      label: "Occupancy (Area)",
-      value: "68.2%",
-      subtext: "1,42,800 / 2,09,380 sq ft",
-      change: "+1.8%",
-      isPositive: true,
-      drilldown: "/properties/rent-roll?tab=occupancy",
-    },
-    {
-      id: "K-07",
-      label: "Occupancy (Seats)",
-      value: "84.2%",
-      subtext: "288 / 342 operational seats",
-      change: "+4.0%",
-      isPositive: true,
-      drilldown: "/properties/rent-roll?tab=flex-centre",
-    },
-    {
-      id: "K-08",
-      label: "WALE (Income)",
-      value: "3.86 yrs",
-      subtext: "Weighted Average Lease Expiry",
-      change: "+0.2 yr",
-      isPositive: true,
-      drilldown: "/properties/rent-roll?tab=escalations",
-    },
-    {
-      id: "K-09",
-      label: "Revenue at Risk (12m)",
-      value: "₹5.22 Cr",
-      subtext: "30.4% of K-01 annual revenue",
-      change: "2 Critical Expiries",
-      isPositive: false,
-      drilldown: "/dashboard/leasing",
-    },
-    {
-      id: "K-10",
-      label: "Escalations Due (90d)",
-      value: "3 contracts",
-      subtext: "+₹2.90 L / month increment",
-      change: "Auto-scheduled",
-      isPositive: true,
-      drilldown: "/properties/rent-roll?tab=escalations",
-    },
-  ];
-
-  const topOccupants = [
-    {
-      rank: 1,
-      name: "Innovate Corp Solutions",
-      industry: "IT & Software",
-      rentMonth: "₹20,90,000",
-      share: "14.6%",
-      space: "Apex BKC · Floor 6-7",
-      area: "18,200 sq ft",
-      expiry: "Nov 2028",
-      arrears: "None",
-    },
-    {
-      rank: 2,
-      name: "NextGen Retail Private Ltd",
-      industry: "E-Commerce",
-      rentMonth: "₹20,24,000",
-      share: "14.2%",
-      space: "Meridian Tech Park · Wing B",
-      area: "24,000 sq ft",
-      expiry: "Jan 2027",
-      arrears: "None",
-    },
-    {
-      rank: 3,
-      name: "TechNova Financial Global",
-      industry: "BFSI",
-      rentMonth: "₹15,40,000",
-      share: "10.8%",
-      space: "Apex BKC · Suite 402",
-      area: "14,000 sq ft",
-      expiry: "Oct 2027",
-      arrears: "None",
-    },
-    {
-      rank: 4,
-      name: "FreshMart Omnichannel",
-      industry: "Retail / Logistics",
-      rentMonth: "₹12,80,000",
-      share: "8.9%",
-      space: "Nexus Hub · Ground",
-      area: "11,500 sq ft",
-      expiry: "May 2029",
-      arrears: "None",
-    },
-    {
-      rank: 5,
-      name: "Brightpath Workspaces",
-      industry: "Flex Operator",
-      rentMonth: "₹10,50,000",
-      share: "7.3%",
-      space: "Meridian Tech Park · Floor 4",
-      area: "120 Seats",
-      expiry: "Mar 2028",
-      arrears: "₹2.1 L (Overdue)",
-    },
-  ];
-
-  const agingBuckets = [
-    { label: "0–30 Days", amount: "₹18,20,000", count: "14 Invoices", width: "47%", color: "bg-emerald-500" },
-    { label: "31–60 Days", amount: "₹9,60,000", count: "6 Invoices", width: "25%", color: "bg-blue-500" },
-    { label: "61–90 Days", amount: "₹4,10,000", count: "3 Invoices", width: "11%", color: "bg-amber-500" },
-    { label: "90+ Days", amount: "₹6,50,000", count: "2 Invoices", width: "17%", color: "bg-rose-500" },
-  ];
-
-  const propertiesList = [
-    {
-      name: "Apex Business Tower",
-      code: "APX-BKC",
-      city: "Mumbai",
-      occupancy: "46.0%",
-      monthlyRent: "₹52.29 L",
-      outstanding: "₹4.10 L",
-      wale: "4.2 yrs",
-      exceptions: 2,
-    },
-    {
-      name: "Meridian Tech Park",
-      code: "MTP-GGN",
-      city: "Gurugram",
-      occupancy: "75.0%",
-      monthlyRent: "₹59.27 L",
-      outstanding: "₹31.60 L",
-      wale: "2.9 yrs",
-      exceptions: 4,
-      alert: true,
-    },
-    {
-      name: "Nexus Corporate Hub",
-      code: "NXH-BLR",
-      city: "Bengaluru",
-      occupancy: "83.5%",
-      monthlyRent: "₹31.44 L",
-      outstanding: "₹2.70 L",
-      wale: "4.6 yrs",
-      exceptions: 1,
-    },
-  ];
+  // Header KPI Computations
+  const totalPropertiesCount = properties.length;
+  const totalLeasableArea = properties.reduce((acc, p) => acc + p.areaSqft, 0);
+  const totalOccupiedArea = properties.reduce((acc, p) => acc + p.occupiedSqft, 0);
+  const occupancyPercentage = Math.round((totalOccupiedArea / totalLeasableArea) * 1000) / 10;
+  const totalMonthlyRevenue = properties.reduce((acc, p) => acc + p.monthlyRevenue, 0);
+  const collectionsRate = 84.6; // MTD collections efficiency
 
   return (
-    <div className="space-y-6">
-      {/* Header & Controls (§S-02) */}
+    <div className="space-y-6 pb-12">
+      {/* Dashboard Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200 uppercase tracking-wider">
               §S-02 Wireframe Spec
             </span>
             <span className="text-xs text-slate-500 font-medium">
-              Last refreshed {lastRefreshed}
+              Portfolio Principal Console · Refreshed {lastRefreshed}
             </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
-            <span>Owner Portfolio Dashboard</span>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
+            Owner & Client Principal Dashboard
           </h1>
           <p className="text-xs text-slate-500">
-            Executive oversight of income, occupancy, lease expirations and cashflow collections across commercial assets.
+            Portfolio performance, monthly revenue trends, tenant health, 90-day expiries, and multi-client owner statements.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Scope Dropdown */}
           <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
             <span className="text-[11px] font-bold text-slate-500">Scope:</span>
             <select
@@ -287,451 +229,441 @@ export default function OwnerDashboardPage() {
               onChange={(e) => setScope(e.target.value)}
               className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
-              <option value="all">All Properties (3 Assets)</option>
-              <option value="apx">Apex Business Tower (APX-BKC)</option>
-              <option value="mtp">Meridian Tech Park (MTP-GGN)</option>
-              <option value="nxh">Nexus Hub (NXH-BLR)</option>
-            </select>
-          </div>
-
-          {/* Period Dropdown */}
-          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-500">Period:</span>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
-            >
-              <option value="Sep-2026">Sep-2026</option>
-              <option value="Oct-2026">Oct-2026 (Current)</option>
-              <option value="Q3-2026">Q3 FY26</option>
-              <option value="FY26-27">FY 2026-27 YTD</option>
+              <option value="all">Consolidated Portfolio (All 3 Properties)</option>
+              <option value="apex">Apex Business Tower (Mumbai)</option>
+              <option value="meridian">Meridian Tech Park (BLR)</option>
+              <option value="cyber">Cyber Tech City (HYD)</option>
             </select>
           </div>
 
           <button
-            onClick={fetchLiveMetrics}
-            disabled={loading}
-            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-2xs transition-colors"
-            title="Refresh Data"
+            onClick={() => setStatementModalOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5"
           >
-            <RefreshCw size={15} className={loading ? "animate-spin text-[#0F8B7D]" : ""} />
+            <Receipt className="w-3.5 h-3.5" />
+            <span>Owner Statement (§Table 103)</span>
           </button>
 
-          <Link
-            href="/properties/rent-roll"
-            className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold shadow-sm shadow-[#0F8B7D]/20 transition-all flex items-center gap-1.5"
+          <button
+            onClick={fetchDashboardMetrics}
+            className="p-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs transition"
+            title="Refresh Metrics"
           >
-            <Download size={14} />
-            <span>Download MIS (§S-53)</span>
-          </Link>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-600" : ""}`} />
+          </button>
         </div>
       </div>
 
-      {/* Primary KPI Drilldown Cards (§S-02 / Table 5.13a) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {topKPIs.map((kpi) => (
-          <Link
-            key={kpi.id}
-            href={kpi.drilldown}
-            className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between text-slate-500 mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider">
-                  {kpi.label}
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {kpi.id}
-                </span>
-              </div>
-              <div className={`text-2xl font-black tracking-tight ${kpi.color}`}>
-                {kpi.value}
-              </div>
-            </div>
-
-            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500 truncate max-w-[140px]">
-                {kpi.comparison}
-              </span>
-              <span
-                className={`font-bold inline-flex items-center gap-0.5 ${
-                  kpi.isPositive ? "text-emerald-600" : "text-rose-600"
-                }`}
-              >
-                {kpi.change}
-                <ArrowUpRight size={12} />
-              </span>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Secondary Operational KPIs Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        {secondaryKPIs.map((kpi) => (
-          <Link
-            key={kpi.id}
-            href={kpi.drilldown}
-            className="p-3.5 rounded-xl bg-slate-100/70 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-all flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-600">
-                  {kpi.label}
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {kpi.id}
-                </span>
-              </div>
-              <div className="text-lg font-black text-slate-900 mt-1">
-                {kpi.value}
-              </div>
-              <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                {kpi.subtext}
-              </p>
-            </div>
-            <div className="mt-2 text-[10px] font-bold text-[#0F8B7D] flex items-center justify-between">
-              <span>{kpi.change}</span>
-              <ArrowUpRight size={11} />
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Action Notification Banners (§S-02 Bottom Wireframe) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Approvals Pending Banner */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-amber-950">
-                Awaiting My Approval (3 Contracts & Escalations)
-              </h4>
-              <p className="text-[11px] text-amber-800 mt-0.5">
-                APX-L-0057 (+₹34.80 L/m), MTP-L-0012 rate revision, and GFT-L-0003 +5% step pending checker review.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/approvals"
-            className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 transition-colors shadow-2xs"
-          >
-            Open Approvals Inbox (§S-06)
-          </Link>
+      {/* Header Top KPIs (6 Cards) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Properties</span>
+          <p className="text-xl font-black text-slate-900 mt-1">{totalPropertiesCount}</p>
+          <span className="text-[10px] text-slate-500 mt-0.5 block">100% Operational</span>
         </div>
 
-        {/* Multi-Client Owner Statement Quick Action */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-800 flex items-center justify-center shrink-0">
-              <DollarSign size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-teal-950">
-                Multi-Client Remittance Statement (§S-55 / RR-MC-02)
-              </h4>
-              <p className="text-[11px] text-teal-800 mt-0.5">
-                Collections: ₹48.0 L | Mgmt fee (4%): (₹1.92 L) | Net remittance: ₹44.53 L.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/properties/rent-roll"
-            className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold shrink-0 transition-colors shadow-2xs"
-          >
-            View Statement
-          </Link>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Leasable Area</span>
+          <p className="text-xl font-black text-slate-900 mt-1">
+            {totalLeasableArea.toLocaleString("en-IN")} <span className="text-xs font-medium text-slate-400">sqft</span>
+          </p>
+          <span className="text-[10px] text-teal-700 font-semibold mt-0.5 block">
+            {totalOccupiedArea.toLocaleString("en-IN")} occupied
+          </span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupancy %</span>
+          <p className="text-xl font-black text-emerald-700 mt-1">{occupancyPercentage}%</p>
+          <span className="text-[10px] text-emerald-600 font-medium mt-0.5 flex items-center gap-0.5">
+            <ArrowUpRight className="w-3 h-3" /> +2.4% vs last mo
+          </span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Monthly Rev</span>
+          <p className="text-xl font-black text-blue-700 mt-1">
+            ₹{(totalMonthlyRevenue / 10000000).toFixed(2)} Cr
+          </p>
+          <span className="text-[10px] text-slate-500 mt-0.5 block">Contracted monthly</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Outstanding Amount</span>
+          <p className="text-xl font-black text-rose-600 mt-1">
+            ₹{(agingBuckets.totalOutstanding / 100000).toFixed(2)} L
+          </p>
+          <span className="text-[10px] text-rose-500 font-medium mt-0.5 block">Across all aging buckets</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Collections Rate</span>
+          <p className="text-xl font-black text-indigo-700 mt-1">{collectionsRate}%</p>
+          <span className="text-[10px] text-indigo-600 font-medium mt-0.5 block">MTD Realized collections</span>
         </div>
       </div>
 
-      {/* Main Split: Billed vs Collected & Aging Analysis */}
+      {/* Section 1 & Section 2: Portfolio Overview & Monthly Revenue Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (7 cols): Billed vs Collected Trend (K-11) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-4">
+        {/* Section 1: Portfolio Overview (7 Cols) */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border">
-                  K-11
-                </span>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Billed vs. Collected — Last 12 Months
-                </h3>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Monthly gross invoice billing vs real-time bank realization & TDS credit
-              </p>
+              <h3 className="text-sm font-bold text-slate-900">Section 1: Portfolio Overview</h3>
+              <p className="text-xs text-slate-500">Asset breakdown by leasable area, occupancy & contracted revenue</p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-                Billed
-              </span>
-              <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
-                Collected
-              </span>
-            </div>
-          </div>
-
-          {/* Simple Visual Bar Comparison */}
-          <div className="space-y-3 pt-2">
-            {[
-              { month: "Oct 26", billed: 152, collected: 130, pct: "85.5%" },
-              { month: "Sep 26", billed: 143, collected: 121, pct: "84.6%" },
-              { month: "Aug 26", billed: 140, collected: 132, pct: "94.2%" },
-              { month: "Jul 26", billed: 138, collected: 129, pct: "93.4%" },
-              { month: "Jun 26", billed: 135, collected: 125, pct: "92.5%" },
-              { month: "May 26", billed: 130, collected: 120, pct: "92.3%" },
-            ].map((m) => (
-              <div key={m.month} className="space-y-1">
-                <div className="flex justify-between text-[11px]">
-                  <span className="font-semibold text-slate-700">{m.month}</span>
-                  <span className="text-slate-500">
-                    Billed: ₹{(m.billed / 100).toFixed(2)} Cr · Collected: ₹{(m.collected / 100).toFixed(2)} Cr ({m.pct})
-                  </span>
-                </div>
-                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                  <div
-                    style={{ width: `${(m.collected / m.billed) * 100}%` }}
-                    className="bg-emerald-500 h-full rounded-l-full"
-                  />
-                  <div
-                    style={{ width: `${100 - (m.collected / m.billed) * 100}%` }}
-                    className="bg-amber-400 h-full rounded-r-full"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Average days to collect: <strong className="text-slate-800">18.4 Days</strong></span>
             <Link
-              href="/properties/rent-roll?tab=collections"
-              className="text-[#0F8B7D] font-bold hover:underline flex items-center gap-1"
+              href="/properties/rent-roll"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
             >
-              <span>View full collections ledger</span>
-              <ArrowUpRight size={12} />
+              Rent Roll View <ChevronRight className="w-3.5 h-3.5" />
             </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">Property Name</th>
+                  <th className="py-2.5 px-3 text-right">Total Area</th>
+                  <th className="py-2.5 px-3 text-right">Occupancy</th>
+                  <th className="py-2.5 px-3 text-right">Monthly Rev</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {properties.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3 px-3">
+                      <div className="font-bold text-slate-900">{p.name}</div>
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        {p.location}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-right text-slate-700 font-medium">
+                      {p.areaSqft.toLocaleString("en-IN")} sqft
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <span className="font-bold text-slate-900">{p.occupancyPct}%</span>
+                      <div className="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden ml-auto mt-1">
+                        <div
+                          className="bg-emerald-500 h-full rounded-full"
+                          style={{ width: `${p.occupancyPct}%` }}
+                        />
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-right font-bold text-blue-700">
+                      ₹{(p.monthlyRevenue / 100000).toFixed(2)} L
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          p.status === "Performing"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : p.status === "Stabilized"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Right Column (5 cols): Collections Aging Analysis (K-12) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border">
-                  K-12
-                </span>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Arrears & Aging Buckets
-                </h3>
-              </div>
-              <span className="text-xs font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                Total ₹38.40 L
-              </span>
+        {/* Section 2: Monthly Revenue Chart (5 Cols) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Section 2: Monthly Revenue (12 Months)</h3>
+              <p className="text-xs text-slate-500">Collected vs Pending vs Projected in ₹ Lakhs</p>
             </div>
-            <p className="text-[11px] text-slate-500 mb-4">
-              Real-time outstanding receivables classified by days past invoice due date.
-            </p>
-
-            <div className="space-y-3">
-              {agingBuckets.map((bucket) => (
-                <Link
-                  key={bucket.label}
-                  href={`/dashboard/finance?bucket=${encodeURIComponent(bucket.label)}`}
-                  className="block p-2.5 rounded-xl border border-slate-100 hover:border-slate-300 hover:bg-slate-50/50 transition-all"
-                >
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-bold text-slate-800 flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-sm ${bucket.color}`} />
-                      {bucket.label}
-                    </span>
-                    <span className="font-mono font-bold text-slate-900">
-                      {bucket.amount}
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: bucket.width }}
-                      className={`h-full rounded-full ${bucket.color}`}
-                    />
-                  </div>
-                  <div className="mt-1 text-[10px] text-slate-400 flex justify-between">
-                    <span>{bucket.count}</span>
-                    <span>{bucket.width} of outstanding</span>
-                  </div>
-                </Link>
-              ))}
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="flex items-center gap-1 font-semibold text-emerald-700">
+                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" /> Collected
+              </span>
+              <span className="flex items-center gap-1 font-semibold text-rose-700">
+                <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm" /> Pending
+              </span>
+              <span className="flex items-center gap-1 font-semibold text-slate-500">
+                <span className="w-2.5 h-2.5 bg-slate-300 rounded-sm" /> Projected
+              </span>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
-            <Link
-              href="/dashboard/finance"
-              className="text-xs font-bold text-[#0F8B7D] hover:underline inline-flex items-center gap-1"
-            >
-              <span>Detailed Aging Analysis & Invoices Register</span>
-              <ChevronRight size={13} />
-            </Link>
+          {/* Clean 12-Month Bar Chart */}
+          <div className="pt-2">
+            <div className="h-48 flex items-end justify-between gap-1.5 px-1 border-b border-slate-200">
+              {monthlyRevenueData.map((d, i) => {
+                const totalH = d.collected + d.pending + d.projected;
+                const maxScale = 180;
+                const collectedH = (d.collected / maxScale) * 100;
+                const pendingH = (d.pending / maxScale) * 100;
+                const projH = (d.projected / maxScale) * 100;
+
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center group relative">
+                    {/* Tooltip */}
+                    <div className="absolute -top-12 bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10">
+                      {d.month}: Collected ₹{d.collected}L, Pending ₹{d.pending}L
+                    </div>
+                    <div className="w-full max-w-[20px] flex flex-col-reverse h-40">
+                      <div style={{ height: `${collectedH}%` }} className="bg-emerald-500 w-full" />
+                      <div style={{ height: `${pendingH}%` }} className="bg-rose-500 w-full" />
+                      {projH > 0 && <div style={{ height: `${projH}%` }} className="bg-slate-300 w-full" />}
+                    </div>
+                    <span className="text-[9px] text-slate-400 mt-2 rotate-45 origin-left">
+                      {d.month.split(" ")[0]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Top 5 Occupants Concentration Table (K-14) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border">
-                K-14
-              </span>
-              <h3 className="text-sm font-bold text-slate-900">
-                Top 5 Occupants by Revenue Concentration
-              </h3>
+      {/* Section 3 & Section 4: Top 5 Occupants & Upcoming Expirations */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Section 3: Top 5 Occupants by Rent (6 Cols) */}
+        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Section 3: Top 5 Occupants by Rent</h3>
+              <p className="text-xs text-slate-500">Highest gross contributing tenants across portfolio</p>
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Single-occupant concentration risk analysis (§5.13 / UAT-57). Max threshold: &lt; 20%
-            </p>
+            <span className="text-xs font-semibold text-slate-400">Rank 1–5</span>
           </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">#</th>
+                  <th className="py-2.5 px-3">Occupant</th>
+                  <th className="py-2.5 px-3">Property / Space</th>
+                  <th className="py-2.5 px-3 text-right">Monthly Rent</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {topOccupants.map((occ) => (
+                  <tr key={occ.rank} className="hover:bg-slate-50/80 transition">
+                    <td className="py-2.5 px-3 font-bold text-slate-400">{occ.rank}</td>
+                    <td className="py-2.5 px-3 font-bold text-slate-900">{occ.name}</td>
+                    <td className="py-2.5 px-3 text-slate-600">
+                      <div>{occ.property}</div>
+                      <div className="text-[10px] text-slate-400">{occ.space}</div>
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold text-blue-700">
+                      ₹{occ.monthlyRent.toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          occ.status === "Active"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {occ.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Section 4: Upcoming Expirations (90 Days) (6 Cols) */}
+        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Section 4: Upcoming Expirations (90 Days)</h3>
+              <p className="text-xs text-slate-500">Color coded: Green (&gt;60d), Yellow (30-60d), Red (&lt;30d)</p>
+            </div>
+            <Link
+              href="/properties/rent-roll"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+            >
+              View Pipeline →
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">Occupant</th>
+                  <th className="py-2.5 px-3">Property</th>
+                  <th className="py-2.5 px-3">Expiry Date</th>
+                  <th className="py-2.5 px-3 text-center">Days Left</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {expirations.map((exp) => {
+                  const badgeColor =
+                    exp.daysLeft < 30
+                      ? "bg-rose-100 text-rose-800 border-rose-300"
+                      : exp.daysLeft <= 60
+                      ? "bg-amber-100 text-amber-800 border-amber-300"
+                      : "bg-emerald-100 text-emerald-800 border-emerald-300";
+
+                  return (
+                    <tr key={exp.id} className="hover:bg-slate-50/80 transition">
+                      <td className="py-2.5 px-3">
+                        <div className="font-bold text-slate-900">{exp.occupant}</div>
+                        <div className="text-[10px] text-slate-400">{exp.space}</div>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600">{exp.property}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-700">{exp.expiryDate}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeColor}`}>
+                          {exp.daysLeft} days
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href="/properties/rent-roll"
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-semibold"
+                          >
+                            Contract
+                          </Link>
+                          <Link
+                            href="/properties/rent-roll"
+                            className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-[10px] font-semibold"
+                          >
+                            Renew
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 5: Collections Status (Aging Buckets) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Section 5: Collections Status by Aging Bucket</h3>
+            <p className="text-xs text-slate-500">Aging receivables status from billing invoice records</p>
+          </div>
+          <div className="text-xs font-bold text-rose-600">
+            Total Outstanding: ₹{(agingBuckets.totalOutstanding / 100000).toFixed(2)} Lakhs
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
-            href="/properties/rent-roll"
-            className="text-xs font-bold text-[#0F8B7D] hover:underline inline-flex items-center gap-1"
+            href="/dashboard/finance"
+            className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80 hover:bg-emerald-50 transition"
           >
-            <span>All Occupants</span>
-            <ChevronRight size={13} />
+            <span className="text-[11px] font-bold uppercase text-emerald-800">0–30 Days (Current)</span>
+            <p className="text-lg font-black text-emerald-900 mt-1">
+              ₹{(agingBuckets.b0_30.amount / 100000).toFixed(2)} L
+            </p>
+            <p className="text-xs text-emerald-700 mt-0.5">{agingBuckets.b0_30.count} invoices on schedule</p>
+          </Link>
+
+          <Link
+            href="/dashboard/finance"
+            className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 hover:bg-amber-50 transition"
+          >
+            <span className="text-[11px] font-bold uppercase text-amber-800">31–60 Days</span>
+            <p className="text-lg font-black text-amber-900 mt-1">
+              ₹{(agingBuckets.b31_60.amount / 100000).toFixed(2)} L
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">{agingBuckets.b31_60.count} invoices in early arrears</p>
+          </Link>
+
+          <Link
+            href="/dashboard/finance"
+            className="p-4 rounded-xl bg-orange-50/60 border border-orange-200/80 hover:bg-orange-50 transition"
+          >
+            <span className="text-[11px] font-bold uppercase text-orange-800">61–90 Days</span>
+            <p className="text-lg font-black text-orange-900 mt-1">
+              ₹{(agingBuckets.b61_90.amount / 100000).toFixed(2)} L
+            </p>
+            <p className="text-xs text-orange-700 mt-0.5">{agingBuckets.b61_90.count} invoices high risk</p>
+          </Link>
+
+          <Link
+            href="/dashboard/finance"
+            className="p-4 rounded-xl bg-rose-50/60 border border-rose-200/80 hover:bg-rose-50 transition"
+          >
+            <span className="text-[11px] font-bold uppercase text-rose-800">90+ Days (Critical)</span>
+            <p className="text-lg font-black text-rose-900 mt-1">
+              ₹{(agingBuckets.b90_plus.amount / 100000).toFixed(2)} L
+            </p>
+            <p className="text-xs text-rose-700 mt-0.5">{agingBuckets.b90_plus.count} default provision pending</p>
           </Link>
         </div>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 border-y border-slate-200">
-                <th className="py-2.5 px-3 font-semibold">#</th>
-                <th className="py-2.5 px-3 font-semibold">Occupant</th>
-                <th className="py-2.5 px-3 font-semibold">Industry</th>
-                <th className="py-2.5 px-3 font-semibold">Assigned Space</th>
-                <th className="py-2.5 px-3 font-semibold">Monthly Rent</th>
-                <th className="py-2.5 px-3 font-semibold">Share of K-01</th>
-                <th className="py-2.5 px-3 font-semibold">Lease Expiry</th>
-                <th className="py-2.5 px-3 font-semibold">Arrears Flag</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {topOccupants.map((occ) => (
-                <tr key={occ.rank} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3 px-3 font-mono font-bold text-slate-400">
-                    {occ.rank}
-                  </td>
-                  <td className="py-3 px-3 font-bold text-slate-900">
-                    {occ.name}
-                  </td>
-                  <td className="py-3 px-3 text-slate-600">{occ.industry}</td>
-                  <td className="py-3 px-3 text-slate-600">
-                    <div>{occ.space}</div>
-                    <span className="text-[10px] text-slate-400">{occ.area}</span>
-                  </td>
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                    {occ.rentMonth}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                      {occ.share}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-slate-600">{occ.expiry}</td>
-                  <td className="py-3 px-3">
-                    {occ.arrears === "None" ? (
-                      <span className="text-emerald-600 font-semibold flex items-center gap-1 text-[11px]">
-                        <CheckCircle2 size={13} />
-                        None
-                      </span>
-                    ) : (
-                      <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200 text-[11px]">
-                        {occ.arrears}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Section 6: Multi-Client Delegated Properties */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Section 6: Multi-Client Operations (§2.1, §S-02)</h3>
+            <p className="text-xs text-slate-500">Own properties vs Delegated to Chartered Accountants / Property Managers</p>
+          </div>
+          <button
+            onClick={() => setStatementModalOpen(true)}
+            className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            View Full Settlement Statement →
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-[10px] font-bold uppercase text-slate-400">Directly Managed Properties</span>
+            <h4 className="text-base font-bold text-slate-900 mt-1">2 Properties (Apex + Meridian)</h4>
+            <p className="text-xs text-slate-600 mt-1">Monthly Gross Collections: ₹1.58 Cr</p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-[10px] font-bold uppercase text-slate-400">Delegated Properties</span>
+            <h4 className="text-base font-bold text-slate-900 mt-1">1 Property (Sharma Estates Mandate)</h4>
+            <p className="text-xs text-slate-600 mt-1">
+              PM Agency Fee: 4.0% (₹1,96,560) · Net Remittance: ₹44,53,440
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase text-blue-800">Total Net Owner Remittance Due</span>
+              <h4 className="text-lg font-black text-blue-900 mt-1">₹44,53,440</h4>
+              <p className="text-[11px] text-blue-700 mt-0.5">Verified per Table 103 Spec Calculation</p>
+            </div>
+            <button
+              onClick={() => setStatementModalOpen(true)}
+              className="mt-3 w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition text-center"
+            >
+              Open Settlement Statement
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Properties Summary Table (§S-02 Wireframe) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-slate-900">
-            Properties Portfolio Breakdown
-          </h3>
-          <span className="text-xs text-slate-500">3 Commercial Assets</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 border-y border-slate-200">
-                <th className="py-2.5 px-3 font-semibold">Property</th>
-                <th className="py-2.5 px-3 font-semibold">City</th>
-                <th className="py-2.5 px-3 font-semibold">Occ %</th>
-                <th className="py-2.5 px-3 font-semibold">Monthly Rent</th>
-                <th className="py-2.5 px-3 font-semibold">Outstanding</th>
-                <th className="py-2.5 px-3 font-semibold">WALE</th>
-                <th className="py-2.5 px-3 font-semibold">Exceptions</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {propertiesList.map((p) => (
-                <tr key={p.code} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3 px-3">
-                    <div className="font-bold text-slate-900">{p.name}</div>
-                    <span className="font-mono text-[10px] text-slate-400">{p.code}</span>
-                  </td>
-                  <td className="py-3 px-3 text-slate-600">{p.city}</td>
-                  <td className="py-3 px-3">
-                    <span className="font-mono font-bold text-slate-900">{p.occupancy}</span>
-                  </td>
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                    {p.monthlyRent}
-                  </td>
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                    {p.outstanding}
-                  </td>
-                  <td className="py-3 px-3 font-mono text-slate-700">{p.wale}</td>
-                  <td className="py-3 px-3">
-                    {p.alert ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                        {p.exceptions} Critical
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
-                        {p.exceptions} open
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <Link
-                      href={`/properties/rent-roll?property_id=${p.code}`}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors"
-                    >
-                      <span>Rent Roll</span>
-                      <ChevronRight size={13} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Owner Statement Modal (§Table 103) */}
+      <OwnerStatementModal
+        isOpen={statementModalOpen}
+        onClose={() => setStatementModalOpen(false)}
+      />
     </div>
   );
 }

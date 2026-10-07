@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -21,432 +21,474 @@ import {
   RefreshCw,
   Search,
   Bell,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  DollarSign,
+  AlertCircle,
+  FileCheck,
+  Send,
+  X
 } from "lucide-react";
 import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
 
+type TaskCategory =
+  | "contract_approval"
+  | "escalation_due"
+  | "deposit_collection"
+  | "document_expiry"
+  | "overdue_payment";
+
 interface TaskItem {
   id: string;
-  type: string;
-  severity: "high" | "medium" | "low";
+  category: TaskCategory;
+  categoryLabel: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
   title: string;
-  dueDate: string;
-  isOverdue?: boolean;
-  record: string;
+  info: string;
   property: string;
-  actionText: string;
-  actionUrl?: string;
+  occupantSpace: string;
+  dueDate: string;
+  dueStatus: "overdue" | "today" | "future";
+  financialDetail?: string;
+  actions: {
+    primaryText: string;
+    secondaryText: string;
+    tertiaryText?: string;
+  };
   isCompleted?: boolean;
 }
 
 export default function PropertyManagerDashboardPage() {
   const [selectedProperty, setSelectedProperty] = useState("all");
-  const [filterSeverity, setFilterSeverity] = useState("all");
+  const [filterPriority, setFilterPriority] = useState<"all" | "HIGH" | "MEDIUM" | "LOW">("all");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [reminderTarget, setReminderTarget] = useState<string | null>(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const todayStr = new Date().toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  // Task Queue according to exact 5 types from spec S-03
   const [tasks, setTasks] = useState<TaskItem[]>([
+    // 1. Contracts Pending Approval (HIGH)
     {
       id: "TSK-01",
-      type: "contract_approval",
-      severity: "high",
-      title: "Contract pending approval — Anita submitted APX-L-0057",
-      dueDate: "Today",
-      isOverdue: false,
-      record: "APX-L-0057 · Global Logistics",
+      category: "contract_approval",
+      categoryLabel: "1. Contracts Pending Approval",
+      priority: "HIGH",
+      title: "Approve Contract: Global Logistics Warehousing",
+      info: "Submitted by: Anita Desai (Leasing) on Oct 5",
       property: "Apex Business Tower",
-      actionText: "Review Contract",
-      actionUrl: "/approvals",
+      occupantSpace: "Global Logistics · Suite 401 East",
+      dueDate: "Approval pending (7 days old)",
+      dueStatus: "overdue",
+      financialDetail: "Monthly Rent: ₹34,80,000",
+      actions: {
+        primaryText: "Approve",
+        secondaryText: "Reject",
+        tertiaryText: "View Details",
+      },
     },
+    // 2. Escalations Due (HIGH)
     {
       id: "TSK-02",
-      type: "escalation_due",
-      severity: "high",
-      title: "Escalation due — Apply 15% rent step to Innovate Corp",
-      dueDate: "01-Nov-2026",
-      isOverdue: false,
-      record: "MTP-T1-03 · Innovate Corp",
+      category: "escalation_due",
+      categoryLabel: "2. Escalations Due (Apply Rent Increase)",
+      priority: "HIGH",
+      title: "Apply Escalation: TechNova Financial Systems",
+      info: "Rent increase 5% effective Oct 1 (Compounded)",
       property: "Meridian Tech Park",
-      actionText: "Apply Step (+15%)",
-      actionUrl: "/properties/rent-roll?tab=escalations",
+      occupantSpace: "TechNova Financial · Floor 3 Full",
+      dueDate: "Due Today (01-Oct)",
+      dueStatus: "today",
+      financialDetail: "Current: ₹18.62L → New: ₹19.55L",
+      actions: {
+        primaryText: "Apply",
+        secondaryText: "Postpone",
+        tertiaryText: "View Timeline",
+      },
     },
+    // 3. Deposits to Collect (MEDIUM)
     {
       id: "TSK-03",
-      type: "deposit_collect",
-      severity: "high",
-      title: "Deposit shortfall — Collect ₹12,00,000 security deposit",
-      dueDate: "Overdue (3d)",
-      isOverdue: true,
-      record: "NXH-G01 · FreshMart Retail",
-      property: "Nexus Corporate Hub",
-      actionText: "Record Deposit",
-      actionUrl: "/properties/rent-roll?tab=collections",
+      category: "deposit_collection",
+      categoryLabel: "3. Deposits to Collect",
+      priority: "MEDIUM",
+      title: "Collect Deposit: Innovate Technologies Ltd",
+      info: "Property: Apex Business Tower | Occupant: Innovate Tech | Security Deposit: ₹50,000",
+      property: "Apex Business Tower",
+      occupantSpace: "Innovate Tech · Suite 401",
+      dueDate: "Oct 10 (3 days left)",
+      dueStatus: "future",
+      financialDetail: "Amount Due: ₹50,000",
+      actions: {
+        primaryText: "Record Collection",
+        secondaryText: "Send Reminder",
+        tertiaryText: "Waive",
+      },
     },
+    // 4. Document Expiry Warnings (LOW)
     {
       id: "TSK-04",
-      type: "document_expiry",
-      severity: "medium",
-      title: "Document expiry warning (< 30 days) — Fire NOC expires 15-Oct",
-      dueDate: "15-Oct-2026",
-      isOverdue: false,
-      record: "APX-BLD · Apex Tower MEP",
-      property: "Apex Business Tower",
-      actionText: "Upload Renewal",
-      actionUrl: "/properties/compliance",
+      category: "document_expiry",
+      categoryLabel: "4. Document Expiry Warnings (<30 days)",
+      priority: "LOW",
+      title: "Document Expiring: Fire Safety & Occupancy Certificate",
+      info: "Property: Meridian Tech Park | Expires: Oct 25 (18 days remaining)",
+      property: "Meridian Tech Park",
+      occupantSpace: "Center Compliance Document",
+      dueDate: "Oct 25 (18 days)",
+      dueStatus: "future",
+      financialDetail: "Statutory Compliance",
+      actions: {
+        primaryText: "Mark Done",
+        secondaryText: "Extend",
+        tertiaryText: "View Document",
+      },
     },
+    // 5. Overdue Payments (>7 days) (HIGH)
     {
       id: "TSK-05",
-      type: "overdue_payment",
-      severity: "high",
-      title: "Overdue payment (> 7 days) — ₹2,84,320 unpaid invoice",
-      dueDate: "Overdue (9d)",
-      isOverdue: true,
-      record: "INV-MTP-0311 · NextGen Retail",
-      property: "Meridian Tech Park",
-      actionText: "Send Reminder",
-      actionUrl: "/dashboard/finance",
-    },
-    {
-      id: "TSK-06",
-      type: "holding_over",
-      severity: "high",
-      title: "Holding over — Tenant lease expired with no exit recorded",
-      dueDate: "Immediate",
-      isOverdue: true,
-      record: "MTP-T1-04 · Alpha Ventures",
-      property: "Meridian Tech Park",
-      actionText: "Record Exit / Renew",
-      actionUrl: "/properties/rent-roll?view=current",
-    },
-    {
-      id: "TSK-07",
-      type: "seat_count",
-      severity: "medium",
-      title: "Seat count not submitted for Oct billing cycle",
-      dueDate: "25-Sep-2026",
-      isOverdue: true,
-      record: "FLX-4F · Brightpath Coworking",
-      property: "Meridian Tech Park",
-      actionText: "Enter Seat Count",
-      actionUrl: "/properties/rent-roll?tab=flex-centre",
+      category: "overdue_payment",
+      categoryLabel: "5. Overdue Payments (>7 days)",
+      priority: "HIGH",
+      title: "Overdue Payment: Heritage Crafts Ltd",
+      info: "Invoice #INV-26-27-0034 | Amount: ₹4,10,000 | Due: Sep 28 (9 days overdue)",
+      property: "Apex Business Tower",
+      occupantSpace: "Heritage Crafts · Suite 201",
+      dueDate: "Sep 28 (9 days overdue)",
+      dueStatus: "overdue",
+      financialDetail: "Overdue Balance: ₹4,10,000",
+      actions: {
+        primaryText: "Record Payment",
+        secondaryText: "Send Reminder",
+        tertiaryText: "Raise Dispute",
+      },
     },
   ]);
 
-  const handleTaskDone = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, isCompleted: !t.isCompleted } : t))
-    );
+  const handleTaskAction = (taskId: string, actionType: "primary" | "secondary" | "tertiary") => {
+    const t = tasks.find((item) => item.id === taskId);
+    if (!t) return;
+
+    if (actionType === "primary") {
+      if (t.category === "contract_approval") {
+        window.location.href = "/approvals";
+        return;
+      }
+      if (t.category === "escalation_due") {
+        setTasks((prev) => prev.map((item) => (item.id === taskId ? { ...item, isCompleted: true } : item)));
+        showFeedback(`Escalation applied for ${t.title}. Contract rent stepped.`);
+        return;
+      }
+      if (t.category === "deposit_collection" || t.category === "overdue_payment") {
+        window.location.href = "/properties/rent-roll?tab=collections";
+        return;
+      }
+      if (t.category === "document_expiry") {
+        setTasks((prev) => prev.map((item) => (item.id === taskId ? { ...item, isCompleted: true } : item)));
+        showFeedback(`Document compliance verified and renewed.`);
+        return;
+      }
+    }
+
+    if (actionType === "secondary") {
+      if (t.actions.secondaryText === "Send Reminder") {
+        setReminderTarget(t.occupantSpace);
+        setReminderModalOpen(true);
+        return;
+      }
+      if (t.actions.secondaryText === "Reject") {
+        window.location.href = "/approvals";
+        return;
+      }
+      if (t.actions.secondaryText === "Postpone") {
+        showFeedback(`Escalation postponed by 14 days.`);
+        return;
+      }
+    }
+
+    if (actionType === "tertiary") {
+      if (t.actions.tertiaryText === "View Details" || t.actions.tertiaryText === "View Timeline") {
+        window.location.href = "/properties/rent-roll";
+        return;
+      }
+    }
   };
 
-  const handleSnooze = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, dueDate: "Snoozed (+2d)" } : t
-      )
-    );
+  const showFeedback = (msg: string) => {
+    setActionSuccessMessage(msg);
+    setTimeout(() => setActionSuccessMessage(""), 4500);
   };
 
-  const filteredTasks = tasks.filter((t) => {
-    if (selectedProperty !== "all" && !t.property.toLowerCase().includes(selectedProperty.toLowerCase())) {
-      return false;
-    }
-    if (filterSeverity !== "all" && t.severity !== filterSeverity) {
-      return false;
-    }
+  // KPIs
+  const activeTasks = tasks.filter((t) => !t.isCompleted);
+  const urgentCount = activeTasks.filter((t) => t.dueStatus === "overdue").length;
+  const todayCount = activeTasks.filter((t) => t.dueStatus === "today").length;
+  const upcomingCount = activeTasks.filter((t) => t.dueStatus === "future").length;
+
+  const filteredTasks = activeTasks.filter((t) => {
+    if (filterPriority !== "all" && t.priority !== filterPriority) return false;
+    if (selectedProperty !== "all" && !t.property.toLowerCase().includes(selectedProperty.toLowerCase())) return false;
     return true;
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header (§S-03) */}
+    <div className="space-y-6 pb-24">
+      {/* Top Header (§S-03) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
               §S-03 Today Queue
             </span>
             <span className="text-xs text-slate-500 font-medium">
-              Tuesday, 29-Sep-2026
+              Property Manager Operational Console
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-            Property Manager "Today" Dashboard
+            Today's Tasks for {todayStr}
           </h1>
           <p className="text-xs text-slate-500">
-            Action queue of operational tasks, contract workflows, escalations, and overdue items across assigned centers.
+            Severity-sorted execution queue: contract approvals, escalations, security deposits, compliance expiries, and payment arrears.
           </p>
         </div>
 
-        {/* Quick Actions Bar */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setWizardOpen(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold shadow-sm shadow-[#0F8B7D]/20 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus size={14} />
-            <span>+ Create Contract (§S-21)</span>
-          </button>
-          <Link
-            href="/properties/rent-roll?tab=collections"
-            className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-bold shadow-2xs transition-colors flex items-center gap-1.5"
-          >
-            <Receipt size={14} />
-            <span>Record Payment</span>
-          </Link>
-          <Link
-            href="/dashboard/finance"
-            className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-bold shadow-2xs transition-colors flex items-center gap-1.5"
-          >
-            <AlertTriangle size={14} />
-            <span>Raise Dispute</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* KPI Counters Strip (§S-03 Wireframe) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200">
-          <div className="text-[11px] font-bold text-rose-800">Overdue Actions</div>
-          <div className="text-2xl font-black text-rose-900 mt-1">4</div>
-          <div className="text-[10px] text-rose-700 mt-0.5">Requires immediate attention</div>
-        </div>
-        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
-          <div className="text-[11px] font-bold text-amber-800">Due This Week</div>
-          <div className="text-2xl font-black text-amber-900 mt-1">9</div>
-          <div className="text-[10px] text-amber-700 mt-0.5">Escalations & notices</div>
-        </div>
-        <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
-          <div className="text-[11px] font-bold text-blue-800">Pending Approvals</div>
-          <div className="text-2xl font-black text-blue-900 mt-1">2</div>
-          <div className="text-[10px] text-blue-700 mt-0.5">Submitted by PM to checker</div>
-        </div>
-        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-          <div className="text-[11px] font-bold text-emerald-800">Occupancy</div>
-          <div className="text-2xl font-black text-emerald-900 mt-1">72.0%</div>
-          <div className="text-[10px] text-emerald-700 mt-0.5">My assigned portfolio</div>
-        </div>
-        <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200">
-          <div className="text-[11px] font-bold text-purple-800">Open Disputes</div>
-          <div className="text-2xl font-black text-purple-900 mt-1">1</div>
-          <div className="text-[10px] text-purple-700 mt-0.5">Under investigation</div>
-        </div>
-      </div>
-
-      {/* Action Queue (§S-03 Core Component) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <ClipboardList size={16} className="text-[#0F8B7D]" />
-              <span>Today Action Queue (Sorted by Severity & Due Date)</span>
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Review and act on pending contract workflows, rent increases, deposit collections, and alerts.
-            </p>
-          </div>
-
-          {/* Filters */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500">Property:</span>
             <select
               value={selectedProperty}
               onChange={(e) => setSelectedProperty(e.target.value)}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none"
+              className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
-              <option value="all">All My Properties (3)</option>
+              <option value="all">All Managed Centres</option>
               <option value="apex">Apex Business Tower</option>
               <option value="meridian">Meridian Tech Park</option>
-              <option value="nexus">Nexus Corporate Hub</option>
+              <option value="cyber">Cyber Tech City</option>
             </select>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500">Priority:</span>
             <select
-              value={filterSeverity}
-              onChange={(e) => setFilterSeverity(e.target.value)}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none"
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value as any)}
+              className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
-              <option value="all">All Severities</option>
-              <option value="high">High Severity Only</option>
-              <option value="medium">Medium</option>
+              <option value="all">All Priorities</option>
+              <option value="HIGH">High Priority Only</option>
+              <option value="MEDIUM">Medium Priority</option>
+              <option value="LOW">Low Priority</option>
             </select>
           </div>
         </div>
+      </div>
 
-        {/* Task Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 border-y border-slate-200">
-                <th className="py-2.5 px-3 font-semibold">Severity</th>
-                <th className="py-2.5 px-3 font-semibold">Task & Condition</th>
-                <th className="py-2.5 px-3 font-semibold">Due Date</th>
-                <th className="py-2.5 px-3 font-semibold">Record / Tenant</th>
-                <th className="py-2.5 px-3 font-semibold">Property</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Row Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredTasks.map((t) => (
-                <tr
-                  key={t.id}
-                  className={`hover:bg-slate-50/80 transition-colors ${
-                    t.isCompleted ? "opacity-40 bg-slate-50/50" : ""
-                  }`}
-                >
-                  <td className="py-3 px-3">
-                    {t.severity === "high" ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                        HIGH
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                        MED
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3">
-                    <div
-                      className={`font-bold text-slate-900 ${
-                        t.isCompleted ? "line-through text-slate-400" : ""
-                      }`}
-                    >
-                      {t.title}
-                    </div>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      ID: {t.id}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`font-semibold ${
-                        t.isOverdue
-                          ? "text-rose-600 font-bold"
-                          : t.dueDate === "Today"
-                          ? "text-amber-600 font-bold"
-                          : "text-slate-600"
-                      }`}
-                    >
-                      {t.dueDate}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-slate-700 font-medium">
-                    {t.record}
-                  </td>
-                  <td className="py-3 px-3 text-slate-500">
-                    {t.property}
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {/* Action Button */}
-                      {t.actionUrl ? (
-                        <Link
-                          href={t.actionUrl}
-                          className="px-2.5 py-1 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-[11px] font-bold transition-colors"
-                        >
-                          {t.actionText}
-                        </Link>
-                      ) : (
-                        <button
-                          onClick={() => handleTaskDone(t.id)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold transition-colors"
-                        >
-                          {t.actionText}
-                        </button>
-                      )}
+      {actionSuccessMessage && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-emerald-800 text-xs font-bold animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{actionSuccessMessage}</span>
+          </div>
+          <button onClick={() => setActionSuccessMessage("")} className="text-slate-400 hover:text-slate-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
-                      {/* Snooze */}
-                      <button
-                        onClick={() => handleSnooze(t.id)}
-                        className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-semibold transition-colors"
-                        title="Snooze 2 days"
-                      >
-                        Snooze
-                      </button>
+      {/* KPIs at Top (4 Cards) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Tasks</span>
+          <p className="text-2xl font-black text-slate-900 mt-1">{activeTasks.length}</p>
+          <span className="text-[10px] text-slate-500 mt-0.5 block">Pending PM action</span>
+        </div>
 
-                      {/* Done */}
-                      <button
-                        onClick={() => handleTaskDone(t.id)}
-                        className={`p-1 rounded-lg border transition-colors ${
-                          t.isCompleted
-                            ? "bg-emerald-600 border-emerald-600 text-white"
-                            : "bg-white border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300"
-                        }`}
-                        title="Mark Done"
-                      >
-                        <Check size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-white p-4 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Urgent (Overdue)</span>
+          <p className="text-2xl font-black text-rose-600 mt-1">{urgentCount}</p>
+          <span className="text-[10px] text-rose-500 font-medium mt-0.5 block">Requires immediate resolution</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Due Today</span>
+          <p className="text-2xl font-black text-amber-700 mt-1">{todayCount}</p>
+          <span className="text-[10px] text-amber-600 font-medium mt-0.5 block">Scheduled for today</span>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Upcoming (Future)</span>
+          <p className="text-2xl font-black text-emerald-700 mt-1">{upcomingCount}</p>
+          <span className="text-[10px] text-emerald-600 font-medium mt-0.5 block">Next 7–30 days</span>
         </div>
       </div>
 
-      {/* My Properties Occupancy Summary (§S-03 Bottom Table) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-900">
-            Assigned Properties Overview
-          </h3>
-          <span className="text-xs text-slate-500">3 Center Portfolios</span>
+      {/* Task Queue Container */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">Prioritized Action Queue</h2>
+            <p className="text-xs text-slate-500">Sorted by Severity (High → Low) and Due Date</p>
+          </div>
+          <span className="text-xs font-semibold text-slate-500">
+            Showing {filteredTasks.length} tasks
+          </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 border-y border-slate-200">
-                <th className="py-2.5 px-3 font-semibold">Center / Property</th>
-                <th className="py-2.5 px-3 font-semibold">Occupancy</th>
-                <th className="py-2.5 px-3 font-semibold">Vacant Space</th>
-                <th className="py-2.5 px-3 font-semibold">Expiring in 90d</th>
-                <th className="py-2.5 px-3 font-semibold">Open Exceptions</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Navigate</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              <tr className="hover:bg-slate-50/80">
-                <td className="py-3 px-3 font-bold text-slate-900">Meridian Tech Park</td>
-                <td className="py-3 px-3 font-mono font-bold text-emerald-700">75.0%</td>
-                <td className="py-3 px-3 text-slate-600">18,500 sq ft</td>
-                <td className="py-3 px-3 font-bold text-amber-600">1 Contract</td>
-                <td className="py-3 px-3 font-bold text-rose-600">4 Exceptions</td>
-                <td className="py-3 px-3 text-right">
-                  <Link
-                    href="/properties/rent-roll?property_id=MTP-GGN"
-                    className="text-[#0F8B7D] font-bold hover:underline"
+
+        <div className="divide-y divide-slate-100">
+          {filteredTasks.map((t) => {
+            const isRed = t.dueStatus === "overdue";
+            const isYellow = t.dueStatus === "today";
+            const isGreen = t.dueStatus === "future";
+
+            const priorityBadge =
+              t.priority === "HIGH"
+                ? "bg-rose-100 text-rose-800 border-rose-200"
+                : t.priority === "MEDIUM"
+                ? "bg-amber-100 text-amber-800 border-amber-200"
+                : "bg-slate-100 text-slate-700 border-slate-200";
+
+            return (
+              <div
+                key={t.id}
+                className={`p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:bg-slate-50/80 ${
+                  isRed ? "border-l-4 border-l-rose-500" : isYellow ? "border-l-4 border-l-amber-500" : "border-l-4 border-l-emerald-500"
+                }`}
+              >
+                {/* Left Side: Icon, Type, Title, Details */}
+                <div className="flex items-start gap-3.5 flex-1">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                      isRed ? "bg-rose-100 text-rose-600" : isYellow ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                    }`}
                   >
-                    Open Center →
-                  </Link>
-                </td>
-              </tr>
-              <tr className="hover:bg-slate-50/80">
-                <td className="py-3 px-3 font-bold text-slate-900">Apex Business Tower</td>
-                <td className="py-3 px-3 font-mono font-bold text-amber-700">46.0%</td>
-                <td className="py-3 px-3 text-slate-600">42,000 sq ft</td>
-                <td className="py-3 px-3 font-bold text-slate-600">0 Contracts</td>
-                <td className="py-3 px-3 font-bold text-slate-600">2 Exceptions</td>
-                <td className="py-3 px-3 text-right">
-                  <Link
-                    href="/properties/rent-roll?property_id=APX-BKC"
-                    className="text-[#0F8B7D] font-bold hover:underline"
+                    {t.category === "contract_approval" && <ShieldCheck className="w-5 h-5" />}
+                    {t.category === "escalation_due" && <TrendingUp className="w-5 h-5" />}
+                    {t.category === "deposit_collection" && <DollarSign className="w-5 h-5" />}
+                    {t.category === "document_expiry" && <FileCheck className="w-5 h-5" />}
+                    {t.category === "overdue_payment" && <AlertTriangle className="w-5 h-5" />}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        {t.categoryLabel}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${priorityBadge}`}>
+                        {t.priority}
+                      </span>
+                    </div>
+
+                    <h3 className="text-sm font-bold text-slate-900">{t.title}</h3>
+                    <p className="text-xs text-slate-600">{t.info}</p>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 pt-0.5">
+                      <span className="font-semibold text-slate-700">{t.property}</span>
+                      <span>•</span>
+                      <span>{t.occupantSpace}</span>
+                      {t.financialDetail && (
+                        <>
+                          <span>•</span>
+                          <span className="font-bold text-blue-700">{t.financialDetail}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Side: Due Date Badge & Action Buttons */}
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 self-start md:self-center shrink-0">
+                  <span
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                      isRed
+                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                        : isYellow
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    }`}
                   >
-                    Open Center →
-                  </Link>
-                </td>
-              </tr>
-              <tr className="hover:bg-slate-50/80">
-                <td className="py-3 px-3 font-bold text-slate-900">Nexus Corporate Hub</td>
-                <td className="py-3 px-3 font-mono font-bold text-emerald-700">83.5%</td>
-                <td className="py-3 px-3 text-slate-600">11,200 sq ft</td>
-                <td className="py-3 px-3 font-bold text-slate-600">0 Contracts</td>
-                <td className="py-3 px-3 font-bold text-slate-600">1 Exception</td>
-                <td className="py-3 px-3 text-right">
-                  <Link
-                    href="/properties/rent-roll?property_id=NXH-BLR"
-                    className="text-[#0F8B7D] font-bold hover:underline"
+                    {t.dueDate}
+                  </span>
+
+                  <button
+                    onClick={() => handleTaskAction(t.id, "primary")}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-xs"
                   >
-                    Open Center →
-                  </Link>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    {t.actions.primaryText}
+                  </button>
+
+                  <button
+                    onClick={() => handleTaskAction(t.id, "secondary")}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition"
+                  >
+                    {t.actions.secondaryText}
+                  </button>
+
+                  {t.actions.tertiaryText && (
+                    <button
+                      onClick={() => handleTaskAction(t.id, "tertiary")}
+                      className="px-2.5 py-1.5 text-slate-500 hover:text-slate-800 text-xs font-medium transition"
+                    >
+                      {t.actions.tertiaryText}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sticky Quick Actions Bar at Bottom (§S-03 Spec) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 py-3.5 shadow-lg">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-900">PM Quick Actions:</span>
+            <span className="text-xs text-slate-500">Direct shortcuts for operational workflows</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              + Create Contract (§S-21)
+            </button>
+
+            <Link
+              href="/properties/rent-roll?tab=collections"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              Record Payment
+            </Link>
+
+            <button
+              onClick={() => {
+                setReminderTarget("All Overdue Occupants");
+                setReminderModalOpen(true);
+              }}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Send Reminder
+            </button>
+
+            <button
+              onClick={() => showFeedback("Task queue synchronized with latest live triggers.")}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -456,8 +498,47 @@ export default function PropertyManagerDashboardPage() {
         onClose={() => setWizardOpen(false)}
         onSuccess={() => {
           setWizardOpen(false);
+          showFeedback("New draft contract created successfully.");
         }}
       />
+
+      {/* Send Reminder Confirmation Dialog */}
+      {reminderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Send className="w-4 h-4 text-blue-600" />
+                Dispatch Payment / Statutory Reminder
+              </h3>
+              <button onClick={() => setReminderModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              An automated notification with outstanding invoice statements will be dispatched to{" "}
+              <span className="font-bold text-slate-900">{reminderTarget}</span>.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setReminderModalOpen(false)}
+                className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setReminderModalOpen(false);
+                  showFeedback(`Collection reminder sent to ${reminderTarget}.`);
+                }}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition"
+              >
+                Send Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
