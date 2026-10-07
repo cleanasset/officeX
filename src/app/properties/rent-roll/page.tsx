@@ -22,6 +22,7 @@ import {
   Sparkles,
   CreditCard,
   Briefcase,
+  FileText,
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -210,6 +211,13 @@ export default function RentRollRegisterPage() {
               <FileSpreadsheet className="w-3.5 h-3.5" />
               Import (§S-30)
             </button>
+            <Link
+              href="/operate/invoices"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-semibold transition"
+            >
+              <FileText className="w-3.5 h-3.5 text-blue-700" />
+              Invoices & Billing (§S-12)
+            </Link>
             <button
               onClick={() => setPaymentsOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold transition"

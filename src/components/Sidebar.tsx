@@ -67,7 +67,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
       subItems: [
         { name: "Dashboard", href: "/properties/rent-roll?tab=dashboard", tabKey: "dashboard", icon: Building },
         { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
-        { name: "Billing & Invoices", href: "/properties/rent-roll?tab=invoices", tabKey: "invoices", icon: DollarSign },
+        { name: "Billing & Invoices", href: "/operate/invoices", tabKey: "invoices", icon: DollarSign },
         { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", tabKey: "meter-readings", icon: Zap },
         { name: "Collections", href: "/properties/rent-roll?tab=collections", tabKey: "collections", icon: CheckCircle },
         { name: "Arrears & Aging", href: "/properties/rent-roll?tab=aging", tabKey: "aging", icon: AlertTriangle },

@@ -26,8 +26,8 @@ export interface RentRollAuthContext {
   isPortfolioRole: boolean;
 }
 
-export const DEFAULT_TEST_ORG_ID = "00000000-0000-0000-0000-000000000001";
-export const DEFAULT_TEST_CLIENT_ID = "00000000-0000-0000-0000-000000000002";
+export const DEFAULT_TEST_ORG_ID = "a411dd64-65db-462d-8eef-336f9768f49d";
+export const DEFAULT_TEST_CLIENT_ID = "25341a70-7bdd-4c38-a44e-3f09986be92c";
 export const DEFAULT_TEST_USER_ID = "00000000-0000-0000-0000-000000000003";
 
 // §5.14 Permissions Matrix Mapping
