@@ -1,5 +1,6 @@
 import { pgTable, pgEnum, uuid, varchar, text, decimal, integer, timestamp, date, boolean, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { subscriptionStatusEnum } from "./rent-roll-schema";
 
 // 1. Existing & Shared Enums
 export const userRoleEnum = pgEnum("user_role", [
@@ -108,6 +109,9 @@ export const users = pgTable("users", {
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
+  slug: text("slug").unique(),
+  subscription_status: subscriptionStatusEnum("subscription_status").default("active"),
+  workspace_name: text("workspace_name"),
   pan: varchar("pan", { length: 10 }),
   gstin: varchar("gstin", { length: 15 }),
   address: text("address"),
@@ -117,9 +121,19 @@ export const organizations = pgTable("organizations", {
   fyStartMonth: integer("fy_start_month").default(4).notNull(), // April by default
   invoicePrefix: varchar("invoice_prefix", { length: 20 }).default("INV").notNull(),
   currency: varchar("currency", { length: 10 }).default("INR").notNull(),
+  // Common Audit & System fields (§4.3)
+  org_id: uuid("org_id"),
+  client_account_id: uuid("client_account_id"),
+  created_by: uuid("created_by"),
+  updated_by: uuid("updated_by"),
+  version: integer("version").default(1),
+  deleted_at: timestamp("deleted_at", { withTimezone: true }),
+  source_import_batch_id: uuid("source_import_batch_id"),
+  source_row_id: text("source_row_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
+
 
 export const properties = pgTable("properties", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -1266,6 +1280,8 @@ export const contractClauses = pgTable("contract_clauses", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 
-
-
-
+// ============================================================================
+// OFFICEX Rent Roll — Phase P0 Schema & Validation Re-exports
+// ============================================================================
+export * from "./rent-roll-schema";
+export * from "./validation";

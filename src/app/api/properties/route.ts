@@ -1,13 +1,25 @@
 import { NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { db } from "@/db";
-import { properties, complianceCertificates, userProperties, leaseUnits, helpdeskTickets, utilityMetrics, rfqs, quotations, workOrders, leases } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { properties, complianceCertificates, userProperties, leaseUnits, helpdeskTickets, utilityMetrics, rfqs, quotations, workOrders, leases, property as rentRollProperty } from "@/db/schema";
+import { desc, eq, and, sql } from "drizzle-orm";
+import { getAuthContext } from "@/lib/rent-roll/auth-context";
 
 export async function GET(req: Request) {
   try {
-    const client = supabaseAdmin || supabase;
     const { searchParams } = new URL(req.url);
+    const isRentRoll = searchParams.get("rent_roll") === "true" || req.headers.has("x-org-id") || searchParams.has("client_account_id");
+    if (isRentRoll) {
+      const auth = getAuthContext(req);
+      const rrList = await db
+        .select()
+        .from(rentRollProperty)
+        .where(and(eq(rentRollProperty.org_id, auth.orgId), sql`${rentRollProperty.deleted_at} IS NULL`))
+        .orderBy(desc(rentRollProperty.created_at));
+      return NextResponse.json({ success: true, data: rrList });
+    }
+
+    const client = supabaseAdmin || supabase;
     const userId = searchParams.get("userId");
     const ownerCompany = searchParams.get("ownerCompany");
 
@@ -48,6 +60,29 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // Check if Rent Roll property creation (has property_code or client_account_id or property_name)
+    if (body.property_code || (body.property_name && body.client_account_id)) {
+      const auth = getAuthContext(req);
+      const [inserted] = await db
+        .insert(rentRollProperty)
+        .values({
+          org_id: body.org_id || auth.orgId,
+          client_account_id: body.client_account_id || auth.clientAccountId,
+          property_name: body.property_name || body.name,
+          property_code: body.property_code,
+          address: body.address || null,
+          city: body.city || null,
+          state: body.state || null,
+          total_leasable_area_sqft: String(body.total_leasable_area_sqft || body.totalArea || 1000),
+          property_type: body.property_type || "office",
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        })
+        .returning();
+      return NextResponse.json({ success: true, data: inserted }, { status: 201 });
+    }
+
     const {
       name,
       type,
