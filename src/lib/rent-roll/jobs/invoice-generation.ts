@@ -269,7 +269,7 @@ export async function generateInvoicesBatch(
         is_recoverable: ch.is_recoverable || false,
         invoice_group: ch.invoice_group || "rent",
         billing_mode: ch.billing_mode || "advance",
-        charge_type_id: ch.charge_type_id || undefined,
+        charge_type_id: (ch as any).charge_type_id || undefined,
         start_date: ch.start_date,
         end_date: ch.end_date,
       }));

@@ -38,7 +38,6 @@ export async function POST(
       .update(invoice)
       .set({
         status: "cancelled",
-        notes: existing.notes ? `${existing.notes} | Rejection reason: ${reason}` : `Rejection reason: ${reason}`,
         updated_at: new Date(),
       })
       .where(eq(invoice.id, id))

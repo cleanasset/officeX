@@ -53,7 +53,17 @@ export interface RentStepInput {
 
 export interface ConcessionInput {
   id?: string;
-  concession_type: "rent_free" | "fitout_period" | "discount_percentage" | "fixed_deduction" | "stepped_relief";
+  concession_type:
+    | "rent_free"
+    | "fitout_period"
+    | "fitout_contribution"
+    | "discount_percentage"
+    | "discount_pct"
+    | "discount_amount"
+    | "fixed_deduction"
+    | "stepped_relief"
+    | "capex_by_landlord"
+    | string;
   start_date: string;
   end_date: string;
   concession_value: number; // Percentage or fixed INR
@@ -306,15 +316,25 @@ export function calculateBilling(params: BillingCalculationParams): BillingCalcu
         const overlap = getOverlapDays(periodStart, periodEnd, conc.start_date, conc.end_date);
         if (overlap > 0) {
           const concRatio = overlap / daysInPeriod;
-          if (conc.concession_type === "rent_free" || conc.concession_type === "fitout_period") {
+          if (
+            conc.concession_type === "rent_free" ||
+            conc.concession_type === "fitout_period" ||
+            conc.concession_type === "fitout_contribution"
+          ) {
             // 100% rent relief for overlapping days
             lineConcession += round2(lineAmount * concRatio);
             appliedFormula += " + F-23 (Rent Free)";
-          } else if (conc.concession_type === "discount_percentage") {
+          } else if (
+            conc.concession_type === "discount_percentage" ||
+            conc.concession_type === "discount_pct"
+          ) {
             const discVal = (Number(conc.concession_value) || 0) / 100;
             lineConcession += round2(lineAmount * concRatio * discVal);
             appliedFormula += ` + F-23 (${conc.concession_value}% Disc)`;
-          } else if (conc.concession_type === "fixed_deduction") {
+          } else if (
+            conc.concession_type === "fixed_deduction" ||
+            conc.concession_type === "discount_amount"
+          ) {
             lineConcession += round2(Number(conc.concession_value) || 0);
             appliedFormula += " + F-23 (Fixed Deduction)";
           }
