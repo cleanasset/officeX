@@ -51,12 +51,9 @@ async function runP4UATSuite() {
       [org] = await db
         .insert(organization)
         .values({
-          legal_name: "OFFICEX Multi-Client Operator",
-          trade_name: "OFFICEX",
-          gstin: "27AABCO1234M1Z1",
-          pan: "AABCO1234M",
-          state_code: "27",
-          status: "active",
+          name: "OFFICEX Multi-Client Operator",
+          slug: "officex-multi-client-operator",
+          subscription_status: "active",
         })
         .returning();
     }

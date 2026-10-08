@@ -52,12 +52,9 @@ async function runP3UATSuite() {
       [org] = await db
         .insert(organization)
         .values({
-          legal_name: "OFFICEX Test Corp",
-          trade_name: "OFFICEX Test",
-          gstin: "27AABCT2345M1Z2",
-          pan: "AABCT2345M",
-          state_code: "27",
-          status: "active",
+          name: "OFFICEX Test Corp",
+          slug: "officex-test-corp",
+          subscription_status: "active",
         })
         .returning();
     }
