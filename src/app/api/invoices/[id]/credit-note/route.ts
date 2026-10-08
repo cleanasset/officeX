@@ -49,17 +49,17 @@ export async function POST(
     const [creditNote] = await db
       .insert(invoice)
       .values({
-        org_id: origInvoice.org_id,
-        client_account_id: origInvoice.client_account_id,
-        contract_id: origInvoice.contract_id,
-        occupant_id: origInvoice.occupant_id,
-        property_id: origInvoice.property_id,
+        org_id: auth.orgId,
+        client_account_id: origInvoice.client_account_id || null,
+        contract_id: origInvoice.contract_id || null,
+        occupant_id: origInvoice.occupant_id || null,
+        property_id: origInvoice.property_id || null,
         invoice_number: creditNoteNumber,
-        fy_year: origInvoice.fy_year,
+        fy_year: origInvoice.fy_year || null,
         invoice_date: todayStr,
         due_date: todayStr,
-        period_start: origInvoice.period_start,
-        period_end: origInvoice.period_end,
+        period_start: origInvoice.period_start || null,
+        period_end: origInvoice.period_end || null,
         base_rent: baseCreditAmount,
         subtotal: negativeSubtotal,
         gst_rate: taxRate.toFixed(2),
@@ -84,8 +84,8 @@ export async function POST(
     for (const cl of creditLines) {
       const lineAmt = parseFloat(cl.reduction_amount || String(creditAmount));
       await db.insert(invoice_line).values({
-        org_id: origInvoice.org_id,
-        client_account_id: origInvoice.client_account_id,
+        org_id: auth.orgId,
+        client_account_id: origInvoice.client_account_id || null,
         invoice_id: creditNote.id,
         description: cl.description || `Credit Note: ${body.reason}`,
         quantity: "1.00",
