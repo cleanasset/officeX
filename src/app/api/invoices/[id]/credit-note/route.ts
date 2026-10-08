@@ -115,19 +115,11 @@ export async function POST(
     // Audit log
     try {
       await db.insert(auditLogs).values({
-        orgId: auth.orgId,
-        userId: auth.userId,
-        action: "CREDIT_NOTE_ISSUED",
-        entityType: "invoice",
-        entityId: creditNote.id,
-        details: {
-          original_invoice_id: id,
-          original_invoice_number: origInvoice.invoice_number,
-          credit_note_number: creditNoteNumber,
-          credited_amount: creditAmount,
-          reason: body.reason,
-          new_balance: newBalance,
-        },
+        traceId: `CN-ISSUE-${id.slice(0, 8)}-${Date.now()}`,
+        module: "Rent Roll Credit Notes",
+        action: `Credit note ${creditNoteNumber} issued for invoice ${origInvoice.invoice_number} by User ${auth.userId} (${auth.roleName}). Amount: ₹${creditAmount}. Reason: ${body.reason}`,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        severity: "info",
       });
     } catch (e) {
       // safe fallback

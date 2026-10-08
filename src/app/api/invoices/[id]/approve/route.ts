@@ -59,20 +59,14 @@ export async function POST(
     // Audit log
     try {
       await db.insert(auditLogs).values({
-        orgId: auth.orgId,
-        userId: auth.userId,
-        action: "INVOICE_APPROVED",
-        entityType: "invoice",
-        entityId: id,
-        details: {
-          invoice_number: existing.invoice_number,
-          gross_total: existing.gross_total,
-          approval_comment: body.approval_comment || "Approved by Finance",
-          approved_by_role: auth.roleName,
-        },
+        traceId: `INV-APPR-${id.slice(0, 8)}-${Date.now()}`,
+        module: "Rent Roll Invoices",
+        action: `Invoice ${existing.invoice_number} approved by User ${auth.userId} (${auth.roleName}). Gross: ₹${existing.gross_total}. Comment: ${body.approval_comment || "Approved by Finance"}`,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        severity: "info",
       });
     } catch (e) {
-      // safe fallback if auditLogs has different structure
+      // safe fallback
     }
 
     return NextResponse.json({

@@ -47,16 +47,11 @@ export async function POST(
     // Audit log
     try {
       await db.insert(auditLogs).values({
-        orgId: auth.orgId,
-        userId: auth.userId,
-        action: "INVOICE_REJECTED",
-        entityType: "invoice",
-        entityId: id,
-        details: {
-          invoice_number: existing.invoice_number,
-          reason,
-          rejected_by_role: auth.roleName,
-        },
+        traceId: `INV-REJ-${id.slice(0, 8)}-${Date.now()}`,
+        module: "Rent Roll Invoices",
+        action: `Invoice ${existing.invoice_number} rejected by User ${auth.userId} (${auth.roleName}). Reason: ${reason}`,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        severity: "warning",
       });
     } catch (e) {
       // safe fallback
