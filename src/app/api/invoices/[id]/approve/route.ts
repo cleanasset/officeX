@@ -61,7 +61,7 @@ export async function POST(
       await db.insert(auditLogs).values({
         traceId: `INV-APPR-${id.slice(0, 8)}-${Date.now()}`,
         module: "Rent Roll Invoices",
-        action: `Invoice ${existing.invoice_number} approved by User ${auth.userId} (${auth.roleName}). Gross: ₹${existing.gross_total}. Comment: ${body.approval_comment || "Approved by Finance"}`,
+        action: `Invoice ${existing.invoice_number} approved by User ${auth.userId} (${auth.role}). Gross: ₹${existing.gross_total}. Comment: ${body.approval_comment || "Approved by Finance"}`,
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
         severity: "info",
       });

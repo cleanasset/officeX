@@ -117,7 +117,7 @@ export async function POST(
       await db.insert(auditLogs).values({
         traceId: `CN-ISSUE-${id.slice(0, 8)}-${Date.now()}`,
         module: "Rent Roll Credit Notes",
-        action: `Credit note ${creditNoteNumber} issued for invoice ${origInvoice.invoice_number} by User ${auth.userId} (${auth.roleName}). Amount: ₹${creditAmount}. Reason: ${body.reason}`,
+        action: `Credit note ${creditNoteNumber} issued for invoice ${origInvoice.invoice_number} by User ${auth.userId} (${auth.role}). Amount: ₹${creditAmount}. Reason: ${body.reason}`,
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
         severity: "info",
       });
