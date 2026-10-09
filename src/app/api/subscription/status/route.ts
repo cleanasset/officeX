@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     const email = (body.email || "").toLowerCase().trim();
     const coupon = (body.coupon || "").toUpperCase().trim();
     const paymentId = body.paymentId || "";
+    const plan = (body.plan || "techpark").toLowerCase().trim();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
         status: "active",
         coupon_applied: coupon || "PAID_CHECKOUT",
         payment_id: paymentId || `VERIFIED_${Date.now()}`,
+        plan: plan,
         updated_at: new Date().toISOString()
       }, { onConflict: "email" });
     } catch {
@@ -89,6 +91,7 @@ export async function POST(request: Request) {
       success: true,
       subscribed: true,
       email,
+      plan,
       message: "Subscription permanently activated for " + email
     }, { status: 200 });
   } catch (error: any) {

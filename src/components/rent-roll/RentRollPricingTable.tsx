@@ -148,6 +148,10 @@ export default function RentRollPricingTable({
 
   // Open checkout for a plan
   const handleOpenCheckout = (slab: typeof SLABS[0]) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_selected_plan", slab.id);
+      sessionStorage.setItem("officex_selected_plan", slab.id);
+    }
     setCheckoutPlan({
       id: slab.id,
       name: slab.name,
@@ -202,12 +206,13 @@ export default function RentRollPricingTable({
       localStorage.setItem("officex_user_name", finalName);
       localStorage.setItem("officex_user_role", finalRole);
       localStorage.setItem(`officex_sub_${finalEmail}`, "active");
-      localStorage.setItem("officex_subscription", "active");
+      if (checkoutPlan?.id) {
+        localStorage.setItem("officex_selected_plan", checkoutPlan.id);
+        sessionStorage.setItem("officex_selected_plan", checkoutPlan.id);
+      }
       sessionStorage.setItem("officex_user_email", finalEmail);
       sessionStorage.setItem(`officex_sub_${finalEmail}`, "active");
-      sessionStorage.setItem("officex_subscription", "active");
-      document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
-      document.cookie = `officex_subscription=active; path=/; max-age=2592000; SameSite=Lax`;
+      document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000`;
     }
 
     setProcessingActivation(true);
