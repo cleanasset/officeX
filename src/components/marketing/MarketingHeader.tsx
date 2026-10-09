@@ -142,6 +142,16 @@ export default function MarketingHeader({
                 Platform Overview
               </Link>
 
+              {/* Pricing in Main Menu */}
+              <Link
+                href="/operate/rent-roll/pricing"
+                className={`hover:text-[#0D7B6C] transition-colors py-2 whitespace-nowrap font-semibold ${
+                  pathname === "/operate/rent-roll/pricing" ? "text-[#0D7B6C] font-extrabold" : "text-slate-700"
+                }`}
+              >
+                Pricing
+              </Link>
+
               {/* Live Portal Demo */}
               <button
                 type="button"
@@ -445,6 +455,9 @@ export default function MarketingHeader({
                 <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Operating Modules</div>
                 <Link href="/operate/rent-roll" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
                   · Rent Roll &amp; Billing
+                </Link>
+                <Link href="/operate/rent-roll/pricing" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
+                  · Pricing &amp; Plans
                 </Link>
                 <Link href="/operate/compliance" onClick={() => setMobileMenuOpen(false)} className="text-left text-xs font-semibold text-slate-700 hover:text-[#0D7B6C]">
                   · Statutory Compliance Calendar

@@ -25,6 +25,8 @@ import {
   FileText,
   Gauge,
   Users,
+  Info,
+  X,
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -73,6 +75,17 @@ export default function RentRollRegisterPage() {
   // Document Viewer Modal (§S-23)
   const [viewerDoc, setViewerDoc] = useState<any>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+
+  // Capacity Quota & Grace Period Telemetry (§OI-8 Commercial Policy)
+  // Quota: 50,00,00,000 Sq.Ft (50 Crore sq.ft) with 90% warning threshold (45 Crore sq.ft)
+  const MAX_FREE_CAPACITY_SQFT = 500_000_000;
+  const [simulateCapacityWarning, setSimulateCapacityWarning] = useState(false);
+  const [showGracePeriodModal, setShowGracePeriodModal] = useState(false);
+
+  const actualAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
+  const effectiveAumSqft = simulateCapacityWarning ? 465_000_000 : actualAumSqft;
+  const capacityPercent = Math.min(100, Math.max(0, (effectiveAumSqft / MAX_FREE_CAPACITY_SQFT) * 100));
+  const isApproachingLimit = capacityPercent >= 90;
 
   useEffect(() => {
     fetchRegisterData();
@@ -278,6 +291,115 @@ export default function RentRollRegisterPage() {
 
       {/* Main SaaS Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-28 md:pb-8">
+        {/* Capacity Telemetry & Grace Period Protection Strip */}
+        {isApproachingLimit ? (
+          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400 bg-linear-to-r from-amber-50 via-orange-50/60 to-amber-50 p-4 sm:p-5 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center shrink-0 border border-amber-300">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-200 text-amber-950">
+                      Capacity Warning · 90%+ Threshold Reached
+                    </span>
+                    <span className="text-xs font-bold text-teal-900 bg-teal-100/90 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
+                      Grace Period Active (Zero Lockout)
+                    </span>
+                  </div>
+                  <h3 className="text-base font-extrabold text-slate-900 mt-1">
+                    Approaching Licensed Quota ({effectiveAumSqft.toLocaleString("en-IN")} / 50,00,00,000 Sq.Ft · {capacityPercent.toFixed(1)}%)
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-0.5 max-w-3xl leading-relaxed">
+                    Under OfficeX commercial policies, <strong className="text-slate-900">operations are never hard-locked</strong>. Invoicing, agreement generation, rent collection, and sub-meter logging continue uninterrupted during your commercial grace period.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
+                <Link
+                  href="/operate/rent-roll/pricing"
+                  className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
+                >
+                  <span>Expand Quota (From ₹50/sq.ft)</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+                <button
+                  onClick={() => setShowGracePeriodModal(true)}
+                  className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-xl transition"
+                >
+                  Grace Policy
+                </button>
+                {simulateCapacityWarning && (
+                  <button
+                    onClick={() => setSimulateCapacityWarning(false)}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline whitespace-nowrap ml-1"
+                    title="Reset simulation back to live area"
+                  >
+                    Reset Sim
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-3.5 pt-3 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex-1 w-full bg-amber-200/80 h-2 rounded-full overflow-hidden mr-4">
+                <div
+                  className="bg-amber-600 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, capacityPercent)}%` }}
+                />
+              </div>
+              <div className="text-[11px] font-mono font-semibold text-amber-950 shrink-0">
+                {effectiveAumSqft.toLocaleString("en-IN")} / 50,00,00,000 Sq.Ft · {capacityPercent.toFixed(1)}% Capacity
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-teal-200/80 bg-linear-to-r from-teal-50/60 via-slate-50/50 to-white p-3.5 sm:p-4 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-teal-700" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-teal-900">
+                      Portfolio Capacity: 50,00,00,000 Sq.Ft Allocated
+                    </span>
+                    <span className="text-[10px] font-semibold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full">
+                      100% Free Coupon Active
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-500">
+                      Tier Rates: ₹50 · ₹100 · ₹200 / sq.ft
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {effectiveAumSqft.toLocaleString("en-IN")} Sq.Ft active ({capacityPercent < 0.01 ? "<0.01%" : `${capacityPercent.toFixed(2)}%`}). Protected by zero-lockout commercial grace policy.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs shrink-0">
+                <button
+                  onClick={() => setSimulateCapacityWarning(true)}
+                  className="text-[10px] font-medium text-slate-400 hover:text-amber-800 hover:bg-amber-50 px-2 py-1 rounded border border-slate-200 transition"
+                  title="Simulate 93% portfolio load to preview the 90% grace period warning banner"
+                >
+                  Simulate 90% Warning
+                </button>
+                <Link
+                  href="/operate/rent-roll/pricing"
+                  className="text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1 hover:underline text-xs"
+                >
+                  <span>Pricing &amp; Plans</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* KPI Summary Tiles (§2.3 List Page Pattern) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
@@ -798,6 +920,78 @@ export default function RentRollRegisterPage() {
         isOpen={multiClientOpen}
         onClose={() => setMultiClientOpen(false)}
       />
+
+      {/* Grace Period Policy Dialog Modal (§OI-8) */}
+      {showGracePeriodModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-xl rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-teal-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    OfficeX Commercial Grace Period Policy
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Statutory Rule §OI-8 · Zero Hard Lock Guarantee
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGracePeriodModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-slate-900">Zero Commercial Lockouts:</strong> In institutional commercial property management, billing, utility cycles, and tenant collections cannot be abruptly cut off. OfficeX never locks your dashboard or lease contracts.
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-slate-900">90% Warning Threshold:</strong> A proactive amber banner appears when registered leasable area exceeds 90% (45,00,00,000 Sq.Ft) of the 50,00,00,000 Sq.Ft allocated capacity.
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-slate-900">Direct Rate Top-ups:</strong> Additional capacity beyond 50 Cr sq.ft can be expanded on demand across commercial tiers (₹50, ₹100, or ₹200 / sq.ft).
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-slate-900">100% Free Promotional Coupon:</strong> Currently active via codes <span className="font-mono font-bold text-teal-800">OFFICEX100</span> or <span className="font-mono font-bold text-teal-800">RENTROLL12</span>.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Link
+                href="/operate/rent-roll/pricing"
+                onClick={() => setShowGracePeriodModal(false)}
+                className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl shadow-xs transition"
+              >
+                View Pricing Plans (₹50–₹200/sq.ft)
+              </Link>
+              <button
+                onClick={() => setShowGracePeriodModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Platform Footer */}
       <Footer />

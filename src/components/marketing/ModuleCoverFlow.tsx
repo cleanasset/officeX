@@ -45,7 +45,7 @@ const MODULES: CompactModule[] = [
     shortName: "Rent Roll",
     category: "Commercial Revenue",
     tagline: "Automate lease escalations, CAM reconciliations, and direct bank escrow with 100% auditability.",
-    route: "/properties/rent-roll?tab=dashboard",
+    route: "/operate/rent-roll",
     stat: "₹42.8L",
     statLabel: "Monthly ARR",
     gradient: "from-[#0A3C36] via-[#072B27] to-[#041A18]",

@@ -41,10 +41,51 @@ export default function SubscriptionGate({
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
+  // 3 Commercial Plans
+  const PLANS = [
+    {
+      id: "starter",
+      name: "Commercial Starter",
+      ratePerSqft: 50,
+      priceDisplay: "₹50",
+      capacity: "Up to 50k sq.ft",
+      basePriceRupees: 50,
+      amountInPaise: 5000,
+      badge: "Standalone Tower",
+      tagline: "39-point lease registers & escalations",
+    },
+    {
+      id: "techpark",
+      name: "Grade-A Tech Park",
+      ratePerSqft: 100,
+      priceDisplay: "₹100",
+      capacity: "Up to 2.5L sq.ft",
+      basePriceRupees: 100,
+      amountInPaise: 10000,
+      badge: "Most Popular",
+      popular: true,
+      tagline: "Lease-to-Cash billing & CAM pooling",
+    },
+    {
+      id: "reit-mega",
+      name: "REIT Mega-Portfolio",
+      ratePerSqft: 200,
+      priceDisplay: "₹200",
+      capacity: "Up to 50 Cr sq.ft",
+      basePriceRupees: 200,
+      amountInPaise: 20000,
+      badge: "Enterprise Scale",
+      tagline: "Maker-checker approvals & custom RBAC",
+    },
+  ];
+
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("techpark");
+  const selectedPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
+
   // 100% Free promo code
   const is100PercentDiscount = appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
-  const finalPriceInRupees = is100PercentDiscount ? 0 : 100;
-  const finalAmountInPaise = is100PercentDiscount ? 0 : 10000;
+  const finalPriceInRupees = is100PercentDiscount ? 0 : selectedPlan.basePriceRupees;
+  const finalAmountInPaise = is100PercentDiscount ? 0 : selectedPlan.amountInPaise;
 
   const handleApplyCoupon = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -205,14 +246,16 @@ export default function SubscriptionGate({
       localStorage.setItem("officex_active_leases", "[]");
     }
 
-    // If 100% Discounted (RENTROLL12) — Instant One-Click Free Activation
+    // If 100% Discounted (OFFICEX100 / RENTROLL12) — Instant One-Click Free Activation
     if (is100PercentDiscount) {
-      await persistSubscription(email, "RENTROLL12", `FREE_RENTROLL12_${Date.now()}`);
+      await persistSubscription(email, appliedCoupon || "OFFICEX100", `FREE_${appliedCoupon || "OFFICEX100"}_${Date.now()}`);
       if (typeof window !== "undefined") {
         sessionStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_session_active", "1");
         sessionStorage.setItem("officex_user_email", email);
         localStorage.setItem("officex_user_email", email);
+        localStorage.setItem("officex_selected_plan", selectedPlan.id);
+        localStorage.setItem("officex_selected_plan_name", selectedPlan.name);
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
       }
@@ -442,7 +485,7 @@ export default function SubscriptionGate({
                 <span>
                   {is100PercentDiscount
                     ? "Continue with Google (100% Free · ₹0)"
-                    : "Continue with Google (Pay ₹100 & Unlock)"}
+                    : `Continue with Google (Pay ₹${selectedPlan.basePriceRupees} & Unlock)`}
                 </span>
               </button>
 
@@ -504,40 +547,79 @@ export default function SubscriptionGate({
             </p>
           </div>
 
-          {/* Value props */}
-          <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 mb-6 space-y-2.5">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Included in Your Operational Plan:
+          {/* ──── 3 SELECTABLE COMMERCIAL EDITIONS ──── */}
+          <div className="mb-5 text-left">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Select Your Plan:
+              </span>
+              <Link
+                href="/operate/rent-roll/pricing"
+                target="_blank"
+                className="text-[11px] font-bold text-[#0D7B6C] hover:underline flex items-center gap-0.5"
+              >
+                <span>Compare All Editions</span>
+                <ArrowRight size={11} />
+              </Link>
             </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-              <CheckCircle size={15} className="text-[#0F8B7D] shrink-0" />
-              <span>Full access to live property registry, rent rolls &amp; CAM billing</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-              <CheckCircle size={15} className="text-[#0F8B7D] shrink-0" />
-              <span>52-week preventive maintenance dispatch &amp; QR asset passports</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-              <CheckCircle size={15} className="text-[#0F8B7D] shrink-0" />
-              <span>Razorpay nodal escrow milestone protection for all work orders</span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {PLANS.map((plan) => {
+                const isSelected = selectedPlanId === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                      isSelected
+                        ? "border-[#0D7B6C] bg-teal-50/40 shadow-xs ring-2 ring-[#0D7B6C]/10"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    {plan.popular && (
+                      <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#0D7B6C] text-white text-[9px] font-bold uppercase tracking-wider">
+                        Popular
+                      </span>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">{plan.name}</span>
+                      {isSelected ? (
+                        <CheckCircle2 size={14} className="text-[#0D7B6C]" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border border-slate-300" />
+                      )}
+                    </div>
+                    <div className="text-base font-black text-slate-900 mt-1 font-mono">
+                      {plan.priceDisplay}
+                      <span className="text-[10px] font-normal text-slate-500">/sq.ft</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-semibold block">
+                      {plan.capacity}
+                    </span>
+                    <p className="text-[10px] text-slate-600 mt-0.5 line-clamp-1">
+                      {plan.tagline}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* ──── LIMITED TIME PROMOTIONAL OFFER (100% OFF) ──── */}
-          <div className="mb-5 relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-teal-50/70 p-4 shadow-xs">
+          <div className="mb-5 relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-teal-50/70 p-3.5 shadow-xs text-left">
             {/* Header Badge */}
-            <div className="flex items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
                   <Sparkles size={11} />
-                  Limited Time Offer
+                  Launch Privilege
                 </span>
                 <span className="text-[11px] font-bold text-amber-900">
-                  100% Off Promotional Access
+                  100% Free Launch Access
                 </span>
               </div>
-              <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300/80">
-                Save ₹100/mo
+              <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300/80">
+                Save 100%
               </span>
             </div>
 
@@ -545,30 +627,51 @@ export default function SubscriptionGate({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs rounded-xl p-3 border border-amber-200 shadow-2xs">
               <div className="flex items-start sm:items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-amber-100/80 text-amber-800 shrink-0 mt-0.5 sm:mt-0">
-                  <Gift size={20} />
+                  <Gift size={18} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm sm:text-base font-black tracking-widest text-[#0F8B7D] px-2.5 py-0.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-300">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedCoupon("OFFICEX100");
+                        setCouponSuccess("🎉 Code OFFICEX100 applied! 100% Free Access Activated (₹0).");
+                        setCouponError(null);
+                      }}
+                      className="font-mono text-xs font-black tracking-wider text-[#0F8B7D] px-2 py-0.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-300 hover:bg-amber-100 transition cursor-pointer"
+                      title="Click to apply OFFICEX100"
+                    >
+                      OFFICEX100
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedCoupon("RENTROLL12");
+                        setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
+                        setCouponError(null);
+                      }}
+                      className="font-mono text-xs font-black tracking-wider text-[#0F8B7D] px-2 py-0.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-300 hover:bg-amber-100 transition cursor-pointer"
+                      title="Click to apply RENTROLL12"
+                    >
                       RENTROLL12
-                    </span>
+                    </button>
                     <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                       100% FREE
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-600 mt-1 leading-snug">
-                    Use code <strong className="text-slate-900 font-bold">RENTROLL12</strong> for 100% free lifetime access to Rent Roll &amp; CAM billing.
+                    Apply either code to unlock <strong className="text-slate-900">{selectedPlan.name}</strong> 100% free with 50 Cr sq.ft quota.
                   </p>
                 </div>
               </div>
 
               {/* 1-Click Apply Button or Applied Status */}
               <div className="shrink-0 self-end sm:self-center">
-                {appliedCoupon === "RENTROLL12" ? (
+                {is100PercentDiscount ? (
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
                       <CheckCircle2 size={13} />
-                      <span>Applied (₹0)</span>
+                      <span>{appliedCoupon} (₹0)</span>
                     </span>
                     <button
                       type="button"
@@ -582,8 +685,8 @@ export default function SubscriptionGate({
                   <button
                     type="button"
                     onClick={() => {
-                      setAppliedCoupon("RENTROLL12");
-                      setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated (₹0).");
+                      setAppliedCoupon("OFFICEX100");
+                      setCouponSuccess("🎉 Code OFFICEX100 applied! 100% Free Access Activated (₹0).");
                       setCouponError(null);
                     }}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
@@ -597,14 +700,14 @@ export default function SubscriptionGate({
 
             {/* Subtext info */}
             <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px]">
-              {appliedCoupon === "RENTROLL12" ? (
+              {is100PercentDiscount ? (
                 <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
                   <CheckCircle2 size={12} className="text-emerald-600" />
-                  Free Lifetime Subscription Active · ₹0 charged
+                  Free Launch Subscription Active · 50 Cr Sq.Ft &amp; Grace Period Protected
                 </span>
               ) : (
                 <span className="text-amber-800/80 text-[10px] font-medium">
-                  ⚡ Instant unlock: No credit card required with code RENTROLL12.
+                  ⚡ Instant unlock: No credit card required with coupon.
                 </span>
               )}
             </div>
@@ -613,27 +716,30 @@ export default function SubscriptionGate({
           {/* Pricing Banner */}
           <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 border border-teal-200 mb-6 text-center">
             <div className="text-[10px] font-black uppercase tracking-widest text-teal-700 mb-1">
-              {is100PercentDiscount ? "PROMOTIONAL 100% FREE ACCESS" : "SUBSCRIPTION FEE"}
+              {is100PercentDiscount
+                ? `PROMOTIONAL 100% FREE ACCESS (${selectedPlan.name.toUpperCase()})`
+                : `SELECTED PLAN: ${selectedPlan.name.toUpperCase()}`}
             </div>
             <div className="flex items-center justify-center gap-3">
               {is100PercentDiscount ? (
                 <>
-                  <span className="text-xl font-bold text-slate-400 line-through">₹100</span>
-                  <span className="text-4xl font-black text-[#0F8B7D]">₹0 FREE</span>
+                  <span className="text-xl font-bold text-slate-400 line-through">₹{selectedPlan.basePriceRupees}</span>
+                  <span className="text-3xl font-black text-[#0F8B7D]">₹0 FREE</span>
                   <span className="text-xs font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
                     100% OFF
                   </span>
                 </>
               ) : (
-                <div className="text-3xl font-black text-[#0F8B7D]">
-                  ₹100<span className="text-sm font-bold text-slate-500">/mo</span>
+                <div className="text-2xl font-black text-[#0F8B7D]">
+                  ₹{selectedPlan.basePriceRupees}
+                  <span className="text-xs font-bold text-slate-500"> / sq.ft</span>
                 </div>
               )}
             </div>
             <div className="text-[10px] text-slate-500 font-semibold mt-1">
               {is100PercentDiscount
-                ? "Promo active: RENTROLL12 • 1-click instant lifetime dashboard unlock"
-                : "Secure payment via Razorpay • Instant activation"}
+                ? `Promo active: ${appliedCoupon} • 1-click instant unlock • 50,00,00,000 Sq.Ft licensed`
+                : `${selectedPlan.capacity} • Secure payment via Razorpay • Instant activation`}
             </div>
           </div>
 
@@ -661,7 +767,7 @@ export default function SubscriptionGate({
               ) : (
                 <>
                   <CreditCard size={14} />
-                  <span>Pay ₹{finalPriceInRupees} &amp; Activate Subscription Now</span>
+                  <span>Pay ₹{finalPriceInRupees} &amp; Activate {selectedPlan.name}</span>
                 </>
               )}
             </button>
