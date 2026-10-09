@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { invoice, payment, adjustmentNotes, occupant } from "@/db/schema";
+import { invoice, payment, occupant } from "@/db/rent-roll-schema";
+import { adjustmentNotes } from "@/db/schema";
 import { sql, eq } from "drizzle-orm";
 
 export const revalidate = 0;
@@ -22,12 +23,12 @@ export async function GET(req: Request) {
             date: invoice.invoice_date,
             occupantName: occupant.occupant_name,
             grossTotal: invoice.gross_total,
-            taxTotal: invoice.tax_total,
+            taxTotal: invoice.gst_amount,
             subtotal: invoice.subtotal,
           })
           .from(invoice)
           .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
-          .where(sql`${invoice.deleted_at} IS NULL`)
+          .where(sql`${invoice.status} IS NOT NULL`)
           .limit(100);
 
         invoices.forEach((inv) => {
@@ -61,7 +62,7 @@ export async function GET(req: Request) {
             paymentId: payment.id,
             date: payment.payment_date,
             amount: payment.amount_inr,
-            utr: payment.utr_number,
+            utr: payment.payment_ref,
             occupantName: occupant.occupant_name,
           })
           .from(payment)
@@ -94,14 +95,15 @@ export async function GET(req: Request) {
         const notes = await db
           .select({
             noteNumber: adjustmentNotes.noteNumber,
-            date: adjustmentNotes.issueDate,
-            amount: adjustmentNotes.totalAmount,
-            taxAmount: adjustmentNotes.taxAmount,
-            reason: adjustmentNotes.reasonCode,
+            date: adjustmentNotes.issuedDate,
+            amount: adjustmentNotes.totalAdjustment,
+            taxAmount: adjustmentNotes.gstAmount,
+            reason: adjustmentNotes.reason,
             occupantName: occupant.occupant_name,
           })
           .from(adjustmentNotes)
-          .leftJoin(occupant, eq(adjustmentNotes.occupantId, occupant.id))
+          .leftJoin(invoice, eq(adjustmentNotes.invoiceId, invoice.id))
+          .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
           .limit(100);
 
         notes.forEach((n) => {

@@ -716,37 +716,14 @@ export default function SignInForm({
     }
 
     let destination = "";
-    if (isRentRollContext) {
-      if (!isAlreadyOnboarded) {
-        destination = `/onboarding?context=rent-roll&redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
-      } else {
-        destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding"))
-          ? safeRedirect
-          : "/properties/rent-roll";
-      }
-    } else if (!isAlreadyOnboarded) {
-      destination = `/onboarding?redirect=${encodeURIComponent(safeRedirect || "/properties/rent-roll")}`;
-    } else {
-      destination = (initialRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding"))
+    if (isRentRollContext || (safeRedirect && safeRedirect.includes("rent-roll"))) {
+      destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding"))
         ? safeRedirect
-        : "";
-
-      if (!destination || destination === "/") {
-        if (isOperateContext) {
-          destination = "/operate";
-        } else if (isFmContext) {
-          destination = "/fm-marketplace";
-        } else {
-          const lowerRole = (typeof window !== "undefined" && (localStorage.getItem("officex_user_role") || roleName || initialRole || "owner") || "owner").toLowerCase();
-          destination = lowerRole.includes("broker")
-            ? "/leasing"
-            : lowerRole.includes("owner")
-              ? "/properties/rent-roll"
-              : lowerRole.includes("vendor") || lowerRole.includes("fm")
-                ? "/vendor"
-                : "/properties";
-        }
-      }
+        : "/properties/rent-roll?tab=dashboard";
+    } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
+      destination = safeRedirect;
+    } else {
+      destination = "/properties/rent-roll?tab=dashboard";
     }
 
     // PRIORITY 1: Fetch user roles after authentication (§5.14)
@@ -943,10 +920,10 @@ export default function SignInForm({
         }
       }
 
-      const searchStr = `?context=${activeCtx}&redirect=${encodeURIComponent(safeRedirect)}`;
+      const targetDestination = safeRedirect || "/properties/rent-roll?tab=dashboard";
       const redirectUrl = typeof window !== "undefined"
-        ? (isRentRollContext ? `${window.location.origin}/signup${searchStr}&role=owner&module=rent-roll` : `${window.location.origin}/login${searchStr}`)
-        : "https://www.officex.pro/login";
+        ? `${window.location.origin}${targetDestination.startsWith("/") ? targetDestination : `/${targetDestination}`}`
+        : "https://www.officex.pro/properties/rent-roll";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",

@@ -15,31 +15,12 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 301);
   }
 
-  // Redirect legacy /rent-roll directly to the Rent Roll SaaS landing page
+  // Redirect legacy /rent-roll directly to the Rent Roll master page
   if (pathname === '/rent-roll' || pathname.startsWith('/rent-roll/')) {
-    return NextResponse.redirect(new URL('/operate/rent-roll', request.url));
+    return NextResponse.redirect(new URL('/properties/rent-roll', request.url));
   }
 
-  // Allow dedicated Rent Roll 2.0 status page through (no dashboard access)
-  if (pathname === '/properties/rent-roll' || pathname.startsWith('/properties/rent-roll/')) {
-    const response = NextResponse.next();
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    return response;
-  }
-
-  // Redirect other legacy dashboard/portal routes directly to the Operate SaaS hub page
-  if (
-    pathname.startsWith('/properties') ||
-    pathname.startsWith('/portal') ||
-    pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/dashboard')
-  ) {
-    return NextResponse.redirect(new URL('/operate', request.url));
-  }
-
-  // All pages (marketing, SaaS modules, APIs, public) pass through directly
+  // All pages (marketing, SaaS modules, APIs, properties, portal, public) pass through directly
   const response = NextResponse.next();
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');

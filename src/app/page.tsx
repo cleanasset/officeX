@@ -837,21 +837,31 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 4. List Your Space */}
-          <Link
-            href="/properties/add"
-            className="hover:text-[#0F8B7D] transition-colors py-2 whitespace-nowrap"
-          >
-            List Your Space
-          </Link>
-
-          {/* 4. Register as Vendor */}
-          <Link
-            href="/vendor"
-            className="hover:text-[#0F8B7D] text-[#0F8B7D] font-bold transition-colors py-2 whitespace-nowrap"
-          >
-            Register as Vendor
-          </Link>
+          {/* 4. Partner With Us Dropdown (Combined List Space & Register Vendor) */}
+          <div className="relative group py-2">
+            <button className="hover:text-[#0F8B7D] text-[#0F8B7D] font-bold transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap">
+              <span>Partner With Us</span>
+              <ChevronDown size={13} className="text-slate-400 group-hover:text-[#0F8B7D] group-hover:rotate-180 transition-transform" />
+            </button>
+            <div className="absolute top-full -left-6 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-slate-900">
+              <div className="p-1 space-y-1">
+                <Link
+                  href="/properties/add"
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
+                  <div className="text-xs font-bold text-slate-900">List Your Space</div>
+                  <div className="text-[11px] text-slate-500 font-normal">For Property Owners &amp; Landlords</div>
+                </Link>
+                <Link
+                  href="/vendor"
+                  className="w-full text-left block p-2 rounded-xl hover:bg-teal-50/60 transition-colors"
+                >
+                  <div className="text-xs font-bold text-[#0F8B7D]">Register as Vendor</div>
+                  <div className="text-[11px] text-slate-500 font-normal">For FM Contractors &amp; Service Providers</div>
+                </Link>
+              </div>
+            </div>
+          </div>
 
           {/* 5. Company Dropdown */}
           <div className="relative group py-2">

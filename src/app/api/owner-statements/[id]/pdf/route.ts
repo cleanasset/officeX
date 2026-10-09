@@ -40,7 +40,7 @@ export async function GET(
       })
       .from(invoice)
       .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
-      .where(sql`${invoice.deleted_at} IS NULL`)
+      .where(sql`${invoice.status} IS NOT NULL`)
       .limit(50);
   } catch (e) {}
 

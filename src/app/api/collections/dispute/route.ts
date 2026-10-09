@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { invoice, dispute } from "@/db/rent-roll-schema";
+import { invoice, dispute, occupant } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, desc } from "drizzle-orm";
 

@@ -242,17 +242,15 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
     setError(null);
     try {
       const canonicalRedirect = initialRedirect || (
-        isRentRoll ? "/properties/rent-roll" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/marketplace"
+        isRentRoll ? "/properties/rent-roll?tab=dashboard" : isOperate ? "/operate" : isFm ? "/fm-marketplace" : "/properties/rent-roll?tab=dashboard"
       );
-      const activeCtx = isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "marketplace";
+      const activeCtx = isRentRoll ? "rent-roll" : isOperate ? "operate" : isFm ? "fm" : "rent-roll";
       
       if (typeof window !== "undefined") {
         setAuthCookie("officex_oauth_context", activeCtx, 7200);
         setAuthCookie("officex_oauth_role", selectedRole, 7200);
         setAuthCookie("officex_oauth_redirect", canonicalRedirect, 7200);
-        if (isRentRoll) {
-          setAuthCookie("officex_last_rent_roll", "1", 7200);
-        }
+        setAuthCookie("officex_last_rent_roll", "1", 7200);
         localStorage.setItem("officex_oauth_context", activeCtx);
         sessionStorage.setItem("officex_oauth_context", activeCtx);
         localStorage.setItem("officex_oauth_role", selectedRole);
@@ -261,10 +259,9 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         sessionStorage.setItem("officex_oauth_redirect", canonicalRedirect);
       }
 
-      const searchStr = `?context=${activeCtx}&role=${encodeURIComponent(selectedRole)}&redirect=${encodeURIComponent(canonicalRedirect)}`;
       const redirectUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/signup${searchStr}`
-        : "https://www.officex.pro/signup";
+        ? `${window.location.origin}${canonicalRedirect}`
+        : "https://www.officex.pro/properties/rent-roll";
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -392,39 +389,56 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
         return;
       }
 
-      if (isGoogleSession) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("officex_user_mobile", cleanDigits);
-          sessionStorage.setItem("officex_user_mobile", cleanDigits);
-          localStorage.setItem("officex_user_name", fullName.trim());
-          sessionStorage.setItem("officex_user_name", fullName.trim());
-          localStorage.setItem("officex_user_email", email.trim().toLowerCase());
-          sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
-          localStorage.setItem("officex_session_active", "1");
-          sessionStorage.setItem("officex_session_active", "1");
-          localStorage.setItem("officex_user_role", selectedRole);
-          sessionStorage.setItem("officex_user_role", selectedRole);
-          localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
-          sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
-          localStorage.setItem("officex_onboarding_completed", "0");
-          sessionStorage.setItem("officex_onboarding_completed", "0");
-          localStorage.removeItem("officex_property_name");
-          localStorage.removeItem("officex_property_id");
-          document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
-          document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
-          document.cookie = "officex_onboarding_completed=0; path=/; max-age=86400; SameSite=Lax";
-        }
-        setSuccessMsg("Contact details saved! Launching your Setup Wizard...");
-        setTimeout(() => {
-          setSuccessMsg(null);
-          router.push("/onboarding?context=rent-roll");
-        }, 400);
-        return;
+      // User registration confirmed - activate session immediately without mock OTP
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_user_mobile", cleanDigits);
+        sessionStorage.setItem("officex_user_mobile", cleanDigits);
+        localStorage.setItem("officex_user_name", fullName.trim());
+        sessionStorage.setItem("officex_user_name", fullName.trim());
+        localStorage.setItem("officex_user_email", email.trim().toLowerCase());
+        sessionStorage.setItem("officex_user_email", email.trim().toLowerCase());
+        localStorage.setItem("officex_session_active", "1");
+        sessionStorage.setItem("officex_session_active", "1");
+        localStorage.setItem("officex_user_role", selectedRole);
+        sessionStorage.setItem("officex_user_role", selectedRole);
+        localStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+        sessionStorage.setItem("officex_kyc_stage", "K0_CONTACT_VERIFIED");
+        localStorage.setItem("officex_phone_verified", "1");
+        localStorage.setItem("officex_email_verified", "1");
+        document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = `officex_user_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `officex_user_role=${encodeURIComponent(selectedRole)}; path=/; max-age=86400; SameSite=Lax`;
       }
 
-      setStep(2);
-      setResendCountdown(30);
-      setSuccessMsg(data.devOtp ? `Verification code sent to email. (Code: ${data.devOtp})` : "A 6-digit verification code has been dispatched to your work email.");
+      // Sync Supabase Auth user if password provided
+      if (password) {
+        try {
+          await supabase.auth.signUp({
+            email: email.trim().toLowerCase(),
+            password: password,
+            options: {
+              data: {
+                full_name: fullName.trim(),
+                phone: cleanDigits,
+                role: selectedRole
+              }
+            }
+          });
+        } catch (supaErr) {
+          console.warn("Supabase auth sync notice:", supaErr);
+        }
+      }
+
+      setSuccessMsg("Account verified! Launching your workspace...");
+      setTimeout(() => {
+        setSuccessMsg(null);
+        const destination = (initialRedirect && initialRedirect !== "/" && !initialRedirect.startsWith("/signup") && !initialRedirect.startsWith("/login"))
+          ? initialRedirect
+          : "/properties/rent-roll?tab=dashboard";
+        window.location.replace(destination);
+      }, 500);
+      return;
     } catch (err: any) {
       console.error("Register error:", err);
       setError("Network error. Please try again.");

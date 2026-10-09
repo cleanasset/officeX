@@ -38,11 +38,11 @@ export async function POST(request: Request) {
         tradeName = matchEntity[0].tradeName || matchEntity[0].legalName;
         address = matchEntity[0].registeredAddress || "";
       } else {
-        const matchOcc = await db.select().from(occupant).where(eq(occupant.gstin, gstinUpper)).limit(1);
+        const matchOcc = await db.select().from(occupant).where(eq(occupant.gst_number, gstinUpper)).limit(1);
         if (matchOcc.length > 0) {
-          legalName = matchOcc[0].legal_entity_name || matchOcc[0].occupant_name;
-          tradeName = matchOcc[0].trade_name || matchOcc[0].occupant_name;
-          address = matchOcc[0].registered_office_address || "";
+          legalName = matchOcc[0].occupant_name;
+          tradeName = matchOcc[0].occupant_name;
+          address = matchOcc[0].address || "";
         }
       }
     } catch (e) {}

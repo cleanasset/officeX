@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { payment, invoice, occupant } from "@/db/schema";
+import { payment, invoice, occupant } from "@/db/rent-roll-schema";
 import { sql, eq } from "drizzle-orm";
 
 export const revalidate = 0;
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
           id: payment.id,
           date: payment.payment_date,
           amount: payment.amount_inr,
-          utr: payment.utr_number,
+          utr: payment.payment_ref,
           occupantName: occupant.occupant_name,
         })
         .from(payment)

@@ -66,7 +66,7 @@ export async function GET(req: Request) {
         })
         .from(invoice)
         .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
-        .where(sql`${invoice.deleted_at} IS NULL`)
+        .where(sql`${invoice.status} IS NOT NULL`)
         .limit(50);
     } catch (e) {}
 
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
           balance: invoice.balance_due,
         })
         .from(invoice)
-        .where(sql`${invoice.deleted_at} IS NULL`);
+        .where(sql`${invoice.status} IS NOT NULL`);
 
       liveInvoices.forEach((inv) => {
         liveGross += parseFloat(String(inv.gross || 0));

@@ -92,16 +92,13 @@ export default function OAuthCallbackHandler() {
           localStorage.removeItem("officex_oauth_context");
           sessionStorage.removeItem("officex_oauth_context");
 
-          // Set Rent Roll context and role (subscription requires coupon or checkout)
+          // Set Rent Roll context and role
           setAuthCookie("officex_user_role", "Property Owner & Asset Manager", 2592000);
           localStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
           sessionStorage.setItem("officex_user_role", "Property Owner & Asset Manager");
 
-          // If already on /signup, let SignupForm manage the steps
-          if (pathname === "/signup") return;
-
-          // Direct redirect into Rent Roll Onboarding Wizard
-          const targetUrl = `/signup?context=rent-roll&role=owner&module=rent-roll&redirect=${encodeURIComponent("/properties/rent-roll")}`;
+          // Direct redirect into Rent Roll Dashboard
+          const targetUrl = savedRedirect && savedRedirect.includes("rent-roll") ? savedRedirect : "/properties/rent-roll?tab=dashboard";
           window.location.replace(targetUrl);
           return;
         }
@@ -115,6 +112,13 @@ export default function OAuthCallbackHandler() {
           sessionStorage.removeItem("officex_oauth_context");
           sessionStorage.removeItem("officex_oauth_redirect");
           window.location.replace(savedRedirect);
+          return;
+        }
+
+        // If on login/signup page and authenticated, send to properties rent-roll
+        if (isLandingPage && isOAuthHashLanding) {
+          redirectedRef.current = true;
+          window.location.replace("/properties/rent-roll?tab=dashboard");
           return;
         }
       }

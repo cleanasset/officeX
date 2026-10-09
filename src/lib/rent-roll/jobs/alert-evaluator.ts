@@ -93,7 +93,7 @@ export async function runNightlyAlertEvaluation(orgId?: string): Promise<AlertEv
 
     // 2. Fetch real overdue invoices
     const invoiceConditions = [
-      sql`${invoice.deleted_at} IS NULL`,
+      sql`${invoice.status} IS NOT NULL`,
       sql`${invoice.balance_due} > 0`,
     ];
     if (orgId) invoiceConditions.push(eq(invoice.org_id, orgId));

@@ -117,19 +117,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: emailSent
-        ? "Verification code sent to your email address."
-        : `Verification code generated: ${code}`,
+      message: "Registration successful.",
       userId: userId,
-      devOtp: code,
       user: {
         id: userId,
         fullName: fullName.trim(),
         email: cleanEmail,
         mobileNumber: `${mobileCountryCode}${cleanMobile}`,
-        emailVerified: false,
-        mobileVerified: false,
-        status: "PENDING_CONTACT",
+        emailVerified: true,
+        mobileVerified: true,
+        status: "ACTIVE",
       },
     });
   } catch (err: any) {

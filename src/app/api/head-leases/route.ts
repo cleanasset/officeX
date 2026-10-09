@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { contract, space, building, property } from "@/db/schema";
+import { invoice } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc } from "drizzle-orm";
 
@@ -11,6 +12,9 @@ export async function GET(req: Request) {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "Oct-2026";
+    const centreName = "Cyber City Flex Hub (Tower B)";
+    const rentRatePsf = 95;
+    const camRatePsf = 18;
 
     // 1. Fetch head lease contracts (direction = payable or contract_type = head_lease)
     let headLeasesList: any[] = [];
@@ -49,7 +53,7 @@ export async function GET(req: Request) {
     // Query member invoices for this flex period
     let totalMemberRevenue = 0;
     try {
-      const invs = await db.select({ gross: invoice.gross_total }).from(invoice).where(sql`${invoice.deleted_at} IS NULL`);
+      const invs = await db.select({ gross: invoice.gross_total }).from(invoice).where(eq(invoice.org_id, auth.orgId));
       invs.forEach((i) => { totalMemberRevenue += parseFloat(String(i.gross || 0)); });
     } catch (e) {}
 
