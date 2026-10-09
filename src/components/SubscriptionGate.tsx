@@ -42,7 +42,7 @@ export default function SubscriptionGate({
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
   // 100% Free promo code
-  const is100PercentDiscount = appliedCoupon === "RENTROLL12";
+  const is100PercentDiscount = appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
   const finalPriceInRupees = is100PercentDiscount ? 0 : 100;
   const finalAmountInPaise = is100PercentDiscount ? 0 : 10000;
 
@@ -51,12 +51,12 @@ export default function SubscriptionGate({
     const clean = couponInput.trim().toUpperCase();
     if (!clean) return;
 
-    if (clean === "RENTROLL12") {
-      setAppliedCoupon("RENTROLL12");
-      setCouponSuccess("🎉 Coupon 'RENTROLL12' applied! 100% FREE Access activated (₹0).");
+    if (clean === "RENTROLL12" || clean === "OFFICEX100" || clean === "FREE100") {
+      setAppliedCoupon(clean);
+      setCouponSuccess(`🎉 Coupon '${clean}' applied! 100% FREE Access activated (₹0).`);
       setCouponError(null);
     } else {
-      setCouponError("Invalid coupon code. Try RENTROLL12 for 100% FREE access.");
+      setCouponError("Invalid coupon code. Try OFFICEX100, RENTROLL12 or FREE100 for 100% FREE access.");
       setCouponSuccess(null);
     }
   };
@@ -69,7 +69,7 @@ export default function SubscriptionGate({
   };
 
   // Helper to permanently persist subscription across all storage layers
-  const persistSubscription = async (email: string, coupon: string = "none", paymentId: string = "FREE_RENTROLL12") => {
+  const persistSubscription = async (email: string, coupon: string = "none", paymentId: string = "FREE_OFFICEX100") => {
     const cleanEmail = email.toLowerCase().trim();
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_subscription", "active");
@@ -102,10 +102,25 @@ export default function SubscriptionGate({
     const checkSubscriptionState = async () => {
       if (typeof window === "undefined") return;
 
-      const email = (getCookie("officex_user_email") || localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
-      const name = localStorage.getItem("officex_user_name") || getCookie("officex_user_name") || "Member";
-      const role = getCookie("officex_user_role") || localStorage.getItem("officex_user_role") || "Property Owner";
-      
+      let email = (getCookie("officex_user_email") || localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
+      let name = localStorage.getItem("officex_user_name") || getCookie("officex_user_name") || "Member";
+      let role = getCookie("officex_user_role") || localStorage.getItem("officex_user_role") || "Property Owner";
+
+      // Also check active Supabase Auth session directly
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          email = session.user.email.toLowerCase().trim();
+          name = session.user.user_metadata?.full_name || session.user.email.split("@")[0] || name;
+          localStorage.setItem("officex_user_email", email);
+          localStorage.setItem("officex_user_name", name);
+          document.cookie = `officex_user_email=${encodeURIComponent(email)}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+        }
+      } catch {
+        // Non-blocking
+      }
+
       setUserEmail(email);
       setUserName(name);
       setUserRole(role);
@@ -119,15 +134,14 @@ export default function SubscriptionGate({
 
       setIsLoggedIn(true);
 
-      // Check active subscription or session
+      // Check active subscription (strictly subscription-based; being logged in alone is NOT enough)
       const subGlobal = getCookie("officex_subscription") === "active" ||
         localStorage.getItem("officex_subscription") === "active";
-      const hasAuth = isAuthenticated();
 
       const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
         getCookie(`officex_sub_${encodeURIComponent(email)}`) === "active";
 
-      if (subEmailLocal || subGlobal || hasAuth) {
+      if (subEmailLocal || subGlobal) {
         setIsSubscribed(true);
         setIsChecking(false);
         return;
@@ -652,20 +666,35 @@ export default function SubscriptionGate({
               )}
             </button>
 
-            <Link
-              href="/pricing"
-              className="w-full py-3 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-xs text-center transition-colors flex items-center justify-center gap-2"
-            >
-              <span>Explore All Pricing Plans &amp; Tiers</span>
-              <ArrowRight size={13} />
-            </Link>
-
-            <Link
-              href={fallbackLandingPage}
-              className="text-center text-xs font-bold text-slate-500 hover:text-slate-800 pt-1 transition-colors"
-            >
-              ← Return to your {userRole || "Persona"} Landing Page
-            </Link>
+            {isLoggedIn ? (
+              <div className="pt-3 flex flex-col items-center gap-2 border-t border-slate-100">
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Not ready to activate {portalName}? You will remain signed in to OfficeX.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold text-[#0F8B7D]">
+                  <Link href="/" className="hover:underline flex items-center gap-1">
+                    <span>OfficeX Homepage</span>
+                  </Link>
+                  <span className="text-slate-300">•</span>
+                  <Link href="/fm-marketplace" className="hover:underline flex items-center gap-1">
+                    <span>FM Marketplace</span>
+                  </Link>
+                  <span className="text-slate-300">•</span>
+                  <Link href={fallbackLandingPage} className="hover:underline flex items-center gap-1">
+                    <span>Platform Overview</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-3 text-center border-t border-slate-100">
+                <Link
+                  href={`/login?redirect=${encodeURIComponent(pathname)}`}
+                  className="text-xs font-bold text-[#0F8B7D] hover:underline"
+                >
+                  Already have an account? Sign In to OfficeX →
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

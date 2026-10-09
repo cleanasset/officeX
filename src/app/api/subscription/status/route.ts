@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const VALID_PROMO_COUPONS = new Set(["RENTROLL12", "LOGIN_VERIFIED", "ACTIVE_USER_SESSION", "OFFICEX100", "SERVER_SAVED"]);
+    const VALID_PROMO_COUPONS = new Set(["RENTROLL12", "LOGIN_VERIFIED", "ACTIVE_USER_SESSION", "OFFICEX100", "FREE100", "SERVER_SAVED"]);
     const isPromoValid = VALID_PROMO_COUPONS.has(coupon);
     const isPaymentValid = typeof paymentId === "string" && (paymentId.startsWith("pay_") || paymentId.startsWith("FREE_") || paymentId.startsWith("SUB_"));
 

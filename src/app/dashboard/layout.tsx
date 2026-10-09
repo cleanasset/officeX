@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
 import RoleSelectorModal, { SpecRoleItem } from "@/components/auth/RoleSelectorModal";
+import SubscriptionGate from "@/components/SubscriptionGate";
 
 export default function DashboardLayout({
   children,
@@ -76,68 +77,70 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      <Topbar />
+    <SubscriptionGate portalName="Operational Dashboard" fallbackLandingPage="/operate">
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+        <Topbar />
 
-      {/* Role & Navigation Control Strip */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
-          {/* Active Role Selector Pill */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Active Role View:
-            </span>
-            <button
-              onClick={() => setIsRoleModalOpen(true)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold shadow-2xs transition-colors cursor-pointer group"
-            >
-              <UserCheck size={14} className="text-teal-400" />
-              <span>{activeRoleLabel}</span>
-              <ChevronDown size={13} className="text-slate-400 group-hover:text-white" />
-            </button>
-            <span className="text-[11px] text-slate-600 hidden md:inline">
-              (Click to switch role §5.14)
-            </span>
-          </div>
+        {/* Role & Navigation Control Strip */}
+        <div className="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-2xs">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            {/* Active Role Selector Pill */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Active Role View:
+              </span>
+              <button
+                onClick={() => setIsRoleModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold shadow-2xs transition-colors cursor-pointer group"
+              >
+                <UserCheck size={14} className="text-teal-400" />
+                <span>{activeRoleLabel}</span>
+                <ChevronDown size={13} className="text-slate-400 group-hover:text-white" />
+              </button>
+              <span className="text-[11px] text-slate-600 hidden md:inline">
+                (Click to switch role §5.14)
+              </span>
+            </div>
 
-          {/* Quick Sub-Navigation by Role */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname.startsWith(item.href);
+            {/* Quick Sub-Navigation by Role */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname.startsWith(item.href);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                    isActive
-                      ? "bg-[#0F8B7D] text-white shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  <Icon size={14} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                      isActive
+                        ? "bg-[#0F8B7D] text-white shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Icon size={14} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
+
+        {/* Role Picker Modal */}
+        <RoleSelectorModal
+          isOpen={isRoleModalOpen}
+          roles={roles}
+          onSelectRole={handleSelectRole}
+          onClose={() => setIsRoleModalOpen(false)}
+          canDismiss={true}
+        />
+
+        {/* Main Dashboard Content */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {children}
+        </main>
       </div>
-
-      {/* Role Picker Modal */}
-      <RoleSelectorModal
-        isOpen={isRoleModalOpen}
-        roles={roles}
-        onSelectRole={handleSelectRole}
-        onClose={() => setIsRoleModalOpen(false)}
-        canDismiss={true}
-      />
-
-      {/* Main Dashboard Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {children}
-      </main>
-    </div>
+    </SubscriptionGate>
   );
 }

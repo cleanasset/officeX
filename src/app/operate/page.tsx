@@ -27,11 +27,13 @@ import {
   Layers,
   Cpu,
   BarChart3,
-  ExternalLink
+  ExternalLink,
+  Calendar
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
+import { ModuleCoverFlow } from "@/components/marketing/ModuleCoverFlow";
 
 export default function OperatePage() {
   const [slideInOpen, setSlideInOpen] = useState(false);
@@ -175,93 +177,62 @@ export default function OperatePage() {
             optical speed-gates, commercial leasing, and statutory compliance across 15M+ sq.ft.
           </p>
 
-          {/* Action CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-5">
-            <a
-              href="#saas-modules"
-              className="px-7 py-3.5 bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-xl hover:-translate-y-0.5 inline-flex items-center gap-2 group cursor-pointer"
-            >
-              <span>Explore SaaS Modules</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </a>
+          {/* Action CTAs — Sleek High-Conversion Pill Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-6">
             <button
               onClick={() => openEnquiry("General Platform")}
-              className="px-7 py-3.5 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl text-xs sm:text-sm border border-slate-300 shadow-xs hover:shadow-md transition-all cursor-pointer"
+              className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm tracking-wide shadow-lg shadow-[#0D7B6C]/25 hover:shadow-xl hover:shadow-[#0D7B6C]/35 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer group"
             >
-              Request Walkthrough
+              <Calendar className="w-4 h-4 text-emerald-200 group-hover:scale-110 transition-transform" />
+              <span>Request Walkthrough</span>
+              <ArrowRight className="w-4 h-4 text-emerald-100 group-hover:translate-x-1 transition-transform" />
             </button>
+
+            <a
+              href="#saas-modules"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 hover:text-[#0D7B6C] font-bold text-xs sm:text-sm border border-slate-200/90 hover:border-teal-300 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer group backdrop-blur-sm"
+            >
+              <Layers className="w-4 h-4 text-[#0D7B6C] group-hover:scale-110 transition-transform" />
+              <span>Explore SaaS Modules</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:translate-y-0.5 transition-transform" />
+            </a>
           </div>
 
-          {/* Trust Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-500 mb-9">
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Zero ERP Re-Keying</span>
-            <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> ISO 27001 &amp; SOC2 Type II</span>
-            <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-indigo-600" /> 100% Statutory Compliance</span>
-          </div>
-
-          {/* SaaS Modules Quick Navigation — Prominent High-Impact Interactive Cards */}
-          <div className="w-full max-w-5xl mb-12">
-            <div className="text-center mb-3">
-              <span className="text-[11px] font-black uppercase tracking-widest text-[#0D7B6C] bg-teal-50 px-3 py-1 rounded-full border border-teal-200/80">
-                Core Built-In SaaS Modules
-              </span>
+          {/* Trust Assurance Strip — Unified Institutional Badges */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 px-4 sm:px-6 py-2 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-2xs text-[11px] sm:text-xs text-slate-600 mb-8 sm:mb-10">
+            <div className="flex items-center gap-1.5 font-bold text-slate-700">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Zero ERP Re-Keying</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 text-left">
-              {productTabs.map((product) => {
-                const Icon = product.icon;
-                return (
-                  <a
-                    key={product.id}
-                    href={`#${product.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById(product.id)?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="p-4 sm:p-5 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-white hover:to-teal-50/40 border border-slate-200/90 hover:border-[#0D7B6C] shadow-xs hover:shadow-lg transition-all duration-200 cursor-pointer group flex items-start gap-4"
-                  >
-                    <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 group-hover:bg-[#0D7B6C] text-[#0D7B6C] group-hover:text-white flex items-center justify-center transition-all shrink-0 shadow-2xs group-hover:scale-105">
-                      <Icon size={22} className="stroke-[2.2]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-[#0D7B6C] transition-colors truncate">
-                          {product.name}
-                        </h3>
-                        <ArrowUpRight size={15} className="text-slate-400 group-hover:text-[#0D7B6C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium line-clamp-1 leading-snug">
-                        {product.title}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-[#0D7B6C] opacity-80 group-hover:opacity-100">
-                        <span>Open module</span>
-                        <ArrowRight size={11} className="transition-transform group-hover:translate-x-1" />
-                      </div>
-                    </div>
-                  </a>
-                );
-              })}
+            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300" />
+            <div className="flex items-center gap-1.5 font-bold text-slate-700">
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+              <span>ISO 27001 &amp; SOC2 Type II</span>
+            </div>
+            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300" />
+            <div className="flex items-center gap-1.5 font-bold text-slate-700">
+              <Sparkles className="w-3.5 h-3.5 text-[#0D7B6C] shrink-0" />
+              <span>100% Statutory Compliance</span>
             </div>
           </div>
 
-          {/* Enterprise Client Trust Badge */}
-          <div className="w-full text-center">
-            <div className="inline-flex flex-col items-center px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
-                TRUSTED BY ASSET MANAGERS &amp; OPERATORS ACROSS 15M+ SQ.FT
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-x-4 sm:gap-x-6 gap-y-1.5 text-xs font-black tracking-wider text-slate-700">
-                <span className="hover:text-[#0D7B6C] transition-colors">PRESTIGE GROUP</span>
-                <span className="text-slate-300 select-none">•</span>
-                <span className="hover:text-[#0D7B6C] transition-colors">BRIGADE TECH</span>
-                <span className="text-slate-300 select-none">•</span>
-                <span className="hover:text-[#0D7B6C] transition-colors">EMBASSY PARKS REIT</span>
-                <span className="text-slate-300 select-none">•</span>
-                <span className="hover:text-[#0D7B6C] transition-colors">BROOKFIELD</span>
-                <span className="text-slate-300 select-none">•</span>
-                <span className="hover:text-[#0D7B6C] transition-colors">MINDSPACE REIT</span>
-                <span className="text-slate-300 select-none">•</span>
-                <span className="hover:text-[#0D7B6C] transition-colors">DLF COMMERCIAL</span>
-              </div>
+          {/* SaaS Modules Quick Navigation — Interactive 3D Fanned CoverFlow */}
+          <div className="w-full max-w-5xl mb-6">
+            <ModuleCoverFlow />
+          </div>
+
+          {/* Institutional Portfolio Trust Strip */}
+          <div className="w-full max-w-5xl mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-slate-200/70">
+            <p className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-slate-400 text-center mb-3 sm:mb-4">
+              POWERING COMMERCIAL ASSETS &amp; TECH PARKS ACROSS 15M+ SQ.FT
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-10 gap-y-2.5 text-xs sm:text-sm font-black tracking-wider text-slate-400">
+              <span className="hover:text-slate-700 transition-colors cursor-default">PRESTIGE GROUP</span>
+              <span className="hover:text-slate-700 transition-colors cursor-default">BRIGADE TECH</span>
+              <span className="hover:text-slate-700 transition-colors cursor-default">EMBASSY PARKS REIT</span>
+              <span className="hover:text-slate-700 transition-colors cursor-default">BROOKFIELD</span>
+              <span className="hover:text-slate-700 transition-colors cursor-default">MINDSPACE REIT</span>
+              <span className="hover:text-slate-700 transition-colors cursor-default">DLF COMMERCIAL</span>
             </div>
           </div>
         </div>

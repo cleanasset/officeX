@@ -199,19 +199,13 @@ export default function RentRollProductPage() {
                   <span>Request Custom Walkthrough</span>
                   <ArrowRight size={15} />
                 </button>
-                <Link
-                  href="/properties/rent-roll"
-                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  <span>Explore Live Demo</span>
-                  <ArrowUpRight size={14} className="text-[#0D7B6C]" />
-                </Link>
                 <button
                   type="button"
                   onClick={() => setEnquiryOpen(true)}
-                  className="px-5 py-3.5 rounded-xl bg-teal-50/70 hover:bg-teal-50 text-[#0D7B6C] font-bold text-xs sm:text-sm border border-teal-200/80 transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                 >
-                  <span>Enquire / Custom Walkthrough</span>
+                  <span>Explore Live Demo / Walkthrough</span>
+                  <ArrowUpRight size={14} className="text-[#0D7B6C]" />
                 </button>
               </div>
 
