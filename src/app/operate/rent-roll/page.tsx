@@ -67,48 +67,22 @@ export default function RentRollProductPage() {
     setActiveFaq(activeFaq === index ? null : index);
   };
 
-  const sampleLedger = [
-    {
-      tenant: "Google Enterprise Services",
-      unit: "Floor 8 · Entire Plate",
-      area: "32,400 Sq.Ft.",
-      rent: "₹84,77,120",
-      cam: "₹8,10,000",
-      status: "Cleared RTGS",
-      statusColor: "text-emerald-700 bg-emerald-50 border-emerald-200",
-      nextEscalation: "Oct 2026 (+5%)"
-    },
-    {
-      tenant: "Tata Digital Limited",
-      unit: "Floor 5 · East Wing",
-      area: "24,000 Sq.Ft.",
-      rent: "₹63,24,800",
-      cam: "₹6,00,000",
-      status: "Auto-Reconciled",
-      statusColor: "text-emerald-700 bg-emerald-50 border-emerald-200",
-      nextEscalation: "Jan 2027 (+5%)"
-    },
-    {
-      tenant: "Deloitte Shared Services",
-      unit: "Floor 3 · West Wing",
-      area: "18,500 Sq.Ft.",
-      rent: "₹48,10,000",
-      cam: "₹4,62,500",
-      status: "Escrow Held",
-      statusColor: "text-teal-700 bg-teal-50 border-teal-200",
-      nextEscalation: "Nov 2026 (+4.5%)"
-    },
-    {
-      tenant: "Microsoft Cloud Lab",
-      unit: "Floor 2 · Suite 201",
-      area: "14,200 Sq.Ft.",
-      rent: "₹36,92,000",
-      cam: "₹3,55,000",
-      status: "Notice Served (4d overdue)",
-      statusColor: "text-amber-800 bg-amber-50 border-amber-200",
-      nextEscalation: "Dec 2026 (+5%)"
+  const [liveData, setLiveData] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadRegister() {
+      try {
+        const res = await fetch("/api/rent-roll/register");
+        const json = await res.json();
+        if (json.success) setLiveData(json);
+      } catch (e) {}
     }
-  ];
+    loadRegister();
+  }, []);
+
+  const visibleLeases = liveData?.rows?.filter((r: any) => r.type === "contract") || [];
+  const totalRentRoll = visibleLeases.reduce((sum: number, r: any) => sum + (r.monthly_base_rent || 0), 0);
+  const totalArea = visibleLeases.reduce((sum: number, r: any) => sum + (r.area_sqft || 0), 0);
 
   const features = [
     {
@@ -281,43 +255,55 @@ export default function RentRollProductPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
                     <span className="text-[10px] uppercase font-bold text-slate-500 block">Monthly Rent Roll</span>
-                    <span className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 block">₹12.4 Cr</span>
-                    <span className="text-[10px] font-semibold text-emerald-700">99.4% Collected</span>
+                    <span className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 block">
+                      ₹{Math.round(totalRentRoll).toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-700">Live Active Billing</span>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
                     <span className="text-[10px] uppercase font-bold text-slate-500 block">Active Leases</span>
-                    <span className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 block">48 Tenants</span>
-                    <span className="text-[10px] font-semibold text-slate-500">324,000 Sq.Ft.</span>
+                    <span className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 block">
+                      {visibleLeases.length} {visibleLeases.length === 1 ? "Tenant" : "Tenants"}
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      {totalArea.toLocaleString()} Sq.Ft.
+                    </span>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 col-span-2 sm:col-span-1">
                     <span className="text-[10px] uppercase font-bold text-slate-500 block">Upcoming Escalations</span>
-                    <span className="text-lg sm:text-xl font-black text-[#0D7B6C] mt-0.5 block">6 Leases</span>
+                    <span className="text-lg sm:text-xl font-black text-[#0D7B6C] mt-0.5 block">0 Leases</span>
                     <span className="text-[10px] font-semibold text-teal-700">Next 90 Days</span>
                   </div>
                 </div>
 
                 {/* Ledger Rows */}
                 <div className="space-y-2.5">
-                  {sampleLedger.map((row, idx) => (
-                    <div key={idx} className="bg-white hover:bg-slate-50 transition-colors p-3 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs">
-                      <div>
-                        <div className="font-extrabold text-slate-900 text-xs sm:text-sm">{row.tenant}</div>
-                        <div className="text-[11px] text-slate-500 font-medium">
-                          {row.unit} · <span className="text-slate-700 font-semibold">{row.area}</span>
+                  {visibleLeases.length > 0 ? (
+                    visibleLeases.slice(0, 4).map((row: any, idx: number) => (
+                      <div key={idx} className="bg-white hover:bg-slate-50 transition-colors p-3 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs">
+                        <div>
+                          <div className="font-extrabold text-slate-900 text-xs sm:text-sm">{row.occupant_name}</div>
+                          <div className="text-[11px] text-slate-500 font-medium">
+                            {row.space_name} · <span className="text-slate-700 font-semibold">{row.area_sqft ? Number(row.area_sqft).toLocaleString() : 0} Sq.Ft.</span>
+                          </div>
+                        </div>
+                        <div className="flex sm:flex-col items-end justify-between sm:justify-center shrink-0">
+                          <div className="font-mono font-black text-slate-900 text-xs sm:text-sm">
+                            ₹{Math.round(row.monthly_base_rent || 0).toLocaleString("en-IN")} <span className="text-[10px] text-slate-500 font-normal">/mo</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full border text-emerald-700 bg-emerald-50 border-emerald-200">
+                              {row.status?.replace(/_/g, " ")}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex sm:flex-col items-end justify-between sm:justify-center shrink-0">
-                        <div className="font-mono font-black text-slate-900 text-xs sm:text-sm">
-                          {row.rent} <span className="text-[10px] text-slate-500 font-normal">/mo</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${row.statusColor}`}>
-                            {row.status}
-                          </span>
-                        </div>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 px-4 text-center rounded-xl bg-slate-50/70 border border-dashed border-slate-200 text-slate-500 text-xs">
+                      No leases recorded in the database yet. Click below to add your first contract.
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {/* Bottom Status Bar */}

@@ -135,13 +135,13 @@ export default function FacilityManagerDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setMeterModalOpen(true)}
+          <Link
+            href="/operations/meters"
             className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold shadow-sm shadow-[#0F8B7D]/20 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Gauge size={14} />
-            <span>Enter Meter Readings</span>
-          </button>
+            <span>Enter Meter Readings (§S-31)</span>
+          </Link>
           <Link
             href="/properties/rent-roll?tab=cam-pools"
             className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-bold shadow-2xs transition-colors flex items-center gap-1.5"

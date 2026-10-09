@@ -2324,3 +2324,170 @@ export const invoices = invoice;
 export const invoiceLine = invoice_line;
 export const paymentAllocation = payment_allocation;
 
+// ============================================================================
+// Wave 2 Operations Tables: Metered Utilities & Flex Operations
+// ============================================================================
+
+export const meter = pgTable(
+  "meters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    org_id: uuid("org_id").notNull(),
+    property_id: uuid("property_id").notNull(),
+    space_id: uuid("space_id"),
+    building_id: uuid("building_id"),
+    meter_code: text("meter_code").notNull(),
+    meter_name: text("meter_name"),
+    utility: text("utility").notNull(), // electricity, dg_backup, water, gas, hvac_btu
+    multiplier: numeric("multiplier", { precision: 10, scale: 4 }).default("1.0000").notNull(),
+    is_virtual: boolean("is_virtual").default(false).notNull(),
+    status: text("status").default("active").notNull(),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("meter_org_id_idx").on(table.org_id),
+    index("meter_property_id_idx").on(table.property_id),
+  ]
+);
+
+export const tariff = pgTable(
+  "tariffs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    org_id: uuid("org_id").notNull(),
+    property_id: uuid("property_id").notNull(),
+    billing_entity_id: uuid("billing_entity_id"),
+    utility: text("utility").notNull(),
+    tariff_name: text("tariff_name"),
+    rate: numeric("rate", { precision: 12, scale: 4 }).notNull(),
+    unit: text("unit").default("kWh").notNull(),
+    valid_from: date("valid_from").notNull(),
+    valid_to: date("valid_to"),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("tariff_org_prop_idx").on(table.org_id, table.property_id),
+  ]
+);
+
+export const meter_reading = pgTable(
+  "meter_readings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    org_id: uuid("org_id").notNull(),
+    property_id: uuid("property_id").notNull(),
+    meter_id: uuid("meter_id").notNull(),
+    space_id: uuid("space_id"),
+    period: text("period").notNull(),
+    opening: numeric("opening", { precision: 14, scale: 2 }).notNull(),
+    closing: numeric("closing", { precision: 14, scale: 2 }).notNull(),
+    multiplier: numeric("multiplier", { precision: 10, scale: 4 }).default("1.0000").notNull(),
+    consumption: numeric("consumption", { precision: 14, scale: 2 }).notNull(),
+    tariff_rate: numeric("tariff_rate", { precision: 12, scale: 4 }).notNull(),
+    amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+    reading_date: date("reading_date").notNull(),
+    photo_path: text("photo_path"),
+    source: text("source").default("manual").notNull(),
+    is_spike: boolean("is_spike").default(false).notNull(),
+    spike_note: text("spike_note"),
+    status: text("status").default("draft").notNull(),
+    submitted_by: uuid("submitted_by"),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("reading_org_prop_period_idx").on(table.org_id, table.property_id, table.period),
+    index("reading_meter_id_idx").on(table.meter_id),
+  ]
+);
+
+export const seat_count = pgTable(
+  "seat_counts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    org_id: uuid("org_id").notNull(),
+    property_id: uuid("property_id").notNull(),
+    contract_id: uuid("contract_id"),
+    occupant_id: uuid("occupant_id"),
+    period: text("period").notNull(),
+    plan_name: text("plan_name"),
+    billing_basis: text("billing_basis").notNull(),
+    contracted_seats: integer("contracted_seats").default(0).notNull(),
+    minimum_seats: integer("minimum_seats").default(0).notNull(),
+    occupied_seats: integer("occupied_seats").default(0).notNull(),
+    billable_seats: integer("billable_seats").default(0).notNull(),
+    seat_rate: numeric("seat_rate", { precision: 12, scale: 2 }).default("0").notNull(),
+    amount: numeric("amount", { precision: 14, scale: 2 }).default("0").notNull(),
+    meeting_room_overage_hours: numeric("meeting_room_overage_hours", { precision: 8, scale: 2 }).default("0"),
+    meeting_room_overage_amount: numeric("meeting_room_overage_amount", { precision: 12, scale: 2 }).default("0"),
+    source: text("source").default("manual").notNull(),
+    status: text("status").default("draft").notNull(),
+    submitted_by: uuid("submitted_by"),
+    approved_by: uuid("approved_by"),
+    notes: text("notes"),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("seat_count_org_prop_period_idx").on(table.org_id, table.property_id, table.period),
+  ]
+);
+
+export const meters = meter;
+export const tariffs = tariff;
+export const meterReadings = meter_reading;
+export const seatCounts = seat_count;
+
+export const cam_pool = pgTable(
+  "cam_pools",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    org_id: uuid("org_id").notNull(),
+    property_id: uuid("property_id").notNull(),
+    pool_name: text("pool_name").notNull(),
+    financial_year: text("financial_year").notNull(),
+    annual_budget: numeric("annual_budget", { precision: 14, scale: 2 }).notNull(),
+    apportionment_method: text("apportionment_method").default("area_weighted").notNull(),
+    total_apportionment_area: numeric("total_apportionment_area", { precision: 12, scale: 2 }).default("0").notNull(),
+    status: text("status").default("active").notNull(),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("cam_pool_org_prop_idx").on(table.org_id, table.property_id),
+  ]
+);
+
+export const cam_pool_cost = pgTable(
+  "cam_pool_costs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pool_id: uuid("pool_id").notNull(),
+    category: text("category").notNull(),
+    budget_amount: numeric("budget_amount", { precision: 14, scale: 2 }).default("0").notNull(),
+    actual_cost: numeric("actual_cost", { precision: 14, scale: 2 }).default("0").notNull(),
+    variance: numeric("variance", { precision: 14, scale: 2 }).default("0").notNull(),
+    period: text("period"),
+    notes: text("notes"),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("cam_cost_pool_idx").on(table.pool_id),
+  ]
+);
+
+export const camPools = cam_pool;
+export const camPoolCosts = cam_pool_cost;
+
+export type Meter = typeof meter.$inferSelect;
+export type NewMeter = typeof meter.$inferInsert;
+export type Tariff = typeof tariff.$inferSelect;
+export type NewTariff = typeof tariff.$inferInsert;
+export type MeterReading = typeof meter_reading.$inferSelect;
+export type NewMeterReading = typeof meter_reading.$inferInsert;
+export type SeatCount = typeof seat_count.$inferSelect;
+export type NewSeatCount = typeof seat_count.$inferInsert;
+export type CamPool = typeof cam_pool.$inferSelect;
+export type NewCamPool = typeof cam_pool.$inferInsert;
+export type CamPoolCost = typeof cam_pool_cost.$inferSelect;
+export type NewCamPoolCost = typeof cam_pool_cost.$inferInsert;
+
+
+

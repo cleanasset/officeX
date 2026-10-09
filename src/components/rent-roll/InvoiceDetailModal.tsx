@@ -549,6 +549,18 @@ export default function InvoiceDetailModal({
                 </button>
               )}
 
+              {!isDraft && (
+                <a
+                  href={`/api/invoices/${inv.id}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+                >
+                  <Printer className="w-4 h-4 text-indigo-600" />
+                  Tax Invoice (PDF)
+                </a>
+              )}
+
               {!isDraft && !creditNoteOpen && (
                 <button
                   onClick={() => setCreditNoteOpen(true)}

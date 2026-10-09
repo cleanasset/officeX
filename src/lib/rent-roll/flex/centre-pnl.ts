@@ -50,13 +50,7 @@ export async function calculateCentrePnL(
   const results: CentrePnLResult[] = [];
 
   for (const prop of propertiesList) {
-    // 1. Query spaces in this property
-    const spacesList = await db
-      .select()
-      .from(space)
-      .where(and(eq(space.org_id, orgId))); // filtered per org
-
-    const totalSeats = prop.total_leasable_seats || 250;
+    const totalSeats = prop.total_leasable_seats || 0;
 
     // 2. Query receivable contracts on this property (Flex Seat Billing: billing_model="seats" or direction="receivable")
     const receivableContracts = await db
@@ -87,37 +81,27 @@ export async function calculateCentrePnL(
     let seatRevenue = 0;
 
     for (const c of receivableContracts) {
-      if (c.billing_model === "seats") {
-        // Seat billing
-        const charges = await db
-          .select()
-          .from(contract_charge)
-          .where(eq(contract_charge.contract_id, c.id));
-        const rate = charges.length > 0 ? parseFloat(charges[0].rate || "12000") : 12000;
-        const seats = 20; // default active seats per contract
-        occupiedSeats += seats;
-        seatRevenue += seats * rate;
-      } else {
-        // Area / Fixed billing
-        const charges = await db
-          .select()
-          .from(contract_charge)
-          .where(eq(contract_charge.contract_id, c.id));
-        const rent = charges.reduce(
-          (sum, ch) => sum + (parseFloat(ch.rate || "0") || 0),
-          150000
-        );
-        seatRevenue += rent;
-        occupiedSeats += 15;
-      }
+      const charges = await db
+        .select()
+        .from(contract_charge)
+        .where(eq(contract_charge.contract_id, c.id));
+
+      const contractSeats = c.billing_model === "seats" ? (charges.reduce((sum, ch) => sum + (ch.quantity_basis ? parseFloat(ch.quantity_basis) : 0), 0) || 0) : 0;
+      const rent = charges.reduce(
+        (sum, ch) => sum + (parseFloat(ch.rate || "0") || 0) * (ch.quantity_basis ? parseFloat(ch.quantity_basis) : 1),
+        0
+      );
+
+      occupiedSeats += contractSeats;
+      seatRevenue += rent;
     }
 
     occupiedSeats = Math.min(occupiedSeats, totalSeats);
     const vacantSeats = Math.max(0, totalSeats - occupiedSeats);
     const occupancyPct = totalSeats > 0 ? Math.round((occupiedSeats / totalSeats) * 1000) / 10 : 0;
 
-    // Ancillary revenue (meeting rooms, cafeteria, printing)
-    const ancillaryRevenue = Math.round(seatRevenue * 0.08 * 100) / 100;
+    // Ancillary revenue
+    const ancillaryRevenue = 0;
     const totalRevenue = seatRevenue + ancillaryRevenue;
 
     // Head lease cost calculation
@@ -128,17 +112,13 @@ export async function calculateCentrePnL(
         .from(contract_charge)
         .where(eq(contract_charge.contract_id, hc.id));
       const payableRent = charges.reduce(
-        (sum, ch) => sum + (parseFloat(ch.rate || "0") || 0),
-        250000
+        (sum, ch) => sum + (parseFloat(ch.rate || "0") || 0) * (ch.quantity_basis ? parseFloat(ch.quantity_basis) : 1),
+        0
       );
       headLeaseCost += payableRent;
     }
-    if (payableContracts.length === 0) {
-      headLeaseCost = Math.round(totalRevenue * 0.55 * 100) / 100; // estimated head lease benchmark
-    }
 
-    // Operating expenses (housekeeping, electricity, internet, community managers)
-    const opex = Math.round(totalRevenue * 0.15 * 100) / 100;
+    const opex = 0;
     const totalCost = headLeaseCost + opex;
 
     const noi = totalRevenue - totalCost;

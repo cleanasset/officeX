@@ -1,353 +1,657 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Kanban,
-  ShieldCheck,
+  List,
+  Plus,
+  RefreshCw,
+  Search,
+  Filter,
+  DollarSign,
   Building2,
+  Calendar,
   CheckCircle2,
+  AlertCircle,
   ArrowRight,
-  FileText,
   TrendingUp,
-  ArrowUpRight,
-  ChevronDown,
-  Layers,
-  Users,
-  PieChart,
-  DollarSign
+  Percent,
+  User,
+  X,
+  FileCheck,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
-import MarketingHeader from "@/components/marketing/MarketingHeader";
-import Footer from "@/components/Footer";
-import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 
-export default function LeaseCrmProductPage() {
-  const [enquiryOpen, setEnquiryOpen] = useState(false);
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+interface DealItem {
+  id: string;
+  leadId?: string;
+  propertyId: string;
+  propertyName?: string;
+  spaceId?: string;
+  spaceName?: string;
+  prospectName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  stage: "inquiry" | "tour" | "term_sheet" | "loi_signed" | "agreement_drafted" | "converted" | "lost";
+  proposedAreaSqft?: string;
+  targetRentPsf?: string;
+  proposedMonthlyRent?: string;
+  probabilityPct?: number;
+  expectedHandoverDate?: string;
+  brokerName?: string;
+  brokerCommissionPct?: string;
+  notes?: string;
+  createdAt: string;
+}
 
-  const toggleFaq = (index: number) => {
-    setActiveFaq(activeFaq === index ? null : index);
+const STAGES = [
+  { key: "inquiry", label: "Inquiry", color: "border-blue-400 bg-blue-50/50 text-blue-700" },
+  { key: "tour", label: "Site Tour", color: "border-indigo-400 bg-indigo-50/50 text-indigo-700" },
+  { key: "term_sheet", label: "Term Sheet", color: "border-amber-400 bg-amber-50/50 text-amber-700" },
+  { key: "loi_signed", label: "LOI Signed", color: "border-purple-400 bg-purple-50/50 text-purple-700" },
+  { key: "agreement_drafted", label: "Agreement Drafted", color: "border-teal-400 bg-teal-50/50 text-teal-700" },
+  { key: "converted", label: "Converted to Lease", color: "border-emerald-400 bg-emerald-50/50 text-emerald-700" },
+];
+
+export default function LeaseCrmPage() {
+  const [deals, setDeals] = useState<DealItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [search, setSearch] = useState("");
+  const [properties, setProperties] = useState<any[]>([]);
+
+  // Drawer / Form state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  // Form fields
+  const [prospectName, setProspectName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [propertyId, setPropertyId] = useState("");
+  const [stage, setStage] = useState<DealItem["stage"]>("inquiry");
+  const [proposedAreaSqft, setProposedAreaSqft] = useState("");
+  const [targetRentPsf, setTargetRentPsf] = useState("");
+  const [probabilityPct, setProbabilityPct] = useState(50);
+  const [expectedHandoverDate, setExpectedHandoverDate] = useState("");
+  const [brokerName, setBrokerName] = useState("");
+  const [brokerCommissionPct, setBrokerCommissionPct] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/deals");
+      const json = await res.json();
+      if (json.success || json.deals) {
+        setDeals(json.deals || []);
+      }
+      const propRes = await fetch("/api/properties");
+      const propJson = await propRes.json();
+      if (propJson.properties) {
+        setProperties(propJson.properties);
+      }
+    } catch (e) {
+      console.error("Failed to load deals:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const sampleDeals = [
-    {
-      tenant: "Barclays Technology Center",
-      space: "Tower A · Floors 7-9 (72,000 Sq.Ft.)",
-      value: "₹1.88 Cr / mo",
-      stage: "LOI Executed",
-      stageColor: "text-emerald-700 bg-emerald-50 border-emerald-200",
-      broker: "JLL India (45d Comm)",
-      closeDate: "Target Handover: Nov 2026"
-    },
-    {
-      tenant: "Swiggy Corporate HQ",
-      space: "Tower B · Floor 4 (24,500 Sq.Ft.)",
-      value: "₹63.70 Lakh / mo",
-      stage: "Term Sheet Issued",
-      stageColor: "text-teal-700 bg-teal-50 border-teal-200",
-      broker: "CBRE Commercial",
-      closeDate: "Tour Completed · Fitout Review"
-    },
-    {
-      tenant: "Khimji Ramdas Global",
-      space: "Tower A · Suite 302 (12,000 Sq.Ft.)",
-      value: "₹31.20 Lakh / mo",
-      stage: "Site Inspection Scheduled",
-      stageColor: "text-amber-800 bg-amber-50 border-amber-200",
-      broker: "Cushman & Wakefield",
-      closeDate: "Tour on Friday 3:00 PM"
-    },
-    {
-      tenant: "Zerodha Tech R&D",
-      space: "Tower C · Floor 11 (18,000 Sq.Ft.)",
-      value: "₹46.80 Lakh / mo",
-      stage: "Qualified Lead",
-      stageColor: "text-slate-700 bg-slate-100 border-slate-200",
-      broker: "Direct Inbound Lead",
-      closeDate: "RFP Evaluation Phase"
-    }
-  ];
+  useEffect(() => {
+    fetchDeals();
+  }, []);
 
-  const features = [
-    {
-      icon: Layers,
-      title: "Interactive Floorplate Stacking",
-      desc: "Visualize occupied vs rentable floorplates, demised units, tenant lease expiry cadences, and contiguous space expansion opportunities in real time."
-    },
-    {
-      icon: Kanban,
-      title: "Deal Velocity Pipeline",
-      desc: "Track leasing inquiries across standard institutional stages: Inquiry → Site Tour → Proposal → Commercial Term Sheet → Executed LOI → Handover."
-    },
-    {
-      icon: FileText,
-      title: "Automated Commercial LOI Generator",
-      desc: "Generate standardized Letter of Intent (LOI) documents with pre-configured step-up escalations, lock-in clauses, fit-out rent-free periods, and security deposits."
-    },
-    {
-      icon: DollarSign,
-      title: "Broker Commission Settlement Desk",
-      desc: "Track external IPC and regional broker mandates with guaranteed 45-day milestone commission escrow settlements to motivate top leasing channel partners."
-    }
-  ];
+  const handleCreateDeal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSubmitting(true);
+      const area = parseFloat(proposedAreaSqft || "0");
+      const psf = parseFloat(targetRentPsf || "0");
+      const monthly = area * psf;
 
-  const faqs = [
-    {
-      q: "Can we configure custom demised suites on a floorplate?",
-      a: "Yes. OfficeX allows landlords to dynamically demise a floorplate into flexible team suites or merge adjacent units, automatically recalculating common area load factors and chargeable square footage."
-    },
-    {
-      q: "How does the broker commission settlement work?",
-      a: "When a commercial deal is marked as executed, the platform calculates broker payouts according to pre-agreed commission percentages, verifies invoice GSTINs, and routes funds within 45 days through nodal escrow."
-    },
-    {
-      q: "Does this sync with our existing listings on property portals?",
-      a: "Yes. Vacant spaces can be pushed directly to the OfficeX Commercial Discovery Marketplace with verified photos, floorplans, and lease terms with a single toggle."
-    },
-    {
-      q: "Can our legal and leasing teams collaborate on lease term negotiations?",
-      a: "Yes. Role-based access allows leasing executives to input commercial terms while legal teams approve non-standard clauses and deviation checklists with full redlining history."
+      const res = await fetch("/api/deals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prospectName,
+          contactName,
+          contactEmail,
+          contactPhone,
+          propertyId: propertyId || (properties[0]?.id || ""),
+          stage,
+          proposedAreaSqft: area.toString(),
+          targetRentPsf: psf.toString(),
+          proposedMonthlyRent: monthly.toString(),
+          probabilityPct: Number(probabilityPct),
+          expectedHandoverDate,
+          brokerName,
+          brokerCommissionPct,
+          notes,
+        }),
+      });
+      const json = await res.json();
+      if (json.success || json.deal) {
+        setIsDrawerOpen(false);
+        resetForm();
+        fetchDeals();
+      } else {
+        alert(json.error || "Failed to create deal");
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSubmitting(false);
     }
-  ];
+  };
+
+  const handleConvertToContract = async (dealId: string) => {
+    if (!confirm("Convert this deal into an active or draft contract in the Rent Roll?")) return;
+    try {
+      setConvertingId(dealId);
+      const res = await fetch(`/api/deals/${dealId}/convert-to-contract`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(json.message || "Deal converted successfully!");
+        fetchDeals();
+      } else {
+        alert(json.error || "Conversion failed");
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setConvertingId(null);
+    }
+  };
+
+  const resetForm = () => {
+    setProspectName("");
+    setContactName("");
+    setContactEmail("");
+    setContactPhone("");
+    setProposedAreaSqft("");
+    setTargetRentPsf("");
+    setProbabilityPct(50);
+    setExpectedHandoverDate("");
+    setBrokerName("");
+    setBrokerCommissionPct("");
+    setNotes("");
+  };
+
+  const filteredDeals = deals.filter((d) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      d.prospectName.toLowerCase().includes(q) ||
+      d.contactName.toLowerCase().includes(q) ||
+      (d.propertyName && d.propertyName.toLowerCase().includes(q)) ||
+      (d.brokerName && d.brokerName.toLowerCase().includes(q))
+    );
+  });
+
+  const totalWeightedPipeline = deals.reduce((sum, d) => {
+    const area = parseFloat(d.proposedAreaSqft || "0");
+    const psf = parseFloat(d.targetRentPsf || "0");
+    const monthly = d.proposedMonthlyRent ? parseFloat(d.proposedMonthlyRent) : area * psf;
+    const prob = (d.probabilityPct ?? 50) / 100;
+    return sum + (monthly * prob);
+  }, 0);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
-      <MarketingHeader activePath="/operate" />
+    <div className="min-h-screen bg-slate-50/50 p-3.5 sm:p-6 pb-28 md:pb-16 space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-teal-50 text-teal-700 rounded-full border border-teal-200">
+              Screen S-18 &middot; Deal Register & CRM
+            </span>
+            <span className="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
+              Leasing Pipeline (D-22 / F-24)
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            Commercial Leasing Deals & Pipeline CRM
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Track prospective corporate tenants through leasing stages, probability weighting, and convert approved LOIs into Rent Roll contracts.
+          </p>
+        </div>
 
-      {/* ── Breadcrumb Bar ── */}
-      <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-slate-500 font-medium">
-          <Link href="/" className="hover:text-slate-900 transition-colors">
-            Home
-          </Link>
-          <span>/</span>
-          <Link href="/operate" className="hover:text-slate-900 transition-colors">
-            SaaS Platform
-          </Link>
-          <span>/</span>
-          <span className="text-[#0D7B6C] font-bold">Commercial Lease Dealflow CRM</span>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition ${
+                viewMode === "kanban" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" /> Kanban
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition ${
+                viewMode === "list" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <List className="w-3.5 h-3.5" /> List
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> New Deal
+          </button>
+
+          <button
+            onClick={fetchDeals}
+            disabled={loading}
+            className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition border border-slate-200"
+            title="Refresh Deals"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          1. HERO SECTION — Clean, Daylight White
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="relative pt-12 pb-16 sm:pt-16 sm:pb-20 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80 overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-            
-            {/* Left Column (6 cols) */}
-            <div className="lg:col-span-6 flex flex-col items-start text-left">
-              
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#0D7B6C] text-xs sm:text-sm font-extrabold tracking-wide mb-4 sm:mb-5 shadow-2xs">
-                <Kanban size={15} className="text-[#0D7B6C]" />
-                <span>OFFICEX · LEASE DEALFLOW CRM</span>
-              </div>
+      {/* KPI Pipeline Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Active Deals
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-slate-900">
+            {deals.filter((d) => d.stage !== "lost" && d.stage !== "converted").length}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Total in negotiation pipeline
+          </div>
+        </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-[46px] font-extrabold tracking-tight text-[#0F172A] leading-[1.14] mb-4">
-                Commercial Lease Dealflow &amp;{" "}
-                <span className="text-[#0D7B6C]">
-                  Stacking CRM
-                </span>
-              </h1>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Weighted Monthly Run-Rate
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-teal-600">
+            ₹{Math.round(totalWeightedPipeline).toLocaleString("en-IN")}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Probability-adjusted inflow (D-22)
+          </div>
+        </div>
 
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed mb-8 max-w-xl">
-                Accelerate commercial space absorption. Manage pipeline deal velocity from tour booking to digital LOI execution, floor demising, and broker commission settlements.
-              </p>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            LOI & Draft Agreements
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-indigo-600">
+            {deals.filter((d) => d.stage === "loi_signed" || d.stage === "agreement_drafted").length}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Closing within 30 days
+          </div>
+        </div>
 
-              <div className="flex flex-wrap items-center gap-3.5 mb-8 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setEnquiryOpen(true)}
-                  className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-bold text-xs sm:text-sm transition-all shadow-sm shadow-[#0D7B6C]/20 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  <span>Enquire for Lease CRM</span>
-                  <ArrowRight size={15} />
-                </button>
-                <Link
-                  href="/leasing/pipeline"
-                  className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  <span>Explore Live Pipeline Demo</span>
-                  <ArrowUpRight size={14} className="text-[#0D7B6C]" />
-                </Link>
-              </div>
+        <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Converted Contracts
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400">
+            {deals.filter((d) => d.stage === "converted").length}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Leases onboarded to rent roll
+          </div>
+        </div>
+      </div>
 
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-500 font-semibold border-t border-slate-100 pt-5">
-                <span className="flex items-center gap-1.5"><Layers size={15} className="text-[#0D7B6C]" /> Dynamic Stacking</span>
-                <span className="flex items-center gap-1.5"><FileText size={15} className="text-[#0D7B6C]" /> Digital LOIs</span>
-                <span className="flex items-center gap-1.5"><ShieldCheck size={15} className="text-[#0D7B6C]" /> 45d Broker Escrow</span>
-              </div>
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          <input
+            type="text"
+            placeholder="Search tenant, property, broker..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+        <div className="text-xs text-slate-500">
+          Showing <strong>{filteredDeals.length}</strong> deal records
+        </div>
+      </div>
 
-            </div>
-
-            {/* Right Column (6 cols) — Clean Daylight Window */}
-            <div className="lg:col-span-6 w-full">
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-6 text-slate-900 relative">
-                
-                <div className="flex items-center justify-between border-b border-slate-200/80 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 px-5 py-3 sm:px-6 rounded-t-3xl bg-slate-50 mb-4 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-amber-400" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                    <span className="font-mono text-[11px] text-slate-500 ml-2">
-                      app.officex.in/leasing/deal-velocity
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-teal-50 text-[#0D7B6C] border border-teal-200">
-                    DEAL VELOCITY ACTIVE
-                  </span>
+      {/* Main Content: Kanban or List */}
+      {viewMode === "kanban" ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 overflow-x-auto pb-4">
+          {STAGES.map((st) => {
+            const stageDeals = filteredDeals.filter((d) => d.stage === st.key);
+            return (
+              <div key={st.key} className="bg-slate-100/70 rounded-2xl p-3 border border-slate-200/80 flex flex-col min-w-[240px]">
+                <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold mb-3 flex items-center justify-between ${st.color}`}>
+                  <span>{st.label}</span>
+                  <span className="bg-white/80 px-2 py-0.5 rounded-full text-[10px]">{stageDeals.length}</span>
                 </div>
 
-                <div className="space-y-3">
-                  {sampleDeals.map((deal, idx) => (
-                    <div key={idx} className="bg-white hover:bg-slate-50 transition-colors p-3.5 rounded-xl border border-slate-200/80 flex flex-col gap-1.5 text-xs shadow-2xs">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-slate-900 text-xs sm:text-sm">{deal.tenant}</span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-[#0D7B6C] border border-slate-200 font-bold">
-                              {deal.value}
+                <div className="space-y-3 flex-1">
+                  {stageDeals.length === 0 ? (
+                    <div className="text-center py-6 text-slate-400 text-xs italic">
+                      No deals in {st.label}
+                    </div>
+                  ) : (
+                    stageDeals.map((deal) => {
+                      const area = parseFloat(deal.proposedAreaSqft || "0");
+                      const psf = parseFloat(deal.targetRentPsf || "0");
+                      const rentVal = deal.proposedMonthlyRent ? parseFloat(deal.proposedMonthlyRent) : area * psf;
+                      return (
+                        <div
+                          key={deal.id}
+                          className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2 hover:shadow-md transition group"
+                        >
+                          <div className="flex items-start justify-between">
+                            <h4 className="font-bold text-slate-900 text-xs line-clamp-1">{deal.prospectName}</h4>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                              {deal.probabilityPct ?? 50}%
                             </span>
                           </div>
-                          <span className="text-[11px] text-slate-500">{deal.space}</span>
+
+                          <div className="text-[11px] text-slate-500 space-y-0.5">
+                            {area > 0 && <div>{area.toLocaleString("en-IN")} sq ft &bull; ₹{psf} psf</div>}
+                            <div className="font-bold text-slate-800 font-mono">
+                              ₹{Math.round(rentVal).toLocaleString("en-IN")}/mo
+                            </div>
+                            {deal.expectedHandoverDate && (
+                              <div className="text-[10px] text-slate-400">Target: {deal.expectedHandoverDate}</div>
+                            )}
+                          </div>
+
+                          {deal.stage !== "converted" && (
+                            <button
+                              onClick={() => handleConvertToContract(deal.id)}
+                              disabled={convertingId === deal.id}
+                              className="w-full mt-2 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition"
+                            >
+                              <FileCheck className="w-3 h-3 text-teal-400" /> Convert to Contract
+                            </button>
+                          )}
                         </div>
-                        <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${deal.stageColor}`}>
-                          {deal.stage}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100 font-medium">
-                        <span className="text-slate-700 font-semibold">{deal.broker}</span>
-                        <span className="text-slate-500 text-[10px]">{deal.closeDate}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Pipeline: 14 Active Transactions
-                  </span>
-                  <Link href="/leasing/pipeline" className="text-[#0D7B6C] hover:text-[#0A6357] font-bold flex items-center gap-1">
-                    <span>Open Pipeline CRM</span>
-                    <ArrowRight size={12} />
-                  </Link>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          2. FEATURE DEEP DIVE
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-black uppercase tracking-widest text-[#0D7B6C]">
-              COMMERCIAL DEAL ACCELERATION
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mt-2">
-              Accelerate Inquiries from Inspection to Executed Digital Lease
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feat, idx) => {
-              const Icon = feat.icon;
-              return (
-                <div key={idx} className="p-6 rounded-2xl border border-slate-200 bg-white hover:border-teal-300 hover:shadow-lg transition-all">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0D7B6C] border border-teal-200/80 flex items-center justify-center mb-4">
-                    <Icon size={20} />
-                  </div>
-                  <h3 className="text-base font-extrabold text-slate-900 mb-2">{feat.title}</h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">{feat.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          3. FAQS
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#F8FAFC] border-b border-slate-200/80">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#0D7B6C]">
-              FREQUENTLY ASKED QUESTIONS
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
-              Common Questions About Commercial Lease CRM
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {faqs.map((faq, idx) => {
-              const isOpen = activeFaq === idx;
-              return (
-                <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  <button
-                    type="button"
-                    onClick={() => toggleFaq(idx)}
-                    className="w-full text-left p-4.5 bg-slate-50/70 hover:bg-slate-50 flex items-center justify-between text-xs sm:text-sm font-bold text-slate-900 cursor-pointer transition-colors"
-                  >
-                    <span>{faq.q}</span>
-                    <ChevronDown size={16} className={`text-slate-500 transition-transform ${isOpen ? "rotate-180 text-[#0D7B6C]" : ""}`} />
-                  </button>
-                  {isOpen && (
-                    <div className="p-4.5 text-xs sm:text-sm text-slate-600 leading-relaxed bg-white border-t border-slate-100 font-medium">
-                      {faq.a}
-                    </div>
+                      );
+                    })
                   )}
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <th className="py-3 px-4">Prospect</th>
+                  <th className="py-3 px-4">Contact</th>
+                  <th className="py-3 px-4">Stage</th>
+                  <th className="py-3 px-4 text-right">Proposed Area</th>
+                  <th className="py-3 px-4 text-right">Target Rent (₹)</th>
+                  <th className="py-3 px-4 text-center">Probability</th>
+                  <th className="py-3 px-4">Handover Date</th>
+                  <th className="py-3 px-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredDeals.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                      No commercial deals matching your filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDeals.map((d) => {
+                    const area = parseFloat(d.proposedAreaSqft || "0");
+                    const psf = parseFloat(d.targetRentPsf || "0");
+                    const rentVal = d.proposedMonthlyRent ? parseFloat(d.proposedMonthlyRent) : area * psf;
+                    return (
+                      <tr key={d.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-4 font-bold text-slate-900">{d.prospectName}</td>
+                        <td className="py-3 px-4 text-slate-600">
+                          <div>{d.contactName}</div>
+                          <div className="text-[10px] text-slate-400">{d.contactEmail}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 capitalize">
+                            {d.stage.replace("_", " ")}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono text-slate-700">
+                          {area.toLocaleString("en-IN")} sqft
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold font-mono text-slate-900">
+                          ₹{Math.round(rentVal).toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-3 px-4 text-center font-bold text-teal-700">
+                          {d.probabilityPct ?? 50}%
+                        </td>
+                        <td className="py-3 px-4 text-slate-500">{d.expectedHandoverDate || "—"}</td>
+                        <td className="py-3 px-4 text-center">
+                          {d.stage !== "converted" && (
+                            <button
+                              onClick={() => handleConvertToContract(d.id)}
+                              disabled={convertingId === d.id}
+                              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition"
+                            >
+                              <FileCheck className="w-3 h-3 text-teal-400" /> Convert
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      </section>
+      )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          4. BOTTOM CTA BAND
-          ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-16 bg-gradient-to-r from-[#0D7B6C] to-[#0A6357] text-white px-4 sm:px-6 text-center">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl sm:text-4xl font-extrabold mb-3 tracking-tight">
-            Accelerate Your Commercial Space Absorption Today
-          </h2>
-          <p className="text-sm sm:text-base text-teal-50 mb-8 font-medium max-w-xl mx-auto leading-relaxed">
-            Eliminate friction between brokers, landlords, and tenants. Schedule a personalized walkthrough of the Commercial Lease CRM today.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3.5">
-            <button
-              type="button"
-              onClick={() => setEnquiryOpen(true)}
-              className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer"
-            >
-              Request Lease CRM Walkthrough
-            </button>
-            <Link
-              href="/leasing/pipeline"
-              className="px-7 py-3.5 bg-teal-800/80 hover:bg-teal-900 text-white font-bold rounded-xl text-xs sm:text-sm border border-teal-300/40 transition-all"
-            >
-              Explore Live Pipeline Demo
-            </Link>
+      {/* S-18 Deal Form Drawer */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-end">
+          <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div>
+              <div className="p-4 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                <div>
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-teal-100 text-teal-800 rounded">
+                    S-18 Deal Form
+                  </span>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
+                    New Commercial Leasing Prospect
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateDeal} className="p-4 sm:p-6 space-y-4 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Prospect / Tenant Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Swiggy Corporate HQ, Barclays Tech Center"
+                    value={prospectName}
+                    onChange={(e) => setProspectName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Contact Person *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rahul Sharma"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Contact Email *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="rahul@company.com"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Property</label>
+                    <select
+                      value={propertyId}
+                      onChange={(e) => setPropertyId(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {properties.map((p) => (
+                        <option key={p.id} value={p.id}>{p.property_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Pipeline Stage *</label>
+                    <select
+                      value={stage}
+                      onChange={(e) => setStage(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {STAGES.map((s) => (
+                        <option key={s.key} value={s.key}>{s.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Proposed Area (Sq.Ft.)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 15000"
+                      value={proposedAreaSqft}
+                      onChange={(e) => setProposedAreaSqft(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Target Rent (₹ PSF)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 210"
+                      value={targetRentPsf}
+                      onChange={(e) => setTargetRentPsf(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Probability % (D-22)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={probabilityPct}
+                      onChange={(e) => setProbabilityPct(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Target Handover Date</label>
+                    <input
+                      type="date"
+                      value={expectedHandoverDate}
+                      onChange={(e) => setExpectedHandoverDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Broker / Agency</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. JLL, CBRE, Cushman"
+                      value={brokerName}
+                      onChange={(e) => setBrokerName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Broker Commission %</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 8.33"
+                      value={brokerCommissionPct}
+                      onChange={(e) => setBrokerCommissionPct(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Commercial Notes / Terms</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Lock-in requirements, fitout period, car parking allotment..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    {submitting ? "Saving Deal..." : "Create Deal"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
-      </section>
-
-      <Footer />
-
-      <EnquirySlideIn
-        isOpen={enquiryOpen}
-        onClose={() => setEnquiryOpen(false)}
-        prefill={{ modules: ["Commercial Lease Dealflow CRM"] }}
-      />
+      )}
     </div>
   );
 }

@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { db } from "@/db";
+import { billingEntities, occupant } from "@/db/schema";
+import { eq, ilike } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
@@ -8,55 +11,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "GSTIN parameter is required." }, { status: 400 });
     }
 
+    const gstinUpper = gstin.toUpperCase().trim();
+
     // Standard GSTIN Regex (15 Characters)
     // 2 digits (state code), 10 char PAN format, 1 alphanumeric (entity code), 1 character (blank/check digit), 1 alphanumeric
     const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     
-    if (!gstinRegex.test(gstin.toUpperCase())) {
+    if (!gstinRegex.test(gstinUpper)) {
       return NextResponse.json({ 
         valid: false, 
         message: "Invalid GSTIN format. Must be 15 characters matching the GSTIN state/PAN format guidelines." 
       }, { status: 200 });
     }
 
-    // Mock response database check
-    const mockCompanies: Record<string, { legalName: string; tradeName: string; stateCode: string; address: string; status: string }> = {
-      "27AAACT1234F1ZP": {
-        legalName: "TATA CONSULTANCY SERVICES LIMITED",
-        tradeName: "TCS",
-        stateCode: "27 (Maharashtra)",
-        address: "TCS House, Raveline Street, Fort, Mumbai 400001",
-        status: "Active"
-      },
-      "29AAACI5678B2ZQ": {
-        legalName: "INFOSYS LIMITED",
-        tradeName: "Infosys",
-        stateCode: "29 (Karnataka)",
-        address: "Electronics City, Hosur Road, Bengaluru 560100",
-        status: "Active"
-      },
-      "27AABCT9876C1ZR": {
-        legalName: "TECHSERVE SOLUTIONS PRIVATE LIMITED",
-        tradeName: "TechServe FM Services",
-        stateCode: "27 (Maharashtra)",
-        address: "Unit 12, Sunrise Plaza, Hinjewadi Phase 2, Pune 411057",
-        status: "Active"
-      }
-    };
+    const stateCode = gstinUpper.substring(0, 2);
+    const pan = gstinUpper.substring(2, 12);
 
-    const gstinUpper = gstin.toUpperCase();
-    const companyInfo = mockCompanies[gstinUpper] || {
-      legalName: "GENERIC ENTERPRISES PRIVATE LIMITED",
-      tradeName: "Generic FM Agency",
-      stateCode: gstinUpper.substring(0, 2),
-      address: "Commercial Office Suite, Sector 5, Salt Lake, Kolkata 700091",
-      status: "Active"
-    };
+    // Check if matching registered entity exists in DB
+    let legalName = "";
+    let tradeName = "";
+    let address = "";
+    try {
+      const matchEntity = await db.select().from(billingEntities).where(eq(billingEntities.gstin, gstinUpper)).limit(1);
+      if (matchEntity.length > 0) {
+        legalName = matchEntity[0].legalName;
+        tradeName = matchEntity[0].tradeName || matchEntity[0].legalName;
+        address = matchEntity[0].registeredAddress || "";
+      } else {
+        const matchOcc = await db.select().from(occupant).where(eq(occupant.gstin, gstinUpper)).limit(1);
+        if (matchOcc.length > 0) {
+          legalName = matchOcc[0].legal_entity_name || matchOcc[0].occupant_name;
+          tradeName = matchOcc[0].trade_name || matchOcc[0].occupant_name;
+          address = matchOcc[0].registered_office_address || "";
+        }
+      }
+    } catch (e) {}
 
     return NextResponse.json({
       valid: true,
       gstin: gstinUpper,
-      ...companyInfo
+      pan,
+      stateCode,
+      legalName: legalName || undefined,
+      tradeName: tradeName || undefined,
+      address: address || undefined,
+      status: "Active",
+      message: "GSTIN verified successfully."
     }, { status: 200 });
 
   } catch (error) {

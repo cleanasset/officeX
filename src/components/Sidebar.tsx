@@ -34,8 +34,10 @@ import {
   Zap,
   Landmark,
   Server,
+  Database,
   Cloud,
-  CreditCard
+  CreditCard,
+  Menu
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -67,19 +69,31 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
       subItems: [
         { name: "Dashboard", href: "/properties/rent-roll?tab=dashboard", tabKey: "dashboard", icon: Building },
         { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
+        { name: "Leasing CRM (S-18)", href: "/operate/lease-crm", tabKey: "lease-crm", icon: Sparkles },
         { name: "Billing & Invoices", href: "/operate/invoices", tabKey: "invoices", icon: DollarSign },
+        { name: "Payments & Allocations (S-43)", href: "/operate/payments", tabKey: "payments", icon: CreditCard },
+        { name: "Collections & Ageing (S-45)", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
+        { name: "Credit Notes (S-42)", href: "/operate/credit-notes", tabKey: "credit-notes", icon: FileText },
+        { name: "Tenant Disputes (S-46)", href: "/operate/disputes", tabKey: "disputes", icon: ShieldCheck },
         { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", tabKey: "meter-readings", icon: Zap },
-        { name: "Collections", href: "/properties/rent-roll?tab=collections", tabKey: "collections", icon: CheckCircle },
-        { name: "Arrears & Aging", href: "/properties/rent-roll?tab=aging", tabKey: "aging", icon: AlertTriangle },
-        { name: "Escalations & Expiries", href: "/properties/rent-roll?tab=escalations", tabKey: "escalations", icon: TrendingUp },
-        { name: "Occupancy & Stacking", href: "/properties/rent-roll?tab=occupancy", tabKey: "occupancy", icon: Layers },
-        { name: "12-Mo Forecast", href: "/properties/rent-roll?tab=forecast", tabKey: "forecast", icon: Calendar },
-        { name: "NOI & P&L", href: "/properties/rent-roll?tab=pnl", tabKey: "pnl", icon: BarChart3 },
-        { name: "Flex & Coworking", href: "/properties/rent-roll?tab=flex-centre", tabKey: "flex-centre", icon: Layers },
-        { name: "CAM Pools & True-Up", href: "/properties/rent-roll?tab=cam-pools", tabKey: "cam-pools", icon: Sparkles },
+        { name: "Escalation Calendar (S-25)", href: "/operate/escalations", tabKey: "escalations", icon: TrendingUp },
+        { name: "Renewals Pipeline (S-24)", href: "/operate/renewals", tabKey: "renewals", icon: Clock },
+        { name: "Bulk Import Centre (S-30)", href: "/operate/imports", tabKey: "imports", icon: FolderOpen },
+        { name: "Stacking Plan (S-26)", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
+        { name: "Owner Statements (S-55)", href: "/operate/owner-statements", tabKey: "owner-statements", icon: Landmark },
+        { name: "Client Mandates (S-56)", href: "/operate/mandates", tabKey: "mandates", icon: Briefcase },
+        { name: "Head Leases & Flex (S-57)", href: "/operate/head-leases", tabKey: "head-leases", icon: TrendingUp },
+        { name: "12-Mo Forecast (S-51)", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
+        { name: "NOI & P&L (S-52)", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
+        { name: "Exceptions (S-50)", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
+        { name: "Month-End Lock (S-53)", href: "/operate/snapshots", tabKey: "snapshots", icon: ShieldCheck },
+        { name: "MIS Investor Pack (S-54)", href: "/operate/mis", tabKey: "mis", icon: FileText },
+        { name: "CAM Pools & True-Up", href: "/operate/cam-pools", tabKey: "cam-pools", icon: Sparkles },
         { name: "Tenants & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
         { name: "Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
-        { name: "Audit Trail", href: "/properties/rent-roll?tab=audit", tabKey: "audit", icon: ShieldCheck }
+        { name: "Settings Master (S-60…S-67)", href: "/settings", tabKey: "settings", icon: Settings },
+        { name: "Tally ERP Sync (RR-INT-01)", href: "/operate/sync/tally", tabKey: "tally-sync", icon: Database },
+        { name: "Bank Reconciler (RR-INT-02)", href: "/operate/sync/bank-reconcile", tabKey: "bank-reconcile", icon: Landmark }
       ]
     },
     { 
@@ -128,7 +142,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
   // LEASING BROKER (CRM)
   leasing: [
     { name: "Broker Dashboard", href: "/leasing", icon: TrendingUp },
-    { name: "Leasing Pipeline", href: "/leasing/pipeline", icon: Layers },
+    { name: "Leasing CRM (S-18)", href: "/operate/lease-crm", icon: Sparkles },
     { name: "Space Listings Builder", href: "/leasing/listings", icon: Sparkles },
     { name: "Leads & Enquiries", href: "/leasing/leads", icon: Users },
     { name: "Site Visits Schedule", href: "/leasing/visits", icon: Calendar },
@@ -194,7 +208,8 @@ const pathPortalAliases: Record<string, string> = {
   "operations": "ops",
   "reports": "reporting",
   "discover": "public",
-  "calq": "leasing"
+  "calq": "leasing",
+  "operate": "properties"
 };
 
 export default function Sidebar() {
@@ -437,6 +452,71 @@ export default function Sidebar() {
           </Link>
         </div>
       </div>
+
+      {/* Mobile App Bottom Navigation Bar (md:hidden) — Native App Experience */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-2 py-1.5 flex items-center justify-around safe-area-bottom"
+      >
+        <Link
+          href="/properties/rent-roll"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+            pathname.startsWith("/properties/rent-roll") || pathname === "/operate/rent-roll"
+              ? "text-[#0F8B7D] font-bold"
+              : "text-slate-500 hover:text-slate-900 font-medium"
+          }`}
+        >
+          <DollarSign size={20} className={pathname.startsWith("/properties/rent-roll") || pathname === "/operate/rent-roll" ? "stroke-[2.5]" : ""} />
+          <span className="text-[10px] mt-0.5 tracking-tight font-semibold">Rent Roll</span>
+        </Link>
+
+        <Link
+          href="/operate/invoices"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+            pathname.startsWith("/operate/invoices") || pathname.startsWith("/invoices")
+              ? "text-[#0F8B7D] font-bold"
+              : "text-slate-500 hover:text-slate-900 font-medium"
+          }`}
+        >
+          <FileText size={20} className={pathname.startsWith("/operate/invoices") || pathname.startsWith("/invoices") ? "stroke-[2.5]" : ""} />
+          <span className="text-[10px] mt-0.5 tracking-tight font-semibold">Invoices</span>
+        </Link>
+
+        <Link
+          href="/operate/stacking"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+            pathname.startsWith("/operate/stacking")
+              ? "text-[#0F8B7D] font-bold"
+              : "text-slate-500 hover:text-slate-900 font-medium"
+          }`}
+        >
+          <Layers size={20} className={pathname.startsWith("/operate/stacking") ? "stroke-[2.5]" : ""} />
+          <span className="text-[10px] mt-0.5 tracking-tight font-semibold">Stacking</span>
+        </Link>
+
+        <Link
+          href="/operate/pnl"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+            pathname.startsWith("/operate/pnl") || pathname.startsWith("/operate/owner-statements")
+              ? "text-[#0F8B7D] font-bold"
+              : "text-slate-500 hover:text-slate-900 font-medium"
+          }`}
+        >
+          <BarChart3 size={20} className={pathname.startsWith("/operate/pnl") || pathname.startsWith("/operate/owner-statements") ? "stroke-[2.5]" : ""} />
+          <span className="text-[10px] mt-0.5 tracking-tight font-semibold">P&amp;L</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+            isOpen ? "text-[#0F8B7D] font-bold" : "text-slate-500 hover:text-slate-900 font-medium"
+          }`}
+        >
+          <Menu size={20} />
+          <span className="text-[10px] mt-0.5 tracking-tight font-semibold">Menu</span>
+        </button>
+      </nav>
     </>
   );
 }

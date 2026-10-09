@@ -13,64 +13,36 @@ export async function GET(req: NextRequest) {
   const periodEnd = searchParams.get("period_end") || undefined;
   let clientAccountId = searchParams.get("client_account_id");
 
-  const defaultSpecStatement = {
-    client_account_id: clientAccountId || "11111111-1111-1111-1111-111111111111",
-    client_name: "Sharma Estates (Managed)",
-    client_code: "SHARMA",
+  const emptyStatement = {
+    client_account_id: clientAccountId || "",
+    client_name: "No Managed Portfolio Selected",
+    client_code: "NONE",
     billing_entity: {
-      entity_name: "Apex PropCo LLP",
-      entity_code: "APEX-PROPCO",
-      gst_number: "27AABCS1429B1Z1",
-      pan_number: "AABCS1429B",
+      entity_name: "Entity Not Configured",
+      entity_code: "N/A",
+      gst_number: "—",
+      pan_number: "—",
     },
-    period: "October 2026",
-    period_start: periodStart || "2026-10-01",
-    period_end: periodEnd || "2026-10-31",
+    period: "Current Period",
+    period_start: periodStart || new Date().toISOString().split("T")[0],
+    period_end: periodEnd || new Date().toISOString().split("T")[0],
     statement_date: new Date().toISOString().split("T")[0],
-    billed_gross_inr: 5200000,
-    collected_inr: 4800000,
-    arrears_carried_forward_inr: 400000,
+    billed_gross_inr: 0,
+    collected_inr: 0,
+    arrears_carried_forward_inr: 0,
     management_fee: {
       fee_structure: "percentage_of_collections",
       rate_or_fixed: "4.0%",
-      fee_amount_inr: 192000,
+      fee_amount_inr: 0,
     },
     mgmt_fee_percent: 4.0,
-    mgmt_fee_inr: 192000,
-    gst_on_fee_inr: 34560,
-    operating_expenses_inr: 120000,
-    expenses_paid_inr: 120000,
-    net_payable_to_owner_inr: 4453440,
-    net_remittance_inr: 4453440,
-    invoices_summary: [
-      {
-        invoice_number: "INV-26-27-0101",
-        invoice_date: "2026-10-01",
-        occupant_name: "Innovate Corp Solutions",
-        gross_total: 2090000,
-        amount_paid: 2090000,
-        balance_due: 0,
-        status: "paid",
-      },
-      {
-        invoice_number: "INV-26-27-0102",
-        invoice_date: "2026-10-01",
-        occupant_name: "NextGen Retail Private Ltd",
-        gross_total: 2024000,
-        amount_paid: 2024000,
-        balance_due: 0,
-        status: "paid",
-      },
-      {
-        invoice_number: "INV-26-27-0103",
-        invoice_date: "2026-10-01",
-        occupant_name: "Brightpath Workspaces",
-        gross_total: 1086000,
-        amount_paid: 686000,
-        balance_due: 400000,
-        status: "partially_paid",
-      },
-    ],
+    mgmt_fee_inr: 0,
+    gst_on_fee_inr: 0,
+    operating_expenses_inr: 0,
+    expenses_paid_inr: 0,
+    net_payable_to_owner_inr: 0,
+    net_remittance_inr: 0,
+    invoices_summary: [],
   };
 
   try {
@@ -101,20 +73,20 @@ export async function GET(req: NextRequest) {
           data: liveStatement,
         });
       } catch (dbErr) {
-        // Fallback gracefully to Table 103 spec statement
+        console.warn("Could not generate live statement:", dbErr);
       }
     }
 
     return NextResponse.json({
       success: true,
-      statement: defaultSpecStatement,
-      data: defaultSpecStatement,
+      statement: emptyStatement,
+      data: emptyStatement,
     });
   } catch (err: any) {
     return NextResponse.json({
       success: true,
-      statement: defaultSpecStatement,
-      data: defaultSpecStatement,
+      statement: emptyStatement,
+      data: emptyStatement,
     });
   }
 }

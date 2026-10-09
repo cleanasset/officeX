@@ -1245,7 +1245,9 @@ export const contractConcessions = pgTable("contract_concessions", {
 // Security Deposit Ledger & Shortfalls (§4.4, RR-ALR-07)
 export const depositTransactions = pgTable("deposit_transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  contractId: uuid("contract_id").references(() => leases.id, { onDelete: "cascade" }).notNull(),
+  contractId: uuid("contract_id").notNull(),
+  orgId: uuid("org_id"),
+  occupantId: uuid("occupant_id"),
   transactionType: varchar("transaction_type", { length: 50 }).notNull(), // received, topped_up, refunded, forfeited, bg_submitted
   instrumentType: varchar("instrument_type", { length: 50 }).notNull(), // bank_guarantee, bank_transfer, cheque, demand_draft
   amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
@@ -1254,7 +1256,12 @@ export const depositTransactions = pgTable("deposit_transactions", {
   validityDate: date("validity_date"),
   requiredDepositAmount: decimal("required_deposit_amount", { precision: 14, scale: 2 }),
   shortfallAmount: decimal("shortfall_amount", { precision: 14, scale: 2 }).default("0.00"),
-  status: varchar("status", { length: 50 }).default("active").notNull(), // active, expired, invoked, returned
+  status: varchar("status", { length: 50 }).default("active").notNull(), // active, expired, invoked, returned, pending_approval, approved
+  invoiceIds: jsonb("invoice_ids"),
+  approvedBy: uuid("approved_by"),
+  notes: text("notes"),
+  claimDate: date("claim_date"),
+  bgNumber: varchar("bg_number", { length: 100 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
 });
 

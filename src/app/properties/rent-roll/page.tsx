@@ -23,6 +23,8 @@ import {
   CreditCard,
   Briefcase,
   FileText,
+  Gauge,
+  Users,
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
@@ -162,9 +164,9 @@ export default function RentRollRegisterPage() {
       <MarketingHeader activePath="/operate/rent-roll" />
 
       {/* Breadcrumb Navigation */}
-      <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs text-slate-500 font-medium">
-          <div className="flex items-center gap-2">
+      <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-2 shrink-0">
             <Link href="/" className="hover:text-slate-900 transition-colors">Home</Link>
             <span>/</span>
             <Link href="/operate" className="hover:text-slate-900 transition-colors">Operate</Link>
@@ -175,66 +177,87 @@ export default function RentRollRegisterPage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none shrink-0">
             <button
               onClick={() => setMasterDataOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <Settings className="w-3.5 h-3.5" />
               Asset Masters (§S-11–14)
             </button>
             <button
               onClick={() => setExpiryOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <Clock className="w-3.5 h-3.5" />
               Expiry Pipeline (§S-24)
             </button>
             <button
               onClick={() => setEscalationOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <TrendingUp className="w-3.5 h-3.5" />
               Escalation Calendar (§S-25)
             </button>
             <button
               onClick={() => setDealsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Deals (§S-18)
             </button>
             <button
               onClick={() => setImportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               Import (§S-30)
             </button>
             <Link
               href="/operate/invoices"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <FileText className="w-3.5 h-3.5 text-blue-700" />
               Invoices & Billing (§S-12)
             </Link>
             <button
               onClick={() => setPaymentsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <CreditCard className="w-3.5 h-3.5" />
               Payments & Collections (§5.9)
             </button>
             <Link
               href="/approvals"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
               Approvals Inbox (§S-06)
             </Link>
+            <Link
+              href="/deposits"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+              Deposits (§S-47)
+            </Link>
+            <Link
+              href="/operations/meters"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
+            >
+              <Gauge className="w-3.5 h-3.5 text-amber-700" />
+              Meters (§S-31)
+            </Link>
+            <Link
+              href="/operations/seat-counts"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-700" />
+              Seat Counts (§S-32)
+            </Link>
             <button
               onClick={() => setMultiClientOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
             >
               <Briefcase className="w-3.5 h-3.5" />
               Multi-Client & Flex (§5.10–11)
@@ -244,7 +267,7 @@ export default function RentRollRegisterPage() {
                 setWizardPrefill(null);
                 setWizardOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold shadow-xs whitespace-nowrap transition"
             >
               <Plus className="w-3.5 h-3.5" />
               New Contract (§S-21)
@@ -254,7 +277,7 @@ export default function RentRollRegisterPage() {
       </div>
 
       {/* Main SaaS Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-28 md:pb-8">
         {/* KPI Summary Tiles (§2.3 List Page Pattern) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs">
@@ -403,8 +426,118 @@ export default function RentRollRegisterPage() {
             </div>
           </div>
 
-          {/* Rent Roll Register Table (§S-10) */}
-          <div className="overflow-x-auto">
+          {/* Mobile Native App Cards (sm:hidden) */}
+          <div className="sm:hidden p-3 space-y-3">
+            {loading ? (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                Recalculating rent roll register for {asOfDate}...
+              </div>
+            ) : visibleRows.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                No contracts or spaces matching the filter.
+              </div>
+            ) : (
+              <>
+                {visibleRows.map((r: any) => {
+                  const isVacant = r.type === "vacant_space";
+                  const isDeal = r.type === "forecast_deal";
+                  const isFuture = r.status === "future";
+
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => {
+                        if (!isVacant && !isDeal) {
+                          setSelectedContractId(r.id);
+                          setDrawerOpen(true);
+                        }
+                      }}
+                      className={`p-3.5 rounded-2xl border transition active:scale-[0.99] cursor-pointer shadow-2xs ${
+                        isVacant
+                          ? "bg-slate-50 border-slate-200 text-slate-500"
+                          : isDeal
+                          ? "bg-amber-50/60 border-amber-200 text-amber-950"
+                          : isFuture
+                          ? "bg-blue-50/60 border-blue-200 text-blue-950"
+                          : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-extrabold text-sm text-slate-900 truncate">
+                            {isVacant ? "(Vacant Space)" : r.occupant_name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-700">{r.space_name}</span>
+                            <span className="font-mono text-[10px] text-slate-400">({r.space_code})</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider shrink-0 ${
+                            isVacant
+                              ? "bg-slate-200 text-slate-600"
+                              : isDeal
+                              ? "bg-amber-100 text-amber-800"
+                              : isFuture
+                              ? "bg-blue-100 text-blue-800"
+                              : r.status === "active"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-purple-100 text-purple-800"
+                          }`}
+                        >
+                          {r.status?.replace(/_/g, " ")}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Monthly Rent</span>
+                          <span className="font-mono font-bold text-teal-900 text-sm">
+                            {isVacant
+                              ? `(₹${Number(r.asking_rent || 0).toLocaleString("en-IN")})`
+                              : `₹${Math.round(r.monthly_base_rent || 0).toLocaleString("en-IN")}`}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block">Area</span>
+                          <span className="font-mono font-bold text-slate-700">
+                            {r.area_sqft ? Number(r.area_sqft).toLocaleString() : "—"} sqft
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 text-[10px] text-slate-500 flex items-center justify-between">
+                        <span>Term: {r.start_date !== "—" ? `${r.start_date} → ${r.end_date}` : "—"}</span>
+                        {!isVacant && !isDeal && (
+                          <span className="text-teal-700 font-bold flex items-center gap-0.5">
+                            Details <ChevronRight size={12} />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Mobile Totals Footer Card */}
+                <div className="p-4 rounded-2xl bg-slate-900 text-white shadow-lg space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-teal-300 block">
+                    TOTAL REGISTER VALUE ({visibleRows.length} ROWS)
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-300 font-medium">
+                      {visibleRows.reduce((sum: number, r: any) => sum + (r.area_sqft || 0), 0).toLocaleString()} sqft
+                    </span>
+                    <span className="font-mono font-bold text-base text-white">
+                      ₹{Math.round(visibleRows.reduce((sum: number, r: any) => sum + (r.monthly_base_rent || 0), 0)).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Desktop Spreadsheet Table (hidden sm:block) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">

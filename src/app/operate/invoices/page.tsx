@@ -192,7 +192,31 @@ export default function InvoiceListPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                href="/operate/billing-runs"
+                className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <Layers className="w-4 h-4 text-indigo-600" />
+                S-40 Billing Run (Split Mode)
+              </Link>
+
+              <Link
+                href="/operate/credit-notes"
+                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <TrendingDown className="w-4 h-4 text-amber-600" />
+                S-42 Credit Notes
+              </Link>
+
+              <Link
+                href="/operate/cam-pools"
+                className="px-3.5 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-teal-600" />
+                F-22 CAM True-Up
+              </Link>
+
               <button
                 onClick={handleGenerateBatch}
                 disabled={batchLoading}
@@ -203,7 +227,7 @@ export default function InvoiceListPage() {
                 ) : (
                   <Plus className="w-4 h-4" />
                 )}
-                Run Invoicing Batch
+                Run Batch
               </button>
 
               <button
@@ -339,7 +363,80 @@ export default function InvoiceListPage() {
 
         {/* Invoice Data Grid */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Native App Cards (sm:hidden) */}
+          <div className="sm:hidden p-3 space-y-3">
+            {loading ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-600" />
+                Loading invoices...
+              </div>
+            ) : invoices.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No invoices found matching criteria.
+              </div>
+            ) : (
+              invoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  onClick={() => openInvoiceDetail(inv.id)}
+                  className="p-3.5 rounded-2xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition active:scale-[0.99] cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-xs text-blue-600 block">
+                        {inv.invoice_number}
+                      </span>
+                      <h4 className="font-bold text-sm text-slate-900 mt-0.5">
+                        {inv.occupant_name || "Occupant"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {inv.property_name || "Commercial Center"} · {inv.space_name}
+                      </p>
+                    </div>
+                    <div className="shrink-0">{statusBadge(inv.status)}</div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Amount</span>
+                      <span className="font-mono font-bold text-base text-slate-900">
+                        ₹{parseFloat(inv.gross_total || "0").toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <a
+                        href={`/api/invoices/${inv.id}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
+                        title="Print PDF"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </a>
+
+                      {inv.status === "draft" && (
+                        <button
+                          onClick={(e) => handleQuickApprove(inv.id, e)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+                        >
+                          Approve
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
+                    <span>Issued: {inv.invoice_date}</span>
+                    <span>Due: {inv.due_date}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Spreadsheet Table (hidden sm:block) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-100/80 text-slate-700 font-semibold border-b border-slate-200">
                 <tr>
@@ -411,6 +508,16 @@ export default function InvoiceListPage() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <a
+                            href={`/api/invoices/${inv.id}/pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-semibold transition inline-flex items-center"
+                            title="Print Statutory Tax Invoice (PDF)"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </a>
+
                           {inv.status === "draft" && (
                             <button
                               onClick={(e) => handleQuickApprove(inv.id, e)}
