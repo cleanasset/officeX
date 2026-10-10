@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -24,7 +24,8 @@ import {
   Phone,
   Building,
   Sparkles,
-  Send
+  Send,
+  Loader2
 } from "lucide-react";
 import type { PropertyListing } from "@/components/RealGoogleMap";
 import { savePublicEnquiry } from "@/lib/leasingStore";
@@ -73,6 +74,59 @@ function PropertySearchContent() {
   const [enquiryProperty, setEnquiryProperty] = useState<PropertyListing | null>(null);
   const [enquiryForm, setEnquiryForm] = useState({ company: "", email: "", phone: "", seats: "60" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Google Maps Place Suggestions
+  const [geoSuggestions, setGeoSuggestions] = useState<any[]>([]);
+  const [isGeoLoading, setIsGeoLoading] = useState(false);
+  const [showGeoDropdown, setShowGeoDropdown] = useState(false);
+  const geoDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowGeoDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSearchInputChange = (val: string) => {
+    setSearchQuery(val);
+    if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
+    if (val.trim().length < 2) {
+      setGeoSuggestions([]);
+      setShowGeoDropdown(false);
+      return;
+    }
+    geoDebounceRef.current = setTimeout(async () => {
+      setIsGeoLoading(true);
+      try {
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(val.trim())}&city=${encodeURIComponent(city)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data.results) ? data.results : [];
+          setGeoSuggestions(items);
+          setShowGeoDropdown(items.length > 0);
+        }
+      } catch (err) {
+        console.warn("Search geocode error:", err);
+      } finally {
+        setIsGeoLoading(false);
+      }
+    }, 280);
+  };
+
+  const handleSelectGeoSuggestion = (item: any) => {
+    const chosenName = item.buildingName || item.area || item.displayName?.split(",")?.[0] || item.fullAddress;
+    setSearchQuery(chosenName);
+    if (item.city) {
+      setCity(item.city);
+    }
+    setShowGeoDropdown(false);
+    setGeoSuggestions([]);
+  };
 
   // Zero Mock Data: properties strictly derived from database
   const properties: PropertyListing[] = [];
@@ -241,23 +295,82 @@ function PropertySearchContent() {
       {/* Top Mobile/Desktop Search Bar */}
       <div className="border-b border-gray-200 p-3 md:px-6 md:py-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 bg-white shrink-0 z-30 shadow-xs">
         <div className="flex items-center gap-2 flex-wrap flex-1">
-          {/* Main Keyword Search Bar */}
-          <div className="relative flex-1 min-w-[200px]">
-            <MapPin size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search building, landmark (e.g. One BKC)..."
-              className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-xs font-medium focus:outline-none focus:border-[#0F8B7D] bg-gray-50/50 focus:bg-white transition-all shadow-xs"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
-              >
-                <X size={13} />
-              </button>
+          {/* Main Keyword Search Bar with Live Google Maps Autocomplete */}
+          <div ref={searchContainerRef} className="relative flex-1 min-w-[200px]">
+            <div className="relative">
+              {isGeoLoading ? (
+                <Loader2 size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0F8B7D] animate-spin" />
+              ) : (
+                <MapPin size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              )}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onFocus={() => {
+                  if (geoSuggestions.length > 0) setShowGeoDropdown(true);
+                }}
+                placeholder="Search building, landmark (e.g. One BKC)..."
+                className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-xs font-medium focus:outline-none focus:border-[#0F8B7D] bg-gray-50/50 focus:bg-white transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setGeoSuggestions([]);
+                    setShowGeoDropdown(false);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
+                  title="Clear"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Google Maps Suggestions Dropdown */}
+            {showGeoDropdown && geoSuggestions.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in duration-150">
+                <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-[10px] font-bold text-gray-500">
+                  <span className="flex items-center gap-1 text-[#0F8B7D]">
+                    <Sparkles size={11} /> Google Maps Suggestions
+                  </span>
+                  <span>Click to filter</span>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {geoSuggestions.map((item, idx) => {
+                    const title = item.buildingName || item.displayName?.split(",")?.[0] || "Location";
+                    const subtitle = item.fullAddress || item.displayName || "";
+                    return (
+                      <button
+                        key={item.id || idx}
+                        type="button"
+                        onClick={() => handleSelectGeoSuggestion(item)}
+                        className="w-full text-left px-3.5 py-2.5 flex items-start gap-2.5 hover:bg-teal-50/70 transition cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-teal-100/70 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
+                          <MapPin size={13} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-xs font-bold text-gray-900 truncate">
+                              {title}
+                            </span>
+                            {item.city && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 shrink-0">
+                                {item.city}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">
+                            {subtitle}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 

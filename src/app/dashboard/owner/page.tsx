@@ -115,6 +115,7 @@ export default function OwnerDashboardPage() {
   const [reassignModalProperty, setReassignModalProperty] = useState<PropertySummary | null>(null);
   const [selectedNewManagerName, setSelectedNewManagerName] = useState("");
   const [selectedNewManagerEmail, setSelectedNewManagerEmail] = useState("");
+  const [showManagerActivationBanner, setShowManagerActivationBanner] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -135,6 +136,8 @@ export default function OwnerDashboardPage() {
       setDelegatedManagerEmail(mgrEmail);
       setDelegatedManagerType(mgrType);
       setDelegatedManagerUserRole(mgrUserRole);
+      const isDismissed = localStorage.getItem("officex_dismiss_manager_banner") === "true";
+      setShowManagerActivationBanner(!isDismissed);
 
       try {
         const assigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
@@ -144,13 +147,23 @@ export default function OwnerDashboardPage() {
   }, []);
 
   const handleCopyManagerActivationLink = () => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.officex.pro";
+    const origin =
+      typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
     const activePropName = properties[0]?.name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
     const inviteLink = `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(inviteLink);
       setManagerLinkCopied(true);
       setTimeout(() => setManagerLinkCopied(false), 3000);
+    }
+  };
+
+  const handleDismissManagerActivationBanner = () => {
+    setShowManagerActivationBanner(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_dismiss_manager_banner", "true");
     }
   };
 
@@ -441,8 +454,8 @@ export default function OwnerDashboardPage() {
       )}
 
       {/* Delegated Manager Active & Link Status Banner */}
-      {hasDelegatedManager && delegatedManagerName && (
-        <div className="bg-linear-to-r from-teal-50/90 via-emerald-50/50 to-white border border-teal-200/90 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
+      {showManagerActivationBanner && hasDelegatedManager && delegatedManagerName && (
+        <div className="bg-linear-to-r from-teal-50/90 via-emerald-50/50 to-white border border-teal-200/90 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs relative animate-in fade-in">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 shadow-sm">
               <Briefcase className="w-5 h-5 text-white" />
@@ -482,6 +495,14 @@ export default function OwnerDashboardPage() {
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Open Manager Portal</span>
             </Link>
+            <button
+              type="button"
+              onClick={handleDismissManagerActivationBanner}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              title="Remove / dismiss activation link notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

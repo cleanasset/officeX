@@ -36,8 +36,8 @@ function InviteContent() {
     if (mgrParam) setManagerName(mgrParam);
     if (emailParam) setManagerEmail(emailParam);
   }, [mgrParam, emailParam]);
-
   const getRoleDisplayName = (r: string) => {
+    if (r === "tenant" || r === "occupant") return "Commercial Tenant / Corporate Occupant";
     if (r === "pm_company" || r === "pm_agency") return "PM Company (Property Management Company)";
     if (r === "fm_company" || r === "fm_operator") return "FM Company (Facilities Management Company)";
     if (r === "msp") return "MSP (Managed Service Provider)";
@@ -68,20 +68,26 @@ function InviteContent() {
       sessionStorage.setItem("officex_user_email", displayEmail);
       document.cookie = `officex_user_email=${encodeURIComponent(displayEmail)}; path=/; max-age=86400; SameSite=Lax`;
 
-      // 3. Set role to Property Manager console
-      const roleLabel = "Property Manager / Centre Manager";
+      const isTenant = roleParam === "tenant" || roleParam === "occupant";
+
+      // 3. Set role to Tenant or Property Manager console
+      const roleLabel = isTenant ? "Commercial Tenant / Occupant" : "Property Manager / Centre Manager";
+      const roleKey = isTenant ? "tenant" : "property_manager";
+
       localStorage.setItem("officex_user_role", roleLabel);
       sessionStorage.setItem("officex_user_role", roleLabel);
       document.cookie = `officex_user_role=${encodeURIComponent(roleLabel)}; path=/; max-age=86400; SameSite=Lax`;
 
-      localStorage.setItem("officex_role_key", "property_manager");
-      sessionStorage.setItem("officex_role_key", "property_manager");
-      document.cookie = "officex_role_key=property_manager; path=/; max-age=86400; SameSite=Lax";
+      localStorage.setItem("officex_role_key", roleKey);
+      sessionStorage.setItem("officex_role_key", roleKey);
+      document.cookie = `officex_role_key=${roleKey}; path=/; max-age=86400; SameSite=Lax`;
 
-      // 4. Set delegated manager status & active property
-      localStorage.setItem("officex_has_manager", "true");
-      localStorage.setItem("officex_manager_dashboard_activated", "true");
-      localStorage.setItem("officex_manager_status", "activated");
+      // 4. Set status & active property
+      if (!isTenant) {
+        localStorage.setItem("officex_has_manager", "true");
+        localStorage.setItem("officex_manager_dashboard_activated", "true");
+        localStorage.setItem("officex_manager_status", "activated");
+      }
       if (propParam) {
         localStorage.setItem("officex_active_property", propParam);
       }
@@ -103,7 +109,11 @@ function InviteContent() {
     }
 
     setTimeout(() => {
-      router.push(`/dashboard/pm?role=${encodeURIComponent(roleParam)}&mgr=${encodeURIComponent(displayName)}&prop=${encodeURIComponent(propParam)}`);
+      if (roleParam === "tenant" || roleParam === "occupant") {
+        router.push("/portal");
+      } else {
+        router.push(`/dashboard/pm?role=${encodeURIComponent(roleParam)}&mgr=${encodeURIComponent(displayName)}&prop=${encodeURIComponent(propParam)}`);
+      }
     }, 400);
   };
 
@@ -137,20 +147,22 @@ function InviteContent() {
               </div>
               <div>
                 <div className="text-[11px] font-bold text-teal-700 uppercase tracking-wider">
-                  Delegation Request
+                  {roleParam === "tenant" ? "Tenant Workspace Invitation" : "Delegation Request"}
                 </div>
                 <h2 className="text-lg font-black text-slate-900">
-                  {propParam ? `Manage ${propParam}` : "Commercial Property Management Invitation"}
+                  {roleParam === "tenant"
+                    ? (propParam ? `Leased Unit at ${propParam}` : "Corporate Tenant Workspace Portal")
+                    : (propParam ? `Manage ${propParam}` : "Commercial Property Management Invitation")}
                 </h2>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Invited by <strong className="text-slate-900">{ownerParam}</strong> to assume operational property management oversight.
+                  Invited by <strong className="text-slate-900">{ownerParam}</strong> {roleParam === "tenant" ? "to access your corporate tenant portal." : "to assume operational property management oversight."}
                 </p>
               </div>
             </div>
 
             {/* Role Breakdown Badge */}
             <div className="pt-2 border-t border-teal-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="font-semibold text-slate-600">Assigned Managing Role:</span>
+              <span className="font-semibold text-slate-600">Assigned Portal Role:</span>
               <span className="font-extrabold text-[#0F8B7D] bg-white px-2.5 py-1 rounded-lg border border-teal-200 shadow-2xs">
                 {getRoleDisplayName(roleParam)}
               </span>
@@ -192,22 +204,45 @@ function InviteContent() {
               Authorized Capabilities Granted Upon Acceptance:
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
-                <span>Rent Roll &amp; Lease Operations</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
-                <span>Tenant Approvals &amp; Ticketing</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
-                <span>CAM &amp; Utility Sub-metering</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
-                <span>PPM Maintenance Tasks</span>
-              </div>
+              {roleParam === "tenant" ? (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>View Lease Contracts &amp; Units</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>GST Invoices &amp; Rent Receipts</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>Facility Maintenance &amp; Tickets</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>Digital NOCs &amp; Agreements</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>Rent Roll &amp; Lease Operations</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>Tenant Approvals &amp; Ticketing</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>CAM &amp; Utility Sub-metering</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-[#0F8B7D] shrink-0" />
+                    <span>PPM Maintenance Tasks</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

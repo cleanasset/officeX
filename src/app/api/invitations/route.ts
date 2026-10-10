@@ -4,8 +4,9 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-// Production Deployed Domain Fallback — Zero localhost guarantee
-const DEPLOYED_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro";
+// Production Deployed Domain Fallback — Verified Vercel and production domain
+const DEPLOYED_BASE_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app";
 
 export async function POST(req: Request) {
   try {
@@ -47,8 +48,22 @@ export async function POST(req: Request) {
     // Generate unique secure token
     const token = `inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
 
-    // Build strictly deployed domain invitation URL
-    const cleanBase = DEPLOYED_BASE_URL.replace(/\/+$/, "");
+    // Build strictly deployed domain invitation URL using incoming host/origin
+    let hostOrigin = DEPLOYED_BASE_URL;
+    try {
+      const reqOrigin = req.headers.get("origin") || req.headers.get("referer");
+      if (reqOrigin) {
+        hostOrigin = new URL(reqOrigin).origin;
+      } else {
+        const hostHeader = req.headers.get("x-forwarded-host") || req.headers.get("host");
+        if (hostHeader) {
+          const proto = req.headers.get("x-forwarded-proto") || "https";
+          hostOrigin = `${proto}://${hostHeader}`;
+        }
+      }
+    } catch {}
+
+    const cleanBase = hostOrigin.replace(/\/+$/, "");
     const inviteLink = `${cleanBase}/invite?token=${token}&role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}`;
 
     return NextResponse.json({

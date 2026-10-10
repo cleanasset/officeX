@@ -797,11 +797,17 @@ export default function RentRollOnboardingWizard({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700">
-                    PAN Number *
+                    PAN Number {currentStructureRule.panRequired ? "*" : ""}
                   </label>
-                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                    Compulsory *
-                  </span>
+                  {currentStructureRule.panRequired ? (
+                    <span className="text-[10px] font-bold text-rose-800 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                      Compulsory *
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                      Optional
+                    </span>
+                  )}
                 </div>
                 <input
                   type="text"
@@ -818,37 +824,27 @@ export default function RentRollOnboardingWizard({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700">
-                    {currentStructureRule.cinLabel}
+                    Corporate Identity / Registration (CIN / LLPIN)
                   </label>
-                  {!currentStructureRule.cinApplicable ? (
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
-                      Not Applicable
-                    </span>
-                  ) : currentStructureRule.cinRequired ? (
+                  {currentStructureRule.cinRequired ? (
                     <span className="text-[10px] font-bold text-rose-800 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
                       Compulsory *
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
                       Optional
                     </span>
                   )}
                 </div>
                 <input
                   type="text"
-                  disabled={!currentStructureRule.cinApplicable}
                   required={currentStructureRule.cinRequired}
-                  placeholder={currentStructureRule.cinPlaceholder}
+                  placeholder={currentStructureRule.cinRequired ? "Compulsory (e.g. U72900KA2020PTC123456)" : "Optional (e.g. U72900KA2020PTC123456 / Reg No)"}
                   maxLength={21}
                   value={cinNumber}
                   onChange={(e) => setCinNumber(e.target.value.toUpperCase())}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none uppercase disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none uppercase"
                 />
-                {!currentStructureRule.cinApplicable && (
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    CIN is only issued by MCA for incorporated Companies/LLPs.
-                  </p>
-                )}
               </div>
 
               {/* GSTIN Number */}
@@ -862,15 +858,15 @@ export default function RentRollOnboardingWizard({
                       Compulsory *
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                      Optional (&lt; ₹20L)
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                      Optional
                     </span>
                   )}
                 </div>
                 <input
                   type="text"
                   required={currentStructureRule.gstinRequired}
-                  placeholder="29AAAAA0000A1Z5"
+                  placeholder="29AAAAA0000A1Z5 (Optional if turnover < ₹20L)"
                   maxLength={15}
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value.toUpperCase())}

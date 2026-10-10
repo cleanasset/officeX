@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import {
   MapPin, Users, Sparkles, ArrowRight, ArrowUpRight,
   Filter, Check, Star, Phone, Clock, ChevronRight,
   SlidersHorizontal, BadgePercent, Award, Shield, Eye,
-  Ticket, Briefcase, Presentation
+  Ticket, Briefcase, Presentation, Loader2, X
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
@@ -35,6 +35,61 @@ export default function PropertyMarketplacePage() {
   const [selectedTeamSize, setSelectedTeamSize] = useState("all");
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [districtFilter, setDistrictFilter] = useState("all");
+
+  // Google Maps / Places Live Autocomplete State for Marketplace
+  const [geoSuggestions, setGeoSuggestions] = useState<any[]>([]);
+  const [isGeoLoading, setIsGeoLoading] = useState(false);
+  const [showGeoDropdown, setShowGeoDropdown] = useState(false);
+  const geoDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowGeoDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLocationInputChange = (val: string) => {
+    setSearchLocationQuery(val);
+    if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
+    if (val.trim().length < 2) {
+      setGeoSuggestions([]);
+      setShowGeoDropdown(false);
+      return;
+    }
+    geoDebounceRef.current = setTimeout(async () => {
+      setIsGeoLoading(true);
+      try {
+        const res = await fetch(
+          `/api/geocode?q=${encodeURIComponent(val.trim())}&city=${encodeURIComponent(selectedCity)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data.results) ? data.results : [];
+          setGeoSuggestions(items);
+          setShowGeoDropdown(items.length > 0);
+        }
+      } catch (err) {
+        console.warn("Marketplace geocode search error:", err);
+      } finally {
+        setIsGeoLoading(false);
+      }
+    }, 280);
+  };
+
+  const handleSelectGeoSuggestion = (item: any) => {
+    const chosenName = item.buildingName || item.area || item.displayName?.split(",")?.[0] || item.fullAddress;
+    setSearchLocationQuery(chosenName);
+    if (item.city) {
+      setSelectedCity(item.city);
+    }
+    setShowGeoDropdown(false);
+    setGeoSuggestions([]);
+  };
 
   // Tab configurations ensuring 100% equal height and identical structure across all 4 solutions
   const solutionConfigs: Record<
@@ -518,16 +573,84 @@ export default function PropertyMarketplacePage() {
                   </select>
                 </div>
 
-                {/* Location input */}
-                <div className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2 transition-all">
-                  <Search size={15} className="text-slate-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={searchLocationQuery}
-                    onChange={(e) => setSearchLocationQuery(e.target.value)}
-                    placeholder={`${currentConfig.placeholder} in ${selectedCity}`}
-                    className="w-full text-xs font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
-                  />
+                {/* Location input with Live Google Maps Autocomplete */}
+                <div ref={searchContainerRef} className="flex-1 relative">
+                  <div className="border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] flex items-center gap-2 transition-all">
+                    {isGeoLoading ? (
+                      <Loader2 size={15} className="text-[#0F8B7D] animate-spin shrink-0" />
+                    ) : (
+                      <Search size={15} className="text-slate-400 shrink-0" />
+                    )}
+                    <input
+                      type="text"
+                      value={searchLocationQuery}
+                      onChange={(e) => handleLocationInputChange(e.target.value)}
+                      onFocus={() => {
+                        if (geoSuggestions.length > 0) setShowGeoDropdown(true);
+                      }}
+                      placeholder={`${currentConfig.placeholder} in ${selectedCity}`}
+                      className="w-full text-xs font-semibold text-slate-900 placeholder:text-slate-400 bg-transparent focus:outline-none"
+                    />
+                    {searchLocationQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchLocationQuery("");
+                          setGeoSuggestions([]);
+                          setShowGeoDropdown(false);
+                        }}
+                        className="text-slate-400 hover:text-slate-600 transition p-0.5 cursor-pointer"
+                        title="Clear"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Google Maps Live Suggestions Popover */}
+                  {showGeoDropdown && geoSuggestions.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto animate-in fade-in duration-150">
+                      <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
+                        <span className="flex items-center gap-1 text-[#0F8B7D]">
+                          <Sparkles size={11} /> Google Maps Verified Locations
+                        </span>
+                        <span>Click to search</span>
+                      </div>
+                      <div className="divide-y divide-slate-100">
+                        {geoSuggestions.map((item, idx) => {
+                          const title = item.buildingName || item.displayName?.split(",")?.[0] || "Location";
+                          const subtitle = item.fullAddress || item.displayName || "";
+                          return (
+                            <button
+                              key={item.id || idx}
+                              type="button"
+                              onClick={() => handleSelectGeoSuggestion(item)}
+                              className="w-full text-left px-3.5 py-2.5 flex items-start gap-2.5 hover:bg-teal-50/70 transition cursor-pointer"
+                            >
+                              <div className="w-6 h-6 rounded-lg bg-teal-100/70 text-[#0F8B7D] flex items-center justify-center shrink-0 mt-0.5">
+                                <MapPin size={13} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-xs font-bold text-slate-900 truncate">
+                                    {title}
+                                  </span>
+                                  {item.city && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 shrink-0">
+                                      {item.city}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                  {subtitle}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Button */}

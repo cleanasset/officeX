@@ -38,7 +38,10 @@ function OnboardingContent() {
         localStorage.setItem("officex_manager_name", data.managerName || "");
         localStorage.setItem("officex_manager_email", data.managerEmail || "");
         localStorage.setItem("officex_manager_status", "activated");
-        const origin = typeof window !== "undefined" ? window.location.origin : "https://www.officex.pro";
+        const origin =
+          typeof window !== "undefined" && window.location.origin
+            ? window.location.origin
+            : (process.env.NEXT_PUBLIC_APP_URL || "https://office-x-cleanassets-projects.vercel.app");
         const inviteUrl = `${origin}/invite?role=${encodeURIComponent(data.managerType || "pm_company")}&mgr=${encodeURIComponent(data.managerName || "")}&prop=${encodeURIComponent(data.propertyName || "")}&owner=${encodeURIComponent(data.companyName || data.brandName || "Commercial Owner")}&invite=act_${Date.now()}`;
         localStorage.setItem("officex_manager_activation_link", inviteUrl);
 
@@ -64,6 +67,8 @@ function OnboardingContent() {
         localStorage.removeItem("officex_manager_dashboard_activated");
       }
 
+      // Persist full onboarding data for PropertyHierarchyModal and downstream forms
+      localStorage.setItem("officex_onboarded_property_details", JSON.stringify(data));
       localStorage.setItem("officex_active_property", data.propertyName);
       if (data.propertyName) {
         const regNames = JSON.parse(localStorage.getItem("officex_registered_property_names") || "[]");
