@@ -1285,7 +1285,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                     onChange={(e) => setOrgLegalName(e.target.value)}
                     placeholder={
                       selectedRole === "owner"
-                        ? "e.g. Apex Commercial Realty Ltd"
+                        ? "e.g. Sterling Commercial Realty Ltd"
                         : selectedRole === "broker"
                         ? "e.g. Knight & Partners Commercial Advisory LLP"
                         : selectedRole === "vendor"
@@ -1532,7 +1532,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                       required
                       value={propertyName}
                       onChange={(e) => setPropertyName(e.target.value)}
-                      placeholder="e.g. Apex Horizon Tower"
+                      placeholder="e.g. Horizon Commercial Tower"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -1710,7 +1710,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                       required
                       value={tenantOfficeName}
                       onChange={(e) => setTenantOfficeName(e.target.value)}
-                      placeholder="e.g. Apex Horizon Tower, 7th Floor, BKC"
+                      placeholder="e.g. Horizon Tower, 7th Floor, Financial District"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

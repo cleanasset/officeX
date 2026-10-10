@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -118,83 +118,21 @@ export default function FMMarketplacePage() {
     pest: { pct: 15, label: "Pest & Vector Defense" },
   };
 
-  const sampleLedgerTransactions = [
-    {
-      id: "tx-101",
-      orderNumber: "WO-HVAC-2026-881",
-      vendorName: "Johnson Controls India",
-      category: "HVAC & Chillers",
-      property: "Maker Maxity, BKC",
-      city: "Mumbai",
-      grossAmount: 420000,
-      commissionPct: 10,
-      platformFee: 42000,
-      netVendorPayout: 378000,
-      escrowStatus: "Released",
-      utrNumber: "HDFC00029108442",
-      completedDate: "12 Sep 2026"
-    },
-    {
-      id: "tx-102",
-      orderNumber: "WO-SEC-2026-440",
-      vendorName: "SIS Group Security",
-      category: "Security & Guarding",
-      property: "World Trade Center, Kharadi",
-      city: "Pune",
-      grossAmount: 1850000,
-      commissionPct: 8,
-      platformFee: 148000,
-      netVendorPayout: 1702000,
-      escrowStatus: "Released",
-      utrNumber: "ICIC00088190331",
-      completedDate: "10 Sep 2026"
-    },
-    {
-      id: "tx-103",
-      orderNumber: "WO-CLN-2026-912",
-      vendorName: "Urban Cleaners Enterprise",
-      category: "Commercial Hygiene",
-      property: "GIFT Tower 1, IFSC",
-      city: "Gandhinagar",
-      grossAmount: 280000,
-      commissionPct: 12,
-      platformFee: 33600,
-      netVendorPayout: 246400,
-      escrowStatus: "Defect Holdback",
-      utrNumber: "Pending 14d sign-off",
-      completedDate: "14 Sep 2026"
-    },
-    {
-      id: "tx-104",
-      orderNumber: "WO-MEP-2026-723",
-      vendorName: "Voltas Electro-Mech Services",
-      category: "MEP & Electrical",
-      property: "One BKC, Bandra Kurla",
-      city: "Mumbai",
-      grossAmount: 640000,
-      commissionPct: 10,
-      platformFee: 64000,
-      netVendorPayout: 576000,
-      escrowStatus: "In Escrow",
-      utrNumber: "Escrow Held: AXIS9921",
-      completedDate: "In Progress"
-    },
-    {
-      id: "tx-105",
-      orderNumber: "WO-ELV-2026-309",
-      vendorName: "Schindler Elevator India",
-      category: "Elevators & Mobility",
-      property: "Godrej BKC, Bandra",
-      city: "Mumbai",
-      grossAmount: 980000,
-      commissionPct: 7.5,
-      platformFee: 73500,
-      netVendorPayout: 906500,
-      escrowStatus: "Under Audit",
-      utrNumber: "Audit Q3 Cycle",
-      completedDate: "13 Sep 2026"
-    },
-  ];
+  const [ledgerTransactions, setLedgerTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchLedgerTransactions();
+  }, []);
+
+  const fetchLedgerTransactions = async () => {
+    try {
+      const res = await fetch("/api/commissions");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.transactions)) {
+        setLedgerTransactions(json.transactions);
+      }
+    } catch (e) {}
+  };
 
 
   // 8 Core Commercial FM Service Categories with Snabbit-inspired Photography
@@ -1152,54 +1090,82 @@ export default function FMMarketplacePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {sampleLedgerTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono font-bold text-slate-900 block">{tx.orderNumber}</span>
-                        <span className="text-[10px] text-slate-400">{tx.completedDate}</span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-bold text-slate-900 block">{tx.vendorName}</span>
-                        <span className="text-[11px] text-slate-500">{tx.property}, {tx.city}</span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
-                          {tx.category}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
-                        ₹{tx.grossAmount.toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <span className="font-mono font-bold text-[#0F8B7D]">
-                          ₹{tx.platformFee.toLocaleString("en-IN")}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block">({tx.commissionPct}%)</span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-700">
-                        ₹{tx.netVendorPayout.toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                            tx.escrowStatus === "Released"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : tx.escrowStatus === "Defect Holdback"
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : tx.escrowStatus === "In Escrow"
-                              ? "bg-blue-50 text-blue-700 border border-blue-200"
-                              : "bg-purple-50 text-purple-700 border border-purple-200"
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                          <span>{tx.escrowStatus}</span>
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500">
-                        {tx.utrNumber}
+                  {ledgerTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Receipt className="w-8 h-8 text-slate-300" />
+                          <span className="text-xs font-semibold text-slate-700">No FM Marketplace Ledger Transactions</span>
+                          <span className="text-[11px] text-slate-400 max-w-sm">
+                            Escrow payouts and settled FM work orders will be tracked and displayed here in real time.
+                          </span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    ledgerTransactions.map((tx: any) => {
+                      const orderNumber = tx.orderNumber || tx.invoiceRef || `WO-${tx.id}`;
+                      const completedDate = tx.completedDate || tx.date || "Recent";
+                      const vendorName = tx.vendorName || tx.clientOrEntity || "Vendor Partner";
+                      const property = tx.property || "Commercial Property";
+                      const category = tx.category || (tx.type === "brokerage" ? "Brokerage Desk" : "FM Operations");
+                      const grossAmount = Number(tx.grossAmount ?? tx.dealValue ?? 0);
+                      const platformFee = Number(tx.platformFee ?? tx.officeXFee ?? 0);
+                      const commissionPct = Number(tx.commissionPct ?? tx.commissionRate ?? 10);
+                      const netVendorPayout = Number(tx.netVendorPayout ?? tx.payoutToVendorOrBroker ?? 0);
+                      const escrowStatus = tx.escrowStatus || (tx.status === "PAID" ? "Released" : tx.status === "ESCROW_HOLD" ? "In Escrow" : "Under Audit");
+                      const utrNumber = tx.utrNumber || (tx.invoiceRef ? `REF-${tx.invoiceRef}` : "Bank Payout Pending");
+
+                      return (
+                        <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <span className="font-mono font-bold text-slate-900 block">{orderNumber}</span>
+                            <span className="text-[10px] text-slate-400">{completedDate}</span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="font-bold text-slate-900 block">{vendorName}</span>
+                            <span className="text-[11px] text-slate-500">{property}</span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                              {category}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                            ₹{grossAmount.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <span className="font-mono font-bold text-[#0F8B7D]">
+                              ₹{platformFee.toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">({commissionPct}%)</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-700">
+                            ₹{netVendorPayout.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                escrowStatus === "Released"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : escrowStatus === "Defect Holdback"
+                                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                  : escrowStatus === "In Escrow"
+                                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                  : "bg-purple-50 text-purple-700 border border-purple-200"
+                              }`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                              <span>{escrowStatus}</span>
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500">
+                            {utrNumber}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

@@ -18,10 +18,27 @@ import {
   Building2,
   ChevronDown,
   Receipt,
-  Briefcase
+  Briefcase,
+  UserCheck,
+  Users,
+  TrendingUp,
+  Zap,
+  ClipboardList,
+  ShieldCheck
 } from "lucide-react";
 import { performClientLogout } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
+
+const AVAILABLE_ROLES = [
+  { key: "owner", label: "Owner / Landlord", sub: "Portfolio, Rent Roll & NOI", route: "/dashboard/owner", icon: Building2 },
+  { key: "property_manager", label: "Property Manager", sub: "Daily Operations & Leases", route: "/dashboard/pm", icon: ClipboardList },
+  { key: "finance_manager", label: "Finance / AR Manager", sub: "Invoices, Payments & Ageing", route: "/dashboard/finance", icon: Receipt },
+  { key: "leasing_manager", label: "Leasing Manager", sub: "Pipeline, Vacancy & Deals", route: "/dashboard/leasing", icon: TrendingUp },
+  { key: "facility_manager", label: "Facility Manager", sub: "FM Helpdesk & CAM Meters", route: "/dashboard/fm", icon: Zap },
+  { key: "flex_operator", label: "Flex / Coworking", sub: "Seats & Centre P&L", route: "/operate/head-leases", icon: Layers },
+  { key: "occupant", label: "Corporate Occupant", sub: "Tenant Self-Service Portal", route: "/tenant", icon: Users },
+  { key: "org_admin", label: "Org Admin / Settings", sub: "Platform Configuration", route: "/settings", icon: Settings },
+];
 
 export default function Topbar() {
   const pathname = usePathname();
@@ -45,6 +62,11 @@ export default function Topbar() {
   const [isOwnerStatementOpen, setIsOwnerStatementOpen] = useState(false);
   const clientDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Role Selector Dropdown State
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [currentRoleKey, setCurrentRoleKey] = useState("owner");
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+
   // Generate breadcrumbs from pathname
   const pathParts = pathname.split("/").filter(Boolean);
   const formattedBreadcrumb = pathParts
@@ -52,27 +74,46 @@ export default function Topbar() {
     .join("  >  ");
 
   const popularDestinations = [
-    { name: "Ahmedabad", type: "City", count: "3 Listed Assets" },
-    { name: "Mumbai", type: "City", count: "5 Listed Assets" },
-    { name: "Bengaluru", type: "City", count: "4 Listed Assets" },
-    { name: "Apex Business Tower", type: "Building", location: "BKC, Mumbai" },
-    { name: "Meridian Tech Park", type: "Building", location: "Whitefield, Bengaluru" },
-    { name: "Nexus Hub", type: "Building", location: "Hinjewadi, Pune" },
-    { name: "AHU-04 (Air Handling Unit)", type: "Asset", location: "Apex Floor 4", count: "Health: 94%" },
-    { name: "DG-02 (Diesel Generator)", type: "Asset", location: "Meridian Tech Park", count: "Health: 97%" },
-    { name: "TKT-4890 (Water Leakage)", type: "Ticket", location: "Nexus Hub", count: "Status: Open" },
-    { name: "WO-9081 (MEP Service)", type: "Work Order", location: "Apex Floor 4", count: "SLA: Normal" }
+    { name: "Rent Roll Register", type: "Module", location: "/properties/rent-roll" },
+    { name: "Invoices & Billing", type: "Module", location: "/operate/invoices" },
+    { name: "Utility Meters", type: "Module", location: "/operations/meters" },
+    { name: "CAM Pools & True-Up", type: "Module", location: "/operate/cam-pools" },
+    { name: "Approvals Inbox", type: "Module", location: "/approvals" }
   ];
 
-  // Sync session state from localStorage
+  // Sync session state from localStorage & purge any dummy subscriber email
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
-      const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
+      let storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
+      let storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
+      const storedRoleKey = localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key");
 
-      if (storedName) setUserName(storedName);
+      // Strictly purge any legacy synthetic subscriber email
+      if (storedEmail && (storedEmail.includes("subscriber@officex.in") || storedEmail.includes("google-subscriber"))) {
+        localStorage.removeItem("officex_user_email");
+        sessionStorage.removeItem("officex_user_email");
+        storedEmail = "";
+      }
+
+      if (storedName && !storedName.toLowerCase().includes("subscriber")) {
+        setUserName(storedName);
+      }
       if (storedEmail) setUserEmail(storedEmail);
+      if (storedRoleKey && AVAILABLE_ROLES.some((r) => r.key === storedRoleKey)) {
+        setCurrentRoleKey(storedRoleKey);
+      }
     }
+
+    // Resolve real user profile from active session
+    fetch("/api/users/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.user?.email && !data.user.email.includes("subscriber@officex.in")) {
+          setUserEmail(data.user.email);
+          if (data.user.fullName) setUserName(data.user.fullName);
+        }
+      })
+      .catch(() => {});
   }, [pathname]);
 
   useEffect(() => {
@@ -115,6 +156,20 @@ export default function Topbar() {
     }
   };
 
+  const handleSelectRole = (r: typeof AVAILABLE_ROLES[0]) => {
+    setCurrentRoleKey(r.key);
+    setIsRoleDropdownOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_role", r.label);
+      localStorage.setItem("officex_role_key", r.key);
+      sessionStorage.setItem("officex_user_role", r.label);
+      sessionStorage.setItem("officex_role_key", r.key);
+      document.cookie = `officex_user_role=${encodeURIComponent(r.label)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `officex_role_key=${encodeURIComponent(r.key)}; path=/; max-age=86400; SameSite=Lax`;
+    }
+    router.push(r.route);
+  };
+
   // Click outside listener for all dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -126,6 +181,9 @@ export default function Topbar() {
       }
       if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
         setIsClientDropdownOpen(false);
+      }
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target as Node)) {
+        setIsRoleDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -150,9 +208,11 @@ export default function Topbar() {
     await performClientLogout("/login");
   };
 
+  const activeRole = AVAILABLE_ROLES.find((r) => r.key === currentRoleKey) || AVAILABLE_ROLES[0];
+
   return (
-    <header className="h-[60px] bg-white border-b border-slate-200 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-4 md:px-8 flex items-center justify-between shadow-xs">
-      {/* Left: Mobile Toggle & Institutional Breadcrumbs */}
+    <header className="h-[60px] bg-white border-b border-slate-200 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-4 md:px-8 flex items-center justify-between shadow-2xs">
+      {/* Left: Mobile Toggle & Breadcrumbs & Selectors */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("officex-toggle-sidebar"))}
@@ -162,8 +222,8 @@ export default function Topbar() {
           <Menu size={18} />
         </button>
 
-        {/* Clean Breadcrumb Hierarchy */}
-        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
+        {/* Breadcrumb Hierarchy */}
+        <div className="hidden xl:flex items-center gap-2 text-xs font-semibold text-slate-500">
           <span className="text-slate-400 font-bold uppercase tracking-wider text-[11px]">OFFICEX</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-800 font-bold capitalize">
@@ -172,7 +232,7 @@ export default function Topbar() {
         </div>
 
         {/* Multi-Client Operator Selector (§2.1, §S-02) */}
-        <div className="relative hidden lg:block" ref={clientDropdownRef}>
+        <div className="relative hidden sm:block" ref={clientDropdownRef}>
           <button
             type="button"
             onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
@@ -180,7 +240,7 @@ export default function Topbar() {
           >
             <Building2 size={13} className="text-[#0F8B7D]" />
             <span className="text-slate-500 font-semibold">Viewing:</span>
-            <span className="truncate max-w-[150px]">{selectedClient?.client_name || "Self (Portfolio)"}</span>
+            <span className="truncate max-w-[130px]">{selectedClient?.client_name || "Self (Portfolio)"}</span>
             <ChevronDown size={12} className="text-slate-500" />
           </button>
 
@@ -221,11 +281,63 @@ export default function Topbar() {
                     setIsClientDropdownOpen(false);
                     setIsOwnerStatementOpen(true);
                   }}
-                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Receipt size={13} className="text-teal-400" />
+                  <Receipt size={13} className="text-[#0F8B7D]" />
                   <span>View Owner Statement (§S-55)</span>
                 </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Compact Role Selector Dropdown (Clean, Fast Switcher) */}
+        <div className="relative" ref={roleDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 text-xs font-bold border border-teal-200 transition-colors cursor-pointer"
+          >
+            <UserCheck size={13} className="text-[#0F8B7D]" />
+            <span className="text-teal-700 font-semibold hidden md:inline">Role:</span>
+            <span className="truncate max-w-[140px]">{activeRole.label}</span>
+            <ChevronDown size={12} className="text-teal-600" />
+          </button>
+
+          {isRoleDropdownOpen && (
+            <div className="absolute left-0 mt-2 w-76 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 text-slate-800 animate-fadeIn">
+              <div className="p-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                <span>Switch Functional Role</span>
+                <span className="text-teal-600 font-semibold">Instant Access</span>
+              </div>
+              <div className="py-1 space-y-1 max-h-72 overflow-y-auto">
+                {AVAILABLE_ROLES.map((r) => {
+                  const Icon = r.icon;
+                  const isSelected = activeRole.key === r.key;
+                  return (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => handleSelectRole(r)}
+                      className={`w-full px-3 py-2 text-left text-xs rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-teal-50 text-teal-900 font-bold border border-teal-200"
+                          : "hover:bg-slate-50 text-slate-700 font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+                          <Icon size={14} />
+                        </div>
+                        <div className="truncate">
+                          <div className="font-bold text-slate-900 leading-tight truncate">{r.label}</div>
+                          <div className="text-[10px] text-slate-400 font-normal truncate">{r.sub}</div>
+                        </div>
+                      </div>
+                      {isSelected && <span className="text-teal-600 font-bold text-xs">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -233,7 +345,7 @@ export default function Topbar() {
       </div>
 
       {/* Right Search, Notification and Profile Avatar */}
-      <div className="flex items-center gap-4 sm:gap-6">
+      <div className="flex items-center gap-3 sm:gap-5">
         {/* Search Input Box */}
         <div className="relative hidden md:block" ref={dropdownRef}>
           <form onSubmit={handleSearchSubmit}>
@@ -245,7 +357,7 @@ export default function Topbar() {
               onFocus={() => {
                 if (searchQuery.trim().length > 0) setIsDropdownOpen(true);
               }}
-              className="pl-9 pr-4 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 text-xs w-64 bg-slate-50 transition-colors"
+              className="pl-9 pr-4 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-600 text-xs w-56 lg:w-64 bg-slate-50 transition-colors"
             />
             <Search size={14} className="absolute left-3.5 top-2.5 text-slate-400" />
           </form>
@@ -262,17 +374,17 @@ export default function Topbar() {
                     key={idx}
                     type="button"
                     onClick={() => handleSelectSuggestion(item.name)}
-                    className="p-3 text-left hover:bg-blue-50/50 flex items-center justify-between border-b border-slate-50 transition-colors cursor-pointer"
+                    className="p-3 text-left hover:bg-teal-50/50 flex items-center justify-between border-b border-slate-50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5">
                       {item.type === "City" ? (
-                        <MapPin size={14} className="text-blue-600" />
+                        <MapPin size={14} className="text-teal-600" />
                       ) : item.type === "Asset" ? (
-                        <Settings size={14} className="text-amber-500 animate-pulse" />
+                        <Settings size={14} className="text-amber-500" />
                       ) : item.type === "Ticket" || item.type === "Work Order" ? (
                         <FileText size={14} className="text-purple-500" />
                       ) : (
-                        <Building size={14} className="text-blue-600" />
+                        <Building size={14} className="text-teal-600" />
                       )}
                       <div>
                         <span className="font-bold text-slate-900 text-xs block">{item.name}</span>
@@ -292,16 +404,16 @@ export default function Topbar() {
         {/* Support Link */}
         <Link
           href="/support"
-          className="text-slate-500 hover:text-blue-600 transition-colors p-1"
+          className="text-slate-500 hover:text-teal-600 transition-colors p-1"
           title="Help & Documentation"
         >
           <HelpCircle size={18} />
         </Link>
 
         {/* Notifications Icon with Red Dot */}
-        <button className="relative text-slate-500 hover:text-blue-600 transition-colors p-1 cursor-pointer">
+        <button className="relative text-slate-500 hover:text-teal-600 transition-colors p-1 cursor-pointer">
           <Bell size={18} />
-          <span className="absolute 0 top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
         </button>
 
         {/* User Mini Avatar & Profile Dropdown */}
@@ -310,17 +422,21 @@ export default function Topbar() {
             type="button"
             suppressHydrationWarning
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-            className="w-9 h-9 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-blue-100"
+            className="w-9 h-9 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-teal-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-teal-100"
           >
-            {(userName || userEmail || "U")[0].toUpperCase()}
+            {(userName || userEmail || "O")[0].toUpperCase()}
           </button>
 
           {/* Profile Dropdown */}
           {isProfileMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
               <div className="p-3 border-b border-slate-100">
-                <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">{userName || userEmail}</span>
-                {userName && <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>}
+                <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">
+                  {userName || userEmail || "Commercial Account"}
+                </span>
+                {userEmail && (
+                  <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>
+                )}
                 <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   Verified Commercial Account
@@ -333,7 +449,7 @@ export default function Topbar() {
                   onClick={() => setIsProfileMenuOpen(false)}
                   className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
                 >
-                  <Layers size={14} className="text-blue-600" />
+                  <Layers size={14} className="text-teal-600" />
                   <span>Portfolio Overview</span>
                 </Link>
 

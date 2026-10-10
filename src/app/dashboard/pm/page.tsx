@@ -73,104 +73,8 @@ export default function PropertyManagerDashboardPage() {
     year: "numeric",
   });
 
-  // Task Queue according to exact 5 types from spec S-03
-  const [tasks, setTasks] = useState<TaskItem[]>([
-    // 1. Contracts Pending Approval (HIGH)
-    {
-      id: "TSK-01",
-      category: "contract_approval",
-      categoryLabel: "1. Contracts Pending Approval",
-      priority: "HIGH",
-      title: "Approve Contract: Global Logistics Warehousing",
-      info: "Submitted by: Anita Desai (Leasing) on Oct 5",
-      property: "Apex Business Tower",
-      occupantSpace: "Global Logistics · Suite 401 East",
-      dueDate: "Approval pending (7 days old)",
-      dueStatus: "overdue",
-      financialDetail: "Monthly Rent: ₹34,80,000",
-      actions: {
-        primaryText: "Approve",
-        secondaryText: "Reject",
-        tertiaryText: "View Details",
-      },
-    },
-    // 2. Escalations Due (HIGH)
-    {
-      id: "TSK-02",
-      category: "escalation_due",
-      categoryLabel: "2. Escalations Due (Apply Rent Increase)",
-      priority: "HIGH",
-      title: "Apply Escalation: TechNova Financial Systems",
-      info: "Rent increase 5% effective Oct 1 (Compounded)",
-      property: "Meridian Tech Park",
-      occupantSpace: "TechNova Financial · Floor 3 Full",
-      dueDate: "Due Today (01-Oct)",
-      dueStatus: "today",
-      financialDetail: "Current: ₹18.62L → New: ₹19.55L",
-      actions: {
-        primaryText: "Apply",
-        secondaryText: "Postpone",
-        tertiaryText: "View Timeline",
-      },
-    },
-    // 3. Deposits to Collect (MEDIUM)
-    {
-      id: "TSK-03",
-      category: "deposit_collection",
-      categoryLabel: "3. Deposits to Collect",
-      priority: "MEDIUM",
-      title: "Collect Deposit: Innovate Technologies Ltd",
-      info: "Property: Apex Business Tower | Occupant: Innovate Tech | Security Deposit: ₹50,000",
-      property: "Apex Business Tower",
-      occupantSpace: "Innovate Tech · Suite 401",
-      dueDate: "Oct 10 (3 days left)",
-      dueStatus: "future",
-      financialDetail: "Amount Due: ₹50,000",
-      actions: {
-        primaryText: "Record Collection",
-        secondaryText: "Send Reminder",
-        tertiaryText: "Waive",
-      },
-    },
-    // 4. Document Expiry Warnings (LOW)
-    {
-      id: "TSK-04",
-      category: "document_expiry",
-      categoryLabel: "4. Document Expiry Warnings (<30 days)",
-      priority: "LOW",
-      title: "Document Expiring: Fire Safety & Occupancy Certificate",
-      info: "Property: Meridian Tech Park | Expires: Oct 25 (18 days remaining)",
-      property: "Meridian Tech Park",
-      occupantSpace: "Center Compliance Document",
-      dueDate: "Oct 25 (18 days)",
-      dueStatus: "future",
-      financialDetail: "Statutory Compliance",
-      actions: {
-        primaryText: "Mark Done",
-        secondaryText: "Extend",
-        tertiaryText: "View Document",
-      },
-    },
-    // 5. Overdue Payments (>7 days) (HIGH)
-    {
-      id: "TSK-05",
-      category: "overdue_payment",
-      categoryLabel: "5. Overdue Payments (>7 days)",
-      priority: "HIGH",
-      title: "Overdue Payment: Heritage Crafts Ltd",
-      info: "Invoice #INV-26-27-0034 | Amount: ₹4,10,000 | Due: Sep 28 (9 days overdue)",
-      property: "Apex Business Tower",
-      occupantSpace: "Heritage Crafts · Suite 201",
-      dueDate: "Sep 28 (9 days overdue)",
-      dueStatus: "overdue",
-      financialDetail: "Overdue Balance: ₹4,10,000",
-      actions: {
-        primaryText: "Record Payment",
-        secondaryText: "Send Reminder",
-        tertiaryText: "Raise Dispute",
-      },
-    },
-  ]);
+  // Dynamic Tasks (100% Real Live State - Zero Mock Data)
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
 
   const handleTaskAction = (taskId: string, actionType: "primary" | "secondary" | "tertiary") => {
     const t = tasks.find((item) => item.id === taskId);
@@ -268,9 +172,6 @@ export default function PropertyManagerDashboardPage() {
               className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
               <option value="all">All Managed Centres</option>
-              <option value="apex">Apex Business Tower</option>
-              <option value="meridian">Meridian Tech Park</option>
-              <option value="cyber">Cyber Tech City</option>
             </select>
           </div>
 
@@ -299,6 +200,43 @@ export default function PropertyManagerDashboardPage() {
           <button onClick={() => setActionSuccessMessage("")} className="text-slate-400 hover:text-slate-600">
             <X className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* §2.6 Empty State Banner (Clean Workspace) */}
+      {tasks.length === 0 && (
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-emerald-50 border border-amber-200/80 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-600/10 text-amber-700 flex items-center justify-center shrink-0">
+              <ClipboardList className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                  §2.6 Clean Workspace
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">Zero Pending PM Operational Tasks</h3>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                No contract approvals, rent escalations, or deposit collections pending action for this workspace.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Create Contract (§S-21)</span>
+            </button>
+            <Link
+              href="/properties/rent-roll"
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition"
+            >
+              Import Rent Roll
+            </Link>
+          </div>
         </div>
       )}
 
@@ -342,7 +280,26 @@ export default function PropertyManagerDashboardPage() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {filteredTasks.map((t) => {
+          {filteredTasks.length === 0 ? (
+            <div className="py-16 text-center text-xs text-slate-500">
+              <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-sm">All Action Queues Clear</h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                No active tasks matching your filter criteria. All escalations, contracts, and deposits are up to date.
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setWizardOpen(true)}
+                  className="px-3.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition cursor-pointer"
+                >
+                  + Create New Lease Contract (§S-21)
+                </button>
+              </div>
+            </div>
+          ) : (
+            filteredTasks.map((t) => {
             const isRed = t.dueStatus === "overdue";
             const isYellow = t.dueStatus === "today";
             const isGreen = t.dueStatus === "future";
@@ -441,7 +398,7 @@ export default function PropertyManagerDashboardPage() {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
 

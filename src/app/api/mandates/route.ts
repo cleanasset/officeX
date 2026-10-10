@@ -30,42 +30,36 @@ export async function GET(req: Request) {
       mandatesList = await db.select().from(managementMandates);
     } catch (e) {}
 
-    const formatted = clients.map((c, idx) => {
-      // Mock / join mandate details
-      const isExpiringSoon = idx === 1; // Horizon expires within 60 days (AL-17)
+    const formatted = clients.map((c) => {
+      const dbMandate = mandatesList.find((m) => m.clientAccountId === c.id);
       return {
         id: c.id,
         account_code: c.accountCode || c.account_code,
         name: c.name,
-        contact_person: c.contactPerson || c.contact_person,
-        contact_email: c.contactEmail || c.contact_email,
-        contact_phone: c.contactPhone || c.contact_phone,
+        contact_person: c.contactPerson || c.contact_person || "Designated Representative",
+        contact_email: c.contactEmail || c.contact_email || "support@officex.in",
+        contact_phone: c.contactPhone || c.contact_phone || "—",
         portal_access_enabled: c.portalAccessEnabled ?? true,
         status: c.status || "active",
-        mandate: {
-          mandate_name: `Comprehensive Asset & Facility Mandate - ${c.name}`,
-          fee_model: "pct_collections",
-          fee_rate_pct: 4.0,
+        mandate: dbMandate ? {
+          mandate_name: dbMandate.mandateName,
+          fee_model: dbMandate.feeModel || "pct_collections",
+          fee_rate_pct: Number(dbMandate.feeRate || 0),
           gst_rate_pct: 18.0,
-          settlement_type: idx === 2 ? "operator_escrow" : "direct_to_owner",
+          settlement_type: dbMandate.settlementType || "direct_to_owner",
           statement_day: 7,
           remittance_day: 10,
-          start_date: "2024-04-01",
-          end_date: isExpiringSoon ? "2026-11-30" : "2027-03-31",
-          is_expiring_soon: isExpiringSoon, // Alert AL-17
+          start_date: dbMandate.startDate,
+          end_date: dbMandate.endDate,
+          is_expiring_soon: false,
           services_mandated: [
             "Rent & CAM Billing",
             "Collections & Bank Reconciliation",
             "Statutory GST & TDS Filing",
-            "Contract Escalation Monitoring",
-            "Dispute Resolution Handling"
+            "Contract Escalation Monitoring"
           ],
-          collection_bank: {
-            bank_name: "HDFC Bank Ltd",
-            account_number: `5020008899${1000 + idx * 23}`,
-            ifsc_code: "HDFC0000060",
-          },
-        },
+          collection_bank: null,
+        } : null,
       };
     });
 

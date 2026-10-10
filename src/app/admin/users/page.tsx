@@ -1,11 +1,29 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Plus, X, CheckCircle } from "lucide-react";
 
 export default function UserManagementPortal() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState({ name: "", email: "", role: "", passwordMode: "auto", properties: ["Apex Tower"] as string[] });
+  const [newUser, setNewUser] = useState({ name: "", email: "", role: "", passwordMode: "auto", properties: [] as string[] });
+  const [allProperties, setAllProperties] = useState<string[]>(["All Properties"]);
+
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        const res = await fetch("/api/properties");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAllProperties(["All Properties", ...data.map((p: any) => p.name || p.title || p.id)]);
+          }
+        }
+      } catch (e) {
+        // Fallback default
+      }
+    }
+    loadProperties();
+  }, []);
 
   const users = [
     { id: "USR-001", name: "Medistation Lifecare", email: "medistationlifecare@gmail.com", role: "Property Owner & Asset Manager", portal: "Commercial Portfolio", properties: "Active Portfolio", lastLogin: "Active", status: "Active" },
@@ -13,15 +31,18 @@ export default function UserManagementPortal() {
     { id: "USR-003", name: "Vikram Singhania", email: "vikram.test@singhaniarealty.in", role: "Commercial Asset Manager", portal: "Commercial Portfolio", properties: "Singhania Realty Portfolio", lastLogin: "Active", status: "Active" }
   ];
 
-  const allProperties = ["All Properties", "Apex Tower", "Crystal Tower", "Orion Park", "Zenith Plaza"];
-
   return (
     <div className="flex flex-col gap-6 font-sans relative">
       {toast && <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2"><CheckCircle size={16} className="text-emerald-400" /><span>{toast}</span></div>}
 
-      <div>
-        <h1 className="text-2xl font-black text-gray-900">User Directory</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage portal access and permissions.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">User Directory</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage portal access and permissions.</p>
+        </div>
+        <button onClick={() => setShowDrawer(true)} className="px-4 py-2 bg-[#0F8B7D] text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer hover:bg-[#0c7065] transition-colors">
+          <Plus size={16} /> Add User
+        </button>
       </div>
 
       {/* Users Table */}
@@ -39,7 +60,7 @@ export default function UserManagementPortal() {
                 <td className="py-3.5 pr-3 text-gray-600">{u.properties}</td>
                 <td className="py-3.5 pr-3 text-gray-500">{u.lastLogin}</td>
                 <td className="py-3.5 pr-3"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${u.status === "Active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200"}`}>{u.status}</span></td>
-                <td className="py-3.5"><button className="text-xs text-gray-500 cursor-pointer">De...</button></td>
+                <td className="py-3.5"><button className="text-xs text-gray-500 cursor-pointer">Deactivate</button></td>
               </tr>
             ))}
           </tbody>
@@ -72,13 +93,13 @@ export default function UserManagementPortal() {
               <label className="text-xs font-semibold text-gray-700">Property Scope</label>
               <p className="text-[10px] text-gray-500 mb-2">Assign properties to enforce data boundaries.</p>
               {allProperties.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-xs mb-1.5 cursor-pointer"><input type="checkbox" defaultChecked={p === "Apex Tower"} className="w-4 h-4 accent-[#0F8B7D]" /> {p}</label>
+                <label key={p} className="flex items-center gap-2 text-xs mb-1.5 cursor-pointer"><input type="checkbox" defaultChecked={false} className="w-4 h-4 accent-[#0F8B7D]" /> {p}</label>
               ))}
             </div>
           </div>
           <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
             <button onClick={() => setShowDrawer(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 cursor-pointer">Cancel</button>
-            <button onClick={() => { setShowDrawer(false); setToast("User provisioned!"); setTimeout(() => setToast(null), 3500); }} className="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold cursor-pointer">Provision User</button>
+            <button onClick={() => { setShowDrawer(false); setToast("User provisioned!"); setTimeout(() => setToast(null), 3500); }} className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold cursor-pointer">Provision User</button>
           </div>
         </div>
       )}

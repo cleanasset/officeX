@@ -846,18 +846,16 @@ export default function ManagedServicesPage() {
         </div>
       </section>
 
-      {/* ═══ FINAL CTA SECTION — SIGNATURE DARK THEME ═══ */}
-      <section className="py-20 px-4 sm:px-8 bg-[#071324] text-white relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#0F8B7D]/15 rounded-full blur-3xl pointer-events-none" />
-
+      {/* ═══ FINAL CTA SECTION — CLEAN LIGHT THEME ═══ */}
+      <section className="py-20 px-4 sm:px-8 bg-teal-50/60 border-t border-teal-100 text-slate-900 relative overflow-hidden">
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <span className="text-[11px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/30 px-3 py-1 rounded-full mb-4 inline-block">
+          <span className="text-[11px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-100 border border-teal-200 px-3 py-1 rounded-full mb-4 inline-block">
             Start With Complete Clarity
           </span>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-white">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-slate-950">
             Ready for world-class, hassle-free property stewardship?
           </h2>
-          <p className="text-slate-300 text-sm sm:text-base mb-8 max-w-xl mx-auto">
+          <p className="text-slate-600 text-sm sm:text-base mb-8 max-w-xl mx-auto">
             Schedule a physical building audit with our commercial engineering leadership today. No commitment, zero cost.
           </p>
           <div className="flex flex-wrap justify-center gap-4">

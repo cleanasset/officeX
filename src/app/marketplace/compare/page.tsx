@@ -48,7 +48,7 @@ function QuoteComparisonBoardContent() {
             // Check if already awarded
             setAwardedWorkOrder({
               id: found.awardedWorkOrderId,
-              client: "Apex Commercial Estates Ltd",
+              client: "Commercial Asset Portfolio",
               vendor: found.awardedTo || "TechServe Solutions",
               property: found.property,
               startDate: "01 Nov 2026",

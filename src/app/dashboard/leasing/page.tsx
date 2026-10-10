@@ -37,69 +37,26 @@ export default function LeasingDashboardPage() {
   const [scope, setScope] = useState("all");
   const [newDealModalOpen, setNewDealModalOpen] = useState(false);
 
-  // Kanban Deals State
-  const [deals, setDeals] = useState<DealCard[]>([
-    {
-      id: "DEAL-012",
-      name: "FinTech Hub Expansion",
-      tenantName: "Apex FinTech Global",
-      property: "Apex Business Tower",
-      areaSqft: 12500,
-      estMonthlyRent: "₹36,25,000",
-      probability: 25,
-      stage: "enquiry",
-    },
-    {
-      id: "DEAL-014",
-      name: "BioPharma Labs Campus",
-      tenantName: "BioPharma Healthcare",
-      property: "Meridian Tech Park",
-      areaSqft: 18000,
-      estMonthlyRent: "₹18,00,000",
-      probability: 45,
-      stage: "site_visit",
-    },
-    {
-      id: "DEAL-015",
-      name: "LogiTrans North Wing",
-      tenantName: "LogiTrans India Ltd",
-      property: "Nexus Corporate Hub",
-      areaSqft: 9800,
-      estMonthlyRent: "₹24,50,000",
-      probability: 60,
-      stage: "proposal",
-    },
-    {
-      id: "DEAL-016",
-      name: "Edutech Virtual Campus",
-      tenantName: "Orbit Edutech Pvt Ltd",
-      property: "Meridian Tech Park",
-      areaSqft: 14200,
-      estMonthlyRent: "₹14,20,000",
-      probability: 80,
-      stage: "loi",
-    },
-    {
-      id: "DEAL-017",
-      name: "Retail Flagship Experience",
-      tenantName: "HyperRetail Stores",
-      property: "Apex Business Tower",
-      areaSqft: 8500,
-      estMonthlyRent: "₹24,65,000",
-      probability: 90,
-      stage: "agreement",
-    },
-    {
-      id: "DEAL-010",
-      name: "SaaS Headquarters Floor 8",
-      tenantName: "CloudScale Software",
-      property: "Apex Business Tower",
-      areaSqft: 16000,
-      estMonthlyRent: "₹46,40,000",
-      probability: 100,
-      stage: "won",
-    },
+interface ExpiryBucket {
+  label: string;
+  count: number;
+  rent: string;
+  color: string;
+  tenant?: string;
+}
+
+// Dynamic Kanban Deals State (Zero prefeeded mock data)
+  const [deals, setDeals] = useState<DealCard[]>([]);
+  const [vacantSpaces, setVacantSpaces] = useState<any[]>([]);
+  const [expiryBuckets, setExpiryBuckets] = useState<ExpiryBucket[]>([
+    { label: "0–30 Days", count: 0, rent: "₹0", color: "bg-emerald-50 text-emerald-800" },
+    { label: "31–90 Days", count: 0, rent: "₹0", color: "bg-amber-50 text-amber-800" },
+    { label: "91–180 Days", count: 0, rent: "₹0", color: "bg-blue-50 text-blue-800" },
+    { label: "181–365 Days", count: 0, rent: "₹0", color: "bg-purple-50 text-purple-800" },
+    { label: "365+ Days", count: 0, rent: "₹0", color: "bg-slate-50 text-slate-800" },
   ]);
+
+
 
   const stages: { key: DealCard["stage"]; label: string; badge: string }[] = [
     { key: "enquiry", label: "Lead / Enquiry", badge: "bg-slate-100 text-slate-700" },
@@ -133,50 +90,6 @@ export default function LeasingDashboardPage() {
     );
   };
 
-  // Expiry Pipeline (§S-24 / §S-04)
-  const expiryBuckets = [
-    { label: "0–30 Days", count: 0, rent: "₹0", color: "bg-emerald-50 text-emerald-800" },
-    { label: "31–90 Days", count: 1, rent: "₹10.50 L", color: "bg-amber-50 text-amber-800", tenant: "Brightpath Workspaces" },
-    { label: "91–180 Days", count: 1, rent: "₹14.20 L", color: "bg-blue-50 text-blue-800", tenant: "Orbit Edutech" },
-    { label: "181–365 Days", count: 2, rent: "₹34.80 L", color: "bg-purple-50 text-purple-800", tenant: "Apex Fin & NextGen" },
-    { label: "365+ Days", count: 6, rent: "₹1.12 Cr", color: "bg-slate-50 text-slate-800", tenant: "Innovate, Google, Deloitte" },
-  ];
-
-  // Vacant and reserved space list (§S-04 Wireframe)
-  const vacantSpaces = [
-    {
-      code: "APX-09",
-      property: "Apex Business Tower",
-      area: "10,200 sq ft",
-      askingRate: "₹290 / sq ft",
-      vacantSince: "01-Apr-2026",
-      daysVacant: 181,
-      deal: "DEAL-012 (Enquiry)",
-      hasArrears: false,
-    },
-    {
-      code: "MTP-T2-02",
-      property: "Meridian Tower 2",
-      area: "18,500 sq ft",
-      askingRate: "₹100 / sq ft",
-      vacantSince: "01-Jan-2026",
-      daysVacant: 271,
-      deal: "DEAL-014 (Site Visit)",
-      hasArrears: false,
-      isHighDays: true,
-    },
-    {
-      code: "NXH-03B",
-      property: "Nexus Corporate Hub",
-      area: "6,400 sq ft",
-      askingRate: "₹140 / sq ft",
-      vacantSince: "01-Aug-2026",
-      daysVacant: 59,
-      deal: "None",
-      hasArrears: false,
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header (§S-04) */}
@@ -207,9 +120,6 @@ export default function LeasingDashboardPage() {
               className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
               <option value="all">All Properties</option>
-              <option value="apex">Apex Business Tower</option>
-              <option value="meridian">Meridian Tech Park</option>
-              <option value="nexus">Nexus Corporate Hub</option>
             </select>
           </div>
 
@@ -231,6 +141,43 @@ export default function LeasingDashboardPage() {
         </div>
       </div>
 
+      {/* §2.6 Empty State Banner (Clean Workspace) */}
+      {deals.length === 0 && vacantSpaces.length === 0 && (
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-200/80 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#0F8B7D]/10 text-[#0F8B7D] flex items-center justify-center shrink-0">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  §2.6 Clean Workspace
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">Zero Active Leasing Pipeline Deals</h3>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Your leasing pipeline and inventory tracker are clean. Register an enquiry or import existing leases to get started.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setNewDealModalOpen(true)}
+              className="px-4 py-2 bg-[#0F8B7D] hover:bg-[#0c7367] text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={14} />
+              <span>+ New Deal Enquiry (§4.7A)</span>
+            </button>
+            <Link
+              href="/properties/rent-roll"
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition"
+            >
+              View Units
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Summary KPI Strip (§S-04 Top Wireframe) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
@@ -238,10 +185,12 @@ export default function LeasingDashboardPage() {
             Vacant / Reserved Area
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">
-            55,700 sq ft
+            {vacantSpaces.reduce((sum, s) => sum + (parseFloat(s.chargeableAreaSqFt || s.area || "0") || 0), 0) > 0
+              ? `${vacantSpaces.reduce((sum, s) => sum + (parseFloat(s.chargeableAreaSqFt || s.area || "0") || 0), 0).toLocaleString("en-IN")} sq ft`
+              : "0 sq ft"}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            26.6% portfolio vacancy
+            {vacantSpaces.length > 0 ? "Portfolio vacancy" : "Zero vacant space"}
           </div>
         </div>
 
@@ -250,10 +199,10 @@ export default function LeasingDashboardPage() {
             Vacant Coworking Seats
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">
-            38 Seats
+            0 Seats
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            Meridian Floor 4 Flex
+            Flex space capacity
           </div>
         </div>
 
@@ -261,11 +210,11 @@ export default function LeasingDashboardPage() {
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             Expiring in 12 Months
           </div>
-          <div className="text-2xl font-black text-amber-700 mt-1">
-            2 / ₹43.50 L pm
+          <div className="text-2xl font-black text-slate-900 mt-1">
+            {expiryBuckets.reduce((a, b) => a + b.count, 0)} Contracts
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            Revenue at risk (K-09)
+            Renewal pipeline
           </div>
         </div>
 
@@ -273,11 +222,11 @@ export default function LeasingDashboardPage() {
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             Deals in Open Pipeline
           </div>
-          <div className="text-2xl font-black text-emerald-700 mt-1">
-            6 / ₹1.18 Cr pm
+          <div className="text-2xl font-black text-slate-900 mt-1">
+            {deals.length} Active Deals
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            Weighted: ₹68.4 L (D-22)
+            Commercial pipeline
           </div>
         </div>
       </div>
@@ -439,7 +388,7 @@ export default function LeasingDashboardPage() {
               Days vacant and prospective deals linked. Note: Arrears indicator shows Yes/No flag only per §S-04 security rules.
             </p>
           </div>
-          <span className="text-xs text-slate-500">3 Available Plates</span>
+          <span className="text-xs text-slate-500">{vacantSpaces.length} Available Plates</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -457,41 +406,55 @@ export default function LeasingDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {vacantSpaces.map((s) => (
-                <tr key={s.code} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                    {s.code}
-                  </td>
-                  <td className="py-3 px-3 text-slate-700">{s.property}</td>
-                  <td className="py-3 px-3 font-medium text-slate-900">{s.area}</td>
-                  <td className="py-3 px-3 font-mono font-bold text-[#0F8B7D]">
-                    {s.askingRate}
-                  </td>
-                  <td className="py-3 px-3 text-slate-600">{s.vacantSince}</td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`font-mono font-bold ${
-                        s.isHighDays ? "text-rose-600 font-black" : "text-slate-700"
-                      }`}
-                    >
-                      {s.daysVacant} days
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                      {s.deal}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <button
-                      onClick={() => setNewDealModalOpen(true)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition-colors"
-                    >
-                      + Create Deal
-                    </button>
+              {vacantSpaces.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-xs text-slate-500">
+                    <div className="mx-auto w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+                      <CheckCircle2 size={20} className="text-emerald-600" />
+                    </div>
+                    <div className="font-bold text-slate-800">No vacant inventory recorded</div>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
+                      All units in your commercial properties are occupied or no spaces have been configured yet.
+                    </p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                vacantSpaces.map((s) => (
+                  <tr key={s.code} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                      {s.code}
+                    </td>
+                    <td className="py-3 px-3 text-slate-700">{s.property}</td>
+                    <td className="py-3 px-3 font-medium text-slate-900">{s.area}</td>
+                    <td className="py-3 px-3 font-mono font-bold text-[#0F8B7D]">
+                      {s.askingRate}
+                    </td>
+                    <td className="py-3 px-3 text-slate-600">{s.vacantSince}</td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`font-mono font-bold ${
+                          s.isHighDays ? "text-rose-600 font-black" : "text-slate-700"
+                        }`}
+                      >
+                        {s.daysVacant} days
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="px-2 py-0.5 rounded font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        {s.deal}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => setNewDealModalOpen(true)}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition-colors cursor-pointer"
+                      >
+                        + Create Deal
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -394,12 +394,14 @@ export default function SuperAdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {(commissionTransactions && commissionTransactions.length > 0 ? commissionTransactions : [
-                    { id: "TXN-8801", clientOrEntity: "Johnson Controls India", property: "Maker Maxity (BKC)", dealValue: 420000, officeXFee: 42000, commissionRate: 10, payoutToVendorOrBroker: 378000, status: "PAID" },
-                    { id: "TXN-8794", clientOrEntity: "Urban Cleaners Enterprise", property: "GIFT Tower 1 (IFSC)", dealValue: 280000, officeXFee: 33600, commissionRate: 12, payoutToVendorOrBroker: 246400, status: "ESCROW_HOLD" },
-                    { id: "TXN-8750", clientOrEntity: "SIS Group Security", property: "World Trade Center (Pune)", dealValue: 1850000, officeXFee: 148000, commissionRate: 8, payoutToVendorOrBroker: 1702000, status: "PAID" },
-                    { id: "TXN-8723", clientOrEntity: "Voltas Electro-Mech", property: "One BKC (Mumbai)", dealValue: 640000, officeXFee: 64000, commissionRate: 10, payoutToVendorOrBroker: 576000, status: "ESCROW_HOLD" }
-                  ]).map((txn) => (
+                  {(!commissionTransactions || commissionTransactions.length === 0) ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-xs text-gray-400">
+                        No commission transactions recorded on ledger yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    commissionTransactions.map((txn) => (
                     <tr key={txn.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-gray-800">{txn.id}</td>
                       <td className="py-3 px-3 font-bold text-gray-900">{txn.clientOrEntity}</td>
@@ -417,7 +419,7 @@ export default function SuperAdminDashboard() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>

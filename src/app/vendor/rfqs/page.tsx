@@ -53,7 +53,7 @@ export default function MatchedRFQsBrowser() {
         body: JSON.stringify({
           action: "submit_quote",
           rfqId: activeRfq.id,
-          vendorName: "Apex Facility Solutions Pvt Ltd",
+          vendorName: "Enterprise Facility Solutions",
           bidAmount: quoteForm.bidAmount,
           timeline: quoteForm.timeline,
           warranty: quoteForm.warranty,
@@ -84,50 +84,8 @@ export default function MatchedRFQsBrowser() {
     }
   };
 
-  const displayRfqs = rfqList.length > 0 ? rfqList : [
-    {
-      id: "RFQ-2026-8842",
-      title: "DG Set Annual Maintenance Contract",
-      category: "HVAC",
-      match: "98% Match",
-      property: "Apex Business Tower, Mumbai BKC",
-      desc: "Comprehensive AMC for 3x 1000kVA Cummins DG sets including preventive maintenance, breakdown calls, and genuine consumables.",
-      scopeOfWork: "Quarterly inspection, load testing, oil analysis, filter replacement, 2-hour breakdown response SLA.",
-      timeRemaining: "1d : 08h : 45m"
-    },
-    {
-      id: "RFQ-2026-8843",
-      title: "Facade Cleaning Service — Quarterly",
-      category: "Cleaning",
-      match: "96% Match",
-      property: "Global Tech Park, Bengaluru",
-      desc: "Quarterly facade cleaning for 3 glass towers. Requires specialized cradle equipment and certified rope access personnel.",
-      scopeOfWork: "Cleaning 42,000 sq.ft of curtain wall facade, silicone seal inspection, IRATA rope certification.",
-      timeRemaining: "2d : 14h : 05m"
-    },
-    {
-      id: "RFQ-2026-8844",
-      title: "UPS Battery Replacement & Testing",
-      category: "Electrical",
-      match: "92% Match",
-      property: "Cyber City, Gurugram",
-      desc: "Supply, installation, and testing of 120 SMF batteries for centralized UPS systems across 4 server room floors.",
-      scopeOfWork: "Replace 12V 100AH Exide SMF batteries, safe disposal of old cells, impedance testing, backup load run.",
-      timeRemaining: "4d : 09h : 20m"
-    },
-    {
-      id: "RFQ-2026-8845",
-      title: "Access Control System Upgrade",
-      category: "Security",
-      match: "88% Match",
-      property: "Pioneer Plaza, Pune",
-      desc: "Migration from legacy RFID to biometric/mobile access control for 15 entry points including turnstiles and server rooms.",
-      scopeOfWork: "Hardware retrofit, SDK integration with OfficeX Speed-Gate API, 3,500 active employee badge provisioning.",
-      timeRemaining: "7d : 11h : 00m"
-    }
-  ];
-
-  const currentRfq = displayRfqs.find(r => r.id === selectedRfqId) || displayRfqs[0];
+  const displayRfqs = rfqList;
+  const currentRfq = displayRfqs.find((r) => r.id === selectedRfqId) || (displayRfqs.length > 0 ? displayRfqs[0] : null);
 
   return (
     <div className="flex gap-6 font-sans relative">
@@ -172,8 +130,14 @@ export default function MatchedRFQsBrowser() {
         </div>
 
         {/* RFQ Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {displayRfqs.map((rfq) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {displayRfqs.length === 0 ? (
+            <div className="col-span-full py-16 text-center text-xs text-gray-500 bg-white rounded-2xl border border-dashed border-gray-200">
+              <p className="font-bold text-gray-700">No matching commercial RFQs found.</p>
+              <p className="text-[11px] text-gray-400 mt-1">When facilities post tenders matching your trade categories, they will appear here in real time.</p>
+            </div>
+          ) : (
+            displayRfqs.map((rfq) => (
             <div
               key={rfq.id}
               onClick={() => setSelectedRfqId(rfq.id)}
@@ -223,7 +187,7 @@ export default function MatchedRFQsBrowser() {
                 </div>
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
 

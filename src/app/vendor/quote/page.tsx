@@ -43,8 +43,8 @@ export default function QuoteSubmissionForm() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Submit Quote: RFQ-089</h1>
-          <p className="text-sm text-gray-500 mt-1">Vendor Portal &gt; Matched RFQs &gt; RFQ-089 &gt; Submit Quote</p>
+          <h1 className="text-2xl font-black text-gray-900">Submit Service Quotation</h1>
+          <p className="text-sm text-gray-500 mt-1">Vendor Portal &gt; Matched RFQs &gt; Submit Quotation</p>
         </div>
         <span className="px-3.5 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
           Open for Bidding
@@ -56,12 +56,12 @@ export default function QuoteSubmissionForm() {
         {/* RFQ Context Header */}
         <div className="grid grid-cols-[1fr_340px] gap-6 pb-6 border-b border-gray-100">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">DG Set Annual Maintenance Contract</h2>
+            <h2 className="text-lg font-bold text-gray-900">Commercial Facility Operations Contract</h2>
             <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
-              <span>🏢 Apex Business Tower</span>
-              <span>⚡ Electrical & DG</span>
+              <span>🏢 Commercial Managed Property</span>
+              <span>⚡ Hard &amp; Soft FM Scope</span>
               <span className="text-red-500 font-semibold flex items-center gap-1">
-                <Clock size={13} /> Closes in 2 days
+                <Clock size={13} /> Open Tender
               </span>
             </div>
           </div>

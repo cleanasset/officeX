@@ -10,18 +10,13 @@ export default function AdminEscrowControlDashboard() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const escrowStats = [
-    { label: "Total Escrow Held", value: "₹48.2 Lakhs", sub: "14 Active Accounts", color: "text-blue-600" },
-    { label: "Released This Month", value: "₹1.84 Crores", sub: "98.5% Auto Disbursed", color: "text-emerald-600" },
-    { label: "Commission Retained", value: "₹18.4 Lakhs", sub: "10% Platform Take Rate", color: "text-purple-600" },
-    { label: "Disputed / On Hold", value: "₹4.5 Lakhs", sub: "2 Disputed Milestones", color: "text-red-500" }
-  ];
+  const [escrowAccounts, setEscrowAccounts] = useState<any[]>([]);
 
-  const escrowAccounts = [
-    { id: "ESC-8841", property: "Apex Business Tower", vendor: "TechServe MEP", amount: "₹2,18,300", milestone: "Aug 2026 Monthly AMC", nodalStatus: "Funds Held in Nodal", action: "Release" },
-    { id: "ESC-8842", property: "Meridian Tech Park", vendor: "Knight FM", amount: "₹4,50,000", milestone: "Lift Modernization Phase 1", nodalStatus: "Client Approved (Ready)", action: "Release" },
-    { id: "ESC-8843", property: "Godrej BKC Horizon", vendor: "SafeGuard Pro", amount: "₹3,20,000", milestone: "Security Guard Deployment", nodalStatus: "Dispute Flagged by FM", action: "Investigate" },
-    { id: "ESC-8844", property: "Nexus Innovation Hub", vendor: "CleanPro Services", amount: "₹1,80,000", milestone: "Façade Deep Cleaning", nodalStatus: "Funds Released", action: "Completed" }
+  const escrowStats = [
+    { label: "Total Escrow Held", value: escrowAccounts.length > 0 ? "₹0.00" : "₹0", sub: `${escrowAccounts.length} Active Accounts`, color: "text-blue-600" },
+    { label: "Released This Month", value: "₹0", sub: "0% Auto Disbursed", color: "text-emerald-600" },
+    { label: "Commission Retained", value: "₹0", sub: "10% Platform Take Rate", color: "text-purple-600" },
+    { label: "Disputed / On Hold", value: "₹0", sub: "0 Disputed Milestones", color: "text-red-500" }
   ];
 
   return (
@@ -83,7 +78,15 @@ export default function AdminEscrowControlDashboard() {
               </tr>
             </thead>
             <tbody>
-              {escrowAccounts.map((acc) => (
+              {escrowAccounts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-xs text-gray-500">
+                    <p className="font-bold text-gray-700">No active nodal escrow transactions on ledger.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Escrow accounts will appear here automatically when milestone work orders are funded.</p>
+                  </td>
+                </tr>
+              ) : (
+                escrowAccounts.map((acc) => (
                 <tr key={acc.id} className="border-b border-gray-100 text-xs hover:bg-gray-50/50">
                   <td className="py-3 pr-3 font-mono font-bold text-[#0F8B7D]">{acc.id}</td>
                   <td className="py-3 pr-3 font-semibold text-gray-900">{acc.property}</td>
@@ -121,7 +124,7 @@ export default function AdminEscrowControlDashboard() {
                     )}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

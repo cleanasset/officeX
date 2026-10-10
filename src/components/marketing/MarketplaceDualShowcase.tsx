@@ -70,24 +70,24 @@ export default function MarketplaceDualShowcase({
   // 4 PRIMARY COMMERCIAL OFFICES (Single 4-card row) - 4 Completely distinct space formats
   const offices = [
     {
-      id: "apex-bkc",
+      id: "pinnacle-bkc",
       badge: "GRADE-A TOWER",
       image: "/images/showcase_single_tower.jpg",
-      title: "Apex Corporate Tower",
+      title: "Pinnacle Corporate Tower",
       location: "BKC, Mumbai",
       facilities: "120 Seats · 8,500 sq.ft. · Triple-Height Lobby · 100% DG Backup",
       specPill: "Dedicated Floor",
-      linkUrl: "/public/search?query=Apex+BKC"
+      linkUrl: "/public/search?query=Pinnacle+BKC"
     },
     {
-      id: "meridian-whitefield",
+      id: "metro-whitefield",
       badge: "MANAGED IT SUITE",
       image: "/images/showcase_managed_coworking.jpg",
-      title: "Meridian Managed Suites",
+      title: "Metro Managed Suites",
       location: "Whitefield, Bengaluru",
       facilities: "45 Desks · Ergonomic Chairs · Acoustic Phone Booths · Leased Line",
       specPill: "Plug & Play",
-      linkUrl: "/public/search?query=Meridian+Whitefield"
+      linkUrl: "/public/search?query=Metro+Whitefield"
     },
     {
       id: "tech-horizon",

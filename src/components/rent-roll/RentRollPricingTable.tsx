@@ -20,7 +20,16 @@ import {
   User,
   Mail,
   Briefcase,
+  Loader2,
 } from "lucide-react";
+import { initiateRazorpayPayment } from "@/lib/razorpay-client";
+import { supabase } from "@/lib/supabase";
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
 
 interface RentRollPricingTableProps {
   onContactSales?: () => void;
@@ -31,6 +40,7 @@ interface SelectedPlanInfo {
   id: string;
   name: string;
   ratePerSqft: number;
+  monthlyPrice: number;
   sqftLimit: string;
   sqftNumber: number;
   basePriceNum: number;
@@ -46,16 +56,47 @@ export default function RentRollPricingTable({
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("owner");
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || "";
-      const storedName = localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || "";
-      const storedRole = localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role") || "owner";
-      if (storedEmail) setUserEmail(storedEmail);
-      if (storedName) setUserName(storedName);
-      if (storedRole) setUserRole(storedRole);
-    }
+    const initAuth = async () => {
+      if (typeof window !== "undefined") {
+        let storedEmail =
+          localStorage.getItem("officex_user_email") ||
+          sessionStorage.getItem("officex_user_email") ||
+          getCookie("officex_user_email") ||
+          "";
+        let storedName =
+          localStorage.getItem("officex_user_name") ||
+          sessionStorage.getItem("officex_user_name") ||
+          getCookie("officex_user_name") ||
+          "";
+        let storedRole =
+          localStorage.getItem("officex_user_role") ||
+          sessionStorage.getItem("officex_user_role") ||
+          getCookie("officex_user_role") ||
+          "owner";
+
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.email) {
+            storedEmail = session.user.email;
+            storedName =
+              session.user.user_metadata?.full_name ||
+              session.user.email.split("@")[0] ||
+              storedName;
+          }
+        } catch {
+          // Non-blocking
+        }
+
+        if (storedEmail) setUserEmail(storedEmail);
+        if (storedName) setUserName(storedName);
+        if (storedRole) setUserRole(storedRole);
+        setIsAuthLoaded(true);
+      }
+    };
+    initAuth();
   }, []);
 
   // Calculator State
@@ -85,18 +126,19 @@ export default function RentRollPricingTable({
 
   const calculatedCalculatorAnnualPrice = customSqft * calculatorRate;
 
-  // Commercial Slabs: Compact, punchy 4 bullets each
+  // Commercial Slabs: Compact, punchy 4 bullets each with canonical ₹50, ₹100, ₹200 plans
   const SLABS = [
     {
       id: "starter",
       name: "Commercial Starter",
       badge: "Up to 50k Sq.Ft",
       ratePerSqft: 50,
+      monthlyPrice: 50,
       sqftLimit: "50,000 sq.ft",
       sqftNumber: 50000,
       target: "Standalone Commercial Tower",
-      basePriceDisplay: "₹25 Lakhs / yr",
-      basePriceNum: 2500000,
+      basePriceDisplay: "₹50 / mo",
+      basePriceNum: 50,
       popular: false,
       ctaText: "Select Starter",
       features: [
@@ -111,11 +153,12 @@ export default function RentRollPricingTable({
       name: "Grade-A Tech Park",
       badge: "Most Popular",
       ratePerSqft: 100,
+      monthlyPrice: 100,
       sqftLimit: "2,50,000 sq.ft",
       sqftNumber: 250000,
       target: "Multi-Tower Tech Parks & Campuses",
-      basePriceDisplay: "₹2.50 Crores / yr",
-      basePriceNum: 25000000,
+      basePriceDisplay: "₹100 / mo",
+      basePriceNum: 100,
       popular: true,
       ctaText: "Select Tech Park",
       features: [
@@ -130,11 +173,12 @@ export default function RentRollPricingTable({
       name: "REIT Mega-Portfolio",
       badge: "Enterprise Scale",
       ratePerSqft: 200,
+      monthlyPrice: 200,
       sqftLimit: "50,00,00,000 sq.ft",
       sqftNumber: 500000000,
       target: "Institutional Funds & REITs",
-      basePriceDisplay: "Enterprise License",
-      basePriceNum: 100000000,
+      basePriceDisplay: "₹200 / mo",
+      basePriceNum: 200,
       popular: false,
       ctaText: "Select Enterprise",
       features: [
@@ -146,39 +190,49 @@ export default function RentRollPricingTable({
     },
   ];
 
-  // Open checkout for a plan
-  const handleOpenCheckout = (slab: typeof SLABS[0]) => {
+  // Open checkout modal for plan review, coupon entry, or Razorpay payment
+  const handleChoosePlan = (slab: typeof SLABS[0]) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_selected_plan", slab.id);
       sessionStorage.setItem("officex_selected_plan", slab.id);
     }
-    setCheckoutPlan({
+    const planInfo: SelectedPlanInfo = {
       id: slab.id,
       name: slab.name,
       ratePerSqft: slab.ratePerSqft,
+      monthlyPrice: slab.monthlyPrice,
       sqftLimit: slab.sqftLimit,
       sqftNumber: slab.sqftNumber,
       basePriceNum: slab.basePriceNum,
-    });
+    };
+    setCheckoutPlan(planInfo);
     setCouponInput("");
     setAppliedCoupon(null);
     setCouponError(null);
-    setShowPromoField(false);
+    setShowPromoField(true);
+    setProcessingActivation(false);
+  };
+
+  const handleOpenCheckout = (slab: typeof SLABS[0]) => {
+    handleChoosePlan(slab);
   };
 
   const handleOpenCalculatorCheckout = () => {
-    setCheckoutPlan({
+    const customPlan: SelectedPlanInfo = {
       id: `custom-${calculatorRate}`,
       name: `Custom Scope (${customSqft.toLocaleString("en-IN")} Sq.Ft)`,
       ratePerSqft: calculatorRate,
+      monthlyPrice: calculatorRate,
       sqftLimit: `${customSqft.toLocaleString("en-IN")} sq.ft`,
       sqftNumber: customSqft,
-      basePriceNum: calculatedCalculatorAnnualPrice,
-    });
+      basePriceNum: calculatorRate,
+    };
+    setCheckoutPlan(customPlan);
     setCouponInput("");
     setAppliedCoupon(null);
     setCouponError(null);
-    setShowPromoField(false);
+    setShowPromoField(true);
+    setProcessingActivation(false);
   };
 
   // Apply Coupon Logic
@@ -195,34 +249,186 @@ export default function RentRollPricingTable({
     }
   };
 
-  // Complete checkout & navigate
-  const handleCompleteActivation = () => {
-    const finalEmail = userEmail.trim().toLowerCase() || "demo@officex.commercial";
-    const finalName = userName.trim() || "Commercial Admin";
-    const finalRole = userRole || "owner";
+  // Launch Razorpay Payment Gateway directly
+  const handlePayViaRazorpay = async (planToPay?: SelectedPlanInfo | null) => {
+    const plan = planToPay || checkoutPlan;
+    if (!plan) return;
 
+    const finalEmail = (
+      userEmail ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("officex_user_email") || getCookie("officex_user_email")
+        : "") ||
+      ""
+    ).trim().toLowerCase();
+
+    const finalName = (
+      userName ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("officex_user_name") || getCookie("officex_user_name")
+        : "") ||
+      "Commercial Account"
+    ).trim();
+
+    const priceInRupees = plan.basePriceNum || 100;
+    const amountInPaise = priceInRupees * 100;
+
+    setProcessingActivation(true);
+    try {
+      await initiateRazorpayPayment({
+        amount: amountInPaise,
+        receipt: `SUB_${plan.id.toUpperCase()}_${Date.now()}`,
+        description: `OfficeX ${plan.name} Subscription - Rent Roll Master`,
+        prefillName: finalName,
+        prefillEmail: finalEmail,
+        notes: {
+          portal: "Rent Roll Master",
+          user_email: finalEmail,
+          plan_id: plan.id,
+          plan_name: plan.name,
+          plan_price: `INR ${priceInRupees}`,
+          coupon: appliedCoupon || "none",
+          discount: "0%",
+        },
+        onSuccess: async (response) => {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_subscription", "active");
+            sessionStorage.setItem("officex_subscription", "active");
+            localStorage.setItem("officex_user_email", finalEmail);
+            localStorage.setItem("officex_user_name", finalName);
+            localStorage.setItem("officex_user_role", userRole || "owner");
+            localStorage.setItem("officex_selected_plan", plan.id);
+            localStorage.setItem("officex_subscription_plan", plan.id);
+            localStorage.setItem(`officex_sub_${finalEmail}`, "active");
+            sessionStorage.setItem(`officex_sub_${finalEmail}`, "active");
+            document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
+            document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+            document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+            document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+          }
+
+          try {
+            await fetch("/api/subscription/status", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: finalEmail,
+                coupon: appliedCoupon || "none",
+                paymentId: response.razorpay_payment_id,
+                plan: plan.id,
+              }),
+            });
+          } catch {
+            // Non-blocking
+          }
+
+          setProcessingActivation(false);
+          router.push("/select-workspace");
+        },
+        onFailure: (err) => {
+          console.error("Razorpay payment cancelled or failed:", err);
+          setProcessingActivation(false);
+        },
+      });
+    } catch (err: any) {
+      console.error("Razorpay initialization error:", err);
+      setProcessingActivation(false);
+      alert(`Could not open payment gateway: ${err.message || "Please try again."}`);
+    }
+  };
+
+  // Complete checkout & navigate for 100% Free coupon
+  const handleCompleteActivation = async () => {
+    const finalEmail = (
+      userEmail ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("officex_user_email") || getCookie("officex_user_email")
+        : "") ||
+      ""
+    ).trim().toLowerCase();
+
+    const finalName = (
+      userName ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("officex_user_name") || getCookie("officex_user_name")
+        : "") ||
+      "Commercial Account"
+    ).trim();
+
+    const finalRole = userRole || "owner";
+    const planId = checkoutPlan?.id || "techpark";
+
+    setProcessingActivation(true);
     if (typeof window !== "undefined") {
+      localStorage.setItem("officex_subscription", "active");
+      sessionStorage.setItem("officex_subscription", "active");
       localStorage.setItem("officex_user_email", finalEmail);
       localStorage.setItem("officex_user_name", finalName);
       localStorage.setItem("officex_user_role", finalRole);
       localStorage.setItem(`officex_sub_${finalEmail}`, "active");
-      if (checkoutPlan?.id) {
-        localStorage.setItem("officex_selected_plan", checkoutPlan.id);
-        sessionStorage.setItem("officex_selected_plan", checkoutPlan.id);
-      }
+      localStorage.setItem("officex_selected_plan", planId);
+      localStorage.setItem("officex_subscription_plan", planId);
       sessionStorage.setItem("officex_user_email", finalEmail);
       sessionStorage.setItem(`officex_sub_${finalEmail}`, "active");
-      document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000`;
+      document.cookie = `officex_sub_${encodeURIComponent(finalEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
+      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+      document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
+      document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
     }
 
-    setProcessingActivation(true);
+    try {
+      await fetch("/api/subscription/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: finalEmail,
+          coupon: appliedCoupon || "RENTROLL12",
+          paymentId: `FREE_${appliedCoupon || "RENTROLL12"}_${Date.now()}`,
+          plan: planId,
+        }),
+      });
+    } catch {
+      // Non-blocking
+    }
+
     setTimeout(() => {
-      router.push("/properties/rent-roll?tab=dashboard");
+      router.push("/dashboard/owner");
     }, 350);
   };
 
   return (
     <div className="w-full">
+      {/* ──── SIGNED-IN VERIFIED BANNER (WHEN USER COMES FROM SIGN-IN / GATE) ──── */}
+      {userEmail && (
+        <div className="max-w-6xl mx-auto mb-6 p-3.5 sm:p-4 bg-gradient-to-r from-teal-50 via-emerald-50/50 to-white border border-teal-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#0D7B6C] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+              {(userName || userEmail).charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-black text-slate-900">
+                  Signed in as {userName || userEmail}
+                </span>
+                <span className="text-[10px] font-black bg-[#0D7B6C] text-white px-2 py-0.5 rounded-full shadow-2xs">
+                  ✓ Verified Account
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 font-medium">
+                {userEmail} &middot; Pick your operational plan below to directly launch the Razorpay payment gateway and unlock live access.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/properties/rent-roll"
+            className="text-xs font-bold text-[#0D7B6C] hover:text-[#0A6357] hover:underline flex items-center gap-1 shrink-0 self-start sm:self-auto"
+          >
+            <span>Return to Dashboard Gate</span>
+            <ArrowRight size={12} />
+          </Link>
+        </div>
+      )}
+
       {/* ──── 1. COMPACT, SLEEK 3 PRICING BOXES ──── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch max-w-6xl mx-auto mb-10">
         {SLABS.map((slab) => (
@@ -261,15 +467,15 @@ export default function RentRollPricingTable({
               <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 mb-4">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-black text-slate-900 font-mono tracking-tight">
-                    ₹{slab.ratePerSqft}
+                    ₹{slab.monthlyPrice}
                   </span>
                   <span className="text-xs font-semibold text-slate-500">
-                    / sq.ft / yr
+                    / mo
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 pt-1 border-t border-slate-200/60 font-medium">
-                  <span>Scope: <strong className="text-slate-800">{slab.sqftLimit}</strong></span>
-                  <span className="font-mono text-slate-500">{slab.basePriceDisplay}</span>
+                  <span>Capacity: <strong className="text-slate-800">{slab.sqftLimit}</strong></span>
+                  <span className="font-mono text-[#0D7B6C] font-bold">Standard Billing</span>
                 </div>
               </div>
 
@@ -293,15 +499,30 @@ export default function RentRollPricingTable({
             <div>
               <button
                 type="button"
-                onClick={() => handleOpenCheckout(slab)}
-                className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                onClick={() => handleChoosePlan(slab)}
+                disabled={processingActivation}
+                className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 ${
                   slab.popular
                     ? "bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/20 hover:shadow-md"
                     : "bg-slate-900 hover:bg-slate-800 text-white"
                 }`}
               >
-                <span>{slab.ctaText}</span>
-                <ArrowRight size={13} />
+                {processingActivation && checkoutPlan?.id === slab.id ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Opening Gateway...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={13} />
+                    <span>
+                      {userEmail
+                        ? `Choose Plan · Pay ₹${slab.monthlyPrice}`
+                        : slab.ctaText}
+                    </span>
+                    <ArrowRight size={13} />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -334,7 +555,7 @@ export default function RentRollPricingTable({
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    ₹{rate}/sq.ft
+                    ₹{rate}/mo
                   </button>
                 ))}
               </div>
@@ -364,19 +585,20 @@ export default function RentRollPricingTable({
           <div className="flex items-center justify-between sm:justify-end gap-4 sm:border-l sm:border-slate-200/80 sm:pl-5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
             <div className="text-left sm:text-right">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Estimated Scope
+                Selected Tier
               </span>
               <span className="text-xl font-black text-slate-900 font-mono">
-                ₹{calculatedCalculatorAnnualPrice.toLocaleString("en-IN")}
+                ₹{calculatorRate}
               </span>
-              <span className="text-[10px] text-slate-400 block">/ yr + GST</span>
+              <span className="text-[10px] text-slate-400 block">/ month (all inclusive)</span>
             </div>
 
             <button
               onClick={handleOpenCalculatorCheckout}
-              className="px-4 py-2 bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer shrink-0"
+              disabled={processingActivation}
+              className="px-4 py-2 bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer shrink-0 disabled:opacity-60"
             >
-              <span>Subscribe Scope</span>
+              <span>{userEmail ? `Pay ₹${calculatorRate} & Subscribe` : "Subscribe Scope"}</span>
               <ArrowRight size={13} />
             </button>
           </div>
@@ -415,87 +637,114 @@ export default function RentRollPricingTable({
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-slate-900">
-                  Subscribe to Rent Roll
+                  Subscribe to {checkoutPlan.name}
                 </h3>
                 <p className="text-[11px] text-slate-500 font-medium">
-                  {checkoutPlan.name} · ₹{checkoutPlan.ratePerSqft}/sq.ft
+                  ₹{checkoutPlan.basePriceNum} / month · Up to {checkoutPlan.sqftLimit}
                 </p>
               </div>
             </div>
 
-            {/* User Details Step (if not already entered) */}
-            <div className="space-y-2.5 mb-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                Workspace Admin Credentials
-              </span>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative">
-                  <User size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Your Name"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#0D7B6C] outline-none"
-                  />
+            {/* User Details Step */}
+            {userEmail ? (
+              <div className="mb-4 p-3 bg-teal-50/80 rounded-xl border border-teal-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#0D7B6C] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    {(userName || userEmail).charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-900">{userName || "Subscriber"}</span>
+                      <span className="text-[10px] font-black bg-white text-[#0D7B6C] border border-teal-200 px-2 py-0.2 rounded-full">
+                        ✓ Signed In
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-600 font-medium block truncate max-w-[220px]">
+                      {userEmail}
+                    </span>
+                  </div>
                 </div>
-                <div className="relative">
-                  <Mail size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder="Work Email"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#0D7B6C] outline-none"
-                  />
-                </div>
+                <span className="text-[10px] text-teal-800 font-bold uppercase tracking-wider bg-teal-100/70 px-2 py-0.5 rounded-md">
+                  {userRole}
+                </span>
               </div>
+            ) : (
+              <div className="space-y-2.5 mb-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Workspace Admin Credentials
+                </span>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative">
+                    <User size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Your Name"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Mail size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
+                    <input
+                      type="email"
+                      placeholder="Work Email"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+                </div>
 
-              {/* Role Selector */}
-              <div className="flex items-center gap-1.5 pt-1">
-                <span className="text-[10px] font-bold text-slate-500 shrink-0">Role:</span>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value)}
-                  className="flex-1 py-1 px-2 text-[11px] rounded-lg border border-slate-300 bg-white font-semibold text-slate-700 outline-none"
-                >
-                  <option value="owner">Commercial Property Owner</option>
-                  <option value="manager">Facility / Asset Manager (IFM)</option>
-                  <option value="finance">CA / Financial Controller</option>
-                  <option value="tenant">Commercial Tenant Admin</option>
-                </select>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-bold text-slate-500 shrink-0">Role:</span>
+                  <select
+                    value={userRole}
+                    onChange={(e) => setUserRole(e.target.value)}
+                    className="flex-1 py-1 px-2 text-[11px] rounded-lg border border-slate-300 bg-white font-semibold text-slate-700 outline-none"
+                  >
+                    <option value="owner">Commercial Property Owner</option>
+                    <option value="manager">Facility / Asset Manager (IFM)</option>
+                    <option value="finance">CA / Financial Controller</option>
+                    <option value="tenant">Commercial Tenant Admin</option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Order Summary */}
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-1.5 text-xs mb-4">
+            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs mb-4">
               <div className="flex justify-between">
-                <span className="text-slate-500">Licensed Scope:</span>
+                <span className="text-slate-500">Plan Tier:</span>
+                <span className="font-bold text-slate-800">{checkoutPlan.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Licensed Portfolio Scope:</span>
                 <span className="font-semibold text-slate-800">{checkoutPlan.sqftLimit}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Commercial License:</span>
-                <span className="font-mono font-medium text-slate-800">
-                  ₹{checkoutPlan.basePriceNum.toLocaleString("en-IN")}
+                <span className="text-slate-500">Monthly License Fee:</span>
+                <span className="font-mono font-bold text-slate-800">
+                  ₹{checkoutPlan.basePriceNum}.00 / mo
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">GST (18%):</span>
-                <span className="font-mono text-slate-600">
-                  ₹{Math.round(checkoutPlan.basePriceNum * 0.18).toLocaleString("en-IN")}
+                <span className="text-slate-500">Statutory GST (18%):</span>
+                <span className="font-mono text-emerald-700 font-semibold">
+                  Included
                 </span>
               </div>
 
               {/* Coupon Row */}
               {appliedCoupon && (
-                <div className="flex justify-between text-emerald-800 font-bold pt-1 border-t border-emerald-200 bg-emerald-100/60 -mx-3 -mb-3 p-2 rounded-b-xl">
+                <div className="flex justify-between text-emerald-800 font-bold pt-1.5 border-t border-emerald-200 bg-emerald-100/70 -mx-3.5 -mb-3.5 p-2.5 rounded-b-xl">
                   <span className="flex items-center gap-1">
-                    <CheckCircle2 size={12} className="text-emerald-700" />
-                    Coupon "{appliedCoupon}" (-100%):
+                    <CheckCircle2 size={13} className="text-emerald-700" />
+                    Launch Coupon "{appliedCoupon}" (100% OFF):
                   </span>
                   <span className="font-mono">
-                    -₹{Math.round(checkoutPlan.basePriceNum * 1.18).toLocaleString("en-IN")}
+                    -₹{checkoutPlan.basePriceNum}.00
                   </span>
                 </div>
               )}
@@ -503,53 +752,63 @@ export default function RentRollPricingTable({
 
             {/* Total Due */}
             <div className="flex justify-between items-baseline mb-4 px-1">
-              <span className="text-xs font-bold text-slate-600">Total Amount:</span>
+              <span className="text-xs font-black uppercase tracking-wider text-slate-600">Total Due:</span>
               <div className="text-right">
                 {appliedCoupon ? (
                   <div className="flex items-baseline gap-2">
                     <span className="text-xs font-mono line-through text-slate-400">
-                      ₹{Math.round(checkoutPlan.basePriceNum * 1.18).toLocaleString("en-IN")}
+                      ₹{checkoutPlan.basePriceNum}.00
                     </span>
                     <span className="text-2xl font-black text-emerald-600 font-mono">
-                      ₹0.00
+                      ₹0.00 FREE
                     </span>
                   </div>
                 ) : (
                   <span className="text-2xl font-black text-slate-900 font-mono">
-                    ₹{Math.round(checkoutPlan.basePriceNum * 1.18).toLocaleString("en-IN")}
+                    ₹{checkoutPlan.basePriceNum}.00
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Promo Code Input */}
-            <div className="mb-5">
-              {!appliedCoupon && !showPromoField && (
-                <button
-                  type="button"
-                  onClick={() => setShowPromoField(true)}
-                  className="text-xs font-semibold text-[#0D7B6C] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Tag size={12} />
-                  <span>Have a promo voucher or launch code?</span>
-                </button>
-              )}
+            {/* Promo Code Input - Always Visible & Interactive */}
+            <div className="mb-5 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <Tag size={13} className="text-[#0D7B6C]" />
+                  <span>Have a Promo Voucher or Launch Code?</span>
+                </span>
+                {!appliedCoupon && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCouponInput("OFFICEX100");
+                      setAppliedCoupon("OFFICEX100");
+                      setCouponError(null);
+                    }}
+                    className="text-[10px] font-black text-[#0D7B6C] bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-0.5 rounded-full transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Sparkles size={10} />
+                    <span>Quick Apply: OFFICEX100</span>
+                  </button>
+                )}
+              </div>
 
-              {(showPromoField || appliedCoupon) && (
+              {!appliedCoupon ? (
                 <form onSubmit={handleApplyCoupon} className="space-y-1.5">
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="e.g. OFFICEX100"
+                      placeholder="Enter OFFICEX100 or RENTROLL12"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
-                      className="flex-1 px-3 py-1.5 text-xs font-mono font-bold rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:border-[#0D7B6C] outline-none uppercase"
+                      className="flex-1 px-3 py-2 text-xs font-mono font-bold rounded-lg border border-slate-300 bg-white text-slate-900 focus:border-[#0D7B6C] focus:ring-1 focus:ring-[#0D7B6C] outline-none uppercase"
                     />
                     <button
                       type="submit"
-                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition cursor-pointer shrink-0"
                     >
-                      Apply
+                      Apply Code
                     </button>
                   </div>
 
@@ -558,26 +817,26 @@ export default function RentRollPricingTable({
                       <AlertTriangle size={11} /> {couponError}
                     </p>
                   )}
-
-                  {appliedCoupon && (
-                    <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 size={13} className="text-emerald-600" />
-                        <strong>100% Free Launch Grant Active!</strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAppliedCoupon(null);
-                          setCouponInput("");
-                        }}
-                        className="text-[10px] text-rose-600 hover:underline cursor-pointer"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
                 </form>
+              ) : (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <span>
+                      Coupon <strong>{appliedCoupon}</strong> Applied: <strong>100% FREE Access Activated!</strong>
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setCouponInput("");
+                    }}
+                    className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer ml-2"
+                  >
+                    Remove
+                  </button>
+                </div>
               )}
             </div>
 
@@ -588,43 +847,60 @@ export default function RentRollPricingTable({
                   type="button"
                   onClick={handleCompleteActivation}
                   disabled={processingActivation}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs sm:text-sm font-bold shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <ShieldCheck size={16} />
-                  <span>
-                    {processingActivation ? "Activating License..." : "Activate Free & Enter Dashboard"}
-                  </span>
-                  <ArrowRight size={14} />
+                  {processingActivation ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Activating Free Subscription...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} />
+                      <span>Activate Free Access (₹0) &amp; Enter Dashboard</span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
                 </button>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      alert("Please click 'Have a promo voucher?' and enter code OFFICEX100 or RENTROLL12 for 100% free access.");
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    onClick={() => handlePayViaRazorpay(checkoutPlan)}
+                    disabled={processingActivation}
+                    className="w-full py-3 px-4 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                   >
-                    <CreditCard size={15} />
-                    <span>Pay ₹{Math.round(checkoutPlan.basePriceNum * 1.18).toLocaleString("en-IN")} via Gateway</span>
+                    {processingActivation ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Opening Razorpay Gateway...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={16} />
+                        <span>Pay ₹{checkoutPlan.basePriceNum} via Razorpay Gateway</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
-                      setShowPromoField(true);
                       setCouponInput("OFFICEX100");
                       setAppliedCoupon("OFFICEX100");
+                      setCouponError(null);
                     }}
-                    className="w-full py-1 text-[11px] font-semibold text-slate-500 hover:text-[#0D7B6C] transition text-center cursor-pointer"
+                    className="w-full py-2 px-3 rounded-lg bg-teal-50/70 hover:bg-teal-100/70 border border-teal-200/70 text-[11px] font-extrabold text-[#0D7B6C] transition text-center cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    Quick-Apply Launch Coupon (OFFICEX100)
+                    <Sparkles size={12} />
+                    <span>Have launch coupon? Apply OFFICEX100 for 100% Free Access</span>
                   </button>
                 </div>
               )}
 
-              <p className="text-[10px] text-slate-400 text-center font-medium">
-                Allocates 50,00,00,000 Sq.Ft capacity protected by 90% grace period.
+              <p className="text-[10px] text-slate-400 text-center font-medium pt-1">
+                Zero lock-in &middot; 14-day commercial grace period &middot; Secured by 256-bit Razorpay encryption.
               </p>
             </div>
           </div>

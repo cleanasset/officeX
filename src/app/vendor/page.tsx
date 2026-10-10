@@ -46,45 +46,55 @@ export default function VendorPortalDashboard() {
     { label: "Professionalism", pct: 88, color: "bg-[#0F8B7D]" }
   ];
 
-  const [matchedRfqs, setMatchedRfqs] = useState([
-    { id: "RFQ-101", title: "HVAC Maintenance", match: "96%", property: "Crystal Tower", budget: "₹45,000", rawBudget: 45000, deadline: "2d 4h left", category: "HVAC" },
-    { id: "RFQ-102", title: "Deep Cleaning & Facade", match: "88%", property: "Apex Business Tower", budget: "₹18,000", rawBudget: 18000, deadline: "5h 20m left", category: "Housekeeping" },
-    { id: "RFQ-103", title: "Electrical Audit & DG Test", match: "92%", property: "Nexus Hub", budget: "₹12,000", rawBudget: 12000, deadline: "4d 12h left", category: "Electrical" }
-  ]);
-
-  const payouts = [
-    { date: "15 Sep 2026", ref: "Ref: RZP-ESC-982341", amount: "₹45,500", color: "text-emerald-600" },
-    { date: "01 Sep 2026", ref: "Ref: RZP-ESC-772901", amount: "₹1,12,000", color: "text-gray-900" },
-    { date: "15 Aug 2026", ref: "Ref: RZP-ESC-332199", amount: "₹68,200", color: "text-gray-900" }
-  ];
-
-  const [workOrders, setWorkOrders] = useState([
-    { id: "WO-045", client: "TCS", property: "Apex Tower", category: "HVAC", catColor: "bg-teal-100 text-teal-700", timeline: "01 Dec - 15 Dec", progress: 75, status: "In Progress", gross: 85000 },
-    { id: "WO-042", client: "Wipro", property: "Meridian Park", category: "Cleaning", catColor: "bg-blue-100 text-blue-700", timeline: "05 Dec - 10 Dec", progress: 40, status: "In Progress", gross: 32000 },
-    { id: "WO-039", client: "Infosys", property: "Nexus Hub", category: "Electrical", catColor: "bg-amber-100 text-amber-700", timeline: "20 Nov - 30 Nov", progress: 100, status: "Completed", gross: 120000 },
-    { id: "WO-035", client: "Deloitte", property: "Crystal Tower", category: "Plumbing", catColor: "bg-purple-100 text-purple-700", timeline: "08 Dec - 12 Dec", progress: 10, status: "Onboarding", gross: 28000 }
-  ]);
+  const [matchedRfqs, setMatchedRfqs] = useState<any[]>([]);
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [workOrders, setWorkOrders] = useState<any[]>([]);
 
   useEffect(() => {
+    fetch("/api/rfqs")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.rfqs)) {
+          setMatchedRfqs(
+            d.rfqs.map((r: any) => ({
+              id: r.id,
+              title: r.title,
+              match: r.match || "90%",
+              property: r.property,
+              budget: r.quotes?.[0]?.bidAmount || "Open Bidding",
+              rawBudget: 45000,
+              deadline: r.timeRemaining || "Active",
+              category: r.category
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
     fetch("/api/work-orders")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success && Array.isArray(data.workOrders) && data.workOrders.length > 0) {
           const mapped = data.workOrders.map((w: any) => ({
             id: w.id,
-            client: w.client || "Apex Business Tower",
-            property: w.property || "Apex Tower",
+            client: w.client || "Client Entity",
+            property: w.property || "Assigned Facility",
             category: w.title.includes("Chiller") || w.title.includes("HVAC") ? "HVAC" : w.title.includes("Lift") || w.title.includes("Elevator") ? "OEM Lift" : "MEP Service",
             catColor: "bg-teal-100 text-teal-700",
             timeline: w.startDate || "Active",
             progress: w.pct || 50,
             status: w.status || "In Progress",
-            gross: parseInt(w.contractValue?.replace(/\D/g, "") || "45000") || 45000
+            gross: parseInt(w.contractValue?.replace(/\D/g, "") || "0") || 0
           }));
           setWorkOrders(mapped);
+        } else {
+          setWorkOrders([]);
         }
       })
-      .catch(err => console.error("Error loading work orders in vendor dashboard:", err));
+      .catch((err) => {
+        console.error("Error loading work orders in vendor dashboard:", err);
+        setWorkOrders([]);
+      });
   }, []);
 
   return (
@@ -121,7 +131,7 @@ export default function VendorPortalDashboard() {
             onClick={() => {
               const newState = !isCheckedIn;
               setIsCheckedIn(newState);
-              showToast(newState ? "GPS Check-In Verified: Apex Business Tower (Lat 19.0657° N, Long 72.8688° E · 11:52 AM · Attendance Logged)" : "Checked Out of Site.");
+              showToast(newState ? "GPS Check-In Verified: Assigned Facility (Lat 19.0657° N, Long 72.8688° E · Attendance Logged)" : "Checked Out of Site.");
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               isCheckedIn
@@ -202,18 +212,18 @@ export default function VendorPortalDashboard() {
         <div className="grid grid-rows-2 gap-3">
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase">Active Work Orders</p>
-            <p className="text-3xl font-black text-gray-900">4</p>
+            <p className="text-3xl font-black text-gray-900">{workOrders.length}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase">Monthly Earnings</p>
-            <p className="text-2xl font-black text-gray-900">₹3,20,000</p>
+            <p className="text-2xl font-black text-gray-900">₹{workOrders.reduce((sum, w) => sum + (w.gross || 0), 0).toLocaleString("en-IN")}</p>
           </div>
         </div>
         <div className="grid grid-rows-2 gap-3">
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase">Matched RFQs ●</p>
-            <p className="text-3xl font-black text-gray-900">6</p>
-            <p className="text-[10px] font-bold text-[#0F8B7D]">+2 Today</p>
+            <p className="text-3xl font-black text-gray-900">{matchedRfqs.length}</p>
+            <p className="text-[10px] font-bold text-[#0F8B7D]">Real-time Match</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase">Quality Score</p>
@@ -249,7 +259,12 @@ export default function VendorPortalDashboard() {
             <Link href="/vendor/rfqs" className="text-xs font-semibold text-[#0F8B7D] cursor-pointer hover:underline">View All</Link>
           </div>
           <div className="space-y-3">
-            {matchedRfqs.map((r) => (
+            {matchedRfqs.length === 0 ? (
+              <div className="py-8 text-center text-xs text-gray-400">
+                No new RFQs matched currently. Check back soon.
+              </div>
+            ) : (
+              matchedRfqs.map((r) => (
               <div key={r.id} className="border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -282,7 +297,7 @@ export default function VendorPortalDashboard() {
                 </div>
                 <p className="text-[10px] text-gray-500">🏢 {r.property}  •  💰 Budget: {r.budget}</p>
               </div>
-            ))}
+            )))}
           </div>
         </div>
 
@@ -297,7 +312,10 @@ export default function VendorPortalDashboard() {
           </div>
           <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Recent Payouts</p>
           <div className="space-y-2">
-            {payouts.map((p, i) => (
+            {payouts.length === 0 ? (
+              <p className="text-[11px] text-gray-400 italic text-center py-4">No recent escrow payouts recorded.</p>
+            ) : (
+              payouts.map((p, i) => (
               <div key={i} className="flex justify-between text-xs">
                 <div>
                   <p className="font-semibold text-gray-900">{p.date}</p>
@@ -305,7 +323,7 @@ export default function VendorPortalDashboard() {
                 </div>
                 <span className={`font-bold ${p.color}`}>{p.amount}</span>
               </div>
-            ))}
+            )))}
           </div>
         </div>
       </div>
@@ -334,7 +352,14 @@ export default function VendorPortalDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {workOrders.map((w) => (
+              {workOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-10 text-center text-xs text-gray-400">
+                    No active work orders. Match with open RFQs to begin service contracts.
+                  </td>
+                </tr>
+              ) : (
+                workOrders.map((w) => (
                 <tr key={w.id} className="text-xs hover:bg-slate-50/60 transition-colors">
                   <td className="py-3.5 pr-3 font-bold text-gray-500">{w.id}</td>
                   <td className="py-3.5 pr-3 font-semibold text-gray-900">{w.client}</td>
@@ -392,7 +417,7 @@ export default function VendorPortalDashboard() {
                     )}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

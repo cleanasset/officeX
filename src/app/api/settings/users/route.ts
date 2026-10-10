@@ -19,53 +19,7 @@ export async function GET(req: Request) {
       { code: "support_breakglass", name: "Platform Support (Break-glass)", scope: "time_limited", description: "Emergency audited diagnostics with auto-expiration" },
     ];
 
-    const usersRoster = [
-      {
-        id: "usr-01",
-        full_name: "Vikram Singhania",
-        email: "v.singhania@officex.ai",
-        role: "org_admin",
-        assigned_properties: ["All Properties (Portfolio-wide)"],
-        status: "active",
-        last_login: "Today, 09:42 IST",
-      },
-      {
-        id: "usr-02",
-        full_name: "Anita Deshmukh",
-        email: "a.deshmukh@officex.ai",
-        role: "finance_checker",
-        assigned_properties: ["All Properties (Portfolio-wide)"],
-        status: "active",
-        last_login: "Today, 09:15 IST",
-      },
-      {
-        id: "usr-03",
-        full_name: "Rohan Kulkarni",
-        email: "r.kulkarni@officex.ai",
-        role: "asset_manager",
-        assigned_properties: ["Meridian Tech Park (Tower 1 & 2)", "Whitefield Global Hub"],
-        status: "active",
-        last_login: "Yesterday, 17:30 IST",
-      },
-      {
-        id: "usr-04",
-        full_name: "Rajesh Sharma",
-        email: "r.sharma@sharmatrust.in",
-        role: "owner_principal",
-        assigned_properties: ["Sharma Family Trust Managed Assets"],
-        status: "active",
-        last_login: "07-Oct-2026, 14:10 IST",
-      },
-      {
-        id: "usr-05",
-        full_name: "Pooja Hegde",
-        email: "p.hegde@officex.ai",
-        role: "leasing_broker",
-        assigned_properties: ["Meridian Tech Park (Tower 1)"],
-        status: "active",
-        last_login: "06-Oct-2026, 11:20 IST",
-      },
-    ];
+    const usersRoster: any[] = [];
 
     const approvalMatrix = [
       {

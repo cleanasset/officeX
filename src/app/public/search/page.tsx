@@ -74,189 +74,8 @@ function PropertySearchContent() {
   const [enquiryForm, setEnquiryForm] = useState({ company: "", email: "", phone: "", seats: "60" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Real Iconic Commercial Buildings in Mumbai BKC
-  const properties: PropertyListing[] = [
-    {
-      id: "apex-bkc",
-      title: "One BKC — North Wing Executive",
-      buildingName: "One BKC Commercial Complex",
-      location: "G Block, Bandra Kurla Complex, Mumbai",
-      subLocation: "Opp. Bank of Baroda, BKC",
-      area: "4,500 sqft",
-      capacity: "60 Seats",
-      furnishing: "Fully Furnished",
-      price: "₹1.25L",
-      pricePerSqft: "₹185/sq.ft.",
-      pricePerSeat: "₹12,500/seat",
-      propertyScore: 86,
-      readiness: "Immediate Move-in",
-      commuteScore: 94,
-      energyRating: "LEED Gold",
-      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
-      lat: 19.0664,
-      lng: 72.8680
-    },
-    {
-      id: "maker-maxity",
-      title: "Maker Maxity — 5th Floor Suite",
-      buildingName: "Maker Maxity Business Park",
-      location: "BKC Entry, Bandra East, Mumbai",
-      subLocation: "Near Jio World Garden",
-      area: "2,800 sqft",
-      capacity: "35 Seats",
-      furnishing: "Semi-Furnished",
-      price: "₹72K",
-      pricePerSqft: "₹140/sq.ft.",
-      pricePerSeat: "₹10,200/seat",
-      propertyScore: 89,
-      readiness: "Fit-out Ready (10d)",
-      commuteScore: 88,
-      energyRating: "IGBC Platinum",
-      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80",
-      lat: 19.0607,
-      lng: 72.8519
-    },
-    {
-      id: "godrej-bkc",
-      title: "Godrej BKC — Floor 8 Horizon Plate",
-      buildingName: "Godrej BKC Flagship Tower",
-      location: "G Block, BKC Main Road, Mumbai",
-      subLocation: "Adjoining MCA Club",
-      area: "6,200 sqft",
-      capacity: "90 Seats",
-      furnishing: "Fully Furnished",
-      price: "₹2.10L",
-      pricePerSqft: "₹195/sq.ft.",
-      pricePerSeat: "₹14,000/seat",
-      propertyScore: 92,
-      readiness: "Immediate Move-in",
-      commuteScore: 91,
-      energyRating: "LEED Platinum",
-      image: "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80",
-      lat: 19.0689,
-      lng: 72.8695
-    },
-    {
-      id: "the-capital",
-      title: "The Capital — Suite 704 Cyber Wing",
-      buildingName: "The Capital (Wadhwa)",
-      location: "Plot C-70, G Block, BKC, Mumbai",
-      subLocation: "Opp. ICICI Bank Towers",
-      area: "3,400 sqft",
-      capacity: "45 Seats",
-      furnishing: "Plug & Play",
-      price: "₹95K",
-      pricePerSqft: "₹120/sq.ft.",
-      pricePerSeat: "₹9,500/seat",
-      propertyScore: 82,
-      readiness: "Available in 15d",
-      commuteScore: 84,
-      energyRating: "IGBC Gold",
-      image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80",
-      lat: 19.0637,
-      lng: 72.8631
-    },
-    {
-      id: "prestige-tech-cloud",
-      title: "Prestige Tech Cloud — Cyber Pavilion",
-      buildingName: "Prestige Tech Cloud Campus",
-      location: "Bellary Road, Hebbal / ORR, Bengaluru",
-      subLocation: "Adjoining KIAL Expressway, Bengaluru",
-      area: "8,500 sqft",
-      capacity: "120 Seats",
-      furnishing: "Fully Furnished",
-      price: "₹1.45L",
-      pricePerSqft: "₹110/sq.ft.",
-      pricePerSeat: "₹11,000/seat",
-      propertyScore: 94,
-      readiness: "Immediate Move-in",
-      commuteScore: 92,
-      energyRating: "LEED Platinum",
-      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
-      lat: 13.0358,
-      lng: 77.5970
-    },
-    {
-      id: "dlf-cyber-city",
-      title: "DLF Cyber City — Building 10 Tower B",
-      buildingName: "DLF Cyber City Tech Complex",
-      location: "DLF Phase 2, Gurugram, Delhi NCR",
-      subLocation: "Rapid Metro Station Cyber City",
-      area: "12,000 sqft",
-      capacity: "180 Seats",
-      furnishing: "Plug & Play",
-      price: "₹2.25L",
-      pricePerSqft: "₹145/sq.ft.",
-      pricePerSeat: "₹12,500/seat",
-      propertyScore: 96,
-      readiness: "Immediate Move-in",
-      commuteScore: 95,
-      energyRating: "LEED Platinum",
-      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80",
-      lat: 28.4907,
-      lng: 77.0888
-    },
-    {
-      id: "mindspace-hitec",
-      title: "Mindspace IT Park — Building 20 Horizon",
-      buildingName: "Mindspace Madhapur Business Park",
-      location: "HITEC City, Madhapur, Hyderabad",
-      subLocation: "Near Inorbit Mall, HITEC City",
-      area: "7,200 sqft",
-      capacity: "105 Seats",
-      furnishing: "Fully Furnished",
-      price: "₹1.15L",
-      pricePerSqft: "₹92/sq.ft.",
-      pricePerSeat: "₹9,800/seat",
-      propertyScore: 91,
-      readiness: "Move-in Ready (7d)",
-      commuteScore: 89,
-      energyRating: "IGBC Platinum",
-      image: "https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80",
-      lat: 17.4399,
-      lng: 78.3807
-    },
-    {
-      id: "panchshil-pune",
-      title: "Panchshil Business Park — Tower A Wing 3",
-      buildingName: "Panchshil Business Park",
-      location: "Balewadi High Street, Baner, Pune",
-      subLocation: "Mumbai-Pune Expressway Connector",
-      area: "5,800 sqft",
-      capacity: "85 Seats",
-      furnishing: "Warm Shell Plus",
-      price: "₹98K",
-      pricePerSqft: "₹98/sq.ft.",
-      pricePerSeat: "₹10,500/seat",
-      propertyScore: 88,
-      readiness: "Available in 15d",
-      commuteScore: 87,
-      energyRating: "LEED Gold",
-      image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80",
-      lat: 18.5756,
-      lng: 73.7744
-    },
-    {
-      id: "gift-tower-one",
-      title: "Brigade IFSC — High-Rise Suite 1204",
-      buildingName: "Brigade International Financial Centre",
-      location: "GIFT SEZ, GIFT City, Gandhinagar",
-      subLocation: "Near GIFT One & Two, GIFT City",
-      area: "6,000 sqft",
-      capacity: "90 Seats",
-      furnishing: "Fully Furnished",
-      price: "₹85K",
-      pricePerSqft: "₹75/sq.ft.",
-      pricePerSeat: "₹8,500/seat",
-      propertyScore: 93,
-      readiness: "Immediate Move-in",
-      commuteScore: 90,
-      energyRating: "IGBC Platinum",
-      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
-      lat: 23.1612,
-      lng: 72.6841
-    }
-  ];
+  // Zero Mock Data: properties strictly derived from database
+  const properties: PropertyListing[] = [];
 
   // Merge with real properties from database
   const [dbProperties, setDbProperties] = useState<PropertyListing[]>([]);
@@ -328,8 +147,8 @@ function PropertySearchContent() {
     fetchRealProperties();
   }, []);
 
-  // Put user-created DB properties first, followed by demo properties
-  const allProperties = [...dbProperties, ...properties];
+  // Strictly real database properties (Zero Mock Data)
+  const allProperties = dbProperties;
 
   // Filter properties based on search query and city selection
   const filteredProperties = allProperties.filter((p) => {
@@ -356,7 +175,7 @@ function PropertySearchContent() {
   });
 
   const isNoResults = filteredProperties.length === 0;
-  const displayProperties = isNoResults ? properties : filteredProperties;
+  const displayProperties = filteredProperties;
 
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
 
@@ -561,16 +380,10 @@ function PropertySearchContent() {
                 Commercial Workspaces in {city ? `${city}` : (searchQuery || "All Metro Hubs")}
               </h1>
               <p className="text-[11px] text-gray-400 mt-0.5">
-                {isNoResults ? (
-                  <span className="text-teal-700 font-semibold">
-                    Showing {displayProperties.length} featured landmark Grade-A spaces across key commercial hubs
-                  </span>
-                ) : (
-                  `Showing ${filteredProperties.length} verified Grade-A landmark towers`
-                )}
+                {isNoResults ? "0 verified properties found" : `Showing ${filteredProperties.length} verified Grade-A landmark towers`}
               </p>
             </div>
-            {isNoResults && (
+            {isNoResults && (searchQuery || (city && city !== "all")) && (
               <button
                 onClick={() => { setCity("all"); setSearchQuery(""); }}
                 className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold border border-teal-200 transition-colors cursor-pointer"
@@ -580,21 +393,25 @@ function PropertySearchContent() {
             )}
           </div>
 
-          {isNoResults && (
-            <div className="bg-teal-50/70 border border-teal-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs text-gray-700 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0">
-                  <Building size={16} />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900">Preloaded Verified Grade-A Workspaces</p>
-                  <p className="text-[11px] text-gray-500">Explore landmark towers across Mumbai, Bengaluru, Gurugram, Pune &amp; GIFT City.</p>
-                </div>
+          {isNoResults ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center flex flex-col items-center justify-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#0F8B7D]">
+                <Building size={32} />
+              </div>
+              <div className="max-w-md">
+                <h3 className="text-base font-bold text-gray-900">No Commercial Properties Found</h3>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  No live properties match your search criteria. Add your first commercial asset to the rent roll to list it on the marketplace.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <Link href="/operate/rent-roll" className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0D7A6E] transition shadow-xs">
+                  + Add Property to Rent Roll
+                </Link>
               </div>
             </div>
-          )}
-
-          <div className="space-y-3.5 pb-20 md:pb-6">
+          ) : (
+            <div className="space-y-3.5 pb-20 md:pb-6">
             {displayProperties.map((prop) => {
               const isComp = compareList.some((c) => c.id === prop.id);
               const isSelected = selectedProperty?.id === prop.id;
@@ -709,6 +526,7 @@ function PropertySearchContent() {
               );
             })}
           </div>
+          )}
         </div>
 
         {/* Right: Real Google Map */}

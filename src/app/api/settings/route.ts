@@ -21,12 +21,12 @@ export async function GET(req: Request) {
       organisation: {
         id: orgData?.id || auth.orgId,
         name: orgData?.name || "OFFICEX Realty Commercial Asset Management",
-        legal_name: "OFFICEX PropTech Solutions Private Limited",
-        pan: "AAFCO8899C",
-        tan: "MUMA88991C",
-        registered_address: "Level 14, Tower 1, Meridian Tech Park, BKC, Mumbai - 400051",
-        website: "https://officex.ai",
-        support_email: "support@officex.ai",
+        legal_name: orgData?.legal_name || orgData?.name || "OfficeX Commercial Portfolio",
+        pan: orgData?.pan || "",
+        tan: orgData?.tan || "",
+        registered_address: orgData?.registered_address || "",
+        website: orgData?.website || "https://officex.ai",
+        support_email: orgData?.support_email || "support@officex.ai",
       },
       branding: {
         logo_url: "/logo.png",

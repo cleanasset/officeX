@@ -793,7 +793,7 @@ export default function VisitorManagementConsole({
                 <h3 className="text-sm font-black text-slate-900">Scan Visitor QR / Pass Token (VC-04)</h3>
               </div>
               <p className="text-xs text-slate-500 mb-4">
-                Simulate front-desk optical scanner or search visitor phone number to verify and check in.
+                Use front-desk optical barcode scanner or enter visitor phone number to verify and check in.
               </p>
 
               <div className="flex gap-2 mb-5">

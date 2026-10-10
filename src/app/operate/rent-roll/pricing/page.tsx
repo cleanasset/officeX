@@ -219,15 +219,15 @@ export default function RentRollPricingPage() {
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">
                     <div>Commercial Starter</div>
-                    <div className="text-[11px] font-bold text-teal-700 normal-case">₹50 / sq.ft</div>
+                    <div className="text-[11px] font-bold text-teal-700 normal-case">₹50 / mo</div>
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5 text-[#0D7B6C] bg-teal-50/50">
                     <div>Grade-A Tech Park</div>
-                    <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">₹100 / sq.ft</div>
+                    <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">₹100 / mo</div>
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">
                     <div>REIT Mega-Portfolio</div>
-                    <div className="text-[11px] font-bold text-slate-800 normal-case">₹200 / sq.ft</div>
+                    <div className="text-[11px] font-bold text-slate-800 normal-case">₹200 / mo</div>
                   </th>
                 </tr>
               </thead>

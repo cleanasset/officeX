@@ -947,7 +947,7 @@ export default function PropertyListingEngine({
                     type="email"
                     value={formData.contactEmail}
                     onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                    placeholder="e.g. ravi@apexventures.com"
+                    placeholder="e.g. contact@commercialventures.in"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
                   />
                 </div>
@@ -962,7 +962,7 @@ export default function PropertyListingEngine({
                     type="text"
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    placeholder="e.g. Apex Commercial Realty LLP"
+                    placeholder="e.g. Commercial Realty LLP"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0F8B7D]"
                   />
                 </div>
@@ -1082,7 +1082,7 @@ export default function PropertyListingEngine({
                       setFormData(prev => ({ ...prev, propertyName: name }));
                     }
                   }}
-                  placeholder="e.g. Apex Business Tower, Godrej BKC, GIFT One Tower..."
+                  placeholder="e.g. Horizon Business Tower, Financial Hub, International Tech Park..."
                 />
               </div>
 

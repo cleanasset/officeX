@@ -19,6 +19,8 @@ export default function DashboardIndexPage() {
         router.replace("/dashboard/leasing");
       } else if (storedRoleKey === "facility_manager" || storedRole.includes("facility") || storedRole.includes("fm")) {
         router.replace("/dashboard/fm");
+      } else if (storedRoleKey === "owner" || storedRole.includes("owner") || storedRole.includes("principal")) {
+        router.replace("/dashboard/owner");
       } else {
         router.replace("/dashboard/owner");
       }

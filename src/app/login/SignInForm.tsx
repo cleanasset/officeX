@@ -717,40 +717,19 @@ export default function SignInForm({
 
     let destination = "";
     if (isRentRollContext || (safeRedirect && safeRedirect.includes("rent-roll"))) {
-      destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding"))
+      destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard")
         ? safeRedirect
-        : "/properties/rent-roll?tab=dashboard";
-    } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
+        : "/properties/rent-roll";
+    } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard") {
       destination = safeRedirect;
     } else {
-      destination = "/properties/rent-roll?tab=dashboard";
+      destination = "/dashboard/owner";
     }
 
-    // PRIORITY 1: Fetch user roles after authentication (§5.14)
-    fetch("/api/users/me")
-      .then((res) => res.json())
-      .then((meData) => {
-        const roles: SpecRoleItem[] = meData?.roles || [];
-        if (roles.length === 1) {
-          // If 1 role: skip selector, go to dashboard directly
-          handleSelectRole(roles[0]);
-        } else if (roles.length > 1) {
-          // If >1 role: show role picker modal with 12 roles
-          setFetchedRoles(roles);
-          setIsRoleModalOpen(true);
-        } else {
-          setStep("signed_in_success");
-          setTimeout(() => {
-            window.location.href = destination || "/dashboard/owner";
-          }, 600);
-        }
-      })
-      .catch(() => {
-        setStep("signed_in_success");
-        setTimeout(() => {
-          window.location.href = destination || "/dashboard/owner";
-        }, 600);
-      });
+    setStep("signed_in_success");
+    setTimeout(() => {
+      window.location.href = destination;
+    }, 500);
     return;
   };
 
@@ -776,7 +755,7 @@ export default function SignInForm({
   const handleCreateNewOrg = () => {
     setIsSettingUpOrg(true);
     const orgName = setupOrgName.trim() || `${successUserName || "My"}'s Commercial Asset`;
-    const propName = setupPropertyName.trim() || "Apex Commercial Tower";
+    const propName = setupPropertyName.trim() || "Commercial Tower 1";
     const city = (setupCity === "CUSTOM" && customSetupCity.trim()) ? customSetupCity.trim() : setupCity || "Pan-India";
 
     const roleTitle = setupRole === "owner"
@@ -2011,7 +1990,7 @@ export default function SignInForm({
                       required
                       value={setupOrgName}
                       onChange={(e) => setSetupOrgName(e.target.value)}
-                      placeholder="e.g. Apex Commercial Realty Ltd"
+                      placeholder="e.g. Prestige Commercial Realty Ltd"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -2027,7 +2006,7 @@ export default function SignInForm({
                         required
                         value={setupPropertyName}
                         onChange={(e) => setSetupPropertyName(e.target.value)}
-                        placeholder="e.g. Apex Horizon Tower"
+                        placeholder="e.g. Horizon Business Park"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <p className="text-[10px] text-slate-500 mt-1">
@@ -2172,13 +2151,13 @@ export default function SignInForm({
                     onClick={() => {
                       const tenantMembership: WorkspaceMembership = {
                         id: `mem_tenant_${Date.now()}`,
-                        orgId: `org_novatech`,
-                        orgName: "NovaTech Solutions India",
+                        orgId: `org_tenant_${inviteCode.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
+                        orgName: `Corporate Tenant (${inviteCode})`,
                         role: "Corporate Workplace Admin",
                         roleCode: "TENANT",
                         workspaceTitle: "Enterprise Workplace Portal",
                         workspaceUrl: "/tenant",
-                        propertyScope: "Apex Business Tower · Floor 5A",
+                        propertyScope: "Commercial Facility Suite",
                         badge: "Occupier",
                         badgeColor: "bg-indigo-500/20 text-indigo-700 border-indigo-400/30",
                         isLastUsed: true

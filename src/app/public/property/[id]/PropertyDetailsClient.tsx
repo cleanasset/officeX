@@ -76,11 +76,11 @@ export default function PropertyDetailsClient({
       contactName: proposalForm.companyName,
       email: proposalForm.email,
       phone: proposalForm.phone,
-      propertyTitle: property.name || property.title || "One BKC — North Wing Executive",
-      buildingName: property.name || "One BKC Commercial Complex",
+      propertyTitle: property.name || property.title || "Commercial Property",
+      buildingName: property.name || "Commercial Building",
       seats: proposalForm.seats,
       moveInDate: proposalForm.moveInDate,
-      budget: "₹1.25L - ₹2.5L/mo"
+      budget: property.baseRentPsf ? `₹${property.baseRentPsf}/sq.ft.` : "Commercial Market Budget"
     });
 
     setTimeout(() => {
@@ -197,7 +197,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
           <ChevronRight size={12} />
           <Link href="/public/search" className="hover:text-gray-900">{property.city || "Mumbai"}</Link>
           <ChevronRight size={12} />
-          <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">{property.name || "Apex BKC Mumbai"}</span>
+          <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">{property.name || "Commercial Property"}</span>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -227,53 +227,67 @@ Generated via OFFICEX Operating Platform · https://officex.in
               </span>
             </div>
             <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/60 backdrop-blur-md text-white p-3 px-4 sm:px-5 rounded-2xl">
-              <h1 className="text-xl sm:text-2xl font-black">{property.name || "Apex Business Tower"}</h1>
+              <h1 className="text-xl sm:text-2xl font-black">{property.name || "Commercial Property"}</h1>
               <p className="text-xs text-gray-200 flex items-center gap-1 mt-0.5">
-                <MapPin size={13} className="text-teal-400 shrink-0" /> {property.address || "G Block, Bandra Kurla Complex, Mumbai"}
+                <MapPin size={13} className="text-teal-400 shrink-0" /> {property.address || property.city || "Commercial Micro-Market"}
               </p>
             </div>
           </div>
 
           {/* Sticky Commercial Pricing Card */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">MONTHLY RENT</span>
-                  <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-0.5">₹1,25,000</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">RATE</span>
-                  <p className="text-sm font-bold text-teal-700">₹185 / sq.ft.</p>
-                  <p className="text-[11px] text-gray-500">₹12,500 / seat</p>
-                </div>
-              </div>
+          {(() => {
+            const areaNum = Number(property.totalArea || property.total_area) || 0;
+            const ratePsfNum = Number(property.baseRentPsf || property.base_rent_psf) || (property.grade === "A" ? 185 : 120);
+            const monthlyRentVal = areaNum > 0 ? areaNum * ratePsfNum : 0;
+            const camPsfVal = Number(property.camPsf || property.cam_psf) || 18;
+            const depositVal = monthlyRentVal > 0 ? monthlyRentVal * 3 : 0;
 
-              <div className="space-y-3 py-4 text-xs">
-                <div className="flex justify-between text-gray-600">
-                  <span>Available Area</span>
-                  <span className="font-bold text-gray-900">4,500 sq.ft. (60 Seats)</span>
+            return (
+              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
+                    <div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">MONTHLY RENT</span>
+                      <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-0.5">
+                        {monthlyRentVal > 0 ? `₹${Math.round(monthlyRentVal).toLocaleString("en-IN")}` : "On Request"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">RATE</span>
+                      <p className="text-sm font-bold text-teal-700">₹{ratePsfNum} / sq.ft.</p>
+                      <p className="text-[11px] text-gray-500">{property.grade ? `Grade ${property.grade}` : "Grade A"}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 py-4 text-xs">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Total Area</span>
+                      <span className="font-bold text-gray-900">
+                        {areaNum > 0 ? `${areaNum.toLocaleString("en-IN")} sq.ft.` : "Available on Request"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>CAM / Maintenance</span>
+                      <span className="font-bold text-gray-900">₹{camPsfVal} / sq.ft. / mo</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Security Deposit</span>
+                      <span className="font-bold text-gray-900">
+                        {depositVal > 0 ? `3 Months (₹${Math.round(depositVal).toLocaleString("en-IN")})` : "3 Months Equivalent"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Escalation</span>
+                      <span className="font-bold text-emerald-700">5% Annual</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Operational Readiness</span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[10px]">
+                        Immediate Move-in
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>CAM / Maintenance</span>
-                  <span className="font-bold text-gray-900">₹18 / sq.ft. / mo</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Security Deposit</span>
-                  <span className="font-bold text-gray-900">3 Months (₹3.75L)</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Escalation</span>
-                  <span className="font-bold text-emerald-700">5% Annual</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Operational Readiness</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[10px]">
-                    Immediate Move-in
-                  </span>
-                </div>
-              </div>
-            </div>
 
             <div className="space-y-2.5 pt-4 border-t border-gray-100">
               <button
@@ -290,6 +304,8 @@ Generated via OFFICEX Operating Platform · https://officex.in
               </button>
             </div>
           </div>
+            );
+          })()}
         </div>
 
         {/* 2-Column Main Section: Left Specifications/Tabs + Right OFFICEX Property Score Card */}
@@ -658,7 +674,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
                 <h3 className="text-lg font-black text-gray-900">Request Commercial Proposal</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{property.name || "Apex BKC Mumbai"}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{property.name || "Commercial Property"}</p>
               </div>
               <button onClick={() => setShowProposalModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />

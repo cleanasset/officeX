@@ -26,7 +26,7 @@ export default function OwnerStatementModal({
   isOpen,
   onClose,
   clientAccountId,
-  clientName = "Sharma Estates",
+  clientName = "Client Portfolio",
 }: OwnerStatementModalProps) {
   const [statementData, setStatementData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export default function OwnerStatementModal({
         setStatementData(json.statement || json.data);
       }
     } catch (e) {
-      // Fallback to spec default statement
+      // Empty state
     } finally {
       setLoading(false);
     }
@@ -58,17 +58,16 @@ export default function OwnerStatementModal({
 
   if (!isOpen) return null;
 
-  // Fallback data strictly conforming to Table 103 / §5.10
   const statement = statementData || {
-    period: "October 2026",
-    billed_gross_inr: 5200000,
-    collected_inr: 4800000,
-    arrears_carried_forward_inr: 400000,
+    period: period,
+    billed_gross_inr: 0,
+    collected_inr: 0,
+    arrears_carried_forward_inr: 0,
     mgmt_fee_percent: 4.0,
-    mgmt_fee_inr: 192000,
-    gst_on_fee_inr: 34560,
-    expenses_paid_inr: 120000,
-    net_remittance_inr: 4453440,
+    mgmt_fee_inr: 0,
+    gst_on_fee_inr: 0,
+    expenses_paid_inr: 0,
+    net_remittance_inr: 0,
   };
 
   return (
@@ -105,7 +104,7 @@ export default function OwnerStatementModal({
                 Total Collected in Period
               </span>
               <span className="text-lg font-black text-emerald-700 font-mono mt-0.5 block">
-                ₹{Number(statement.collected_inr || 4800000).toLocaleString("en-IN")}
+                ₹{Number(statement.collected_inr || 0).toLocaleString("en-IN")}
               </span>
             </div>
             <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 shadow-2xs">
@@ -113,7 +112,7 @@ export default function OwnerStatementModal({
                 Net Remittance to Owner (F-21)
               </span>
               <span className="text-lg font-black text-teal-950 font-mono mt-0.5 block">
-                ₹{Number(statement.net_remittance_inr || 4453440).toLocaleString("en-IN")}
+                ₹{Number(statement.net_remittance_inr || 0).toLocaleString("en-IN")}
               </span>
             </div>
           </div>
@@ -129,42 +128,42 @@ export default function OwnerStatementModal({
               <div className="px-4 py-3 flex justify-between">
                 <span className="text-slate-700 font-medium">Billed in period (rent + CAM, gross)</span>
                 <span className="font-mono font-bold text-slate-900">
-                  ₹{Number(statement.billed_gross_inr || 5200000).toLocaleString("en-IN")}
+                  ₹{Number(statement.billed_gross_inr || 0).toLocaleString("en-IN")}
                 </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between bg-emerald-50/30">
                 <span className="text-emerald-900 font-bold">Collected in period</span>
                 <span className="font-mono font-bold text-emerald-700">
-                  ₹{Number(statement.collected_inr || 4800000).toLocaleString("en-IN")}
+                  ₹{Number(statement.collected_inr || 0).toLocaleString("en-IN")}
                 </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between">
                 <span className="text-slate-500">Arrears carried forward</span>
                 <span className="font-mono text-slate-600">
-                  ₹{Number(statement.arrears_carried_forward_inr || 400000).toLocaleString("en-IN")}
+                  ₹{Number(statement.arrears_carried_forward_inr || 0).toLocaleString("en-IN")}
                 </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between text-amber-900 bg-amber-50/30">
                 <span>Management fee (4.0% × collections) — F-20</span>
                 <span className="font-mono font-bold text-amber-700">
-                  (₹{Number(statement.mgmt_fee_inr || 192000).toLocaleString("en-IN")})
+                  (₹{Number(statement.mgmt_fee_inr || 0).toLocaleString("en-IN")})
                 </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between text-slate-600">
                 <span>GST on management fee @ 18%</span>
                 <span className="font-mono">
-                  (₹{Number(statement.gst_on_fee_inr || 34560).toLocaleString("en-IN")})
+                  (₹{Number(statement.gst_on_fee_inr || 0).toLocaleString("en-IN")})
                 </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between text-slate-600">
                 <span>Expenses paid on owner's behalf (repairs, approved)</span>
                 <span className="font-mono">
-                  (₹{Number(statement.expenses_paid_inr || 120000).toLocaleString("en-IN")})
+                  (₹{Number(statement.expenses_paid_inr || 0).toLocaleString("en-IN")})
                 </span>
               </div>
 
@@ -173,7 +172,7 @@ export default function OwnerStatementModal({
                   Net Remittance to Owner — Formula F-21
                 </span>
                 <span className="font-mono font-black text-teal-900 text-sm">
-                  ₹{Number(statement.net_remittance_inr || 4453440).toLocaleString("en-IN")}
+                  ₹{Number(statement.net_remittance_inr || 0).toLocaleString("en-IN")}
                 </span>
               </div>
             </div>

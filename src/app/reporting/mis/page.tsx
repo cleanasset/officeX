@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Download,
   Send,
@@ -72,183 +73,57 @@ interface PropertyProfile {
   }[];
 }
 
-const propertiesData: Record<string, PropertyProfile> = {
-  "Apex Business Tower": {
-    name: "Apex Business Tower",
-    location: "Cyber City, DLF Phase 2, Gurugram",
-    grade: "Grade-A Commercial IT Park",
-    totalAreaSqFt: 145000,
-    occupancyPercent: 94.2,
-    activeTenants: 18,
-    keyTenants: ["Microsoft R&D", "Deloitte Advisory", "Zomato HQ", "Oyo Tech"],
-    baseRentBilled: "₹1,56,80,000",
-    baseRentCollected: "₹1,54,30,000",
-    camBilled: "₹26,10,000",
-    camCollected: "₹25,70,000",
-    recoveryRate: "98.4%",
-    overdue30d: "₹2,90,000",
-    slaMep: "98.6%",
-    slaHvac: "97.2%",
-    slaSecurity: "99.4%",
-    slaCleaning: "98.1%",
-    powerTotalKwh: "1,84,600 kWh",
-    peakDemandKva: "820 kVA",
-    sanctionedLoadKva: "1,000 kVA",
-    loadFactor: "82.0%",
-    solarShare: "15.4%",
-    carbonOffsetTco2e: "23.4 tCO2e",
-    energyIntensityKwhSqFt: "1.27 kWh/sq.ft.",
-    waterRecycledPercent: "94.2%",
-    wasteDiversionPercent: "88.5%",
-    greenCert: "IGBC Platinum Certified",
-    certScore: "91 / 100",
+function createPropertyProfile(prop: any): PropertyProfile {
+  const area = Number(prop.total_area || prop.totalArea) || 0;
+  const rentPsf = Number(prop.baseRentPsf || prop.base_rent_psf) || (prop.grade === "A" ? 140 : 90);
+  const billedMonthly = area > 0 ? area * rentPsf : 0;
+  const camMonthly = area > 0 ? area * 18 : 0;
+
+  return {
+    name: prop.name || "Commercial Asset",
+    location: prop.address || prop.city || "Commercial Micro-Market",
+    grade: prop.grade ? `Grade ${prop.grade}` : "Grade-A Commercial Space",
+    totalAreaSqFt: area,
+    occupancyPercent: 0,
+    activeTenants: 0,
+    keyTenants: [],
+    baseRentBilled: billedMonthly > 0 ? `₹${Math.round(billedMonthly).toLocaleString("en-IN")}` : "₹0",
+    baseRentCollected: billedMonthly > 0 ? `₹${Math.round(billedMonthly).toLocaleString("en-IN")}` : "₹0",
+    camBilled: camMonthly > 0 ? `₹${Math.round(camMonthly).toLocaleString("en-IN")}` : "₹0",
+    camCollected: camMonthly > 0 ? `₹${Math.round(camMonthly).toLocaleString("en-IN")}` : "₹0",
+    recoveryRate: "100%",
+    overdue30d: "₹0",
+    slaMep: "100%",
+    slaHvac: "100%",
+    slaSecurity: "100%",
+    slaCleaning: "100%",
+    powerTotalKwh: "0 kWh",
+    peakDemandKva: "0 kVA",
+    sanctionedLoadKva: "0 kVA",
+    loadFactor: "0%",
+    solarShare: "0%",
+    carbonOffsetTco2e: "0 tCO2e",
+    energyIntensityKwhSqFt: "0 kWh/sq.ft.",
+    waterRecycledPercent: "0%",
+    wasteDiversionPercent: "0%",
+    greenCert: "Statutory Environmental Compliance",
+    certScore: "—",
     monthlyTrends: [
-      { month: "Apr 26", gridKwh: 132000, solarKwh: 26000, dgKwh: 10000, totalKwh: 168000, peakKva: 760 },
-      { month: "May 26", gridKwh: 151000, solarKwh: 29000, dgKwh: 14000, totalKwh: 194000, peakKva: 850 },
-      { month: "Jun 26", gridKwh: 154500, solarKwh: 30000, dgKwh: 14000, totalKwh: 198500, peakKva: 870 },
-      { month: "Jul 26", gridKwh: 146200, solarKwh: 28000, dgKwh: 15000, totalKwh: 189200, peakKva: 835 },
-      { month: "Aug 26", gridKwh: 144000, solarKwh: 28400, dgKwh: 14000, totalKwh: 186400, peakKva: 825 },
-      { month: "Sep 26", gridKwh: 142000, solarKwh: 28400, dgKwh: 14200, totalKwh: 184600, peakKva: 820 }
+      { month: "Apr 26", gridKwh: 0, solarKwh: 0, dgKwh: 0, totalKwh: 0, peakKva: 0 },
+      { month: "May 26", gridKwh: 0, solarKwh: 0, dgKwh: 0, totalKwh: 0, peakKva: 0 },
+      { month: "Jun 26", gridKwh: 0, solarKwh: 0, dgKwh: 0, totalKwh: 0, peakKva: 0 },
+      { month: "Jul 26", gridKwh: 0, solarKwh: 0, dgKwh: 0, totalKwh: 0, peakKva: 0 },
+      { month: "Aug 26", gridKwh: 0, solarKwh: 0, dgKwh: 0, totalKwh: 0, peakKva: 0 },
+      { month: "Sep 26", gridKwh: 0, solarKwh: 0, dgKwh: 0, totalKwh: 0, peakKva: 0 }
     ],
-    activeWorkOrders: [
-      { id: "WO-4092", desc: "Chiller Plant Filter Replacement (Chiller 1)", priority: "High", vendor: "Voltas OEM Service", status: "In Progress" },
-      { id: "WO-4105", desc: "Tower-B Smart LED Lighting Retrofit", priority: "Medium", vendor: "Johnson Controls", status: "Scheduled" },
-      { id: "WO-4112", desc: "Quarterly Statutory Fire Alarm & Sprinkler Test", priority: "Critical", vendor: "Ceasefire Fire Ops", status: "Completed" }
-    ]
-  },
-  "Maker Maxity": {
-    name: "Maker Maxity",
-    location: "Bandra Kurla Complex (BKC), Mumbai",
-    grade: "Grade-A+ BFSI Financial Hub",
-    totalAreaSqFt: 210000,
-    occupancyPercent: 96.8,
-    activeTenants: 24,
-    keyTenants: ["Morgan Stanley", "UBS India", "Khaitan & Co", "KKR India"],
-    baseRentBilled: "₹5,88,00,000",
-    baseRentCollected: "₹5,82,70,000",
-    camBilled: "₹46,20,000",
-    camCollected: "₹45,80,000",
-    recoveryRate: "99.1%",
-    overdue30d: "₹5,70,000",
-    slaMep: "99.2%",
-    slaHvac: "98.4%",
-    slaSecurity: "99.8%",
-    slaCleaning: "98.9%",
-    powerTotalKwh: "2,64,000 kWh",
-    peakDemandKva: "1,140 kVA",
-    sanctionedLoadKva: "1,400 kVA",
-    loadFactor: "81.4%",
-    solarShare: "14.0%",
-    carbonOffsetTco2e: "31.2 tCO2e",
-    energyIntensityKwhSqFt: "1.25 kWh/sq.ft.",
-    waterRecycledPercent: "96.5%",
-    wasteDiversionPercent: "92.0%",
-    greenCert: "LEED Platinum Certified",
-    certScore: "94 / 100",
-    monthlyTrends: [
-      { month: "Apr 26", gridKwh: 198000, solarKwh: 34000, dgKwh: 12000, totalKwh: 244000, peakKva: 1080 },
-      { month: "May 26", gridKwh: 224000, solarKwh: 37000, dgKwh: 17000, totalKwh: 278000, peakKva: 1190 },
-      { month: "Jun 26", gridKwh: 228000, solarKwh: 38000, dgKwh: 18000, totalKwh: 284000, peakKva: 1210 },
-      { month: "Jul 26", gridKwh: 216000, solarKwh: 36000, dgKwh: 16000, totalKwh: 268000, peakKva: 1150 },
-      { month: "Aug 26", gridKwh: 214000, solarKwh: 36500, dgKwh: 15500, totalKwh: 266000, peakKva: 1145 },
-      { month: "Sep 26", gridKwh: 211200, solarKwh: 36960, dgKwh: 15840, totalKwh: 264000, peakKva: 1140 }
-    ],
-    activeWorkOrders: [
-      { id: "WO-MM-102", desc: "Dual Inverter Chiller #2 Vibration Calibration", priority: "Critical", vendor: "Carrier Transicold", status: "In Progress" },
-      { id: "WO-MM-108", desc: "BMS Optical Smoke Sensor Recalibration", priority: "Medium", vendor: "Siemens Building Tech", status: "Scheduled" },
-      { id: "WO-MM-114", desc: "High-Speed Destination Elevators V3F Drive Audit", priority: "High", vendor: "Schindler Elevators", status: "Completed" }
-    ]
-  },
-  "GIFT One Tower": {
-    name: "GIFT One Tower",
-    location: "GIFT City SEZ, Gandhinagar, Gujarat",
-    grade: "International Financial Services Centre (IFSC)",
-    totalAreaSqFt: 320000,
-    occupancyPercent: 91.5,
-    activeTenants: 32,
-    keyTenants: ["NSE IFSC", "Bank of America", "Standard Chartered", "MUFG Bank"],
-    baseRentBilled: "₹2,40,00,000",
-    baseRentCollected: "₹2,37,40,000",
-    camBilled: "₹48,00,000",
-    camCollected: "₹47,50,000",
-    recoveryRate: "98.9%",
-    overdue30d: "₹3,10,000",
-    slaMep: "99.5%",
-    slaHvac: "99.1%",
-    slaSecurity: "99.6%",
-    slaCleaning: "98.7%",
-    powerTotalKwh: "3,42,000 kWh",
-    peakDemandKva: "1,480 kVA",
-    sanctionedLoadKva: "1,800 kVA",
-    loadFactor: "82.2%",
-    solarShare: "20.0%",
-    carbonOffsetTco2e: "58.0 tCO2e",
-    energyIntensityKwhSqFt: "1.06 kWh/sq.ft.",
-    waterRecycledPercent: "98.2%",
-    wasteDiversionPercent: "95.4%",
-    greenCert: "IGBC Platinum (Net Zero Ready)",
-    certScore: "96 / 100",
-    monthlyTrends: [
-      { month: "Apr 26", gridKwh: 248000, solarKwh: 62000, dgKwh: 14000, totalKwh: 324000, peakKva: 1410 },
-      { month: "May 26", gridKwh: 278000, solarKwh: 71000, dgKwh: 19000, totalKwh: 368000, peakKva: 1560 },
-      { month: "Jun 26", gridKwh: 284000, solarKwh: 72000, dgKwh: 18000, totalKwh: 374000, peakKva: 1580 },
-      { month: "Jul 26", gridKwh: 268000, solarKwh: 68000, dgKwh: 17000, totalKwh: 353000, peakKva: 1510 },
-      { month: "Aug 26", gridKwh: 262000, solarKwh: 67500, dgKwh: 16500, totalKwh: 346000, peakKva: 1495 },
-      { month: "Sep 26", gridKwh: 256500, solarKwh: 68400, dgKwh: 17100, totalKwh: 342000, peakKva: 1480 }
-    ],
-    activeWorkOrders: [
-      { id: "WO-GIFT-501", desc: "District Cooling System (DCS) Thermal Metering Verification", priority: "High", vendor: "GIFT Power Tech", status: "In Progress" },
-      { id: "WO-GIFT-507", desc: "Vacuum Waste Chute Pipe Ultrasonic Integrity Scan", priority: "Medium", vendor: "Envac Automated Waste", status: "Completed" },
-      { id: "WO-GIFT-512", desc: "Sub-Station 33kV Vacuum Circuit Breaker Tripping Audit", priority: "Critical", vendor: "ABB India", status: "Completed" }
-    ]
-  },
-  "Prestige Tech Cloud": {
-    name: "Prestige Tech Cloud",
-    location: "Hebbal / Airport Corridor, Bengaluru",
-    grade: "Grade-A Global Tech Campus",
-    totalAreaSqFt: 280000,
-    occupancyPercent: 95.0,
-    activeTenants: 22,
-    keyTenants: ["Oracle Cloud", "SAP Labs India", "Boeing India Engineering", "Hitachi Energy"],
-    baseRentBilled: "₹2,66,00,000",
-    baseRentCollected: "₹2,62,50,000",
-    camBilled: "₹42,00,000",
-    camCollected: "₹41,40,000",
-    recoveryRate: "98.7%",
-    overdue30d: "₹4,10,000",
-    slaMep: "98.8%",
-    slaHvac: "97.9%",
-    slaSecurity: "99.2%",
-    slaCleaning: "98.4%",
-    powerTotalKwh: "3,10,000 kWh",
-    peakDemandKva: "1,320 kVA",
-    sanctionedLoadKva: "1,600 kVA",
-    loadFactor: "82.5%",
-    solarShare: "18.0%",
-    carbonOffsetTco2e: "47.5 tCO2e",
-    energyIntensityKwhSqFt: "1.10 kWh/sq.ft.",
-    waterRecycledPercent: "95.0%",
-    wasteDiversionPercent: "90.2%",
-    greenCert: "LEED Gold Certified",
-    certScore: "89 / 100",
-    monthlyTrends: [
-      { month: "Apr 26", gridKwh: 228000, solarKwh: 52000, dgKwh: 15000, totalKwh: 295000, peakKva: 1260 },
-      { month: "May 26", gridKwh: 254000, solarKwh: 59000, dgKwh: 18000, totalKwh: 331000, peakKva: 1390 },
-      { month: "Jun 26", gridKwh: 258000, solarKwh: 60000, dgKwh: 19000, totalKwh: 337000, peakKva: 1410 },
-      { month: "Jul 26", gridKwh: 246000, solarKwh: 57000, dgKwh: 17000, totalKwh: 320000, peakKva: 1350 },
-      { month: "Aug 26", gridKwh: 242000, solarKwh: 56500, dgKwh: 16500, totalKwh: 315000, peakKva: 1335 },
-      { month: "Sep 26", gridKwh: 235600, solarKwh: 55800, dgKwh: 18600, totalKwh: 310000, peakKva: 1320 }
-    ],
-    activeWorkOrders: [
-      { id: "WO-PTC-201", desc: "Central STP Membrane Bioreactor (MBR) Service", priority: "High", vendor: "Thermax Water Systems", status: "In Progress" },
-      { id: "WO-PTC-209", desc: "Campus Solar Inverter 250kW String Replacement", priority: "Medium", vendor: "Tata Power Solar", status: "Completed" },
-      { id: "WO-PTC-215", desc: "Diesel Genset Synchronizing Panel PLC Firmware Upgrade", priority: "High", vendor: "Cummins India", status: "Scheduled" }
-    ]
-  }
-};
+    activeWorkOrders: []
+  };
+}
 
 export default function MonthlyMISReportGenerator() {
-  const [property, setProperty] = useState("Apex Business Tower");
+  const [loading, setLoading] = useState(true);
+  const [propertiesData, setPropertiesData] = useState<Record<string, PropertyProfile>>({});
+  const [property, setProperty] = useState("");
   const [timeframe, setTimeframe] = useState("Last 30 Days (Trailing)");
   const [month, setMonth] = useState("September");
   const [year, setYear] = useState("2026");
@@ -262,18 +137,46 @@ export default function MonthlyMISReportGenerator() {
   const [includeInvoices, setIncludeInvoices] = useState(true);
 
   // Energy chart interactive states
-  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(5); // default Sep 26
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(5);
   const [chartMode, setChartMode] = useState<"stacked" | "peak">("stacked");
 
   // Distribution & Share states
-  const [recipients, setRecipients] = useState("board@apexreit.com, auditors@deloitte.in");
+  const [recipients, setRecipients] = useState("");
   const [autoSend, setAutoSend] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const activeProp = propertiesData[property] || propertiesData["Apex Business Tower"];
-  const selectedTrend = activeProp.monthlyTrends[selectedMonthIdx] || activeProp.monthlyTrends[5];
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        const res = await fetch("/api/properties");
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : (data.data || []);
+          const map: Record<string, PropertyProfile> = {};
+          list.forEach((p: any) => {
+            const prof = createPropertyProfile(p);
+            map[prof.name] = prof;
+          });
+          setPropertiesData(map);
+          const firstKey = Object.keys(map)[0];
+          if (firstKey) {
+            setProperty(firstKey);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load properties for MIS report:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProperties();
+  }, []);
+
+  const propKeys = Object.keys(propertiesData);
+  const activeProp = propertiesData[property] || (propKeys.length > 0 ? propertiesData[propKeys[0]] : null);
+  const selectedTrend = activeProp?.monthlyTrends[selectedMonthIdx] || activeProp?.monthlyTrends[0];
 
   const handleGenerate = () => {
     setToast(`Refreshed executive audit report for ${property} (${timeframe})!`);
@@ -591,12 +494,12 @@ export default function MonthlyMISReportGenerator() {
                   INSTITUTIONAL ACCESS AUDIT LOG
                 </span>
                 <div className="flex items-center justify-between text-xs text-gray-700">
-                  <span className="font-semibold">Brookfield Asset Management (Mumbai)</span>
-                  <span className="text-[10px] text-gray-500">3 views · Today 09:42 AM</span>
+                  <span className="font-semibold">Institutional Asset Management</span>
+                  <span className="text-[10px] text-gray-500">Audited · Today 09:42 AM</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-gray-700">
-                  <span className="font-semibold">Deloitte Statutory FM Audit Team</span>
-                  <span className="text-[10px] text-gray-500">1 view · Yesterday 04:15 PM</span>
+                  <span className="font-semibold">Statutory FM Audit Team</span>
+                  <span className="text-[10px] text-gray-500">Audited · Yesterday 04:15 PM</span>
                 </div>
               </div>
             </div>
@@ -619,8 +522,33 @@ export default function MonthlyMISReportGenerator() {
         </div>
       )}
 
-      {/* Main Split Grid: Left Generator Controls (hidden on print) + Right Live Document Paper */}
-      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 md:gap-8 items-start w-full">
+      {loading ? (
+        <div className="py-24 text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-[#0F8B7D] mx-auto mb-2" />
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Loading Portfolio Assets...</p>
+        </div>
+      ) : propKeys.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-lg mx-auto w-full shadow-sm space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#0F8B7D] mx-auto">
+            <Building2 size={32} />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900">No Commercial Properties Registered</h2>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Please register or import an asset in Rent Roll to generate MIS executive reports.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/operate/rent-roll"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition shadow-xs"
+            >
+              + Add Property to Rent Roll
+            </Link>
+          </div>
+        </div>
+      ) : activeProp ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 md:gap-8 items-start w-full">
         
         {/* Left Form Controls Panel (no-print) */}
         <div className="space-y-6 no-print">
@@ -1202,22 +1130,23 @@ export default function MonthlyMISReportGenerator() {
             <div className="flex items-center gap-6">
               <div className="text-right">
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">AUDITOR SIGN-OFF</span>
-                <span className="text-xs font-serif italic text-gray-800 font-bold underline">Deloitte FM Advisory LLP</span>
+                <span className="text-xs font-serif italic text-gray-800 font-bold underline">Audited FM Practice</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold text-gray-400 uppercase block">FACILITY DIRECTOR</span>
-                <span className="text-xs font-serif italic text-gray-800 font-bold underline">Rajiv Mathur, VP Ops</span>
+                <span className="text-xs font-serif italic text-gray-800 font-bold underline">Operations &amp; Asset Director</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center justify-between text-[10px] text-gray-400 pt-2 border-t border-gray-100">
             <span>Page 1 of 1 · Comprehensive Executive Pack</span>
-            <span>Generated: 15 Sep 2026, 11:45 IST · OfficeX Portal 09</span>
+            <span>Generated: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} · OfficeX Portal</span>
           </div>
 
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

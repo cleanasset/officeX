@@ -13,7 +13,7 @@ export default function AuditTrailLogsDashboard() {
       user: "Rajesh Kumar",
       isAi: false,
       module: "Compliance",
-      action: "Renewed Electrical Safety Cert (Apex Tower)",
+      action: "Renewed Electrical Safety Certificate",
       ip: "192.168.1.42",
       severity: "Info",
       sevClass: "text-emerald-700 bg-emerald-50 border-emerald-200"

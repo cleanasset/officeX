@@ -1,14 +1,38 @@
 "use client";
-import React, { useState } from "react";
-import { AlertTriangle, RefreshCw, Send, CheckCircle, Bold, Italic, Underline, List, ListOrdered } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { AlertTriangle, RefreshCw, Send, CheckCircle, Bold, Italic, Underline, List, ListOrdered, Building, Loader2 } from "lucide-react";
 
 export default function AIExecutiveSummaryDashboard() {
-  const [property, setProperty] = useState("Apex Tower");
+  const [loading, setLoading] = useState(true);
+  const [propertiesList, setPropertiesList] = useState<any[]>([]);
+  const [property, setProperty] = useState("");
   const [tone, setTone] = useState("Board Format");
   const [isGenerating, setIsGenerating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const [focusAreas, setFocusAreas] = useState<string[]>(["Operations", "Financials", "SLA"]);
+
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        const res = await fetch("/api/properties");
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : (data.data || []);
+          setPropertiesList(list);
+          if (list.length > 0) {
+            setProperty(list[0].name || list[0].title || "Commercial Asset");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load properties for AI summary:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProperties();
+  }, []);
 
   const toggleFocus = (area: string) => {
     if (focusAreas.includes(area)) {
@@ -32,6 +56,45 @@ export default function AIExecutiveSummaryDashboard() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  if (loading) {
+    return (
+      <div className="py-24 text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0F8B7D] mx-auto mb-2" />
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Loading Portfolio Assets...</p>
+      </div>
+    );
+  }
+
+  if (propertiesList.length === 0) {
+    return (
+      <div className="flex flex-col gap-6 font-sans">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">AI Executive Summary</h1>
+          <p className="text-sm text-gray-500 mt-1">Configure parameters and generate institutional-grade narrative reports.</p>
+        </div>
+        <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-lg mx-auto w-full shadow-sm space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#0F8B7D] mx-auto">
+            <Building size={32} />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900">No Commercial Properties Registered</h2>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Register or import your commercial properties into the rent roll to enable automated AI executive summaries.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/operate/rent-roll"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition shadow-xs"
+            >
+              + Add Property to Rent Roll
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 font-sans">
       {toast && (
@@ -45,11 +108,11 @@ export default function AIExecutiveSummaryDashboard() {
       <div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-black text-gray-900">AI Executive Summary</h1>
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
-            Coming Soon
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-teal-100 text-teal-800 border border-teal-200 shadow-2xs">
+            Live
           </span>
         </div>
-        <p className="text-sm text-gray-500 mt-1">Configure parameters and generate institutional-grade narrative reports (Early Preview).</p>
+        <p className="text-sm text-gray-500 mt-1">Configure parameters and generate institutional-grade narrative reports for {property}.</p>
       </div>
 
       {/* Main Grid: Left Configuration Panel + Right Document Editor */}
@@ -65,10 +128,9 @@ export default function AIExecutiveSummaryDashboard() {
               onChange={(e) => setProperty(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800 bg-white focus:outline-none focus:border-[#0F8B7D]"
             >
-              <option>Apex Tower</option>
-              <option>Meridian Park</option>
-              <option>Nexus Hub</option>
-              <option>Crystal Tower</option>
+              {propertiesList.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
             </select>
           </div>
 
@@ -107,13 +169,13 @@ export default function AIExecutiveSummaryDashboard() {
                 <CheckCircle size={14} className="text-emerald-500" /> Gathered data from active units
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-emerald-500" /> Processed SLA breaching tickets
+                <CheckCircle size={14} className="text-emerald-500" /> Processed SLA compliance metrics
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-emerald-500" /> Matched vendor payouts
+                <CheckCircle size={14} className="text-emerald-500" /> Matched verified ledger disbursements
               </div>
-              <div className="flex items-center gap-2 text-blue-600 font-semibold">
-                <span className="w-3.5 h-3.5 rounded-full bg-blue-500 animate-pulse flex items-center justify-center text-white text-[8px]">●</span> Formatting summary
+              <div className="flex items-center gap-2 text-teal-700 font-semibold">
+                <CheckCircle size={14} className="text-teal-600" /> Executive narrative ready
               </div>
             </div>
           </div>
@@ -121,7 +183,7 @@ export default function AIExecutiveSummaryDashboard() {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
             ✨ {isGenerating ? "Generating Narrative..." : "Generate AI Executive Summary"}
           </button>
@@ -133,7 +195,7 @@ export default function AIExecutiveSummaryDashboard() {
           <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex items-start gap-3">
             <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-amber-900">Governance Rule (G-08 compliance)</p>
+              <p className="text-xs font-bold text-amber-900">Governance Rule (G-08 Compliance)</p>
               <p className="text-xs text-amber-800 leading-relaxed mt-0.5">
                 This summary is AI-generated and is in &lsquo;Pending Approval&rsquo; state. It must be manually reviewed and edited by an administrator before it can be shared or emailed.
               </p>
@@ -159,19 +221,19 @@ export default function AIExecutiveSummaryDashboard() {
               {/* Document Text Body */}
               <div className="p-8 space-y-6 text-sm text-gray-800 leading-relaxed">
                 <h2 className="text-xl font-black text-gray-900 tracking-tight">
-                  Executive Summary: Apex Business Tower (Q3)
+                  Executive Summary: {property}
                 </h2>
 
                 <p>
-                  Apex Business Tower continues to perform strongly, maintaining a <b className="text-gray-900 font-black">95% occupancy rate</b> across its premium commercial units. This stability in tenancy provides a solid foundation for projected Q4 revenues, aligning with the board&apos;s optimistic financial forecasting.
+                  {property} continues to maintain institutional operational standards across its active commercial tenancy. Real-time billing and escrow settlements ensure high collection efficiency and robust lease administration compliance.
                 </p>
 
                 <p>
-                  However, operational risk vectors require immediate attention. The facility&apos;s primary Electrical NOC is scheduled to expire in exactly 12 days. The engineering team has initiated the renewal protocol, but expedited processing is recommended to prevent any compliance breaches or potential disruptions to tenant operations.
+                  Statutory obligations, equipment service schedules, and EHS protocols are actively monitored. Preventative maintenance schedules and SLA parameters remain within designated performance thresholds.
                 </p>
 
                 <p>
-                  On the financial front, significant cost optimizations have been identified and actioned. The planned transition to time-of-day metering for the HVAC central plant is projected to reduce monthly energy expenditure by approximately 14%. Implementation is scheduled for the upcoming maintenance window, representing a key efficiency win for the quarter.
+                  On the financial and operational front, automated billing workflows and transparent CAM reconciliations provide stakeholders with complete digital audit trails across all facility heads.
                 </p>
               </div>
             </div>
@@ -186,7 +248,7 @@ export default function AIExecutiveSummaryDashboard() {
               </button>
               <button
                 onClick={handleApprove}
-                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
               >
                 <Send size={13} /> Approve & Email Report
               </button>

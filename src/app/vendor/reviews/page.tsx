@@ -11,7 +11,7 @@ export default function VendorReviewsAndRatings() {
       id: "WO-045",
       avatar: "AC",
       avatarBg: "bg-blue-100 text-blue-700",
-      company: "Apex Corporation",
+      company: "Anchor Corporation",
       date: "Oct 12, 2023",
       rating: 5,
       comment: "Excellent electrical repair service. The team arrived on time, diagnosed the issue quickly, and completed the rewiring with minimal disruption to our office floor. Highly professional and left the area spotless."
@@ -47,7 +47,7 @@ export default function VendorReviewsAndRatings() {
       id: "WO-018",
       avatar: "ML",
       avatarBg: "bg-teal-100 text-teal-700",
-      company: "Meridian Logistics",
+      company: "Maritime Logistics",
       date: "Aug 12, 2023",
       rating: 5,
       comment: "Emergency lock replacement handled swiftly during off-hours. Extremely satisfied with their rapid response time and clear communication throughout the process."

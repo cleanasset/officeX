@@ -105,93 +105,8 @@ export default function ApprovalsInboxPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
 
-  const [contracts, setContracts] = useState<SubmittedContract[]>([
-    {
-      id: "CON-SUB-01",
-      type: "New Contract",
-      contractCode: "APX-L-0057",
-      occupantName: "Global Logistics Warehousing",
-      spaceName: "Floor 4 · East Wing",
-      propertyName: "Apex Business Tower",
-      monthlyRent: "₹34,80,000",
-      financialImpact: "+₹34.80 L / month",
-      submittedBy: "Anita Desai",
-      makerRole: "Leasing Manager",
-      submittedDate: "27-Sep-2026",
-      dueDate: "30-Sep-2026",
-      priority: "High",
-      targetStatus: "active",
-      startDate: "01-Oct-2026",
-      endDate: "30-Sep-2029",
-      escalationTerms: "+5% annually (Compounded)",
-      depositAmount: "₹1,04,40,000 (3 Months)",
-      isMaker: false,
-    },
-    {
-      id: "CON-SUB-02",
-      type: "Financial change",
-      contractCode: "MTP-L-0012",
-      occupantName: "TechNova Financial Systems",
-      spaceName: "Floor 3 · Entire Floor",
-      propertyName: "Meridian Tech Park",
-      monthlyRent: "₹18,62,000",
-      financialImpact: "+₹66,000 / month (Rate ₹95 → ₹98)",
-      submittedBy: "Ravi Kumar",
-      makerRole: "Property Manager",
-      submittedDate: "28-Sep-2026",
-      dueDate: "02-Oct-2026",
-      priority: "Medium",
-      targetStatus: "active",
-      startDate: "01-Aug-2025",
-      endDate: "31-Jul-2028",
-      escalationTerms: "Rate amendment step",
-      depositAmount: "₹55,86,000",
-      isMaker: false,
-    },
-    {
-      id: "CON-SUB-03",
-      type: "Escalation apply",
-      contractCode: "GFT-L-0003",
-      occupantName: "FinTech Trade Labs",
-      spaceName: "Suite 502",
-      propertyName: "Nexus Corporate Hub",
-      monthlyRent: "₹8,25,000",
-      financialImpact: "+₹37,500 / month (+5.0% Step)",
-      submittedBy: "System (Scheduled Auto-Trigger)",
-      makerRole: "Automated Workflow Engine",
-      submittedDate: "29-Sep-2026",
-      dueDate: "01-Oct-2026",
-      priority: "High",
-      targetStatus: "active",
-      startDate: "01-Oct-2024",
-      endDate: "30-Sep-2027",
-      escalationTerms: "+5% at Year 2 Anniversary",
-      depositAmount: "₹24,75,000",
-      isMaker: false,
-    },
-  ]);
-
-  const [historyItems, setHistoryItems] = useState([
-    {
-      id: "HIST-01",
-      code: "NXH-L-0021",
-      occupant: "FreshMart Omnichannel",
-      action: "Approved",
-      date: "25-Sep-2026",
-      approver: "Vikram Mehta (Principal)",
-      impact: "+₹12.80 L/m",
-    },
-    {
-      id: "HIST-02",
-      code: "APX-L-0044",
-      occupant: "Krypton Design Studio",
-      action: "Rejected",
-      date: "22-Sep-2026",
-      approver: "Vikram Mehta (Principal)",
-      reason: "Deposit lock-in clause missing 60-day notice requirement",
-      impact: "Returned to draft",
-    },
-  ]);
+  const [contracts, setContracts] = useState<SubmittedContract[]>([]);
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
 
   // -------------------------------------------------------------------------
   // TAB 2: INVOICE APPROVALS STATE (§S-06 TAB 2 NEW)
@@ -255,14 +170,13 @@ export default function ApprovalsInboxPage() {
             depositAmount: `₹${Number(row.contract.security_deposit_inr || 0).toLocaleString("en-IN")}`,
             isMaker: false,
           }));
-          setContracts((prev) => {
-            const existingCodes = new Set(apiItems.map((a) => a.contractCode));
-            return [...apiItems, ...prev.filter((p) => !existingCodes.has(p.contractCode))];
-          });
+          setContracts(apiItems);
+        } else {
+          setContracts([]);
         }
       }
     } catch (e) {
-      // fallback
+      setContracts([]);
     } finally {
       setContractLoading(false);
     }
@@ -292,68 +206,12 @@ export default function ApprovalsInboxPage() {
           }));
           setInvoices(mapped);
         } else {
-          // Provide realistic pending invoices for verification if DB currently has none in draft
-          setInvoices([
-            {
-              id: "inv-demo-01",
-              invoice_number: "INV-2026-27-8001",
-              invoice_date: "2026-10-01",
-              due_date: "2026-10-15",
-              occupant_name: "Apex Infotech Ltd",
-              property_name: "Cyber Tech City",
-              space_name: "Suite 401",
-              contract_code: "CON-INN-2026",
-              subtotal: 250000,
-              gst_amount: 45000,
-              gross_total: 295000,
-              submitted_by: "Billing Schedule Job",
-              status: "draft",
-              lines: [
-                { description: "Base Rent Oct 2026", amount: 250000, gst_rate: 18, total: 295000 }
-              ]
-            },
-            {
-              id: "inv-demo-02",
-              invoice_number: "INV-2026-27-8002",
-              invoice_date: "2026-10-01",
-              due_date: "2026-10-15",
-              occupant_name: "Acme Tech Labs Pvt Ltd",
-              property_name: "Meridian Tech Park",
-              space_name: "Floor 2 Wing B",
-              contract_code: "CNT-P3-1077",
-              subtotal: 180000,
-              gst_amount: 32400,
-              gross_total: 212400,
-              submitted_by: "Meera Sen (Finance)",
-              status: "draft",
-              lines: [
-                { description: "Base Rent Oct 2026", amount: 150000, gst_rate: 18, total: 177000 },
-                { description: "CAM Charges Oct 2026", amount: 30000, gst_rate: 18, total: 35400 }
-              ]
-            },
-            {
-              id: "inv-demo-03",
-              invoice_number: "INV-2026-27-8003",
-              invoice_date: "2026-10-01",
-              due_date: "2026-10-10",
-              occupant_name: "FinTech Trade Labs",
-              property_name: "Nexus Corporate Hub",
-              space_name: "Suite 502",
-              contract_code: "GFT-L-0003",
-              subtotal: 825000,
-              gst_amount: 148500,
-              gross_total: 973500,
-              submitted_by: "Scheduled Billing Engine",
-              status: "draft",
-              lines: [
-                { description: "Base Rent Oct 2026 (Post-Escalation)", amount: 825000, gst_rate: 18, total: 973500 }
-              ]
-            }
-          ]);
+          setInvoices([]);
         }
       }
     } catch (e) {
       console.error("Failed to load draft invoices", e);
+      setInvoices([]);
     } finally {
       setInvoiceLoading(false);
     }
@@ -368,32 +226,12 @@ export default function ApprovalsInboxPage() {
         if (json.data && json.data.length > 0) {
           setDisputes(json.data);
         } else {
-          setDisputes([
-            {
-              id: "disp-01",
-              dispute_code: "DISP-20261001-4412",
-              invoice_id: "INV-2026-27-7201",
-              dispute_type: "incorrect_amount",
-              dispute_reason: "CAM charges calculated on gross instead of usable carpet area as per amendment rider.",
-              occupant_response: "Awaiting credit note adjustment before payment release.",
-              dispute_status: "open",
-              created_at: "2026-10-02T10:15:00Z"
-            },
-            {
-              id: "disp-02",
-              dispute_code: "DISP-20260928-1099",
-              invoice_id: "INV-2026-27-6910",
-              dispute_type: "service_issue",
-              dispute_reason: "HVAC cooling downtime on 3rd floor for 5 business days in September.",
-              occupant_response: "Requested 10% rent concession for affected period.",
-              dispute_status: "under_review",
-              created_at: "2026-09-28T14:30:00Z"
-            }
-          ]);
+          setDisputes([]);
         }
       }
     } catch (e) {
       console.error("Failed to load disputes", e);
+      setDisputes([]);
     } finally {
       setDisputeLoading(false);
     }
@@ -1374,6 +1212,12 @@ export default function ApprovalsInboxPage() {
                     ))}
                   </tbody>
                 </table>
+
+                {filteredDisputes.length === 0 && (
+                  <div className="p-8 text-center text-xs text-slate-400 italic">
+                    No active payment or billing disputes on record.
+                  </div>
+                )}
               </div>
             </div>
           </div>

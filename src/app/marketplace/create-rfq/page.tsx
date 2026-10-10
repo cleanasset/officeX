@@ -5,14 +5,26 @@ import { useRouter } from "next/navigation";
 
 export default function CreateRFQ() {
   const router = useRouter();
+  const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
   const [form, setForm] = useState({
-    title: "", property: "Apex Business Tower", category: "HVAC", subCategory: "Chiller & Duct Maintenance", scope: "",
+    title: "", property: "", category: "HVAC", subCategory: "Chiller & Duct Maintenance", scope: "",
     frequency: "Monthly", area: "45,000 sq.ft.", manpower: "4", materialProvisioning: "Vendor Provides Materials & Consumables",
     contractDuration: "1 Year", startDate: "2026-11-01", deadline: "2026-10-30",
     autoMatch: true, minRating: 4.0
   });
   const [toast, setToast] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/properties")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setProperties(data.map((p: any) => ({ id: p.id, name: p.name || p.property_name })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (action: "draft" | "publish") => {
     if (!form.title.trim()) {
@@ -87,10 +99,9 @@ export default function CreateRFQ() {
                   className="mt-1 w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#0F8B7D]"
                 >
                   <option value="">Select Property...</option>
-                  <option>Apex Tower</option>
-                  <option>Meridian Park</option>
-                  <option>Nexus Hub</option>
-                  <option>Crystal Tower</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.name}>{p.name}</option>
+                  ))}
                 </select>
               </div>
             </div>

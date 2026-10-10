@@ -140,23 +140,8 @@ export async function POST(req: Request) {
       employeeCountBand: employeeCountBand || "11–50",
       organizationStatus: "SUBMITTED",
       // GST-modeled components
-      promoters: promoters.length > 0 ? promoters : [
-        {
-          name: authorizedSignatory?.name || "Primary Promoter",
-          designation: authorizedSignatory?.designation || "Managing Director",
-          dinPan: pan || "DIN-08912345",
-          mobile: authorizedSignatory?.mobile || "+91 98200 12345",
-          email: authorizedSignatory?.email || "director@officex.com",
-          equityPct: "100%"
-        }
-      ],
-      authorizedSignatory: authorizedSignatory || {
-        name: legalName + " Signatory",
-        designation: "Authorized Signatory",
-        mobile: "+91 98200 12345",
-        email: "signatory@officex.com",
-        authorizationDocRef: "BR/2026/01"
-      },
+      promoters: promoters || [],
+      authorizedSignatory: authorizedSignatory || null,
       authorizedRepresentative: authorizedRepresentative || null,
       principalPlaceOfBusiness: principalPlaceOfBusiness || {
         natureOfPossession: "OWNED",

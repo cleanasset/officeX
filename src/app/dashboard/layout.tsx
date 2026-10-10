@@ -91,11 +91,11 @@ export default function DashboardLayout({
               </span>
               <button
                 onClick={() => setIsRoleModalOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold shadow-2xs transition-colors cursor-pointer group"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-900 hover:bg-teal-100 text-xs font-bold shadow-2xs transition-colors cursor-pointer group"
               >
-                <UserCheck size={14} className="text-teal-400" />
+                <UserCheck size={14} className="text-[#0F8B7D]" />
                 <span>{activeRoleLabel}</span>
-                <ChevronDown size={13} className="text-slate-400 group-hover:text-white" />
+                <ChevronDown size={13} className="text-teal-600 group-hover:text-teal-800" />
               </button>
               <span className="text-[11px] text-slate-600 hidden md:inline">
                 (Click to switch role §5.14)

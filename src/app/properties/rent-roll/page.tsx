@@ -79,11 +79,9 @@ export default function RentRollRegisterPage() {
   // Capacity Quota & Grace Period Telemetry (§OI-8 Commercial Policy)
   // Quota: 50,00,00,000 Sq.Ft (50 Crore sq.ft) with 90% warning threshold (45 Crore sq.ft)
   const MAX_FREE_CAPACITY_SQFT = 500_000_000;
-  const [simulateCapacityWarning, setSimulateCapacityWarning] = useState(false);
   const [showGracePeriodModal, setShowGracePeriodModal] = useState(false);
 
-  const actualAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
-  const effectiveAumSqft = simulateCapacityWarning ? 465_000_000 : actualAumSqft;
+  const effectiveAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
   const capacityPercent = Math.min(100, Math.max(0, (effectiveAumSqft / MAX_FREE_CAPACITY_SQFT) * 100));
   const isApproachingLimit = capacityPercent >= 90;
 
@@ -176,7 +174,28 @@ export default function RentRollRegisterPage() {
       {/* Universal Marketing & Platform Header */}
       <MarketingHeader activePath="/operate/rent-roll" />
 
-      {/* Breadcrumb Navigation */}
+      {/* Role View Context Banner (§2.2 Navigation by Role & §S-01) - Pure Light Theme */}
+      <div className="bg-teal-50/70 text-slate-800 px-3 sm:px-6 lg:px-8 py-2.5 border-b border-teal-100">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-teal-700 font-bold uppercase tracking-wider text-[10px] bg-teal-100/80 border border-teal-200 px-2 py-0.5 rounded">
+              Active Context: Rent Roll Register (§S-10)
+            </span>
+            <span className="text-slate-600 hidden md:inline text-[11px]">
+              Complete master schedule of leasable spaces, contract terms &amp; escalations.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7065] text-white text-[11px] font-bold shadow-2xs transition"
+            >
+              <span>Go to Role Dashboard</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </div>
       <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs text-slate-500 font-medium">
           <div className="flex items-center gap-2 shrink-0">
@@ -331,15 +350,6 @@ export default function RentRollRegisterPage() {
                 >
                   Grace Policy
                 </button>
-                {simulateCapacityWarning && (
-                  <button
-                    onClick={() => setSimulateCapacityWarning(false)}
-                    className="text-[11px] text-slate-500 hover:text-slate-800 underline whitespace-nowrap ml-1"
-                    title="Reset simulation back to live area"
-                  >
-                    Reset Sim
-                  </button>
-                )}
               </div>
             </div>
 
@@ -381,13 +391,6 @@ export default function RentRollRegisterPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs shrink-0">
-                <button
-                  onClick={() => setSimulateCapacityWarning(true)}
-                  className="text-[10px] font-medium text-slate-400 hover:text-amber-800 hover:bg-amber-50 px-2 py-1 rounded border border-slate-200 transition"
-                  title="Simulate 93% portfolio load to preview the 90% grace period warning banner"
-                >
-                  Simulate 90% Warning
-                </button>
                 <Link
                   href="/operate/rent-roll/pricing"
                   className="text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1 hover:underline text-xs"

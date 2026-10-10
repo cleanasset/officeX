@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User, Check } from "lucide-react";
+import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, LogOut, CreditCard, Loader2, Tag, X, Gift, Building2, User, Check, Receipt, Zap, ClipboardList, Layers, ChevronRight } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 import { isAuthenticated, getCookie } from "@/lib/auth-client";
@@ -101,6 +101,10 @@ export default function SubscriptionGate({
   const [phone, setPhone] = useState("");
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentToast, setPaymentToast] = useState<string | null>(null);
+
+  // User Operational Role Decision state (§S-01, §2.1 & §5.14)
+  const [isRoleDecided, setIsRoleDecided] = useState<boolean>(true);
+  const [selectedPersonaKey, setSelectedPersonaKey] = useState<string>("owner");
 
   // Selected Pricing Plan state (default: "techpark" ₹100, user can pick "starter" ₹50 or "reit-mega" ₹200)
   const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "techpark" | "reit-mega">("techpark");
@@ -237,8 +241,16 @@ export default function SubscriptionGate({
       const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
         getCookie(`officex_sub_${encodeURIComponent(email)}`) === "active";
 
+      const storedRoleKey =
+        localStorage.getItem("officex_role_key") ||
+        sessionStorage.getItem("officex_role_key") ||
+        getCookie("officex_role_key");
+      const hasDecidedRole = !!storedRoleKey;
+      setIsRoleDecided(hasDecidedRole);
+
       if (subEmailLocal || subGlobal) {
         setIsSubscribed(true);
+        setIsRoleDecided(hasDecidedRole);
         setIsChecking(false);
         return;
       }
@@ -251,6 +263,7 @@ export default function SubscriptionGate({
           if (data.subscribed) {
             persistSubscription(email, "verified_server", "SERVER_SAVED");
             setIsSubscribed(true);
+            setIsRoleDecided(hasDecidedRole);
             setIsChecking(false);
             return;
           }
@@ -315,8 +328,10 @@ export default function SubscriptionGate({
       setIsLoggedIn(true);
       setIsSubscribed(true);
       setIsPaymentProcessing(false);
-      setPaymentToast(`🎉 100% Free Access to ${selectedPlan.name} Activated! Welcome to OfficeX Live Dashboard.`);
-      setTimeout(() => setPaymentToast(null), 6000);
+      setPaymentToast(`🎉 100% Free Access to ${selectedPlan.name} Activated! Routing to workspace setup...`);
+      setTimeout(() => {
+        router.push("/properties/rent-roll");
+      }, 400);
       return;
     }
 
@@ -350,8 +365,10 @@ export default function SubscriptionGate({
           }
           setIsLoggedIn(true);
           setIsSubscribed(true);
-          setPaymentToast(`Subscription to ${selectedPlan.name} activated! Payment ID: ${response.razorpay_payment_id}`);
-          setTimeout(() => setPaymentToast(null), 6000);
+          setPaymentToast(`Subscription to ${selectedPlan.name} activated! Routing to workspace setup...`);
+          setTimeout(() => {
+            router.push("/properties/rent-roll");
+          }, 400);
         },
         onFailure: (error) => {
           console.error("Subscription payment failed:", error);
@@ -492,7 +509,7 @@ export default function SubscriptionGate({
                       : "https://www.officex.pro/signup";
 
                     if (is100PercentDiscount) {
-                      await persistSubscription(userEmail || "google-subscriber@officex.in", appliedCoupon || "RENTROLL12", `FREE_${appliedCoupon || "RENTROLL12"}_${Date.now()}`, selectedPlan.id);
+                      await persistSubscription(userEmail || "", appliedCoupon || "RENTROLL12", `FREE_${appliedCoupon || "RENTROLL12"}_${Date.now()}`, selectedPlan.id);
                       setPaymentToast(`🎉 100% Free Lifetime Offer for ${selectedPlan.name} Activated! Redirecting to Google...`);
                       setTimeout(async () => {
                         await supabase.auth.signInWithOAuth({
@@ -512,7 +529,7 @@ export default function SubscriptionGate({
                       prefillEmail: userEmail,
                       notes: { portal: portalName, auth_provider: "google", plan_id: selectedPlan.id, plan_price: `INR ${selectedPlan.price}` },
                       onSuccess: async (response) => {
-                        await persistSubscription(userEmail || "google-subscriber@officex.in", "none", response.razorpay_payment_id, selectedPlan.id);
+                        await persistSubscription(userEmail || "", "none", response.razorpay_payment_id, selectedPlan.id);
                         setPaymentToast("Payment verified! Redirecting to Google to complete sign-in...");
                         setTimeout(async () => {
                           await supabase.auth.signInWithOAuth({
@@ -615,11 +632,11 @@ export default function SubscriptionGate({
                 </h4>
               </div>
               <Link
-                href="/operate/rent-roll/pricing"
-                target="_blank"
-                className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1 shrink-0"
+                href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`}
+                className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0C6E63] text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
               >
-                <span>Full Pricing Specs →</span>
+                <Sparkles size={13} className="text-teal-200" />
+                <span>Explore More in Pricing →</span>
               </Link>
             </div>
 
@@ -727,6 +744,16 @@ export default function SubscriptionGate({
                     <span>{feat}</span>
                   </div>
                 ))}
+              </div>
+              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 font-medium">Want full 48-point feature matrix comparison?</span>
+                <Link
+                  href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`}
+                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 border border-teal-200 text-xs font-bold text-[#0F8B7D] flex items-center gap-1 shadow-2xs transition"
+                >
+                  <Sparkles size={11} />
+                  <span>Explore More in Pricing →</span>
+                </Link>
               </div>
             </div>
           </div>
@@ -876,6 +903,19 @@ export default function SubscriptionGate({
               )}
             </button>
 
+            {/* Explore More Option */}
+            <div className="text-center pt-1 pb-1">
+              <Link
+                href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`}
+                className="text-xs font-bold text-slate-500 hover:text-[#0F8B7D] inline-flex items-center gap-1.5 transition group"
+              >
+                <span>Want to explore all operational specs &amp; comparison?</span>
+                <span className="text-[#0F8B7D] font-extrabold group-hover:underline flex items-center gap-1">
+                  Explore More in Pricing →
+                </span>
+              </Link>
+            </div>
+
             {isLoggedIn ? (
               <div className="pt-3 flex flex-col items-center gap-2 border-t border-slate-100">
                 <p className="text-[11px] text-slate-500 font-medium">
@@ -886,8 +926,9 @@ export default function SubscriptionGate({
                     <span>OfficeX Homepage</span>
                   </Link>
                   <span className="text-slate-300">•</span>
-                  <Link href="/operate/rent-roll/pricing" className="hover:underline flex items-center gap-1">
-                    <span>Editions &amp; Pricing</span>
+                  <Link href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`} className="hover:underline flex items-center gap-1 font-extrabold">
+                    <Sparkles size={12} />
+                    <span>Explore More in Pricing</span>
                   </Link>
                   <span className="text-slate-300">•</span>
                   <Link href="/fm-marketplace" className="hover:underline flex items-center gap-1">
@@ -915,6 +956,216 @@ export default function SubscriptionGate({
     );
   }
 
-  // Render children normally if logged in AND subscribed
+  // S-01 Workspace Decision Roles (§2.1 Customer Segments, §3 Personas, §4.1 org_type, §5.14 Roles)
+  const S01_DECISION_ROLES = [
+    {
+      key: "owner",
+      roleLabel: "Owner / Client Principal",
+      orgType: "owner" as const,
+      segmentCode: "Segment A · Asset Owner",
+      title: "Commercial Property Owner / Landlord",
+      subtitle: "Individual Owners, REIT SPVs, Developers & Asset Funds",
+      icon: Building2,
+      badgeBg: "bg-blue-100 text-blue-800 border-blue-300",
+      accentBg: "bg-blue-600 text-white",
+      targetDashboard: "/dashboard/owner",
+      description: "Own or asset-manage commercial office parks, IT SEZs, or retail assets. Need executive portfolio oversight, revenue leakage defense, and automated investor MIS.",
+      whatYouSee: [
+        "Portfolio Rent Roll & Occupancy % (Physical & Economic)",
+        "Receivables Overdue >60 Days & Holding Over contracts",
+        "12-Month Lease Expiration Pipeline & Escalation Calendar",
+        "Automated Monthly Owner Statements & Investor MIS"
+      ]
+    },
+    {
+      key: "finance_manager",
+      roleLabel: "Finance / AR Manager",
+      orgType: "owner" as const,
+      segmentCode: "Statutory Hub · AR Sub-Ledger",
+      title: "Finance Manager / Financial Controller",
+      subtitle: "Accounts, Billing & Revenue Assurance Team",
+      icon: Receipt,
+      badgeBg: "bg-purple-100 text-purple-800 border-purple-300",
+      accentBg: "bg-purple-600 text-white",
+      targetDashboard: "/dashboard/finance",
+      description: "Responsible for monthly tenant billing runs, separate GST tax invoices (Rent / CAM / Utility), TDS reconciliation, unallocated cash, and debt ageing.",
+      whatYouSee: [
+        "0–90+ Days Receivables Ageing Schedule & Bad Debt Tracker",
+        "Monthly Billing Batch Runs & Separate GST Tax Invoices",
+        "Unallocated Cash Receipts & Bank Settlement Reconciliations",
+        "TDS Credit Certificates & Statutory Output Tax Sub-Ledger"
+      ]
+    },
+    {
+      key: "facility_manager",
+      roleLabel: "Facility Manager",
+      orgType: "facility_manager" as const,
+      segmentCode: "Segment C · CAM & Utilities",
+      title: "Facility Management Company (IFM)",
+      subtitle: "IFM Firms & Technical Building Services",
+      icon: Zap,
+      badgeBg: "bg-teal-100 text-teal-800 border-teal-300",
+      accentBg: "bg-teal-600 text-white",
+      targetDashboard: "/dashboard/fm",
+      description: "Manage facilities, utility sub-meters, CAM expense pools, and maintenance recoveries on behalf of property owners or condominium associations.",
+      whatYouSee: [
+        "Monthly Sub-Meter Logging (Electricity, Water, DG Backup)",
+        "CAM Cost Pool Budget vs Actual Reconciliation (True-Up)",
+        "Charges-Only Contracts & Service-Charge Invoices",
+        "Tenant Utility Discrepancies & HVAC Overtime Logs"
+      ]
+    },
+    {
+      key: "property_manager",
+      roleLabel: "Property Manager / Centre Manager",
+      orgType: "property_manager" as const,
+      segmentCode: "Segment B/D · On-Ground Operations",
+      title: "Property Manager / Centre Manager",
+      subtitle: "Operations, Leasing Compliance & Tenant Relations",
+      icon: ClipboardList,
+      badgeBg: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      accentBg: "bg-emerald-600 text-white",
+      targetDashboard: "/dashboard/pm",
+      description: "On-ground property manager keeping space schedules, lease clauses, security deposit balances, and day-to-day notices 100% compliant.",
+      whatYouSee: [
+        "S-03 Today Task Queue: critical lease actions due today",
+        "Lease Escalation Calendar (90/60/30-day notice alerts)",
+        "Missing Lease Deeds, Expired NOCs & Stamp Duty Gaps",
+        "Holding Over occupants and upcoming lock-in expiry dates"
+      ]
+    }
+  ];
+
+  const handleConfirmRoleDecision = (chosen: typeof S01_DECISION_ROLES[0]) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_user_role", chosen.roleLabel);
+      localStorage.setItem("officex_role_key", chosen.key);
+      localStorage.setItem("officex_org_type", chosen.orgType);
+      localStorage.setItem("officex_workspace_initialized", "true");
+      sessionStorage.setItem("officex_user_role", chosen.roleLabel);
+      sessionStorage.setItem("officex_role_key", chosen.key);
+      sessionStorage.setItem("officex_org_type", chosen.orgType);
+      sessionStorage.setItem("officex_workspace_initialized", "true");
+      document.cookie = `officex_user_role=${encodeURIComponent(chosen.roleLabel)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `officex_role_key=${encodeURIComponent(chosen.key)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `officex_org_type=${encodeURIComponent(chosen.orgType)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `officex_workspace_initialized=true; path=/; max-age=86400; SameSite=Lax`;
+    }
+    setIsRoleDecided(true);
+    router.push(chosen.targetDashboard);
+  };
+
+  // Enforce specification: User CANNOT see any dashboard before deciding their operational persona!
+  if (!isRoleDecided) {
+    const activePersona = S01_DECISION_ROLES.find((r) => r.key === selectedPersonaKey) || S01_DECISION_ROLES[0];
+
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans p-4 sm:p-6 justify-center items-center">
+        <div className="max-w-4xl w-full my-auto py-6">
+          {/* Header */}
+          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 text-xs font-bold uppercase tracking-wider mb-2.5">
+              <Sparkles size={13} />
+              <span>Specification Protocol · §S-01 Workspace &amp; Role Selection</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Who is managing this commercial portfolio?
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Per Section 2.1 Customer Segments &amp; Section 5.14 Access Control, you cannot enter a generic dashboard before deciding your operational responsibility. Please select your role below:
+            </p>
+          </div>
+
+          {/* Role Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-6">
+            {S01_DECISION_ROLES.map((persona) => {
+              const IconComp = persona.icon;
+              const isSelected = selectedPersonaKey === persona.key;
+
+              return (
+                <div
+                  key={persona.key}
+                  onClick={() => setSelectedPersonaKey(persona.key)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between text-left relative ${
+                    isSelected
+                      ? "bg-slate-900 border-[#0F8B7D] ring-2 ring-[#0F8B7D]/30 shadow-lg shadow-[#0F8B7D]/10"
+                      : "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                            isSelected ? "bg-[#0F8B7D] text-white" : "bg-slate-800 text-slate-300"
+                          }`}
+                        >
+                          <IconComp size={18} />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-teal-400 block uppercase tracking-wider">
+                            {persona.segmentCode}
+                          </span>
+                          <h3 className="text-xs sm:text-sm font-bold text-white leading-tight">
+                            {persona.title}
+                          </h3>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                          isSelected ? "bg-[#0F8B7D] border-[#0F8B7D] text-white" : "border-slate-700"
+                        }`}
+                      >
+                        {isSelected && <Check size={12} strokeWidth={3} />}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+                      {persona.description}
+                    </p>
+
+                    <div className="space-y-1 pt-2 border-t border-slate-800">
+                      <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider block">
+                        Included in this Role Dashboard:
+                      </span>
+                      {persona.whatYouSee.slice(0, 2).map((feature, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                          <div className="w-1 h-1 rounded-full bg-teal-400 shrink-0" />
+                          <span className="truncate">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+                    <span>Landing: <strong className="text-teal-400 font-mono">{persona.targetDashboard}</strong></span>
+                    <span className="text-slate-400">{persona.roleLabel}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Confirm Button */}
+
+          {/* Confirm Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-slate-400 text-center sm:text-left">
+              After entering, you can access the Central Register, Billing, and Operations from your dashboard anytime.
+            </p>
+            <button
+              onClick={() => handleConfirmRoleDecision(activePersona)}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold shadow-md shadow-[#0F8B7D]/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Launch {activePersona.title} Dashboard</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render children normally if logged in AND subscribed AND role decided
   return <>{children}</>;
 }

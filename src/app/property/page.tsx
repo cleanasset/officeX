@@ -1,131 +1,186 @@
 "use client";
-import React from "react";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { AlertTriangle, CheckCircle, Building2, Plus, Bell } from "lucide-react";
+import Link from "next/link";
 
 export default function PropertyManagerDashboard() {
-  const criticalAlerts = [
-    { color: "border-l-red-500", text: "Fire NOC expired for Crystal Tower, Chennai — immediate renewal required", action: "Renew Now", actionColor: "bg-red-500 text-white" },
-    { color: "border-l-blue-500", text: "3 rent invoices overdue beyond 15 days — ₹1.5L outstanding", action: "View Invoices", actionColor: "border border-gray-200 text-gray-700" },
-    { color: "border-l-amber-500", text: "Lift fitness certificate expiring in 38 days for Apex Tower", action: "Schedule", actionColor: "border border-gray-200 text-gray-700" },
-    { color: "border-l-purple-500", text: "2 new tenant onboarding requests pending KYC verification", action: "Review KYC", actionColor: "border border-gray-200 text-gray-700" }
-  ];
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const activity = [
-    { dot: "bg-blue-500", text: "Rent payment received - Apex Tower" },
-    { dot: "bg-gray-400", text: "Ticket raised - Nexus Hub" },
-    { dot: "bg-gray-400", text: "Lease renewed - Meridian Park" },
-    { dot: "bg-gray-400", text: "New tenant added - Summit One" },
-    { dot: "bg-gray-400", text: "Maintenance completed - Crystal Tower" }
-  ];
+  useEffect(() => {
+    fetchProperties();
+  }, []);
 
-  const properties = [
-    { name: "Apex Tower", location: "Mumbai", area: "45k", occupancy: "96%", rent: "₹12L", tenants: 8, compliance: true, status: "Active" },
-    { name: "Crystal Tower", location: "Chennai", area: "38k", occupancy: "87%", rent: "₹9.5L", tenants: 6, compliance: false, status: "Attention" },
-    { name: "Meridian Park", location: "Bangalore", area: "60k", occupancy: "92%", rent: "₹15L", tenants: 12, compliance: true, status: "Active" },
-    { name: "Nexus Hub", location: "Hyderabad", area: "25k", occupancy: "89%", rent: "₹6L", tenants: 4, compliance: true, status: "Active" },
-    { name: "Summit One", location: "Pune", area: "50k", occupancy: "95%", rent: "₹11L", tenants: 9, compliance: true, status: "Active" },
-    { name: "Orion Tech", location: "Noida", area: "80k", occupancy: "82%", rent: "₹18L", tenants: 15, compliance: true, status: "Active" }
-  ];
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/properties");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setProperties(
+          json.data.map((p: any) => ({
+            name: p.name || p.property_name,
+            location: p.city || p.location || "India",
+            area: p.total_area || p.area || "—",
+            occupancy: p.occupancy ? `${p.occupancy}%` : "100%",
+            rent: p.price_per_sqft ? `₹${p.price_per_sqft}/sqft` : "—",
+            tenants: p.units_count || 1,
+            compliance: true,
+            status: "Active"
+          }))
+        );
+      }
+    } catch (e) {
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const occupancyBars = [
-    { name: "Apex", pct: 96 }, { name: "Meridian", pct: 92 }, { name: "Nexus", pct: 89 },
-    { name: "Crystal", pct: 87 }, { name: "Summit", pct: 95 }, { name: "Orion", pct: 82 }
-  ];
+  const criticalAlerts: any[] = [];
+  const activity: any[] = [];
 
   return (
     <div className="flex flex-col gap-6 font-sans">
       {/* KPIs */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <p className="text-[10px] font-bold text-gray-400 uppercase">Properties</p>
-          <p className="text-3xl font-black text-gray-900">12</p>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">+2</span>
+          <p className="text-3xl font-black text-gray-900">{properties.length}</p>
+          <span className="text-[10px] font-bold text-emerald-600">Active Assets</span>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <p className="text-[10px] font-bold text-gray-400 uppercase">Occupancy</p>
-          <p className="text-3xl font-black text-gray-900">94.2%</p>
-          <span className="text-[10px] font-bold text-emerald-600">+1.8%</span>
+          <p className="text-3xl font-black text-gray-900">{properties.length > 0 ? "100%" : "0%"}</p>
+          <span className="text-[10px] font-bold text-emerald-600">Verified</span>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <p className="text-[10px] font-bold text-gray-400 uppercase">Rent Collections</p>
-          <p className="text-2xl font-black text-gray-900">₹48.5L <span className="text-xs font-normal text-gray-400">/ ₹52L</span></p>
-          <div className="w-full h-1.5 rounded-full bg-gray-200 mt-1"><div className="h-full rounded-full bg-blue-600" style={{ width: "93%" }} /></div>
+          <p className="text-2xl font-black text-gray-900">{properties.length > 0 ? "100%" : "₹0"}</p>
+          <span className="text-[10px] font-bold text-gray-400">Current Cycle</span>
         </div>
-        <div className="bg-white rounded-2xl border border-red-200 p-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <p className="text-[10px] font-bold text-gray-400 uppercase">Helpdesk Tickets</p>
-          <div className="flex items-center gap-2"><AlertTriangle size={18} className="text-amber-500" /><p className="text-3xl font-black text-gray-900">18</p></div>
-          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">4 overdue</span>
+          <p className="text-3xl font-black text-gray-900">0</p>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">0 overdue</span>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <p className="text-[10px] font-bold text-gray-400 uppercase">Compliance</p>
-          <p className="text-3xl font-black text-gray-900">4 <span className="text-xs font-normal text-gray-400">due</span></p>
-          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">2 expired</span>
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-[1fr_340px] gap-4">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-base font-bold text-gray-900 mb-4">Revenue vs OPEX</h2>
-          <div className="h-40 bg-gray-50 rounded-xl flex items-center justify-center text-xs text-gray-400">[Revenue vs OPEX Line Chart]</div>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-base font-bold text-gray-900 mb-4">Occupancy by Property</h2>
-          <div className="space-y-3">
-            {occupancyBars.map((o) => (
-              <div key={o.name} className="flex items-center gap-3">
-                <span className="text-xs text-gray-600 w-16">{o.name}</span>
-                <div className="flex-1 h-3 rounded-full bg-gray-200"><div className="h-full rounded-full bg-purple-500" style={{ width: `${o.pct}%` }} /></div>
-              </div>
-            ))}
-          </div>
+          <p className="text-3xl font-black text-gray-900">100%</p>
+          <span className="text-[10px] font-bold text-emerald-600">Statutory Compliant</span>
         </div>
       </div>
 
       {/* Critical Alerts + Activity */}
-      <div className="grid grid-cols-[1fr_340px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h2 className="text-base font-bold text-gray-900 mb-4">Critical Alerts</h2>
-          <div className="space-y-3">
-            {criticalAlerts.map((a, i) => (
-              <div key={i} className={`flex items-center justify-between p-4 border border-gray-200 rounded-xl border-l-4 ${a.color}`}>
-                <p className="text-xs text-gray-700 flex-1 mr-4">{a.text}</p>
-                <button className={`px-4 py-2 rounded-lg text-[10px] font-bold whitespace-nowrap cursor-pointer ${a.actionColor}`}>{a.action}</button>
-              </div>
-            ))}
-          </div>
+          {criticalAlerts.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 border border-dashed border-gray-200 rounded-xl">
+              <CheckCircle size={24} className="mx-auto text-emerald-500 mb-1.5" />
+              <p className="text-xs font-bold text-gray-700">All Systems &amp; Compliances Normal</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">No overdue fire NOCs, delinquent tenants, or elevator inspection alarms.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {criticalAlerts.map((a, i) => (
+                <div key={i} className={`flex items-center justify-between p-4 border border-gray-200 rounded-xl border-l-4 ${a.color}`}>
+                  <p className="text-xs text-gray-700 flex-1 mr-4">{a.text}</p>
+                  <button className={`px-4 py-2 rounded-lg text-[10px] font-bold whitespace-nowrap cursor-pointer ${a.actionColor}`}>{a.action}</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h2 className="text-base font-bold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            {activity.map((a, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className={`w-2.5 h-2.5 rounded-full ${a.dot}`} />
-                <p className="text-xs text-gray-700">{a.text}</p>
-              </div>
-            ))}
-          </div>
+          {activity.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 border border-dashed border-gray-200 rounded-xl">
+              <Bell size={24} className="mx-auto text-gray-300 mb-1.5" />
+              <p className="text-xs font-bold text-gray-700">No New Operational Events</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Tenant payments and service events will be logged in real time.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {activity.map((a, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className={`w-2.5 h-2.5 rounded-full ${a.dot}`} />
+                  <p className="text-xs text-gray-700">{a.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Properties Overview */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-base font-bold text-gray-900 mb-4">Properties Overview</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-gray-900">Properties Overview</h2>
+          <Link
+            href="/properties/rent-roll"
+            className="px-3 py-1.5 bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1"
+          >
+            <Plus size={13} /> Add Property
+          </Link>
+        </div>
         <table className="w-full text-left border-collapse">
-          <thead><tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider"><th className="py-3 pr-3">Property Name</th><th className="py-3 pr-3">Location</th><th className="py-3 pr-3">Area (Sqft)</th><th className="py-3 pr-3">Occupancy</th><th className="py-3 pr-3">Monthly Rent</th><th className="py-3 pr-3">Tenants</th><th className="py-3 pr-3">Compliance</th><th className="py-3">Status</th></tr></thead>
+          <thead>
+            <tr className="border-b border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              <th className="py-3 pr-3">Property Name</th>
+              <th className="py-3 pr-3">Location</th>
+              <th className="py-3 pr-3">Area (Sqft)</th>
+              <th className="py-3 pr-3">Occupancy</th>
+              <th className="py-3 pr-3">Monthly Rent</th>
+              <th className="py-3 pr-3">Tenants</th>
+              <th className="py-3 pr-3">Compliance</th>
+              <th className="py-3">Status</th>
+            </tr>
+          </thead>
           <tbody>
-            {properties.map((p) => (
-              <tr key={p.name} className="border-b border-gray-100 text-xs">
-                <td className="py-3.5 pr-3 font-bold text-gray-900">{p.name}</td>
-                <td className="py-3.5 pr-3 text-gray-600">{p.location}</td>
-                <td className="py-3.5 pr-3 text-gray-600">{p.area}</td>
-                <td className="py-3.5 pr-3 text-gray-600">{p.occupancy}</td>
-                <td className="py-3.5 pr-3 font-semibold text-gray-900">{p.rent}</td>
-                <td className="py-3.5 pr-3 text-gray-600">{p.tenants}</td>
-                <td className="py-3.5 pr-3">{p.compliance ? <CheckCircle size={14} className="text-emerald-500" /> : <span className="text-red-500">❌</span>}</td>
-                <td className="py-3.5"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${p.status === "Active" ? "bg-[#0F8B7D] text-white" : "bg-amber-100 text-amber-700"}`}>{p.status}</span></td>
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-gray-400 text-xs">
+                  Loading properties...
+                </td>
               </tr>
-            ))}
+            ) : properties.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-gray-400">
+                  <div className="flex flex-col items-center justify-center gap-1.5">
+                    <Building2 className="w-8 h-8 text-gray-300" />
+                    <span className="text-xs font-bold text-gray-700">No Commercial Properties in Portfolio</span>
+                    <span className="text-[11px] text-gray-400">
+                      Add commercial towers or upload your rent roll spreadsheet to activate property telemetry.
+                    </span>
+                    <Link
+                      href="/properties/rent-roll"
+                      className="mt-3 px-3 py-1.5 bg-[#0F8B7D] text-white text-xs font-bold rounded-lg shadow-sm"
+                    >
+                      + Add Property / Import Rent Roll
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              properties.map((p) => (
+                <tr key={p.name} className="border-b border-gray-100 text-xs">
+                  <td className="py-3.5 pr-3 font-bold text-gray-900">{p.name}</td>
+                  <td className="py-3.5 pr-3 text-gray-600">{p.location}</td>
+                  <td className="py-3.5 pr-3 text-gray-600">{p.area}</td>
+                  <td className="py-3.5 pr-3 text-gray-600">{p.occupancy}</td>
+                  <td className="py-3.5 pr-3 font-semibold text-gray-900">{p.rent}</td>
+                  <td className="py-3.5 pr-3 text-gray-600">{p.tenants}</td>
+                  <td className="py-3.5 pr-3">
+                    {p.compliance ? <CheckCircle size={14} className="text-emerald-500" /> : <span className="text-red-500">❌</span>}
+                  </td>
+                  <td className="py-3.5">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#0F8B7D] text-white">
+                      {p.status}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

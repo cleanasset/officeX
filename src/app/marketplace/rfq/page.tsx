@@ -44,15 +44,11 @@ export default function RFQDirectory() {
           }));
           setRfqList(formatted);
         } else {
-          setRfqList([
-            { id: "RFQ-2026-8842", title: "DG Set Annual Maintenance Contract", property: "Apex Business Tower", category: "HVAC", posted: "18-Sep", deadline: "15-Oct", quotes: "3 received", status: "Open", vendorScore: "98", slaRate: "99.0%" },
-            { id: "RFQ-2026-8843", title: "Facade Glass Cleaning Service — Quarterly", property: "Global Tech Park", category: "Cleaning", posted: "19-Sep", deadline: "18-Oct", quotes: "2 received", status: "Evaluating", vendorScore: "96", slaRate: "98.5%" },
-            { id: "RFQ-2026-8844", title: "UPS Battery Replacement & Load Testing", property: "Cyber City", category: "Electrical", posted: "20-Sep", deadline: "22-Oct", quotes: "4 received", status: "Awarded", vendorScore: "92", slaRate: "99.4%" },
-            { id: "RFQ-2026-8845", title: "Access Control & Turnstile Upgrade", property: "Pioneer Plaza", category: "Security", posted: "20-Sep", deadline: "28-Oct", quotes: "1 received", status: "Open", vendorScore: "88", slaRate: "97.8%" }
-          ]);
+          setRfqList([]);
         }
       } catch (err) {
         console.error("Failed to load RFQs:", err);
+        setRfqList([]);
       } finally {
         setIsLoading(false);
       }
@@ -152,10 +148,9 @@ export default function RFQDirectory() {
             className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white cursor-pointer focus:outline-none focus:border-[#0F8B7D]"
           >
             <option>All Properties</option>
-            <option>Apex Tower</option>
-            <option>Meridian Park</option>
-            <option>Nexus Hub</option>
-            <option>Crystal Tower</option>
+            {Array.from(new Set(rfqList.map((r) => r.property).filter(Boolean))).map((propName) => (
+              <option key={propName} value={propName}>{propName}</option>
+            ))}
           </select>
           <select
             value={dateFilter}

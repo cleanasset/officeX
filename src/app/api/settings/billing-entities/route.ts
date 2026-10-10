@@ -20,53 +20,7 @@ export async function GET(req: Request) {
     } catch (e) {}
 
     if (entities.length === 0) {
-      entities = [
-        {
-          id: "be-mh-01",
-          legalName: "Apex PropCo LLP (Maharashtra Unit)",
-          tradeName: "Meridian Tech Park SPV",
-          pan: "AABCS1429B",
-          gstin: "27AABCS1429B1Z1",
-          stateCode: "27",
-          registeredAddress: "Level 14, Tower 1, Meridian Tech Park, BKC, Bandra East, Mumbai - 400051",
-          bankName: "HDFC Bank Ltd",
-          bankAccountNumber: "50200088991234",
-          bankIfsc: "HDFC0000060",
-          bankBranch: "Fort Branch, Mumbai",
-          invoicePrefix: "INV-26-27-MH",
-          isDefault: true,
-        },
-        {
-          id: "be-ka-02",
-          legalName: "Apex Southern Real Estate Pvt Ltd (Karnataka Unit)",
-          tradeName: "Meridian Global Hub Bengaluru",
-          pan: "AABCS1429C",
-          gstin: "29AABCS1429C1Z8",
-          stateCode: "29",
-          registeredAddress: "Plot 88, EPIP Zone, Whitefield, Bengaluru, Karnataka - 560066",
-          bankName: "ICICI Bank Ltd",
-          bankAccountNumber: "000205009941",
-          bankIfsc: "ICIC0000002",
-          bankBranch: "Indiranagar, Bengaluru",
-          invoicePrefix: "INV-26-27-KA",
-          isDefault: false,
-        },
-        {
-          id: "be-dl-03",
-          legalName: "Meridian Capital North Holdings LLP",
-          tradeName: "Meridian Business Tower Gurugram",
-          pan: "AABCS1429D",
-          gstin: "06AABCS1429D1Z3",
-          stateCode: "06",
-          registeredAddress: "Sector 44, Golf Course Extension Road, Gurugram, Haryana - 122003",
-          bankName: "Axis Bank Ltd",
-          bankAccountNumber: "91802004455881",
-          bankIfsc: "UTIB0000028",
-          bankBranch: "Cyber City, Gurugram",
-          invoicePrefix: "INV-26-27-HR",
-          isDefault: false,
-        },
-      ];
+      entities = [];
     }
 
     const formatted = entities.map((e) => ({
@@ -83,7 +37,7 @@ export async function GET(req: Request) {
       bank_branch: e.bankBranch || e.bank_branch,
       invoice_prefix: e.invoicePrefix || e.invoice_prefix,
       is_default: e.isDefault || e.is_default || false,
-      authorized_signatory: "Rajeev Agarwal (Authorized Key Signatory)",
+      authorized_signatory: e.legalName ? `${e.legalName} Authorized Signatory` : "Authorized Key Signatory",
     }));
 
     return NextResponse.json({ success: true, data: formatted });

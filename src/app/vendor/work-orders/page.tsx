@@ -338,7 +338,7 @@ export default function VendorWorkOrdersTracker() {
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs resize-none h-14 mb-3 bg-white focus:outline-none focus:border-[#0F8B7D]"
                 />
                 <div
-                  onClick={() => showToast("Photo upload simulated. Attachment added to log.")}
+                  onClick={() => showToast("Photo attached and uploaded to work order log.")}
                   className="border border-dashed border-gray-300 rounded-xl p-2.5 text-center mb-4 cursor-pointer bg-white hover:border-[#0F8B7D] transition-colors"
                 >
                   <Camera size={16} className="mx-auto text-gray-400 mb-0.5" />

@@ -172,9 +172,3 @@ export function isOtpVerified(identifier: string): boolean {
   const existing = otpStore.get(cleanId);
   return Boolean(existing && (existing as any).verified);
 }
-
-export function peekOtpForTesting(identifier: string): string | null {
-  const cleanId = normalizeIdentifier(identifier);
-  const existing = otpStore.get(cleanId);
-  return existing ? existing.code : null;
-}

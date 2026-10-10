@@ -23,10 +23,22 @@ export default function TallySyncPage() {
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [synced, setSynced] = useState(false);
+  const [companyName, setCompanyName] = useState<string>("Operating Commercial SPV");
 
   useEffect(() => {
     fetchVouchers();
+    fetchEntity();
   }, [period, voucherType]);
+
+  const fetchEntity = async () => {
+    try {
+      const res = await fetch("/api/settings/billing-entities");
+      const json = await res.json();
+      if (json.success && json.data && json.data.length > 0) {
+        setCompanyName(json.data[0].legal_name || json.data[0].trade_name || "Operating Commercial SPV");
+      }
+    } catch (e) {}
+  };
 
   const fetchVouchers = async () => {
     setLoading(true);
@@ -131,7 +143,7 @@ export default function TallySyncPage() {
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
           <div className="space-y-1">
             <span className="text-slate-400 font-semibold block">Tally Company Name:</span>
-            <span className="font-bold text-slate-900 text-sm">Meridian Tech Park SPV</span>
+            <span className="font-bold text-slate-900 text-sm">{companyName}</span>
           </div>
           <div className="space-y-1">
             <span className="text-slate-400 font-semibold block">Debtors Control Ledger:</span>
@@ -168,6 +180,22 @@ export default function TallySyncPage() {
             <div className="py-16 text-center">
               <div className="w-8 h-8 border-4 border-[#0D7B6C] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p className="text-xs text-slate-500">Generating Tally accounting vouchers...</p>
+            </div>
+          ) : vouchers.length === 0 ? (
+            <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+              <Table className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-slate-800">No Journal Entries Found</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                No invoices, receipts, or credit notes exist for the selected period ({period}). Issue tenant invoices or record payments to generate Tally journal entries.
+              </p>
+              <div className="mt-4 flex justify-center gap-3">
+                <Link
+                  href="/billing"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#0D7B6C] rounded-lg shadow-sm hover:bg-[#09574C]"
+                >
+                  Go to Billing
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

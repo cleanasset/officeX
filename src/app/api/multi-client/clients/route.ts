@@ -23,31 +23,9 @@ export async function GET(req: NextRequest) {
         sql`${client_account.org_id} = ${auth.orgId} AND ${client_account.deleted_at} IS NULL`
       );
 
-    // If no client account rows yet in database, provide standard specification defaults
-    if (!clients || clients.length === 0) {
-      clients = [
-        {
-          id: "00000000-0000-0000-0000-000000000002",
-          client_name: "Self (Owner Portfolio)",
-          client_code: "SELF",
-          is_self: true,
-          management_mandate: { fee_type: "fixed", fee_percentage: 0 },
-        },
-        {
-          id: "11111111-1111-1111-1111-111111111111",
-          client_name: "Sharma Estates (Managed)",
-          client_code: "SHARMA",
-          is_self: false,
-          management_mandate: { fee_type: "percentage_of_collections", fee_percentage: 4.0 },
-        },
-        {
-          id: "22222222-2222-2222-2222-222222222222",
-          client_name: "Meridian Holdings (Mandate)",
-          client_code: "MERIDIAN",
-          is_self: false,
-          management_mandate: { fee_type: "percentage_of_collections", fee_percentage: 5.0 },
-        },
-      ];
+    // Strictly database client accounts (zero mock data)
+    if (!clients) {
+      clients = [];
     }
 
     return NextResponse.json({

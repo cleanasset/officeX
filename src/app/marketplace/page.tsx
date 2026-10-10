@@ -282,7 +282,7 @@ export default function PropertyMarketplacePage() {
   const featuredSpaces = [
     {
       id: "space-1",
-      name: "Apex Horizon Tech Park",
+      name: "Horizon Tech Park",
       location: "SG Highway, Ahmedabad",
       type: "Enterprise Managed Floor",
       area: "18,500 Sq.Ft.",

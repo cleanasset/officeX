@@ -76,79 +76,21 @@ export default function OwnerDashboardPage() {
   const [lastRefreshed, setLastRefreshed] = useState("Just now");
   const [statementModalOpen, setStatementModalOpen] = useState(false);
 
-  // Dynamic Data States
-  const [properties, setProperties] = useState<PropertySummary[]>([
-    {
-      id: "PROP-01",
-      name: "Apex Business Tower",
-      code: "APX-01",
-      location: "BKC, Mumbai (19.0657° N, 72.8687° E)",
-      areaSqft: 125000,
-      occupiedSqft: 110000,
-      occupancyPct: 88.0,
-      monthlyRevenue: 10450000,
-      status: "Performing",
-    },
-    {
-      id: "PROP-02",
-      name: "Meridian Tech Park",
-      code: "MTP-02",
-      location: "Whitefield, Bengaluru (12.9698° N, 77.7500° E)",
-      areaSqft: 85000,
-      occupiedSqft: 68000,
-      occupancyPct: 80.0,
-      monthlyRevenue: 5440000,
-      status: "Stabilized",
-    },
-    {
-      id: "PROP-03",
-      name: "Cyber Tech City Tower B",
-      code: "CTC-03",
-      location: "HITEC City, Hyderabad (17.4435° N, 78.3772° E)",
-      areaSqft: 50000,
-      occupiedSqft: 34500,
-      occupancyPct: 69.0,
-      monthlyRevenue: 2760000,
-      status: "At Risk",
-    },
-  ]);
-
-  const [topOccupants, setTopOccupants] = useState<OccupantRank[]>([
-    { rank: 1, name: "Global Logistics Warehousing", property: "Apex Business Tower", space: "Floor 4, East", monthlyRent: 3480000, status: "Active" },
-    { rank: 2, name: "TechNova Financial Systems", property: "Meridian Tech Park", space: "Floor 3, Full", monthlyRent: 1862000, status: "Active" },
-    { rank: 3, name: "Innovate Technologies Ltd", property: "Apex Business Tower", space: "Suite 401", monthlyRent: 2500000, status: "Active" },
-    { rank: 4, name: "Apex Infotech Ltd", property: "Cyber Tech City Tower B", space: "Space U-101", monthlyRent: 250000, status: "Active" },
-    { rank: 5, name: "NextGen Digital Retail", property: "Meridian Tech Park", space: "Ground Floor Retail", monthlyRent: 840000, status: "Expiring Soon" },
-  ]);
-
-  const [expirations, setExpirations] = useState<ExpirationItem[]>([
-    { id: "EXP-01", occupant: "Skyline Designs Pvt Ltd", property: "Apex Business Tower", space: "Suite 204", expiryDate: "2026-10-28", daysLeft: 21, status: "approaching", renewalStatusText: "Notice Served (Expiring <30d)" },
-    { id: "EXP-02", occupant: "NextGen Digital Retail", property: "Meridian Tech Park", space: "GF-02 Retail", expiryDate: "2026-11-15", daysLeft: 39, status: "under_negotiation", renewalStatusText: "Term Sheet Under Review (30-60d)" },
-    { id: "EXP-03", occupant: "Brightpath Coworking", property: "Meridian Tech Park", space: "Floor 1 Flex", expiryDate: "2026-12-20", daysLeft: 74, status: "under_negotiation", renewalStatusText: "Early Renewal Discussed (>60d)" },
-  ]);
-
+  // Dynamic Data States (Zero prefeeded mock data - populated from live database or Section 13 benchmark opt-in)
+  const [properties, setProperties] = useState<PropertySummary[]>([]);
+  const [topOccupants, setTopOccupants] = useState<OccupantRank[]>([]);
+  const [expirations, setExpirations] = useState<ExpirationItem[]>([]);
   const [agingBuckets, setAgingBuckets] = useState({
-    b0_30: { count: 18, amount: 1820000 },
-    b31_60: { count: 7, amount: 960000 },
-    b61_90: { count: 3, amount: 410000 },
-    b90_plus: { count: 2, amount: 650000 },
-    totalOutstanding: 3840000,
+    b0_30: { count: 0, amount: 0 },
+    b31_60: { count: 0, amount: 0 },
+    b61_90: { count: 0, amount: 0 },
+    b90_plus: { count: 0, amount: 0 },
+    totalOutstanding: 0,
   });
 
-  const [monthlyRevenueData, setMonthlyRevenueData] = useState([
-    { month: "Nov 25", collected: 125, pending: 15, projected: 0 },
-    { month: "Dec 25", collected: 132, pending: 18, projected: 0 },
-    { month: "Jan 26", collected: 130, pending: 12, projected: 0 },
-    { month: "Feb 26", collected: 135, pending: 14, projected: 0 },
-    { month: "Mar 26", collected: 142, pending: 16, projected: 0 },
-    { month: "Apr 26", collected: 138, pending: 20, projected: 0 },
-    { month: "May 26", collected: 140, pending: 15, projected: 0 },
-    { month: "Jun 26", collected: 145, pending: 14, projected: 0 },
-    { month: "Jul 26", collected: 144, pending: 18, projected: 0 },
-    { month: "Aug 26", collected: 148, pending: 16, projected: 0 },
-    { month: "Sep 26", collected: 143, pending: 22, projected: 0 },
-    { month: "Oct 26", collected: 121, pending: 38, projected: 25 },
-  ]);
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState<Array<{ month: string; collected: number; pending: number; projected: number }>>([]);
+  const [delegatedCount, setDelegatedCount] = useState(0);
+  const [ownerRemittanceDue, setOwnerRemittanceDue] = useState(0);
 
   useEffect(() => {
     fetchDashboardMetrics();
@@ -157,22 +99,47 @@ export default function OwnerDashboardPage() {
   const fetchDashboardMetrics = async () => {
     try {
       setLoading(true);
-      // Fetch Aging data
+
+      // 1. Fetch live properties from database API
+      const propRes = await fetch("/api/rent-roll/properties").catch(() => null);
+      let liveProps: PropertySummary[] = [];
+      if (propRes && propRes.ok) {
+        const json = await propRes.json();
+        if (Array.isArray(json.data) && json.data.length > 0) {
+          liveProps = json.data.map((p: any) => ({
+            id: p.id,
+            name: p.property_name,
+            code: p.property_code || "PROP",
+            location: `${p.city || "Mumbai"}, ${p.state || "Maharashtra"}`,
+            areaSqft: parseFloat(p.total_leasable_area_sqft || 0),
+            occupiedSqft: parseFloat(p.occupied_area_sqft || 0),
+            occupancyPct: parseFloat(p.total_leasable_area_sqft) > 0 ? Math.round((parseFloat(p.occupied_area_sqft || 0) / parseFloat(p.total_leasable_area_sqft)) * 100) : 0,
+            monthlyRevenue: parseFloat(p.monthly_rent || 0),
+            status: "Performing" as const,
+          }));
+        }
+      }
+
+      setProperties(liveProps);
+      setTopOccupants([]);
+      setExpirations([]);
+
+      // 2. Fetch live Aging data
       const agingRes = await fetch("/api/collections/aging").catch(() => null);
       if (agingRes && agingRes.ok) {
         const json = await agingRes.json();
         if (json.summary) {
           setAgingBuckets({
-            b0_30: { count: json.summary.bucket_counts?.["0-30"] || 18, amount: json.summary.current_0_30_inr || 1820000 },
-            b31_60: { count: json.summary.bucket_counts?.["31-60"] || 7, amount: json.summary.overdue_31_60_inr || 960000 },
-            b61_90: { count: json.summary.bucket_counts?.["61-90"] || 3, amount: json.summary.overdue_61_90_inr || 410000 },
-            b90_plus: { count: json.summary.bucket_counts?.["90+"] || 2, amount: json.summary.overdue_90_plus_inr || 650000 },
-            totalOutstanding: json.summary.total_receivables_inr || 3840000,
+            b0_30: { count: json.summary.bucket_counts?.["0-30"] || 0, amount: json.summary.current_0_30_inr || 0 },
+            b31_60: { count: json.summary.bucket_counts?.["31-60"] || 0, amount: json.summary.overdue_31_60_inr || 0 },
+            b61_90: { count: json.summary.bucket_counts?.["61-90"] || 0, amount: json.summary.overdue_61_90_inr || 0 },
+            b90_plus: { count: json.summary.bucket_counts?.["90+"] || 0, amount: json.summary.overdue_90_plus_inr || 0 },
+            totalOutstanding: json.summary.total_receivables_inr || 0,
           });
         }
       }
 
-      // Fetch Invoices count & KPIs
+      // 3. Fetch live Invoices count & KPIs
       const invRes = await fetch("/api/invoices").catch(() => null);
       if (invRes && invRes.ok) {
         const json = await invRes.json();
@@ -181,6 +148,23 @@ export default function OwnerDashboardPage() {
             ...prev,
             totalOutstanding: json.kpis.overdue_inr + (json.kpis.total_invoiced_inr - json.kpis.collections_realized_inr),
           }));
+        }
+      }
+
+      // 4. Fetch Multi-Client Mandates & Owner Statement
+      const clientRes = await fetch("/api/multi-client/clients").catch(() => null);
+      if (clientRes && clientRes.ok) {
+        const cJson = await clientRes.json();
+        const clients = cJson.data || cJson.clients || [];
+        setDelegatedCount(clients.filter((c: any) => !c.is_self).length);
+      }
+
+      const stmtRes = await fetch("/api/multi-client/owner-statement").catch(() => null);
+      if (stmtRes && stmtRes.ok) {
+        const sJson = await stmtRes.json();
+        const stmt = sJson.statement || sJson.data;
+        if (stmt) {
+          setOwnerRemittanceDue(stmt.net_remittance_inr || 0);
         }
       }
 
@@ -229,10 +213,14 @@ export default function OwnerDashboardPage() {
               onChange={(e) => setScope(e.target.value)}
               className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
-              <option value="all">Consolidated Portfolio (All 3 Properties)</option>
-              <option value="apex">Apex Business Tower (Mumbai)</option>
-              <option value="meridian">Meridian Tech Park (BLR)</option>
-              <option value="cyber">Cyber Tech City (HYD)</option>
+              <option value="all">
+                {properties.length > 0 ? `Consolidated Portfolio (${properties.length} Properties)` : "Consolidated Portfolio"}
+              </option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.location})
+                </option>
+              ))}
             </select>
           </div>
 
@@ -253,6 +241,34 @@ export default function OwnerDashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* §2.6 Empty State (First Use when 0 properties exist) */}
+      {properties.length === 0 && (
+        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-8 sm:p-12 text-center max-w-2xl mx-auto shadow-2xs my-4">
+          <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center mx-auto mb-4">
+            <Building2 size={32} />
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">Zero Properties in Workspace (Clean State)</h3>
+          <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-md mx-auto">
+            Per Section 2.6 of the specification, your portfolio starts 100% clean with zero prefeeded mock data. You can import your rent roll spreadsheet or add your first property.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <Link
+              href="/properties/rent-roll"
+              className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0c7367] transition flex items-center gap-1.5 shadow-xs"
+            >
+              <FileText size={14} />
+              <span>Import Rent Roll (S-30)</span>
+            </Link>
+            <Link
+              href="/properties/rent-roll"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition"
+            >
+              <span>Add First Property</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Header Top KPIs (6 Cards) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
@@ -631,23 +647,33 @@ export default function OwnerDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <span className="text-[10px] font-bold uppercase text-slate-400">Directly Managed Properties</span>
-            <h4 className="text-base font-bold text-slate-900 mt-1">2 Properties (Apex + Meridian)</h4>
-            <p className="text-xs text-slate-600 mt-1">Monthly Gross Collections: ₹1.58 Cr</p>
+            <h4 className="text-base font-bold text-slate-900 mt-1">
+              {totalPropertiesCount > 0 ? `${totalPropertiesCount} Properties Direct` : "0 Properties Direct"}
+            </h4>
+            <p className="text-xs text-slate-600 mt-1">
+              Monthly Contracted Rent: ₹{(totalMonthlyRevenue / 10000000).toFixed(2)} Cr
+            </p>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <span className="text-[10px] font-bold uppercase text-slate-400">Delegated Properties</span>
-            <h4 className="text-base font-bold text-slate-900 mt-1">1 Property (Sharma Estates Mandate)</h4>
+            <h4 className="text-base font-bold text-slate-900 mt-1">
+              {delegatedCount > 0 ? `${delegatedCount} Delegated Mandates` : "0 Delegated Mandates"}
+            </h4>
             <p className="text-xs text-slate-600 mt-1">
-              PM Agency Fee: 4.0% (₹1,96,560) · Net Remittance: ₹44,53,440
+              {delegatedCount > 0 ? "Active Third-Party Management Mandates" : "No external client mandates active"}
             </p>
           </div>
 
           <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase text-blue-800">Total Net Owner Remittance Due</span>
-              <h4 className="text-lg font-black text-blue-900 mt-1">₹44,53,440</h4>
-              <p className="text-[11px] text-blue-700 mt-0.5">Verified per Table 103 Spec Calculation</p>
+              <h4 className="text-lg font-black text-blue-900 mt-1">
+                ₹{ownerRemittanceDue.toLocaleString("en-IN")}
+              </h4>
+              <p className="text-[11px] text-blue-700 mt-0.5">
+                {ownerRemittanceDue > 0 ? "Pending remittance disbursement" : "All balances settled"}
+              </p>
             </div>
             <button
               onClick={() => setStatementModalOpen(true)}

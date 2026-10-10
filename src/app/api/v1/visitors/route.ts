@@ -30,56 +30,9 @@ export async function GET(req: Request) {
       console.warn("Visitors DB warning:", dbErr);
     }
 
-    // Include seeded realistic visitors for mock/offline resilience
-    const seedVisitors = [
-      {
-        id: "vis-seed-01",
-        name: "Vikram Malhotra",
-        company: "McKinsey & Company",
-        mobile: "+91 98200 44211",
-        email: "v.malhotra@mckinsey.com",
-        visitorType: "client",
-        status: "active",
-        consentFlag: true
-      },
-      {
-        id: "vis-seed-02",
-        name: "Ananya Deshmukh",
-        company: "Deloitte India",
-        mobile: "+91 97690 12890",
-        email: "ananya.d@deloitte.com",
-        visitorType: "interview_candidate",
-        status: "active",
-        consentFlag: true
-      },
-      {
-        id: "vis-seed-03",
-        name: "Ramesh Pawar",
-        company: "Voltas MEP Services",
-        mobile: "+91 99300 88712",
-        email: "ramesh.p@voltasfm.com",
-        visitorType: "contractor",
-        status: "active",
-        consentFlag: true
-      },
-      {
-        id: "vis-seed-04",
-        name: "Suresh Kumar",
-        company: "BlueDart Express",
-        mobile: "+91 98199 66543",
-        email: "courier.mumbai@bluedart.com",
-        visitorType: "delivery",
-        status: "active",
-        consentFlag: true
-      }
-    ];
-
-    const merged = [...list, ...seedVisitors];
-    const unique = Array.from(new Map(merged.map(v => [v.mobile || v.id, v])).values());
-
     return NextResponse.json({
-      count: unique.length,
-      visitors: unique
+      count: list.length,
+      visitors: list
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

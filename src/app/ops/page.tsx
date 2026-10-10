@@ -112,9 +112,9 @@ export default function OperationsDashboard() {
           body: JSON.stringify({
             id: woId,
             title: `Emergency OEM Escalation: ${dispatchModal.title || "Elevator Controller Failure"}`,
-            client: "Apex Business Tower Management",
+            client: "Commercial Facilities Management",
             vendor: "Schindler Lifts & Escalators India",
-            property: dispatchModal.location || "Apex Business Tower, Mumbai BKC",
+            property: dispatchModal.location || "Commercial Asset Tower, BKC",
             startDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
             progress: "Emergency Dispatch",
             pct: 15,
@@ -271,7 +271,7 @@ export default function OperationsDashboard() {
               <span className="text-[11px] text-teal-200/80">Anomaly Detected (Chiller Bank 1)</span>
             </div>
             <p className="text-sm font-bold text-white mt-1">
-              Maker Maxity Chiller 1 — Filter replacement &amp; refrigerant check due in <strong className="text-teal-300 font-black">3 days</strong>
+              Primary Central Chiller 1 — Filter replacement &amp; refrigerant check due in <strong className="text-teal-300 font-black">3 days</strong>
             </p>
             <p className="text-xs text-gray-300 mt-0.5">
               Based on 2,450 cumulative runtime hours &amp; 4.2% differential pressure deviation. Preventative dispatch avoids ₹2.8L emergency overhaul.

@@ -28,104 +28,7 @@ interface Ticket {
   description?: string;
 }
 
-const INITIAL_TICKETS: Ticket[] = [
-  { 
-    id: "TK-4501", 
-    title: "AC not cooling — Zone B, Floor 4", 
-    category: "HVAC", 
-    priority: "Critical", 
-    status: "in-progress", 
-    assignee: "Rajesh Kumar (HVAC Lead)", 
-    location: "One BKC (Apex Tower) · F4 · Zone B", 
-    asset: "AHU-03 (Chilled Water Coil)", 
-    slaDeadline: "14:30", 
-    slaRemaining: "1h 12m", 
-    slaState: "At Risk", 
-    created: "2h ago", 
-    requester: "Priya Nair (Tata Digital)",
-    description: "Tenant reports temperature in meeting room is 27°C despite thermostat set to 21°C. Condenser line inspection required."
-  },
-  { 
-    id: "TK-4499", 
-    title: "Lift #2 intermittent shutdown", 
-    category: "Mechanical", 
-    priority: "High", 
-    status: "assigned", 
-    assignee: "Metro Elevators OEM", 
-    location: "One BKC · Main Lobby Passenger Bank", 
-    asset: "LIFT-02 (Schindler 7000)", 
-    slaDeadline: "16:00", 
-    slaRemaining: "2h 45m", 
-    slaState: "Normal", 
-    created: "3h ago", 
-    requester: "Security Control Room",
-    description: "Lift car stopped between Floor 7 and 8 for 45 seconds before resuming. Safety interlock sensor error code E-42."
-  },
-  { 
-    id: "TK-4497", 
-    title: "Water leakage from ceiling — Conf Room Orchid", 
-    category: "Plumbing", 
-    priority: "High", 
-    status: "open", 
-    assignee: "Unassigned", 
-    location: "One BKC · F5 · Executive Suite", 
-    asset: "PLMB-FCU-Drain-05", 
-    slaDeadline: "13:00", 
-    slaRemaining: "Breached", 
-    slaState: "Breached", 
-    created: "5h ago", 
-    requester: "Amit Shah (Google Enterprise)",
-    description: "Drain tray overflow dripping above conference table. Water supply isolated."
-  },
-  { 
-    id: "TK-4493", 
-    title: "Flickering tube light near Desk C-04", 
-    category: "Electrical", 
-    priority: "Medium", 
-    status: "in-progress", 
-    assignee: "Sanjay Patel (Electrician)", 
-    location: "One BKC · F3 · Zone C", 
-    asset: "LT-F3-C04", 
-    slaDeadline: "17:00", 
-    slaRemaining: "4h 10m", 
-    slaState: "Normal", 
-    created: "6h ago", 
-    requester: "Divya Rao (Deloitte)",
-    description: "Driver ballast failure on 40W LED panel."
-  },
-  { 
-    id: "TK-4491", 
-    title: "Pantry hot water dispenser not working", 
-    category: "Appliance", 
-    priority: "Low", 
-    status: "resolved", 
-    assignee: "Quick Fix FM", 
-    location: "One BKC · F2 · Central Pantry", 
-    asset: "HWD-F2-01", 
-    slaDeadline: "Resolved", 
-    slaRemaining: "—", 
-    slaState: "Normal", 
-    created: "1d ago", 
-    requester: "Ravi Gupta (Admin)",
-    description: "Heating element descaled and thermostat reset. Tested at 95°C output."
-  },
-  { 
-    id: "TK-4480", 
-    title: "Fire extinguisher pressure low — Stairwell F3", 
-    category: "Safety", 
-    priority: "Critical", 
-    status: "assigned", 
-    assignee: "Safety First Co.", 
-    location: "One BKC · F3 · Stairwell South", 
-    asset: "FE-F3-SW01 (ABC Powder 6kg)", 
-    slaDeadline: "15:00", 
-    slaRemaining: "2h 10m", 
-    slaState: "At Risk", 
-    created: "4h ago", 
-    requester: "Compliance Auto-Audit",
-    description: "Quarterly inspection flagged pressure needle in red recharge zone."
-  }
-];
+const INITIAL_TICKETS: Ticket[] = [];
 
 const statusColumns: { key: TicketStatus; label: string; color: string }[] = [
   { key: "open", label: "Open (Unassigned)", color: "bg-red-500" },
@@ -151,7 +54,7 @@ export default function HelpdeskCommandCentre() {
       try {
         const res = await fetch("/api/tickets");
         const data = await res.json();
-        if (data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
+        if (data.success && Array.isArray(data.tickets)) {
           setTickets(data.tickets);
         }
       } catch (e) {
