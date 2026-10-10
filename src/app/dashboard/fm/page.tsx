@@ -39,10 +39,26 @@ interface FMTask {
 export default function FacilityManagerDashboardPage() {
   const [meterModalOpen, setMeterModalOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [selectedProperty, setSelectedProperty] = useState("all");
 
   // Dynamic Tasks & Meters (100% Real Live State - Zero Mock Data)
   const [fmTasks, setFmTasks] = useState<FMTask[]>([]);
   const [meterInputs, setMeterInputs] = useState<Array<{ id: string; name: string; prev: number; current: string; unit: string }>>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedScope = localStorage.getItem("officex_selected_property");
+      if (savedScope) setSelectedProperty(savedScope);
+
+      const handlePropertyUpdate = (e: any) => {
+        if (e.detail?.propertyId) {
+          setSelectedProperty(e.detail.propertyId);
+        }
+      };
+      window.addEventListener("officex-property-change", handlePropertyUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropertyUpdate);
+    }
+  }, []);
 
   const handleTaskDone = (id: string) => {
     setFmTasks((prev) =>

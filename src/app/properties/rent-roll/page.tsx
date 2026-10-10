@@ -89,6 +89,21 @@ export default function RentRollRegisterPage() {
     fetchRegisterData();
   }, [asOfDate, currentView, propertyFilter, expiryFilter]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedScope = localStorage.getItem("officex_selected_property");
+      if (savedScope) setPropertyFilter(savedScope);
+
+      const handlePropertyUpdate = (e: any) => {
+        if (e.detail?.propertyId) {
+          setPropertyFilter(e.detail.propertyId);
+        }
+      };
+      window.addEventListener("officex-property-change", handlePropertyUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropertyUpdate);
+    }
+  }, []);
+
   async function fetchRegisterData() {
     try {
       setLoading(true);

@@ -60,6 +60,7 @@ interface TaskItem {
 
 export default function PropertyManagerDashboardPage() {
   const [selectedProperty, setSelectedProperty] = useState("all");
+  const [propertiesList, setPropertiesList] = useState<any[]>([]);
   const [filterPriority, setFilterPriority] = useState<"all" | "HIGH" | "MEDIUM" | "LOW">("all");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
@@ -75,6 +76,29 @@ export default function PropertyManagerDashboardPage() {
 
   // Dynamic Tasks (100% Real Live State - Zero Mock Data)
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+
+  useEffect(() => {
+    fetch("/api/properties")
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data.properties || [];
+        setPropertiesList(list);
+      })
+      .catch(() => {});
+
+    if (typeof window !== "undefined") {
+      const savedScope = localStorage.getItem("officex_selected_property");
+      if (savedScope) setSelectedProperty(savedScope);
+
+      const handlePropertyUpdate = (e: any) => {
+        if (e.detail?.propertyId) {
+          setSelectedProperty(e.detail.propertyId);
+        }
+      };
+      window.addEventListener("officex-property-change", handlePropertyUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropertyUpdate);
+    }
+  }, []);
 
   const handleTaskAction = (taskId: string, actionType: "primary" | "secondary" | "tertiary") => {
     const t = tasks.find((item) => item.id === taskId);
@@ -168,10 +192,27 @@ export default function PropertyManagerDashboardPage() {
             <span className="text-[11px] font-bold text-slate-500">Property:</span>
             <select
               value={selectedProperty}
-              onChange={(e) => setSelectedProperty(e.target.value)}
+              onChange={(e) => {
+                const newScope = e.target.value;
+                setSelectedProperty(newScope);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("officex_selected_property", newScope);
+                  const pObj = propertiesList.find((p) => p.id === newScope);
+                  window.dispatchEvent(
+                    new CustomEvent("officex-property-change", {
+                      detail: { propertyId: newScope, propertyName: pObj?.name || "All Properties" },
+                    })
+                  );
+                }
+              }}
               className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
               <option value="all">All Managed Centres</option>
+              {propertiesList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
             </select>
           </div>
 

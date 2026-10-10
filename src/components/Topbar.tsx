@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { performClientLogout } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
+import PropertySelector from "@/components/PropertySelector";
 
 const AVAILABLE_ROLES = [
   { key: "owner", label: "Owner / Landlord", sub: "Portfolio, Rent Roll & NOI", route: "/dashboard/owner", icon: Building2 },
@@ -166,6 +167,7 @@ export default function Topbar() {
       sessionStorage.setItem("officex_role_key", r.key);
       document.cookie = `officex_user_role=${encodeURIComponent(r.label)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_role_key=${encodeURIComponent(r.key)}; path=/; max-age=86400; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent("officex-role-change", { detail: { roleKey: r.key, role: r } }));
     }
     router.push(r.route);
   };
@@ -289,6 +291,11 @@ export default function Topbar() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Global Property Selector (§2.1 App Shell) */}
+        <div className="hidden sm:block">
+          <PropertySelector />
         </div>
 
         {/* Compact Role Selector Dropdown (Clean, Fast Switcher) */}

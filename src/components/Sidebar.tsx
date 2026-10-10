@@ -55,11 +55,142 @@ interface MenuItem {
   subItems?: SubMenuItem[];
 }
 
-// 1. Role-Specific Menus (Strict namespace isolation per portal)
+// 1. Role-Specific Menus (Strict namespace isolation per UX Spec §2.2 & §7.1)
 const roleSpecificMenus: Record<string, MenuItem[]> = {
-  // PROPERTY OWNER / LANDLORD
+  // PROPERTY OWNER / LANDLORD (§3.1, §S-02)
+  owner: [
+    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers },
+    { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Property Registry", href: "/properties/registry", icon: Building },
+    { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
+    { name: "Contracts & Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck },
+    { name: "Stacking Plan (S-26)", href: "/operate/stacking", icon: Layers },
+    { name: "Owner Statements (S-55)", href: "/operate/owner-statements", icon: Landmark },
+    { name: "FM Delegation & Mandates", href: "/settings/delegation", icon: Briefcase },
+    { name: "12-Mo Forecast (S-51)", href: "/operate/forecast", icon: Calendar },
+    { name: "NOI & Property P&L", href: "/operate/pnl", icon: BarChart3 },
+    { name: "MIS Investor Pack", href: "/operate/mis", icon: FileText },
+    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
+    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+  ],
+
+  // PROPERTY MANAGER / CENTRE MANAGER (§3.2, §S-03)
+  property_manager: [
+    { name: "PM Today Console", href: "/dashboard/pm", icon: ClipboardList },
+    { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Space & Building Registry", href: "/properties/registry", icon: Building },
+    { name: "Deals & Inquiries", href: "/operate/lease-crm", icon: Sparkles },
+    { name: "New Contract Wizard", href: "/operate/contracts/new", icon: FileText },
+    { name: "Active Contracts", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Expiry & Renewals (S-24)", href: "/operate/renewals", icon: Clock },
+    { name: "Escalation Calendar (S-25)", href: "/operate/escalations", icon: TrendingUp },
+    { name: "Stacking Plan (S-26)", href: "/operate/stacking", icon: Layers },
+    { name: "Invoices & Billing", href: "/operate/invoices", icon: DollarSign },
+    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
+    { name: "Disputes & Claims", href: "/operate/disputes", icon: ShieldCheck },
+    { name: "Security Deposits (S-47)", href: "/operate/deposits", icon: Landmark },
+    { name: "Utility Meters (S-31)", href: "/properties/rent-roll?tab=meter-readings", icon: Zap },
+    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+  ],
+
+  // FACILITY MANAGER (§3.6, §S-03 FM)
+  facility_manager: [
+    { name: "FM Command Centre", href: "/dashboard/fm", icon: ClipboardList },
+    { name: "Utility Meter Readings", href: "/properties/rent-roll?tab=meter-readings", icon: Zap },
+    { name: "CAM Pools & True-Up", href: "/operate/cam-pools", icon: Sparkles },
+    { name: "Helpdesk & Work Orders", href: "/ops/helpdesk", icon: AlertTriangle },
+    { name: "52-Week PPM Calendar", href: "/ops/ppm", icon: Calendar },
+    { name: "Asset Register & Health", href: "/ops/assets", icon: Settings },
+    { name: "Space & Building Directory", href: "/properties/registry", icon: Building },
+    { name: "Service Disputes (S-46)", href: "/operate/disputes", icon: ShieldCheck },
+    { name: "Statutory Compliance", href: "/ops/compliance", icon: ShieldCheck },
+    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+  ],
+
+  // FINANCE / AR MANAGER (§3.4, §S-05)
+  finance_manager: [
+    { name: "Finance Dashboard", href: "/dashboard/finance", icon: BarChart3 },
+    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck },
+    { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Contracts Review", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Billing Runs & Invoices", href: "/operate/invoices", icon: DollarSign },
+    { name: "Credit Notes (S-42)", href: "/operate/credit-notes", icon: FileText },
+    { name: "Payments Centre", href: "/operate/payments", icon: CreditCard },
+    { name: "Bank Reconciler (RR-INT-02)", href: "/operate/sync/bank-reconcile", icon: Landmark },
+    { name: "Tally ERP Sync (RR-INT-01)", href: "/operate/sync/tally", icon: Database },
+    { name: "Ageing & Collections", href: "/operate/collections", icon: AlertTriangle },
+    { name: "Security Deposits (S-47)", href: "/operate/deposits", icon: Landmark },
+    { name: "Month-End Snapshots", href: "/operate/snapshots", icon: ShieldCheck },
+    { name: "Property P&L", href: "/operate/pnl", icon: BarChart3 },
+    { name: "MIS Investor Pack", href: "/operate/mis", icon: FileText },
+    { name: "Billing Entities & Setup", href: "/settings", icon: Settings }
+  ],
+
+  // LEASING MANAGER (§3.3, §S-04)
+  leasing_manager: [
+    { name: "Leasing Dashboard", href: "/dashboard/leasing", icon: TrendingUp },
+    { name: "Deals CRM & Inquiries", href: "/operate/lease-crm", icon: Sparkles },
+    { name: "Stacking Plan & Vacancy", href: "/operate/stacking", icon: Layers },
+    { name: "Expiry Pipeline & Renewals", href: "/operate/renewals", icon: Clock },
+    { name: "Rent Roll (Rates Masked)", href: "/properties/rent-roll?tab=rentroll", icon: FileText },
+    { name: "Proposals & Contracts", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Space Listings Builder", href: "/leasing/listings", icon: Sparkles },
+    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+  ],
+
+  // FLEX & COWORKING OPERATOR (§S-57)
+  flex_operator: [
+    { name: "Head Leases & Centre P&L", href: "/operate/head-leases", icon: TrendingUp },
+    { name: "Seat Inventory & Plans", href: "/operate/seats", icon: Layers },
+    { name: "Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Stacking Plan (S-26)", href: "/operate/stacking", icon: Layers },
+    { name: "Billing & Invoices", href: "/operate/invoices", icon: DollarSign },
+    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle }
+  ],
+
+  // CORPORATE TENANT / OCCUPANT (§3.5, §T-01…T-08)
+  tenant: [
+    { name: "Tenant Workplace", href: "/portal", icon: Building },
+    { name: "Invoices & Settlement", href: "/portal/invoices", icon: DollarSign },
+    { name: "Payments & Tax Receipts", href: "/portal/payments", icon: CreditCard },
+    { name: "Raise Dispute (T-05)", href: "/portal/disputes", icon: AlertTriangle },
+    { name: "My Lease Contract", href: "/portal/contracts", icon: FileText },
+    { name: "Lease Documents", href: "/portal/documents", icon: FolderOpen },
+    { name: "Contacts & Sub-Users", href: "/portal/sub-users", icon: Users }
+  ],
+
+  // OCCUPANT ALIAS
+  occupant: [
+    { name: "Tenant Workplace", href: "/portal", icon: Building },
+    { name: "Invoices & Settlement", href: "/portal/invoices", icon: DollarSign },
+    { name: "Payments & Tax Receipts", href: "/portal/payments", icon: CreditCard },
+    { name: "Raise Dispute (T-05)", href: "/portal/disputes", icon: AlertTriangle },
+    { name: "My Lease Contract", href: "/portal/contracts", icon: FileText },
+    { name: "Lease Documents", href: "/portal/documents", icon: FolderOpen },
+    { name: "Contacts & Sub-Users", href: "/portal/sub-users", icon: Users }
+  ],
+
+  // ORGANISATION ADMIN / SYSTEM GOVERNANCE (§3.6)
+  org_admin: [
+    { name: "Executive Portfolio", href: "/dashboard/owner", icon: Layers },
+    { name: "Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { name: "Property Registry", href: "/properties/registry", icon: Building },
+    { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
+    { name: "Deal Register", href: "/operate/lease-crm", icon: Sparkles },
+    { name: "Contracts & Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
+    { name: "Billing Runs & Invoices", href: "/operate/invoices", icon: DollarSign },
+    { name: "Payments & Banking", href: "/operate/payments", icon: CreditCard },
+    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
+    { name: "FM Delegation & Mandates", href: "/settings/delegation", icon: Briefcase },
+    { name: "Bulk Import Centre", href: "/operate/imports", icon: FolderOpen },
+    { name: "Settings Master", href: "/settings", icon: Settings },
+    { name: "System Audit Log", href: "/admin/audit", icon: ShieldCheck }
+  ],
+
+  // COMMERCIAL PORTFOLIO (DEFAULT COMPATIBILITY)
   properties: [
-    { name: "Portfolio Overview", href: "/properties", icon: Layers },
+    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers },
     { name: "Property Registry", href: "/properties/registry", icon: Building },
     { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
     { 
@@ -67,67 +198,46 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
       href: "/properties/rent-roll?tab=dashboard", 
       icon: DollarSign,
       subItems: [
-        { name: "Dashboard", href: "/properties/rent-roll?tab=dashboard", tabKey: "dashboard", icon: Building },
+        { name: "Dashboard", href: "/dashboard/owner", tabKey: "dashboard", icon: Building },
         { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", tabKey: "rentroll", icon: FileText },
         { name: "Leasing CRM (S-18)", href: "/operate/lease-crm", tabKey: "lease-crm", icon: Sparkles },
         { name: "Billing & Invoices", href: "/operate/invoices", tabKey: "invoices", icon: DollarSign },
-        { name: "Payments & Allocations (S-43)", href: "/operate/payments", tabKey: "payments", icon: CreditCard },
-        { name: "Collections & Ageing (S-45)", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
-        { name: "Credit Notes (S-42)", href: "/operate/credit-notes", tabKey: "credit-notes", icon: FileText },
-        { name: "Tenant Disputes (S-46)", href: "/operate/disputes", tabKey: "disputes", icon: ShieldCheck },
+        { name: "Payments & Allocations", href: "/operate/payments", tabKey: "payments", icon: CreditCard },
+        { name: "Collections & Ageing", href: "/operate/collections", tabKey: "collections", icon: AlertTriangle },
+        { name: "Credit Notes", href: "/operate/credit-notes", tabKey: "credit-notes", icon: FileText },
+        { name: "Tenant Disputes", href: "/operate/disputes", tabKey: "disputes", icon: ShieldCheck },
         { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", tabKey: "meter-readings", icon: Zap },
-        { name: "Escalation Calendar (S-25)", href: "/operate/escalations", tabKey: "escalations", icon: TrendingUp },
-        { name: "Renewals Pipeline (S-24)", href: "/operate/renewals", tabKey: "renewals", icon: Clock },
-        { name: "Bulk Import Centre (S-30)", href: "/operate/imports", tabKey: "imports", icon: FolderOpen },
-        { name: "Stacking Plan (S-26)", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
-        { name: "Owner Statements (S-55)", href: "/operate/owner-statements", tabKey: "owner-statements", icon: Landmark },
-        { name: "Client Mandates (S-56)", href: "/operate/mandates", tabKey: "mandates", icon: Briefcase },
-        { name: "Head Leases & Flex (S-57)", href: "/operate/head-leases", tabKey: "head-leases", icon: TrendingUp },
-        { name: "12-Mo Forecast (S-51)", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
-        { name: "NOI & P&L (S-52)", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
-        { name: "Exceptions (S-50)", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
-        { name: "Month-End Lock (S-53)", href: "/operate/snapshots", tabKey: "snapshots", icon: ShieldCheck },
-        { name: "MIS Investor Pack (S-54)", href: "/operate/mis", tabKey: "mis", icon: FileText },
+        { name: "Escalation Calendar", href: "/operate/escalations", tabKey: "escalations", icon: TrendingUp },
+        { name: "Renewals Pipeline", href: "/operate/renewals", tabKey: "renewals", icon: Clock },
+        { name: "Bulk Import Centre", href: "/operate/imports", tabKey: "imports", icon: FolderOpen },
+        { name: "Stacking Plan", href: "/operate/stacking", tabKey: "stacking", icon: Layers },
+        { name: "Owner Statements", href: "/operate/owner-statements", tabKey: "owner-statements", icon: Landmark },
+        { name: "Client Mandates / Delegation", href: "/settings/delegation", tabKey: "mandates", icon: Briefcase },
+        { name: "Head Leases & Flex", href: "/operate/head-leases", tabKey: "head-leases", icon: TrendingUp },
+        { name: "12-Mo Forecast", href: "/operate/forecast", tabKey: "forecast", icon: Calendar },
+        { name: "NOI & P&L", href: "/operate/pnl", tabKey: "pnl", icon: BarChart3 },
+        { name: "Exceptions", href: "/operate/exceptions", tabKey: "exceptions", icon: AlertTriangle },
+        { name: "Month-End Lock", href: "/operate/snapshots", tabKey: "snapshots", icon: ShieldCheck },
+        { name: "MIS Investor Pack", href: "/operate/mis", tabKey: "mis", icon: FileText },
         { name: "CAM Pools & True-Up", href: "/operate/cam-pools", tabKey: "cam-pools", icon: Sparkles },
-        { name: "Tenants & Leases", href: "/properties/rent-roll?tab=tenants", tabKey: "tenants", icon: Users },
-        { name: "Terms Dictionary", href: "/properties/rent-roll?tab=dictionary", tabKey: "dictionary", icon: Sparkles },
-        { name: "Settings Master (S-60…S-67)", href: "/settings", tabKey: "settings", icon: Settings },
-        { name: "Tally ERP Sync (RR-INT-01)", href: "/operate/sync/tally", tabKey: "tally-sync", icon: Database },
-        { name: "Bank Reconciler (RR-INT-02)", href: "/operate/sync/bank-reconcile", tabKey: "bank-reconcile", icon: Landmark }
+        { name: "Settings Master", href: "/settings", tabKey: "settings", icon: Settings },
+        { name: "Tally ERP Sync", href: "/operate/sync/tally", tabKey: "tally-sync", icon: Database },
+        { name: "Bank Reconciler", href: "/operate/sync/bank-reconcile", tabKey: "bank-reconcile", icon: Landmark }
       ]
     },
-    { 
-      name: "Banking & Accounting", 
-      href: "/properties/banking", 
-      icon: Landmark
-    },
-    { 
-      name: "Visitor Management", 
-      href: "/properties/visitors", 
-      icon: Users
-    },
+    { name: "Banking & Accounting", href: "/properties/banking", icon: Landmark },
     { name: "Statutory Compliance", href: "/properties/compliance", icon: ShieldCheck }
   ],
 
   // FACILITY MANAGER (FM OPS)
   ops: [
-    { name: "FM Command Centre", href: "/ops", icon: ClipboardList },
+    { name: "FM Command Centre", href: "/dashboard/fm", icon: ClipboardList },
     { name: "Helpdesk Tickets", href: "/ops/helpdesk", icon: AlertTriangle },
     { name: "52-Week PPM Calendar", href: "/ops/ppm", icon: Calendar },
     { name: "Asset Register & Health", href: "/ops/assets", icon: Settings },
     { name: "Outcome-Based FM", href: "/ops/outcomes", icon: Activity },
     { name: "Visitor & Speed-Gates", href: "/ops/visitors", icon: Users },
     { name: "Compliance Centre", href: "/ops/compliance", icon: ShieldCheck }
-  ],
-
-  // ENTERPRISE TENANT & EMPLOYEES
-  tenant: [
-    { name: "Tenant Workplace", href: "/tenant", icon: Building },
-    { name: "Employee Desk & Rooms", href: "/tenant/employee", icon: MapPin },
-    { name: "Visitor Pre-Registration", href: "/tenant/visitors", icon: Users },
-    { name: "Helpdesk & Requests", href: "/tenant/helpdesk", icon: HelpCircle },
-    { name: "Rent & Invoices", href: "/tenant/payments", icon: DollarSign },
-    { name: "Lease Documents", href: "/tenant/documents", icon: FileText }
   ],
 
   // SERVICE VENDOR & CONTRACTOR
@@ -141,7 +251,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 
   // LEASING BROKER (CRM)
   leasing: [
-    { name: "Broker Dashboard", href: "/leasing", icon: TrendingUp },
+    { name: "Broker Dashboard", href: "/dashboard/leasing", icon: TrendingUp },
     { name: "Leasing CRM (S-18)", href: "/operate/lease-crm", icon: Sparkles },
     { name: "Space Listings Builder", href: "/leasing/listings", icon: Sparkles },
     { name: "Leads & Enquiries", href: "/leasing/leads", icon: Users },
@@ -170,9 +280,10 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 
   // EXECUTIVE CONTROL / GOVERNANCE
   admin: [
+    { name: "Executive Portfolio", href: "/dashboard/owner", icon: Layers },
     { name: "Governance Console", href: "/admin", icon: Shield },
     { name: "KYC & Vetting", href: "/admin/kyc", icon: ShieldCheck },
-    { name: "Accounting & ERP Sync", href: "/properties/integrations", icon: Zap },
+    { name: "FM Delegation & Mandates", href: "/settings/delegation", icon: Briefcase },
     { name: "Razorpay Escrow Control", href: "/admin/escrow", icon: DollarSign },
     { name: "Platform Users", href: "/admin/users", icon: Users },
     { name: "System Audit Logs", href: "/admin/audit", icon: FileText }
@@ -188,13 +299,21 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 };
 
 const roleHomes: Record<string, { label: string; roleName: string; route: string }> = {
-  properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/properties" },
-  ops: { label: "Facility Management", roleName: "Facility Management", route: "/ops" },
-  tenant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/tenant" },
-  vendor: { label: "Facility Services", roleName: "Facility Services", route: "/vendor" },
-  leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/leasing" },
-  marketplace: { label: "FM Procurement", roleName: "FM Procurement", route: "/marketplace" },
+  owner: { label: "Owner & Principal", roleName: "Owner / Landlord", route: "/dashboard/owner" },
+  property_manager: { label: "Property Management", roleName: "Property Manager", route: "/dashboard/pm" },
+  facility_manager: { label: "Facility Operations", roleName: "Facility Manager", route: "/dashboard/fm" },
+  finance_manager: { label: "Finance & Accounts", roleName: "Finance Manager", route: "/dashboard/finance" },
+  leasing_manager: { label: "Commercial Leasing", roleName: "Leasing Manager", route: "/dashboard/leasing" },
+  flex_operator: { label: "Flex & Coworking", roleName: "Flex Operator", route: "/operate/head-leases" },
+  tenant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/portal" },
+  occupant: { label: "Corporate Workplace", roleName: "Corporate Workplace", route: "/portal" },
+  org_admin: { label: "Executive Control", roleName: "Organisation Admin", route: "/dashboard/owner" },
   admin: { label: "Executive Control", roleName: "Executive Control", route: "/admin" },
+  properties: { label: "Commercial Portfolio", roleName: "Commercial Portfolio", route: "/dashboard/owner" },
+  ops: { label: "Facility Management", roleName: "Facility Management", route: "/dashboard/fm" },
+  vendor: { label: "Facility Services", roleName: "Facility Services", route: "/vendor" },
+  leasing: { label: "Commercial Leasing", roleName: "Commercial Leasing", route: "/dashboard/leasing" },
+  marketplace: { label: "FM Procurement", roleName: "FM Procurement", route: "/marketplace" },
   reporting: { label: "Workplace Analytics", roleName: "Workplace Analytics", route: "/reporting" },
   public: { label: "Commercial Discovery", roleName: "Commercial Discovery", route: "/public/search" }
 };
@@ -205,10 +324,10 @@ const pathPortalAliases: Record<string, string> = {
   "portfolio": "properties",
   "property": "properties",
   "compliance": "properties",
-  "operations": "ops",
+  "operations": "facility_manager",
   "reports": "reporting",
   "discover": "public",
-  "calq": "leasing",
+  "calq": "leasing_manager",
   "operate": "properties"
 };
 
@@ -220,7 +339,7 @@ export default function Sidebar() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<string>("properties");
+  const [selectedRole, setSelectedRole] = useState<string>("owner");
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
   const [orgDisplayName, setOrgDisplayName] = useState<string>("");
@@ -228,18 +347,25 @@ export default function Sidebar() {
   const [orgLogo, setOrgLogo] = useState<string>("");
   const [expandedSubMenus, setExpandedSubMenus] = useState<Record<string, boolean>>({});
 
-  // Synchronously compute active portal from URL first, handling both direct keys and aliases
+  // Synchronously compute active portal from URL first
   const findPortalKey = (path: string): string | undefined => {
-    const cleanPath = path.replace(/^\//, "").split("/")[0];
-    if (roleHomes[cleanPath]) return cleanPath;
-    if (pathPortalAliases[cleanPath]) return pathPortalAliases[cleanPath];
-    return Object.keys(roleHomes).find(key => 
-      path === `/${key}` || path.startsWith(`/${key}/`)
-    );
+    if (path === "/dashboard/owner" || path.startsWith("/dashboard/owner/")) return "owner";
+    if (path === "/dashboard/pm" || path.startsWith("/dashboard/pm/")) return "property_manager";
+    if (path === "/dashboard/fm" || path.startsWith("/dashboard/fm/")) return "facility_manager";
+    if (path === "/dashboard/leasing" || path.startsWith("/dashboard/leasing/")) return "leasing_manager";
+    if (path === "/dashboard/finance" || path.startsWith("/dashboard/finance/")) return "finance_manager";
+    if (path.startsWith("/portal") || path.startsWith("/tenant")) return "tenant";
+    if (path.startsWith("/ops")) return "facility_manager";
+    if (path.startsWith("/leasing")) return "leasing_manager";
+    if (path.startsWith("/marketplace")) return "marketplace";
+    if (path.startsWith("/vendor")) return "vendor";
+    if (path.startsWith("/admin")) return "org_admin";
+    if (path.startsWith("/public")) return "public";
+    return undefined;
   };
 
   const matchedFromPath = findPortalKey(pathname);
-  const currentPortalKey = matchedFromPath || selectedRole || "properties";
+  const currentPortalKey = matchedFromPath || selectedRole || "owner";
 
   useEffect(() => {
     setIsMounted(true);
@@ -250,9 +376,14 @@ export default function Sidebar() {
       const storedEmail = localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email");
       if (storedEmail) setUserEmail(storedEmail);
 
-      const saved = localStorage.getItem("officex_active_portal");
-      if (saved && roleHomes[saved]) {
-        setSelectedRole(saved);
+      const storedRoleKey = localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key");
+      if (storedRoleKey && (roleHomes[storedRoleKey] || roleSpecificMenus[storedRoleKey])) {
+        setSelectedRole(storedRoleKey);
+      } else {
+        const saved = localStorage.getItem("officex_active_portal");
+        if (saved && (roleHomes[saved] || roleSpecificMenus[saved])) {
+          setSelectedRole(saved);
+        }
       }
 
       // Load dynamic org identity from onboarding
@@ -272,6 +403,17 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
+    const handleRoleUpdate = (e: any) => {
+      const rKey = e.detail?.roleKey;
+      if (rKey && (roleHomes[rKey] || roleSpecificMenus[rKey])) {
+        setSelectedRole(rKey);
+      }
+    };
+    window.addEventListener("officex-role-change", handleRoleUpdate);
+    return () => window.removeEventListener("officex-role-change", handleRoleUpdate);
+  }, []);
+
+  useEffect(() => {
     setIsOpen(false);
     if (matchedFromPath) {
       setSelectedRole(matchedFromPath);
@@ -283,8 +425,8 @@ export default function Sidebar() {
     }
   }, [pathname, matchedFromPath]);
 
-  const activeRole = roleHomes[currentPortalKey] || roleHomes.properties;
-  const activeMenu = roleSpecificMenus[currentPortalKey] || roleSpecificMenus.properties;
+  const activeRole = roleHomes[currentPortalKey] || roleHomes.owner;
+  const activeMenu = roleSpecificMenus[currentPortalKey] || roleSpecificMenus.owner;
 
   const handleRoleChange = (key: string) => {
     setSelectedRole(key);

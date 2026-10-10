@@ -21,7 +21,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Eye,
-  Send
+  Send,
+  Landmark,
+  Copy,
+  Check
 } from "lucide-react";
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
@@ -74,6 +77,18 @@ function TenantInvoicesContent() {
   // Payment result screen (§T-03)
   const [paymentResult, setPaymentResult] = useState<any | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Net Banking / Direct Bank Transfer State (§T-02 / §T-03)
+  const [netBankingModalOpen, setNetBankingModalOpen] = useState(false);
+  const [landlordBankDetails, setLandlordBankDetails] = useState<any | null>(null);
+  const [utrNumber, setUtrNumber] = useState("");
+  const [remittingBank, setRemittingBank] = useState("");
+  const [transferMethod, setTransferMethod] = useState("NEFT");
+  const [transferDate, setTransferDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [transferNotes, setTransferNotes] = useState("");
+  const [submittingTransfer, setSubmittingTransfer] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [netBankingSuccessResult, setNetBankingSuccessResult] = useState<any | null>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -277,6 +292,79 @@ function TenantInvoicesContent() {
       alert("Failed to submit dispute");
     } finally {
       setSubmittingDispute(false);
+    }
+  }
+
+  // Load Landlord's Bank Account for Direct Transfer
+  async function fetchLandlordBankDetails() {
+    try {
+      const res = await fetch("/api/portal/payments/netbanking");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.bank_details) {
+          setLandlordBankDetails(json.bank_details);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load landlord bank details:", e);
+    }
+  }
+
+  function handleCopy(text: string, fieldName: string) {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  }
+
+  // Submit Net Banking Direct Payment Proof (§T-03)
+  async function handleSubmitNetBankingTransfer() {
+    if (!utrNumber || utrNumber.trim().length === 0) {
+      alert("Please enter the Bank Transaction / UTR reference number (§T-02).");
+      return;
+    }
+
+    try {
+      setSubmittingTransfer(true);
+      const res = await fetch("/api/portal/payments/netbanking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: finalPayAmount,
+          reference_id: utrNumber.trim(),
+          payment_method: transferMethod.toLowerCase(),
+          payment_date: transferDate,
+          bank_name: remittingBank,
+          invoice_ids: Array.from(selectedIds),
+          notes: transferNotes,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setNetBankingSuccessResult({
+          payment_id: json.payment_id,
+          utr: utrNumber.trim(),
+          amount: finalPayAmount,
+          method: transferMethod,
+          date: transferDate,
+          bank_name: remittingBank,
+          invoices_count: selectedIds.size,
+        });
+        setNetBankingModalOpen(false);
+        setUtrNumber("");
+        setRemittingBank("");
+        setTransferNotes("");
+        loadInvoices();
+      } else {
+        alert(json.error || "Failed to record Net Banking transfer.");
+      }
+    } catch (e: any) {
+      console.error("Net banking submission error:", e);
+      alert(e.message || "Failed to submit bank transfer details.");
+    } finally {
+      setSubmittingTransfer(false);
     }
   }
 
@@ -527,17 +615,29 @@ function TenantInvoicesContent() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                disabled={isProcessingPayment || finalPayAmount <= 0}
-                onClick={handleProceedPayment}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm tracking-wide shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
-              >
-                <CreditCard size={16} /> Pay ₹{finalPayAmount.toLocaleString("en-IN")} via Razorpay
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                <button
+                  disabled={finalPayAmount <= 0}
+                  onClick={() => {
+                    fetchLandlordBankDetails();
+                    setNetBankingModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-black text-sm tracking-wide shadow-lg shadow-teal-700/25 flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+                  title="Direct bank transfer (NEFT/RTGS/IMPS) to Landlord Bank Account (§T-02)"
+                >
+                  <Landmark size={16} /> Pay ₹{finalPayAmount.toLocaleString("en-IN")} via Net Banking
+                </button>
+
+                <button
+                  disabled={isProcessingPayment || finalPayAmount <= 0}
+                  onClick={handleProceedPayment}
+                  className="w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+                >
+                  <CreditCard size={15} /> Card / Gateway
+                </button>
+              </div>
             </div>
           </div>
-        </div>
       )}
 
       {/* Invoice Detail Drawer Modal */}
@@ -767,6 +867,306 @@ function TenantInvoicesContent() {
                 className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors cursor-pointer"
               >
                 Back to Invoices
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Screen T-02 / T-03: Direct Net Banking Modal */}
+      {netBankingModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                    §T-02 Direct Settlement
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">Owner Bank Transfer</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mt-1">
+                  Pay via Net Banking (NEFT / RTGS / IMPS)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Transfer rent directly to the Property Owner&apos;s verified bank account and record your UTR number for automated reconciliation.
+                </p>
+              </div>
+              <button
+                onClick={() => setNetBankingModalOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Landlord Verified Bank Details Box */}
+            <div className="bg-gradient-to-br from-teal-50/70 to-emerald-50/40 border border-teal-200/80 rounded-2xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
+                  <Landmark size={14} className="text-[#0F8B7D]" />
+                  Beneficiary (Landlord) Bank Account
+                </span>
+                <span className="text-[10px] font-bold text-teal-700 bg-teal-100/70 px-2 py-0.5 rounded-full">
+                  Verified SPV Account
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="bg-white/80 p-2.5 rounded-xl border border-teal-100">
+                  <span className="text-[10px] font-bold text-slate-400 block">Account Name / Beneficiary</span>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="font-bold text-slate-900 truncate">
+                      {landlordBankDetails?.name || "OFFICEX Commercial Properties Private Limited"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails?.name || "OFFICEX Commercial Properties Private Limited", "name")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                      title="Copy"
+                    >
+                      {copiedField === "name" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white/80 p-2.5 rounded-xl border border-teal-100">
+                  <span className="text-[10px] font-bold text-slate-400 block">Bank Name</span>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="font-bold text-slate-900 truncate">
+                      {landlordBankDetails?.bankName || "HDFC Bank Limited"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails?.bankName || "HDFC Bank Limited", "bankName")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                      title="Copy"
+                    >
+                      {copiedField === "bankName" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white/80 p-2.5 rounded-xl border border-teal-100">
+                  <span className="text-[10px] font-bold text-slate-400 block">Account Number</span>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="font-mono font-black text-slate-900 text-sm tracking-wider">
+                      {landlordBankDetails?.bankAccountNumber || "50200084920194"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails?.bankAccountNumber || "50200084920194", "account")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                      title="Copy"
+                    >
+                      {copiedField === "account" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white/80 p-2.5 rounded-xl border border-teal-100">
+                  <span className="text-[10px] font-bold text-slate-400 block">IFSC Code</span>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="font-mono font-black text-teal-800 text-sm tracking-wider">
+                      {landlordBankDetails?.bankIfscCode || "HDFC0000060"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails?.bankIfscCode || "HDFC0000060", "ifsc")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                      title="Copy"
+                    >
+                      {copiedField === "ifsc" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {landlordBankDetails?.upiId && (
+                <div className="flex items-center justify-between bg-white/90 px-3 py-2 rounded-xl border border-teal-100 text-xs">
+                  <span className="text-slate-500 font-semibold">Or via Corporate UPI / VPA:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-slate-800">{landlordBankDetails.upiId}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(landlordBankDetails.upiId, "upi")}
+                      className="p-1 text-slate-400 hover:text-teal-700"
+                    >
+                      {copiedField === "upi" ? <Check size={12} className="text-teal-700" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Transfer Submission Form */}
+            <div className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Transfer Amount (INR)</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={`₹${finalPayAmount.toLocaleString("en-IN")}`}
+                    className="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 font-black text-slate-900 text-sm outline-none cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Payment Channel *</label>
+                  <select
+                    value={transferMethod}
+                    onChange={(e) => setTransferMethod(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 outline-none"
+                  >
+                    <option value="NEFT">NEFT (National Electronic Fund)</option>
+                    <option value="RTGS">RTGS (Real-Time Gross Settlement)</option>
+                    <option value="IMPS">IMPS (Immediate Payment)</option>
+                    <option value="BANK_TRANSFER">Direct Account Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Bank UTR / Transaction Ref *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HDFC000192837482"
+                    value={utrNumber}
+                    onChange={(e) => setUtrNumber(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 font-mono font-bold text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Found on your bank debit receipt or SMS confirmation.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Your Remitting Bank Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ICICI Bank, SBI, Axis"
+                    value={remittingBank}
+                    onChange={(e) => setRemittingBank(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-800 outline-none focus:border-teal-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    value={transferDate}
+                    onChange={(e) => setTransferDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-800 outline-none focus:border-teal-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Remarks / Note (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rent for Oct 2026"
+                    value={transferNotes}
+                    onChange={(e) => setTransferNotes(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-800 outline-none focus:border-teal-600"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setNetBankingModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submittingTransfer || !utrNumber.trim()}
+                onClick={handleSubmitNetBankingTransfer}
+                className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors shadow-md disabled:opacity-50"
+              >
+                <Check size={14} />
+                {submittingTransfer ? "Recording Transfer..." : "Submit Bank Transfer & UTR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Screen T-03: Net Banking Confirmation & Challan Modal */}
+      {netBankingSuccessResult && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-7 sm:p-8 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="w-16 h-16 rounded-full bg-teal-100 text-[#0F8B7D] flex items-center justify-center mx-auto shadow-xs">
+              <CheckCircle2 size={36} />
+            </div>
+
+            <div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200">
+                §T-03 Payment Recorded
+              </span>
+              <h3 className="text-2xl font-black text-slate-900 mt-2">
+                Bank Transfer Logged!
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Your direct Net Banking payment has been registered.
+              </p>
+            </div>
+
+            <div className="text-4xl font-black text-[#0F8B7D]">
+              ₹{Number(netBankingSuccessResult.amount).toLocaleString("en-IN")}
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Transaction / UTR:</span>
+                <span className="font-mono font-black text-slate-900">{netBankingSuccessResult.utr}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Payment Channel:</span>
+                <span className="font-bold text-slate-800 uppercase">{netBankingSuccessResult.method}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Transfer Date:</span>
+                <span className="font-bold text-slate-800">{netBankingSuccessResult.date}</span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 font-semibold">Settlement Status:</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                  Pending Owner Reconciliation
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 font-medium">
+              The Landlord&apos;s finance team has received your UTR number for bank reconciliation. The payment is linked to your invoices.
+            </p>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Link
+                href="/portal/payments"
+                className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors"
+              >
+                View in Ledger
+              </Link>
+              <button
+                onClick={() => setNetBankingSuccessResult(null)}
+                className="flex-1 py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7267] text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Done
               </button>
             </div>
           </div>

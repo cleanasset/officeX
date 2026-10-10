@@ -94,7 +94,22 @@ export default function OwnerDashboardPage() {
 
   useEffect(() => {
     fetchDashboardMetrics();
-  }, [scope, period]);
+  }, [period]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedScope = localStorage.getItem("officex_selected_property");
+      if (savedScope) setScope(savedScope);
+
+      const handlePropertyUpdate = (e: any) => {
+        if (e.detail?.propertyId) {
+          setScope(e.detail.propertyId);
+        }
+      };
+      window.addEventListener("officex-property-change", handlePropertyUpdate);
+      return () => window.removeEventListener("officex-property-change", handlePropertyUpdate);
+    }
+  }, []);
 
   const fetchDashboardMetrics = async () => {
     try {
@@ -176,12 +191,13 @@ export default function OwnerDashboardPage() {
     }
   };
 
-  // Header KPI Computations
-  const totalPropertiesCount = properties.length;
-  const totalLeasableArea = properties.reduce((acc, p) => acc + p.areaSqft, 0);
-  const totalOccupiedArea = properties.reduce((acc, p) => acc + p.occupiedSqft, 0);
-  const occupancyPercentage = Math.round((totalOccupiedArea / totalLeasableArea) * 1000) / 10;
-  const totalMonthlyRevenue = properties.reduce((acc, p) => acc + p.monthlyRevenue, 0);
+  // Header KPI Computations (Scoped dynamically to selected property or portfolio)
+  const displayedProperties = scope === "all" ? properties : properties.filter((p) => p.id === scope);
+  const totalPropertiesCount = displayedProperties.length;
+  const totalLeasableArea = displayedProperties.reduce((acc, p) => acc + p.areaSqft, 0);
+  const totalOccupiedArea = displayedProperties.reduce((acc, p) => acc + p.occupiedSqft, 0);
+  const occupancyPercentage = totalLeasableArea > 0 ? Math.round((totalOccupiedArea / totalLeasableArea) * 1000) / 10 : 0;
+  const totalMonthlyRevenue = displayedProperties.reduce((acc, p) => acc + p.monthlyRevenue, 0);
   const collectionsRate = 84.6; // MTD collections efficiency
 
   return (
@@ -210,7 +226,19 @@ export default function OwnerDashboardPage() {
             <span className="text-[11px] font-bold text-slate-500">Scope:</span>
             <select
               value={scope}
-              onChange={(e) => setScope(e.target.value)}
+              onChange={(e) => {
+                const newScope = e.target.value;
+                setScope(newScope);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("officex_selected_property", newScope);
+                  const pObj = properties.find((p) => p.id === newScope);
+                  window.dispatchEvent(
+                    new CustomEvent("officex-property-change", {
+                      detail: { propertyId: newScope, propertyName: pObj?.name || "All Properties" },
+                    })
+                  );
+                }
+              }}
               className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             >
               <option value="all">
@@ -348,7 +376,7 @@ export default function OwnerDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {properties.map((p) => (
+                {displayedProperties.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-3">
                       <div className="font-bold text-slate-900">{p.name}</div>
