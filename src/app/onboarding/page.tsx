@@ -29,12 +29,17 @@ function OnboardingContent() {
       // Owner Delegation Data (Fetched in complete profile hub)
       if (data.hasDelegatedManager) {
         localStorage.setItem("officex_has_manager", "true");
-        localStorage.setItem("officex_manager_type", data.managerType || "pm_agency");
+        localStorage.setItem("officex_manager_type", data.managerType || "pm_company");
+        if (data.managerUserRole) {
+          localStorage.setItem("officex_manager_user_role", data.managerUserRole);
+        } else {
+          localStorage.removeItem("officex_manager_user_role");
+        }
         localStorage.setItem("officex_manager_name", data.managerName || "");
         localStorage.setItem("officex_manager_email", data.managerEmail || "");
         localStorage.setItem("officex_manager_status", "activated");
         localStorage.setItem("officex_manager_dashboard_activated", "true");
-        const inviteUrl = `https://www.officex.pro/dashboard/pm?role=${encodeURIComponent(data.managerType || "pm_agency")}&mgr=${encodeURIComponent(data.managerName || "")}&invite=act_${Date.now()}`;
+        const inviteUrl = `https://www.officex.pro/dashboard/pm?role=${encodeURIComponent(data.managerType || "pm_company")}&mgr=${encodeURIComponent(data.managerName || "")}&invite=act_${Date.now()}`;
         localStorage.setItem("officex_manager_activation_link", inviteUrl);
 
         // Pre-assign manager to initial property
@@ -43,13 +48,16 @@ function OnboardingContent() {
           currentAssigns[data.propertyName] = {
             name: data.managerName,
             email: data.managerEmail || "",
-            type: data.managerType || "pm_agency",
+            type: data.managerType || "pm_company",
+            userRole: data.managerUserRole || undefined,
             assignedAt: new Date().toISOString(),
           };
           localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
         }
       } else {
         localStorage.removeItem("officex_has_manager");
+        localStorage.removeItem("officex_manager_type");
+        localStorage.removeItem("officex_manager_user_role");
         localStorage.removeItem("officex_manager_name");
         localStorage.removeItem("officex_manager_email");
         localStorage.removeItem("officex_manager_activation_link");

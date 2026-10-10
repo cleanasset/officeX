@@ -36,7 +36,7 @@ import {
   UserCheck
 } from "lucide-react";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
-import RentRollOnboardingWizard from "@/components/rent-roll/RentRollOnboardingWizard";
+import RentRollOnboardingWizard, { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
 
 interface PropertySummary {
   id: string;
@@ -103,7 +103,8 @@ export default function OwnerDashboardPage() {
   const [hasDelegatedManager, setHasDelegatedManager] = useState(false);
   const [delegatedManagerName, setDelegatedManagerName] = useState("");
   const [delegatedManagerEmail, setDelegatedManagerEmail] = useState("");
-  const [delegatedManagerType, setDelegatedManagerType] = useState("pm_agency");
+  const [delegatedManagerType, setDelegatedManagerType] = useState("pm_company");
+  const [delegatedManagerUserRole, setDelegatedManagerUserRole] = useState("");
   const [managerLinkCopied, setManagerLinkCopied] = useState(false);
   const [propertyAssignments, setPropertyAssignments] = useState<Record<string, any>>({});
   const [reassignModalProperty, setReassignModalProperty] = useState<PropertySummary | null>(null);
@@ -122,11 +123,13 @@ export default function OwnerDashboardPage() {
       const hasMgr = localStorage.getItem("officex_has_manager") === "true";
       const mgrName = localStorage.getItem("officex_manager_name") || "";
       const mgrEmail = localStorage.getItem("officex_manager_email") || "";
-      const mgrType = localStorage.getItem("officex_manager_type") || "pm_agency";
+      const mgrType = localStorage.getItem("officex_manager_type") || "pm_company";
+      const mgrUserRole = localStorage.getItem("officex_manager_user_role") || "";
       setHasDelegatedManager(hasMgr && Boolean(mgrName || mgrEmail));
       setDelegatedManagerName(mgrName);
       setDelegatedManagerEmail(mgrEmail);
       setDelegatedManagerType(mgrType);
+      setDelegatedManagerUserRole(mgrUserRole);
 
       try {
         const assigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
@@ -439,13 +442,7 @@ export default function OwnerDashboardPage() {
                   Manager Dashboard Active &amp; Live
                 </span>
                 <span className="text-xs font-bold text-slate-500">
-                  {delegatedManagerType === "pm_agency"
-                    ? "Property Management Firm"
-                    : delegatedManagerType === "ca_firm"
-                    ? "Chartered Accountant / CA"
-                    : delegatedManagerType === "fm_operator"
-                    ? "Facility Management Partner"
-                    : "Individual Property Manager"}
+                  {getDelegatedEntityLabel(delegatedManagerType, delegatedManagerUserRole)}
                 </span>
               </div>
               <h4 className="text-sm font-black text-slate-900 mt-0.5">

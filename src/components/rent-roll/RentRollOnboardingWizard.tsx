@@ -53,6 +53,7 @@ export interface OnboardingCompleteData {
   managerType?: string;
   managerName?: string;
   managerEmail?: string;
+  managerUserRole?: "property_manager" | "org_admin";
 }
 
 interface RentRollOnboardingWizardProps {
@@ -95,12 +96,23 @@ export const CANONICAL_ROLES = [
 ];
 
 export const DELEGATED_ENTITY_TYPES = [
-  { id: "pm_agency", title: "Property Management Company / Agency" },
-  { id: "ca_firm", title: "Chartered Accountant (CA) / Finance Firm" },
-  { id: "fm_operator", title: "Facility Management Partner" },
-  { id: "leasing_agency", title: "Leasing Brokerage Firm" },
-  { id: "individual_pm", title: "Individual Property Manager" },
+  { id: "pm_company", title: "PM Company (Property Management Company)" },
+  { id: "fm_company", title: "FM Company (Facilities Management Company)" },
+  { id: "msp", title: "MSP (Managed Service Provider)" },
+  { id: "user_pm_or_admin", title: "Another User with role: Property Manager or Org Admin" },
 ];
+
+export function getDelegatedEntityLabel(type?: string, userRole?: string): string {
+  if (!type || type === "pm_company" || type === "pm_agency") return "PM Company (Property Management Company)";
+  if (type === "fm_company" || type === "fm_operator") return "FM Company (Facilities Management Company)";
+  if (type === "msp") return "MSP (Managed Service Provider)";
+  if (type === "user_pm_or_admin" || type === "individual_pm" || type === "another_user") {
+    if (userRole === "org_admin") return "Another User (Role: Org Admin)";
+    if (userRole === "property_manager") return "Another User (Role: Property Manager)";
+    return "Another User with role: Property Manager or Org Admin";
+  }
+  return "PM Company (Property Management Company)";
+}
 
 export default function RentRollOnboardingWizard({
   onComplete,
@@ -116,7 +128,8 @@ export default function RentRollOnboardingWizard({
 
   // Managing Entity Delegation (For Owner Only)
   const [hasDelegatedManager, setHasDelegatedManager] = useState(false);
-  const [managerType, setManagerType] = useState("pm_agency");
+  const [managerType, setManagerType] = useState("pm_company");
+  const [managerUserRole, setManagerUserRole] = useState<"property_manager" | "org_admin">("property_manager");
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
 
@@ -262,6 +275,7 @@ export default function RentRollOnboardingWizard({
       managerType: hasDelegatedManager ? managerType : undefined,
       managerName: hasDelegatedManager ? managerName.trim() : undefined,
       managerEmail: hasDelegatedManager ? managerEmail.trim().toLowerCase() : undefined,
+      managerUserRole: hasDelegatedManager && managerType === "user_pm_or_admin" ? managerUserRole : undefined,
     });
   };
 
@@ -434,51 +448,100 @@ export default function RentRollOnboardingWizard({
                 </label>
 
                 {hasDelegatedManager && (
-                  <div className="pt-3 border-t border-amber-200/60 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-150">
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                        Managing Entity Type
-                      </label>
-                      <select
-                        value={managerType}
-                        onChange={(e) => setManagerType(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
-                      >
-                        {DELEGATED_ENTITY_TYPES.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.title}
-                          </option>
-                        ))}
-                      </select>
+                  <div className="pt-3 border-t border-amber-200/60 space-y-3 animate-in fade-in duration-150">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Managing Entity Type
+                        </label>
+                        <select
+                          value={managerType}
+                          onChange={(e) => setManagerType(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        >
+                          {DELEGATED_ENTITY_TYPES.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          {managerType === "user_pm_or_admin" ? "User Full Name *" : "Entity / Company Name *"}
+                        </label>
+                        <input
+                          type="text"
+                          required={hasDelegatedManager}
+                          placeholder={
+                            managerType === "user_pm_or_admin"
+                              ? "e.g. Vikram Sharma"
+                              : managerType === "fm_company"
+                              ? "e.g. CBRE / JLL Facilities"
+                              : managerType === "msp"
+                              ? "e.g. SmartOps MSP Solutions"
+                              : "e.g. Apex Property Management LLP"
+                          }
+                          value={managerName}
+                          onChange={(e) => setManagerName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          {managerType === "user_pm_or_admin" ? "User Email Address *" : "Work Email *"}
+                        </label>
+                        <input
+                          type="email"
+                          required={hasDelegatedManager}
+                          placeholder={
+                            managerType === "user_pm_or_admin" ? "vikram@company.com" : "manager@apexpm.in"
+                          }
+                          value={managerEmail}
+                          onChange={(e) => setManagerEmail(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                        Entity / Contact Name *
-                      </label>
-                      <input
-                        type="text"
-                        required={hasDelegatedManager}
-                        placeholder="e.g. Apex Property Management LLP"
-                        value={managerName}
-                        onChange={(e) => setManagerName(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                        Work Email *
-                      </label>
-                      <input
-                        type="email"
-                        required={hasDelegatedManager}
-                        placeholder="manager@apexpm.in"
-                        value={managerEmail}
-                        onChange={(e) => setManagerEmail(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
-                    </div>
+                    {managerType === "user_pm_or_admin" && (
+                      <div className="p-3 bg-white rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div>
+                          <span className="text-xs font-black text-slate-900 block">
+                            Designated Role for this User
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Choose whether this user operates as a Property Manager or an Org Admin.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                            <input
+                              type="radio"
+                              name="managerUserRole"
+                              value="property_manager"
+                              checked={managerUserRole === "property_manager"}
+                              onChange={() => setManagerUserRole("property_manager")}
+                              className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                            />
+                            <span>Property Manager</span>
+                          </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                            <input
+                              type="radio"
+                              name="managerUserRole"
+                              value="org_admin"
+                              checked={managerUserRole === "org_admin"}
+                              onChange={() => setManagerUserRole("org_admin")}
+                              className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                            />
+                            <span>Org Admin</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

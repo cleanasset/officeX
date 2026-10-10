@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -46,7 +46,7 @@ import {
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro";
 
-export default function CompleteProfilePage() {
+function CompleteProfileContent() {
   const router = useRouter();
 
   // Active step
@@ -193,7 +193,8 @@ export default function CompleteProfilePage() {
       const hasMgr = localStorage.getItem("officex_has_manager") === "true";
       const mgrName = localStorage.getItem("officex_manager_name") || "";
       const mgrEmail = localStorage.getItem("officex_manager_email") || "";
-      const mgrType = localStorage.getItem("officex_manager_type") || "pm_agency";
+      const mgrType = localStorage.getItem("officex_manager_type") || "pm_company";
+      const mgrRole = localStorage.getItem("officex_manager_user_role") || "property_manager";
 
       setCompanyName(storedComp);
       setBrandName(storedBrand);
@@ -244,9 +245,9 @@ export default function CompleteProfilePage() {
           name: mgrName,
           email: mgrEmail,
           entityType: mgrType,
-          role: "property_manager",
+          role: mgrRole,
         });
-        generateDomainInviteLink(mgrName, mgrEmail, "property_manager", mgrType);
+        generateDomainInviteLink(mgrName, mgrEmail, mgrRole, mgrType);
         // Mark delegation completed since onboarding is finished
         setCompletedSteps((prev) => (prev.includes("delegation") ? prev : [...prev, "delegation"]));
         setAssignChoice("delegated");
@@ -1472,25 +1473,34 @@ export default function CompleteProfilePage() {
               <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Entity / Person Type</label>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Managing Entity Type</label>
                     <select
                       value={managerData.entityType}
                       onChange={(e) => setManagerData({ ...managerData, entityType: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
                     >
-                      <option value="pm_agency">Property Management Company</option>
-                      <option value="ca_firm">CA / Financial Advisory Firm</option>
-                      <option value="fm_operator">Facility Management Operator</option>
-                      <option value="leasing_agency">Leasing Brokerage Firm</option>
-                      <option value="individual_pm">Individual Property Manager</option>
+                      <option value="pm_company">PM Company (Property Management Company)</option>
+                      <option value="fm_company">FM Company (Facilities Management Company)</option>
+                      <option value="msp">MSP (Managed Service Provider)</option>
+                      <option value="user_pm_or_admin">Another User with role: Property Manager or Org Admin</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Manager / Agency Name</label>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      {managerData.entityType === "user_pm_or_admin" ? "User Full Name *" : "Entity / Company Name *"}
+                    </label>
                     <input
                       type="text"
-                      placeholder="e.g. Apex Property Management LLP"
+                      placeholder={
+                        managerData.entityType === "user_pm_or_admin"
+                          ? "e.g. Vikram Sharma"
+                          : managerData.entityType === "fm_company"
+                          ? "e.g. CBRE / JLL Facilities"
+                          : managerData.entityType === "msp"
+                          ? "e.g. SmartOps MSP Solutions"
+                          : "e.g. Apex Property Management LLP"
+                      }
                       value={managerData.name}
                       onChange={(e) => setManagerData({ ...managerData, name: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
@@ -1498,16 +1508,57 @@ export default function CompleteProfilePage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Work Email Address</label>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      {managerData.entityType === "user_pm_or_admin" ? "User Email Address *" : "Work Email Address *"}
+                    </label>
                     <input
                       type="email"
-                      placeholder="manager@apexpm.in"
+                      placeholder={
+                        managerData.entityType === "user_pm_or_admin" ? "vikram@company.com" : "manager@apexpm.in"
+                      }
                       value={managerData.email}
                       onChange={(e) => setManagerData({ ...managerData, email: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
                     />
                   </div>
                 </div>
+
+                {managerData.entityType === "user_pm_or_admin" && (
+                  <div className="p-3 bg-white rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div>
+                      <span className="text-xs font-black text-slate-900 block">
+                        Designated Role for this User
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        Choose whether this user operates as a Property Manager or an Org Admin.
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                        <input
+                          type="radio"
+                          name="profileManagerRole"
+                          value="property_manager"
+                          checked={managerData.role === "property_manager"}
+                          onChange={() => setManagerData({ ...managerData, role: "property_manager" })}
+                          className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                        />
+                        <span>Property Manager</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                        <input
+                          type="radio"
+                          name="profileManagerRole"
+                          value="org_admin"
+                          checked={managerData.role === "org_admin"}
+                          onChange={() => setManagerData({ ...managerData, role: "org_admin" })}
+                          className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                        />
+                        <span>Org Admin</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 {/* Rights Checklist */}
                 <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
@@ -1698,5 +1749,19 @@ export default function CompleteProfilePage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAFCFB] flex items-center justify-center font-bold text-slate-500">
+          Loading Workspace Setup...
+        </div>
+      }
+    >
+      <CompleteProfileContent />
+    </Suspense>
   );
 }

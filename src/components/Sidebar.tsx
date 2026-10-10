@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -331,7 +331,7 @@ const pathPortalAliases: Record<string, string> = {
   "operate": "properties"
 };
 
-export default function Sidebar() {
+function SidebarInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -660,5 +660,13 @@ export default function Sidebar() {
         </button>
       </nav>
     </>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={<aside className="w-[260px] h-screen bg-white/95 border-r border-gray-200/80 fixed left-0 top-0 z-30 shrink-0" />}>
+      <SidebarInner />
+    </Suspense>
   );
 }
