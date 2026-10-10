@@ -64,15 +64,21 @@ export default function PropertiesPortfolioPage() {
             }
           } catch {}
 
-          // Strictly filter ONLY properties belonging to this user (zero phantom properties)
-          const userPropertiesOnly = json.data.filter((p: any) => {
-            const pName = (p.property_name || "").toLowerCase().trim();
-            if (registeredPropIds.includes(p.id)) return true;
-            if (registeredPropNames.some((n: string) => n.toLowerCase().trim() === pName)) return true;
-            if (userProperty && pName === userProperty.toLowerCase().trim()) return true;
-            if (userProperty && pName.includes(userProperty.toLowerCase().trim())) return true;
-            return false;
-          });
+          // Display user registered properties or fallback to all database properties (prevents vanishing properties in new browser sessions)
+          let userPropertiesOnly = json.data;
+          if (registeredPropIds.length > 0 || registeredPropNames.length > 0 || userProperty) {
+            const filtered = json.data.filter((p: any) => {
+              const pName = (p.property_name || "").toLowerCase().trim();
+              if (registeredPropIds.includes(p.id)) return true;
+              if (registeredPropNames.some((n: string) => n.toLowerCase().trim() === pName)) return true;
+              if (userProperty && pName === userProperty.toLowerCase().trim()) return true;
+              if (userProperty && pName.includes(userProperty.toLowerCase().trim())) return true;
+              return false;
+            });
+            if (filtered.length > 0) {
+              userPropertiesOnly = filtered;
+            }
+          }
 
           setProperties(userPropertiesOnly);
           // Calculate used sqft strictly from user's active properties

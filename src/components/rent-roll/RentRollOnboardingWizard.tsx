@@ -174,9 +174,17 @@ export default function RentRollOnboardingWizard({
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
-      if (stored && stored > 0) setSubscribedCapacity(stored);
+      if (stored && stored > 0) {
+        setSubscribedCapacity(stored);
+        setAreaSqft((prev) => (prev > stored ? stored : prev));
+      }
       const storedLogo = localStorage.getItem("officex_brand_logo");
       if (storedLogo) setLogoPreview(storedLogo);
+      const storedComp = localStorage.getItem("officex_company_name") || localStorage.getItem("officex_brand_name") || "";
+      if (storedComp) {
+        setCompanyName((prev) => prev || storedComp);
+        setSpvName((prev) => prev || storedComp);
+      }
     }
   }, []);
 
@@ -604,16 +612,38 @@ export default function RentRollOnboardingWizard({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Total Leasable Area (Sq.Ft) *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">Total Leasable Area (Sq.Ft) *</label>
+                  {subscribedCapacity > 0 && (
+                    <span className="text-[10px] font-black text-[#0D7B6C] bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      Subscribed Cap: {subscribedCapacity.toLocaleString()} Sq.Ft
+                    </span>
+                  )}
+                </div>
                 <input
                   type="number"
                   min="1000"
+                  max={subscribedCapacity > 0 ? subscribedCapacity : undefined}
                   step="1000"
                   required
                   value={areaSqft}
-                  onChange={(e) => setAreaSqft(Number(e.target.value) || 0)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                  onChange={(e) => {
+                    const val = Number(e.target.value) || 0;
+                    if (subscribedCapacity > 0 && val > subscribedCapacity) {
+                      setAreaSqft(subscribedCapacity);
+                    } else {
+                      setAreaSqft(val);
+                    }
+                  }}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border ${
+                    subscribedCapacity > 0 && areaSqft > subscribedCapacity
+                      ? "border-rose-400 bg-rose-50"
+                      : "border-slate-300 bg-white"
+                  } text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none`}
                 />
+                <p className="text-[10px] text-slate-500 mt-1 font-medium">
+                  Cannot exceed your active subscription tier capacity ({subscribedCapacity.toLocaleString()} Sq.Ft).
+                </p>
               </div>
 
               <div>
@@ -744,8 +774,11 @@ export default function RentRollOnboardingWizard({
               {/* Landlord / SPV Entity Name */}
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Landlord / Entity Legal Name *
+                  Property Ownership / SPV Legal Name (Asset Holding Entity) *
                 </label>
+                <p className="text-[11px] text-slate-500 mb-1.5 font-medium">
+                  The legal entity or landlord holding title to this property (defaults to your company name).
+                </p>
                 <input
                   type="text"
                   required
@@ -754,7 +787,7 @@ export default function RentRollOnboardingWizard({
                       ? "e.g. Ramesh Kumar (Proprietor)"
                       : "e.g. Cyber Estates SPV Pvt Ltd"
                   }
-                  value={spvName}
+                  value={spvName || companyName}
                   onChange={(e) => setSpvName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
                 />

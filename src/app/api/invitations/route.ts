@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 // Production Deployed Domain Fallback — Zero localhost guarantee
 const DEPLOYED_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.officex.pro";
@@ -23,6 +26,22 @@ export async function POST(req: Request) {
         { error: "Valid email address is required" },
         { status: 400 }
       );
+    }
+
+    // Save delegated manager in Supabase users table
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(users).values({
+          email: cleanEmail,
+          fullName: name || "Property Manager",
+          passwordHash: "INVITED_DELEGATION",
+          role: "property_manager",
+        });
+      }
+    } catch (dbErr) {
+      console.error("Delegated user DB persistence note:", dbErr);
     }
 
     // Generate unique secure token

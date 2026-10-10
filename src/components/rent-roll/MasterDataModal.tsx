@@ -34,45 +34,45 @@ export default function MasterDataModal({
   const [properties, setProperties] = useState<any[]>([]);
   const [buildings, setBuildings] = useState<any[]>([]);
 
-  // Forms
+  // Forms (Clean Zero Pre-Fed Data)
   const [propForm, setPropForm] = useState({
-    property_name: "Tech Park Oasis",
-    property_code: `PR-${Date.now().toString().slice(-4)}`,
-    total_leasable_area_sqft: "125000",
+    property_name: "",
+    property_code: "",
+    total_leasable_area_sqft: "",
     property_type: "office",
-    city: "Bengaluru",
-    state: "Karnataka",
+    city: "",
+    state: "",
   });
 
   const [bldgForm, setBldgForm] = useState({
     property_id: "",
-    building_name: "Wing B Tower",
-    building_code: `BLDG-${Date.now().toString().slice(-4)}`,
-    floors: 12,
-    total_area_sqft: "60000",
-    total_seats: 400,
+    building_name: "",
+    building_code: "",
+    floors: 1,
+    total_area_sqft: "",
+    total_seats: 0,
   });
 
   const [spaceForm, setSpaceForm] = useState({
     building_id: "",
-    space_name: "Executive Suite 402",
-    space_code: `SP-${Date.now().toString().slice(-4)}`,
-    floor_name: "4th Floor",
+    space_name: "",
+    space_code: "",
+    floor_name: "",
     space_type: "suite",
-    chargeable_area_sqft: "3500",
-    carpet_area_sqft: "3000",
+    chargeable_area_sqft: "",
+    carpet_area_sqft: "",
     occupancy_status: "vacant",
   });
 
   const [occForm, setOccForm] = useState({
-    occupant_name: "Vertex Cloud Innovations",
-    occupant_code: `OCC-${Date.now().toString().slice(-4)}`,
+    occupant_name: "",
+    occupant_code: "",
     occupant_type: "company",
-    pan_number: "AAACV9876Q",
-    gst_number: "29AAACV9876Q1Z2",
-    industry_sector: "Information Technology",
-    email: "contact@vertexcloud.io",
-    phone: "+91 9876543210",
+    pan_number: "",
+    gst_number: "",
+    industry_sector: "",
+    email: "",
+    phone: "",
     is_critical_occupant: false,
     occupant_status: "active",
   });

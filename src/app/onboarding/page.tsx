@@ -38,8 +38,8 @@ function OnboardingContent() {
         localStorage.setItem("officex_manager_name", data.managerName || "");
         localStorage.setItem("officex_manager_email", data.managerEmail || "");
         localStorage.setItem("officex_manager_status", "activated");
-        localStorage.setItem("officex_manager_dashboard_activated", "true");
-        const inviteUrl = `https://www.officex.pro/dashboard/pm?role=${encodeURIComponent(data.managerType || "pm_company")}&mgr=${encodeURIComponent(data.managerName || "")}&invite=act_${Date.now()}`;
+        const origin = typeof window !== "undefined" ? window.location.origin : "https://www.officex.pro";
+        const inviteUrl = `${origin}/invite?role=${encodeURIComponent(data.managerType || "pm_company")}&mgr=${encodeURIComponent(data.managerName || "")}&prop=${encodeURIComponent(data.propertyName || "")}&owner=${encodeURIComponent(data.companyName || data.brandName || "Commercial Owner")}&invite=act_${Date.now()}`;
         localStorage.setItem("officex_manager_activation_link", inviteUrl);
 
         // Pre-assign manager to initial property

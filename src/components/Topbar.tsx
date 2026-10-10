@@ -263,138 +263,21 @@ export default function Topbar() {
           <Menu size={18} />
         </button>
 
-        {/* Breadcrumb Hierarchy */}
-        <div className="hidden xl:flex items-center gap-2 text-xs font-semibold text-slate-500">
-          <span className="text-slate-400 font-bold uppercase tracking-wider text-[11px]">OFFICEX</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-slate-800 font-bold capitalize">
-            {formattedBreadcrumb || "Commercial Portfolio"}
+        {/* Clean Company / Brand Logo & Name Badge */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs">
+          {brandLogo ? (
+            <img src={brandLogo} alt="Logo" className="h-5 max-w-[80px] object-contain rounded" />
+          ) : (
+            <Building2 size={15} className="text-[#0F8B7D]" />
+          )}
+          <span className="text-xs font-extrabold text-slate-900 max-w-[180px] truncate">
+            {brandName || "OfficeX Commercial"}
           </span>
         </div>
 
-        {/* Brand Logo Display Badge */}
-        {brandLogo && (
-          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs">
-            <img src={brandLogo} alt="Brand Logo" className="h-5 max-w-[70px] object-contain rounded" />
-            <span className="text-xs font-black text-slate-800 max-w-[130px] truncate">{brandName || "My Portfolio"}</span>
-          </div>
-        )}
-
-        {/* Multi-Client Operator Selector (§2.1, §S-02) */}
-        <div className="relative hidden sm:block" ref={clientDropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-200 transition-colors cursor-pointer"
-          >
-            <Building2 size={13} className="text-[#0F8B7D]" />
-            <span className="text-slate-500 font-semibold">Viewing:</span>
-            <span className="truncate max-w-[130px]">{selectedClient?.client_name || "Self (Portfolio)"}</span>
-            <ChevronDown size={12} className="text-slate-500" />
-          </button>
-
-          {isClientDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 text-slate-800 animate-fadeIn">
-              <div className="p-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                <span>Switch Client Account</span>
-                <span className="text-teal-600 font-semibold">§2.1 Multi-Client</span>
-              </div>
-              <div className="py-1 space-y-1 max-h-56 overflow-y-auto">
-                {clients.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => handleSelectClient(c)}
-                    className={`w-full px-3 py-2 text-left text-xs rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                      selectedClient?.id === c.id
-                        ? "bg-teal-50 text-teal-900 font-bold border border-teal-200"
-                        : "hover:bg-slate-50 text-slate-700 font-medium"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="text-sm">{c.is_self ? "🏢" : "💼"}</span>
-                      <span className="truncate">{c.client_name}</span>
-                    </div>
-                    {c.is_self && (
-                      <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-mono">
-                        Self
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <div className="pt-2 border-t border-slate-100 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsClientDropdownOpen(false);
-                    setIsOwnerStatementOpen(true);
-                  }}
-                  className="w-full px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Receipt size={13} className="text-[#0F8B7D]" />
-                  <span>View Owner Statement (§S-55)</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Global Property Selector (§2.1 App Shell) */}
-        <div className="hidden sm:block">
+        {/* Global Property Selector */}
+        <div>
           <PropertySelector />
-        </div>
-
-        {/* Compact Role Selector Dropdown (Clean, Fast Switcher) */}
-        <div className="relative" ref={roleDropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 text-xs font-bold border border-teal-200 transition-colors cursor-pointer"
-          >
-            <UserCheck size={13} className="text-[#0F8B7D]" />
-            <span className="text-teal-700 font-semibold hidden md:inline">Role:</span>
-            <span className="truncate max-w-[140px]">{activeRole.label}</span>
-            <ChevronDown size={12} className="text-teal-600" />
-          </button>
-
-          {isRoleDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-76 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 text-slate-800 animate-fadeIn">
-              <div className="p-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                <span>Switch Functional Role</span>
-                <span className="text-teal-600 font-semibold">Instant Access</span>
-              </div>
-              <div className="py-1 space-y-1 max-h-72 overflow-y-auto">
-                {AVAILABLE_ROLES.map((r) => {
-                  const Icon = r.icon;
-                  const isSelected = activeRole.key === r.key;
-                  return (
-                    <button
-                      key={r.key}
-                      type="button"
-                      onClick={() => handleSelectRole(r)}
-                      className={`w-full px-3 py-2 text-left text-xs rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                        isSelected
-                          ? "bg-teal-50 text-teal-900 font-bold border border-teal-200"
-                          : "hover:bg-slate-50 text-slate-700 font-medium"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"}`}>
-                          <Icon size={14} />
-                        </div>
-                        <div className="truncate">
-                          <div className="font-bold text-slate-900 leading-tight truncate">{r.label}</div>
-                          <div className="text-[10px] text-slate-400 font-normal truncate">{r.sub}</div>
-                        </div>
-                      </div>
-                      {isSelected && <span className="text-teal-600 font-bold text-xs">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

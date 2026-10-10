@@ -60,7 +60,7 @@ export default function ContractWizardModal({
     notice_period_days: 90,
 
     // Step 3: Billing Model & Charges
-    base_rent_rate: "85",
+    base_rent_rate: "",
     calc_basis: "per_area",
     rate_period: "month",
     billing_mode: "advance",
@@ -68,23 +68,23 @@ export default function ContractWizardModal({
 
     // Step 4: Escalation & Concessions
     escalation_type: "percentage",
-    escalation_value: "5",
-    has_escalation: true,
+    escalation_value: "",
+    has_escalation: false,
     has_concession: false,
     concession_type: "rent_free",
-    concession_months: "1",
-    concession_value: "0",
+    concession_months: "",
+    concession_value: "",
 
     // Step 5: Deposits & Clauses
-    deposit_amount_inr: "510000",
+    deposit_amount_inr: "",
     deposit_status: "pending",
-    clause_title: "Lock-in Period & Termination Restraint",
-    clause_text: "Standard commercial lock-in clause forbidding unilateral lease termination during the initial 12-month tenure.",
+    clause_title: "",
+    clause_text: "",
 
     // Step 6: Documents
-    doc_file_name: "Executed_Lease_Agreement.pdf",
+    doc_file_name: "",
     doc_type: "lease_agreement",
-    has_uploaded_doc: true,
+    has_uploaded_doc: false,
 
     // General remarks
     remarks: "",

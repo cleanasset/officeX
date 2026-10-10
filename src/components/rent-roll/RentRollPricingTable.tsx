@@ -690,8 +690,8 @@ export default function RentRollPricingTable({
 
       {/* ──── 4. INTERACTIVE CHECKOUT & ONBOARDING SHEET MODAL ──── */}
       {checkoutPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 p-5 sm:p-6 shadow-2xl text-left my-8 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-hidden">
+          <div className="relative w-full max-w-md max-h-[88vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 p-5 sm:p-6 shadow-2xl text-left my-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Close Button */}
             <button
               onClick={() => setCheckoutPlan(null)}

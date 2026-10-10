@@ -78,6 +78,7 @@ export async function POST(req: Request) {
         gst_number: body.gstin || body.gst_number || null,
         email: body.email || null,
         phone: body.phone || null,
+        address: body.billing_address || body.address || null,
         industry_sector: body.industry_sector || null,
         occupant_status: "active",
         created_by: auth.userId,

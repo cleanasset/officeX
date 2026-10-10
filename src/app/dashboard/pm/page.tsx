@@ -87,7 +87,23 @@ export default function PropertyManagerDashboardPage() {
       .catch(() => {});
 
     if (typeof window !== "undefined") {
-      const savedScope = localStorage.getItem("officex_selected_property");
+      const urlParams = new URLSearchParams(window.location.search);
+      const mgrParam = urlParams.get("mgr");
+      const propParam = urlParams.get("prop");
+      if (mgrParam) {
+        localStorage.setItem("officex_user_name", mgrParam);
+        sessionStorage.setItem("officex_user_name", mgrParam);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        localStorage.setItem("officex_role_key", "property_manager");
+        localStorage.setItem("officex_user_role", "Property Manager / Centre Manager");
+      }
+      if (propParam) {
+        setSelectedProperty(propParam);
+        localStorage.setItem("officex_active_property", propParam);
+      }
+
+      const savedScope = localStorage.getItem("officex_selected_property") || localStorage.getItem("officex_active_property");
       if (savedScope) setSelectedProperty(savedScope);
 
       const handlePropertyUpdate = (e: any) => {

@@ -33,10 +33,12 @@ import {
   CreditCard,
   Briefcase,
   Copy,
-  UserCheck
+  UserCheck,
+  Plus
 } from "lucide-react";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import RentRollOnboardingWizard, { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
+import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
 
 interface PropertySummary {
   id: string;
@@ -80,6 +82,9 @@ export default function OwnerDashboardPage() {
   const [lastRefreshed, setLastRefreshed] = useState("Just now");
   const [statementModalOpen, setStatementModalOpen] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState<boolean>(true);
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
+  const [hierarchyInitialTab, setHierarchyInitialTab] = useState<HierarchyTab>("building");
+  const [showNextStepBanner, setShowNextStepBanner] = useState(true);
 
   // Dynamic Data States (Zero pre-feeded mock data - cleanly empty until live data created)
   const [properties, setProperties] = useState<PropertySummary[]>([]);
@@ -139,7 +144,9 @@ export default function OwnerDashboardPage() {
   }, []);
 
   const handleCopyManagerActivationLink = () => {
-    const inviteLink = `https://www.officex.pro/dashboard/pm?role=${delegatedManagerType}&mgr=${encodeURIComponent(delegatedManagerName)}&invite=act_${Date.now()}`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.officex.pro";
+    const activePropName = properties[0]?.name || (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
+    const inviteLink = `${origin}/invite?role=${encodeURIComponent(delegatedManagerType)}&mgr=${encodeURIComponent(delegatedManagerName)}&prop=${encodeURIComponent(activePropName)}&owner=${encodeURIComponent(brandName || "Commercial Property Owner")}&invite=act_${Date.now()}`;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(inviteLink);
       setManagerLinkCopied(true);
@@ -237,17 +244,22 @@ export default function OwnerDashboardPage() {
           const mgrEmail = typeof window !== "undefined" ? localStorage.getItem("officex_manager_email") || "" : "";
           const mgrType = typeof window !== "undefined" ? localStorage.getItem("officex_manager_type") || "pm_agency" : "pm_agency";
 
-          // Strictly filter ONLY properties belonging to this user session (zero phantom properties)
-          liveProps = json.data
-            .filter((p: any) => {
+          let targetProps = json.data;
+          if (registeredPropIds.length > 0 || registeredPropNames.length > 0 || userProperty) {
+            const filtered = json.data.filter((p: any) => {
               const pName = (p.property_name || "").toLowerCase().trim();
               if (registeredPropIds.includes(p.id)) return true;
               if (registeredPropNames.some((n: string) => n.toLowerCase().trim() === pName)) return true;
               if (userProperty && pName === userProperty.toLowerCase().trim()) return true;
               if (userProperty && pName.includes(userProperty.toLowerCase().trim())) return true;
               return false;
-            })
-            .map((p: any) => {
+            });
+            if (filtered.length > 0) {
+              targetProps = filtered;
+            }
+          }
+
+          liveProps = targetProps.map((p: any) => {
               const assigned =
                 storedAssignments[p.id] ||
                 storedAssignments[p.property_name] ||
@@ -473,6 +485,60 @@ export default function OwnerDashboardPage() {
           </div>
         </div>
       )}
+      {/* Sequence Guide: Property Registered -> Add Buildings, Spaces & Tenants */}
+      {showNextStepBanner && (
+        <div className="bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border-2 border-teal-500/30 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs animate-in fade-in">
+          <div className="flex items-start gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#0F8B7D] text-white flex items-center justify-center shrink-0 shadow-md">
+              <Sparkles className="w-5 h-5 text-yellow-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Property Registered
+                </span>
+                <span className="text-xs font-bold text-slate-500">Next Step: Build Commercial Portfolio</span>
+              </div>
+              <h3 className="text-sm sm:text-base font-black text-slate-900 mt-1">
+                Your property is registered! Next step: Add your Buildings, Spaces &amp; Tenants
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5 max-w-2xl">
+                Configure your towers, office suites, occupant tenants, and lease contracts with zero pre-fed mock data.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              onClick={() => {
+                setHierarchyInitialTab("building");
+                setHierarchyModalOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Buildings, Spaces &amp; Tenants</span>
+            </button>
+            <button
+              onClick={() => {
+                setHierarchyInitialTab("contract");
+                setHierarchyModalOpen(true);
+              }}
+              className="px-3.5 py-2.5 rounded-xl bg-white border border-teal-200 text-[#0F8B7D] hover:bg-teal-50 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>+ New Contract</span>
+            </button>
+            <button
+              onClick={() => setShowNextStepBanner(false)}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dashboard Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3.5">
@@ -491,7 +557,7 @@ export default function OwnerDashboardPage() {
               </span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-              Commercial Rent Roll Dashboard
+              Rent Roll Dashboard
             </h1>
             <p className="text-xs text-slate-500">
               Portfolio performance, monthly revenue trends, tenant health, 90-day expiries, and multi-client owner statements.
@@ -500,6 +566,17 @@ export default function OwnerDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => {
+              setHierarchyInitialTab("property");
+              setHierarchyModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Hierarchy Setup</span>
+          </button>
+
           <button
             onClick={() => setIsOnboarded(false)}
             className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] border border-teal-200 text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
@@ -1186,6 +1263,14 @@ export default function OwnerDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Property Hierarchy, Units & Lease Contracts Modal (Zero Mock Data) */}
+      <PropertyHierarchyModal
+        isOpen={hierarchyModalOpen}
+        onClose={() => setHierarchyModalOpen(false)}
+        initialTab={hierarchyInitialTab}
+        onSuccess={fetchDashboardMetrics}
+      />
     </div>
   );
 }

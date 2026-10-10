@@ -199,9 +199,26 @@ export default function SubscriptionGate({
   useEffect(() => {
     const checkSubscriptionState = async () => {
       if (typeof window !== "undefined") {
-        // Read URL param or stored preference for selected plan
         try {
           const urlParams = new URLSearchParams(window.location.search);
+          // Delegated manager invitation bypass & auto-grant
+          if (urlParams.get("invite") || urlParams.get("mgr")) {
+            localStorage.setItem("officex_subscription", "active");
+            sessionStorage.setItem("officex_subscription", "active");
+            document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+            const mgrName = urlParams.get("mgr");
+            if (mgrName) {
+              localStorage.setItem("officex_user_name", mgrName);
+              localStorage.setItem("officex_user_role", "Property Manager / Centre Manager");
+              localStorage.setItem("officex_role_key", "property_manager");
+            }
+            setIsSubscribed(true);
+            setIsLoggedIn(true);
+            setIsChecking(false);
+            return;
+          }
+
+          // Read URL param or stored preference for selected plan
           const urlPlan = urlParams.get("plan")?.toLowerCase();
           const storedPlan = localStorage.getItem("officex_selected_plan")?.toLowerCase();
           const target = urlPlan || storedPlan;
@@ -453,11 +470,11 @@ export default function SubscriptionGate({
           </div>
         )}
 
-        <div className="w-full max-w-2xl bg-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-slate-200 relative overflow-hidden">
+        <div className="w-full max-w-2xl max-h-[88vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 relative overflow-hidden">
           {/* Top Decorative Header */}
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#0F8B7D] via-teal-400 to-[#071324]" />
 
-          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+          <div className="flex items-center justify-between px-5 sm:px-8 py-4 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-3">
               <Image src="/logo-removebg-preview.png" alt="OfficeX" width={34} height={34} className="object-contain" />
               <div>
@@ -482,6 +499,9 @@ export default function SubscriptionGate({
               </Link>
             )}
           </div>
+
+          {/* Scrollable Modal Content Body */}
+          <div className="overflow-y-auto px-5 sm:px-8 py-4 space-y-4 flex-1">
 
           {/* Step 1 Indicator: Prominent User Signed In Status or Email Capture */}
           {isLoggedIn ? (
@@ -927,6 +947,7 @@ export default function SubscriptionGate({
                 </Link>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

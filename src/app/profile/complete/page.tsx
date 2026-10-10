@@ -583,7 +583,7 @@ function CompleteProfileContent() {
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[11px] font-bold text-slate-700 shrink-0">Activation Link Dispatched:</span>
                     <span className="font-mono text-xs text-teal-800 truncate select-all">
-                      {generatedInviteLink || `${DEPLOYED_BASE_URL}/dashboard/pm?role=property_manager&invite=act_${Date.now()}`}
+                      {generatedInviteLink || `${DEPLOYED_BASE_URL}/invite?role=property_manager&mgr=${encodeURIComponent(managerData.name)}&invite=act_${Date.now()}`}
                     </span>
                   </div>
                   <button
