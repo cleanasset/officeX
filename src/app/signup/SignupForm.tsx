@@ -182,14 +182,17 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
   // Sync with searchParams, cookies, and localStorage (e.g. if arriving from Google OAuth)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedName = localStorage.getItem("officex_user_name") || getAuthCookie("officex_user_name");
-      const savedEmail = localStorage.getItem("officex_user_email") || getAuthCookie("officex_user_email");
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryName = (urlParams.get("name") || "").trim();
+      const queryEmail = (urlParams.get("email") || urlParams.get("identifier") || "").trim().toLowerCase();
+      const savedName = queryName || localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") || getAuthCookie("officex_user_name");
+      const savedEmail = queryEmail || localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || getAuthCookie("officex_user_email");
       const savedMobile = localStorage.getItem("officex_user_mobile") || getAuthCookie("officex_user_mobile");
       const sessionActive =
         localStorage.getItem("officex_session_active") === "1" ||
         getAuthCookie("officex_session_active") === "1" ||
         getAuthCookie("officex_auth") === "1";
-      if (savedName && !fullName) setFullName(savedName);
+      if (savedName && savedName !== "Commercial Account" && !fullName) setFullName(savedName);
       if (savedEmail && !email) setEmail(savedEmail);
       if (savedMobile && !mobileNumber) setMobileNumber(savedMobile);
       if (sessionActive || savedEmail) setIsGoogleSession(true);
@@ -1563,7 +1566,7 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
                         onChange={(e) => setAssetType(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                       >
-                        <option value="OFFICE">Grade-A Commercial Office</option>
+                        <option value="OFFICE">Commercial Office</option>
                         <option value="IT_PARK">IT / Tech Park Campus</option>
                         <option value="RETAIL">Commercial Retail Hub</option>
                         <option value="WAREHOUSE">Logistics & Warehousing</option>

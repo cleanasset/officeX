@@ -193,11 +193,11 @@ export default function RentRollProductPage() {
               {/* Action Buttons — Clean, Direct & High-Impact */}
               <div className="flex flex-wrap items-center gap-3 mb-4 w-full sm:w-auto">
                 <Link
-                  href={isSubscribed ? "/properties/rent-roll?tab=dashboard" : "/operate/rent-roll/pricing"}
+                  href={isSubscribed ? "/dashboard/owner" : "/operate/rent-roll/pricing"}
                   className="px-6 py-3.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white font-extrabold text-xs sm:text-sm transition-all shadow-md shadow-[#0D7B6C]/25 hover:shadow-lg hover:scale-102 active:scale-98 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto group"
                 >
                   <Building2 size={16} className="text-teal-200 group-hover:scale-110 transition-transform" />
-                  <span>{isSubscribed ? "Open Rent Roll Register" : "Get Started · View Pricing"}</span>
+                  <span>{isSubscribed ? "Open Rent Roll Dashboard" : "Get Started · View Pricing"}</span>
                   <ArrowRight size={15} />
                 </Link>
                 <Link
@@ -520,11 +520,11 @@ export default function RentRollProductPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5">
             <Link
-              href={isSubscribed ? "/properties/rent-roll?tab=dashboard" : "/operate/rent-roll/pricing"}
+              href={isSubscribed ? "/dashboard/owner" : "/operate/rent-roll/pricing"}
               className="px-7 py-3.5 bg-white text-[#0D7B6C] hover:bg-slate-100 font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 group"
             >
               <CreditCard size={15} className="text-[#0D7B6C] group-hover:scale-110 transition-transform" />
-              <span>{isSubscribed ? "Open Rent Roll Register" : "Get Started · Select Plan"}</span>
+              <span>{isSubscribed ? "Open Rent Roll Dashboard" : "Get Started · Select Plan"}</span>
               <ArrowRight size={14} />
             </Link>
             <Link

@@ -28,8 +28,9 @@ import {
   Info,
   X,
 } from "lucide-react";
-import MarketingHeader from "@/components/marketing/MarketingHeader";
-import Footer from "@/components/Footer";
+import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 // Rent Roll Modular Subcomponents (§S-10–S-25)
 import ContractDetailDrawer from "@/components/rent-roll/ContractDetailDrawer";
@@ -83,7 +84,9 @@ export default function RentRollRegisterPage() {
 
   const effectiveAumSqft = Number(registerData?.summary?.total_leasable_area_sqft || 0);
   const capacityPercent = Math.min(100, Math.max(0, (effectiveAumSqft / MAX_FREE_CAPACITY_SQFT) * 100));
-  const isApproachingLimit = capacityPercent >= 90;
+  const percentRemaining = Math.max(0, 100 - capacityPercent);
+  // STRICT REQUIREMENT: Only triggers when strictly 2% or less capacity remains
+  const isApproachingLimit = percentRemaining <= 2 && percentRemaining > 0 && effectiveAumSqft > 0;
 
   useEffect(() => {
     fetchRegisterData();
@@ -185,238 +188,130 @@ export default function RentRollRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans flex flex-col antialiased selection:bg-[#0D7B6C] selection:text-white">
-      {/* Universal Marketing & Platform Header */}
-      <MarketingHeader activePath="/operate/rent-roll" />
+    <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">
+      {/* Canonical Left Sidebar */}
+      <Sidebar />
 
-      {/* Role View Context Banner (§2.2 Navigation by Role & §S-01) - Pure Light Theme */}
-      <div className="bg-teal-50/70 text-slate-800 px-3 sm:px-6 lg:px-8 py-2.5 border-b border-teal-100">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-teal-700 font-bold uppercase tracking-wider text-[10px] bg-teal-100/80 border border-teal-200 px-2 py-0.5 rounded">
-              Active Context: Rent Roll Register (§S-10)
-            </span>
-            <span className="text-slate-600 hidden md:inline text-[11px]">
-              Complete master schedule of leasable spaces, contract terms &amp; escalations.
-            </span>
-          </div>
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0F8B7D] hover:bg-[#0c7065] text-white text-[11px] font-bold shadow-2xs transition"
-            >
-              <span>Go to Role Dashboard</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      </div>
-      <div className="border-b border-slate-200/80 bg-white/70 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2.5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs text-slate-500 font-medium">
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href="/" className="hover:text-slate-900 transition-colors">Home</Link>
-            <span>/</span>
-            <Link href="/operate" className="hover:text-slate-900 transition-colors">Operate</Link>
-            <span>/</span>
-            <span className="text-slate-900 font-semibold">Rent Roll Register</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
-              PHASE P1 LIVE
-            </span>
-          </div>
+      {/* Main Panel beside Sidebar */}
+      <div className="flex-1 min-w-0 pl-0 md:pl-[260px] flex flex-col max-w-full overflow-x-hidden">
+        <Topbar />
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none shrink-0">
-            <button
-              onClick={() => setMasterDataOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              Asset Masters (§S-11–14)
-            </button>
-            <button
-              onClick={() => setExpiryOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              Expiry Pipeline (§S-24)
-            </button>
-            <button
-              onClick={() => setEscalationOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <TrendingUp className="w-3.5 h-3.5" />
-              Escalation Calendar (§S-25)
-            </button>
-            <button
-              onClick={() => setDealsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Deals (§S-18)
-            </button>
-            <button
-              onClick={() => setImportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              Import (§S-30)
-            </button>
-            <Link
-              href="/operate/invoices"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <FileText className="w-3.5 h-3.5 text-blue-700" />
-              Invoices & Billing (§S-12)
-            </Link>
-            <button
-              onClick={() => setPaymentsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              Payments & Collections (§5.9)
-            </button>
-            <Link
-              href="/approvals"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
-              Approvals Inbox (§S-06)
-            </Link>
-            <Link
-              href="/deposits"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-              Deposits (§S-47)
-            </Link>
-            <Link
-              href="/operations/meters"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <Gauge className="w-3.5 h-3.5 text-amber-700" />
-              Meters (§S-31)
-            </Link>
-            <Link
-              href="/operations/seat-counts"
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <Users className="w-3.5 h-3.5 text-purple-700" />
-              Seat Counts (§S-32)
-            </Link>
-            <button
-              onClick={() => setMultiClientOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-semibold whitespace-nowrap transition"
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              Multi-Client & Flex (§5.10–11)
-            </button>
-            <button
-              onClick={() => {
-                setWizardPrefill(null);
-                setWizardOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold shadow-xs whitespace-nowrap transition"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Contract (§S-21)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main SaaS Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-28 md:pb-8">
-        {/* Capacity Telemetry & Grace Period Protection Strip */}
-        {isApproachingLimit ? (
-          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400 bg-linear-to-r from-amber-50 via-orange-50/60 to-amber-50 p-4 sm:p-5 shadow-sm">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center shrink-0 border border-amber-300">
-                  <AlertTriangle className="w-5 h-5 text-amber-700 animate-pulse" />
+        <div className="flex-1 mt-[60px] min-w-0 max-w-full">
+          {/* Main SaaS Workspace */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6 pb-28 md:pb-8">
+            {/* Clean Executive Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <Link href="/properties" className="hover:text-slate-800 transition">Portfolio</Link>
+                  <span>/</span>
+                  <span className="text-[#0F8B7D] font-bold">Rent Roll</span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-200 text-amber-950">
-                      Capacity Warning · 90%+ Threshold Reached
-                    </span>
-                    <span className="text-xs font-bold text-teal-900 bg-teal-100/90 px-2 py-0.5 rounded-md flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
-                      Grace Period Active (Zero Lockout)
-                    </span>
-                  </div>
-                  <h3 className="text-base font-extrabold text-slate-900 mt-1">
-                    Approaching Licensed Quota ({effectiveAumSqft.toLocaleString("en-IN")} / 50,00,00,000 Sq.Ft · {capacityPercent.toFixed(1)}%)
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-0.5 max-w-3xl leading-relaxed">
-                    Under OfficeX commercial policies, <strong className="text-slate-900">operations are never hard-locked</strong>. Invoicing, agreement generation, rent collection, and sub-meter logging continue uninterrupted during your commercial grace period.
-                  </p>
-                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+                  Rent Roll Register
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Schedule of leasable commercial spaces, active occupant agreements, and step escalations.
+                </p>
               </div>
-              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
-                <Link
-                  href="/operate/rent-roll/pricing"
-                  className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
-                >
-                  <span>Expand Quota (From ₹50/sq.ft)</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
+
+              {/* Clean Action Buttons */}
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <button
-                  onClick={() => setShowGracePeriodModal(true)}
-                  className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-xl transition"
+                  type="button"
+                  onClick={() => setImportOpen(true)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
-                  Grace Policy
+                  <FileSpreadsheet size={14} className="text-teal-600" />
+                  <span>Import Data</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpiryOpen(true)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Clock size={14} className="text-amber-600" />
+                  <span>Expiries</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEscalationOpen(true)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <TrendingUp size={14} className="text-indigo-600" />
+                  <span>Escalations</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWizardPrefill(null);
+                    setWizardOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Plus size={15} />
+                  <span>New Contract</span>
                 </button>
               </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="mt-3.5 pt-3 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div className="flex-1 w-full bg-amber-200/80 h-2 rounded-full overflow-hidden mr-4">
-                <div
-                  className="bg-amber-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, capacityPercent)}%` }}
-                />
-              </div>
-              <div className="text-[11px] font-mono font-semibold text-amber-950 shrink-0">
-                {effectiveAumSqft.toLocaleString("en-IN")} / 50,00,00,000 Sq.Ft · {capacityPercent.toFixed(1)}% Capacity
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-teal-200/80 bg-linear-to-r from-teal-50/60 via-slate-50/50 to-white p-3.5 sm:p-4 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-4 h-4 text-teal-700" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-teal-900">
-                      Portfolio Capacity: 50,00,00,000 Sq.Ft Allocated
-                    </span>
-                    <span className="text-[10px] font-semibold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full">
-                      100% Free Coupon Active
-                    </span>
-                    <span className="text-[10px] font-medium text-slate-500">
-                      Tier Rates: ₹50 · ₹100 · ₹200 / sq.ft
-                    </span>
+            {/* Capacity Warning Alert (Only triggers when capacity approaches 90%+ / 5% remaining) */}
+            {isApproachingLimit && (
+              <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400 bg-linear-to-r from-amber-50 via-orange-50/60 to-amber-50 p-4 sm:p-5 shadow-sm">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center shrink-0 border border-amber-300">
+                      <AlertTriangle className="w-5 h-5 text-amber-700 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-200 text-amber-950">
+                          Capacity Warning · 2% or Less Remaining (98%+ Threshold)
+                        </span>
+                        <span className="text-xs font-bold text-teal-900 bg-teal-100/90 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
+                          Grace Period Active (Zero Lockout)
+                        </span>
+                      </div>
+                      <h3 className="text-base font-extrabold text-slate-900 mt-1">
+                        Approaching Licensed Quota ({effectiveAumSqft.toLocaleString("en-IN")} / 50,00,00,000 Sq.Ft · {capacityPercent.toFixed(1)}%)
+                      </h3>
+                      <p className="text-xs text-slate-600 mt-0.5 max-w-3xl leading-relaxed">
+                        Under OfficeX commercial policies, operations are never hard-locked. Invoicing, agreement generation, rent collection, and sub-meter logging continue uninterrupted during your commercial grace period.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {effectiveAumSqft.toLocaleString("en-IN")} Sq.Ft active ({capacityPercent < 0.01 ? "<0.01%" : `${capacityPercent.toFixed(2)}%`}). Protected by zero-lockout commercial grace policy.
-                  </p>
+                  <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
+                    <Link
+                      href="/operate/rent-roll/pricing"
+                      className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
+                    >
+                      <span>Expand Quota (From ₹50/sq.ft)</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                    <button
+                      onClick={() => setShowGracePeriodModal(true)}
+                      className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-xl transition"
+                    >
+                      Grace Policy
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-3.5 pt-3 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex-1 w-full bg-amber-200/80 h-2 rounded-full overflow-hidden mr-4">
+                    <div
+                      className="bg-amber-600 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, capacityPercent)}%` }}
+                    />
+                  </div>
+                  <div className="text-[11px] font-mono font-semibold text-amber-950 shrink-0">
+                    {effectiveAumSqft.toLocaleString("en-IN")} / 50,00,00,000 Sq.Ft · {capacityPercent.toFixed(1)}% Capacity
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-xs shrink-0">
-                <Link
-                  href="/operate/rent-roll/pricing"
-                  className="text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1 hover:underline text-xs"
-                >
-                  <span>Pricing &amp; Plans</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
         {/* KPI Summary Tiles (§2.3 List Page Pattern) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -700,8 +595,22 @@ export default function RentRollRegisterPage() {
                   </tr>
                 ) : visibleRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-400">
-                      No contracts or spaces matching the current filter criteria.
+                    <td colSpan={8} className="p-12 text-center text-slate-500">
+                      <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                        <FileText className="w-8 h-8 text-slate-300 mb-1" />
+                        <span className="font-bold text-slate-700 text-sm">No contracts or spaces recorded yet</span>
+                        <span className="text-xs text-slate-400">Initialize your rent roll register by creating your first lease contract or importing data.</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWizardPrefill(null);
+                            setWizardOpen(true);
+                          }}
+                          className="mt-2 px-4 py-2 rounded-xl bg-[#0F8B7D] text-white font-bold text-xs hover:bg-[#0c7064] transition shadow-xs cursor-pointer"
+                        >
+                          + Add First Contract
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -1011,8 +920,11 @@ export default function RentRollRegisterPage() {
         </div>
       )}
 
-      {/* Platform Footer */}
-      <Footer />
+        </div>
+      </div>
+
+      {/* Fixed Mobile Bottom App Bar */}
+      <MobileBottomNav />
     </div>
   );
 }

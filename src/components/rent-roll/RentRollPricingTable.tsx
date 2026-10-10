@@ -90,8 +90,20 @@ export default function RentRollPricingTable({
           // Non-blocking
         }
 
-        if (storedEmail) setUserEmail(storedEmail);
-        if (storedName) setUserName(storedName);
+        // Never prefill generic or dummy values
+        if (!storedName || storedName.toLowerCase().includes("commercial account") || storedName.toLowerCase().includes("subscriber")) {
+          storedName = "";
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("officex_user_name");
+            sessionStorage.removeItem("officex_user_name");
+          }
+        }
+        if (!storedEmail) {
+          storedName = "";
+        }
+
+        setUserEmail(storedEmail);
+        setUserName(storedName);
         if (storedRole) setUserRole(storedRole);
         setIsAuthLoaded(true);
       }
@@ -99,10 +111,36 @@ export default function RentRollPricingTable({
     initAuth();
   }, []);
 
-  // Calculator State
-  const [calculatorRate, setCalculatorRate] = useState<number>(100);
-  const [customSqft, setCustomSqft] = useState<number>(250000);
-  const [sliderSqft, setSliderSqft] = useState<number>(250000);
+  const handleNameChange = (val: string) => {
+    setUserName(val);
+    if (typeof window !== "undefined") {
+      const clean = val.trim();
+      if (clean && clean !== "Commercial Account") {
+        localStorage.setItem("officex_user_name", clean);
+        sessionStorage.setItem("officex_user_name", clean);
+        document.cookie = `officex_user_name=${encodeURIComponent(clean)}; path=/; max-age=2592000; SameSite=Lax`;
+      }
+    }
+  };
+
+  const handleEmailChange = (val: string) => {
+    setUserEmail(val);
+    if (typeof window !== "undefined") {
+      const clean = val.trim().toLowerCase();
+      if (clean) {
+        localStorage.setItem("officex_user_email", clean);
+        sessionStorage.setItem("officex_user_email", clean);
+        document.cookie = `officex_user_email=${encodeURIComponent(clean)}; path=/; max-age=2592000; SameSite=Lax`;
+      }
+    }
+  };
+
+  // Area Scope State (User enters / selects their property sq.ft)
+  const [customSqft, setCustomSqft] = useState<number>(50000);
+  const [sliderSqft, setSliderSqft] = useState<number>(50000);
+
+  // Quick Preset Sq.Ft Chips
+  const SQFT_PRESETS = [10000, 25000, 50000, 100000, 250000, 500000];
 
   // Checkout Modal State
   const [checkoutPlan, setCheckoutPlan] = useState<SelectedPlanInfo | null>(null);
@@ -112,33 +150,45 @@ export default function RentRollPricingTable({
   const [showPromoField, setShowPromoField] = useState<boolean>(false);
   const [processingActivation, setProcessingActivation] = useState(false);
 
+  const handleSqftChange = (val: number) => {
+    const clamped = Math.max(1, Math.round(val) || 0);
+    setCustomSqft(clamped);
+    setSliderSqft(clamped);
+    if (checkoutPlan) {
+      const newTotal = clamped * checkoutPlan.ratePerSqft;
+      setCheckoutPlan((prev) =>
+        prev
+          ? {
+              ...prev,
+              sqftNumber: clamped,
+              sqftLimit: `${clamped.toLocaleString("en-IN")} sq.ft`,
+              basePriceNum: newTotal,
+              monthlyPrice: newTotal,
+            }
+          : null
+      );
+    }
+  };
+
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
-    setSliderSqft(val);
-    setCustomSqft(val);
+    handleSqftChange(val);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value.replace(/,/g, "")) || 0;
-    setCustomSqft(val);
-    if (val <= 1000000) setSliderSqft(val);
+    const raw = e.target.value.replace(/[^0-9]/g, "");
+    const val = Number(raw) || 0;
+    handleSqftChange(val);
   };
 
-  const calculatedCalculatorAnnualPrice = customSqft * calculatorRate;
-
-  // Commercial Slabs: Compact, punchy 4 bullets each with canonical ₹50, ₹100, ₹200 plans
+  // Commercial Slabs: ₹50, ₹100, ₹200 per sq.ft with specific tier benefits
   const SLABS = [
     {
       id: "starter",
       name: "Commercial Starter",
-      badge: "Up to 50k Sq.Ft",
+      badge: "Standalone Tower",
       ratePerSqft: 50,
-      monthlyPrice: 50,
-      sqftLimit: "50,000 sq.ft",
-      sqftNumber: 50000,
-      target: "Standalone Commercial Tower",
-      basePriceDisplay: "₹50 / mo",
-      basePriceNum: 50,
+      target: "Standalone Commercial Towers & Small Portfolios",
       popular: false,
       ctaText: "Select Starter",
       features: [
@@ -150,15 +200,10 @@ export default function RentRollPricingTable({
     },
     {
       id: "techpark",
-      name: "Grade-A Tech Park",
+      name: "Tech Park Campus",
       badge: "Most Popular",
       ratePerSqft: 100,
-      monthlyPrice: 100,
-      sqftLimit: "2,50,000 sq.ft",
-      sqftNumber: 250000,
-      target: "Multi-Tower Tech Parks & Campuses",
-      basePriceDisplay: "₹100 / mo",
-      basePriceNum: 100,
+      target: "Multi-Tower Tech Parks & Commercial Campuses",
       popular: true,
       ctaText: "Select Tech Park",
       features: [
@@ -173,16 +218,11 @@ export default function RentRollPricingTable({
       name: "REIT Mega-Portfolio",
       badge: "Enterprise Scale",
       ratePerSqft: 200,
-      monthlyPrice: 200,
-      sqftLimit: "50,00,00,000 sq.ft",
-      sqftNumber: 500000000,
-      target: "Institutional Funds & REITs",
-      basePriceDisplay: "₹200 / mo",
-      basePriceNum: 200,
+      target: "Institutional Funds, REITs & Mega Portfolios",
       popular: false,
       ctaText: "Select Enterprise",
       features: [
-        "Up to 50,00,00,000 Sq.Ft licensed capacity allocation",
+        "Consolidated portfolio aggregation across multiple cities",
         "14-Day commercial grace period (zero hard lockouts)",
         "Maker-checker approvals & custom institutional RBAC",
         "REST APIs & webhooks with enterprise SSO (SAML 2.0)",
@@ -190,20 +230,26 @@ export default function RentRollPricingTable({
     },
   ];
 
-  // Open checkout modal for plan review, coupon entry, or Razorpay payment
-  const handleChoosePlan = (slab: typeof SLABS[0]) => {
+  // Open checkout modal for plan review with exact sq.ft calculation
+  const handleChoosePlan = (slab: typeof SLABS[0], chosenSqft?: number) => {
+    const area = chosenSqft || customSqft || 50000;
+    const totalPrice = area * slab.ratePerSqft;
+
     if (typeof window !== "undefined") {
       localStorage.setItem("officex_selected_plan", slab.id);
       sessionStorage.setItem("officex_selected_plan", slab.id);
+    }
+    if (userName && userName.toLowerCase().includes("commercial account")) {
+      setUserName("");
     }
     const planInfo: SelectedPlanInfo = {
       id: slab.id,
       name: slab.name,
       ratePerSqft: slab.ratePerSqft,
-      monthlyPrice: slab.monthlyPrice,
-      sqftLimit: slab.sqftLimit,
-      sqftNumber: slab.sqftNumber,
-      basePriceNum: slab.basePriceNum,
+      monthlyPrice: totalPrice,
+      sqftLimit: `${area.toLocaleString("en-IN")} sq.ft`,
+      sqftNumber: area,
+      basePriceNum: totalPrice,
     };
     setCheckoutPlan(planInfo);
     setCouponInput("");
@@ -217,24 +263,6 @@ export default function RentRollPricingTable({
     handleChoosePlan(slab);
   };
 
-  const handleOpenCalculatorCheckout = () => {
-    const customPlan: SelectedPlanInfo = {
-      id: `custom-${calculatorRate}`,
-      name: `Custom Scope (${customSqft.toLocaleString("en-IN")} Sq.Ft)`,
-      ratePerSqft: calculatorRate,
-      monthlyPrice: calculatorRate,
-      sqftLimit: `${customSqft.toLocaleString("en-IN")} sq.ft`,
-      sqftNumber: customSqft,
-      basePriceNum: calculatorRate,
-    };
-    setCheckoutPlan(customPlan);
-    setCouponInput("");
-    setAppliedCoupon(null);
-    setCouponError(null);
-    setShowPromoField(true);
-    setProcessingActivation(false);
-  };
-
   // Apply Coupon Logic
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,6 +272,18 @@ export default function RentRollPricingTable({
     if (code === "OFFICEX100" || code === "RENTROLL12" || code === "FREE100") {
       setAppliedCoupon(code);
       setCouponError(null);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_applied_coupon", code);
+        sessionStorage.setItem("officex_applied_coupon", code);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        localStorage.setItem("officex_subscribed_sqft", String(customSqft || 50000));
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+        if (userEmail) {
+          localStorage.setItem(`officex_sub_${userEmail}`, "active");
+          document.cookie = `officex_sub_${encodeURIComponent(userEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
+        }
+      }
     } else {
       setCouponError("Invalid coupon code. Use OFFICEX100 or RENTROLL12 for launch access.");
     }
@@ -267,10 +307,12 @@ export default function RentRollPricingTable({
       (typeof window !== "undefined"
         ? localStorage.getItem("officex_user_name") || getCookie("officex_user_name")
         : "") ||
-      "Commercial Account"
-    ).trim();
+      (finalEmail ? finalEmail.split("@")[0] : "")
+    ).trim() === "Commercial Account" ? (finalEmail ? finalEmail.split("@")[0] : "") : (
+      (userName || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") || "" : "") || (finalEmail ? finalEmail.split("@")[0] : "")).trim()
+    );
 
-    const priceInRupees = plan.basePriceNum || 100;
+    const priceInRupees = (plan.sqftNumber * plan.ratePerSqft) || plan.basePriceNum || 50;
     const amountInPaise = priceInRupees * 100;
 
     setProcessingActivation(true);
@@ -296,7 +338,7 @@ export default function RentRollPricingTable({
             sessionStorage.setItem("officex_subscription", "active");
             localStorage.setItem("officex_user_email", finalEmail);
             localStorage.setItem("officex_user_name", finalName);
-            localStorage.setItem("officex_user_role", userRole || "owner");
+            localStorage.setItem("officex_user_role", "owner");
             localStorage.setItem("officex_selected_plan", plan.id);
             localStorage.setItem("officex_subscription_plan", plan.id);
             localStorage.setItem(`officex_sub_${finalEmail}`, "active");
@@ -352,10 +394,12 @@ export default function RentRollPricingTable({
       (typeof window !== "undefined"
         ? localStorage.getItem("officex_user_name") || getCookie("officex_user_name")
         : "") ||
-      "Commercial Account"
-    ).trim();
+      (finalEmail ? finalEmail.split("@")[0] : "")
+    ).trim() === "Commercial Account" ? (finalEmail ? finalEmail.split("@")[0] : "") : (
+      (userName || (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") || "" : "") || (finalEmail ? finalEmail.split("@")[0] : "")).trim()
+    );
 
-    const finalRole = userRole || "owner";
+    const finalRole = "owner";
     const planId = checkoutPlan?.id || "techpark";
 
     setProcessingActivation(true);
@@ -391,8 +435,20 @@ export default function RentRollPricingTable({
       // Non-blocking
     }
 
+    const userRoleKey = typeof window !== "undefined"
+      ? (localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key") || "")
+      : "";
+    const roleDashboards: Record<string, string> = {
+      owner: "/dashboard/owner",
+      property_manager: "/dashboard/pm",
+      facility_manager: "/dashboard/fm",
+      leasing_manager: "/dashboard/leasing",
+      finance_manager: "/dashboard/finance",
+    };
+    const target = (userRoleKey && roleDashboards[userRoleKey]) ? roleDashboards[userRoleKey] : "/onboarding";
+
     setTimeout(() => {
-      router.push("/dashboard/owner");
+      router.push(target);
     }, 350);
   };
 
@@ -429,180 +485,194 @@ export default function RentRollPricingTable({
         </div>
       )}
 
-      {/* ──── 1. COMPACT, SLEEK 3 PRICING BOXES ──── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch max-w-6xl mx-auto mb-10">
-        {SLABS.map((slab) => (
-          <div
-            key={slab.id}
-            className={`relative rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-200 ${
-              slab.popular
-                ? "bg-gradient-to-b from-white via-white to-teal-50/20 border-2 border-[#0D7B6C] shadow-lg shadow-teal-950/5 ring-2 ring-[#0D7B6C]/10"
-                : "bg-white border border-slate-200/90 shadow-2xs hover:shadow-md"
-            }`}
-          >
-            {/* Badge */}
-            {slab.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#0D7B6C] text-white text-[10px] font-bold tracking-wider uppercase shadow-xs flex items-center gap-1 whitespace-nowrap">
-                <Sparkles size={11} />
-                <span>{slab.badge}</span>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-                  {slab.name}
-                </h3>
-                {!slab.popular && (
-                  <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                    {slab.badge}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mb-4">
-                {slab.target}
-              </p>
-
-              {/* Compact Price Header */}
-              <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 mb-4">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-slate-900 font-mono tracking-tight">
-                    ₹{slab.monthlyPrice}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-500">
-                    / mo
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 pt-1 border-t border-slate-200/60 font-medium">
-                  <span>Capacity: <strong className="text-slate-800">{slab.sqftLimit}</strong></span>
-                  <span className="font-mono text-[#0D7B6C] font-bold">Standard Billing</span>
-                </div>
-              </div>
-
-              {/* Concise 4-Bullet Feature List */}
-              <div className="space-y-2 mb-6 text-left">
-                {slab.features.map((feat, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-slate-700 leading-snug">
-                    <Check
-                      size={14}
-                      className={`shrink-0 mt-0.5 ${
-                        slab.popular ? "text-[#0D7B6C]" : "text-emerald-600"
-                      }`}
-                    />
-                    <span>{feat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CTA Button */}
-            <div>
-              <button
-                type="button"
-                onClick={() => handleChoosePlan(slab)}
-                disabled={processingActivation}
-                className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 ${
-                  slab.popular
-                    ? "bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/20 hover:shadow-md"
-                    : "bg-slate-900 hover:bg-slate-800 text-white"
-                }`}
-              >
-                {processingActivation && checkoutPlan?.id === slab.id ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin" />
-                    <span>Opening Gateway...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={13} />
-                    <span>
-                      {userEmail
-                        ? `Choose Plan · Pay ₹${slab.monthlyPrice}`
-                        : slab.ctaText}
-                    </span>
-                    <ArrowRight size={13} />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ──── 2. COMPACT, STREAMLINED AREA CALCULATOR ──── */}
-      <div className="max-w-4xl mx-auto mb-10 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 text-slate-900 text-left">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          {/* Left: Rate pills and area slider */}
+      {/* ──── 1. MASTER PROPERTY AREA (SQ.FT) SELECTOR ──── */}
+      <div className="max-w-6xl mx-auto mb-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 text-left">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex-1 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Sliders size={13} className="text-[#0D7B6C]" />
-                <span className="text-xs font-bold text-slate-800">
-                  Quick Scope Calculator
-                </span>
-              </div>
-
-              {/* Rate Pills */}
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                {[50, 100, 200].map((rate) => (
-                  <button
-                    key={rate}
-                    type="button"
-                    onClick={() => setCalculatorRate(rate)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                      calculatorRate === rate
-                        ? "bg-[#0D7B6C] text-white shadow-2xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    ₹{rate}/mo
-                  </button>
-                ))}
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-teal-50 text-[#0D7B6C] flex items-center justify-center font-bold text-sm border border-teal-200/60">
+                📐
+              </span>
+              <div>
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                  Enter Your Leasable Property Area (Sq.Ft)
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Plans are charged fixed at <strong className="text-slate-800">₹50, ₹100, or ₹200 per sq.ft</strong> based on tier capabilities. Choose or type your area below:
+                </p>
               </div>
             </div>
 
-            {/* Slider with live area readout */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">Area Scope:</span>
-                <span className="font-mono font-bold text-slate-900">
-                  {customSqft.toLocaleString("en-IN")} sq.ft
-                </span>
-              </div>
+            {/* Slider */}
+            <div className="space-y-1 pt-1">
               <input
                 type="range"
-                min="10000"
+                min="1000"
                 max="1000000"
-                step="10000"
+                step="1000"
                 value={sliderSqft}
                 onChange={handleSliderChange}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0D7B6C]"
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0D7B6C]"
               />
             </div>
+
+            {/* Preset Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">
+                Quick Select:
+              </span>
+              {SQFT_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handleSqftChange(preset)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    customSqft === preset
+                      ? "bg-[#0D7B6C] text-white shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
+                  }`}
+                >
+                  {preset >= 100000 ? `${preset / 100000} Lakh sq.ft` : `${(preset / 1000).toLocaleString("en-IN")}k sq.ft`}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Right: Calculated Amount & CTA */}
-          <div className="flex items-center justify-between sm:justify-end gap-4 sm:border-l sm:border-slate-200/80 sm:pl-5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-            <div className="text-left sm:text-right">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Selected Tier
+          {/* Direct Input Field */}
+          <div className="lg:w-80 bg-slate-50 rounded-2xl p-4 border border-slate-200/90 text-left shrink-0 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+              Direct Area Input
+            </span>
+            <div className="relative">
+              <input
+                type="text"
+                value={customSqft.toLocaleString("en-IN")}
+                onChange={handleInputChange}
+                className="w-full pl-3 pr-14 py-2 font-mono font-black text-xl rounded-xl border border-slate-300 bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+              />
+              <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-500">
+                sq.ft
               </span>
-              <span className="text-xl font-black text-slate-900 font-mono">
-                ₹{calculatorRate}
-              </span>
-              <span className="text-[10px] text-slate-400 block">/ month (all inclusive)</span>
             </div>
-
-            <button
-              onClick={handleOpenCalculatorCheckout}
-              disabled={processingActivation}
-              className="px-4 py-2 bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer shrink-0 disabled:opacity-60"
-            >
-              <span>{userEmail ? `Pay ₹${calculatorRate} & Subscribe` : "Subscribe Scope"}</span>
-              <ArrowRight size={13} />
-            </button>
+            <p className="text-[10px] text-slate-400 font-medium">
+              Type any exact commercial square footage you manage.
+            </p>
           </div>
         </div>
+      </div>
+
+      {/* ──── 2. 3 TIER PRICING CARDS DYNAMICALLY SCOPED ──── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch max-w-6xl mx-auto mb-10">
+        {SLABS.map((slab) => {
+          const totalTierPrice = customSqft * slab.ratePerSqft;
+          return (
+            <div
+              key={slab.id}
+              className={`relative rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-200 ${
+                slab.popular
+                  ? "bg-gradient-to-b from-white via-white to-teal-50/20 border-2 border-[#0D7B6C] shadow-lg shadow-teal-950/5 ring-2 ring-[#0D7B6C]/10"
+                  : "bg-white border border-slate-200/90 shadow-2xs hover:shadow-md"
+              }`}
+            >
+              {/* Badge */}
+              {slab.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#0D7B6C] text-white text-[10px] font-bold tracking-wider uppercase shadow-xs flex items-center gap-1 whitespace-nowrap">
+                  <Sparkles size={11} />
+                  <span>{slab.badge}</span>
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                    {slab.name}
+                  </h3>
+                  {!slab.popular && (
+                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {slab.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium mb-4">
+                  {slab.target}
+                </p>
+
+                {/* Clear Per Sq.Ft Rate & Total Calculation */}
+                <div className="p-3.5 bg-slate-50/90 rounded-xl border border-slate-200/80 mb-4">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-slate-900 font-mono tracking-tight">
+                        ₹{slab.ratePerSqft}
+                      </span>
+                      <span className="text-xs font-bold text-slate-600">
+                        / sq.ft
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#0D7B6C] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                      Direct Rate
+                    </span>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-200 text-xs">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span className="font-medium">Total for {customSqft.toLocaleString("en-IN")} sq.ft:</span>
+                      <span className="font-mono font-black text-slate-900 text-base">
+                        ₹{totalTierPrice.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                      Calculation: {customSqft.toLocaleString("en-IN")} sq.ft × ₹{slab.ratePerSqft}/sq.ft
+                    </p>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="space-y-2 mb-6 text-left">
+                  {slab.features.map((feat, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-slate-700 leading-snug">
+                      <Check
+                        size={14}
+                        className={`shrink-0 mt-0.5 ${
+                          slab.popular ? "text-[#0D7B6C]" : "text-emerald-600"
+                        }`}
+                      />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Button */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleChoosePlan(slab)}
+                  disabled={processingActivation}
+                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 ${
+                    slab.popular
+                      ? "bg-[#0D7B6C] hover:bg-[#0A6357] text-white shadow-[#0D7B6C]/20 hover:shadow-md"
+                      : "bg-slate-900 hover:bg-slate-800 text-white"
+                  }`}
+                >
+                  {processingActivation && checkoutPlan?.id === slab.id ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Opening Gateway...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={13} />
+                      <span>
+                        Choose {slab.name} · ₹{totalTierPrice.toLocaleString("en-IN")}
+                      </span>
+                      <ArrowRight size={13} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ──── 3. COMPACT REASSURANCE & GRACE PERIOD CALLOUT ──── */}
@@ -614,7 +684,7 @@ export default function RentRollPricingTable({
           </span>
         </div>
         <span className="text-[11px] font-mono font-bold text-[#0D7B6C] bg-white px-2.5 py-1 rounded-lg border border-teal-200 shrink-0">
-          50,00,00,000 Sq.Ft Cap
+          Capacity Tailored to Your Portfolio
         </span>
       </div>
 
@@ -640,13 +710,13 @@ export default function RentRollPricingTable({
                   Subscribe to {checkoutPlan.name}
                 </h3>
                 <p className="text-[11px] text-slate-500 font-medium">
-                  ₹{checkoutPlan.basePriceNum} / month · Up to {checkoutPlan.sqftLimit}
+                  ₹{checkoutPlan.ratePerSqft} / sq.ft · For {checkoutPlan.sqftNumber.toLocaleString("en-IN")} sq.ft scope
                 </p>
               </div>
             </div>
 
             {/* User Details Step */}
-            {userEmail ? (
+            {userEmail && isAuthLoaded && typeof window !== "undefined" && (localStorage.getItem("officex_session_active") === "1" || localStorage.getItem("officex_auth") === "1") ? (
               <div className="mb-4 p-3 bg-teal-50/80 rounded-xl border border-teal-200 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-[#0D7B6C] text-white flex items-center justify-center font-bold text-xs shrink-0">
@@ -654,7 +724,7 @@ export default function RentRollPricingTable({
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-slate-900">{userName || "Subscriber"}</span>
+                      <span className="text-xs font-bold text-slate-900">{userName || userEmail.split("@")[0]}</span>
                       <span className="text-[10px] font-black bg-white text-[#0D7B6C] border border-teal-200 px-2 py-0.2 rounded-full">
                         ✓ Signed In
                       </span>
@@ -664,15 +734,36 @@ export default function RentRollPricingTable({
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] text-teal-800 font-bold uppercase tracking-wider bg-teal-100/70 px-2 py-0.5 rounded-md">
-                  {userRole}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserEmail("");
+                    setUserName("");
+                    if (typeof window !== "undefined") {
+                      localStorage.removeItem("officex_user_email");
+                      localStorage.removeItem("officex_user_name");
+                      sessionStorage.removeItem("officex_user_email");
+                      sessionStorage.removeItem("officex_user_name");
+                    }
+                  }}
+                  className="text-[10px] text-teal-800 font-semibold underline hover:text-teal-950 cursor-pointer"
+                >
+                  Change
+                </button>
               </div>
             ) : (
-              <div className="space-y-2.5 mb-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Workspace Admin Credentials
-                </span>
+              <div className="space-y-2 mb-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Workspace Admin Credentials
+                  </span>
+                  <Link
+                    href={`/login?email=${encodeURIComponent(userEmail || "")}&name=${encodeURIComponent(userName || "")}&redirect=/operate/rent-roll/pricing`}
+                    className="text-[10px] font-bold text-[#0D7B6C] hover:underline"
+                  >
+                    Already have account? Sign in &rarr;
+                  </Link>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
@@ -680,8 +771,8 @@ export default function RentRollPricingTable({
                     <input
                       type="text"
                       placeholder="Your Name"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
+                      value={userName && !userName.toLowerCase().includes("commercial account") ? userName : ""}
+                      onChange={(e) => handleNameChange(e.target.value)}
                       className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#0D7B6C] outline-none"
                     />
                   </div>
@@ -691,46 +782,60 @@ export default function RentRollPricingTable({
                       type="email"
                       placeholder="Work Email"
                       value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
+                      onChange={(e) => handleEmailChange(e.target.value)}
                       className="w-full pl-7 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#0D7B6C] outline-none"
                     />
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 pt-1">
-                  <span className="text-[10px] font-bold text-slate-500 shrink-0">Role:</span>
-                  <select
-                    value={userRole}
-                    onChange={(e) => setUserRole(e.target.value)}
-                    className="flex-1 py-1 px-2 text-[11px] rounded-lg border border-slate-300 bg-white font-semibold text-slate-700 outline-none"
-                  >
-                    <option value="owner">Commercial Property Owner</option>
-                    <option value="manager">Facility / Asset Manager (IFM)</option>
-                    <option value="finance">CA / Financial Controller</option>
-                    <option value="tenant">Commercial Tenant Admin</option>
-                  </select>
                 </div>
               </div>
             )}
 
             {/* Order Summary */}
-            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs mb-4">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Plan Tier:</span>
-                <span className="font-bold text-slate-800">{checkoutPlan.name}</span>
+            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2.5 text-xs mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Selected Tier:</span>
+                <span className="font-bold text-slate-900">{checkoutPlan.name}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Licensed Portfolio Scope:</span>
-                <span className="font-semibold text-slate-800">{checkoutPlan.sqftLimit}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Monthly License Fee:</span>
-                <span className="font-mono font-bold text-slate-800">
-                  ₹{checkoutPlan.basePriceNum}.00 / mo
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Fixed Rate:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  ₹{checkoutPlan.ratePerSqft}.00 / sq.ft
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Statutory GST (18%):</span>
+
+              {/* Editable Area right in the modal */}
+              <div className="flex justify-between items-center pt-1 border-t border-slate-200/70">
+                <span className="text-slate-700 font-semibold">Property Area:</span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1000"
+                    value={checkoutPlan.sqftNumber}
+                    onChange={(e) => handleSqftChange(Number(e.target.value))}
+                    className="w-24 px-2 py-1 text-right font-mono font-bold text-slate-900 border border-slate-300 rounded-lg bg-white text-xs outline-none focus:border-[#0D7B6C]"
+                  />
+                  <span className="font-bold text-slate-600 text-xs">sq.ft</span>
+                </div>
+              </div>
+
+              {/* Transparent calculation line */}
+              <div className="flex justify-between items-center text-[11px] text-slate-600 bg-slate-100/90 p-2 rounded-lg font-mono">
+                <span>Calculation:</span>
+                <span className="font-bold text-slate-900">
+                  {checkoutPlan.sqftNumber.toLocaleString("en-IN")} sq.ft × ₹{checkoutPlan.ratePerSqft}/sq.ft
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Subtotal Due:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Statutory GST (18%):</span>
                 <span className="font-mono text-emerald-700 font-semibold">
                   Included
                 </span>
@@ -744,7 +849,7 @@ export default function RentRollPricingTable({
                     Launch Coupon "{appliedCoupon}" (100% OFF):
                   </span>
                   <span className="font-mono">
-                    -₹{checkoutPlan.basePriceNum}.00
+                    -₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
                   </span>
                 </div>
               )}
@@ -757,7 +862,7 @@ export default function RentRollPricingTable({
                 {appliedCoupon ? (
                   <div className="flex items-baseline gap-2">
                     <span className="text-xs font-mono line-through text-slate-400">
-                      ₹{checkoutPlan.basePriceNum}.00
+                      ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
                     </span>
                     <span className="text-2xl font-black text-emerald-600 font-mono">
                       ₹0.00 FREE
@@ -765,7 +870,7 @@ export default function RentRollPricingTable({
                   </div>
                 ) : (
                   <span className="text-2xl font-black text-slate-900 font-mono">
-                    ₹{checkoutPlan.basePriceNum}.00
+                    ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")}.00
                   </span>
                 )}
               </div>
@@ -785,6 +890,17 @@ export default function RentRollPricingTable({
                       setCouponInput("OFFICEX100");
                       setAppliedCoupon("OFFICEX100");
                       setCouponError(null);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_applied_coupon", "OFFICEX100");
+                        sessionStorage.setItem("officex_applied_coupon", "OFFICEX100");
+                        localStorage.setItem("officex_subscription", "active");
+                        sessionStorage.setItem("officex_subscription", "active");
+                        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+                        if (userEmail) {
+                          localStorage.setItem(`officex_sub_${userEmail}`, "active");
+                          document.cookie = `officex_sub_${encodeURIComponent(userEmail)}=active; path=/; max-age=2592000; SameSite=Lax`;
+                        }
+                      }
                     }}
                     className="text-[10px] font-black text-[#0D7B6C] bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-0.5 rounded-full transition cursor-pointer flex items-center gap-1"
                   >
@@ -878,7 +994,7 @@ export default function RentRollPricingTable({
                     ) : (
                       <>
                         <CreditCard size={16} />
-                        <span>Pay ₹{checkoutPlan.basePriceNum} via Razorpay Gateway</span>
+                        <span>Pay ₹{(checkoutPlan.sqftNumber * checkoutPlan.ratePerSqft).toLocaleString("en-IN")} via Razorpay Gateway</span>
                         <ArrowRight size={14} />
                       </>
                     )}

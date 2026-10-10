@@ -185,12 +185,20 @@ export default function SignInForm({
     return () => clearInterval(interval);
   }, [recoveryCooldown]);
 
-  // Sync initial identifier if prefilled in query or localStorage
+  // Sync initial identifier & name if prefilled in query, sessionStorage, or localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedEmail = localStorage.getItem("officex_user_email") || localStorage.getItem("officex_remembered_email");
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryEmail = (urlParams.get("email") || urlParams.get("identifier") || "").trim().toLowerCase();
+      const queryName = (urlParams.get("name") || "").trim();
+      const savedEmail = queryEmail || localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") || localStorage.getItem("officex_remembered_email");
+      const savedName = queryName || localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name");
+
       if (savedEmail && !identifier) {
         setIdentifier(savedEmail);
+      }
+      if (savedName && savedName !== "Commercial Account" && !successUserName) {
+        setSuccessUserName(savedName);
       }
     }
   }, []);
@@ -715,15 +723,38 @@ export default function SignInForm({
       return;
     }
 
+    // Determine destination based on user role and onboarding status
+    const storedRoleKey = typeof window !== "undefined"
+      ? (localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key") || "")
+      : "";
+
+    const roleDashboards: Record<string, string> = {
+      owner: "/dashboard/owner",
+      property_manager: "/dashboard/pm",
+      facility_manager: "/dashboard/fm",
+      leasing_manager: "/dashboard/leasing",
+      finance_manager: "/dashboard/finance",
+      tenant: "/portal",
+      occupant: "/portal",
+      flex_operator: "/operate/head-leases",
+      org_admin: "/dashboard/owner",
+    };
+    const determinedRoleDashboard = (storedRoleKey && roleDashboards[storedRoleKey])
+      ? roleDashboards[storedRoleKey]
+      : "/dashboard/owner";
+
     let destination = "";
-    if (isRentRollContext || (safeRedirect && safeRedirect.includes("rent-roll"))) {
+    if (!isAlreadyOnboarded || !storedRoleKey) {
+      // New user without selected role: MUST go to onboarding to pick from the 5 roles
+      destination = `/onboarding?redirect=${encodeURIComponent(safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup") ? safeRedirect : determinedRoleDashboard)}`;
+    } else if (isRentRollContext || (safeRedirect && safeRedirect.includes("rent-roll"))) {
       destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard")
         ? safeRedirect
         : "/properties/rent-roll";
     } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard") {
       destination = safeRedirect;
     } else {
-      destination = "/dashboard/owner";
+      destination = determinedRoleDashboard;
     }
 
     setStep("signed_in_success");

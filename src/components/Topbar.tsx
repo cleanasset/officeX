@@ -29,6 +29,7 @@ import {
 import { performClientLogout } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import PropertySelector from "@/components/PropertySelector";
+import ModuleChooserModal from "@/components/dashboard/ModuleChooserModal";
 
 const AVAILABLE_ROLES = [
   { key: "owner", label: "Owner / Landlord", sub: "Portfolio, Rent Roll & NOI", route: "/dashboard/owner", icon: Building2 },
@@ -50,10 +51,14 @@ export default function Topbar() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Profile Menu State
+  // Profile Menu & Subscription State
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
+  const [brandLogo, setBrandLogo] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isModuleChooserOpen, setIsModuleChooserOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // Multi-Client Operator State (§2.1, §S-02)
@@ -96,6 +101,11 @@ export default function Topbar() {
         storedEmail = "";
       }
 
+      const storedLogo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
+      const storedBrand = localStorage.getItem("officex_brand_name") || localStorage.getItem("officex_company_name") || "";
+      if (storedLogo) setBrandLogo(storedLogo);
+      if (storedBrand) setBrandName(storedBrand);
+
       if (storedName && !storedName.toLowerCase().includes("subscriber")) {
         setUserName(storedName);
       }
@@ -103,6 +113,16 @@ export default function Topbar() {
       if (storedRoleKey && AVAILABLE_ROLES.some((r) => r.key === storedRoleKey)) {
         setCurrentRoleKey(storedRoleKey);
       }
+
+      const globalSub =
+        localStorage.getItem("officex_subscription") === "active" ||
+        sessionStorage.getItem("officex_subscription") === "active" ||
+        document.cookie.includes("officex_subscription=active");
+      const emailSub = storedEmail
+        ? localStorage.getItem(`officex_sub_${storedEmail}`) === "active" ||
+          document.cookie.includes(`officex_sub_${encodeURIComponent(storedEmail)}=active`)
+        : false;
+      setIsSubscribed(globalSub || emailSub);
     }
 
     // Resolve real user profile from active session
@@ -116,6 +136,25 @@ export default function Topbar() {
       })
       .catch(() => {});
   }, [pathname]);
+
+  const handleGoToDashboard = () => {
+    setIsProfileMenuOpen(false);
+    if (!isSubscribed) {
+      router.push("/operate/rent-roll/pricing");
+      return;
+    }
+    // Always open module chooser modal per user requirement
+    setIsModuleChooserOpen(true);
+  };
+
+  const handleProfileKYC = () => {
+    setIsProfileMenuOpen(false);
+    if (!isSubscribed) {
+      router.push("/operate/rent-roll/pricing");
+    } else {
+      router.push("/settings");
+    }
+  };
 
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
@@ -232,6 +271,14 @@ export default function Topbar() {
             {formattedBreadcrumb || "Commercial Portfolio"}
           </span>
         </div>
+
+        {/* Brand Logo Display Badge */}
+        {brandLogo && (
+          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs">
+            <img src={brandLogo} alt="Brand Logo" className="h-5 max-w-[70px] object-contain rounded" />
+            <span className="text-xs font-black text-slate-800 max-w-[130px] truncate">{brandName || "My Portfolio"}</span>
+          </div>
+        )}
 
         {/* Multi-Client Operator Selector (§2.1, §S-02) */}
         <div className="relative hidden sm:block" ref={clientDropdownRef}>
@@ -429,45 +476,74 @@ export default function Topbar() {
             type="button"
             suppressHydrationWarning
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-            className="w-9 h-9 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-teal-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-teal-100"
+            className="w-9 h-9 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-teal-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-teal-100 overflow-hidden"
           >
-            {(userName || userEmail || "O")[0].toUpperCase()}
+            {brandLogo ? (
+              <img src={brandLogo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              (userName || userEmail || "O")[0].toUpperCase()
+            )}
           </button>
 
           {/* Profile Dropdown */}
           {isProfileMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 animate-fadeIn text-slate-800">
-              <div className="p-3 border-b border-slate-100">
-                <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">
-                  {userName || userEmail || "Commercial Account"}
-                </span>
-                {userEmail && (
-                  <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>
+              <div className="p-3 border-b border-slate-100 flex items-center gap-2.5">
+                {brandLogo ? (
+                  <img src={brandLogo} alt="Logo" className="w-9 h-9 object-contain rounded-xl border border-slate-200 bg-white p-0.5 shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center shrink-0">
+                    {(userName || userEmail || "O")[0].toUpperCase()}
+                  </div>
                 )}
-                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Verified Commercial Account
-                </span>
+                <div className="min-w-0 flex-1">
+                  <span suppressHydrationWarning className="text-xs font-bold text-slate-900 block truncate">
+                    {brandName || userName || userEmail || "Commercial Account"}
+                  </span>
+                  {userEmail && (
+                    <span className="text-[11px] text-slate-500 font-mono block truncate">{userEmail}</span>
+                  )}
+                  <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Verified Account
+                  </span>
+                </div>
               </div>
 
               <div className="py-1 space-y-1">
-                <Link
-                  href="/properties"
-                  onClick={() => setIsProfileMenuOpen(false)}
+                <button
+                  type="button"
+                  onClick={handleGoToDashboard}
                   className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
                 >
                   <Layers size={14} className="text-teal-600" />
-                  <span>Portfolio Overview</span>
-                </Link>
+                  <div className="flex flex-col">
+                    <span>
+                      {pathname.startsWith("/dashboard") || pathname.startsWith("/properties/rent-roll")
+                        ? "Switch SaaS Module"
+                        : "Go to My Dashboard"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      {pathname.startsWith("/dashboard") || pathname.startsWith("/properties/rent-roll")
+                        ? `Active: ${activeRole.label} · Switch`
+                        : (isSubscribed ? "Open Module Dashboard" : "Subscription Required")}
+                    </span>
+                  </div>
+                </button>
 
-                <Link
-                  href="/properties/organization"
-                  onClick={() => setIsProfileMenuOpen(false)}
+                <button
+                  type="button"
+                  onClick={handleProfileKYC}
                   className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
                 >
                   <Building2 size={14} className="text-slate-500" />
-                  <span>Organization Profile</span>
-                </Link>
+                  <div className="flex flex-col">
+                    <span>Profile &amp; KYC</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      {isSubscribed ? "Organization & Compliance" : "Subscription Required"}
+                    </span>
+                  </div>
+                </button>
 
                 <button
                   type="button"
@@ -489,6 +565,12 @@ export default function Topbar() {
         onClose={() => setIsOwnerStatementOpen(false)}
         clientAccountId={selectedClient?.id}
         clientName={selectedClient?.client_name}
+      />
+
+      {/* Multi-Module SaaS Chooser Modal */}
+      <ModuleChooserModal
+        isOpen={isModuleChooserOpen}
+        onClose={() => setIsModuleChooserOpen(false)}
       />
     </header>
   );

@@ -50,14 +50,37 @@ export async function POST(req: Request) {
     const auth = getAuthContext(req);
     const body = await req.json();
 
+    const generatedCode =
+      (body.property_code && body.property_code.trim()) ||
+      (body.property_name
+        ? body.property_name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase() + "-" + Math.floor(100 + Math.random() * 900)
+        : `PROP-${Date.now().toString(36).toUpperCase()}`);
+
+    const validPropertyTypes = ["office", "residential", "retail", "flex_workspace", "mixed"];
+    let normalizedType = "office";
+    if (body.property_type) {
+      const lower = String(body.property_type).toLowerCase();
+      if (validPropertyTypes.includes(lower)) {
+        normalizedType = lower;
+      } else if (lower.includes("retail")) {
+        normalizedType = "retail";
+      } else if (lower.includes("residential")) {
+        normalizedType = "residential";
+      } else if (lower.includes("flex")) {
+        normalizedType = "flex_workspace";
+      } else {
+        normalizedType = "office";
+      }
+    }
+
     const payload = {
       ...body,
       org_id: body.org_id || auth.orgId,
       client_account_id: body.client_account_id || auth.clientAccountId,
-      property_name: body.property_name,
-      property_code: body.property_code,
-      total_leasable_area_sqft: body.total_leasable_area_sqft,
-      property_type: body.property_type || "office",
+      property_name: body.property_name || "Commercial Tower",
+      property_code: generatedCode,
+      total_leasable_area_sqft: body.total_leasable_area_sqft || 50000,
+      property_type: normalizedType,
     };
 
     const reqVal = validateRequiredFields("property", payload);
@@ -79,7 +102,7 @@ export async function POST(req: Request) {
         country_code: body.country_code || "IN",
         total_leasable_area_sqft: String(payload.total_leasable_area_sqft),
         total_leasable_seats: body.total_leasable_seats ? Number(body.total_leasable_seats) : null,
-        property_type: payload.property_type,
+        property_type: payload.property_type as any,
         created_by: auth.userId,
         updated_by: auth.userId,
       })

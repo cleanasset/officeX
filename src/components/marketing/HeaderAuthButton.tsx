@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { getAuthCookie, clearAuthCookie } from "@/lib/auth-storage";
 import { performClientLogout } from "@/lib/auth-client";
+import ModuleChooserModal from "@/components/dashboard/ModuleChooserModal";
 
 interface HeaderAuthButtonProps {
   className?: string;
@@ -30,62 +31,70 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
   const [userRole, setUserRole] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isModuleChooserOpen, setIsModuleChooserOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
     const checkAuth = (authUser?: any) => {
-      if (typeof window === "undefined") return;
-      const hasAuthCookie =
-        document.cookie.includes("officex_session_active=1") ||
-        document.cookie.includes("officex_auth=1") ||
-        document.cookie.includes("officex_auth=true") ||
-        getAuthCookie("officex_auth") === "1";
-      const sessionActive =
-        sessionStorage.getItem("officex_session_active") === "1" ||
-        localStorage.getItem("officex_session_active") === "1";
+      if (typeof window !== "undefined") {
+        const hasAuthCookie =
+          document.cookie.includes("officex_session_active=1") ||
+          document.cookie.includes("officex_auth=1") ||
+          document.cookie.includes("officex_auth=true") ||
+          getAuthCookie("officex_auth") === "1";
+        const sessionActive =
+          sessionStorage.getItem("officex_session_active") === "1" ||
+          localStorage.getItem("officex_session_active") === "1";
 
-      if (!hasAuthCookie && !sessionActive && !authUser) {
-        setIsLoggedIn(false);
-        setUserName("");
-        setUserRole("");
-        setIsSubscribed(false);
-        return;
+        if (!hasAuthCookie && !sessionActive && !authUser) {
+          setIsLoggedIn(false);
+          setUserName("");
+          setUserRole("");
+          setIsSubscribed(false);
+          return;
+        }
+
+        let email =
+          authUser?.email ||
+          sessionStorage.getItem("officex_user_email") ||
+          localStorage.getItem("officex_user_email") ||
+          getAuthCookie("officex_user_email") ||
+          "";
+        let name =
+          authUser?.user_metadata?.full_name ||
+          authUser?.user_metadata?.name ||
+          sessionStorage.getItem("officex_user_name") ||
+          localStorage.getItem("officex_user_name") ||
+          "";
+
+        if (!name && email) {
+          name = email.split("@")[0].replace(/[._-]/g, " ");
+        }
+        if (!name) name = "Member";
+
+        const role =
+          sessionStorage.getItem("officex_user_role") ||
+          localStorage.getItem("officex_user_role") ||
+          "Commercial Owner";
+
+        const globalSub =
+          localStorage.getItem("officex_subscription") === "active" ||
+          sessionStorage.getItem("officex_subscription") === "active" ||
+          document.cookie.includes("officex_subscription=active");
+
+        const sub = globalSub || (email
+          ? sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
+            localStorage.getItem(`officex_sub_${email}`) === "active" ||
+            document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
+          : false);
+
+        setIsLoggedIn(true);
+        setUserName(name);
+        setUserRole(role);
+        setIsSubscribed(sub);
       }
-
-      let email =
-        authUser?.email ||
-        sessionStorage.getItem("officex_user_email") ||
-        localStorage.getItem("officex_user_email") ||
-        getAuthCookie("officex_user_email") ||
-        "";
-      let name =
-        authUser?.user_metadata?.full_name ||
-        authUser?.user_metadata?.name ||
-        sessionStorage.getItem("officex_user_name") ||
-        localStorage.getItem("officex_user_name") ||
-        "";
-
-      if (!name && email) {
-        name = email.split("@")[0].replace(/[._-]/g, " ");
-      }
-      if (!name) name = "Member";
-
-      const role =
-        sessionStorage.getItem("officex_user_role") ||
-        localStorage.getItem("officex_user_role") ||
-        "Commercial Owner";
-      const sub = email
-        ? sessionStorage.getItem(`officex_sub_${email}`) === "active" ||
-          localStorage.getItem(`officex_sub_${email}`) === "active" ||
-          document.cookie.includes(`officex_sub_${encodeURIComponent(email)}=active`)
-        : false;
-
-      setIsLoggedIn(true);
-      setUserName(name);
-      setUserRole(role);
-      setIsSubscribed(sub);
     };
 
     checkAuth();
@@ -145,6 +154,30 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
     ? "/login?context=properties&redirect=/properties"
     : "/login?context=marketplace&redirect=/marketplace";
 
+  const handleDashboardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(false);
+
+    if (!isSubscribed) {
+      router.push("/operate/rent-roll/pricing");
+      return;
+    }
+
+    // Always show module chooser modal so user can choose where they want to go
+    setIsModuleChooserOpen(true);
+  };
+
+  const handleProfileClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(false);
+
+    if (!isSubscribed) {
+      router.push("/operate/rent-roll/pricing");
+    } else {
+      router.push("/settings");
+    }
+  };
+
   if (!mounted) {
     return (
       <Link
@@ -157,14 +190,6 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
   }
 
   if (isLoggedIn) {
-    const dashboardHref =
-      (typeof window !== "undefined" &&
-        (sessionStorage.getItem("officex_dashboard") ||
-          localStorage.getItem("officex_dashboard"))) ||
-      "/properties";
-    const effectiveDashboardHref =
-      dashboardHref && dashboardHref !== "/" ? dashboardHref : "/properties";
-
     return (
       <div className="relative inline-block text-left" ref={menuRef}>
         <button
@@ -197,9 +222,9 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
             {/* Core User Navigation */}
             <div className="py-1.5 space-y-0.5">
               {/* Go to My Dashboard */}
-              <Link
-                href="/operate"
-                onClick={() => setMenuOpen(false)}
+              <button
+                type="button"
+                onClick={handleDashboardClick}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
@@ -207,14 +232,16 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Go to My Dashboard</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Portfolio &amp; Workspace</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {isSubscribed ? "Open SaaS Dashboard" : "Subscription Required"}
+                  </span>
                 </div>
-              </Link>
+              </button>
 
-              {/* My Profile */}
-              <Link
-                href="/operate"
-                onClick={() => setMenuOpen(false)}
+              {/* Profile & KYC */}
+              <button
+                type="button"
+                onClick={handleProfileClick}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:text-[#0F8B7D] hover:bg-teal-50/70 transition-colors group text-left cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-lg bg-teal-50 group-hover:bg-[#0F8B7D] text-[#0F8B7D] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
@@ -222,9 +249,11 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Profile &amp; KYC</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Account &amp; Organization</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {isSubscribed ? "Account &amp; Organization" : "Subscription Required"}
+                  </span>
                 </div>
-              </Link>
+              </button>
             </div>
 
             {/* Sign Out */}
@@ -240,6 +269,12 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
             </div>
           </div>
         )}
+
+        {/* Multi-Module Chooser Modal */}
+        <ModuleChooserModal
+          isOpen={isModuleChooserOpen}
+          onClose={() => setIsModuleChooserOpen(false)}
+        />
       </div>
     );
   }

@@ -12,14 +12,18 @@ function cleanAddressSegment(str: string): string {
 // Normalize city names
 function cleanCityName(rawCity: string, rawState: string): string {
   if (!rawCity) return "";
-  let c = rawCity.replace(/\s+Taluka|\s+District|\s+Subdivision|\s+Municipal Corporation|\s+Tehsil/gi, "").trim();
+  let c = rawCity.replace(/\s+Taluka|\s+District|\s+Subdivision|\s+Municipal Corporation|\s+Tehsil|\s+Urban|\s+Rural/gi, "").trim();
   const lower = c.toLowerCase();
-  if (lower === "ahemedabad" || lower === "maninagar" || lower === "vejalpur") return "Ahmedabad";
-  if (lower === "bombay") return "Mumbai";
-  if (lower === "bangalore" || lower === "bengaluru south" || lower === "bengaluru north" || lower === "bangalore east") return "Bengaluru";
-  if (lower === "calcutta") return "Kolkata";
-  if (lower === "madras") return "Chennai";
-  if (lower === "gurgaon") return "Gurugram";
+  if (lower.includes("ahmedabad") || lower === "ahemedabad" || lower === "maninagar" || lower === "vejalpur") return "Ahmedabad";
+  if (lower === "bombay" || lower.includes("mumbai")) return "Mumbai";
+  if (lower.includes("bangalore") || lower.includes("bengaluru")) return "Bengaluru";
+  if (lower === "calcutta" || lower.includes("kolkata")) return "Kolkata";
+  if (lower === "madras" || lower.includes("chennai")) return "Chennai";
+  if (lower.includes("gurgaon") || lower.includes("gurugram")) return "Gurugram";
+  if (lower.includes("hyderabad") || lower.includes("secunderabad") || lower.includes("cyberabad")) return "Hyderabad";
+  if (lower.includes("delhi")) return "New Delhi";
+  if (lower.includes("pune") || lower === "poona") return "Pune";
+  if (lower.includes("noida")) return lower.includes("greater") ? "Greater Noida" : "Noida";
   return c;
 }
 
@@ -265,49 +269,61 @@ export async function GET(request: Request) {
 
   const fetchTasks: Promise<any>[] = [];
 
-  // A) Google Global Search Suggest (Captures every landmark, cafe, business, hotel, airport worldwide)
-  const gSuggestUrl = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(cleanQ)}`;
+  // A) Global Photon Geocoder (Fast Elasticsearch, no strict rate limit)
+  const photonQ = targetCity ? `${cleanQ}, ${targetCity}` : cleanQ;
   fetchTasks.push(
-    fetch(gSuggestUrl, { headers: { "Accept-Language": "en" }, next: { revalidate: 3600 } })
+    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(photonQ)}&limit=15`, {
+      headers: { "Accept-Language": "en" },
+      signal: AbortSignal.timeout(2000),
+      next: { revalidate: 3600 }
+    })
       .then(r => r.json())
-      .then(data => ({ engine: "google", data }))
-      .catch(err => ({ engine: "google", error: err }))
+      .then(data => ({ engine: "photon", data }))
+      .catch(err => ({ engine: "photon", error: err }))
   );
 
-  // B) Global Photon Geocoder (Worldwide — No bounding box, No country restrictions)
-  for (const sq of searchVariants) {
-    const pUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(sq)}&limit=15`;
+  // Also query raw query on Photon if city was added
+  if (targetCity) {
     fetchTasks.push(
-      fetch(pUrl, { headers: { "Accept-Language": "en" }, next: { revalidate: 3600 } })
+      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQ)}&limit=10`, {
+        headers: { "Accept-Language": "en" },
+        signal: AbortSignal.timeout(2000),
+        next: { revalidate: 3600 }
+      })
         .then(r => r.json())
         .then(data => ({ engine: "photon", data }))
         .catch(err => ({ engine: "photon", error: err }))
     );
   }
 
-  // C) Global Nominatim Geocoder (Localized by target city/state when available)
-  const nomQueries = [cleanQ];
-  if (targetCity) {
-    nomQueries.unshift(`${cleanQ}, ${targetCity}${targetState ? `, ${targetState}` : ""}`);
-  }
+  // B) Global Nominatim Geocoder (Single targeted query with strict 2s timeout)
+  const nomQ = targetCity ? `${cleanQ}, ${targetCity}` : cleanQ;
+  fetchTasks.push(
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nomQ)}&addressdetails=1&limit=12`, {
+      headers: {
+        "User-Agent": "OfficeX-Global-Commercial-System/1.0",
+        "Accept-Language": "en"
+      },
+      signal: AbortSignal.timeout(2000),
+      next: { revalidate: 3600 }
+    })
+      .then(r => r.json())
+      .then(data => ({ engine: "nom", data }))
+      .catch(err => ({ engine: "nom", error: err }))
+  );
 
-  for (const nq of nomQueries) {
-    const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      nq
-    )}&addressdetails=1&limit=15`;
-    fetchTasks.push(
-      fetch(nomUrl, {
-        headers: {
-          "User-Agent": "OfficeX-Global-Commercial-System/1.0",
-          "Accept-Language": "en"
-        },
-        next: { revalidate: 3600 }
-      })
-        .then(r => r.json())
-        .then(data => ({ engine: "nom", data }))
-        .catch(err => ({ engine: "nom", error: err }))
-    );
-  }
+  // C) Google Global Search Suggest
+  const gSuggestUrl = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(cleanQ)}`;
+  fetchTasks.push(
+    fetch(gSuggestUrl, {
+      headers: { "Accept-Language": "en" },
+      signal: AbortSignal.timeout(1200),
+      next: { revalidate: 3600 }
+    })
+      .then(r => r.json())
+      .then(data => ({ engine: "google", data }))
+      .catch(err => ({ engine: "google", error: err }))
+  );
 
   const taskResults = await Promise.all(fetchTasks);
 
@@ -364,11 +380,15 @@ export async function GET(request: Request) {
         const name = item.name || cleanQ;
         const road = addr.road || addr.street || "";
         const suburb = addr.suburb || addr.neighbourhood || addr.commercial || addr.quarter || "";
-        const rawCity = addr.city || addr.town || addr.municipality || addr.district || "";
+        const rawCity = addr.city || addr.town || addr.municipality || addr.state_district || addr.district || addr.county || addr.city_district || "";
         const city = cleanCityName(rawCity, addr.state || "");
         const state = addr.state || "";
         const country = addr.country || "";
-        const pincode = addr.postcode || "";
+        let pincode = addr.postcode || "";
+        if (!pincode) {
+          const pinMatch = (item.display_name || "").match(/\b([1-9][0-9]{5})\b/);
+          if (pinMatch) pincode = pinMatch[1];
+        }
         const area = [cleanAddressSegment(suburb), cleanAddressSegment(addr.city_district)]
           .filter(Boolean)
           .filter(a => a !== city && a !== state && a !== country)
@@ -399,8 +419,8 @@ export async function GET(request: Request) {
     }
   }
 
-  // 6. Process Global Google Place Suggestions
-  const junkWords = ["price", "menu", "buffet", "ticket", "review", "career", "job", "photo", "owner", "net worth", "turnover", "wiki", "brochure", "booking", "timing", "contact", "download", "salary", "pdf", "stock", "share", "lyrics"];
+  // 6. Process Global Google Place Suggestions (Filter out non-address queries)
+  const junkWords = ["price", "menu", "buffet", "ticket", "review", "reviews", "career", "careers", "job", "jobs", "photo", "photos", "image", "images", "owner", "net worth", "turnover", "wiki", "wikipedia", "brochure", "booking", "timing", "timings", "contact", "download", "salary", "salaries", "pdf", "stock", "share", "lyrics", "restaurant", "restaurants", "club", "clubs", "bar", "bars", "nightlife", "night view", "weather", "it company list", "distance"];
   for (const res of taskResults) {
     if (res.engine === "google" && Array.isArray(res.data?.[1])) {
       const hints: string[] = res.data[1];
@@ -447,14 +467,38 @@ export async function GET(request: Request) {
     for (const t of qTokens) {
       if (text.includes(t)) matches++;
     }
-    let score = qTokens.length > 0 ? (matches / qTokens.length) : 0;
+    let score = qTokens.length > 0 ? (matches / qTokens.length) * 10 : 0;
 
-    // Bonus for matching first keyword in building name
-    if (qTokens[0] && item.buildingName.toLowerCase().includes(qTokens[0])) {
-      score += 0.5;
+    // Bonus for matching tokens in building name
+    const normBName = (item.buildingName || "").toLowerCase();
+    let bMatches = 0;
+    for (const t of qTokens) {
+      if (normBName.includes(t)) bMatches++;
+    }
+    if (bMatches > 0 && qTokens.length > 0) {
+      score += (bMatches / qTokens.length) * 40.0;
     }
 
-    // Heavy priority boost for matching target city & state
+    // Exact or prefix match on building name
+    if (qTokens[0] && normBName.startsWith(qTokens[0])) {
+      score += 15.0;
+    }
+
+    // Heavy priority boost for physical places with GPS coordinates and real city/state/pincode
+    if (item.latitude !== null && item.longitude !== null) {
+      score += 25.0;
+    }
+    if (item.city) {
+      score += 15.0;
+    }
+    if (item.state) {
+      score += 10.0;
+    }
+    if (item.pincode) {
+      score += 10.0;
+    }
+
+    // Priority boost for matching target city & state if provided
     const itemCity = (item.city || "").toLowerCase();
     const itemState = (item.state || "").toLowerCase();
     const fullText = (item.fullAddress || item.displayName || "").toLowerCase();
@@ -471,13 +515,8 @@ export async function GET(request: Request) {
       if (itemState.includes(normState) || fullText.includes(normState)) {
         score += 10.0; // High priority for selected state (e.g. Gujarat)
       } else if (normCity && !itemCity.includes(normCity)) {
-        score -= 15.0; // Severely penalize other states (e.g. Kerala, Hyderabad, Tamil Nadu)
+        score -= 15.0; // Severely penalize other states
       }
-    }
-
-    // Bonus for having full GPS coordinates
-    if (item.latitude !== null && item.longitude !== null) {
-      score += 0.05;
     }
 
     return { item, score };
@@ -486,7 +525,36 @@ export async function GET(request: Request) {
   scoredResults.sort((a, b) => b.score - a.score);
   const sortedFinal = scoredResults.map(s => s.item);
 
-  // 8. Fallback if still no results found
+  // 8. Enrich top results with Postal PIN Code if coordinates are present
+  const topNeedPin = sortedFinal.slice(0, 4).filter(it => !it.pincode && it.latitude !== null && it.longitude !== null);
+  if (topNeedPin.length > 0) {
+    try {
+      await Promise.all(
+        topNeedPin.map(async (item) => {
+          try {
+            const revUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${item.latitude}&lon=${item.longitude}&addressdetails=1`;
+            const revRes = await fetch(revUrl, {
+              headers: { "User-Agent": "OfficeX-Global-Commercial-System/1.0" },
+              signal: AbortSignal.timeout(1200),
+            });
+            if (revRes.ok) {
+              const revData = await revRes.json();
+              const pin = revData.address?.postcode;
+              if (pin) {
+                item.pincode = pin;
+                if (!item.fullAddress.includes(pin)) {
+                  item.fullAddress = `${item.fullAddress}, ${pin}`;
+                  item.displayName = `${item.displayName}, ${pin}`;
+                }
+              }
+            }
+          } catch (_) {}
+        })
+      );
+    } catch (_) {}
+  }
+
+  // 9. Fallback if still no results found
   if (sortedFinal.length === 0) {
     const formattedTitle = cleanQ
       .split(" ")

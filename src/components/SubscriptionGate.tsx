@@ -43,7 +43,7 @@ export const SUBSCRIPTION_PLAN_OPTIONS: SubscriptionPlanTier[] = [
   },
   {
     id: "techpark",
-    name: "Grade-A Tech Park",
+    name: "Tech Park Campus",
     badge: "Most Popular",
     popular: true,
     price: 100,
@@ -108,6 +108,13 @@ export default function SubscriptionGate({
 
   // Selected Pricing Plan state (default: "techpark" ₹100, user can pick "starter" ₹50 or "reit-mega" ₹200)
   const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "techpark" | "reit-mega">("techpark");
+  const [customSqft, setCustomSqft] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const stored = Number(localStorage.getItem("officex_subscribed_sqft"));
+      if (stored && stored > 0) return stored;
+    }
+    return 50000;
+  });
 
   // Coupon state (Initially null; user must click apply to activate 100% Free access)
   const [couponInput, setCouponInput] = useState("");
@@ -118,8 +125,8 @@ export default function SubscriptionGate({
   // Active Plan & Dynamic Pricing Calculations
   const selectedPlan = SUBSCRIPTION_PLAN_OPTIONS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLAN_OPTIONS[1];
   const is100PercentDiscount = appliedCoupon === "RENTROLL12" || appliedCoupon === "OFFICEX100" || appliedCoupon === "FREE100";
-  const finalPriceInRupees = is100PercentDiscount ? 0 : selectedPlan.price;
-  const finalAmountInPaise = is100PercentDiscount ? 0 : selectedPlan.price * 100;
+  const finalPriceInRupees = is100PercentDiscount ? 0 : customSqft * selectedPlan.price;
+  const finalAmountInPaise = is100PercentDiscount ? 0 : customSqft * selectedPlan.price * 100;
 
   const handleApplyCoupon = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -130,6 +137,14 @@ export default function SubscriptionGate({
       setAppliedCoupon(clean);
       setCouponSuccess(`🎉 Coupon '${clean}' applied! 100% FREE Access activated for ${selectedPlan.name} (₹0).`);
       setCouponError(null);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_applied_coupon", clean);
+        sessionStorage.setItem("officex_applied_coupon", clean);
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        localStorage.setItem("officex_subscribed_sqft", String(customSqft));
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+      }
     } else {
       setCouponError("Invalid coupon code. Try OFFICEX100, RENTROLL12 or FREE100 for 100% FREE access.");
       setCouponSuccess(null);
@@ -234,6 +249,11 @@ export default function SubscriptionGate({
 
       setIsLoggedIn(true);
 
+      const hasDecidedRole = Boolean(
+        role ||
+        (typeof window !== "undefined" && (localStorage.getItem("officex_user_role") || localStorage.getItem("officex_rentroll_onboarded")))
+      );
+
       // Check active subscription (strictly subscription-based; being logged in alone is NOT enough)
       const subGlobal = getCookie("officex_subscription") === "active" ||
         localStorage.getItem("officex_subscription") === "active";
@@ -241,14 +261,14 @@ export default function SubscriptionGate({
       const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
         getCookie(`officex_sub_${encodeURIComponent(email)}`) === "active";
 
-      const storedRoleKey =
-        localStorage.getItem("officex_role_key") ||
-        sessionStorage.getItem("officex_role_key") ||
-        getCookie("officex_role_key");
-      const hasDecidedRole = !!storedRoleKey;
-      setIsRoleDecided(hasDecidedRole);
+      const storedCoupon =
+        localStorage.getItem("officex_applied_coupon") ||
+        sessionStorage.getItem("officex_applied_coupon");
+      if (storedCoupon) {
+        setAppliedCoupon(storedCoupon);
+      }
 
-      if (subEmailLocal || subGlobal) {
+      if (subEmailLocal || subGlobal || storedCoupon) {
         setIsSubscribed(true);
         setIsRoleDecided(hasDecidedRole);
         setIsChecking(false);
@@ -317,20 +337,24 @@ export default function SubscriptionGate({
     // If 100% Discounted (RENTROLL12 / OFFICEX100) — Instant One-Click Free Activation
     if (is100PercentDiscount) {
       await persistSubscription(email, appliedCoupon || "RENTROLL12", `FREE_${appliedCoupon || "RENTROLL12"}_${Date.now()}`, selectedPlan.id);
+      let isOnboarded = false;
       if (typeof window !== "undefined") {
         sessionStorage.setItem("officex_session_active", "1");
         localStorage.setItem("officex_session_active", "1");
         sessionStorage.setItem("officex_user_email", email);
         localStorage.setItem("officex_user_email", email);
+        localStorage.setItem("officex_subscribed_sqft", String(customSqft));
+        sessionStorage.setItem("officex_subscribed_sqft", String(customSqft));
         document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
         document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+        isOnboarded = localStorage.getItem("officex_rentroll_onboarded") === "true";
       }
       setIsLoggedIn(true);
       setIsSubscribed(true);
       setIsPaymentProcessing(false);
-      setPaymentToast(`🎉 100% Free Access to ${selectedPlan.name} Activated! Routing to workspace setup...`);
+      setPaymentToast(`🎉 100% Free Access to ${selectedPlan.name} Activated! Routing to workspace...`);
       setTimeout(() => {
-        router.push("/properties/rent-roll");
+        router.push(isOnboarded ? "/properties/rent-roll" : "/onboarding");
       }, 400);
       return;
     }
@@ -355,19 +379,23 @@ export default function SubscriptionGate({
         },
         onSuccess: async (response) => {
           await persistSubscription(email, appliedCoupon || "none", response.razorpay_payment_id, selectedPlan.id);
+          let isOnboarded = false;
           if (typeof window !== "undefined") {
             sessionStorage.setItem("officex_session_active", "1");
             localStorage.setItem("officex_session_active", "1");
             sessionStorage.setItem("officex_user_email", email);
             localStorage.setItem("officex_user_email", email);
+            localStorage.setItem("officex_subscribed_sqft", String(customSqft));
+            sessionStorage.setItem("officex_subscribed_sqft", String(customSqft));
             document.cookie = "officex_auth=1; path=/; max-age=86400; SameSite=Lax";
             document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+            isOnboarded = localStorage.getItem("officex_rentroll_onboarded") === "true";
           }
           setIsLoggedIn(true);
           setIsSubscribed(true);
-          setPaymentToast(`Subscription to ${selectedPlan.name} activated! Routing to workspace setup...`);
+          setPaymentToast(`Subscription to ${selectedPlan.name} activated! Routing to workspace...`);
           setTimeout(() => {
-            router.push("/properties/rent-roll");
+            router.push(isOnboarded ? "/properties/rent-roll" : "/onboarding");
           }, 400);
         },
         onFailure: (error) => {
@@ -603,212 +631,171 @@ export default function SubscriptionGate({
             </div>
           )}
 
-          <div className="text-center py-4">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mb-3 shadow-xs">
-              <Lock size={22} />
+          {/* Clean Executive Header */}
+          <div className="text-center py-2 mb-4">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-teal-50 border border-teal-200 text-[#0F8B7D] flex items-center justify-center mb-2 shadow-2xs">
+              <Lock size={18} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-              {isLoggedIn ? "STEP 2 OF 2: SUBSCRIPTION REQUIRED" : "SUBSCRIPTION REQUIRED TO ACCESS RENT ROLL"}
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2.5 tracking-tight">
-              Activate Subscription to Enter Live Dashboard
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Activate Workspace Subscription
             </h3>
-            <p className="text-xs sm:text-sm text-slate-600 mt-2 font-medium max-w-md mx-auto leading-relaxed">
-              {isLoggedIn
-                ? "Your account is verified. To unlock the live Rent Roll, statutory compliance, and facility management tools, activate your monthly subscription."
-                : "The Rent Roll module is a dedicated commercial SaaS tool. Activate your subscription below to unlock the full live dashboard."}
+            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto font-medium">
+              Choose your managed square footage and tier to unlock the live Rent Roll workspace.
             </p>
           </div>
 
-          {/* ──── STEP 2A: INTERACTIVE PRICING PLAN SELECTOR (₹50 / ₹100 / ₹200) ──── */}
-          <div className="mb-5 text-left">
-            <div className="flex items-center justify-between mb-2.5">
+          {/* ──── INTERACTIVE SQUARE FOOTAGE CHOOSER ──── */}
+          <div className="mb-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#0F8B7D] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-                  STEP 2A: SELECT SUBSCRIPTION TIER
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-800 block">
+                  Managed Square Footage (Sq.Ft)
+                </label>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Dynamic rate calculated per square foot.
                 </span>
-                <h4 className="text-sm sm:text-base font-black text-slate-900 mt-1">
-                  Choose Your Operational Plan
-                </h4>
               </div>
-              <Link
-                href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`}
-                className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0C6E63] text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
-              >
-                <Sparkles size={13} className="text-teal-200" />
-                <span>Explore More in Pricing →</span>
-              </Link>
+              <div className="relative w-full sm:w-44">
+                <input
+                  type="number"
+                  min="1000"
+                  step="5000"
+                  value={customSqft}
+                  onChange={(e) => {
+                    const val = Math.max(1000, Number(e.target.value) || 0);
+                    setCustomSqft(val);
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_subscribed_sqft", String(val));
+                    }
+                  }}
+                  className="w-full px-3 py-1.5 pr-11 rounded-xl border border-slate-300 bg-white text-sm font-mono font-black text-slate-900 text-right focus:border-[#0F8B7D] outline-none shadow-2xs"
+                />
+                <span className="absolute right-3 top-2 text-[11px] font-bold text-slate-400">sq.ft</span>
+              </div>
             </div>
 
-            {/* 3 Clickable Plan Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-              {SUBSCRIPTION_PLAN_OPTIONS.map((plan) => {
-                const isSelected = selectedPlan.id === plan.id;
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPlanId(plan.id);
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("officex_selected_plan", plan.id);
-                        sessionStorage.setItem("officex_selected_plan", plan.id);
-                      }
-                    }}
-                    className={`relative rounded-2xl p-3.5 text-left transition-all duration-150 cursor-pointer flex flex-col justify-between ${
-                      isSelected
-                        ? "bg-teal-50/70 border-2 border-[#0F8B7D] shadow-md ring-2 ring-[#0F8B7D]/15"
-                        : "bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 shadow-2xs"
-                    }`}
-                  >
-                    {/* Badge */}
-                    {plan.popular ? (
-                      <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[9px] font-black tracking-wider uppercase shadow-2xs flex items-center gap-0.5">
-                        <Sparkles size={9} />
-                        <span>{plan.badge}</span>
-                      </div>
-                    ) : (
-                      <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-bold tracking-wider uppercase">
-                        <span>{plan.badge}</span>
-                      </div>
-                    )}
-
-                    <div>
-                      <div className="flex items-center justify-between gap-1 mb-1 mt-0.5">
-                        <span className="text-xs font-black text-slate-900 tracking-tight leading-snug">
-                          {plan.name}
-                        </span>
-                        <div
-                          className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected
-                              ? "bg-[#0F8B7D] text-white"
-                              : "border-2 border-slate-300 bg-white"
-                          }`}
-                        >
-                          {isSelected && <Check size={10} strokeWidth={3} />}
-                        </div>
-                      </div>
-
-                      <p className="text-[10px] text-slate-500 font-semibold mb-2">
-                        {plan.scope}
-                      </p>
-
-                      <div className="flex items-baseline gap-1">
-                        {is100PercentDiscount ? (
-                          <>
-                            <span className="text-xs font-bold text-slate-400 line-through">
-                              ₹{plan.price}
-                            </span>
-                            <span className="text-lg font-black text-[#0F8B7D]">
-                              ₹0
-                            </span>
-                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-md">
-                              FREE
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-lg font-black text-slate-900">
-                              ₹{plan.price}
-                            </span>
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              /mo
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-2 pt-2 border-t border-slate-200/70 text-[10px] text-slate-600 font-medium leading-tight">
-                      {plan.target}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Selected Plan Features Preview */}
-            <div className="mt-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
-                  Included in {selectedPlan.name} ({selectedPlan.scope}):
-                </span>
-                <span className="text-[11px] font-mono font-bold text-[#0F8B7D]">
-                  ₹{selectedPlan.price}/month tier
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] text-slate-700 font-medium">
-                {selectedPlan.features.map((feat, idx) => (
-                  <div key={idx} className="flex items-start gap-1.5 leading-snug">
-                    <CheckCircle size={13} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                    <span>{feat}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 font-medium">Want full 48-point feature matrix comparison?</span>
-                <Link
-                  href={`/operate/rent-roll/pricing?plan=${selectedPlanId}`}
-                  className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 border border-teal-200 text-xs font-bold text-[#0F8B7D] flex items-center gap-1 shadow-2xs transition"
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-200/60">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Presets:</span>
+              {[25000, 50000, 100000, 250000, 500000].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => {
+                    setCustomSqft(preset);
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_subscribed_sqft", String(preset));
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    customSqft === preset
+                      ? "bg-[#0F8B7D] text-white shadow-2xs"
+                      : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                  }`}
                 >
-                  <Sparkles size={11} />
-                  <span>Explore More in Pricing →</span>
-                </Link>
-              </div>
+                  {preset >= 100000 ? `${(preset / 100000).toFixed(preset % 100000 === 0 ? 0 : 1)}L sq.ft` : `${(preset / 1000).toFixed(0)}k sq.ft`}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* ──── LIMITED TIME PROMOTIONAL OFFER (100% OFF) ──── */}
-          <div className="mb-5 relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-teal-50/70 p-4 shadow-xs">
-            {/* Header Badge */}
-            <div className="flex items-center justify-between gap-2 mb-2.5">
-              <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
-                  <Sparkles size={11} />
-                  Limited Time Offer
-                </span>
-                <span className="text-[11px] font-bold text-amber-900">
-                  100% Off Promotional Access
-                </span>
-              </div>
-              <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300/80">
-                Save ₹{selectedPlan.price}/mo
-              </span>
-            </div>
+          {/* ──── 3 CLEAN PLAN CARDS ──── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+            {SUBSCRIPTION_PLAN_OPTIONS.map((plan) => {
+              const isSelected = selectedPlan.id === plan.id;
+              const planTotal = customSqft * plan.price;
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlanId(plan.id);
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_selected_plan", plan.id);
+                      sessionStorage.setItem("officex_selected_plan", plan.id);
+                    }
+                  }}
+                  className={`relative rounded-2xl p-3 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? "bg-teal-50/70 border-2 border-[#0F8B7D] shadow-sm ring-1 ring-[#0F8B7D]/20"
+                      : "bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs"
+                  }`}
+                >
+                  {/* Badge */}
+                  {plan.popular ? (
+                    <div className="absolute -top-2 right-2.5 px-2 py-0.5 rounded-full bg-[#0F8B7D] text-white text-[8px] font-black uppercase tracking-wider shadow-2xs">
+                      {plan.badge}
+                    </div>
+                  ) : (
+                    <div className="absolute -top-2 right-2.5 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[8px] font-bold uppercase">
+                      {plan.badge}
+                    </div>
+                  )}
 
-            {/* Ticket Showcase Card */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs rounded-xl p-3 border border-amber-200 shadow-2xs">
-              <div className="flex items-start sm:items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-100/80 text-amber-800 shrink-0 mt-0.5 sm:mt-0">
-                  <Gift size={20} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm sm:text-base font-black tracking-widest text-[#0F8B7D] px-2.5 py-0.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-300">
-                      RENTROLL12
-                    </span>
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      100% FREE
-                    </span>
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1 mt-0.5">
+                      <span className="text-xs font-black text-slate-900 tracking-tight">
+                        {plan.name}
+                      </span>
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
+                          isSelected ? "bg-[#0F8B7D] text-white" : "border border-slate-300"
+                        }`}
+                      >
+                        {isSelected && <Check size={9} strokeWidth={3} />}
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-slate-500 font-semibold mb-1.5">
+                      {plan.scope}
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-base font-black text-slate-900">
+                        ₹{plan.price}
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        / sq.ft
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-600 mt-1 leading-snug">
-                    Use code <strong className="text-slate-900 font-bold">RENTROLL12</strong> for 100% free lifetime access to <strong className="text-slate-900">{selectedPlan.name}</strong> &amp; CAM billing.
-                  </p>
-                </div>
+
+                  <div className="mt-2 pt-1.5 border-t border-slate-200/70 text-[10px] text-slate-600 font-medium">
+                    {is100PercentDiscount ? (
+                      <span className="text-emerald-700 font-bold">₹0 FREE</span>
+                    ) : (
+                      <span>Est: ₹{planTotal.toLocaleString("en-IN")}</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ──── 1-CLICK PROMOTIONAL COUPON (RENTROLL12) ──── */}
+          <div className="mb-4 rounded-xl border border-amber-300/80 bg-linear-to-r from-amber-50/80 to-teal-50/60 p-3 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Gift size={16} className="text-amber-700 shrink-0" />
+                <span className="font-mono text-xs font-black text-[#0F8B7D] px-2 py-0.5 rounded-md bg-amber-100/80 border border-dashed border-amber-400">
+                  RENTROLL12
+                </span>
+                <span className="text-[11px] font-semibold text-slate-700 hidden sm:inline">
+                  100% Free Promotional Access (₹0)
+                </span>
               </div>
 
-              {/* 1-Click Apply Button or Applied Status */}
-              <div className="shrink-0 self-end sm:self-center">
+              <div>
                 {appliedCoupon === "RENTROLL12" ? (
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
-                      <CheckCircle2 size={13} />
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-2xs">
+                      <CheckCircle2 size={12} />
                       <span>Applied (₹0)</span>
                     </span>
                     <button
                       type="button"
                       onClick={handleRemoveCoupon}
-                      className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                      className="text-[10px] font-bold text-slate-400 hover:text-rose-600 cursor-pointer"
                     >
                       Remove
                     </button>
@@ -818,59 +805,49 @@ export default function SubscriptionGate({
                     type="button"
                     onClick={() => {
                       setAppliedCoupon("RENTROLL12");
-                      setCouponSuccess(`🎉 Code RENTROLL12 applied! 100% Free Access Activated for ${selectedPlan.name} (₹0).`);
+                      setCouponSuccess("🎉 Code RENTROLL12 applied! 100% Free Access Activated.");
                       setCouponError(null);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("officex_applied_coupon", "RENTROLL12");
+                        sessionStorage.setItem("officex_applied_coupon", "RENTROLL12");
+                        localStorage.setItem("officex_subscription", "active");
+                        sessionStorage.setItem("officex_subscription", "active");
+                        localStorage.setItem("officex_subscribed_sqft", String(customSqft));
+                      }
                     }}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                    className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-[11px] shadow-2xs transition active:scale-95 cursor-pointer"
                   >
-                    <Sparkles size={13} />
-                    <span>Apply 100% Off</span>
+                    Apply 100% Off
                   </button>
                 )}
               </div>
             </div>
-
-            {/* Subtext info */}
-            <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px]">
-              {appliedCoupon === "RENTROLL12" ? (
-                <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
-                  <CheckCircle2 size={12} className="text-emerald-600" />
-                  Free Lifetime Access to {selectedPlan.name} Active · ₹0 charged
-                </span>
-              ) : (
-                <span className="text-amber-800/80 text-[10px] font-medium">
-                  ⚡ Instant unlock: No credit card required with code RENTROLL12.
-                </span>
-              )}
-            </div>
           </div>
 
-          {/* Pricing Banner */}
-          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 border border-teal-200 mb-6 text-center">
-            <div className="text-[10px] font-black uppercase tracking-widest text-teal-700 mb-1">
-              {is100PercentDiscount
-                ? `PROMOTIONAL 100% FREE ACCESS · ${selectedPlan.name.toUpperCase()}`
-                : `SUBSCRIPTION FEE · ${selectedPlan.name.toUpperCase()}`}
+          {/* ──── LIVE CALCULATION SUMMARY ──── */}
+          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-3.5 border border-teal-200 mb-5 text-center">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-teal-800 mb-0.5">
+              {is100PercentDiscount ? "PROMOTIONAL 100% FREE ACCESS" : "CALCULATED SUBSCRIPTION FEE"}
             </div>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-2">
               {is100PercentDiscount ? (
                 <>
-                  <span className="text-xl font-bold text-slate-400 line-through">₹{selectedPlan.price}</span>
-                  <span className="text-4xl font-black text-[#0F8B7D]">₹0 FREE</span>
-                  <span className="text-xs font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                  <span className="text-xs font-bold text-slate-400 line-through">
+                    ₹{(customSqft * selectedPlan.price).toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-black text-[#0F8B7D]">₹0 FREE</span>
+                  <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full uppercase">
                     100% OFF
                   </span>
                 </>
               ) : (
-                <div className="text-3xl font-black text-[#0F8B7D]">
-                  ₹{selectedPlan.price}<span className="text-sm font-bold text-slate-500">/mo</span>
+                <div className="text-2xl font-black text-[#0F8B7D]">
+                  ₹{(customSqft * selectedPlan.price).toLocaleString("en-IN")}
+                  <span className="text-xs font-semibold text-slate-500 ml-1">
+                    ({customSqft.toLocaleString("en-IN")} sq.ft × ₹{selectedPlan.price}/sq.ft)
+                  </span>
                 </div>
               )}
-            </div>
-            <div className="text-[10px] text-slate-500 font-semibold mt-1">
-              {is100PercentDiscount
-                ? `Promo active: RENTROLL12 • 1-click instant lifetime dashboard unlock on ${selectedPlan.name}`
-                : `Secure payment via Razorpay • Instant activation for ${selectedPlan.name}`}
             </div>
           </div>
 
@@ -893,12 +870,12 @@ export default function SubscriptionGate({
               ) : is100PercentDiscount ? (
                 <>
                   <Sparkles size={14} className="text-yellow-300" />
-                  <span>✨ Claim 100% Free Access to {selectedPlan.name} &amp; Unlock Dashboard Now</span>
+                  <span>✨ Activate 100% Free Access (₹0) &amp; Unlock Dashboard Now</span>
                 </>
               ) : (
                 <>
                   <CreditCard size={14} />
-                  <span>Pay ₹{finalPriceInRupees} &amp; Activate {selectedPlan.name} Now</span>
+                  <span>Pay ₹{finalPriceInRupees.toLocaleString("en-IN")} &amp; Activate {selectedPlan.name} Now</span>
                 </>
               )}
             </button>

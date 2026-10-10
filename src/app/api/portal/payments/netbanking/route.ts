@@ -6,6 +6,7 @@ import {
   invoices,
   billingEntities,
   tenants,
+  leases,
   auditLogs,
 } from "@/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -129,14 +130,14 @@ export async function POST(req: NextRequest) {
           .limit(1);
 
         if (inv) {
-          const invTotal = Number(inv.totalAmount || 0);
+          const invTotal = Number(inv.netPayable || inv.grossTotal || 0);
           const allocAmount = Math.min(remainingAmount, invTotal);
 
           await db.insert(paymentAllocations).values({
             id: crypto.randomUUID(),
             invoiceId: invId,
-            collectionId: paymentId,
-            amount: String(allocAmount),
+            paymentId: paymentId,
+            totalAllocated: String(allocAmount),
             allocatedAt: new Date(),
           });
 
@@ -145,8 +146,9 @@ export async function POST(req: NextRequest) {
           await db
             .update(invoices)
             .set({
-              status: newStatus,
-              paidAmount: sql`COALESCE(paid_amount, 0) + ${allocAmount}`,
+              status: newStatus as any,
+              amountPaid: sql`COALESCE(amount_paid, 0) + ${allocAmount}`,
+              balanceDue: sql`GREATEST(0, COALESCE(balance_due, net_payable) - ${allocAmount})`,
               updatedAt: new Date(),
             })
             .where(eq(invoices.id, invId));
@@ -160,17 +162,11 @@ export async function POST(req: NextRequest) {
     try {
       await db.insert(auditLogs).values({
         id: crypto.randomUUID(),
-        orgId: auth.orgId,
-        userId: auth.userId,
+        traceId: reference_id.trim() || crypto.randomUUID(),
+        module: "collections",
+        severity: "info",
         action: "RECORD_NET_BANKING_PAYMENT",
-        resourceType: "collection",
-        resourceId: paymentId,
-        changes: {
-          amount,
-          utr: reference_id,
-          method: payment_method,
-          invoices: invoice_ids,
-        },
+        humanOverrideAction: `Direct transfer UTR: ${reference_id.trim()}`,
       });
     } catch (e) {
       // Non-fatal

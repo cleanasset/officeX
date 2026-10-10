@@ -151,38 +151,65 @@ export default function RentRollPricingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative pt-12 pb-14 sm:pt-16 sm:pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-slate-50/50 to-[#F8FAFC] border-b border-slate-200/80 overflow-hidden text-center">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[720px] h-[360px] bg-gradient-to-tr from-teal-500/10 via-[#0D7B6C]/8 to-emerald-400/10 blur-3xl pointer-events-none rounded-full" />
+      <section className="relative pt-10 pb-12 sm:pt-14 sm:pb-14 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-teal-50/20 to-[#F8FAFC] border-b border-slate-200/80 overflow-hidden text-center">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[380px] bg-gradient-to-tr from-teal-500/12 via-[#0D7B6C]/10 to-emerald-400/12 blur-3xl pointer-events-none rounded-full" />
         
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-[#0D7B6C] text-xs font-bold tracking-wide mb-4 shadow-2xs">
-            <Building2 size={14} className="text-[#0D7B6C]" />
-            <span>OFFICEX RENT ROLL &middot; PLANS &amp; PRICING</span>
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-100/70 border border-teal-300 text-[#0D7B6C] text-xs font-black tracking-wide mb-3 shadow-2xs">
+            <Sparkles size={14} className="text-[#0D7B6C]" />
+            <span>TRANSPARENT PORTFOLIO PRICING · INSTANT ACTIVATION</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-[48px] font-black tracking-tight text-[#0F172A] leading-tight mb-4">
-            Predictable pricing for portfolios of every scale
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[#0F172A] leading-tight mb-2">
+            Simple Pricing. Infinite Scale.
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8">
-            Transparent per-square-foot commercial licensing designed for property owners, asset managers, and REITs. Pick the plan tailored to your leasable square footage.
+          <p className="text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto mb-6">
+            Pay strictly for the square footage you manage. No lock-ins, zero hidden charges.
           </p>
 
-          <div className="inline-flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-600 font-semibold bg-white/90 border border-slate-200/80 py-2 px-5 rounded-full shadow-2xs">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-emerald-600" /> Enterprise Standalone SaaS
+          {/* Attractive 3-Tier Quick Price Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto mb-6">
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col items-center hover:border-teal-300 transition-all">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Standalone Tower</span>
+              <div className="text-2xl font-black text-slate-900 mt-0.5">
+                ₹50<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
+              </div>
+              <span className="text-[11px] font-bold text-teal-700 mt-1">Commercial Starter</span>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-gradient-to-b from-teal-50/60 to-white border-2 border-[#0D7B6C] shadow-md shadow-teal-900/5 flex flex-col items-center relative">
+              <span className="absolute -top-2.5 px-2 py-0.5 bg-[#0D7B6C] text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-2xs">
+                ★ MOST POPULAR
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-teal-800">Tech Parks &amp; Campuses</span>
+              <div className="text-2xl font-black text-[#0D7B6C] mt-0.5">
+                ₹100<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
+              </div>
+              <span className="text-[11px] font-bold text-teal-800 mt-1">Tech Park Campus</span>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col items-center hover:border-teal-300 transition-all">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Funds &amp; REITs</span>
+              <div className="text-2xl font-black text-slate-900 mt-0.5">
+                ₹200<span className="text-xs font-semibold text-slate-500"> / sq.ft</span>
+              </div>
+              <span className="text-[11px] font-bold text-slate-700 mt-1">REIT Mega-Portfolio</span>
+            </div>
+          </div>
+
+          {/* Launch Special Offer Ribbon */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-slate-800 font-bold bg-white/95 border border-teal-200 py-2 px-5 rounded-2xl shadow-xs">
+            <span className="flex items-center gap-1.5 text-emerald-700">
+              <Check size={14} className="text-emerald-600 stroke-[3]" /> Instant Activation
             </span>
-            <span className="w-1 h-1 rounded-full bg-slate-300 hidden sm:inline" />
-            <span className="flex items-center gap-1.5">
-              <Zap size={14} className="text-[#0D7B6C]" /> Zero ERP Re-Keying
+            <span className="text-slate-300">•</span>
+            <span className="flex items-center gap-1.5 text-teal-800 font-black">
+              <Sparkles size={14} className="text-[#0D7B6C]" /> Launch Offer: 100% OFF with Coupon <code className="font-mono bg-teal-100/80 text-teal-900 px-2 py-0.5 rounded-md border border-teal-300">RENTROLL12</code>
             </span>
-            <span className="w-1 h-1 rounded-full bg-slate-300 hidden sm:inline" />
-            <span className="flex items-center gap-1.5">
-              <Lock size={14} className="text-teal-600" /> Statutory GST &amp; TDS Compliant
-            </span>
-            <span className="w-1 h-1 rounded-full bg-slate-300 hidden sm:inline" />
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-[#0D7B6C]" /> 14-Day Grace Period Protection
+            <span className="text-slate-300">•</span>
+            <span className="flex items-center gap-1.5 text-slate-600">
+              <Lock size={12} className="text-teal-600" /> 14-Day Grace Protection
             </span>
           </div>
         </div>
@@ -222,7 +249,7 @@ export default function RentRollPricingPage() {
                     <div className="text-[11px] font-bold text-teal-700 normal-case">₹50 / mo</div>
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5 text-[#0D7B6C] bg-teal-50/50">
-                    <div>Grade-A Tech Park</div>
+                    <div>Tech Park Campus</div>
                     <div className="text-[11px] font-bold text-[#0D7B6C] normal-case">₹100 / mo</div>
                   </th>
                   <th className="py-4 px-4 text-xs font-black uppercase tracking-wider text-center w-1/5">

@@ -62,6 +62,11 @@ export default function InvoiceDetailModal({
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Dynamic Landlord Branding (§S-60 / Brand Logo)
+  const [brandLogo, setBrandLogo] = useState<string>("");
+  const [brandName, setBrandName] = useState<string>("");
+  const [companyName, setCompanyName] = useState<string>("");
+
   // Credit Note dialog state
   const [creditNoteOpen, setCreditNoteOpen] = useState(false);
   const [creditReason, setCreditReason] = useState("");
@@ -69,6 +74,17 @@ export default function InvoiceDetailModal({
 
   // Approval comment state
   const [approvalComment, setApprovalComment] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const logo = localStorage.getItem("officex_brand_logo") || localStorage.getItem("officex_org_logo") || "";
+      const bName = localStorage.getItem("officex_brand_name") || "";
+      const cName = localStorage.getItem("officex_company_name") || "";
+      if (logo) setBrandLogo(logo);
+      if (bName) setBrandName(bName);
+      if (cName) setCompanyName(cName);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && invoiceId) {
@@ -247,6 +263,38 @@ export default function InvoiceDetailModal({
 
           {!loading && inv && (
             <>
+              {/* Official Tax Invoice Letterhead with Brand Logo */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                <div className="flex items-center gap-3.5">
+                  {brandLogo ? (
+                    <div className="w-14 h-14 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                      <img src={brandLogo} alt="Landlord Logo" className="max-h-full max-w-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
+                      {(brandName || companyName || "O").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
+                      {brandName || companyName || "OFFICEX Commercial Asset Management"}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Commercial Real Estate Tax Invoice · SAC 997212 (18% GST)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="sm:text-right">
+                  <div className="text-xs font-mono font-black text-slate-900">
+                    INVOICE #{inv.invoice_number}
+                  </div>
+                  <div className="text-[11px] text-teal-700 font-bold mt-0.5">
+                    Date: {inv.invoice_date}
+                  </div>
+                </div>
+              </div>
+
               {/* Party Information (Two Columns) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
                 {/* Billed By */}
@@ -255,7 +303,7 @@ export default function InvoiceDetailModal({
                     Billed By (Lessor / SPV)
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 mt-1">
-                    OFFICEX Asset Management SPV
+                    {companyName || brandName || "OFFICEX Asset Management SPV"}
                   </h3>
                   <p className="text-xs text-slate-600 mt-0.5">
                     GSTIN: <span className="font-mono font-medium">27AAAAA0000A1Z5</span> · PAN: AAAAA0000A
