@@ -484,6 +484,8 @@ export default function PropertyHierarchyModal({
           areaSqft: "",
           floorNumber: "",
           unitType: "Office",
+          fitoutCondition: "Fully Furnished",
+          workstationsCount: "",
         });
         setActiveTab("tenant");
         onSuccess?.();
