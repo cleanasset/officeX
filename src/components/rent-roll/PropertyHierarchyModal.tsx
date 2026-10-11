@@ -25,6 +25,9 @@ import {
   Car,
   FileCheck2,
   FileUp,
+  Zap,
+  Armchair,
+  Clock,
 } from "lucide-react";
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
@@ -70,8 +73,9 @@ export default function PropertyHierarchyModal({
   const [spacesList, setSpacesList] = useState<Array<{ id: string; name: string; area: number; buildingId?: string }>>([]);
   const [tenantsList, setTenantsList] = useState<Array<{ id: string; name: string; company?: string }>>([]);
 
-  // ──── 1. PROPERTY FORM (11 Fields) ────
+  // ──── 1. PROPERTY FORM (Enhanced Commercial Master) ────
   const [propForm, setPropForm] = useState({
+    existingPropId: "",
     propertyName: "",
     address: "",
     city: "",
@@ -83,6 +87,11 @@ export default function PropertyHierarchyModal({
     floorsCount: "",
     contactName: "",
     contactPhone: "",
+    fitoutCondition: "Fully Furnished", // "Fully Furnished" | "Warm Shell" | "Bare Shell" | "Semi-Furnished"
+    workstationsCount: "",
+    cabinsCount: "",
+    meetingRoomsCount: "",
+    defaultFitoutDays: "60",
   });
 
   // ──── 2. BUILDING FORM (3 Fields) ────
@@ -93,16 +102,18 @@ export default function PropertyHierarchyModal({
     buildingAddress: "",
   });
 
-  // ──── 3. SPACE FORM (5 Fields) ────
+  // ──── 3. SPACE FORM (Enhanced Handover Specs) ────
   const [spaceForm, setSpaceForm] = useState({
     buildingId: "",
     spaceName: "",
     areaSqft: "",
     floorNumber: "",
     unitType: "Office",
+    fitoutCondition: "Fully Furnished",
+    workstationsCount: "",
   });
 
-  // ──── 4. TENANT FORM (9 Fields) ────
+  // ──── 4. TENANT FORM (Corporate & Signatory Master) ────
   const [tenantForm, setTenantForm] = useState({
     occupantName: "",
     email: "",
@@ -113,6 +124,10 @@ export default function PropertyHierarchyModal({
     billingAddress: "",
     altContactName: "",
     altContactPhone: "",
+    cinNumber: "",
+    industryType: "IT & Software",
+    signatoryName: "",
+    signatoryDesignation: "",
   });
 
   // ──── 5. CONTRACT FORM (Comprehensive Commercial Terms) ────
@@ -187,6 +202,7 @@ export default function PropertyHierarchyModal({
           try {
             const ob = JSON.parse(rawOb);
             setPropForm((prev) => ({
+              ...prev,
               propertyName: prev.propertyName || ob.propertyName || localStorage.getItem("officex_active_property") || "",
               address: prev.address || ob.address || "",
               city: prev.city || ob.city || "Bengaluru",
@@ -332,6 +348,7 @@ export default function PropertyHierarchyModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: propForm.existingPropId || undefined,
           property_name: propForm.propertyName.trim(),
           address_line1: propForm.address.trim(),
           city: propForm.city.trim() || "Bengaluru",
@@ -510,6 +527,12 @@ export default function PropertyHierarchyModal({
           billing_address: tenantForm.billingAddress.trim(),
           alt_contact_name: tenantForm.altContactName.trim(),
           alt_contact_phone: tenantForm.altContactPhone.trim(),
+          remarks: JSON.stringify({
+            signatory_name: tenantForm.signatoryName.trim(),
+            signatory_designation: tenantForm.signatoryDesignation.trim(),
+            industry_type: tenantForm.industryType,
+            cin_number: tenantForm.cinNumber.trim().toUpperCase(),
+          }),
         }),
       });
       const data = await res.json();
@@ -558,6 +581,10 @@ export default function PropertyHierarchyModal({
           billingAddress: "",
           altContactName: "",
           altContactPhone: "",
+          cinNumber: "",
+          industryType: "IT & Software",
+          signatoryName: "",
+          signatoryDesignation: "",
         });
 
         // Switch to contract creation
@@ -1045,15 +1072,85 @@ export default function PropertyHierarchyModal({
                   />
                 </div>
 
-                {/* 9. Number of Floors */}
+                {/* 9. Number of Floors (0 allowed for ground-floor only warehouses) */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Number of Floors</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Number of Floors</label>
+                    <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-semibold">
+                      0 for Ground Floor warehouse
+                    </span>
+                  </div>
                   <input
                     type="number"
-                    min="1"
-                    placeholder="e.g. 14"
+                    min="0"
+                    placeholder="e.g. 14 (or 0 for Ground Floor only)"
                     value={propForm.floorsCount}
                     onChange={(e) => setPropForm({ ...propForm, floorsCount: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+
+                {/* Handover & Fit-out Condition */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Handover / Fit-out Condition *
+                  </label>
+                  <select
+                    value={propForm.fitoutCondition}
+                    onChange={(e) => setPropForm({ ...propForm, fitoutCondition: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="Fully Furnished">Fully Furnished (Plug &amp; Play / Turnkey)</option>
+                    <option value="Warm Shell">Warm Shell (HVAC, Ceilings, Lighting)</option>
+                    <option value="Bare Shell">Bare Shell (Core &amp; Shell / Slab)</option>
+                    <option value="Semi-Furnished">Semi-Furnished (Partially Fitted)</option>
+                  </select>
+                </div>
+
+                {/* Workstations / Cabins if furnished */}
+                {(propForm.fitoutCondition === "Fully Furnished" || propForm.fitoutCondition === "Semi-Furnished") && (
+                  <>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Workstations Count</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 100 Seats"
+                        value={propForm.workstationsCount}
+                        onChange={(e) => setPropForm({ ...propForm, workstationsCount: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Manager Cabins Count</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 4 Cabins"
+                        value={propForm.cabinsCount}
+                        onChange={(e) => setPropForm({ ...propForm, cabinsCount: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Meeting Rooms Count</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 2 Rooms"
+                        value={propForm.meetingRoomsCount}
+                        onChange={(e) => setPropForm({ ...propForm, meetingRoomsCount: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Default Fit-out Period Days */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Default Fit-out Period (Days)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 60 or 90 Days"
+                    value={propForm.defaultFitoutDays}
+                    onChange={(e) => setPropForm({ ...propForm, defaultFitoutDays: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
                   />
                 </div>
@@ -1261,7 +1358,7 @@ export default function PropertyHierarchyModal({
                 </div>
 
                 {/* 4. Unit Type (dropdown: Office, Desk, Retail) */}
-                <div className="sm:col-span-2">
+                <div>
                   <label className="font-bold text-slate-700 block mb-1">Unit Type *</label>
                   <select
                     value={spaceForm.unitType}
@@ -1273,6 +1370,34 @@ export default function PropertyHierarchyModal({
                     <option value="Retail">Retail</option>
                   </select>
                 </div>
+
+                {/* Handover & Fit-out Condition */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Space Furnishing Condition *</label>
+                  <select
+                    value={spaceForm.fitoutCondition}
+                    onChange={(e) => setSpaceForm({ ...spaceForm, fitoutCondition: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="Fully Furnished">Fully Furnished (Plug &amp; Play)</option>
+                    <option value="Warm Shell">Warm Shell (HVAC, Ceilings)</option>
+                    <option value="Bare Shell">Bare Shell (Raw Slab)</option>
+                    <option value="Semi-Furnished">Semi-Furnished (Fitted)</option>
+                  </select>
+                </div>
+
+                {(spaceForm.fitoutCondition === "Fully Furnished" || spaceForm.fitoutCondition === "Semi-Furnished") && (
+                  <div className="sm:col-span-2">
+                    <label className="font-bold text-slate-700 block mb-1">Workstations / Desks in Unit</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 24 Desks"
+                      value={spaceForm.workstationsCount}
+                      onChange={(e) => setSpaceForm({ ...spaceForm, workstationsCount: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -1476,6 +1601,63 @@ export default function PropertyHierarchyModal({
                     placeholder="+91 99000 88776"
                     value={tenantForm.altContactPhone}
                     onChange={(e) => setTenantForm({ ...tenantForm, altContactPhone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+
+                {/* 10. Corporate CIN / LLPIN Number */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Corporate Identity (CIN / LLPIN) <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. U72200KA2021PTC145678"
+                    value={tenantForm.cinNumber}
+                    onChange={(e) => setTenantForm({ ...tenantForm, cinNumber: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none uppercase"
+                  />
+                </div>
+
+                {/* 11. Industry Vertical */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Industry / Sector</label>
+                  <select
+                    value={tenantForm.industryType}
+                    onChange={(e) => setTenantForm({ ...tenantForm, industryType: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="IT & Software">IT / SaaS / Tech</option>
+                    <option value="BFSI">BFSI / FinTech / Investment</option>
+                    <option value="Consulting & Legal">Consulting &amp; Legal</option>
+                    <option value="Healthcare & Pharma">Healthcare &amp; Pharma</option>
+                    <option value="E-Commerce & Retail">E-Commerce &amp; Retail</option>
+                    <option value="Manufacturing & Logistics">Manufacturing &amp; Logistics</option>
+                    <option value="Coworking & Managed Office">Coworking &amp; Managed Office</option>
+                    <option value="Other">Other Commercial Enterprise</option>
+                  </select>
+                </div>
+
+                {/* 12. Authorized Signatory Name */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Authorized Signatory Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rahul Sharma"
+                    value={tenantForm.signatoryName}
+                    onChange={(e) => setTenantForm({ ...tenantForm, signatoryName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+
+                {/* 13. Authorized Signatory Designation */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Signatory Designation</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Managing Director / VP Real Estate"
+                    value={tenantForm.signatoryDesignation}
+                    onChange={(e) => setTenantForm({ ...tenantForm, signatoryDesignation: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
                   />
                 </div>

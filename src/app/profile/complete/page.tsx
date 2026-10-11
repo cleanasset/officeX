@@ -27,6 +27,18 @@ import {
   Layers,
   X,
   AlertTriangle,
+  FileUp,
+  FileCheck2,
+  UploadCloud,
+  Loader2,
+  Calculator,
+  Zap,
+  Car,
+  Wrench,
+  Shield,
+  Check,
+  Clock,
+  Armchair,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -76,6 +88,11 @@ function CompleteProfileContent() {
     property_name: "",
     property_code: "",
     property_type: "office",
+    fitout_condition: "fully_furnished", // "fully_furnished" | "warm_shell" | "bare_shell" | "semi_furnished"
+    workstations_count: "",
+    cabins_count: "",
+    meeting_rooms_count: "",
+    default_fitout_days: "60",
     ownership_structure: "pvt_ltd",
     total_leasable_area_sqft: 0,
     floors_count: 1,
@@ -136,7 +153,7 @@ function CompleteProfileContent() {
   const [sheetParsedRows, setSheetParsedRows] = useState<any[]>([]);
   const [propLoading, setPropLoading] = useState(false);
 
-  // Step 2: Tenant Form (Exact 9 fields requested by user)
+  // Step 2: Tenant Form (Enriched with corporate & statutory specs)
   const [selectedPropertyForTenant, setSelectedPropertyForTenant] = useState<string>("");
   const [tenantForm, setTenantForm] = useState({
     occupant_name: "",
@@ -148,6 +165,10 @@ function CompleteProfileContent() {
     billing_address: "",
     alt_contact_name: "",
     alt_contact_phone: "",
+    signatory_name: "",
+    signatory_designation: "",
+    industry_type: "IT / Technology",
+    cin_number: "",
   });
   const [tenantLoading, setTenantLoading] = useState(false);
 
@@ -162,7 +183,7 @@ function CompleteProfileContent() {
   // Tenants List for Contract selection
   const [tenantsList, setTenantsList] = useState<Array<{ id: string; name: string; company?: string }>>([]);
 
-  // Step 3: Contract Form (Exact 18 fields requested by user)
+  // Step 3: Contract Form (Comprehensive Commercial Terms & Auto-Extraction)
   const [contractForm, setContractForm] = useState({
     occupant_id: "",
     occupant_name: "",
@@ -172,19 +193,167 @@ function CompleteProfileContent() {
     start_date: "",
     end_date: "",
     area_sqft: "",
+    // Pricing Model & Rates
+    billing_model: "Area-based", // "Area-based" | "Seat-based" | "Fixed" | "Hybrid" | "Pure Rent"
+    rate_per_sqft: "",
+    rate_per_seat: "",
+    seat_count: "",
+    bare_shell_rate: "",
+    fitout_rate: "",
     monthly_rent: "",
-    escalation_pct: "",
+    // Fit-out & Handover Terms
+    fitout_condition: "Fully Furnished", // "Fully Furnished" | "Warm Shell" | "Bare Shell" | "Semi-Furnished"
+    fitout_period_days: "60",
+    possession_date: "",
+    // CAM Charges
+    cam_type: "Per Sq.Ft", // "Per Sq.Ft" | "Fixed Monthly" | "Included" | "Actuals"
+    cam_rate: "",
+    cam_monthly: "",
+    // Utilities & Power Backup
+    electricity_billing: "Submeter Actuals", // "Submeter Actuals" | "Fixed Monthly" | "Included in Rent" | "Proportionate Share"
+    power_backup_type: "100% DG Power Backup", // "100% DG Power Backup" | "Partial DG Backup" | "No DG Backup"
+    electricity_load_kva: "",
+    dg_rate_per_kwh: "",
+    water_charges: "Included in CAM",
+    // Dedicated Parking Allocation
+    car_parking_slots: "2",
+    car_parking_rate: "3000",
+    two_wheeler_slots: "5",
+    two_wheeler_rate: "500",
+    // Escalations & Deposits
+    escalation_pct: "5.0",
     escalation_start_date: "",
     escalation_frequency: "Annual",
     security_deposit: "",
-    lock_in_months: "",
+    deposit_months: "6",
+    lock_in_months: "36",
     notice_days: "90",
+    // Commercial Entities & Statutory
     billing_entity: "",
-    billing_model: "Area-based",
     payment_terms: "Net 30",
+    late_interest_pct: "18",
+    gst_applicable: true,
+    tds_applicable: true,
+    stamp_duty_sharing: "50:50 Shared",
     notes: "",
   });
   const [contractLoading, setContractLoading] = useState(false);
+
+  // Rent Agreement Upload & Auto-Extraction State
+  const [isUploadingAgreement, setIsUploadingAgreement] = useState(false);
+  const [parsedAgreementMeta, setParsedAgreementMeta] = useState<{
+    fileName: string;
+    confidence: number;
+    extractedFieldsCount: number;
+    summaryHighlights: string[];
+  } | null>(null);
+
+  // ──── LEASE AGREEMENT PARSING & AUTO-POPULATION ────
+  const handleUploadRentAgreement = async (file: File) => {
+    if (!file) return;
+    setIsUploadingAgreement(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/contracts/parse-agreement", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        const d = json.data;
+        setParsedAgreementMeta({
+          fileName: json.fileName,
+          confidence: d.confidence || 92,
+          extractedFieldsCount: d.extractedFieldsCount || 16,
+          summaryHighlights: d.summaryHighlights || [],
+        });
+
+        // 1. Auto-match occupant if name detected
+        let targetOccupantId = contractForm.occupant_id;
+        if (d.occupantName || d.companyName) {
+          const searchName = (d.occupantName || d.companyName).toLowerCase();
+          const matched = tenantsList.find(
+            (t) =>
+              t.name.toLowerCase().includes(searchName) ||
+              searchName.includes(t.name.toLowerCase()) ||
+              (t.company && t.company.toLowerCase().includes(searchName))
+          );
+          if (matched) {
+            targetOccupantId = matched.id;
+          }
+        }
+
+        // 2. Auto-populate all extracted commercial particulars
+        setContractForm((prev) => {
+          const areaVal = d.areaSqft ? String(d.areaSqft) : prev.area_sqft;
+          const rateSqft = d.ratePerSqft ? String(d.ratePerSqft) : prev.rate_per_sqft;
+          let calculatedRent = d.monthlyRent ? String(d.monthlyRent) : prev.monthly_rent;
+          if (!calculatedRent && rateSqft && areaVal) {
+            calculatedRent = String(Math.round(Number(rateSqft) * Number(areaVal)));
+          }
+
+          let calcDeposit = d.securityDeposit ? String(d.securityDeposit) : prev.security_deposit;
+          if (!calcDeposit && d.depositMonths && calculatedRent) {
+            calcDeposit = String(Math.round(Number(calculatedRent) * Number(d.depositMonths)));
+          }
+
+          return {
+            ...prev,
+            occupant_id: targetOccupantId || prev.occupant_id,
+            building_name: d.buildingName || prev.building_name,
+            space_unit: d.spaceName || prev.space_unit,
+            area_sqft: areaVal,
+            start_date: d.startDate || prev.start_date,
+            end_date: d.endDate || prev.end_date,
+            billing_model: d.billingModel || prev.billing_model,
+            rate_per_sqft: rateSqft,
+            rate_per_seat: d.ratePerSeat ? String(d.ratePerSeat) : prev.rate_per_seat,
+            seat_count: d.seatCount ? String(d.seatCount) : prev.seat_count,
+            bare_shell_rate: d.bareShellRate ? String(d.bareShellRate) : prev.bare_shell_rate,
+            fitout_rate: d.fitoutRate ? String(d.fitoutRate) : prev.fitout_rate,
+            monthly_rent: calculatedRent,
+            fitout_condition: d.fitoutCondition || prev.fitout_condition,
+            fitout_period_days: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitout_period_days,
+            possession_date: d.possessionDate || prev.possession_date,
+            cam_type: d.camType || prev.cam_type,
+            cam_rate: d.camRate ? String(d.camRate) : prev.cam_rate,
+            cam_monthly: d.camMonthly ? String(d.camMonthly) : prev.cam_monthly,
+            electricity_billing: d.electricityBilling || prev.electricity_billing,
+            power_backup_type: d.powerBackupType || prev.power_backup_type,
+            electricity_load_kva: d.electricityLoadKva ? String(d.electricityLoadKva) : prev.electricity_load_kva,
+            dg_rate_per_kwh: d.dgRatePerKwh ? String(d.dgRatePerKwh) : prev.dg_rate_per_kwh,
+            water_charges: d.waterCharges || prev.water_charges,
+            car_parking_slots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.car_parking_slots,
+            car_parking_rate: d.carParkingRate ? String(d.carParkingRate) : prev.car_parking_rate,
+            two_wheeler_slots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.two_wheeler_slots,
+            two_wheeler_rate: d.twoWheelerRate ? String(d.twoWheelerRate) : prev.two_wheeler_rate,
+            escalation_pct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalation_pct,
+            escalation_frequency: d.escalationFrequency || prev.escalation_frequency,
+            escalation_start_date: d.escalationStartDate || prev.escalation_start_date,
+            security_deposit: calcDeposit,
+            deposit_months: d.depositMonths ? String(d.depositMonths) : prev.deposit_months,
+            lock_in_months: d.lockInMonths ? String(d.lockInMonths) : prev.lock_in_months,
+            notice_days: d.noticeDays ? String(d.noticeDays) : prev.notice_days,
+            billing_entity: d.billingEntity || prev.billing_entity,
+            payment_terms: d.paymentTerms || prev.payment_terms,
+            late_interest_pct: d.lateInterestPct ? String(d.lateInterestPct) : prev.late_interest_pct,
+            stamp_duty_sharing: d.stampDutySharing || prev.stamp_duty_sharing,
+            notes: d.notes || prev.notes,
+          };
+        });
+
+        showToast(`✓ Rent Agreement parsed successfully! ${d.extractedFieldsCount || 16} commercial terms auto-filled.`);
+      } else {
+        showToast(json.error || "Failed to parse rent agreement. Please ensure document is legible.", "error");
+      }
+    } catch (err: any) {
+      showToast(`Document extraction failed: ${err.message}`, "error");
+    } finally {
+      setIsUploadingAgreement(false);
+    }
+  };
 
   // Step 4: Documents Vault
   const [uploadedDocs, setUploadedDocs] = useState<{ [key: string]: boolean }>({
@@ -453,12 +622,27 @@ function CompleteProfileContent() {
 
     const finalSpvName = propForm.spv_name.trim() || companyName || brandName || propForm.property_name || "Commercial Asset SPV";
 
+    const matchingProp = registeredProperties.find(
+      (p: any) =>
+        (p.property_name && p.property_name.toLowerCase().trim() === propForm.property_name.toLowerCase().trim()) ||
+        (p.property_code && propForm.property_code && p.property_code.toLowerCase().trim() === propForm.property_code.toLowerCase().trim())
+    );
+
+    let propIdToUse = matchingProp?.id;
+    if (!propIdToUse && typeof window !== "undefined") {
+      try {
+        const storedIds = JSON.parse(localStorage.getItem("officex_registered_property_ids") || "[]");
+        if (storedIds.length > 0) propIdToUse = storedIds[storedIds.length - 1];
+      } catch {}
+    }
+
     setPropLoading(true);
     try {
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: propIdToUse || undefined,
           property_name: propForm.property_name.trim(),
           property_code: propForm.property_code || undefined,
           property_type: propForm.property_type,
@@ -475,7 +659,7 @@ function CompleteProfileContent() {
 
       if (res.ok) {
         const newProp = json.data || {
-          id: `prop_${Date.now()}`,
+          id: matchingProp?.id || `prop_${Date.now()}`,
           property_name: propForm.property_name,
           address: propForm.address,
           city: propForm.city,
@@ -483,7 +667,13 @@ function CompleteProfileContent() {
           postal_code: propForm.pincode,
           total_leasable_area_sqft: propForm.total_leasable_area_sqft,
         };
-        const updatedList = [...registeredProperties, newProp];
+        const updatedList = registeredProperties.some(
+          (p: any) => p.id === newProp.id || p.property_name?.toLowerCase() === newProp.property_name?.toLowerCase()
+        )
+          ? registeredProperties.map((p: any) =>
+              p.id === newProp.id || p.property_name?.toLowerCase() === newProp.property_name?.toLowerCase() ? newProp : p
+            )
+          : [...registeredProperties, newProp];
         setRegisteredProperties(updatedList);
         setSelectedPropertyForTenant(newProp.id || newProp.property_name);
 
@@ -623,6 +813,12 @@ function CompleteProfileContent() {
           alt_contact_name: tenantForm.alt_contact_name.trim(),
           alt_contact_phone: tenantForm.alt_contact_phone.trim(),
           property_id: selectedPropertyForTenant,
+          remarks: JSON.stringify({
+            signatory_name: tenantForm.signatory_name.trim(),
+            signatory_designation: tenantForm.signatory_designation.trim(),
+            industry_type: tenantForm.industry_type,
+            cin_number: tenantForm.cin_number.trim().toUpperCase(),
+          }),
         }),
       });
       const data = await res.json();
@@ -674,7 +870,7 @@ function CompleteProfileContent() {
     }
   };
 
-  // Save Contract (Exact 18 fields requested by user)
+  // Save Contract (Comprehensive Commercial Terms & Institutional Linking)
   const handleSaveContract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contractForm.occupant_id) {
@@ -688,6 +884,63 @@ function CompleteProfileContent() {
 
     setContractLoading(true);
     try {
+      const baseRent = Number(contractForm.monthly_rent) || 100000;
+      const camTotal = contractForm.cam_type === "Per Sq.Ft"
+        ? Math.round((Number(contractForm.cam_rate) || 0) * (Number(contractForm.area_sqft) || 0))
+        : Number(contractForm.cam_monthly) || 0;
+      const parkingTotal =
+        (Number(contractForm.car_parking_slots) || 0) * (Number(contractForm.car_parking_rate) || 0) +
+        (Number(contractForm.two_wheeler_slots) || 0) * (Number(contractForm.two_wheeler_rate) || 0);
+
+      // 1. Assembling structured billing charges
+      const charges = [
+        {
+          component: "base_rent",
+          calc_basis: contractForm.billing_model === "Seat-based" ? "per_seat" : "per_area",
+          rate: contractForm.billing_model === "Seat-based" ? Number(contractForm.rate_per_seat) || baseRent : Number(contractForm.rate_per_sqft) || baseRent,
+          rate_period: "month",
+          quantity_basis: contractForm.billing_model === "Seat-based" ? Number(contractForm.seat_count) || 1 : Number(contractForm.area_sqft) || 1,
+          start_date: contractForm.start_date,
+          end_date: contractForm.end_date,
+        },
+      ];
+
+      if (camTotal > 0) {
+        charges.push({
+          component: "cam",
+          calc_basis: contractForm.cam_type === "Per Sq.Ft" ? "per_area" : "fixed",
+          rate: Number(contractForm.cam_rate) || camTotal,
+          rate_period: "month",
+          quantity_basis: Number(contractForm.area_sqft) || 1,
+          start_date: contractForm.start_date,
+          end_date: contractForm.end_date,
+        });
+      }
+
+      if (parkingTotal > 0) {
+        charges.push({
+          component: "parking",
+          calc_basis: "fixed",
+          rate: parkingTotal,
+          rate_period: "month",
+          quantity_basis: Number(contractForm.car_parking_slots) || 1,
+          start_date: contractForm.start_date,
+          end_date: contractForm.end_date,
+        });
+      }
+
+      // 2. Fitout rent-free concessions
+      const concessions = [];
+      const fitoutDays = Number(contractForm.fitout_period_days) || 0;
+      if (fitoutDays > 0) {
+        concessions.push({
+          concession_type: "rent_free",
+          start_date: contractForm.possession_date || contractForm.start_date,
+          concession_value: fitoutDays,
+          description: `Fit-out Rent-Free Period of ${fitoutDays} Days`,
+        });
+      }
+
       const res = await fetch("/api/contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -698,7 +951,7 @@ function CompleteProfileContent() {
           start_date: contractForm.start_date,
           end_date: contractForm.end_date,
           contract_type: "lease",
-          base_rent_rate: Number(contractForm.monthly_rent) || 100000,
+          base_rent_rate: baseRent,
           billing_model: contractForm.billing_model.toLowerCase().replace(/\s+/g, "_"),
           escalation_type: "percentage",
           escalation_value: Number(contractForm.escalation_pct) || 0,
@@ -708,11 +961,30 @@ function CompleteProfileContent() {
           notice_period_days: Number(contractForm.notice_days) || 90,
           billing_entity: contractForm.billing_entity.trim(),
           payment_terms: contractForm.payment_terms.trim(),
-          remarks: contractForm.notes.trim(),
+          remarks: JSON.stringify({
+            fitout_condition: contractForm.fitout_condition,
+            fitout_period_days: contractForm.fitout_period_days,
+            cam_type: contractForm.cam_type,
+            cam_rate: contractForm.cam_rate,
+            cam_monthly: camTotal,
+            parking_monthly: parkingTotal,
+            electricity_billing: contractForm.electricity_billing,
+            power_backup: contractForm.power_backup_type,
+            electricity_load_kva: contractForm.electricity_load_kva,
+            dg_rate_per_kwh: contractForm.dg_rate_per_kwh,
+            parking: { cars: contractForm.car_parking_slots, bikes: contractForm.two_wheeler_slots },
+            late_interest_pct: contractForm.late_interest_pct,
+            gst_applicable: contractForm.gst_applicable,
+            tds_applicable: contractForm.tds_applicable,
+            stamp_duty_sharing: contractForm.stamp_duty_sharing,
+            notes: contractForm.notes,
+          }),
+          charges,
+          concessions,
         }),
       });
       markStepDone("contract");
-      showToast("✓ Commercial Lease Contract registered successfully!");
+      showToast("✓ Commercial Lease Contract registered with full commercial breakdown!");
       setActiveStep("documents");
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
@@ -1050,6 +1322,71 @@ function CompleteProfileContent() {
                         value={propForm.wings_count}
                         onChange={(e) => setPropForm({ ...propForm, wings_count: Number(e.target.value) || 1 })}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Handover & Fit-out Condition (§Commercial Spec) */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">
+                        Handover / Fit-out Condition *
+                      </label>
+                      <select
+                        value={propForm.fitout_condition}
+                        onChange={(e) => setPropForm({ ...propForm, fitout_condition: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="fully_furnished">Fully Furnished (Plug &amp; Play / Turnkey)</option>
+                        <option value="warm_shell">Warm Shell (Flooring, Ceiling, HVAC Ducts, Lighting)</option>
+                        <option value="bare_shell">Bare Shell (Core &amp; Shell / Concrete Slab)</option>
+                        <option value="semi_furnished">Semi-Furnished (Partially Fitted / Cabins Only)</option>
+                      </select>
+                    </div>
+
+                    {/* Dynamic Workstation & Layout Specs when furnished */}
+                    {(propForm.fitout_condition === "fully_furnished" || propForm.fitout_condition === "semi_furnished") && (
+                      <>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">Workstations / Seats Count</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 100 Seats"
+                            value={propForm.workstations_count}
+                            onChange={(e) => setPropForm({ ...propForm, workstations_count: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">Manager Cabins</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 4 Cabins"
+                            value={propForm.cabins_count}
+                            onChange={(e) => setPropForm({ ...propForm, cabins_count: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">Conference / Meeting Rooms</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 2 Rooms"
+                            value={propForm.meeting_rooms_count}
+                            onChange={(e) => setPropForm({ ...propForm, meeting_rooms_count: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Fit-out Rent-Free Days */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Default Fit-out Period (Days)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 60 or 90 Days"
+                        value={propForm.default_fitout_days}
+                        onChange={(e) => setPropForm({ ...propForm, default_fitout_days: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
 
@@ -1766,6 +2103,66 @@ function CompleteProfileContent() {
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
+
+                    {/* 10. Corporate CIN / LLPIN Number */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Corporate Identity (CIN / LLPIN)</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Optional
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="e.g. U72200KA2021PTC145678"
+                        value={tenantForm.cin_number}
+                        onChange={(e) => setTenantForm({ ...tenantForm, cin_number: e.target.value.toUpperCase() })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none uppercase"
+                      />
+                    </div>
+
+                    {/* 11. Industry Vertical */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Industry / Sector</label>
+                      <select
+                        value={tenantForm.industry_type}
+                        onChange={(e) => setTenantForm({ ...tenantForm, industry_type: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="IT & Software">IT / SaaS / Tech</option>
+                        <option value="BFSI">BFSI / FinTech / Investment</option>
+                        <option value="Consulting & Legal">Consulting &amp; Legal</option>
+                        <option value="Healthcare & Pharma">Healthcare &amp; Pharma</option>
+                        <option value="E-Commerce & Retail">E-Commerce &amp; Retail</option>
+                        <option value="Manufacturing & Logistics">Manufacturing &amp; Logistics</option>
+                        <option value="Coworking & Managed Office">Coworking &amp; Managed Office</option>
+                        <option value="Other">Other Commercial Enterprise</option>
+                      </select>
+                    </div>
+
+                    {/* 12. Authorized Signatory Name */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Authorized Signatory Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Rahul Sharma"
+                        value={tenantForm.signatory_name}
+                        onChange={(e) => setTenantForm({ ...tenantForm, signatory_name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* 13. Authorized Signatory Designation */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Signatory Designation</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Managing Director / VP Real Estate"
+                        value={tenantForm.signatory_designation}
+                        onChange={(e) => setTenantForm({ ...tenantForm, signatory_designation: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
                   </div>
 
                   <div className="pt-4 flex items-center justify-between border-t border-slate-100">
@@ -1846,262 +2243,959 @@ function CompleteProfileContent() {
                 </div>
               )}
 
-              <form onSubmit={handleSaveContract} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* 1. Occupant (dropdown - selects from occupants, pre-selected with latest added) */}
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Occupant / Tenant *</label>
-                    <select
-                      value={contractForm.occupant_id}
+              {/* ──── LEASE AGREEMENT UPLOAD & AUTO-EXTRACTION ──── */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/50 to-white border-2 border-dashed border-[#0D7B6C]/40 hover:border-[#0D7B6C] transition space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <FileUp size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-black text-slate-900">
+                          Upload Rent Agreement / Lease Deed (Automatic Data Fetch)
+                        </h4>
+                        <span className="text-[10px] font-bold text-[#0D7B6C] bg-white px-2 py-0.5 rounded-full border border-teal-200 uppercase tracking-wider">
+                          Auto-Fetch Enabled
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">
+                        Upload your registered lease deed or signed term sheet (.PDF or .DOCX). The extraction engine reads demised area, base rent, CAM, escalation percentages, security deposit, and lock-in period to auto-populate all terms below.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="cursor-pointer shrink-0">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.doc,.txt"
+                      disabled={isUploadingAgreement}
+                      className="hidden"
                       onChange={(e) => {
-                        const sel = tenantsList.find((t) => t.id === e.target.value);
-                        setContractForm({
-                          ...contractForm,
-                          occupant_id: e.target.value,
-                          occupant_name: sel?.name || "",
-                        });
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadRentAgreement(file);
+                        e.target.value = "";
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                    />
+                    <div
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer ${
+                        isUploadingAgreement
+                          ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          : "bg-[#0D7B6C] hover:bg-[#0A6357] text-white"
+                      }`}
                     >
-                      {tenantsList.length === 0 && (
-                        <option value="">{tenantForm.occupant_name || "Enrolled Occupant"}</option>
+                      {isUploadingAgreement ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Extracting Terms...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud size={15} />
+                          <span>Browse Lease Agreement</span>
+                        </>
                       )}
-                      {tenantsList.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} {t.company ? `(${t.company})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Parsed Highlights Banner */}
+                {parsedAgreementMeta && (
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 animate-in fade-in space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-bold">
+                        <FileCheck2 size={16} className="text-emerald-700" />
+                        <span>Parsed: {parsedAgreementMeta.fileName}</span>
+                      </div>
+                      <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                        {parsedAgreementMeta.confidence}% Confidence • {parsedAgreementMeta.extractedFieldsCount} Terms Extracted
+                      </span>
+                    </div>
+
+                    {parsedAgreementMeta.summaryHighlights.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {parsedAgreementMeta.summaryHighlights.map((hl, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] font-semibold bg-white px-2.5 py-0.5 rounded-md border border-emerald-300 text-emerald-900"
+                          >
+                            ✓ {hl}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-emerald-800 font-medium">
+                      ✓ Commercial clauses and payment particulars have been parsed and populated into the fields below. Review and adjust any term as needed.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleSaveContract} className="space-y-6">
+                {/* ──── SECTION 1: HIERARCHY & SPACE MAPPING ──── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
+                    <Building2 size={15} className="text-[#0D7B6C]" />
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      1. Space Allocation &amp; Occupant Association
+                    </h4>
                   </div>
 
-                  {/* 2. Property (dropdown) */}
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Property *</label>
-                    <select
-                      value={contractForm.property_id || selectedPropertyForTenant}
-                      onChange={(e) => setContractForm({ ...contractForm, property_id: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
-                    >
-                      {registeredProperties.map((p) => (
-                        <option key={p.id || p.property_name} value={p.id || p.property_name}>
-                          {p.property_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    {/* Occupant / Tenant */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Occupant / Tenant *</label>
+                      <select
+                        value={contractForm.occupant_id}
+                        onChange={(e) => {
+                          const sel = tenantsList.find((t) => t.id === e.target.value);
+                          setContractForm({
+                            ...contractForm,
+                            occupant_id: e.target.value,
+                            occupant_name: sel?.name || "",
+                          });
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        {tenantsList.length === 0 && (
+                          <option value="">{tenantForm.occupant_name || "Enrolled Occupant"}</option>
+                        )}
+                        {tenantsList.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} {t.company ? `(${t.company})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* 3. Building (dropdown / input) */}
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Building / Tower *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Tower 1 / West Wing"
-                      value={contractForm.building_name}
-                      onChange={(e) => setContractForm({ ...contractForm, building_name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
+                    {/* Property */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Commercial Property *</label>
+                      <select
+                        value={contractForm.property_id || selectedPropertyForTenant}
+                        onChange={(e) => setContractForm({ ...contractForm, property_id: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        {registeredProperties.map((p) => (
+                          <option key={p.id || p.property_name} value={p.id || p.property_name}>
+                            {p.property_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* 4. Space / Unit (dropdown / input) */}
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Space / Unit *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Suite 402, 4th Floor"
-                      value={contractForm.space_unit}
-                      onChange={(e) => setContractForm({ ...contractForm, space_unit: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
+                    {/* Building / Tower */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Building / Tower *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Tower 1 / West Wing"
+                        value={contractForm.building_name}
+                        onChange={(e) => setContractForm({ ...contractForm, building_name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
 
-                  {/* 5. Contract Start Date */}
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Contract Start Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={contractForm.start_date}
-                      onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 6. Contract End Date */}
-                  <div className="sm:col-span-1">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Contract End Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={contractForm.end_date}
-                      onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 7. Area (Sq.Ft) */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Area (Sq.Ft) *</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 5000"
-                      value={contractForm.area_sqft}
-                      onChange={(e) => setContractForm({ ...contractForm, area_sqft: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 8. Monthly Rent Amount */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Monthly Rent Amount (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="e.g. 250000"
-                      value={contractForm.monthly_rent}
-                      onChange={(e) => setContractForm({ ...contractForm, monthly_rent: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 9. Escalation % */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Escalation % (if any)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      placeholder="e.g. 5.0"
-                      value={contractForm.escalation_pct}
-                      onChange={(e) => setContractForm({ ...contractForm, escalation_pct: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 10. Escalation Start Date */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Escalation Start Date</label>
-                    <input
-                      type="date"
-                      value={contractForm.escalation_start_date}
-                      onChange={(e) => setContractForm({ ...contractForm, escalation_start_date: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 11. Escalation Frequency */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Escalation Frequency</label>
-                    <select
-                      value={contractForm.escalation_frequency}
-                      onChange={(e) => setContractForm({ ...contractForm, escalation_frequency: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
-                    >
-                      <option value="Annual">Annual (Every 12 Months)</option>
-                      <option value="Biannual">Biannual (Every 24 Months)</option>
-                      <option value="Quarterly">Quarterly</option>
-                    </select>
-                  </div>
-
-                  {/* 12. Security Deposit Amount */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Security Deposit Amount (₹)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 1500000 (6 Months)"
-                      value={contractForm.security_deposit}
-                      onChange={(e) => setContractForm({ ...contractForm, security_deposit: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 13. Lock-in Period (months) */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Lock-in Period (Months)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 36 (Months)"
-                      value={contractForm.lock_in_months}
-                      onChange={(e) => setContractForm({ ...contractForm, lock_in_months: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 14. Notice Period (Days before termination) */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Notice Period (Days)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 90 (Days)"
-                      value={contractForm.notice_days}
-                      onChange={(e) => setContractForm({ ...contractForm, notice_days: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  {/* 15. Billing Entity (dropdown / SPV) */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Billing Entity (SPV) *</label>
-                    <input
-                      type="text"
-                      list="billing-entity-options"
-                      required
-                      placeholder="e.g. Prestige Tech Park SPV LLP"
-                      value={contractForm.billing_entity}
-                      onChange={(e) => setContractForm({ ...contractForm, billing_entity: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                    <datalist id="billing-entity-options">
-                      {propForm.spv_name && <option value={propForm.spv_name} />}
-                      {companyName && <option value={companyName} />}
-                      {brandName && <option value={brandName} />}
-                    </datalist>
-                  </div>
-
-                  {/* 16. Billing Model */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Billing Model</label>
-                    <select
-                      value={contractForm.billing_model}
-                      onChange={(e) => setContractForm({ ...contractForm, billing_model: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
-                    >
-                      <option value="Area-based">Area-based (₹ / sq.ft / month)</option>
-                      <option value="Seat-based">Seat-based (₹ / workstation / month)</option>
-                      <option value="Fixed">Fixed Monthly Rent</option>
-                      <option value="Hybrid">Hybrid (Base Rent + CAM + Power)</option>
-                      <option value="Pure Rent">Pure Rent (Zero pass-through)</option>
-                    </select>
-                  </div>
-
-                  {/* 17. Payment Terms */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Payment Terms</label>
-                    <select
-                      value={contractForm.payment_terms}
-                      onChange={(e) => setContractForm({ ...contractForm, payment_terms: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
-                    >
-                      <option value="Net 0">Net 0 (Immediate upon invoice generation)</option>
-                      <option value="Net 7">Net 7 (7 days credit)</option>
-                      <option value="Net 15">Net 15 (15 days credit)</option>
-                      <option value="Net 30">Net 30 (30 days credit)</option>
-                      <option value="Due on 1st">Due on 1st of every calendar month</option>
-                    </select>
-                  </div>
-
-                  {/* 18. Notes (optional) */}
-                  <div className="sm:col-span-3">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Contract Notes / Covenants (Optional)</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Parking allocations, fit-out rent free period, signage covenants, sub-meter billing..."
-                      value={contractForm.notes}
-                      onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none resize-none"
-                    />
+                    {/* Space / Unit */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Space / Unit Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Suite 402, 4th Floor"
+                        value={contractForm.space_unit}
+                        onChange={(e) => setContractForm({ ...contractForm, space_unit: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* ──── SECTION 2: TERM DATES & POSSESSION ──── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
+                    <Clock size={15} className="text-[#0D7B6C]" />
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      2. Lease Term Dates &amp; Handover Schedule
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Handover / Possession Date */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Handover / Possession Date</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.2 rounded">
+                          Optional
+                        </span>
+                      </div>
+                      <input
+                        type="date"
+                        value={contractForm.possession_date}
+                        onChange={(e) => setContractForm({ ...contractForm, possession_date: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Contract Start Date */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Rent Commencement Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={contractForm.start_date}
+                        onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Contract End Date */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Lease Expiry Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={contractForm.end_date}
+                        onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 3: FIT-OUT & HANDOVER CONDITION ──── */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200/80 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Armchair size={15} className="text-[#0D7B6C]" />
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        3. Fit-Out &amp; Handover Condition
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Specify interior furnishing state and rent-free concession days
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                    {/* Handover Condition */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Handover Condition *</label>
+                      <select
+                        value={contractForm.fitout_condition}
+                        onChange={(e) => setContractForm({ ...contractForm, fitout_condition: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="Fully Furnished">Fully Furnished (Plug &amp; Play)</option>
+                        <option value="Warm Shell">Warm Shell (HVAC, Ceilings, Screed)</option>
+                        <option value="Bare Shell">Bare Shell (Raw Concrete Slab)</option>
+                        <option value="Semi-Furnished">Semi-Furnished (Partially Fitted)</option>
+                      </select>
+                    </div>
+
+                    {/* Rent-Free Fit-out Period (Days) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Fit-out Rent-Free Period (Days)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 60 or 90"
+                        value={contractForm.fitout_period_days}
+                        onChange={(e) => setContractForm({ ...contractForm, fitout_period_days: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Bare Shell Rate (₹/sqft) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Bare Shell Rate (₹/sqft/mo)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 65"
+                        value={contractForm.bare_shell_rate}
+                        onChange={(e) => {
+                          const bs = e.target.value;
+                          const fit = Number(contractForm.fitout_rate) || 0;
+                          const totalRate = Number(bs) + fit;
+                          const area = Number(contractForm.area_sqft) || 0;
+                          setContractForm({
+                            ...contractForm,
+                            bare_shell_rate: bs,
+                            rate_per_sqft: totalRate > 0 ? String(totalRate) : contractForm.rate_per_sqft,
+                            monthly_rent: totalRate > 0 && area > 0 ? String(Math.round(totalRate * area)) : contractForm.monthly_rent,
+                          });
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Fit-out Amortization Rate (₹/sqft) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Fit-out Rent (₹/sqft/mo)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 25"
+                        value={contractForm.fitout_rate}
+                        onChange={(e) => {
+                          const fit = e.target.value;
+                          const bs = Number(contractForm.bare_shell_rate) || 0;
+                          const totalRate = bs + Number(fit);
+                          const area = Number(contractForm.area_sqft) || 0;
+                          setContractForm({
+                            ...contractForm,
+                            fitout_rate: fit,
+                            rate_per_sqft: totalRate > 0 ? String(totalRate) : contractForm.rate_per_sqft,
+                            monthly_rent: totalRate > 0 && area > 0 ? String(Math.round(totalRate * area)) : contractForm.monthly_rent,
+                          });
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 4: RENT MODEL & PRICING BASIS ──── */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Calculator size={15} className="text-[#0D7B6C]" />
+                      <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                        4. Rent Calculation Model &amp; Pricing Basis
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Select pricing model; base rent calculates automatically
+                    </span>
+                  </div>
+
+                  {/* Model Selection Pills */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {(
+                      [
+                        { id: "Area-based", label: "Per Sq.Ft (Area)", desc: "₹ / sq.ft / mo" },
+                        { id: "Seat-based", label: "Per Seat (Desk)", desc: "₹ / workstation / mo" },
+                        { id: "Fixed", label: "Fixed Lump-Sum", desc: "Flat monthly billing" },
+                        { id: "Hybrid", label: "Hybrid (Turnkey)", desc: "Base + Fitout + CAM" },
+                        { id: "Pure Rent", label: "Pure Rent", desc: "Bare Shell lease" },
+                      ] as const
+                    ).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          const newModel = m.id;
+                          setContractForm((prev) => {
+                            let nextRent = prev.monthly_rent;
+                            if (newModel === "Area-based" && prev.rate_per_sqft && prev.area_sqft) {
+                              nextRent = String(Math.round(Number(prev.rate_per_sqft) * Number(prev.area_sqft)));
+                            } else if (newModel === "Seat-based" && prev.rate_per_seat && prev.seat_count) {
+                              nextRent = String(Math.round(Number(prev.rate_per_seat) * Number(prev.seat_count)));
+                            }
+                            return { ...prev, billing_model: newModel, monthly_rent: nextRent };
+                          });
+                        }}
+                        className={`p-2.5 rounded-xl text-left border transition cursor-pointer ${
+                          contractForm.billing_model === m.id
+                            ? "bg-teal-50/60 border-[#0D7B6C] ring-2 ring-[#0D7B6C]/20 shadow-xs"
+                            : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <div className="font-extrabold text-slate-900 text-xs">{m.label}</div>
+                        <div className="text-[10px] text-slate-500">{m.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Dynamic Pricing Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                    {/* Area (Sq.Ft) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Demised Area (Sq.Ft) *</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 5000"
+                        value={contractForm.area_sqft}
+                        onChange={(e) => {
+                          const area = e.target.value;
+                          const rate = Number(contractForm.rate_per_sqft) || 0;
+                          const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthly_rent;
+                          setContractForm({ ...contractForm, area_sqft: area, monthly_rent: calcRent });
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Rate per Sq.Ft or Rate per Seat */}
+                    {contractForm.billing_model === "Seat-based" ? (
+                      <>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Seats / Workstations Count *</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 50"
+                            value={contractForm.seat_count}
+                            onChange={(e) => {
+                              const seats = e.target.value;
+                              const rateSeat = Number(contractForm.rate_per_seat) || 0;
+                              const calcRent = seats && rateSeat ? String(Math.round(Number(seats) * rateSeat)) : contractForm.monthly_rent;
+                              setContractForm({ ...contractForm, seat_count: seats, monthly_rent: calcRent });
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Rate per Seat (₹ / seat / mo) *</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 12000"
+                            value={contractForm.rate_per_seat}
+                            onChange={(e) => {
+                              const rateSeat = e.target.value;
+                              const seats = Number(contractForm.seat_count) || 0;
+                              const calcRent = rateSeat && seats ? String(Math.round(Number(rateSeat) * seats)) : contractForm.monthly_rent;
+                              setContractForm({ ...contractForm, rate_per_seat: rateSeat, monthly_rent: calcRent });
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Rate per Sq.Ft (₹ / sq.ft / mo)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="e.g. 75"
+                          value={contractForm.rate_per_sqft}
+                          onChange={(e) => {
+                            const rate = e.target.value;
+                            const area = Number(contractForm.area_sqft) || 0;
+                            const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthly_rent;
+                            setContractForm({ ...contractForm, rate_per_sqft: rate, monthly_rent: calcRent });
+                          }}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        />
+                      </div>
+                    )}
+
+                    {/* Monthly Base Rent Amount */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Monthly Base Rent (₹) *</label>
+                        <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-mono font-bold">
+                          ₹{Number(contractForm.monthly_rent || 0).toLocaleString()} /mo
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 250000"
+                        value={contractForm.monthly_rent}
+                        onChange={(e) => setContractForm({ ...contractForm, monthly_rent: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-black text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 5: CAM (COMMON AREA MAINTENANCE) CHARGES ──── */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200/80 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Wrench size={15} className="text-[#0D7B6C]" />
+                      <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                        5. Common Area Maintenance (CAM) Charges
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Operational upkeep, security, landscaping, and central amenities
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* CAM Model */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">CAM Billing Model</label>
+                      <select
+                        value={contractForm.cam_type}
+                        onChange={(e) => setContractForm({ ...contractForm, cam_type: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="Per Sq.Ft">Per Sq.Ft / Month (Rate Basis)</option>
+                        <option value="Fixed Monthly">Fixed Monthly Amount</option>
+                        <option value="Included">Included in Base Rent (Zero extra)</option>
+                        <option value="Actuals">Pass-Through Actuals (Periodic reconciliations)</option>
+                      </select>
+                    </div>
+
+                    {/* CAM Rate */}
+                    {contractForm.cam_type === "Per Sq.Ft" && (
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">CAM Rate (₹ / sq.ft / mo)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="e.g. 15"
+                          value={contractForm.cam_rate}
+                          onChange={(e) => {
+                            const rate = e.target.value;
+                            const area = Number(contractForm.area_sqft) || 0;
+                            const monthly = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.cam_monthly;
+                            setContractForm({ ...contractForm, cam_rate: rate, cam_monthly: monthly });
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        />
+                      </div>
+                    )}
+
+                    {/* Monthly CAM Amount */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Monthly CAM Outgo (₹)
+                        {contractForm.cam_type === "Per Sq.Ft" && contractForm.cam_rate && contractForm.area_sqft && (
+                          <span className="text-teal-700 ml-1.5 font-mono">
+                            (₹{(Math.round(Number(contractForm.cam_rate) * Number(contractForm.area_sqft))).toLocaleString()})
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 75000"
+                        value={
+                          contractForm.cam_type === "Per Sq.Ft" && contractForm.cam_rate && contractForm.area_sqft
+                            ? Math.round(Number(contractForm.cam_rate) * Number(contractForm.area_sqft))
+                            : contractForm.cam_monthly
+                        }
+                        onChange={(e) => setContractForm({ ...contractForm, cam_monthly: e.target.value })}
+                        disabled={contractForm.cam_type === "Included"}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 6: DEDICATED PARKING ALLOCATION ──── */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Car size={15} className="text-[#0D7B6C]" />
+                      <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                        6. Dedicated Parking Allocation
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Reserved 4-wheeler and 2-wheeler parking slots with monthly tariffs
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Car Parking Slots (4W)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 4"
+                        value={contractForm.car_parking_slots}
+                        onChange={(e) => setContractForm({ ...contractForm, car_parking_slots: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Rate per Car Slot (₹/mo)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 3000"
+                        value={contractForm.car_parking_rate}
+                        onChange={(e) => setContractForm({ ...contractForm, car_parking_rate: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Two-Wheeler Slots (2W)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 10"
+                        value={contractForm.two_wheeler_slots}
+                        onChange={(e) => setContractForm({ ...contractForm, two_wheeler_slots: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Rate per 2W Slot (₹/mo)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 500"
+                        value={contractForm.two_wheeler_rate}
+                        onChange={(e) => setContractForm({ ...contractForm, two_wheeler_rate: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 7: POWER, UTILITIES & SUB-METERING ──── */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200/80 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Zap size={15} className="text-[#0D7B6C]" />
+                      <h4 className="font-black text-slate-800 uppercase tracking-wider text-xs">
+                        7. Power, Utilities &amp; Sub-metering
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      DG backup specifications, electrical load, and energy billing modes
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {/* Electricity Billing */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Electricity Billing Mode</label>
+                      <select
+                        value={contractForm.electricity_billing}
+                        onChange={(e) => setContractForm({ ...contractForm, electricity_billing: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="Submeter Actuals">Sub-meter Actuals (Per Unit)</option>
+                        <option value="Fixed Monthly">Fixed Monthly Utility Charge</option>
+                        <option value="Included in Rent">Included in Base Rent</option>
+                        <option value="Proportionate Share">Proportionate Floor Area Share</option>
+                      </select>
+                    </div>
+
+                    {/* Power Backup Type */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">DG Power Backup</label>
+                      <select
+                        value={contractForm.power_backup_type}
+                        onChange={(e) => setContractForm({ ...contractForm, power_backup_type: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="100% DG Power Backup">100% DG Backup (Grade-A)</option>
+                        <option value="Partial DG Backup">Partial Backup (Critical Lighting)</option>
+                        <option value="No DG Backup">No DG Backup</option>
+                      </select>
+                    </div>
+
+                    {/* Sanctioned Electrical Load (kVA) */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Sanctioned Load (kVA)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 50 kVA"
+                        value={contractForm.electricity_load_kva}
+                        onChange={(e) => setContractForm({ ...contractForm, electricity_load_kva: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* DG Rate per kWh */}
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">DG Power Tariff (₹ / kWh)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        placeholder="e.g. 24.50"
+                        value={contractForm.dg_rate_per_kwh}
+                        onChange={(e) => setContractForm({ ...contractForm, dg_rate_per_kwh: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 8: ESCALATIONS & SECURITY DEPOSIT ──── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
+                    <Shield size={15} className="text-[#0D7B6C]" />
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      8. Escalation Terms, Security Deposit &amp; Lock-in
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Escalation % */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Escalation % Rate</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g. 5.0"
+                        value={contractForm.escalation_pct}
+                        onChange={(e) => setContractForm({ ...contractForm, escalation_pct: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Escalation Frequency */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Escalation Frequency</label>
+                      <select
+                        value={contractForm.escalation_frequency}
+                        onChange={(e) => setContractForm({ ...contractForm, escalation_frequency: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="Annual">Annual (Every 12 Months)</option>
+                        <option value="Biannual">Biannual (Every 24 Months)</option>
+                        <option value="Triennial">Triennial (Every 36 Months)</option>
+                        <option value="Quarterly">Quarterly</option>
+                      </select>
+                    </div>
+
+                    {/* Escalation Start Date */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Escalation Effective Date</label>
+                      <input
+                        type="date"
+                        value={contractForm.escalation_start_date}
+                        onChange={(e) => setContractForm({ ...contractForm, escalation_start_date: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Deposit Months */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Security Deposit (Months)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 6 Months"
+                        value={contractForm.deposit_months}
+                        onChange={(e) => {
+                          const m = e.target.value;
+                          const rent = Number(contractForm.monthly_rent) || 0;
+                          const calcDep = m && rent ? String(Math.round(Number(m) * rent)) : contractForm.security_deposit;
+                          setContractForm({ ...contractForm, deposit_months: m, security_deposit: calcDep });
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Security Deposit Amount */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Security Deposit Amount (₹)</label>
+                        {contractForm.security_deposit && (
+                          <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-mono font-bold">
+                            ₹{Number(contractForm.security_deposit).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        placeholder="e.g. 1500000"
+                        value={contractForm.security_deposit}
+                        onChange={(e) => setContractForm({ ...contractForm, security_deposit: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Lock-in Period (months) */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Lock-in Period (Months)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 36 Months"
+                        value={contractForm.lock_in_months}
+                        onChange={(e) => setContractForm({ ...contractForm, lock_in_months: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* Notice Period (days) */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Notice Period (Days)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 90 Days"
+                        value={contractForm.notice_days}
+                        onChange={(e) => setContractForm({ ...contractForm, notice_days: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 9: STATUTORY, SPV & COVENANTS ──── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
+                    <ShieldCheck size={15} className="text-[#0D7B6C]" />
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      9. Statutory Billing SPV, Payment Terms &amp; Covenants
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Billing Entity (SPV) */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Billing Entity (SPV / Landlord) *</label>
+                      <input
+                        type="text"
+                        list="billing-entity-options"
+                        required
+                        placeholder="e.g. Prestige Tech Park SPV LLP"
+                        value={contractForm.billing_entity}
+                        onChange={(e) => setContractForm({ ...contractForm, billing_entity: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                      <datalist id="billing-entity-options">
+                        {propForm.spv_name && <option value={propForm.spv_name} />}
+                        {companyName && <option value={companyName} />}
+                        {brandName && <option value={brandName} />}
+                      </datalist>
+                    </div>
+
+                    {/* Payment Terms */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Payment Credit Terms</label>
+                      <select
+                        value={contractForm.payment_terms}
+                        onChange={(e) => setContractForm({ ...contractForm, payment_terms: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="Due on 1st">Due on 1st of every calendar month</option>
+                        <option value="Due on 5th">Due on 5th of every calendar month</option>
+                        <option value="Net 0">Net 0 (Immediate upon invoice generation)</option>
+                        <option value="Net 7">Net 7 (7 days credit)</option>
+                        <option value="Net 15">Net 15 (15 days credit)</option>
+                        <option value="Net 30">Net 30 (30 days credit)</option>
+                      </select>
+                    </div>
+
+                    {/* Stamp Duty Sharing */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Stamp Duty &amp; Reg Sharing</label>
+                      <select
+                        value={contractForm.stamp_duty_sharing}
+                        onChange={(e) => setContractForm({ ...contractForm, stamp_duty_sharing: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="50:50 Shared">50:50 Shared (Standard Commercial)</option>
+                        <option value="100% Tenant">100% Borne by Tenant</option>
+                        <option value="100% Landlord">100% Borne by Landlord</option>
+                      </select>
+                    </div>
+
+                    {/* Late Interest Rate (% p.a.) */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Late Payment Interest (% p.a.)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 18%"
+                        value={contractForm.late_interest_pct}
+                        onChange={(e) => setContractForm({ ...contractForm, late_interest_pct: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* GST & TDS Switches */}
+                    <div className="sm:col-span-2 flex flex-wrap items-center gap-6 pt-2">
+                      <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={contractForm.gst_applicable}
+                          onChange={(e) => setContractForm({ ...contractForm, gst_applicable: e.target.checked })}
+                          className="w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                        />
+                        <span>Apply GST (18% on Commercial Lease Rent)</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={contractForm.tds_applicable}
+                          onChange={(e) => setContractForm({ ...contractForm, tds_applicable: e.target.checked })}
+                          className="w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                        />
+                        <span>TDS Deductible under Sec 194-I (10%)</span>
+                      </label>
+                    </div>
+
+                    {/* Notes / Special Covenants */}
+                    <div className="sm:col-span-3">
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Special Lease Covenants / Notes</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Parking slot allocations, fit-out rent free period clauses, signage covenants, sub-meter billing..."
+                        value={contractForm.notes}
+                        onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ──── SECTION 10: REAL-TIME COMMERCIAL LEASE SUMMARY CARD ──── */}
+                {(() => {
+                  const bRent = Number(contractForm.monthly_rent) || 0;
+                  const cArea = Number(contractForm.area_sqft) || 0;
+                  const cMonthly = contractForm.cam_type === "Per Sq.Ft"
+                    ? Math.round((Number(contractForm.cam_rate) || 0) * cArea)
+                    : (Number(contractForm.cam_monthly) || 0);
+                  const pMonthly =
+                    (Number(contractForm.car_parking_slots) || 0) * (Number(contractForm.car_parking_rate) || 0) +
+                    (Number(contractForm.two_wheeler_slots) || 0) * (Number(contractForm.two_wheeler_rate) || 0);
+                  const netMonthly = bRent + cMonthly + pMonthly;
+                  const gst = contractForm.gst_applicable ? Math.round(netMonthly * 0.18) : 0;
+                  const grossTotal = netMonthly + gst;
+                  const sDeposit = Number(contractForm.security_deposit) || Math.round(bRent * (Number(contractForm.deposit_months) || 6));
+
+                  return (
+                    <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={16} className="text-teal-400" />
+                          <h4 className="text-xs font-black uppercase tracking-wider text-teal-300">
+                            Executive Commercial Lease Summary (Live Calculation)
+                          </h4>
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {contractForm.billing_model} • {cArea ? `${cArea.toLocaleString()} Sq.Ft` : "Flexible Unit"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Base Rent</span>
+                          <span className="text-base font-black text-white font-mono">₹{bRent.toLocaleString()}</span>
+                          <span className="text-[9px] text-slate-400 block mt-0.5">/ month</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">CAM Charges</span>
+                          <span className="text-base font-black text-white font-mono">₹{cMonthly.toLocaleString()}</span>
+                          <span className="text-[9px] text-slate-400 block mt-0.5">{contractForm.cam_type}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Dedicated Parking</span>
+                          <span className="text-base font-black text-white font-mono">₹{pMonthly.toLocaleString()}</span>
+                          <span className="text-[9px] text-slate-400 block mt-0.5">
+                            {contractForm.car_parking_slots} 4W + {contractForm.two_wheeler_slots} 2W
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Security Deposit</span>
+                          <span className="text-base font-black text-teal-300 font-mono">₹{sDeposit.toLocaleString()}</span>
+                          <span className="text-[9px] text-slate-400 block mt-0.5">
+                            {contractForm.deposit_months || 6} Months Rent
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-4 text-slate-300 text-[11px]">
+                          <span>Net Rent: <strong className="text-white font-mono">₹{netMonthly.toLocaleString()}</strong></span>
+                          <span>GST (18%): <strong className="text-white font-mono">₹{gst.toLocaleString()}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-400 font-medium">Gross Monthly Billing:</span>
+                          <span className="text-lg font-black text-teal-400 font-mono">
+                            ₹{grossTotal.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="pt-4 flex items-center justify-between border-t border-slate-100">
                   <button
@@ -2115,7 +3209,7 @@ function CompleteProfileContent() {
                   <button
                     type="submit"
                     disabled={contractLoading}
-                    className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                   >
                     <span>Execute Contract &amp; Continue →</span>
                   </button>

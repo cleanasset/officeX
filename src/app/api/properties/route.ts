@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { db } from "@/db";
 import { properties, complianceCertificates, userProperties, leaseUnits, helpdeskTickets, utilityMetrics, rfqs, quotations, workOrders, leases, property as rentRollProperty } from "@/db/schema";
-import { desc, eq, and, sql } from "drizzle-orm";
+import { desc, eq, and, sql, or, ilike } from "drizzle-orm";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 
 export async function GET(req: Request) {
@@ -64,18 +64,76 @@ export async function POST(req: Request) {
     // Check if Rent Roll property creation (has property_code or client_account_id or property_name)
     if (body.property_code || (body.property_name && body.client_account_id)) {
       const auth = getAuthContext(req);
+      const orgId = body.org_id || auth.orgId;
+      const clientAccountId = body.client_account_id || auth.clientAccountId;
+      const propertyName = (body.property_name || body.name || "Commercial Tower").trim();
+      const providedCode = body.property_code && body.property_code.trim() ? body.property_code.trim() : "";
+      const areaVal = Number(body.total_leasable_area_sqft || body.totalArea) || 1000;
+
+      // Check if already exists for this org
+      const existing = await db
+        .select()
+        .from(rentRollProperty)
+        .where(
+          and(
+            eq(rentRollProperty.org_id, orgId),
+            sql`${rentRollProperty.deleted_at} IS NULL`,
+            body.id || body.property_id
+              ? eq(rentRollProperty.id, body.id || body.property_id)
+              : or(
+                  providedCode ? eq(rentRollProperty.property_code, providedCode) : sql`FALSE`,
+                  ilike(rentRollProperty.property_name, propertyName)
+                )!
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        const [updated] = await db
+          .update(rentRollProperty)
+          .set({
+            property_name: propertyName,
+            address: body.address || existing[0].address,
+            city: body.city || existing[0].city,
+            state: body.state || existing[0].state,
+            total_leasable_area_sqft: String(areaVal),
+            property_type: (body.property_type || existing[0].property_type || "office") as any,
+            updated_by: auth.userId,
+            updated_at: new Date(),
+          })
+          .where(eq(rentRollProperty.id, existing[0].id))
+          .returning();
+        return NextResponse.json({ success: true, data: updated, isExisting: true }, { status: 200 });
+      }
+
+      let finalCode =
+        providedCode ||
+        `${propertyName.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      let codeCandidate = finalCode;
+      let collisionCount = 0;
+      while (collisionCount < 10) {
+        const collision = await db
+          .select({ id: rentRollProperty.id })
+          .from(rentRollProperty)
+          .where(and(eq(rentRollProperty.org_id, orgId), eq(rentRollProperty.property_code, codeCandidate)))
+          .limit(1);
+        if (collision.length === 0) break;
+        collisionCount++;
+        codeCandidate = `${finalCode}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+
       const [inserted] = await db
         .insert(rentRollProperty)
         .values({
-          org_id: body.org_id || auth.orgId,
-          client_account_id: body.client_account_id || auth.clientAccountId,
-          property_name: body.property_name || body.name,
-          property_code: body.property_code,
+          org_id: orgId,
+          client_account_id: clientAccountId,
+          property_name: propertyName,
+          property_code: codeCandidate,
           address: body.address || null,
           city: body.city || null,
           state: body.state || null,
-          total_leasable_area_sqft: String(body.total_leasable_area_sqft || body.totalArea || 1000),
-          property_type: body.property_type || "office",
+          total_leasable_area_sqft: String(areaVal),
+          property_type: (body.property_type || "office") as any,
           created_by: auth.userId,
           updated_by: auth.userId,
         })

@@ -17,6 +17,13 @@ export interface ExtractedLeaseAgreement {
   areaSqft: number;
   seatCount: number;
 
+  // Property Condition & Fit-out
+  fitoutCondition: "Fully Furnished" | "Bare Shell" | "Warm Shell" | "Semi-Furnished";
+  workstationsCount: number;
+  cabinsCount: number;
+  meetingRoomsCount: number;
+  possessionDate: string;
+
   // Rent Calculation Model
   billingModel: "Area-based" | "Seat-based" | "Fixed" | "Hybrid" | "Pure Rent";
   ratePerSqft: number;
@@ -24,6 +31,13 @@ export interface ExtractedLeaseAgreement {
   bareShellRate: number;
   fitoutRate: number;
   monthlyRent: number;
+
+  // Electricity & Utilities
+  electricityBilling: "Submeter Actuals" | "Fixed Monthly" | "Included in Rent" | "Proportionate Share";
+  electricityLoadKva: number;
+  powerBackupType: "100% DG Power Backup" | "Partial DG Backup" | "No DG Backup";
+  dgRatePerKwh: number;
+  waterCharges: "Included in CAM" | "Actuals" | "Fixed Monthly";
 
   // CAM & Utilities
   camType: "Per Sq.Ft" | "Fixed Monthly" | "Included" | "Actuals";
@@ -219,7 +233,7 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     }
   }
 
-  // 5. SEATS (FOR COWORKING / MANAGED OFFICE)
+  // 5. SEATS & FIT-OUT SPECIFICATIONS
   let seatCount = 0;
   const seatMatch = text.match(/([0-9,]+)\s*(?:seats?|workstations?|desks?)/i) ||
                     text.match(/(?:allotment\s*of|capacity\s*of|measuring)?\s*([0-9,]+)\s*(?:seats?|workstations?|desks?)/i);
@@ -231,6 +245,34 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
       highlights.push(`Allocated Seats: ${seatCount} Desks`);
     }
   }
+
+  // Workstations, Cabins & Meeting Rooms
+  let workstationsCount = seatCount || 0;
+  let cabinsCount = 0;
+  let meetingRoomsCount = 0;
+  const cabinMatch = text.match(/([0-9]+)\s*(?:cabins?|executive\s*cabins?|manager\s*cabins?)/i);
+  if (cabinMatch && cabinMatch[1]) {
+    cabinsCount = parseInt(cabinMatch[1], 10);
+    highlights.push(`Cabins: ${cabinsCount}`);
+  }
+  const meetingMatch = text.match(/([0-9]+)\s*(?:meeting|conference)\s*rooms?/i);
+  if (meetingMatch && meetingMatch[1]) {
+    meetingRoomsCount = parseInt(meetingMatch[1], 10);
+    highlights.push(`Meeting Rooms: ${meetingRoomsCount}`);
+  }
+
+  // Premises Fit-out Condition (Bare Shell, Warm Shell, Semi-Furnished, Fully Furnished)
+  let fitoutCondition: "Fully Furnished" | "Bare Shell" | "Warm Shell" | "Semi-Furnished" = "Fully Furnished";
+  if (text.match(/bare\s*shell/i)) {
+    fitoutCondition = "Bare Shell";
+  } else if (text.match(/warm\s*shell/i)) {
+    fitoutCondition = "Warm Shell";
+  } else if (text.match(/semi[- ]furnished/i)) {
+    fitoutCondition = "Semi-Furnished";
+  } else if (text.match(/fully\s*furnished|plug\s*(?:and|&)\s*play|fitted[- ]out/i)) {
+    fitoutCondition = "Fully Furnished";
+  }
+  highlights.push(`Fit-out: ${fitoutCondition}`);
 
   // 6. RENT PER SQ. FT.
   let ratePerSqft = 0;
@@ -350,6 +392,43 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     }
   }
 
+  // 10b. ELECTRICITY & UTILITY CLAUSES
+  let electricityBilling: "Submeter Actuals" | "Fixed Monthly" | "Included in Rent" | "Proportionate Share" = "Submeter Actuals";
+  let electricityLoadKva = 20;
+  let powerBackupType: "100% DG Power Backup" | "Partial DG Backup" | "No DG Backup" = "100% DG Power Backup";
+  let dgRatePerKwh = 25;
+  let waterCharges: "Included in CAM" | "Actuals" | "Fixed Monthly" = "Included in CAM";
+
+  if (text.match(/electricity.*?(?:included|inclusive)/i)) {
+    electricityBilling = "Included in Rent";
+  } else if (text.match(/(?:submeter|sub[- ]meter|actual\s*(?:consumption|reading|discom))/i)) {
+    electricityBilling = "Submeter Actuals";
+  } else if (text.match(/proportionate\s*(?:basis|share)/i)) {
+    electricityBilling = "Proportionate Share";
+  }
+
+  const kvaMatch = text.match(/([0-9]+)\s*(?:kva|kw)\s*(?:load|power|electricity)?/i) || text.match(/(?:sanctioned\s*load|power\s*load)\s*[:\-–]?\s*([0-9]+)\s*(?:kva|kw)?/i);
+  if (kvaMatch && kvaMatch[1]) {
+    electricityLoadKva = parseInt(kvaMatch[1], 10);
+  }
+
+  if (text.match(/100%\s*(?:dg|power|generator)\s*backup/i)) {
+    powerBackupType = "100% DG Power Backup";
+  } else if (text.match(/(?:partial|limited)\s*backup/i)) {
+    powerBackupType = "Partial DG Backup";
+  }
+
+  const dgRateMatch = text.match(/(?:dg|generator)\s*(?:rate|charge|cost)?[^\n.]*?(?:rs\.?|inr|₹)?\s*([0-9,.]+)(?:\s*\/\-|\s*\-)?\s*(?:per|\/)\s*(?:unit|kwh)/i);
+  if (dgRateMatch && dgRateMatch[1]) {
+    dgRatePerKwh = parseCleanNumber(dgRateMatch[1]);
+  }
+
+  if (text.match(/water.*?(?:actuals|meter|reading)/i)) {
+    waterCharges = "Actuals";
+  }
+
+  highlights.push(`Power: ${electricityLoadKva} KVA (${powerBackupType}, ${electricityBilling})`);
+
   // 11. CAR & TWO-WHEELER PARKING
   let carParkingSlots = 0;
   let carParkingRate = 0;
@@ -415,10 +494,19 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     highlights.push(`Security Deposit: ₹${securityDeposit.toLocaleString()} (${depositMonths || Math.round(securityDeposit / (monthlyRent || 1))} months)`);
   }
 
-  // 14. DATES (COMMENCEMENT & EXPIRY)
+  // 14. DATES (POSSESSION, COMMENCEMENT & EXPIRY)
+  let possessionDate = "";
   let startDate = "";
   let endDate = "";
   let leaseTermMonths = 36;
+
+  const possMatch = text.match(/(?:possession\s*date|handover\s*date|date\s*of\s*handing\s*over)\s*[:\-–]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+[0-9]{4}|[0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{4}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{1,2})/i);
+  if (possMatch && possMatch[1]) {
+    possessionDate = parseCleanDate(possMatch[1]);
+    if (possessionDate) {
+      highlights.push(`Possession Date: ${possessionDate}`);
+    }
+  }
 
   const termMatch = text.match(/(?:lease\s*(?:period|term)|tenure|duration|period\s*of\s*lease)\s*(?:of|is)?\s*[:\-–]?\s*([0-9]+)\s*(?:months|years)/i);
   if (termMatch && termMatch[1]) {
@@ -580,6 +668,7 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     twoWheelerRate,
     parkingMonthly,
     totalMonthlyPayout,
+    possessionDate: possessionDate || "",
     startDate: startDate || new Date().toISOString().split("T")[0],
     endDate: endDate || "",
     leaseTermMonths,
@@ -591,6 +680,11 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     escalationPct,
     escalationFrequency,
     escalationStartDate,
+    electricityBilling,
+    electricityLoadKva,
+    powerBackupType,
+    dgRatePerKwh,
+    waterCharges,
     paymentTerms,
     paymentDueDay,
     lateInterestPct: 18,

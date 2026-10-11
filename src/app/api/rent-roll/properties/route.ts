@@ -50,11 +50,10 @@ export async function POST(req: Request) {
     const auth = getAuthContext(req);
     const body = await req.json();
 
-    const generatedCode =
-      (body.property_code && body.property_code.trim()) ||
-      (body.property_name
-        ? body.property_name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase() + "-" + Math.floor(100 + Math.random() * 900)
-        : `PROP-${Date.now().toString(36).toUpperCase()}`);
+    const orgId = body.org_id || auth.orgId;
+    const clientAccountId = body.client_account_id || auth.clientAccountId;
+    const propertyName = (body.property_name || body.name || "Commercial Tower").trim();
+    const providedCode = body.property_code && body.property_code.trim() ? body.property_code.trim() : "";
 
     const validPropertyTypes = ["office", "residential", "retail", "flex_workspace", "mixed"];
     let normalizedType = "office";
@@ -73,13 +72,93 @@ export async function POST(req: Request) {
       }
     }
 
+    const areaVal = Number(body.total_leasable_area_sqft || body.totalArea) || 50000;
+    const seatsRaw = body.total_leasable_seats ?? body.total_seats;
+    const parsedSeats =
+      seatsRaw !== null && seatsRaw !== undefined && seatsRaw !== "" && !isNaN(Number(seatsRaw))
+        ? Number(seatsRaw)
+        : null;
+
+    // 1. Check if property already exists for this org (by ID, matching code, or matching name)
+    const matchConditions = [];
+    if (body.id || body.property_id) {
+      matchConditions.push(eq(property.id, body.id || body.property_id));
+    }
+    if (providedCode) {
+      matchConditions.push(eq(property.property_code, providedCode));
+    }
+    if (propertyName) {
+      matchConditions.push(ilike(property.property_name, propertyName));
+    }
+
+    const existingProperties = matchConditions.length > 0
+      ? await db
+          .select()
+          .from(property)
+          .where(
+            and(
+              eq(property.org_id, orgId),
+              sql`${property.deleted_at} IS NULL`,
+              or(...matchConditions)!
+            )
+          )
+          .limit(1)
+      : [];
+
+    if (existingProperties.length > 0) {
+      const existing = existingProperties[0];
+      const [updated] = await db
+        .update(property)
+        .set({
+          property_name: propertyName,
+          property_code: providedCode || existing.property_code,
+          address: body.address || body.address_line1 || existing.address,
+          city: body.city || existing.city,
+          state: body.state || existing.state,
+          postal_code: body.postal_code || body.pincode || existing.postal_code,
+          country_code: body.country_code || existing.country_code || "IN",
+          total_leasable_area_sqft: String(areaVal),
+          total_leasable_seats: parsedSeats !== null ? parsedSeats : existing.total_leasable_seats,
+          property_type: normalizedType as any,
+          updated_by: auth.userId,
+          updated_at: new Date(),
+        })
+        .where(eq(property.id, existing.id))
+        .returning();
+
+      return NextResponse.json({ success: true, data: updated, isExisting: true }, { status: 200 });
+    }
+
+    // 2. Generate a unique property code that does not collide with existing properties
+    let finalCode = providedCode;
+    if (!finalCode) {
+      finalCode = propertyName
+        ? propertyName.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase() + "-" + Math.floor(100 + Math.random() * 900)
+        : `PROP-${Date.now().toString(36).toUpperCase()}`;
+    }
+
+    // Ensure the candidate code doesn't collide with ANY existing property in this org
+    let codeCandidate = finalCode;
+    let collisionCount = 0;
+    while (collisionCount < 10) {
+      const collision = await db
+        .select({ id: property.id })
+        .from(property)
+        .where(and(eq(property.org_id, orgId), eq(property.property_code, codeCandidate)))
+        .limit(1);
+      if (collision.length === 0) break;
+      collisionCount++;
+      codeCandidate = `${finalCode}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+    finalCode = codeCandidate;
+
     const payload = {
       ...body,
-      org_id: body.org_id || auth.orgId,
-      client_account_id: body.client_account_id || auth.clientAccountId,
-      property_name: body.property_name || "Commercial Tower",
-      property_code: generatedCode,
-      total_leasable_area_sqft: body.total_leasable_area_sqft || 50000,
+      org_id: orgId,
+      client_account_id: clientAccountId,
+      property_name: propertyName,
+      property_code: finalCode,
+      total_leasable_area_sqft: areaVal,
       property_type: normalizedType,
     };
 
@@ -101,15 +180,46 @@ export async function POST(req: Request) {
         postal_code: body.postal_code || body.pincode || null,
         country_code: body.country_code || "IN",
         total_leasable_area_sqft: String(payload.total_leasable_area_sqft),
-        total_leasable_seats: (body.total_leasable_seats || body.total_seats) ? Number(body.total_leasable_seats || body.total_seats) : null,
+        total_leasable_seats: parsedSeats,
         property_type: payload.property_type as any,
         created_by: auth.userId,
         updated_by: auth.userId,
+      })
+      .onConflictDoUpdate({
+        target: [property.org_id, property.property_code],
+        set: {
+          property_name: payload.property_name,
+          address: body.address || body.address_line1 || null,
+          city: body.city || null,
+          state: body.state || null,
+          postal_code: body.postal_code || body.pincode || null,
+          country_code: body.country_code || "IN",
+          total_leasable_area_sqft: String(payload.total_leasable_area_sqft),
+          total_leasable_seats: parsedSeats,
+          property_type: payload.property_type as any,
+          updated_by: auth.userId,
+          updated_at: new Date(),
+        },
       })
       .returning();
 
     return NextResponse.json({ success: true, data: inserted }, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to create property", message: err.message }, { status: 500 });
+    console.error("Failed to create/update property:", err);
+    const isDup =
+      err.code === "23505" ||
+      err.cause?.code === "23505" ||
+      String(err?.message || "").includes("duplicate key") ||
+      String(err?.cause?.message || "").includes("duplicate key");
+
+    return NextResponse.json(
+      {
+        error: "Failed to create property",
+        message: isDup
+          ? "This property or property code already exists in your portfolio."
+          : (err.cause?.message || err.message || "An unexpected database error occurred"),
+      },
+      { status: 500 }
+    );
   }
 }
