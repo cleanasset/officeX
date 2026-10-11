@@ -32,6 +32,7 @@ import {
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
 } from "@/components/common/GoogleAddressAutocomplete";
+import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 
 
 export type HierarchyTab = "property" | "building" | "space" | "tenant" | "contract";
@@ -608,15 +609,8 @@ export default function PropertyHierarchyModal({
     setIsUploadingAgreement(true);
     setFeedback(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/contracts/parse-agreement", {
-        method: "POST",
-        body: formData,
-      });
-      const json = await res.json();
-      if (res.ok && json.success && json.data) {
+      const json = await uploadAndParseAgreement(file);
+      if (json && json.success && json.data) {
         const d = json.data;
         setParsedAgreementMeta({
           fileName: json.fileName,

@@ -54,6 +54,7 @@ import {
   matchCanonicalIndianState,
   matchCanonicalIndianCity,
 } from "@/lib/india-locations";
+import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL =
@@ -253,15 +254,8 @@ function CompleteProfileContent() {
     if (!file) return;
     setIsUploadingAgreement(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/contracts/parse-agreement", {
-        method: "POST",
-        body: formData,
-      });
-      const json = await res.json();
-      if (res.ok && json.success && json.data) {
+      const json = await uploadAndParseAgreement(file);
+      if (json && json.success && json.data) {
         const d = json.data;
         setParsedAgreementMeta({
           fileName: json.fileName,
