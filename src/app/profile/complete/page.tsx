@@ -50,8 +50,8 @@ const DEPLOYED_BASE_URL =
 function CompleteProfileContent() {
   const router = useRouter();
 
-  // Active step
-  const [activeStep, setActiveStep] = useState<"property" | "tenant" | "documents" | "delegation">("property");
+  // Active step (now includes Contract step)
+  const [activeStep, setActiveStep] = useState<"property" | "tenant" | "contract" | "documents" | "delegation">("property");
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -60,6 +60,12 @@ function CompleteProfileContent() {
   const [brandName, setBrandName] = useState("");
   const [brandLogo, setBrandLogo] = useState("");
   const [userRoleKey, setUserRoleKey] = useState("owner");
+
+  // Subscribed Capacity (Ceiling)
+  const [subscribedCapacity, setSubscribedCapacity] = useState<number>(50000);
+
+  // Manager activation banner visibility
+  const [showManagerActivationBanner, setShowManagerActivationBanner] = useState(true);
 
   // Registered Properties List (Fetched from DB & Storage)
   const [registeredProperties, setRegisteredProperties] = useState<any[]>([]);
@@ -130,22 +136,57 @@ function CompleteProfileContent() {
   const [sheetParsedRows, setSheetParsedRows] = useState<any[]>([]);
   const [propLoading, setPropLoading] = useState(false);
 
-  // Step 2: Tenant Form (Clean, zero pre-feeded mock data)
+  // Step 2: Tenant Form (Exact 9 fields requested by user)
   const [selectedPropertyForTenant, setSelectedPropertyForTenant] = useState<string>("");
   const [tenantForm, setTenantForm] = useState({
-    tenant_name: "",
-    trade_name: "",
-    pan: "",
-    gstin: "",
-    contact_name: "",
+    occupant_name: "",
     email: "",
     phone: "",
-    unit_number: "",
-    monthly_rent: 0,
+    company_name: "",
+    gstin: "",
+    pan: "",
+    billing_address: "",
+    alt_contact_name: "",
+    alt_contact_phone: "",
   });
   const [tenantLoading, setTenantLoading] = useState(false);
 
-  // Step 3: Documents Vault
+  // Latest Generated Tenant Invite Link
+  const [latestTenantInvite, setLatestTenantInvite] = useState<{
+    name: string;
+    email: string;
+    link: string;
+  } | null>(null);
+  const [copiedTenantInvite, setCopiedTenantInvite] = useState(false);
+
+  // Tenants List for Contract selection
+  const [tenantsList, setTenantsList] = useState<Array<{ id: string; name: string; company?: string }>>([]);
+
+  // Step 3: Contract Form (Exact 18 fields requested by user)
+  const [contractForm, setContractForm] = useState({
+    occupant_id: "",
+    occupant_name: "",
+    property_id: "",
+    building_name: "Tower 1",
+    space_unit: "Suite 101",
+    start_date: "",
+    end_date: "",
+    area_sqft: "",
+    monthly_rent: "",
+    escalation_pct: "",
+    escalation_start_date: "",
+    escalation_frequency: "Annual",
+    security_deposit: "",
+    lock_in_months: "",
+    notice_days: "90",
+    billing_entity: "",
+    billing_model: "Area-based",
+    payment_terms: "Net 30",
+    notes: "",
+  });
+  const [contractLoading, setContractLoading] = useState(false);
+
+  // Step 4: Documents Vault
   const [uploadedDocs, setUploadedDocs] = useState<{ [key: string]: boolean }>({
     title_deed: false,
     fire_noc: false,
@@ -153,7 +194,7 @@ function CompleteProfileContent() {
     sanction_load: false,
   });
 
-  // Step 4: Manager Delegation & Domain-Safe Invite Link
+  // Step 5: Manager Delegation & Domain-Safe Invite Link
   const [managerData, setManagerData] = useState({
     name: "",
     email: "",
@@ -202,6 +243,63 @@ function CompleteProfileContent() {
       setBrandLogo(storedLogo);
       setUserRoleKey(storedRole);
 
+      const isDismissed = localStorage.getItem("officex_dismiss_manager_banner") === "true";
+      setShowManagerActivationBanner(!isDismissed);
+
+      // 1. Subscribed Capacity
+      const storedSubCap = Number(localStorage.getItem("officex_subscribed_sqft"));
+      if (storedSubCap && !isNaN(storedSubCap) && storedSubCap > 0) {
+        setSubscribedCapacity(storedSubCap);
+      }
+
+      // 2. Pre-fill Step 1 from Onboarding data
+      const rawOnboarded = localStorage.getItem("officex_onboarded_property_details");
+      if (rawOnboarded) {
+        try {
+          const ob = JSON.parse(rawOnboarded);
+          const stateMatched = matchCanonicalIndianState(ob.state) || ob.state || "Karnataka";
+          const citiesList = INDIAN_STATES_CITIES[stateMatched] || [];
+          if (citiesList.length > 0) {
+            setAvailableCities(citiesList);
+          }
+          const propNameVal = ob.propertyName || localStorage.getItem("officex_active_property") || "";
+          setPropForm((prev) => ({
+            ...prev,
+            property_name: prev.property_name || propNameVal,
+            property_code: prev.property_code || ob.propertyCode || (propNameVal ? propNameVal.slice(0, 4).toUpperCase() : ""),
+            property_type: (ob.propertyType ? ob.propertyType.toLowerCase() : prev.property_type) || "office",
+            ownership_structure: ob.ownershipStructure || prev.ownership_structure || "pvt_ltd",
+            total_leasable_area_sqft: prev.total_leasable_area_sqft || Number(ob.areaSqft) || 50000,
+            floors_count: prev.floors_count || Number(ob.floorsCount) || 1,
+            wings_count: prev.wings_count || Number(ob.wingsCount) || 1,
+            address: prev.address || ob.address || "",
+            state: stateMatched,
+            city: ob.city || (citiesList.length > 0 ? citiesList[0] : prev.city),
+            pincode: prev.pincode || ob.pincode || "",
+            spv_name: prev.spv_name || ob.spvName || ob.companyName || "",
+            pan_number: prev.pan_number || ob.panNumber || "",
+            cin_number: prev.cin_number || ob.cinNumber || "",
+            gstin: prev.gstin || ob.gstin || "",
+            rera_number: prev.rera_number || ob.reraNumber || "",
+            micro_market: prev.micro_market || ob.microMarket || "",
+          }));
+
+          if (ob.spvName || ob.companyName) {
+            setContractForm((prev) => ({
+              ...prev,
+              billing_entity: prev.billing_entity || ob.spvName || ob.companyName || "",
+            }));
+          }
+        } catch (e) {
+          console.error("Failed to parse onboarding details:", e);
+        }
+      } else {
+        const activeProp = localStorage.getItem("officex_active_property");
+        if (activeProp) {
+          setPropForm((prev) => ({ ...prev, property_name: prev.property_name || activeProp }));
+        }
+      }
+
       try {
         const storedAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
         setPropertyAssignments(storedAssigns);
@@ -240,6 +338,27 @@ function CompleteProfileContent() {
       } catch (e) {
         console.error("Failed to load registered properties:", e);
       }
+
+      // Fetch tenants
+      try {
+        const tRes = await fetch("/api/rent-roll/tenants");
+        if (tRes.ok) {
+          const tData = await tRes.json();
+          const tArr = (Array.isArray(tData.data) ? tData.data : []).map((t: any) => ({
+            id: t.id,
+            name: t.tenant_name || t.trade_name,
+            company: t.trade_name,
+          }));
+          setTenantsList(tArr);
+          if (tArr.length > 0) {
+            setContractForm((prev) => ({
+              ...prev,
+              occupant_id: prev.occupant_id || tArr[0].id,
+              occupant_name: prev.occupant_name || tArr[0].name,
+            }));
+          }
+        }
+      } catch (e) {}
 
       if (hasMgr && (mgrName || mgrEmail)) {
         setManagerData({
@@ -317,6 +436,13 @@ function CompleteProfileContent() {
       showToast("Please enter property name.");
       return;
     }
+    const enteredArea = Number(propForm.total_leasable_area_sqft) || 0;
+    if (subscribedCapacity > 0 && enteredArea > subscribedCapacity) {
+      showToast(`Total leasable area (${enteredArea.toLocaleString()} Sq.Ft) cannot exceed your subscribed capacity (${subscribedCapacity.toLocaleString()} Sq.Ft). Clamped to maximum limit.`);
+      setPropForm({ ...propForm, total_leasable_area_sqft: subscribedCapacity });
+      return;
+    }
+
     setPropLoading(true);
     try {
       const res = await fetch("/api/rent-roll/properties", {
@@ -428,44 +554,133 @@ function CompleteProfileContent() {
     }, 600);
   };
 
-  // Save Tenant
+  // Save Tenant (Exact 9 fields requested by user)
   const handleSaveTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenantForm.tenant_name.trim()) {
-      showToast("Please enter tenant name.");
+    if (!tenantForm.occupant_name.trim()) {
+      showToast("Occupant Name is required");
       return;
     }
+    if (!tenantForm.email.trim()) {
+      showToast("Email is required");
+      return;
+    }
+    if (!tenantForm.phone.trim()) {
+      showToast("Phone is required");
+      return;
+    }
+
     setTenantLoading(true);
     try {
       const res = await fetch("/api/rent-roll/tenants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...tenantForm,
+          tenant_name: tenantForm.occupant_name.trim(),
+          trade_name: tenantForm.company_name.trim() || tenantForm.occupant_name.trim(),
+          email: tenantForm.email.trim(),
+          phone: tenantForm.phone.trim(),
+          gstin: tenantForm.gstin.trim().toUpperCase(),
+          pan: tenantForm.pan.trim().toUpperCase(),
+          billing_address: tenantForm.billing_address.trim(),
+          alt_contact_name: tenantForm.alt_contact_name.trim(),
+          alt_contact_phone: tenantForm.alt_contact_phone.trim(),
           property_id: selectedPropertyForTenant,
         }),
       });
-      if (res.ok) {
-        markStepDone("tenant");
-        showToast(`✓ Tenant '${tenantForm.tenant_name}' registered to selected property!`);
-        // Reset form cleanly
-        setTenantForm({
-          tenant_name: "",
-          trade_name: "",
-          pan: "",
-          gstin: "",
-          contact_name: "",
-          email: "",
-          phone: "",
-          unit_number: "",
-          monthly_rent: 0,
-        });
-        setActiveStep("documents");
-      }
+      const data = await res.json();
+      const tenantId = data?.data?.id || `ten_${Date.now()}`;
+      const occupantName = tenantForm.occupant_name.trim();
+
+      // Add to tenants list
+      setTenantsList((prev) => [
+        ...prev,
+        { id: tenantId, name: occupantName, company: tenantForm.company_name.trim() }
+      ]);
+
+      // Generate Tenant Portal Invite Link
+      const origin =
+        typeof window !== "undefined" && window.location.origin
+          ? window.location.origin
+          : DEPLOYED_BASE_URL;
+      const targetProp =
+        registeredProperties.find((p) => p.id === selectedPropertyForTenant)?.property_name ||
+        propForm.property_name ||
+        "Commercial Property";
+      const ownerTitle = companyName || brandName || "Commercial Property Owner";
+      const inviteUrl = `${origin}/invite?role=tenant&mgr=${encodeURIComponent(occupantName)}&email=${encodeURIComponent(tenantForm.email.trim())}&prop=${encodeURIComponent(targetProp)}&owner=${encodeURIComponent(ownerTitle)}&invite=ten_${Date.now()}`;
+
+      setLatestTenantInvite({
+        name: occupantName,
+        email: tenantForm.email.trim(),
+        link: inviteUrl,
+      });
+
+      // Auto-pre-select the newly added tenant in the contract form
+      setContractForm((prev) => ({
+        ...prev,
+        occupant_id: tenantId,
+        occupant_name: occupantName,
+        property_id: selectedPropertyForTenant || registeredProperties[0]?.id || "",
+        billing_entity: prev.billing_entity || propForm.spv_name || companyName || "",
+      }));
+
+      markStepDone("tenant");
+      showToast(`✓ Occupant '${occupantName}' enrolled! Tenant Portal invite generated.`);
+
+      // Advance directly to Creating Contract
+      setActiveStep("contract");
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
       setTenantLoading(false);
+    }
+  };
+
+  // Save Contract (Exact 18 fields requested by user)
+  const handleSaveContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contractForm.occupant_id) {
+      showToast("Please select an occupant / tenant");
+      return;
+    }
+    if (!contractForm.start_date || !contractForm.end_date) {
+      showToast("Contract Start and End dates are required");
+      return;
+    }
+
+    setContractLoading(true);
+    try {
+      const res = await fetch("/api/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          occupant_id: contractForm.occupant_id,
+          property_id: contractForm.property_id || selectedPropertyForTenant,
+          contract_code: `LEAS-${Date.now().toString().slice(-5)}`,
+          start_date: contractForm.start_date,
+          end_date: contractForm.end_date,
+          contract_type: "lease",
+          base_rent_rate: Number(contractForm.monthly_rent) || 100000,
+          billing_model: contractForm.billing_model.toLowerCase().replace(/\s+/g, "_"),
+          escalation_type: "percentage",
+          escalation_value: Number(contractForm.escalation_pct) || 0,
+          has_escalation: Boolean(Number(contractForm.escalation_pct) > 0),
+          deposit_amount_inr: Number(contractForm.security_deposit) || 0,
+          lock_in_period_days: (Number(contractForm.lock_in_months) || 0) * 30,
+          notice_period_days: Number(contractForm.notice_days) || 90,
+          billing_entity: contractForm.billing_entity.trim(),
+          payment_terms: contractForm.payment_terms.trim(),
+          remarks: contractForm.notes.trim(),
+        }),
+      });
+      markStepDone("contract");
+      showToast("✓ Commercial Lease Contract registered successfully!");
+      setActiveStep("documents");
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setContractLoading(false);
     }
   };
 
@@ -476,7 +691,7 @@ function CompleteProfileContent() {
     }
   };
 
-  const progressPct = Math.round(((completedSteps.length + 1) / 4) * 100);
+  const progressPct = Math.round(((completedSteps.length) / 5) * 100);
 
   return (
     <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">
@@ -530,7 +745,7 @@ function CompleteProfileContent() {
             <div className="mt-5 space-y-2">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-slate-600">
-                  Profile Progress: <strong className="text-teal-700">{completedSteps.length} of 4 Modules Completed</strong>
+                  Profile Progress: <strong className="text-teal-700">{completedSteps.length} of 5 Modules Completed</strong>
                 </span>
                 <span className="font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
                   {Math.min(100, progressPct)}%
@@ -545,8 +760,8 @@ function CompleteProfileContent() {
             </div>
 
             {/* 1ST ACTION AFTER USER ONBOARDING: MANAGER ONBOARDING COMPLETED & DASHBOARD ACTIVATED */}
-            {managerData.name && (
-              <div className="mt-5 p-5 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border-2 border-teal-500/40 shadow-xs space-y-3.5 animate-in fade-in">
+            {showManagerActivationBanner && managerData.name && (
+              <div className="mt-5 p-5 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border-2 border-teal-500/40 shadow-xs space-y-3.5 relative animate-in fade-in">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -577,6 +792,19 @@ function CompleteProfileContent() {
                       <ExternalLink size={13} />
                       <span>Manager Portal</span>
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowManagerActivationBanner(false);
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("officex_dismiss_manager_banner", "true");
+                        }
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                      title="Remove / dismiss activation link notification"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                 </div>
 
@@ -603,13 +831,14 @@ function CompleteProfileContent() {
               </div>
             )}
 
-            {/* Navigation Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-6 pt-5 border-t border-slate-100">
+            {/* Navigation Tabs (5 Steps) */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-6 pt-5 border-t border-slate-100">
               {[
-                { id: "property", label: "1. Add Property & Assign", icon: Building2 },
-                { id: "tenant", label: "2. Add Tenants", icon: Users },
-                { id: "documents", label: "3. Compliance Vault", icon: FileText },
-                { id: "delegation", label: "4. Team Delegation", icon: UserCheck },
+                { id: "property", label: "1. Add Property", icon: Building2 },
+                { id: "tenant", label: "2. Add Occupant", icon: Users },
+                { id: "contract", label: "3. Lease Contract", icon: FileText },
+                { id: "documents", label: "4. Compliance Vault", icon: ShieldCheck },
+                { id: "delegation", label: "5. Team Delegation", icon: UserCheck },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isCurrent = activeStep === tab.id;
@@ -729,17 +958,40 @@ function CompleteProfileContent() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Total Leasable Area (Sq.Ft) *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Total Leasable Area (Sq.Ft) *</label>
+                        {subscribedCapacity > 0 && (
+                          <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                            Subscribed Cap: {subscribedCapacity.toLocaleString()} Sq.Ft
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
-                        min="1000"
-                        step="1000"
+                        min="100"
+                        max={subscribedCapacity > 0 ? subscribedCapacity : undefined}
+                        step="100"
                         required
-                        placeholder="50000"
+                        placeholder={`e.g. ${subscribedCapacity || 50000}`}
                         value={propForm.total_leasable_area_sqft || ""}
-                        onChange={(e) => setPropForm({ ...propForm, total_leasable_area_sqft: Number(e.target.value) || 0 })}
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0;
+                          if (subscribedCapacity > 0 && val > subscribedCapacity) {
+                            setPropForm({ ...propForm, total_leasable_area_sqft: subscribedCapacity });
+                            showToast(
+                              `Total leasable area cannot exceed your subscribed capacity (${subscribedCapacity.toLocaleString()} Sq.Ft). Clamped to maximum limit.`
+                            );
+                          } else {
+                            setPropForm({ ...propForm, total_leasable_area_sqft: val });
+                          }
+                        }}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
+                      {subscribedCapacity > 0 && propForm.total_leasable_area_sqft > subscribedCapacity && (
+                        <p className="text-[10px] font-bold text-rose-600 mt-1">
+                          Entered area exceeds subscribed quota ({subscribedCapacity.toLocaleString()} Sq.Ft).
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1202,19 +1454,59 @@ function CompleteProfileContent() {
             </div>
           )}
 
-          {/* ──── MODULE 2: ADD TENANTS (REQUIRES REGISTERED PROPERTY) ──── */}
+          {/* ──── MODULE 2: ADD TENANTS / OCCUPANTS ──── */}
           {activeStep === "tenant" && (
             <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-6">
               <div className="border-b border-slate-100 pb-4">
-                <h3 className="text-lg font-black text-slate-900">
-                  Step 2: Add Tenants &amp; Lease Counterparties
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                    Step 2 of 5
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">Occupant Master</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mt-1">
+                  Adding Tenant / Occupant
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Assign corporate occupants to your registered commercial buildings.
+                  Register corporate occupiers or individual tenants with statutory details and generate tenant portal access.
                 </p>
               </div>
 
-              {/* Point 8: Check if any property is registered */}
+              {/* Latest Tenant Invite Banner if already created */}
+              {latestTenantInvite && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border border-teal-300 shadow-2xs space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} className="text-[#0D7B6C]" />
+                      <span className="text-xs font-black text-slate-900">
+                        Tenant Portal Invite Link Active for {latestTenantInvite.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(latestTenantInvite.link);
+                          setCopiedTenantInvite(true);
+                          setTimeout(() => setCopiedTenantInvite(false), 3000);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
+                    >
+                      <Copy size={13} />
+                      <span>{copiedTenantInvite ? "Copied!" : "Copy Tenant Invite Link"}</span>
+                    </button>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-teal-200 font-mono text-[11px] text-teal-900 truncate select-all">
+                    {latestTenantInvite.link}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    Tenants using this link will access their self-service workspace portal (`/portal`) to review lease terms, download invoices, and log service tickets.
+                  </p>
+                </div>
+              )}
+
+              {/* Check if any property is registered */}
               {registeredProperties.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-amber-50/70 border border-amber-300 text-center space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
@@ -1237,10 +1529,10 @@ function CompleteProfileContent() {
                 </div>
               ) : (
                 <form onSubmit={handleSaveTenant} className="space-y-4">
-                  {/* Point 8: Property Selector Dropdown */}
+                  {/* Property Selector */}
                   <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200">
                     <label className="text-xs font-black text-slate-900 block mb-1.5">
-                      Select Registered Property for This Tenant *
+                      Select Registered Property for This Occupant *
                     </label>
                     <select
                       value={selectedPropertyForTenant}
@@ -1256,43 +1548,70 @@ function CompleteProfileContent() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 1. Occupant Name (required) */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Tenant Legal Entity Name *</label>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Occupant Name *</label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Infosys BPM Ltd"
-                        value={tenantForm.tenant_name}
-                        onChange={(e) => setTenantForm({ ...tenantForm, tenant_name: e.target.value })}
+                        placeholder="e.g. Rahul Sharma / Microsoft India"
+                        value={tenantForm.occupant_name}
+                        onChange={(e) => setTenantForm({ ...tenantForm, occupant_name: e.target.value })}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
 
+                    {/* 2. Email (required) */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Trade / Brand Display Name</label>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="tenant@enterprise.com"
+                        value={tenantForm.email}
+                        onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* 3. Phone (required) */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+91 98765 43210"
+                        value={tenantForm.phone}
+                        onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    {/* 4. Company Name (optional) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Company Name</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Optional
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        placeholder="e.g. Infosys"
-                        value={tenantForm.trade_name}
-                        onChange={(e) => setTenantForm({ ...tenantForm, trade_name: e.target.value })}
+                        placeholder="e.g. Infosys BPM Ltd (leave blank if individual)"
+                        value={tenantForm.company_name}
+                        onChange={(e) => setTenantForm({ ...tenantForm, company_name: e.target.value })}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
 
+                    {/* 5. GST Number (if company, optional) */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Tenant PAN Number</label>
-                      <input
-                        type="text"
-                        placeholder="AAACI1234F"
-                        maxLength={10}
-                        value={tenantForm.pan}
-                        onChange={(e) => setTenantForm({ ...tenantForm, pan: e.target.value.toUpperCase() })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none uppercase"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Tenant GSTIN</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">GST Number</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Optional (If company)
+                        </span>
+                      </div>
                       <input
                         type="text"
                         placeholder="29AAACI1234F1Z5"
@@ -1303,47 +1622,67 @@ function CompleteProfileContent() {
                       />
                     </div>
 
+                    {/* 6. PAN (if individual, optional) */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Authorized Contact (SPOC)</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">PAN Number</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Optional (If individual)
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        placeholder="SPOC Full Name"
-                        value={tenantForm.contact_name}
-                        onChange={(e) => setTenantForm({ ...tenantForm, contact_name: e.target.value })}
+                        placeholder="ABCDE1234F"
+                        maxLength={10}
+                        value={tenantForm.pan}
+                        onChange={(e) => setTenantForm({ ...tenantForm, pan: e.target.value.toUpperCase() })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none uppercase"
+                      />
+                    </div>
+
+                    {/* 7. Billing Address (Google Autocomplete) */}
+                    <div className="sm:col-span-2">
+                      <GoogleAddressAutocomplete
+                        value={tenantForm.billing_address}
+                        onChange={(val) => setTenantForm((prev) => ({ ...prev, billing_address: val }))}
+                        onAddressSelect={(res) => setTenantForm((prev) => ({ ...prev, billing_address: res.fullAddress }))}
+                        label="Billing Address"
+                        placeholder="Search office street address, building, or city..."
+                        hint="Selecting an address populates standard statutory invoicing particulars."
+                      />
+                    </div>
+
+                    {/* 8. Alternate Contact Name (optional) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Alternate Contact Name</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Optional
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="e.g. Accounts Manager / CFO"
+                        value={tenantForm.alt_contact_name}
+                        onChange={(e) => setTenantForm({ ...tenantForm, alt_contact_name: e.target.value })}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
 
+                    {/* 9. Alternate Contact Phone (optional) */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Billing Email</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Alternate Contact Phone</label>
+                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Optional
+                        </span>
+                      </div>
                       <input
-                        type="email"
-                        placeholder="leases@company.com"
-                        value={tenantForm.email}
-                        onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Allocated Unit / Demised Space</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Unit 402, 4th Floor"
-                        value={tenantForm.unit_number}
-                        onChange={(e) => setTenantForm({ ...tenantForm, unit_number: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Monthly Base Rent (INR)</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 150000"
-                        value={tenantForm.monthly_rent || ""}
-                        onChange={(e) => setTenantForm({ ...tenantForm, monthly_rent: Number(e.target.value) || 0 })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        type="tel"
+                        placeholder="+91 98765 00000"
+                        value={tenantForm.alt_contact_phone}
+                        onChange={(e) => setTenantForm({ ...tenantForm, alt_contact_phone: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
                   </div>
@@ -1352,7 +1691,7 @@ function CompleteProfileContent() {
                     <button
                       type="button"
                       onClick={() => setActiveStep("property")}
-                      className="text-xs font-bold text-slate-500 hover:text-slate-800"
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
                     >
                       ← Back to Property
                     </button>
@@ -1362,7 +1701,7 @@ function CompleteProfileContent() {
                       disabled={tenantLoading}
                       className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>Save Tenant &amp; Continue →</span>
+                      <span>Save Tenant &amp; Create Contract →</span>
                     </button>
                   </div>
                 </form>
@@ -1370,12 +1709,352 @@ function CompleteProfileContent() {
             </div>
           )}
 
-          {/* ──── MODULE 3: COMPLIANCE DOCUMENTS VAULT ──── */}
+          {/* ──── MODULE 3: CREATING CONTRACT (LINKING TENANT TO SPACE) ──── */}
+          {activeStep === "contract" && (
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                    Step 3 of 5
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">Commercial Contract</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mt-1">
+                  Creating Contract (Linking Tenant to Space)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Bind the newly added tenant to demised property space, establish escalation terms, security deposits, and billing SPVs.
+                </p>
+              </div>
+
+              {/* Tenant Portal Invite Link Banner */}
+              {latestTenantInvite && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border-2 border-teal-500/40 shadow-xs space-y-2.5 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0">
+                        <Sparkles size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-slate-900">
+                          Tenant Portal Access Link for {latestTenantInvite.name}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          Share this link so the tenant can access `/portal` to inspect their lease and pay rent.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(latestTenantInvite.link);
+                          setCopiedTenantInvite(true);
+                          setTimeout(() => setCopiedTenantInvite(false), 3000);
+                        }
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
+                    >
+                      <Copy size={13} />
+                      <span>{copiedTenantInvite ? "Link Copied!" : "Copy Tenant Invite Link"}</span>
+                    </button>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-teal-200 font-mono text-[11px] text-teal-900 truncate select-all">
+                    {latestTenantInvite.link}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveContract} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* 1. Occupant (dropdown - selects from occupants, pre-selected with latest added) */}
+                  <div className="sm:col-span-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Occupant / Tenant *</label>
+                    <select
+                      value={contractForm.occupant_id}
+                      onChange={(e) => {
+                        const sel = tenantsList.find((t) => t.id === e.target.value);
+                        setContractForm({
+                          ...contractForm,
+                          occupant_id: e.target.value,
+                          occupant_name: sel?.name || "",
+                        });
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                    >
+                      {tenantsList.length === 0 && (
+                        <option value="">{tenantForm.occupant_name || "Enrolled Occupant"}</option>
+                      )}
+                      {tenantsList.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} {t.company ? `(${t.company})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 2. Property (dropdown) */}
+                  <div className="sm:col-span-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Property *</label>
+                    <select
+                      value={contractForm.property_id || selectedPropertyForTenant}
+                      onChange={(e) => setContractForm({ ...contractForm, property_id: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                    >
+                      {registeredProperties.map((p) => (
+                        <option key={p.id || p.property_name} value={p.id || p.property_name}>
+                          {p.property_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Building (dropdown / input) */}
+                  <div className="sm:col-span-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Building / Tower *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Tower 1 / West Wing"
+                      value={contractForm.building_name}
+                      onChange={(e) => setContractForm({ ...contractForm, building_name: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 4. Space / Unit (dropdown / input) */}
+                  <div className="sm:col-span-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Space / Unit *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Suite 402, 4th Floor"
+                      value={contractForm.space_unit}
+                      onChange={(e) => setContractForm({ ...contractForm, space_unit: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 5. Contract Start Date */}
+                  <div className="sm:col-span-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Contract Start Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={contractForm.start_date}
+                      onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 6. Contract End Date */}
+                  <div className="sm:col-span-1">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Contract End Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={contractForm.end_date}
+                      onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 7. Area (Sq.Ft) */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Area (Sq.Ft) *</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 5000"
+                      value={contractForm.area_sqft}
+                      onChange={(e) => setContractForm({ ...contractForm, area_sqft: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 8. Monthly Rent Amount */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Monthly Rent Amount (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="e.g. 250000"
+                      value={contractForm.monthly_rent}
+                      onChange={(e) => setContractForm({ ...contractForm, monthly_rent: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 9. Escalation % */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Escalation % (if any)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="e.g. 5.0"
+                      value={contractForm.escalation_pct}
+                      onChange={(e) => setContractForm({ ...contractForm, escalation_pct: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 10. Escalation Start Date */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Escalation Start Date</label>
+                    <input
+                      type="date"
+                      value={contractForm.escalation_start_date}
+                      onChange={(e) => setContractForm({ ...contractForm, escalation_start_date: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 11. Escalation Frequency */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Escalation Frequency</label>
+                    <select
+                      value={contractForm.escalation_frequency}
+                      onChange={(e) => setContractForm({ ...contractForm, escalation_frequency: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                    >
+                      <option value="Annual">Annual (Every 12 Months)</option>
+                      <option value="Biannual">Biannual (Every 24 Months)</option>
+                      <option value="Quarterly">Quarterly</option>
+                    </select>
+                  </div>
+
+                  {/* 12. Security Deposit Amount */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Security Deposit Amount (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 1500000 (6 Months)"
+                      value={contractForm.security_deposit}
+                      onChange={(e) => setContractForm({ ...contractForm, security_deposit: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 13. Lock-in Period (months) */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Lock-in Period (Months)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 36 (Months)"
+                      value={contractForm.lock_in_months}
+                      onChange={(e) => setContractForm({ ...contractForm, lock_in_months: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 14. Notice Period (Days before termination) */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Notice Period (Days)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 90 (Days)"
+                      value={contractForm.notice_days}
+                      onChange={(e) => setContractForm({ ...contractForm, notice_days: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                  </div>
+
+                  {/* 15. Billing Entity (dropdown / SPV) */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Billing Entity (SPV) *</label>
+                    <input
+                      type="text"
+                      list="billing-entity-options"
+                      required
+                      placeholder="e.g. Prestige Tech Park SPV LLP"
+                      value={contractForm.billing_entity}
+                      onChange={(e) => setContractForm({ ...contractForm, billing_entity: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                    />
+                    <datalist id="billing-entity-options">
+                      {propForm.spv_name && <option value={propForm.spv_name} />}
+                      {companyName && <option value={companyName} />}
+                      {brandName && <option value={brandName} />}
+                    </datalist>
+                  </div>
+
+                  {/* 16. Billing Model */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Billing Model</label>
+                    <select
+                      value={contractForm.billing_model}
+                      onChange={(e) => setContractForm({ ...contractForm, billing_model: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                    >
+                      <option value="Area-based">Area-based (₹ / sq.ft / month)</option>
+                      <option value="Seat-based">Seat-based (₹ / workstation / month)</option>
+                      <option value="Fixed">Fixed Monthly Rent</option>
+                      <option value="Hybrid">Hybrid (Base Rent + CAM + Power)</option>
+                      <option value="Pure Rent">Pure Rent (Zero pass-through)</option>
+                    </select>
+                  </div>
+
+                  {/* 17. Payment Terms */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Payment Terms</label>
+                    <select
+                      value={contractForm.payment_terms}
+                      onChange={(e) => setContractForm({ ...contractForm, payment_terms: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                    >
+                      <option value="Net 0">Net 0 (Immediate upon invoice generation)</option>
+                      <option value="Net 7">Net 7 (7 days credit)</option>
+                      <option value="Net 15">Net 15 (15 days credit)</option>
+                      <option value="Net 30">Net 30 (30 days credit)</option>
+                      <option value="Due on 1st">Due on 1st of every calendar month</option>
+                    </select>
+                  </div>
+
+                  {/* 18. Notes (optional) */}
+                  <div className="sm:col-span-3">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Contract Notes / Covenants (Optional)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Parking allocations, fit-out rent free period, signage covenants, sub-meter billing..."
+                      value={contractForm.notes}
+                      onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep("tenant")}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                  >
+                    ← Back to Occupant
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={contractLoading}
+                    className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Execute Contract &amp; Continue →</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ──── MODULE 4: COMPLIANCE DOCUMENTS VAULT ──── */}
           {activeStep === "documents" && (
             <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-6">
               <div className="border-b border-slate-100 pb-4">
-                <h3 className="text-lg font-black text-slate-900">
-                  Step 3: Commercial Compliance Vault
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                    Step 4 of 5
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">Compliance &amp; Due Diligence</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mt-1">
+                  Step 4: Commercial Compliance Vault
                 </h3>
                 <p className="text-xs text-slate-500">
                   Upload key statutory documents, title deeds, and standard lease contract drafts.
@@ -1452,16 +2131,21 @@ function CompleteProfileContent() {
             </div>
           )}
 
-          {/* ──── MODULE 4: TEAM DELEGATION & INVITATION LINK ──── */}
+          {/* ──── MODULE 5: TEAM DELEGATION & INVITATION LINK ──── */}
           {activeStep === "delegation" && (
             <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-6">
               <div className="border-b border-slate-100 pb-4">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#0D7B6C] text-[10px] font-black uppercase tracking-wider mb-1.5">
-                  <ShieldCheck size={12} />
-                  <span>Sovereign Owner Controls</span>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                    Step 5 of 5
+                  </span>
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#0D7B6C] text-[10px] font-black uppercase tracking-wider">
+                    <ShieldCheck size={11} />
+                    <span>Sovereign Owner Controls</span>
+                  </div>
                 </div>
                 <h3 className="text-lg font-black text-slate-900">
-                  Step 4: Managing Entity Delegation &amp; Approval Matrix
+                  Step 5: Managing Entity Delegation &amp; Approval Matrix
                 </h3>
                 <p className="text-xs text-slate-500">
                   Assign a managing company, CA, or manager to operate this portfolio and decide what rights they hold. Actions without direct rights require your explicit approval.
