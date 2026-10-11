@@ -276,7 +276,7 @@ function CompleteProfileContent() {
             state: stateMatched,
             city: ob.city || (citiesList.length > 0 ? citiesList[0] : prev.city),
             pincode: prev.pincode || ob.pincode || "",
-            spv_name: prev.spv_name || ob.spvName || ob.companyName || "",
+            spv_name: prev.spv_name || ob.spvName || ob.companyName || storedComp || storedBrand || "",
             pan_number: prev.pan_number || ob.panNumber || "",
             cin_number: prev.cin_number || ob.cinNumber || "",
             gstin: prev.gstin || ob.gstin || "",
@@ -284,10 +284,18 @@ function CompleteProfileContent() {
             micro_market: prev.micro_market || ob.microMarket || "",
           }));
 
-          if (ob.spvName || ob.companyName) {
+          const obFullAddr = [ob.address, ob.city, stateMatched, ob.pincode].filter(Boolean).join(", ");
+          if (obFullAddr) {
+            setTenantForm((prev) => ({
+              ...prev,
+              billing_address: prev.billing_address || obFullAddr,
+            }));
+          }
+
+          if (ob.spvName || ob.companyName || storedComp || storedBrand) {
             setContractForm((prev) => ({
               ...prev,
-              billing_entity: prev.billing_entity || ob.spvName || ob.companyName || "",
+              billing_entity: prev.billing_entity || ob.spvName || ob.companyName || storedComp || storedBrand || "",
             }));
           }
         } catch (e) {
@@ -377,7 +385,7 @@ function CompleteProfileContent() {
     }
   };
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, _type?: "success" | "error" | "info" | string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
@@ -433,15 +441,17 @@ function CompleteProfileContent() {
   const handleSaveProperty = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!propForm.property_name.trim()) {
-      showToast("Please enter property name.");
+      showToast("Please enter property name.", "error");
       return;
     }
     const enteredArea = Number(propForm.total_leasable_area_sqft) || 0;
     if (subscribedCapacity > 0 && enteredArea > subscribedCapacity) {
-      showToast(`Total leasable area (${enteredArea.toLocaleString()} Sq.Ft) cannot exceed your subscribed capacity (${subscribedCapacity.toLocaleString()} Sq.Ft). Clamped to maximum limit.`);
+      showToast(`Total leasable area (${enteredArea.toLocaleString()} Sq.Ft) cannot exceed your subscribed capacity (${subscribedCapacity.toLocaleString()} Sq.Ft). Clamped to maximum limit.`, "error");
       setPropForm({ ...propForm, total_leasable_area_sqft: subscribedCapacity });
       return;
     }
+
+    const finalSpvName = propForm.spv_name.trim() || companyName || brandName || propForm.property_name || "Commercial Asset SPV";
 
     setPropLoading(true);
     try {
@@ -449,7 +459,7 @@ function CompleteProfileContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          property_name: propForm.property_name,
+          property_name: propForm.property_name.trim(),
           property_code: propForm.property_code || undefined,
           property_type: propForm.property_type,
           total_leasable_area_sqft: propForm.total_leasable_area_sqft || 50000,
@@ -457,15 +467,40 @@ function CompleteProfileContent() {
           state: propForm.state,
           address: propForm.address,
           postal_code: propForm.pincode,
-          spv_name: propForm.spv_name,
+          spv_name: finalSpvName,
         }),
       });
+
+      const json = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        const json = await res.json();
-        const newProp = json.data;
+        const newProp = json.data || {
+          id: `prop_${Date.now()}`,
+          property_name: propForm.property_name,
+          address: propForm.address,
+          city: propForm.city,
+          state: propForm.state,
+          postal_code: propForm.pincode,
+          total_leasable_area_sqft: propForm.total_leasable_area_sqft,
+        };
         const updatedList = [...registeredProperties, newProp];
         setRegisteredProperties(updatedList);
         setSelectedPropertyForTenant(newProp.id || newProp.property_name);
+
+        // Auto-fill tenant billing address from the newly saved property's full address
+        const propFullAddress = [
+          propForm.address,
+          propForm.city,
+          propForm.state,
+          propForm.pincode ? `- ${propForm.pincode}` : ""
+        ].filter(Boolean).join(", ");
+
+        if (propFullAddress) {
+          setTenantForm((prev) => ({
+            ...prev,
+            billing_address: prev.billing_address || propFullAddress,
+          }));
+        }
 
         // Update registered property trackers in localStorage
         if (typeof window !== "undefined") {
@@ -479,6 +514,7 @@ function CompleteProfileContent() {
             regNames.push(propForm.property_name);
             localStorage.setItem("officex_registered_property_names", JSON.stringify(regNames));
           }
+          localStorage.setItem("officex_active_property", propForm.property_name);
         }
 
         // Process Manager Assignment (§Workflow Requirement)
@@ -520,12 +556,13 @@ function CompleteProfileContent() {
 
         markStepDone("property");
         showToast(`✓ Property '${propForm.property_name}' registered successfully!`);
-        if (!assignedObj) {
-          setActiveStep("tenant");
-        }
+        // Always advance directly to Step 2 (Add Tenant)
+        setActiveStep("tenant");
+      } else {
+        showToast(json.message || json.error || "Failed to save property. Please check required fields.", "error");
       }
     } catch (err: any) {
-      showToast(`Error: ${err.message}`);
+      showToast(`Error: ${err.message}`, "error");
     } finally {
       setPropLoading(false);
     }
@@ -1122,16 +1159,22 @@ function CompleteProfileContent() {
 
                     {/* Landlord / SPV Entity Name */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">
-                        Landlord / Entity Legal Name *
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">
+                          Landlord / Entity Legal Name
+                        </label>
+                        <span className="text-[10px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200 font-semibold">
+                          Optional (Defaults to Company/Property)
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        required
                         placeholder={
-                          propForm.ownership_structure === "sole_proprietorship"
+                          companyName ||
+                          brandName ||
+                          (propForm.ownership_structure === "sole_proprietorship"
                             ? "e.g. Ramesh Kumar (Proprietor)"
-                            : "e.g. Prestige Estates SPV Ltd"
+                            : "e.g. Prestige Estates SPV Ltd")
                         }
                         value={propForm.spv_name}
                         onChange={(e) => setPropForm({ ...propForm, spv_name: e.target.value })}
@@ -1531,12 +1574,27 @@ function CompleteProfileContent() {
                 <form onSubmit={handleSaveTenant} className="space-y-4">
                   {/* Property Selector */}
                   <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200">
-                    <label className="text-xs font-black text-slate-900 block mb-1.5">
-                      Select Registered Property for This Occupant *
-                    </label>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
+                      <label className="text-xs font-black text-slate-900 block">
+                        Select Registered Property for This Occupant *
+                      </label>
+                      <span className="text-[10px] text-teal-800 font-bold bg-teal-100/70 px-2 py-0.5 rounded">
+                        Leased Building Mandate
+                      </span>
+                    </div>
                     <select
                       value={selectedPropertyForTenant}
-                      onChange={(e) => setSelectedPropertyForTenant(e.target.value)}
+                      onChange={(e) => {
+                        const newPropKey = e.target.value;
+                        setSelectedPropertyForTenant(newPropKey);
+                        const matched = registeredProperties.find((p) => p.id === newPropKey || p.property_name === newPropKey);
+                        if (matched) {
+                          const pAddr = [matched.address, matched.city, matched.state, matched.postal_code].filter(Boolean).join(", ");
+                          if (pAddr) {
+                            setTenantForm((prev) => ({ ...prev, billing_address: pAddr }));
+                          }
+                        }
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-teal-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
                     >
                       {registeredProperties.map((p) => (
@@ -1640,15 +1698,38 @@ function CompleteProfileContent() {
                       />
                     </div>
 
-                    {/* 7. Billing Address (Google Autocomplete) */}
+                    {/* 7. Billing Address (Auto-filled with property address, editable) */}
                     <div className="sm:col-span-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                        <label className="text-xs font-bold text-slate-700">
+                          Tenant Billing Address <span className="text-[10px] text-teal-800 font-semibold bg-teal-50 border border-teal-200 px-1.5 py-0.2 rounded ml-1">Auto-filled from Property</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const matched = registeredProperties.find(
+                              (p) => p.id === selectedPropertyForTenant || p.property_name === selectedPropertyForTenant
+                            );
+                            const pAddr = matched
+                              ? [matched.address, matched.city, matched.state, matched.postal_code].filter(Boolean).join(", ")
+                              : [propForm.address, propForm.city, propForm.state, propForm.pincode].filter(Boolean).join(", ");
+                            if (pAddr) {
+                              setTenantForm((prev) => ({ ...prev, billing_address: pAddr }));
+                              showToast("✓ Billing address restored to property address!");
+                            }
+                          }}
+                          className="text-[11px] font-bold text-[#0D7B6C] hover:text-[#0A6357] hover:underline self-start sm:self-auto cursor-pointer"
+                        >
+                          ↺ Reset to Property Address
+                        </button>
+                      </div>
                       <GoogleAddressAutocomplete
                         value={tenantForm.billing_address}
                         onChange={(val) => setTenantForm((prev) => ({ ...prev, billing_address: val }))}
                         onAddressSelect={(res) => setTenantForm((prev) => ({ ...prev, billing_address: res.fullAddress }))}
-                        label="Billing Address"
+                        label=""
                         placeholder="Search office street address, building, or city..."
-                        hint="Selecting an address populates standard statutory invoicing particulars."
+                        hint="Auto-filled with the property address for monthly rent GST invoicing. Edit if the tenant's registered corporate headquarters differs."
                       />
                     </div>
 

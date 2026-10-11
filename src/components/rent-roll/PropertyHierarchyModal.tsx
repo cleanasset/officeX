@@ -18,7 +18,13 @@ import {
   ShieldCheck,
   Loader2,
   Copy,
-  Check
+  Check,
+  UploadCloud,
+  Calculator,
+  Percent,
+  Car,
+  FileCheck2,
+  FileUp,
 } from "lucide-react";
 import GoogleAddressAutocomplete, {
   AddressAutofillResult,
@@ -109,7 +115,7 @@ export default function PropertyHierarchyModal({
     altContactPhone: "",
   });
 
-  // ──── 5. CONTRACT FORM (18 Fields) ────
+  // ──── 5. CONTRACT FORM (Comprehensive Commercial Terms) ────
   const [contractForm, setContractForm] = useState({
     occupantId: "",
     propertyId: "",
@@ -118,18 +124,48 @@ export default function PropertyHierarchyModal({
     startDate: "",
     endDate: "",
     areaSqft: "",
+    // Pricing Model & Rates
+    billingModel: "Area-based", // "Area-based" | "Seat-based" | "Fixed" | "Hybrid" | "Pure Rent"
+    ratePerSqft: "",
+    ratePerSeat: "",
+    seatCount: "",
+    bareShellRate: "",
+    fitoutRate: "",
     monthlyRent: "",
-    escalationPct: "",
-    escalationStartDate: "",
-    escalationFrequency: "Annual",
+    // CAM Charges
+    camType: "Per Sq.Ft", // "Per Sq.Ft" | "Fixed Monthly" | "Included" | "Actuals"
+    camRate: "",
+    camMonthly: "",
+    // Parking Allocations
+    carParkingSlots: "0",
+    carParkingRate: "0",
+    twoWheelerSlots: "0",
+    twoWheelerRate: "0",
+    // Security Deposit & Period
     securityDeposit: "",
-    lockInMonths: "",
+    depositMonths: "6",
+    fitoutDays: "0",
+    lockInMonths: "12",
     noticeDays: "90",
+    // Escalation
+    escalationPct: "5",
+    escalationStartDate: "",
+    escalationFrequency: "Annual", // "Annual" | "Biannual" | "Triennial" | "Quarterly"
+    // Legal & Statutory
     billingEntity: "",
-    billingModel: "Area-based",
-    paymentTerms: "Net 30",
+    paymentTerms: "Due on 5th of month",
+    stampDutySharing: "50:50 Shared",
     notes: "",
   });
+
+  // Agreement Document Upload & Auto-Fill State
+  const [isUploadingAgreement, setIsUploadingAgreement] = useState(false);
+  const [parsedAgreementMeta, setParsedAgreementMeta] = useState<{
+    fileName: string;
+    confidence: number;
+    extractedFieldsCount: number;
+    summaryHighlights: string[];
+  } | null>(null);
 
   // Sync and pre-populate onboarding details when modal opens
   useEffect(() => {
@@ -164,13 +200,20 @@ export default function PropertyHierarchyModal({
               contactPhone: prev.contactPhone || ob.contactPhone || "",
             }));
 
-            // Pre-populate Billing SPV
+            // Pre-populate Billing SPV & Tenant Billing Address
             const spv = ob.spvName || ob.companyName || localStorage.getItem("officex_company_name") || "";
             if (spv) {
               setBillingEntities((prev) => Array.from(new Set([...prev, spv])));
               setContractForm((prev) => ({
                 ...prev,
                 billingEntity: prev.billingEntity || spv,
+              }));
+            }
+            const obAddr = [ob.address, ob.city, ob.state].filter(Boolean).join(", ");
+            if (obAddr) {
+              setTenantForm((prev) => ({
+                ...prev,
+                billingAddress: prev.billingAddress || obAddr,
               }));
             }
           } catch {
@@ -318,6 +361,14 @@ export default function PropertyHierarchyModal({
             regIds.push(data.data.id);
             localStorage.setItem("officex_registered_property_ids", JSON.stringify(regIds));
           }
+        }
+        // Auto-fill tenant billing address with property address
+        const propAddr = [propForm.address, propForm.city, propForm.state].filter(Boolean).join(", ");
+        if (propAddr) {
+          setTenantForm((prev) => ({
+            ...prev,
+            billingAddress: prev.billingAddress || propAddr,
+          }));
         }
         await loadHierarchyDropdowns();
         setActiveTab("building");
@@ -522,6 +573,107 @@ export default function PropertyHierarchyModal({
     }
   };
 
+  // ──── LEASE AGREEMENT PARSING & AUTO-POPULATION ────
+  const handleUploadRentAgreement = async (file: File) => {
+    if (!file) return;
+    setIsUploadingAgreement(true);
+    setFeedback(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/contracts/parse-agreement", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        const d = json.data;
+        setParsedAgreementMeta({
+          fileName: json.fileName,
+          confidence: d.confidence || 90,
+          extractedFieldsCount: d.extractedFieldsCount || 12,
+          summaryHighlights: d.summaryHighlights || [],
+        });
+
+        // 1. Auto-match or detect occupant
+        let targetOccupantId = contractForm.occupantId;
+        if (d.occupantName) {
+          const matchedTenant = tenantsList.find(
+            (t) =>
+              t.name.toLowerCase().includes(d.occupantName.toLowerCase()) ||
+              d.occupantName.toLowerCase().includes(t.name.toLowerCase()) ||
+              (t.company && d.companyName && t.company.toLowerCase().includes(d.companyName.toLowerCase()))
+          );
+          if (matchedTenant) {
+            targetOccupantId = matchedTenant.id;
+          }
+        }
+
+        // 2. Auto-match space if area is close
+        let targetSpaceId = contractForm.spaceId;
+        if (d.areaSqft > 0) {
+          const matchedSpace = spacesList.find(
+            (s) => Math.abs(s.area - d.areaSqft) < 100
+          );
+          if (matchedSpace) {
+            targetSpaceId = matchedSpace.id;
+          }
+        }
+
+        // 3. Billing SPV match or add
+        if (d.billingEntity) {
+          setBillingEntities((prev) => Array.from(new Set([...prev, d.billingEntity])));
+        }
+
+        setContractForm((prev) => ({
+          ...prev,
+          occupantId: targetOccupantId || prev.occupantId,
+          spaceId: targetSpaceId || prev.spaceId,
+          areaSqft: d.areaSqft ? String(d.areaSqft) : prev.areaSqft,
+          billingModel: d.billingModel || prev.billingModel,
+          ratePerSqft: d.ratePerSqft ? String(d.ratePerSqft) : prev.ratePerSqft,
+          ratePerSeat: d.ratePerSeat ? String(d.ratePerSeat) : prev.ratePerSeat,
+          seatCount: d.seatCount ? String(d.seatCount) : prev.seatCount,
+          bareShellRate: d.bareShellRate ? String(d.bareShellRate) : prev.bareShellRate,
+          fitoutRate: d.fitoutRate ? String(d.fitoutRate) : prev.fitoutRate,
+          monthlyRent: d.monthlyRent ? String(d.monthlyRent) : prev.monthlyRent,
+          camType: d.camType || prev.camType,
+          camRate: d.camRate ? String(d.camRate) : prev.camRate,
+          camMonthly: d.camMonthly ? String(d.camMonthly) : prev.camMonthly,
+          carParkingSlots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.carParkingSlots,
+          carParkingRate: d.carParkingRate !== undefined ? String(d.carParkingRate) : prev.carParkingRate,
+          twoWheelerSlots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.twoWheelerSlots,
+          twoWheelerRate: d.twoWheelerRate !== undefined ? String(d.twoWheelerRate) : prev.twoWheelerRate,
+          securityDeposit: d.securityDeposit ? String(d.securityDeposit) : prev.securityDeposit,
+          depositMonths: d.depositMonths ? String(d.depositMonths) : prev.depositMonths,
+          fitoutDays: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitoutDays,
+          lockInMonths: d.lockInMonths !== undefined ? String(d.lockInMonths) : prev.lockInMonths,
+          noticeDays: d.noticeDays !== undefined ? String(d.noticeDays) : prev.noticeDays,
+          startDate: d.startDate || prev.startDate,
+          endDate: d.endDate || prev.endDate,
+          escalationPct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalationPct,
+          escalationFrequency: d.escalationFrequency === "Triennial" ? "Biannual" : (d.escalationFrequency || prev.escalationFrequency),
+          escalationStartDate: d.escalationStartDate || prev.escalationStartDate,
+          billingEntity: d.billingEntity || prev.billingEntity,
+          paymentTerms: d.paymentTerms || prev.paymentTerms,
+          stampDutySharing: d.stampDutySharing || prev.stampDutySharing,
+          notes: d.notes || prev.notes,
+        }));
+
+        showToast(
+          `✓ Agreement "${json.fileName}" parsed! ${d.extractedFieldsCount || 14} terms pre-filled. You can review and adjust any field below.`
+        );
+      } else {
+        showToast(json.error || "Failed to extract text from agreement file", "error");
+      }
+    } catch (err: any) {
+      showToast(`Upload error: ${err.message}`, "error");
+    } finally {
+      setIsUploadingAgreement(false);
+    }
+  };
+
   // ──── SUBMIT 5: CONTRACT / LEASE ────
   const handleSaveContract = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -537,8 +689,44 @@ export default function PropertyHierarchyModal({
       showToast("Start and End dates are compulsory", "error");
       return;
     }
+    const enteredRent = Number(contractForm.monthlyRent) || 0;
+    if (enteredRent <= 0) {
+      showToast("Please provide or calculate Monthly Rent Amount", "error");
+      return;
+    }
+
     setLoading(true);
     try {
+      const dbBillingModel =
+        contractForm.billingModel === "Seat-based"
+          ? "seats"
+          : contractForm.billingModel === "Fixed"
+          ? "fixed"
+          : contractForm.billingModel === "Hybrid"
+          ? "hybrid"
+          : "area";
+
+      const camAmount =
+        contractForm.camType === "Per Sq.Ft"
+          ? Math.round((Number(contractForm.camRate) || 0) * (Number(contractForm.areaSqft) || 0))
+          : Number(contractForm.camMonthly) || 0;
+      const parkingAmount =
+        (Number(contractForm.carParkingSlots) || 0) * (Number(contractForm.carParkingRate) || 0) +
+        (Number(contractForm.twoWheelerSlots) || 0) * (Number(contractForm.twoWheelerRate) || 0);
+
+      const notesSummary = [
+        contractForm.notes,
+        contractForm.billingModel ? `Model: ${contractForm.billingModel}` : null,
+        contractForm.ratePerSqft ? `Rate PSF: ₹${contractForm.ratePerSqft}/sqft` : null,
+        contractForm.ratePerSeat ? `Rate Seat: ₹${contractForm.ratePerSeat}/seat (${contractForm.seatCount} seats)` : null,
+        camAmount > 0 ? `CAM: ₹${camAmount.toLocaleString()}/mo (${contractForm.camType})` : null,
+        parkingAmount > 0 ? `Parking: ₹${parkingAmount.toLocaleString()}/mo` : null,
+        contractForm.fitoutDays ? `Fit-out Period: ${contractForm.fitoutDays} days` : null,
+        contractForm.stampDutySharing ? `Stamp Duty: ${contractForm.stampDutySharing}` : null,
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
       const res = await fetch("/api/contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -549,8 +737,8 @@ export default function PropertyHierarchyModal({
           start_date: contractForm.startDate,
           end_date: contractForm.endDate,
           contract_type: "lease",
-          base_rent_rate: Number(contractForm.monthlyRent) || 100000,
-          billing_model: contractForm.billingModel.toLowerCase().replace(/\s+/g, "_"),
+          base_rent_rate: enteredRent,
+          billing_model: dbBillingModel,
           escalation_type: "percentage",
           escalation_value: Number(contractForm.escalationPct) || 0,
           has_escalation: Boolean(Number(contractForm.escalationPct) > 0),
@@ -559,7 +747,7 @@ export default function PropertyHierarchyModal({
           notice_period_days: Number(contractForm.noticeDays) || 90,
           billing_entity: contractForm.billingEntity.trim(),
           payment_terms: contractForm.paymentTerms.trim(),
-          remarks: contractForm.notes.trim(),
+          remarks: notesSummary,
         }),
       });
       const data = await res.json();
@@ -1230,6 +1418,24 @@ export default function PropertyHierarchyModal({
 
                 {/* 7. Billing Address - Google Maps Autocomplete */}
                 <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Billing Address <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">Auto-filled from Property</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const propAddr = [propForm.address, propForm.city, propForm.state].filter(Boolean).join(", ");
+                        if (propAddr) {
+                          setTenantForm((prev) => ({ ...prev, billingAddress: propAddr }));
+                          showToast("✓ Billing address restored to property address!");
+                        }
+                      }}
+                      className="text-[11px] font-bold text-[#0F8B7D] hover:underline cursor-pointer"
+                    >
+                      ↺ Reset to Property Address
+                    </button>
+                  </div>
                   <GoogleAddressAutocomplete
                     value={tenantForm.billingAddress}
                     onChange={(val) => setTenantForm((prev) => ({ ...prev, billingAddress: val }))}
@@ -1239,10 +1445,10 @@ export default function PropertyHierarchyModal({
                         billingAddress: res.fullAddress || res.streetAddress,
                       }));
                     }}
-                    label="Billing Address"
+                    label=""
                     placeholder="Search registered corporate office or billing address..."
                     required={false}
-                    hint="Optional: Select from Google Maps to auto-complete GST billing address."
+                    hint="Auto-filled with the property address for monthly rent GST invoicing. Edit if the tenant's registered corporate headquarters differs."
                   />
                 </div>
 
@@ -1295,15 +1501,25 @@ export default function PropertyHierarchyModal({
             </form>
           )}
 
-          {/* ════════════════ TAB 5: LEASE CONTRACT (18 Fields) ════════════════ */}
+          {/* ════════════════ TAB 5: LEASE CONTRACT (COMPULSORY LINKING) ════════════════ */}
           {activeTab === "contract" && (
             <form onSubmit={handleSaveContract} className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  Step 5: Commercial Lease Contract (18 Fields)
-                </span>
-                <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                  Linking Tenant to Commercial Space
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      Step 5: Commercial Lease Contract
+                    </span>
+                    <span className="text-[10px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-wider">
+                      Compulsory *
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Link tenant to demised commercial space, configure rent calculation basis, CAM, parking, and legal covenants.
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 self-start sm:self-auto">
+                  Space &amp; Tenant Binding
                 </span>
               </div>
 
@@ -1342,10 +1558,101 @@ export default function PropertyHierarchyModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 text-xs">
-                {/* 1. Occupant (dropdown - select from occupants) */}
+              {/* ──── UPLOAD RENT AGREEMENT BOX (AUTO-EXTRACT TERMS) ──── */}
+              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-dashed border-teal-300 hover:border-teal-500 transition-all">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <FileUp size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-black text-slate-900">
+                          Upload Rent Agreement / Lease Deed
+                        </h4>
+                        <span className="text-[10px] font-black text-teal-700 bg-teal-100/70 px-2 py-0.5 rounded-full">
+                          Auto-Extract
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Upload PDF, DOCX, or text agreement. Automatically detects tenant, rent rate/sqft, CAM, parking, escalation, deposit, and lock-in. You can review and edit all fields below.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="cursor-pointer shrink-0">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.doc,.txt,.rtf"
+                      disabled={isUploadingAgreement}
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadRentAgreement(file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1.5 shadow-xs ${
+                        isUploadingAgreement
+                          ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          : "bg-teal-700 hover:bg-teal-800 text-white"
+                      }`}
+                    >
+                      {isUploadingAgreement ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" />
+                          <span>Extracting Terms...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud size={14} />
+                          <span>Browse Lease Deed</span>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* Parsed Highlights Banner */}
+                {parsedAgreementMeta && (
+                  <div className="mt-3 p-3 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 animate-in fade-in space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <FileCheck2 size={15} className="text-emerald-700" />
+                        <span>Parsed: {parsedAgreementMeta.fileName}</span>
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                        {parsedAgreementMeta.confidence}% Confidence • {parsedAgreementMeta.extractedFieldsCount} Terms Extracted
+                      </span>
+                    </div>
+
+                    {parsedAgreementMeta.summaryHighlights.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {parsedAgreementMeta.summaryHighlights.map((hl, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded-md border border-emerald-300 text-emerald-900"
+                          >
+                            ✓ {hl}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-emerald-800 italic pt-0.5">
+                      ✓ All detected parameters have been auto-populated into the contract form below. You can modify any value as needed.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* ──── SECTION 1: HIERARCHY MAPPING ──── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                {/* 1. Occupant */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Occupant (Tenant) *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Occupant (Tenant) <span className="text-rose-500">*</span>
+                  </label>
                   <select
                     value={contractForm.occupantId}
                     onChange={(e) => setContractForm({ ...contractForm, occupantId: e.target.value })}
@@ -1360,9 +1667,11 @@ export default function PropertyHierarchyModal({
                   </select>
                 </div>
 
-                {/* 2. Property (dropdown) */}
+                {/* 2. Property */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Property *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Property <span className="text-rose-500">*</span>
+                  </label>
                   <select
                     value={contractForm.propertyId}
                     onChange={(e) => setContractForm({ ...contractForm, propertyId: e.target.value })}
@@ -1377,9 +1686,11 @@ export default function PropertyHierarchyModal({
                   </select>
                 </div>
 
-                {/* 3. Building (dropdown) */}
+                {/* 3. Building */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Building *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Building <span className="text-rose-500">*</span>
+                  </label>
                   <select
                     value={contractForm.buildingId}
                     onChange={(e) => setContractForm({ ...contractForm, buildingId: e.target.value })}
@@ -1394,9 +1705,11 @@ export default function PropertyHierarchyModal({
                   </select>
                 </div>
 
-                {/* 4. Space/Unit (dropdown) */}
+                {/* 4. Space / Unit */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Space / Unit *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Space / Unit <span className="text-rose-500">*</span>
+                  </label>
                   <select
                     value={contractForm.spaceId}
                     onChange={(e) => handleSpaceSelect(e.target.value)}
@@ -1410,10 +1723,469 @@ export default function PropertyHierarchyModal({
                     {spacesList.length === 0 && <option value="">No spaces created</option>}
                   </select>
                 </div>
+              </div>
 
-                {/* 5. Contract Start Date */}
+              {/* ──── SECTION 2: RENT CALCULATION BASIS & BILLING MODEL ──── */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/70 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Calculator size={15} className="text-teal-700" />
+                    <span className="font-bold text-slate-800">Rent Calculation Model &amp; Pricing Basis</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Select how base rent is calculated for invoices
+                  </span>
+                </div>
+
+                {/* Model Tabs / Radio Pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                  {(
+                    [
+                      { id: "Area-based", label: "Per Sq.Ft (Area)", desc: "₹/sqft/mo" },
+                      { id: "Seat-based", label: "Per Seat (Desk)", desc: "₹/seat/mo" },
+                      { id: "Fixed", label: "Fixed Lump-sum", desc: "Flat monthly" },
+                      { id: "Hybrid", label: "Hybrid / Turnkey", desc: "Area + Services" },
+                      { id: "Pure Rent", label: "Pure Rent", desc: "Bare Shell" },
+                    ] as const
+                  ).map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        const newModel = m.id;
+                        setContractForm((prev) => {
+                          let nextRent = prev.monthlyRent;
+                          if (newModel === "Area-based" && prev.ratePerSqft && prev.areaSqft) {
+                            nextRent = String(Math.round(Number(prev.ratePerSqft) * Number(prev.areaSqft)));
+                          } else if (newModel === "Seat-based" && prev.ratePerSeat && prev.seatCount) {
+                            nextRent = String(Math.round(Number(prev.ratePerSeat) * Number(prev.seatCount)));
+                          }
+                          return { ...prev, billingModel: newModel, monthlyRent: nextRent };
+                        });
+                      }}
+                      className={`p-2 rounded-xl text-left border transition cursor-pointer ${
+                        contractForm.billingModel === m.id
+                          ? "bg-white border-teal-600 shadow-xs ring-1 ring-teal-500"
+                          : "bg-white/60 border-slate-200 hover:bg-white text-slate-600"
+                      }`}
+                    >
+                      <div className="font-bold text-slate-900 text-[11px]">{m.label}</div>
+                      <div className="text-[10px] text-slate-500">{m.desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Dynamic Inputs Based on Selected Model */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {contractForm.billingModel === "Area-based" || contractForm.billingModel === "Pure Rent" || contractForm.billingModel === "Hybrid" ? (
+                    <>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Rate per Sq.Ft (₹ / sqft / month) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="e.g. 80"
+                          value={contractForm.ratePerSqft}
+                          onChange={(e) => {
+                            const rate = e.target.value;
+                            const area = Number(contractForm.areaSqft) || 0;
+                            const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthlyRent;
+                            setContractForm({
+                              ...contractForm,
+                              ratePerSqft: rate,
+                              monthlyRent: calcRent,
+                            });
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Chargeable Area (Sq.Ft) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 5000"
+                          value={contractForm.areaSqft}
+                          onChange={(e) => {
+                            const area = e.target.value;
+                            const rate = Number(contractForm.ratePerSqft) || 0;
+                            const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthlyRent;
+                            setContractForm({
+                              ...contractForm,
+                              areaSqft: area,
+                              monthlyRent: calcRent,
+                            });
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        />
+                      </div>
+                    </>
+                  ) : contractForm.billingModel === "Seat-based" ? (
+                    <>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Rate per Seat (₹ / seat / month) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 12000"
+                          value={contractForm.ratePerSeat}
+                          onChange={(e) => {
+                            const rate = e.target.value;
+                            const seats = Number(contractForm.seatCount) || 0;
+                            const calcRent = rate && seats ? String(Math.round(Number(rate) * seats)) : contractForm.monthlyRent;
+                            setContractForm({
+                              ...contractForm,
+                              ratePerSeat: rate,
+                              monthlyRent: calcRent,
+                            });
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Allocated Seats / Desks <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 50"
+                          value={contractForm.seatCount}
+                          onChange={(e) => {
+                            const seats = e.target.value;
+                            const rate = Number(contractForm.ratePerSeat) || 0;
+                            const calcRent = seats && rate ? String(Math.round(Number(seats) * rate)) : contractForm.monthlyRent;
+                            setContractForm({
+                              ...contractForm,
+                              seatCount: seats,
+                              monthlyRent: calcRent,
+                            });
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Chargeable Area (Sq.Ft)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 5000"
+                        value={contractForm.areaSqft}
+                        onChange={(e) => setContractForm({ ...contractForm, areaSqft: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {/* Monthly Base Rent (Calculated / Direct) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700">
+                        Monthly Base Rent (₹) <span className="text-rose-500">*</span>
+                      </label>
+                      {contractForm.billingModel === "Area-based" && contractForm.ratePerSqft && contractForm.areaSqft && (
+                        <span className="text-[10px] font-bold text-teal-700">Auto-calculated</span>
+                      )}
+                      {contractForm.billingModel === "Seat-based" && contractForm.ratePerSeat && contractForm.seatCount && (
+                        <span className="text-[10px] font-bold text-teal-700">Auto-calculated</span>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      placeholder="e.g. 400000"
+                      value={contractForm.monthlyRent}
+                      onChange={(e) => setContractForm({ ...contractForm, monthlyRent: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-teal-500 bg-white font-mono font-black text-slate-900 focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Calculation Formula Badge */}
+                {contractForm.billingModel === "Area-based" && contractForm.ratePerSqft && contractForm.areaSqft && (
+                  <div className="p-2 rounded-xl bg-teal-50/70 border border-teal-200 text-[11px] font-medium text-teal-900 flex items-center justify-between">
+                    <span>
+                      Formula: ₹{Number(contractForm.ratePerSqft).toLocaleString()} / sqft × {Number(contractForm.areaSqft).toLocaleString()} sqft =
+                    </span>
+                    <span className="font-mono font-bold">
+                      ₹{Number(contractForm.monthlyRent).toLocaleString()} / month base rent
+                    </span>
+                  </div>
+                )}
+                {contractForm.billingModel === "Seat-based" && contractForm.ratePerSeat && contractForm.seatCount && (
+                  <div className="p-2 rounded-xl bg-teal-50/70 border border-teal-200 text-[11px] font-medium text-teal-900 flex items-center justify-between">
+                    <span>
+                      Formula: ₹{Number(contractForm.ratePerSeat).toLocaleString()} / seat × {Number(contractForm.seatCount)} seats =
+                    </span>
+                    <span className="font-mono font-bold">
+                      ₹{Number(contractForm.monthlyRent).toLocaleString()} / month base rent
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* ──── SECTION 3: COMMON AREA MAINTENANCE (CAM) & PARKING ──── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                {/* CAM (Common Area Maintenance) */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-200/70 pb-1.5">
+                    <span className="font-bold text-slate-800">Common Area Maintenance (CAM)</span>
+                    <span className="text-[10px] text-slate-500">Operation &amp; Upkeep</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">CAM Billing Basis</label>
+                      <select
+                        value={contractForm.camType}
+                        onChange={(e) => {
+                          const type = e.target.value;
+                          let nextMonthly = contractForm.camMonthly;
+                          if (type === "Per Sq.Ft" && contractForm.camRate && contractForm.areaSqft) {
+                            nextMonthly = String(Math.round(Number(contractForm.camRate) * Number(contractForm.areaSqft)));
+                          }
+                          setContractForm({ ...contractForm, camType: type, camMonthly: nextMonthly });
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-medium outline-none cursor-pointer"
+                      >
+                        <option value="Per Sq.Ft">Per Sq.Ft (₹/sqft/mo)</option>
+                        <option value="Fixed Monthly">Fixed Monthly Amount</option>
+                        <option value="Included">Included in Base Rent</option>
+                        <option value="Actuals">Actuals / Reimbursement</option>
+                      </select>
+                    </div>
+
+                    {contractForm.camType === "Per Sq.Ft" ? (
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">CAM Rate (₹ / sqft)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="e.g. 15"
+                          value={contractForm.camRate}
+                          onChange={(e) => {
+                            const rate = e.target.value;
+                            const area = Number(contractForm.areaSqft) || 0;
+                            const monthly = rate && area ? String(Math.round(Number(rate) * area)) : "";
+                            setContractForm({ ...contractForm, camRate: rate, camMonthly: monthly });
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono font-medium outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">CAM Monthly (₹)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 75000"
+                          value={contractForm.camMonthly}
+                          onChange={(e) => setContractForm({ ...contractForm, camMonthly: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono font-medium outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {contractForm.camType === "Per Sq.Ft" && contractForm.camRate && contractForm.areaSqft && (
+                    <div className="text-[11px] text-teal-800 font-medium">
+                      CAM Total: ₹{Math.round(Number(contractForm.camRate) * Number(contractForm.areaSqft)).toLocaleString()} / month
+                    </div>
+                  )}
+                </div>
+
+                {/* Parking Allocations */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-200/70 pb-1.5">
+                    <div className="flex items-center gap-1 font-bold text-slate-800">
+                      <Car size={13} />
+                      <span>Parking Allocations</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">4-Wheeler &amp; 2-Wheeler</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Car Slots (4W)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Slots (e.g. 4)"
+                        value={contractForm.carParkingSlots}
+                        onChange={(e) => setContractForm({ ...contractForm, carParkingSlots: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Rate / Car Slot (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="₹/slot (e.g. 4000)"
+                        value={contractForm.carParkingRate}
+                        onChange={(e) => setContractForm({ ...contractForm, carParkingRate: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Bike Slots (2W)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Slots (e.g. 10)"
+                        value={contractForm.twoWheelerSlots}
+                        onChange={(e) => setContractForm({ ...contractForm, twoWheelerSlots: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Rate / Bike Slot (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="₹/slot (e.g. 500)"
+                        value={contractForm.twoWheelerRate}
+                        onChange={(e) => setContractForm({ ...contractForm, twoWheelerRate: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ──── LIVE GROSS MONTHLY PAYOUT SUMMARY CARD ──── */}
+              {Number(contractForm.monthlyRent) > 0 && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white shadow-md text-xs space-y-2">
+                  <div className="flex items-center justify-between border-b border-teal-800/80 pb-2">
+                    <span className="font-bold tracking-wide uppercase text-[11px] text-teal-300">
+                      Live Invoicing Breakdown &amp; Monthly Cashflow
+                    </span>
+                    <span className="text-[10px] text-teal-400 font-mono">
+                      SAC Code 997212 (Leasing)
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const baseRent = Number(contractForm.monthlyRent) || 0;
+                    const cam =
+                      contractForm.camType === "Per Sq.Ft"
+                        ? Math.round((Number(contractForm.camRate) || 0) * (Number(contractForm.areaSqft) || 0))
+                        : Number(contractForm.camMonthly) || 0;
+                    const parking =
+                      (Number(contractForm.carParkingSlots) || 0) * (Number(contractForm.carParkingRate) || 0) +
+                      (Number(contractForm.twoWheelerSlots) || 0) * (Number(contractForm.twoWheelerRate) || 0);
+                    const grossExclGst = baseRent + cam + parking;
+                    const gst = Math.round(grossExclGst * 0.18);
+                    const totalGross = grossExclGst + gst;
+
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono">
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase">Base Rent</div>
+                          <div className="font-bold text-sm text-white">₹{baseRent.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase">CAM + Parking</div>
+                          <div className="font-bold text-sm text-teal-300">₹{(cam + parking).toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase">Gross (Excl. GST)</div>
+                          <div className="font-bold text-sm text-white">₹{grossExclGst.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-emerald-400 uppercase font-sans font-bold">Total Invoiced (GST 18%)</div>
+                          <div className="font-black text-sm text-emerald-300">₹{totalGross.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* ──── SECTION 4: SECURITY DEPOSIT (IFRSD) ──── */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200/70 pb-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <ShieldCheck size={14} className="text-teal-700" />
+                    <span>Interest-Free Refundable Security Deposit (IFRSD)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Quick multi-month rent multipliers
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-slate-600 mr-1">Months multiplier:</span>
+                  {["3", "6", "9", "10", "12"].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        const rent = Number(contractForm.monthlyRent) || 0;
+                        setContractForm({
+                          ...contractForm,
+                          depositMonths: m,
+                          securityDeposit: rent > 0 ? String(Math.round(Number(m) * rent)) : contractForm.securityDeposit,
+                        });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                        contractForm.depositMonths === m
+                          ? "bg-teal-700 text-white border-teal-700"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {m} Months
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Security Deposit Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 2400000"
+                      value={contractForm.securityDeposit}
+                      onChange={(e) => setContractForm({ ...contractForm, securityDeposit: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Rent-Free Fit-out Period (Days)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 30 (Days)"
+                      value={contractForm.fitoutDays}
+                      onChange={(e) => setContractForm({ ...contractForm, fitoutDays: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ──── SECTION 5: DATES & LEGAL PERIODS ──── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                {/* Contract Start Date */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Contract Start Date *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Contract Start Date <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="date"
                     required
@@ -1423,9 +2195,11 @@ export default function PropertyHierarchyModal({
                   />
                 </div>
 
-                {/* 6. Contract End Date */}
+                {/* Contract End Date */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Contract End Date *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Contract End Date <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="date"
                     required
@@ -1435,87 +2209,11 @@ export default function PropertyHierarchyModal({
                   />
                 </div>
 
-                {/* 7. Area (auto-filled from space) */}
+                {/* Lock-in Period */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Area (Sq.Ft) [Auto-filled from space]</label>
-                  <input
-                    type="number"
-                    readOnly
-                    placeholder="Auto-filled from space"
-                    value={contractForm.areaSqft}
-                    onChange={(e) => setContractForm({ ...contractForm, areaSqft: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold bg-slate-50 focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 8. Monthly Rent Amount */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Monthly Rent Amount (₹) *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    placeholder="e.g. 150000"
-                    value={contractForm.monthlyRent}
-                    onChange={(e) => setContractForm({ ...contractForm, monthlyRent: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 9. Escalation % (if any) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Escalation % (If any)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g. 5"
-                    value={contractForm.escalationPct}
-                    onChange={(e) => setContractForm({ ...contractForm, escalationPct: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 10. Escalation Start Date */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Escalation Start Date</label>
-                  <input
-                    type="date"
-                    value={contractForm.escalationStartDate}
-                    onChange={(e) => setContractForm({ ...contractForm, escalationStartDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 11. Escalation Frequency (Annual / Biannual / Quarterly) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Escalation Frequency</label>
-                  <select
-                    value={contractForm.escalationFrequency}
-                    onChange={(e) => setContractForm({ ...contractForm, escalationFrequency: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="Annual">Annual (Every 12 Months)</option>
-                    <option value="Biannual">Biannual (Every 24 Months)</option>
-                    <option value="Quarterly">Quarterly (Every 3 Months)</option>
-                  </select>
-                </div>
-
-                {/* 12. Security Deposit Amount */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Security Deposit Amount (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 900000"
-                    value={contractForm.securityDeposit}
-                    onChange={(e) => setContractForm({ ...contractForm, securityDeposit: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
-                  />
-                </div>
-
-                {/* 13. Lock-in Period (months, if any) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Lock-in Period (Months, if any)</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Lock-in Period (Months)
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -1526,9 +2224,11 @@ export default function PropertyHierarchyModal({
                   />
                 </div>
 
-                {/* 14. Notice Period (days before termination) */}
+                {/* Notice Period */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Notice Period (Days before termination)</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Notice Period (Days)
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -1538,10 +2238,57 @@ export default function PropertyHierarchyModal({
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
                   />
                 </div>
+              </div>
 
-                {/* 15. Billing Entity (dropdown - which SPV bills this) */}
+              {/* ──── SECTION 6: ESCALATION TERMS ──── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                {/* Escalation % */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Billing Entity (Which SPV bills this)</label>
+                  <label className="font-bold text-slate-700 block mb-1">Escalation %</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g. 5"
+                    value={contractForm.escalationPct}
+                    onChange={(e) => setContractForm({ ...contractForm, escalationPct: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+
+                {/* Escalation Frequency */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Escalation Frequency</label>
+                  <select
+                    value={contractForm.escalationFrequency}
+                    onChange={(e) => setContractForm({ ...contractForm, escalationFrequency: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="Annual">Annual (Every 12 Months)</option>
+                    <option value="Biannual">Biannual (Every 24 Months)</option>
+                    <option value="Triennial">Triennial (Every 36 Months)</option>
+                    <option value="Quarterly">Quarterly (Every 3 Months)</option>
+                  </select>
+                </div>
+
+                {/* Escalation Start Date */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Escalation Start Date</label>
+                  <input
+                    type="date"
+                    value={contractForm.escalationStartDate}
+                    onChange={(e) => setContractForm({ ...contractForm, escalationStartDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* ──── SECTION 7: STATUTORY & INVOICING TERMS ──── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                {/* Billing Entity (SPV) */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Billing Entity (Which SPV Bills This)
+                  </label>
                   <input
                     type="text"
                     list="spv-options"
@@ -1560,23 +2307,7 @@ export default function PropertyHierarchyModal({
                   </datalist>
                 </div>
 
-                {/* 16. Billing Model (Area-based / Seat-based / Fixed / Hybrid / Pure Rent) */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Billing Model</label>
-                  <select
-                    value={contractForm.billingModel}
-                    onChange={(e) => setContractForm({ ...contractForm, billingModel: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
-                  >
-                    <option value="Area-based">Area-based (Per Sq.Ft)</option>
-                    <option value="Seat-based">Seat-based (Per Desk)</option>
-                    <option value="Fixed">Fixed (Lump-sum Fee)</option>
-                    <option value="Hybrid">Hybrid (Area + Utility)</option>
-                    <option value="Pure Rent">Pure Rent (Bare Shell)</option>
-                  </select>
-                </div>
-
-                {/* 17. Payment Terms (Net 0 / Net 7 / Net 15 / Net 30) */}
+                {/* Payment Terms */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Payment Terms</label>
                   <select
@@ -1584,34 +2315,59 @@ export default function PropertyHierarchyModal({
                     onChange={(e) => setContractForm({ ...contractForm, paymentTerms: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
                   >
-                    <option value="Net 0">Net 0 (Due on Receipt)</option>
-                    <option value="Net 7">Net 7 (Within 7 Days)</option>
-                    <option value="Net 15">Net 15 (Within 15 Days)</option>
-                    <option value="Net 30">Net 30 (Within 30 Days)</option>
                     <option value="Due on 1st of month">Due on 1st of month</option>
+                    <option value="Due on 5th of month">Due on 5th of month</option>
+                    <option value="Due on 7th of month">Due on 7th of month</option>
+                    <option value="Net 0">Net 0 (Due upon receipt)</option>
+                    <option value="Net 7">Net 7 (Within 7 days)</option>
+                    <option value="Net 15">Net 15 (Within 15 days)</option>
+                    <option value="Net 30">Net 30 (Within 30 days)</option>
                   </select>
                 </div>
 
-                {/* 18. Notes (optional) */}
-                <div className="sm:col-span-2 md:col-span-3">
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Notes <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Any specific covenants, fitout period, car parking allocations, or terms..."
-                    value={contractForm.notes}
-                    onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none resize-none"
-                  />
+                {/* Stamp Duty & Registration Sharing */}
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Stamp Duty Sharing</label>
+                  <select
+                    value={contractForm.stampDutySharing}
+                    onChange={(e) => setContractForm({ ...contractForm, stampDutySharing: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    <option value="50:50 Shared">50:50 Shared Equally</option>
+                    <option value="100% Tenant">100% Borne by Tenant</option>
+                    <option value="100% Landlord">100% Borne by Landlord</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              {/* Notes */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Covenants &amp; Special Conditions <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Any specific covenants, signage rights, power backup limits, fitout terms, or termination clauses..."
+                  value={contractForm.notes}
+                  onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none resize-none text-xs"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("tenant")}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  ← Back to Tenants
+                </button>
+
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  className="px-6 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-black uppercase tracking-wider transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                 >
                   {loading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={14} />}
                   <span>Execute Lease Contract &amp; Save</span>
