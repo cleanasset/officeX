@@ -39,7 +39,9 @@ import DocumentViewerModal from "@/components/rent-roll/DocumentViewerModal";
 import DealsRegisterView from "@/components/rent-roll/DealsRegisterView";
 import ExpiryPipelineView from "@/components/rent-roll/ExpiryPipelineView";
 import EscalationCalendarView from "@/components/rent-roll/EscalationCalendarView";
-import MasterDataModal from "@/components/rent-roll/MasterDataModal";
+import PropertyHierarchyModal, {
+  HierarchyTab,
+} from "@/components/rent-roll/PropertyHierarchyModal";
 import { DataImportView } from "@/components/rent-roll/DataImportView";
 import PaymentsCollectionsView from "@/components/rent-roll/PaymentsCollectionsView";
 import MultiClientFlexView from "@/components/rent-roll/MultiClientFlexView";
@@ -72,6 +74,7 @@ export default function RentRollRegisterPage() {
   const [expiryOpen, setExpiryOpen] = useState(false);
   const [escalationOpen, setEscalationOpen] = useState(false);
   const [masterDataOpen, setMasterDataOpen] = useState(false);
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
 
   // Document Viewer Modal (§S-23)
   const [viewerDoc, setViewerDoc] = useState<any>(null);
@@ -244,13 +247,24 @@ export default function RentRollRegisterPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setWizardPrefill(null);
-                    setWizardOpen(true);
+                    setHierarchyTab("tenant");
+                    setMasterDataOpen(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Users size={14} className="text-teal-600" />
+                  <span>+ Add Tenant</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHierarchyTab("contract");
+                    setMasterDataOpen(true);
                   }}
                   className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <Plus size={15} />
-                  <span>New Contract</span>
+                  <span>+ Setup Lease / Contract</span>
                 </button>
               </div>
             </div>
@@ -814,11 +828,12 @@ export default function RentRollRegisterPage() {
         onClose={() => setEscalationOpen(false)}
       />
 
-      {/* Master Data Management Modal (§S-11–14) */}
-      <MasterDataModal
+      {/* Unified Canonical Commercial Hierarchy, Tenant & Lease Setup */}
+      <PropertyHierarchyModal
         isOpen={masterDataOpen}
         onClose={() => setMasterDataOpen(false)}
-        onDataChanged={fetchRegisterData}
+        initialTab={hierarchyTab}
+        onSuccess={fetchRegisterData}
       />
 
       {/* Data Import Pipeline Modal (§S-30) */}

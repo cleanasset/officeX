@@ -18,12 +18,17 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import PropertyHierarchyModal, {
+  HierarchyTab,
+} from "@/components/rent-roll/PropertyHierarchyModal";
 
 export default function SpaceAndBuildingRegistryPage() {
   const [spaces, setSpaces] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBuilding, setSelectedBuilding] = useState("all");
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("space");
 
   useEffect(() => {
     fetchSpaces();
@@ -32,11 +37,21 @@ export default function SpaceAndBuildingRegistryPage() {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/rent-roll/spaces").catch(() => null);
+      const res = await fetch("/api/spaces").catch(() => null);
       if (res && res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
-          setSpaces(json.data);
+          setSpaces(
+            json.data.map((s: any) => ({
+              id: s.id,
+              space_number: s.space_name || s.space_code,
+              building_name: s.building_name || s.property_name || "Main Tower",
+              floor_number: s.floor_name ? s.floor_name.replace("Floor ", "") : "1",
+              chargeable_area: Number(s.chargeable_area_sqft || s.area_sqft || 0),
+              status: s.occupancy_status || "available",
+              standard_rate_psf: Number(s.standard_rate_psf || s.rate_per_sqft || 0),
+            }))
+          );
         }
       } else {
         // Fallback: check properties to build spaces summary
@@ -111,13 +126,16 @@ export default function SpaceAndBuildingRegistryPage() {
               >
                 <RefreshCw size={15} className={loading ? "animate-spin text-teal-600" : ""} />
               </button>
-              <Link
-                href="/properties/rent-roll?action=add-space"
-                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition"
+              <button
+                onClick={() => {
+                  setHierarchyTab("space");
+                  setHierarchyModalOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus size={16} />
                 <span>Demarcate New Unit</span>
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -158,13 +176,16 @@ export default function SpaceAndBuildingRegistryPage() {
                   You haven&apos;t added any commercial floors or spaces yet. Add your property units to track occupancy, leases, and escalations.
                 </p>
                 <div className="mt-6 flex items-center justify-center gap-3">
-                  <Link
-                    href="/onboarding"
-                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20"
+                  <button
+                    onClick={() => {
+                      setHierarchyTab("property");
+                      setHierarchyModalOpen(true);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
                   >
                     <Plus size={15} />
                     <span>Onboard Property First</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -222,6 +243,14 @@ export default function SpaceAndBuildingRegistryPage() {
             )}
           </div>
         </main>
+
+        {/* Unified Canonical Commercial Hierarchy, Space & Property Modal */}
+        <PropertyHierarchyModal
+          isOpen={hierarchyModalOpen}
+          onClose={() => setHierarchyModalOpen(false)}
+          initialTab={hierarchyTab}
+          onSuccess={fetchSpaces}
+        />
 
         <MobileBottomNav />
       </div>

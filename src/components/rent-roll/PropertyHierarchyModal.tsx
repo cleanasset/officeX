@@ -33,6 +33,9 @@ import GoogleAddressAutocomplete, {
   AddressAutofillResult,
 } from "@/components/common/GoogleAddressAutocomplete";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
+import AgreementVarianceModal, {
+  AgreementDiffItem,
+} from "./AgreementVarianceModal";
 
 
 export type HierarchyTab = "property" | "building" | "space" | "tenant" | "contract";
@@ -50,7 +53,7 @@ export default function PropertyHierarchyModal({
   initialTab = "property",
   onSuccess,
 }: PropertyHierarchyModalProps) {
-  const [activeTab, setActiveTab] = useState<HierarchyTab>(initialTab);
+  const [activeTab, setActiveTabState] = useState<HierarchyTab>(initialTab);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -73,6 +76,27 @@ export default function PropertyHierarchyModal({
   const [buildingsList, setBuildingsList] = useState<Array<{ id: string; name: string; propertyId?: string }>>([]);
   const [spacesList, setSpacesList] = useState<Array<{ id: string; name: string; area: number; buildingId?: string }>>([]);
   const [tenantsList, setTenantsList] = useState<Array<{ id: string; name: string; company?: string }>>([]);
+
+  // Agreement Variance Review Modal State & Temporary Highlight
+  const [varianceModalOpen, setVarianceModalOpen] = useState(false);
+  const [agreementDifferences, setAgreementDifferences] = useState<AgreementDiffItem[]>([]);
+  const [pendingAgreementData, setPendingAgreementData] = useState<any>(null);
+  const [pendingAgreementFile, setPendingAgreementFile] = useState<string>("");
+  const [changedFieldKeys, setChangedFieldKeys] = useState<Set<string>>(new Set());
+
+  // Wrapper for setActiveTab to automatically clear temporary highlight on tab/stage change
+  const setActiveTab = (tab: HierarchyTab) => {
+    setChangedFieldKeys(new Set());
+    setActiveTabState(tab);
+  };
+
+  // Helper for dynamic temporary yellow highlight
+  const getHighlightClass = (key: string, baseClass = "") => {
+    if (changedFieldKeys.has(key)) {
+      return `${baseClass} bg-amber-100/90 border-amber-500 ring-2 ring-amber-400 text-amber-950 font-bold transition-all duration-300`;
+    }
+    return baseClass;
+  };
 
   // ──── 1. PROPERTY FORM (Enhanced Commercial Master) ────
   const [propForm, setPropForm] = useState({
@@ -603,7 +627,7 @@ export default function PropertyHierarchyModal({
     }
   };
 
-  // ──── LEASE AGREEMENT PARSING & AUTO-POPULATION ────
+  // ──── LEASE AGREEMENT PARSING & AUTO-POPULATION WITH DIFFERENCE REVIEW ────
   const handleUploadRentAgreement = async (file: File) => {
     if (!file) return;
     setIsUploadingAgreement(true);
@@ -619,82 +643,235 @@ export default function PropertyHierarchyModal({
           summaryHighlights: d.summaryHighlights || [],
         });
 
-        // 1. Auto-match or detect occupant
-        let targetOccupantId = contractForm.occupantId;
+        // Compute differences between currently entered data and extracted agreement data
+        const currentSelectedTenant = tenantsList.find((t) => t.id === contractForm.occupantId);
+        const currentOccupantName = tenantForm.occupantName || currentSelectedTenant?.name || "";
+        const diffs: AgreementDiffItem[] = [];
+
+        // 1. Occupant / Tenant Name
         if (d.occupantName) {
-          const matchedTenant = tenantsList.find(
-            (t) =>
-              t.name.toLowerCase().includes(d.occupantName.toLowerCase()) ||
-              d.occupantName.toLowerCase().includes(t.name.toLowerCase()) ||
-              (t.company && d.companyName && t.company.toLowerCase().includes(d.companyName.toLowerCase()))
-          );
-          if (matchedTenant) {
-            targetOccupantId = matchedTenant.id;
-          }
+          const hasVariance =
+            currentOccupantName !== "" &&
+            currentOccupantName.toLowerCase().trim() !== d.occupantName.toLowerCase().trim();
+          diffs.push({
+            fieldKey: "occupantName",
+            label: "Tenant / Occupant Name",
+            currentValue: currentOccupantName || "(Not entered)",
+            agreementValue: d.occupantName,
+            hasVariance: hasVariance || (!currentOccupantName && !!d.occupantName),
+          });
         }
 
-        // 2. Auto-match space if area is close
-        let targetSpaceId = contractForm.spaceId;
+        // 2. Leasable Area (Sq.Ft)
         if (d.areaSqft > 0) {
-          const matchedSpace = spacesList.find(
-            (s) => Math.abs(s.area - d.areaSqft) < 100
-          );
-          if (matchedSpace) {
-            targetSpaceId = matchedSpace.id;
-          }
+          const curArea = Number(contractForm.areaSqft) || 0;
+          const hasVariance = curArea > 0 && curArea !== d.areaSqft;
+          diffs.push({
+            fieldKey: "areaSqft",
+            label: "Leasable Area",
+            currentValue: curArea > 0 ? `${curArea.toLocaleString()} Sq.Ft` : "(Not entered)",
+            agreementValue: `${d.areaSqft.toLocaleString()} Sq.Ft`,
+            hasVariance: hasVariance || (!curArea && d.areaSqft > 0),
+          });
         }
 
-        // 3. Billing SPV match or add
-        if (d.billingEntity) {
-          setBillingEntities((prev) => Array.from(new Set([...prev, d.billingEntity])));
+        // 3. Monthly Rent
+        if (d.monthlyRent > 0) {
+          const curRent = Number(contractForm.monthlyRent) || 0;
+          const hasVariance = curRent > 0 && curRent !== d.monthlyRent;
+          diffs.push({
+            fieldKey: "monthlyRent",
+            label: "Monthly Base Rent",
+            currentValue: curRent > 0 ? `₹${curRent.toLocaleString()}` : "(Not entered)",
+            agreementValue: `₹${d.monthlyRent.toLocaleString()}`,
+            hasVariance: hasVariance || (!curRent && d.monthlyRent > 0),
+          });
         }
 
-        setContractForm((prev) => ({
-          ...prev,
-          occupantId: targetOccupantId || prev.occupantId,
-          spaceId: targetSpaceId || prev.spaceId,
-          areaSqft: d.areaSqft ? String(d.areaSqft) : prev.areaSqft,
-          billingModel: d.billingModel || prev.billingModel,
-          ratePerSqft: d.ratePerSqft ? String(d.ratePerSqft) : prev.ratePerSqft,
-          ratePerSeat: d.ratePerSeat ? String(d.ratePerSeat) : prev.ratePerSeat,
-          seatCount: d.seatCount ? String(d.seatCount) : prev.seatCount,
-          bareShellRate: d.bareShellRate ? String(d.bareShellRate) : prev.bareShellRate,
-          fitoutRate: d.fitoutRate ? String(d.fitoutRate) : prev.fitoutRate,
-          monthlyRent: d.monthlyRent ? String(d.monthlyRent) : prev.monthlyRent,
-          camType: d.camType || prev.camType,
-          camRate: d.camRate ? String(d.camRate) : prev.camRate,
-          camMonthly: d.camMonthly ? String(d.camMonthly) : prev.camMonthly,
-          carParkingSlots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.carParkingSlots,
-          carParkingRate: d.carParkingRate !== undefined ? String(d.carParkingRate) : prev.carParkingRate,
-          twoWheelerSlots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.twoWheelerSlots,
-          twoWheelerRate: d.twoWheelerRate !== undefined ? String(d.twoWheelerRate) : prev.twoWheelerRate,
-          securityDeposit: d.securityDeposit ? String(d.securityDeposit) : prev.securityDeposit,
-          depositMonths: d.depositMonths ? String(d.depositMonths) : prev.depositMonths,
-          fitoutDays: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitoutDays,
-          lockInMonths: d.lockInMonths !== undefined ? String(d.lockInMonths) : prev.lockInMonths,
-          noticeDays: d.noticeDays !== undefined ? String(d.noticeDays) : prev.noticeDays,
-          startDate: d.startDate || prev.startDate,
-          endDate: d.endDate || prev.endDate,
-          escalationPct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalationPct,
-          escalationFrequency: d.escalationFrequency === "Triennial" ? "Biannual" : (d.escalationFrequency || prev.escalationFrequency),
-          escalationStartDate: d.escalationStartDate || prev.escalationStartDate,
-          billingEntity: d.billingEntity || prev.billingEntity,
-          paymentTerms: d.paymentTerms || prev.paymentTerms,
-          stampDutySharing: d.stampDutySharing || prev.stampDutySharing,
-          notes: d.notes || prev.notes,
-        }));
+        // 4. Rate per Sq.Ft
+        if (d.ratePerSqft > 0) {
+          const curRate = Number(contractForm.ratePerSqft) || 0;
+          const hasVariance = curRate > 0 && curRate !== d.ratePerSqft;
+          diffs.push({
+            fieldKey: "ratePerSqft",
+            label: "Rate PSF",
+            currentValue: curRate > 0 ? `₹${curRate}/sqft` : "(Not entered)",
+            agreementValue: `₹${d.ratePerSqft}/sqft`,
+            hasVariance: hasVariance || (!curRate && d.ratePerSqft > 0),
+          });
+        }
 
-        showToast(
-          `✓ Agreement "${json.fileName}" parsed! ${d.extractedFieldsCount || 14} terms pre-filled. You can review and adjust any field below.`
-        );
+        // 5. Security Deposit
+        if (d.securityDeposit > 0) {
+          const curDep = Number(contractForm.securityDeposit) || 0;
+          const hasVariance = curDep > 0 && curDep !== d.securityDeposit;
+          diffs.push({
+            fieldKey: "securityDeposit",
+            label: "Security Deposit",
+            currentValue: curDep > 0 ? `₹${curDep.toLocaleString()}` : "(Not entered)",
+            agreementValue: `₹${d.securityDeposit.toLocaleString()}`,
+            hasVariance: hasVariance || (!curDep && d.securityDeposit > 0),
+          });
+        }
+
+        // 6. Start Date
+        if (d.startDate) {
+          const curStart = contractForm.startDate;
+          const hasVariance = curStart !== "" && curStart !== d.startDate;
+          diffs.push({
+            fieldKey: "startDate",
+            label: "Lease Start Date",
+            currentValue: curStart || "(Not entered)",
+            agreementValue: d.startDate,
+            hasVariance: hasVariance || (!curStart && !!d.startDate),
+          });
+        }
+
+        // 7. End Date
+        if (d.endDate) {
+          const curEnd = contractForm.endDate;
+          const hasVariance = curEnd !== "" && curEnd !== d.endDate;
+          diffs.push({
+            fieldKey: "endDate",
+            label: "Lease End Date",
+            currentValue: curEnd || "(Not entered)",
+            agreementValue: d.endDate,
+            hasVariance: hasVariance || (!curEnd && !!d.endDate),
+          });
+        }
+
+        // 8. Escalation %
+        if (d.escalationPct !== undefined) {
+          const curEsc = Number(contractForm.escalationPct) || 0;
+          const hasVariance = curEsc > 0 && curEsc !== d.escalationPct;
+          diffs.push({
+            fieldKey: "escalationPct",
+            label: "Escalation Rate",
+            currentValue: `${contractForm.escalationPct}% (${contractForm.escalationFrequency})`,
+            agreementValue: `${d.escalationPct}% (${d.escalationFrequency})`,
+            hasVariance: hasVariance || contractForm.escalationFrequency !== d.escalationFrequency,
+          });
+        }
+
+        // 9. Lock-in Period
+        if (d.lockInMonths !== undefined && d.lockInMonths > 0) {
+          const curLock = Number(contractForm.lockInMonths) || 0;
+          const hasVariance = curLock > 0 && curLock !== d.lockInMonths;
+          diffs.push({
+            fieldKey: "lockInMonths",
+            label: "Lock-in Period",
+            currentValue: curLock > 0 ? `${curLock} Months` : "(Not entered)",
+            agreementValue: `${d.lockInMonths} Months`,
+            hasVariance: hasVariance || (!curLock && d.lockInMonths > 0),
+          });
+        }
+
+        // Save pending data & differences
+        setPendingAgreementData(d);
+        setPendingAgreementFile(json.fileName);
+        setAgreementDifferences(diffs);
+
+        // Check if there are real variances (mismatches)
+        const realDiscrepancies = diffs.filter((x) => x.hasVariance);
+        if (realDiscrepancies.length > 0) {
+          setVarianceModalOpen(true);
+        } else {
+          // If no conflicts, apply automatically
+          applyAgreementTerms(d, diffs);
+        }
       } else {
-        showToast(json.error || "Failed to extract text from agreement file", "error");
+        showToast(json?.error || "Failed to extract text from agreement file", "error");
       }
     } catch (err: any) {
       showToast(`Upload error: ${err.message}`, "error");
     } finally {
       setIsUploadingAgreement(false);
     }
+  };
+
+  // ──── APPLY AGREEMENT PARTICULARS WITH TEMPORARY YELLOW HIGHLIGHT ────
+  const applyAgreementTerms = (d: any, diffsList?: AgreementDiffItem[]) => {
+    if (!d) return;
+
+    // 1. Auto-match or detect occupant
+    let targetOccupantId = contractForm.occupantId;
+    if (d.occupantName) {
+      const matchedTenant = tenantsList.find(
+        (t) =>
+          t.name.toLowerCase().includes(d.occupantName.toLowerCase()) ||
+          d.occupantName.toLowerCase().includes(t.name.toLowerCase()) ||
+          (t.company && d.companyName && t.company.toLowerCase().includes(d.companyName.toLowerCase()))
+      );
+      if (matchedTenant) {
+        targetOccupantId = matchedTenant.id;
+      }
+      // Also sync tenantForm state
+      setTenantForm((prev) => ({
+        ...prev,
+        occupantName: d.occupantName,
+        companyName: d.companyName || d.occupantName,
+      }));
+    }
+
+    // 2. Auto-match space if area is close
+    let targetSpaceId = contractForm.spaceId;
+    if (d.areaSqft > 0) {
+      const matchedSpace = spacesList.find(
+        (s) => Math.abs(s.area - d.areaSqft) < 100
+      );
+      if (matchedSpace) {
+        targetSpaceId = matchedSpace.id;
+      }
+    }
+
+    // 3. Billing SPV match or add
+    if (d.billingEntity) {
+      setBillingEntities((prev) => Array.from(new Set([...prev, d.billingEntity])));
+    }
+
+    setContractForm((prev) => ({
+      ...prev,
+      occupantId: targetOccupantId || prev.occupantId,
+      spaceId: targetSpaceId || prev.spaceId,
+      areaSqft: d.areaSqft ? String(d.areaSqft) : prev.areaSqft,
+      billingModel: d.billingModel || prev.billingModel,
+      ratePerSqft: d.ratePerSqft ? String(d.ratePerSqft) : prev.ratePerSqft,
+      ratePerSeat: d.ratePerSeat ? String(d.ratePerSeat) : prev.ratePerSeat,
+      seatCount: d.seatCount ? String(d.seatCount) : prev.seatCount,
+      bareShellRate: d.bareShellRate ? String(d.bareShellRate) : prev.bareShellRate,
+      fitoutRate: d.fitoutRate ? String(d.fitoutRate) : prev.fitoutRate,
+      monthlyRent: d.monthlyRent ? String(d.monthlyRent) : prev.monthlyRent,
+      camType: d.camType || prev.camType,
+      camRate: d.camRate ? String(d.camRate) : prev.camRate,
+      camMonthly: d.camMonthly ? String(d.camMonthly) : prev.camMonthly,
+      carParkingSlots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.carParkingSlots,
+      carParkingRate: d.carParkingRate !== undefined ? String(d.carParkingRate) : prev.carParkingRate,
+      twoWheelerSlots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.twoWheelerSlots,
+      twoWheelerRate: d.twoWheelerRate !== undefined ? String(d.twoWheelerRate) : prev.twoWheelerRate,
+      securityDeposit: d.securityDeposit ? String(d.securityDeposit) : prev.securityDeposit,
+      depositMonths: d.depositMonths ? String(d.depositMonths) : prev.depositMonths,
+      fitoutDays: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitoutDays,
+      lockInMonths: d.lockInMonths !== undefined ? String(d.lockInMonths) : prev.lockInMonths,
+      noticeDays: d.noticeDays !== undefined ? String(d.noticeDays) : prev.noticeDays,
+      startDate: d.startDate || prev.startDate,
+      endDate: d.endDate || prev.endDate,
+      escalationPct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalationPct,
+      escalationFrequency: d.escalationFrequency === "Triennial" ? "Biannual" : (d.escalationFrequency || prev.escalationFrequency),
+      escalationStartDate: d.escalationStartDate || prev.escalationStartDate,
+      billingEntity: d.billingEntity || prev.billingEntity,
+      paymentTerms: d.paymentTerms || prev.paymentTerms,
+      stampDutySharing: d.stampDutySharing || prev.stampDutySharing,
+      notes: d.notes || prev.notes,
+    }));
+
+    // Record changed keys for temporary yellow highlight
+    const list = diffsList || agreementDifferences;
+    const changed = new Set(list.filter((x) => x.hasVariance).map((x) => x.fieldKey));
+    setChangedFieldKeys(changed);
+
+    showToast(
+      `✓ Form updated according to Rent Agreement! ${changed.size} changed fields highlighted in yellow.`
+    );
   };
 
   // ──── SUBMIT 5: CONTRACT / LEASE ────
@@ -802,7 +979,14 @@ export default function PropertyHierarchyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-hidden">
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-white border border-slate-200 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-150">
+      <div
+        onClick={() => {
+          if (changedFieldKeys.size > 0) {
+            setChangedFieldKeys(new Set());
+          }
+        }}
+        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-white border border-slate-200 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Top Decorative Gradient */}
         <div className="h-2 bg-gradient-to-r from-[#0F8B7D] via-teal-400 to-[#071324] shrink-0 rounded-t-3xl" />
 
@@ -844,6 +1028,28 @@ export default function PropertyHierarchyModal({
           >
             {feedback.type === "success" ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
             <span>{feedback.text}</span>
+          </div>
+        )}
+
+        {/* Temporary Highlight Indicator Banner */}
+        {changedFieldKeys.size > 0 && (
+          <div className="mx-5 sm:mx-7 mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span>
+                <strong>{changedFieldKeys.size} field{changedFieldKeys.size > 1 ? "s" : ""} updated</strong> according to Rent Agreement (highlighted in yellow below). Click anywhere or edit to dismiss.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setChangedFieldKeys(new Set());
+              }}
+              className="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline shrink-0 cursor-pointer"
+            >
+              Dismiss Highlight
+            </button>
           </div>
         )}
 
@@ -1458,14 +1664,33 @@ export default function PropertyHierarchyModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 {/* 1. Occupant Name (required) */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Occupant Name *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Occupant Name *</label>
+                    {changedFieldKeys.has("occupantName") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                        Updated from Agreement
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Vikas Nair"
                     value={tenantForm.occupantName}
-                    onChange={(e) => setTenantForm({ ...tenantForm, occupantName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
+                    onChange={(e) => {
+                      if (changedFieldKeys.has("occupantName")) {
+                        setChangedFieldKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete("occupantName");
+                          return next;
+                        });
+                      }
+                      setTenantForm({ ...tenantForm, occupantName: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "occupantName",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none"
+                    )}
                   />
                 </div>
 
@@ -1828,13 +2053,32 @@ export default function PropertyHierarchyModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 {/* 1. Occupant */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Occupant (Tenant) <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Occupant (Tenant) <span className="text-rose-500">*</span>
+                    </label>
+                    {changedFieldKeys.has("occupantName") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                        Updated
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={contractForm.occupantId}
-                    onChange={(e) => setContractForm({ ...contractForm, occupantId: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                    onChange={(e) => {
+                      if (changedFieldKeys.has("occupantName")) {
+                        setChangedFieldKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete("occupantName");
+                          return next;
+                        });
+                      }
+                      setContractForm({ ...contractForm, occupantId: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "occupantName",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                    )}
                   >
                     {tenantsList.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -1958,15 +2202,29 @@ export default function PropertyHierarchyModal({
                   {contractForm.billingModel === "Area-based" || contractForm.billingModel === "Pure Rent" || contractForm.billingModel === "Hybrid" ? (
                     <>
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">
-                          Rate per Sq.Ft (₹ / sqft / month) <span className="text-rose-500">*</span>
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">
+                            Rate PSF (₹/sqft/mo) <span className="text-rose-500">*</span>
+                          </label>
+                          {changedFieldKeys.has("ratePerSqft") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           step="0.5"
                           placeholder="e.g. 80"
                           value={contractForm.ratePerSqft}
                           onChange={(e) => {
+                            if (changedFieldKeys.has("ratePerSqft")) {
+                              setChangedFieldKeys((prev) => {
+                                const next = new Set(prev);
+                                next.delete("ratePerSqft");
+                                return next;
+                              });
+                            }
                             const rate = e.target.value;
                             const area = Number(contractForm.areaSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthlyRent;
@@ -1976,19 +2234,36 @@ export default function PropertyHierarchyModal({
                               monthlyRent: calcRent,
                             });
                           }}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                          className={getHighlightClass(
+                            "ratePerSqft",
+                            "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                          )}
                         />
                       </div>
 
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">
-                          Chargeable Area (Sq.Ft) <span className="text-rose-500">*</span>
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">
+                            Chargeable Area (Sq.Ft) <span className="text-rose-500">*</span>
+                          </label>
+                          {changedFieldKeys.has("areaSqft") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           placeholder="e.g. 5000"
                           value={contractForm.areaSqft}
                           onChange={(e) => {
+                            if (changedFieldKeys.has("areaSqft")) {
+                              setChangedFieldKeys((prev) => {
+                                const next = new Set(prev);
+                                next.delete("areaSqft");
+                                return next;
+                              });
+                            }
                             const area = e.target.value;
                             const rate = Number(contractForm.ratePerSqft) || 0;
                             const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthlyRent;
@@ -1998,7 +2273,10 @@ export default function PropertyHierarchyModal({
                               monthlyRent: calcRent,
                             });
                           }}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                          className={getHighlightClass(
+                            "areaSqft",
+                            "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                          )}
                         />
                       </div>
                     </>
@@ -2057,8 +2335,20 @@ export default function PropertyHierarchyModal({
                         type="number"
                         placeholder="e.g. 5000"
                         value={contractForm.areaSqft}
-                        onChange={(e) => setContractForm({ ...contractForm, areaSqft: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("areaSqft")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("areaSqft");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, areaSqft: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "areaSqft",
+                          "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                        )}
                       />
                     </div>
                   )}
@@ -2069,11 +2359,14 @@ export default function PropertyHierarchyModal({
                       <label className="font-bold text-slate-700">
                         Monthly Base Rent (₹) <span className="text-rose-500">*</span>
                       </label>
-                      {contractForm.billingModel === "Area-based" && contractForm.ratePerSqft && contractForm.areaSqft && (
-                        <span className="text-[10px] font-bold text-teal-700">Auto-calculated</span>
-                      )}
-                      {contractForm.billingModel === "Seat-based" && contractForm.ratePerSeat && contractForm.seatCount && (
-                        <span className="text-[10px] font-bold text-teal-700">Auto-calculated</span>
+                      {changedFieldKeys.has("monthlyRent") ? (
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                          Updated
+                        </span>
+                      ) : (
+                        contractForm.billingModel === "Area-based" && contractForm.ratePerSqft && contractForm.areaSqft && (
+                          <span className="text-[10px] font-bold text-teal-700">Auto-calculated</span>
+                        )
                       )}
                     </div>
                     <input
@@ -2081,8 +2374,20 @@ export default function PropertyHierarchyModal({
                       required
                       placeholder="e.g. 400000"
                       value={contractForm.monthlyRent}
-                      onChange={(e) => setContractForm({ ...contractForm, monthlyRent: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-teal-500 bg-white font-mono font-black text-slate-900 focus:border-[#0F8B7D] outline-none"
+                      onChange={(e) => {
+                        if (changedFieldKeys.has("monthlyRent")) {
+                          setChangedFieldKeys((prev) => {
+                            const next = new Set(prev);
+                            next.delete("monthlyRent");
+                            return next;
+                          });
+                        }
+                        setContractForm({ ...contractForm, monthlyRent: e.target.value });
+                      }}
+                      className={getHighlightClass(
+                        "monthlyRent",
+                        "w-full px-3 py-2 rounded-xl border border-teal-500 bg-white font-mono font-black text-slate-900 focus:border-[#0F8B7D] outline-none"
+                      )}
                     />
                   </div>
                 </div>
@@ -2143,30 +2448,66 @@ export default function PropertyHierarchyModal({
 
                     {contractForm.camType === "Per Sq.Ft" ? (
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">CAM Rate (₹ / sqft)</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">CAM Rate (₹/sqft)</label>
+                          {changedFieldKeys.has("camRate") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           step="0.5"
                           placeholder="e.g. 15"
                           value={contractForm.camRate}
                           onChange={(e) => {
+                            if (changedFieldKeys.has("camRate")) {
+                              setChangedFieldKeys((prev) => {
+                                const next = new Set(prev);
+                                next.delete("camRate");
+                                return next;
+                              });
+                            }
                             const rate = e.target.value;
                             const area = Number(contractForm.areaSqft) || 0;
                             const monthly = rate && area ? String(Math.round(Number(rate) * area)) : "";
                             setContractForm({ ...contractForm, camRate: rate, camMonthly: monthly });
                           }}
-                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono font-medium outline-none"
+                          className={getHighlightClass(
+                            "camRate",
+                            "w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono font-medium outline-none"
+                          )}
                         />
                       </div>
                     ) : (
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">CAM Monthly (₹)</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">CAM Monthly (₹)</label>
+                          {changedFieldKeys.has("camRate") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           placeholder="e.g. 75000"
                           value={contractForm.camMonthly}
-                          onChange={(e) => setContractForm({ ...contractForm, camMonthly: e.target.value })}
-                          className="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono font-medium outline-none"
+                          onChange={(e) => {
+                            if (changedFieldKeys.has("camRate")) {
+                              setChangedFieldKeys((prev) => {
+                                const next = new Set(prev);
+                                next.delete("camRate");
+                                return next;
+                              });
+                            }
+                            setContractForm({ ...contractForm, camMonthly: e.target.value });
+                          }}
+                          className={getHighlightClass(
+                            "camRate",
+                            "w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-mono font-medium outline-none"
+                          )}
                         />
                       </div>
                     )}
@@ -2329,16 +2670,33 @@ export default function PropertyHierarchyModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">
-                      Security Deposit Amount (₹)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700">Security Deposit Amount (₹)</label>
+                      {changedFieldKeys.has("securityDeposit") && (
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                          Updated
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       min="0"
                       placeholder="e.g. 2400000"
                       value={contractForm.securityDeposit}
-                      onChange={(e) => setContractForm({ ...contractForm, securityDeposit: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                      onChange={(e) => {
+                        if (changedFieldKeys.has("securityDeposit")) {
+                          setChangedFieldKeys((prev) => {
+                            const next = new Set(prev);
+                            next.delete("securityDeposit");
+                            return next;
+                          });
+                        }
+                        setContractForm({ ...contractForm, securityDeposit: e.target.value });
+                      }}
+                      className={getHighlightClass(
+                        "securityDeposit",
+                        "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold focus:border-[#0F8B7D] outline-none"
+                      )}
                     />
                   </div>
                   <div>
@@ -2361,44 +2719,99 @@ export default function PropertyHierarchyModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 {/* Contract Start Date */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Contract Start Date <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Contract Start Date <span className="text-rose-500">*</span>
+                    </label>
+                    {changedFieldKeys.has("startDate") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                        Updated
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="date"
                     required
                     value={contractForm.startDate}
-                    onChange={(e) => setContractForm({ ...contractForm, startDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    onChange={(e) => {
+                      if (changedFieldKeys.has("startDate")) {
+                        setChangedFieldKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete("startDate");
+                          return next;
+                        });
+                      }
+                      setContractForm({ ...contractForm, startDate: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "startDate",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    )}
                   />
                 </div>
 
                 {/* Contract End Date */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Contract End Date <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Contract End Date <span className="text-rose-500">*</span>
+                    </label>
+                    {changedFieldKeys.has("endDate") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                        Updated
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="date"
                     required
                     value={contractForm.endDate}
-                    onChange={(e) => setContractForm({ ...contractForm, endDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    onChange={(e) => {
+                      if (changedFieldKeys.has("endDate")) {
+                        setChangedFieldKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete("endDate");
+                          return next;
+                        });
+                      }
+                      setContractForm({ ...contractForm, endDate: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "endDate",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:border-[#0F8B7D] outline-none"
+                    )}
                   />
                 </div>
 
                 {/* Lock-in Period */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Lock-in Period (Months)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Lock-in Period (Months)</label>
+                    {changedFieldKeys.has("lockInMonths") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                        Updated
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
                     min="0"
                     placeholder="e.g. 12"
                     value={contractForm.lockInMonths}
-                    onChange={(e) => setContractForm({ ...contractForm, lockInMonths: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    onChange={(e) => {
+                      if (changedFieldKeys.has("lockInMonths")) {
+                        setChangedFieldKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete("lockInMonths");
+                          return next;
+                        });
+                      }
+                      setContractForm({ ...contractForm, lockInMonths: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "lockInMonths",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    )}
                   />
                 </div>
 
@@ -2422,14 +2835,33 @@ export default function PropertyHierarchyModal({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 {/* Escalation % */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Escalation %</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">Escalation %</label>
+                    {changedFieldKeys.has("escalationPct") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                        Updated
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
                     step="0.1"
                     placeholder="e.g. 5"
                     value={contractForm.escalationPct}
-                    onChange={(e) => setContractForm({ ...contractForm, escalationPct: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    onChange={(e) => {
+                      if (changedFieldKeys.has("escalationPct")) {
+                        setChangedFieldKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete("escalationPct");
+                          return next;
+                        });
+                      }
+                      setContractForm({ ...contractForm, escalationPct: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "escalationPct",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-[#0F8B7D] outline-none"
+                    )}
                   />
                 </div>
 
@@ -2554,6 +2986,24 @@ export default function PropertyHierarchyModal({
             </form>
           )}
         </div>
+
+        {/* ──── AGREEMENT VARIANCE REVIEW MODAL (POPUP) ──── */}
+        <AgreementVarianceModal
+          isOpen={varianceModalOpen}
+          onClose={() => setVarianceModalOpen(false)}
+          fileName={pendingAgreementFile}
+          differences={agreementDifferences}
+          onKeepCurrent={() => {
+            setVarianceModalOpen(false);
+            showToast("Kept user-entered details unchanged without modifying form.");
+          }}
+          onApplyAgreement={() => {
+            setVarianceModalOpen(false);
+            if (pendingAgreementData) {
+              applyAgreementTerms(pendingAgreementData, agreementDifferences);
+            }
+          }}
+        />
       </div>
     </div>
   );

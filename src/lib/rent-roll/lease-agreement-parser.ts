@@ -140,47 +140,98 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   const highlights: string[] = [];
   let fieldCount = 0;
 
-  // 1. LESSEE / TENANT / OCCUPANT
+  // --- 1. SPECIALIZED DEED & LOI PARTIES & ENTITY EXTRACTION ---
   let occupantName = "";
   let companyName = "";
-  const lesseeRegexes = [
-    /(?:LESSEE|TENANT|LICENSEE|SECOND\s+PARTY|PARTY\s+OF\s+THE\s+SECOND\s+PART)\s*[:\-–]?\s*(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,60}?)(?:,|\n|having|represented|incorporated|a\s+company|a\s+private)/i,
-    /(?:between|amongst)\s+.*?\s+and\s+(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,50}?)(?:,|\n|having|hereinafter\s+referred\s+to\s+as\s+the\s+["“]LESSEE["”])/i,
-    /Tenant\s*Name\s*[:\-]\s*([A-Za-z0-9\s&.,()'\-]{3,50})/i,
-    /Occupant\s*[:\-]\s*([A-Za-z0-9\s&.,()'\-]{3,50})/i,
-  ];
+  let billingEntity = "";
 
-  for (const reg of lesseeRegexes) {
-    const match = text.match(reg);
-    if (match && match[1]) {
-      const candidate = match[1].replace(/[\n\r]+/g, " ").trim();
-      if (candidate.length > 2 && !candidate.toLowerCase().includes("hereinafter")) {
-        occupantName = candidate;
-        companyName = candidate;
-        fieldCount++;
-        highlights.push(`Tenant: ${occupantName}`);
-        break;
+  // Check A: LOI Format (First Party : Lessor, Second Party : Tenant/Lessee)
+  if (text.match(/First\s+Party/i) && text.match(/Second\s+Party/i)) {
+    const p1 = text.match(/First\s+Party\s*[:\-–]?\s*[\r\n\s]*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:,|\n|Second)/i);
+    const p2 = text.match(/Second\s+Party\s*[:\-–]?\s*[\r\n\s]*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:[\r\n]{2,}|Permitted|Complex|Unit|Lease)/i);
+    if (p1 && p1[1]) billingEntity = p1[1].replace(/[\r\n]+/g, " ").trim();
+    if (p2 && p2[1]) {
+      occupantName = p2[1].replace(/[\r\n]+/g, " ").trim();
+      companyName = occupantName;
+      fieldCount++;
+      highlights.push(`Tenant: ${occupantName}`);
+    }
+  }
+
+  // Check B: Standard Deed Structure (BETWEEN [Lessor] ... AND [Lessee] ...)
+  if (!occupantName || !billingEntity) {
+    const betweenIdx = text.search(/\bBETWEEN\b/i);
+    if (betweenIdx !== -1) {
+      const afterBetween = text.slice(betweenIdx + 7);
+      const andMatch = afterBetween.match(/[\r\n\s]+AND[\r\n\s]+/i);
+      if (andMatch && andMatch.index) {
+        const party1Chunk = afterBetween.slice(0, andMatch.index).trim();
+        const party2Chunk = afterBetween.slice(andMatch.index + andMatch[0].length, andMatch.index + andMatch[0].length + 1500).trim();
+
+        if (!billingEntity) {
+          const p1NameMatch = party1Chunk.match(/(?:M\/[Ss]\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:\s*\(PAN|\s*\(CIN|,\s*having|,\s*a\s+|[\r\n]+having|[\r\n]+is\s+having)/i);
+          if (p1NameMatch && p1NameMatch[1]) {
+            billingEntity = p1NameMatch[1].replace(/[\r\n]+/g, " ").trim();
+            fieldCount++;
+            highlights.push(`Lessor/SPV: ${billingEntity}`);
+          }
+        }
+
+        if (!occupantName) {
+          const p2NameMatch = party2Chunk.match(/(?:M\/[Ss]\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,'\-]{3,60}?)(?:\s*\(PAN|\s*\(CIN|,\s*having|,\s*a\s+|[\r\n]+having|[\r\n]+is\s+having)/i);
+          if (p2NameMatch && p2NameMatch[1]) {
+            occupantName = p2NameMatch[1].replace(/[\r\n]+/g, " ").trim();
+            companyName = occupantName;
+            fieldCount++;
+            highlights.push(`Tenant: ${occupantName}`);
+          }
+        }
       }
     }
   }
 
-  // 2. LESSOR / LANDLORD / SPV (BILLING ENTITY)
-  let billingEntity = "";
-  const lessorRegexes = [
-    /(?:LESSOR|LANDLORD|LICENSOR|FIRST\s+PARTY|PARTY\s+OF\s+THE\s+FIRST\s+PART)\s*[:\-–]?\s*(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,60}?)(?:,|\n|having|represented|incorporated|a\s+company)/i,
-    /(?:by\s+and\s+between)\s+(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,50}?)(?:,|\n|having|hereinafter\s+referred\s+to\s+as\s+the\s+["“]LESSOR["”])/i,
-    /Landlord\s*Name\s*[:\-]\s*([A-Za-z0-9\s&.,()'\-]{3,50})/i,
-  ];
+  // Fallback Lessee Regexes
+  if (!occupantName) {
+    const lesseeRegexes = [
+      /(?:LESSEE|TENANT|LICENSEE|SECOND\s+PARTY|PARTY\s+OF\s+THE\s+SECOND\s+PART)\s*[:\-–]?\s*(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,60}?)(?:,|\n|having|represented|incorporated|a\s+company|a\s+private)/i,
+      /(?:between|amongst)\s+.*?\s+and\s+(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,50}?)(?:,|\n|having|hereinafter\s+referred\s+to\s+as\s+the\s+["“]LESSEE["”])/i,
+      /Tenant\s*Name\s*[:\-]\s*([A-Za-z0-9\s&.,()'\-]{3,50})/i,
+      /Occupant\s*[:\-]\s*([A-Za-z0-9\s&.,()'\-]{3,50})/i,
+    ];
 
-  for (const reg of lessorRegexes) {
-    const match = text.match(reg);
-    if (match && match[1]) {
-      const candidate = match[1].replace(/[\n\r]+/g, " ").trim();
-      if (candidate.length > 2 && !candidate.toLowerCase().includes("hereinafter")) {
-        billingEntity = candidate;
-        fieldCount++;
-        highlights.push(`Lessor/SPV: ${billingEntity}`);
-        break;
+    for (const reg of lesseeRegexes) {
+      const match = text.match(reg);
+      if (match && match[1]) {
+        const candidate = match[1].replace(/[\n\r]+/g, " ").trim();
+        if (candidate.length > 2 && !candidate.toLowerCase().includes("hereinafter")) {
+          occupantName = candidate;
+          companyName = candidate;
+          fieldCount++;
+          highlights.push(`Tenant: ${occupantName}`);
+          break;
+        }
+      }
+    }
+  }
+
+  // Fallback Lessor Regexes
+  if (!billingEntity) {
+    const lessorRegexes = [
+      /(?:LESSOR|LANDLORD|LICENSOR|FIRST\s+PARTY|PARTY\s+OF\s+THE\s+FIRST\s+PART)\s*[:\-–]?\s*(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,60}?)(?:,|\n|having|represented|incorporated|a\s+company)/i,
+      /(?:by\s+and\s+between)\s+(?:M\/s\.?|Mr\.?|Ms\.?)?\s*([A-Za-z0-9\s&.,()'\-]{3,50}?)(?:,|\n|having|hereinafter\s+referred\s+to\s+as\s+the\s+["“]LESSOR["”])/i,
+      /Landlord\s*Name\s*[:\-]\s*([A-Za-z0-9\s&.,()'\-]{3,50})/i,
+    ];
+
+    for (const reg of lessorRegexes) {
+      const match = text.match(reg);
+      if (match && match[1]) {
+        const candidate = match[1].replace(/[\n\r]+/g, " ").trim();
+        if (candidate.length > 2 && !candidate.toLowerCase().includes("hereinafter")) {
+          billingEntity = candidate;
+          fieldCount++;
+          highlights.push(`Lessor/SPV: ${billingEntity}`);
+          break;
+        }
       }
     }
   }
@@ -190,34 +241,69 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   let buildingName = "";
   let spaceName = "";
 
-  const towerMatch = text.match(/(?:Floor\s+of|at|in|known\s+as)\s+([A-Za-z0-9\s]+?(?:Tower|Park|Plaza|Heights|Complex|Centre|Center|Enclave|Hub|Asset|Building|House))\b/i);
-  if (towerMatch && towerMatch[1]) {
-    propertyName = towerMatch[1].trim();
-    buildingName = towerMatch[1].trim();
+  const complexMatch = text.match(/Complex\s*[:\-–]\s*([^\n,]+)/i);
+  if (complexMatch && complexMatch[1]) {
+    propertyName = complexMatch[1].trim();
+    buildingName = propertyName;
     fieldCount++;
     highlights.push(`Property: ${propertyName}`);
-  } else {
-    const premisesMatch = text.match(/(?:demised\s+premises|premises|building|property|tower|tech\s*park)\s*(?:known\s+as|situated\s+at|named|bearing\s+name)?\s*[:\-–]?\s*([A-Za-z0-9\s,.'\-]{4,60}?)(?:,|\n|\.|\band\s+measuring|\bhaving)/i);
-    if (premisesMatch && premisesMatch[1]) {
-      propertyName = premisesMatch[1].trim().replace(/^,\s*/, "");
+  }
+
+  const landmarkMatch = text.match(/\b(Joy\s+Tower|Noida\s+One)\b/i);
+  if (landmarkMatch && !propertyName) {
+    propertyName = landmarkMatch[1].trim();
+    buildingName = propertyName;
+    fieldCount++;
+    highlights.push(`Property: ${propertyName}`);
+  }
+
+  if (!propertyName) {
+    const towerMatch = text.match(/(?:Floor\s+of|at|in|known\s+as)\s+([A-Za-z0-9\s]+?(?:Tower|Park|Plaza|Heights|Complex|Centre|Center|Enclave|Hub|Asset|Building|House))\b/i);
+    if (towerMatch && towerMatch[1]) {
+      propertyName = towerMatch[1].trim();
+      buildingName = towerMatch[1].trim();
       fieldCount++;
       highlights.push(`Property: ${propertyName}`);
+    } else {
+      const premisesMatch = text.match(/(?:demised\s+premises|premises|building|property|tower|tech\s*park)\s*(?:known\s+as|situated\s+at|named|bearing\s+name|bearing\s+no\.?)?\s*[:\-–]?\s*([A-Za-z0-9\s,.'\-]{4,60}?)(?:,|\n|\.|\band\s+measuring|\bhaving|\badmeasuring)/i);
+      if (premisesMatch && premisesMatch[1]) {
+        propertyName = premisesMatch[1].trim().replace(/^,\s*/, "");
+        fieldCount++;
+        highlights.push(`Property: ${propertyName}`);
+      }
     }
   }
 
-  const spaceMatch = text.match(/(?:unit|suite|office|space|demised\s+portion)\s*(?:no\.?|number|bearing\s+no\.?)?\s*[:\-–]?\s*([A-Za-z0-9\s\-\/]{1,25}?)(?:\s+on|\s+at|,|\.|\n)/i) ||
-                     text.match(/(?:unit|suite|office|space)\s*(?:no\.?|number)?\s*([A-Za-z0-9\-\/]+)/i);
-  if (spaceMatch && spaceMatch[1]) {
-    spaceName = spaceMatch[1].trim().startsWith("Unit") ? spaceMatch[1].trim() : `Unit ${spaceMatch[1].trim()}`;
-    fieldCount++;
+  const towerLetterMatch = text.match(/Tower\s*No\.?\s*[:\-–]?\s*([A-Za-z0-9]+)/i);
+  if (towerLetterMatch && towerLetterMatch[1]) {
+    buildingName = `Tower ${towerLetterMatch[1].trim()}`;
+  }
+
+  const unitPatternMatch = text.match(/Unit\s*No\.?\s*(?:&\s*Floor)?\s*[:\-–]?\s*([A-Za-z0-9\s\-\/,]+?)(?:[\r\n]{2,}|Tower|Area|Whether)/i);
+  if (unitPatternMatch && unitPatternMatch[1]) {
+    spaceName = unitPatternMatch[1].trim().replace(/[\r\n]+/g, " ");
+  }
+
+  if (!spaceName) {
+    const spaceMatch = text.match(/(?:unit|suite|office|space|demised\s+portion)\s*(?:no\.?|number|bearing\s+no\.?)?\s*[:\-–]?\s*([A-Za-z0-9\s\-\/]{1,25}?)(?:\s+on|\s+at|,|\.|\n)/i) ||
+                       text.match(/(?:unit|suite|office|space)\s*(?:no\.?|number)?\s*([A-Za-z0-9\-\/]+)/i);
+    if (spaceMatch && spaceMatch[1]) {
+      spaceName = spaceMatch[1].trim().startsWith("Unit") ? spaceMatch[1].trim() : `Unit ${spaceMatch[1].trim()}`;
+      fieldCount++;
+    } else if (text.match(/(?:Forth|Fourth|Second|Ground|First|Third|5th|6th)\s+Floor/i)) {
+      const flMatch = text.match(/(Forth|Fourth|Second|Ground|First|Third|5th|6th)\s+Floor/i);
+      if (flMatch) spaceName = `${flMatch[1]} Floor Unit`;
+    }
   }
 
   // 4. AREA (CHARGEABLE / SUPER BUILT-UP / CARPET)
   let areaSqft = 0;
   const areaMatches = [
+    /Area\s*[:\-–]\s*([0-9,.]+)\s*(?:Sq\s*Ft|sqft|sq\.?\s*ft)/i,
+    /(?:measuring|demised\s+premises\s+for|super\s+area\s+of\s+about|admeasuring)\s*([0-9,.]+)\s*(?:sq\s*ft|sqft|sq\.?\s*ft)/i,
     /(?:super\s*built[- ]?up|chargeable|leasable|carpet|rentable)\s*area\s*(?:of|measuring|is)?\s*[:\-–]?\s*([0-9,.]+)\s*(?:sq(?:uare)?\.?\s*(?:ft|feet)|sqft)/i,
     /(?:measuring\s*an\s*area\s*of|area\s*of\s*approx(?:imately)?\.?)\s*([0-9,.]+)\s*(?:sq(?:uare)?\.?\s*(?:ft|feet)|sqft)/i,
-    /([0-9,.]+)\s*(?:sq(?:uare)?\.?\s*(?:ft|feet)|sqft)\s*(?:super\s*built[- ]?up|chargeable|leasable|carpet)?/i,
+    /([0-9,.]+)\s*(?:sq(?:uare)?\.?\s*(?:ft|feet)|sqft)\s*(?:super\s*built[- ]?up|chargeable|leasable|carpet|covered\s+area|of\s+area)?/i,
   ];
 
   for (const reg of areaMatches) {
@@ -269,7 +355,7 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     fitoutCondition = "Warm Shell";
   } else if (text.match(/semi[- ]furnished/i)) {
     fitoutCondition = "Semi-Furnished";
-  } else if (text.match(/fully\s*furnished|plug\s*(?:and|&)\s*play|fitted[- ]out/i)) {
+  } else if (text.match(/fully\s*furnished|plug\s*(?:and|&)\s*play|fitted[- ]out|Furnished/i)) {
     fitoutCondition = "Fully Furnished";
   }
   highlights.push(`Fit-out: ${fitoutCondition}`);
@@ -322,7 +408,9 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   // 9. TOTAL MONTHLY BASE RENT
   let monthlyRent = 0;
   const monthlyRentMatches = [
-    /(?:monthly\s*(?:lease\s*)?rent(?:al)?|license\s*fee|monthly\s*consideration|monthly\s*fee|base\s*rent)\s*(?:of|is|amounting\s*to)?\s*[:\-–]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i,
+    /(?:rent\s+starting[^\n.]*?)\s*(?:of|is)?\s*(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i,
+    /(?:RENT\s+PER\s+MONTH|Lease\s+Rent)\s*[:\-–]?\s*(?:INR|Rs\.?|₹)?\s*([0-9,]+(?:\.[0-9]+)?)/i,
+    /(?:monthly\s*(?:lease\s*)?rent(?:al)?|license\s*fees?|monthly\s*consideration|monthly\s*fee|base\s*rent)\s*(?:of|is|amounting\s*to)?\s*[:\-–]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i,
     /(?:sum\s*of\s*(?:rs\.?|inr|₹)?\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?\s*(?:per\s*month|\/\s*month|p\.m\.|pm))/i,
     /(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?\s*(?:per\s*month|\/\s*month|p\.m\.|pm)/i,
     /amounting\s+to\s+(?:rs\.?|inr|₹)?\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i,
@@ -470,7 +558,8 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   let securityDeposit = 0;
   let depositMonths = 0;
 
-  const depositAmtMatch = text.match(/(?:interest[- ]free\s*refundable\s*security\s*deposit|security\s*deposit|ifrsd|caution\s*deposit)[^\n.]*?(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i) ||
+  const depositAmtMatch = text.match(/(?:interest[- ]free\s*refundable\s*security\s*deposit|security\s*deposit|ifrsd|caution\s*deposit|SECURITY\s*REFUNDABLE)[^\n.]*?(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i) ||
+                          text.match(/sum\s+(?:of\s+)?(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]+)?)[^\n.]*?as\s+(?:interest\s*free\s*)?security\s*deposit/i) ||
                           text.match(/amounting\s+to\s+(?:rs\.?|inr|₹)?\s*([0-9,]+(?:\.[0-9]+)?)(?:\s*\/\-|\s*\-)?/i);
   if (depositAmtMatch && depositAmtMatch[1]) {
     const depNum = parseCleanNumber(depositAmtMatch[1]);
@@ -479,13 +568,21 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     }
   }
 
+  const ifsdMonthMatch = text.match(/([0-9]+)\s*Month(?:\s*Lease)?\s*Rent\s*as\s*IFSD/i);
+  if (ifsdMonthMatch && ifsdMonthMatch[1]) {
+    depositMonths = parseInt(ifsdMonthMatch[1], 10);
+    if (monthlyRent > 0) {
+      securityDeposit = depositMonths * monthlyRent;
+    }
+  }
+
   const depositMonthsMatch = text.match(/(?:equivalent\s*to|of)\s*([0-9]+)\s*(?:months?|month's)\s*(?:of\s*)?(?:rent|license\s*fee)?/i);
-  if (depositMonthsMatch && depositMonthsMatch[1]) {
+  if (depositMonthsMatch && depositMonthsMatch[1] && !depositMonths) {
     depositMonths = parseInt(depositMonthsMatch[1], 10);
     if (securityDeposit === 0 && monthlyRent > 0) {
       securityDeposit = depositMonths * monthlyRent;
     }
-  } else if (securityDeposit > 0 && monthlyRent > 0) {
+  } else if (securityDeposit > 0 && monthlyRent > 0 && !depositMonths) {
     depositMonths = Math.round(securityDeposit / monthlyRent);
   }
 
@@ -500,6 +597,21 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   let endDate = "";
   let leaseTermMonths = 36;
 
+  // Direct Date Range: from DD/MM/YYYY to DD/MM/YYYY or w.e.f. DD-MM-YYYY to DD-MM-YYYY
+  const dateRangeMatch = text.match(/(?:from|commencing\s+from|w\.e\.f\.?)\s*[:\-–]?\s*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})\s*(?:to|till|-)\s*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4})/i);
+  if (dateRangeMatch && dateRangeMatch[1] && dateRangeMatch[2]) {
+    startDate = parseCleanDate(dateRangeMatch[1]);
+    endDate = parseCleanDate(dateRangeMatch[2]);
+    if (startDate) {
+      fieldCount++;
+      highlights.push(`Start Date: ${startDate}`);
+    }
+    if (endDate) {
+      fieldCount++;
+      highlights.push(`End Date: ${endDate}`);
+    }
+  }
+
   const possMatch = text.match(/(?:possession\s*date|handover\s*date|date\s*of\s*handing\s*over)\s*[:\-–]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+[0-9]{4}|[0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{4}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{1,2})/i);
   if (possMatch && possMatch[1]) {
     possessionDate = parseCleanDate(possMatch[1]);
@@ -508,7 +620,7 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     }
   }
 
-  const termMatch = text.match(/(?:lease\s*(?:period|term)|tenure|duration|period\s*of\s*lease)\s*(?:of|is)?\s*[:\-–]?\s*([0-9]+)\s*(?:months|years)/i);
+  const termMatch = text.match(/(?:lease\s*(?:period|term)|tenure|duration|period\s*of\s*lease|RENT\s+PERIOD)\s*(?:of|is)?\s*[:\-–]?\s*([0-9]+)\s*(?:months|years)/i);
   if (termMatch && termMatch[1]) {
     const rawVal = parseInt(termMatch[1], 10);
     if (termMatch[0].toLowerCase().includes("year")) {
@@ -519,21 +631,25 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
     fieldCount++;
   }
 
-  const startDateMatch = text.match(/(?:commencement\s*date|effective\s*date|start\s*date|commencing\s*(?:from|on|with\s*effect\s*from)|rent\s*commencement\s*date)\s*[:\-–]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+[0-9]{4}|[0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{4}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{1,2})/i);
-  if (startDateMatch && startDateMatch[1]) {
-    startDate = parseCleanDate(startDateMatch[1]);
-    if (startDate) {
-      fieldCount++;
-      highlights.push(`Start Date: ${startDate}`);
+  if (!startDate) {
+    const startDateMatch = text.match(/(?:commencement\s*date|effective\s*date|start\s*date|commencing\s*(?:from|on|with\s*effect\s*from)|rent\s*commencement\s*date|Lease\s*Rent\s*Commencement\s*Date)\s*[:\-–]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+[0-9]{4}|[0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{4}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{1,2})/i);
+    if (startDateMatch && startDateMatch[1]) {
+      startDate = parseCleanDate(startDateMatch[1]);
+      if (startDate) {
+        fieldCount++;
+        highlights.push(`Start Date: ${startDate}`);
+      }
     }
   }
 
-  const endDateMatch = text.match(/(?:expiry\s*date|ending\s*(?:on|with)|terminating\s*on|end\s*date|expiring\s*on)\s*[:\-–]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+[0-9]{4}|[0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{4}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{1,2})/i);
-  if (endDateMatch && endDateMatch[1]) {
-    endDate = parseCleanDate(endDateMatch[1]);
-    if (endDate) {
-      fieldCount++;
-      highlights.push(`End Date: ${endDate}`);
+  if (!endDate) {
+    const endDateMatch = text.match(/(?:expiry\s*date|ending\s*(?:on|with)|terminating\s*on|end\s*date|expiring\s*on)\s*[:\-–]?\s*([0-9]{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+[0-9]{4}|[0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{4}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{1,2})/i);
+    if (endDateMatch && endDateMatch[1]) {
+      endDate = parseCleanDate(endDateMatch[1]);
+      if (endDate) {
+        fieldCount++;
+        highlights.push(`End Date: ${endDate}`);
+      }
     }
   }
 
@@ -560,7 +676,8 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
 
   // 16. LOCK-IN PERIOD
   let lockInMonths = 12;
-  const lockInMatch = text.match(/(?:lock[- ]in\s*period|lock[- ]in)\s*(?:of|is)?\s*[:\-–]?\s*([0-9]+)\s*(?:months?|years?)/i);
+  const lockInMatch = text.match(/(?:lock[- ]in\s*period|lock[- ]in)\s*(?:of|is)?\s*[:\-–]?\s*([0-9]+)\s*(?:months?|years?)/i) ||
+                      text.match(/terminate\s+the\s+lease\s+deed\s+any\s+time\s+after\s*([0-9]+)\s*months/i);
   if (lockInMatch && lockInMatch[1]) {
     const val = parseInt(lockInMatch[1], 10);
     lockInMonths = lockInMatch[0].toLowerCase().includes("year") ? val * 12 : val;
@@ -582,28 +699,36 @@ export function parseCommercialLeaseText(rawText: string, fileName?: string): Ex
   let escalationPct = 5;
   let escalationFrequency: "Annual" | "Biannual" | "Quarterly" | "Triennial" = "Annual";
 
-  const escPctMatch = text.match(/(?:escalation|rent\s*(?:increase|revision)|escalated?)\s*(?:of|by|at)?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i) ||
-                      text.match(/([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:escalation|increase\s*in\s*rent)/i);
-  if (escPctMatch && escPctMatch[1]) {
-    escalationPct = parseFloat(escPctMatch[1]);
+  const escMatch = text.match(/(?:increase|escalation)[^\n.]*?([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:in\s+rent\s+and\s+maintenance\s+)?(?:after|every)\s*(?:every\s*)?([a-z0-9\s()]*?)(?:year|years)/i) ||
+                   text.match(/([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:escalation|increase\s*in\s*rent|every\s*year)/i) ||
+                   text.match(/(?:escalation|rent\s*(?:increase|revision)|escalated?)\s*(?:of|by|at)?\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+  if (escMatch && escMatch[1]) {
+    escalationPct = parseFloat(escMatch[1]);
     fieldCount++;
+    if (escMatch[2] && (escMatch[2].includes("two") || escMatch[2].includes("2"))) {
+      escalationFrequency = "Biannual";
+    }
   }
 
   if (text.match(/(?:after\s*every|every)\s*3\s*years/i) || text.match(/36\s*months/i)) {
     escalationFrequency = "Triennial";
-  } else if (text.match(/(?:after\s*every|every)\s*2\s*years/i) || text.match(/24\s*months/i)) {
-    escalationFrequency = "Biannual";
-  } else if (text.match(/quarterly|every\s*3\s*months/i)) {
-    escalationFrequency = "Quarterly";
-  } else {
-    escalationFrequency = "Annual";
+  } else if (!escalationFrequency || escalationFrequency === "Annual") {
+    if (text.match(/(?:after\s*every|every)\s*2\s*years/i) || text.match(/24\s*months/i)) {
+      escalationFrequency = "Biannual";
+    }
   }
   highlights.push(`Escalation: ${escalationPct}% (${escalationFrequency})`);
 
   let escalationStartDate = "";
   if (startDate) {
+    const monthsMap: Record<string, number> = {
+      Triennial: 36,
+      Biannual: 24,
+      Quarterly: 3,
+      Annual: 12,
+    };
+    const addMonths = monthsMap[escalationFrequency] || 12;
     const st = new Date(startDate);
-    const addMonths = escalationFrequency === "Triennial" ? 36 : escalationFrequency === "Biannual" ? 24 : escalationFrequency === "Quarterly" ? 3 : 12;
     st.setMonth(st.getMonth() + addMonths);
     const yyyy = st.getFullYear();
     const mm = String(st.getMonth() + 1).padStart(2, "0");

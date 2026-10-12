@@ -17,6 +17,9 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import PropertyHierarchyModal, {
+  HierarchyTab,
+} from "@/components/rent-roll/PropertyHierarchyModal";
 
 export default function TenantDirectoryPage() {
   const [tenants, setTenants] = useState<any[]>([]);
@@ -24,6 +27,8 @@ export default function TenantDirectoryPage() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("tenant");
 
   useEffect(() => {
     fetchData();
@@ -106,13 +111,16 @@ export default function TenantDirectoryPage() {
               >
                 <RefreshCw size={15} className={loading ? "animate-spin text-teal-600" : ""} />
               </button>
-              <Link
-                href="/profile/complete"
-                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition"
+              <button
+                onClick={() => {
+                  setHierarchyTab("tenant");
+                  setHierarchyModalOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus size={16} />
                 <span>Onboard New Tenant</span>
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -130,13 +138,16 @@ export default function TenantDirectoryPage() {
                   You must register a commercial property or tower before adding tenants and executing lease agreements.
                 </p>
               </div>
-              <Link
-                href="/profile/complete"
-                className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition inline-flex items-center gap-2 shadow-md shadow-teal-700/20"
+              <button
+                onClick={() => {
+                  setHierarchyTab("property");
+                  setHierarchyModalOpen(true);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition inline-flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
               >
                 <Plus size={16} />
                 <span>+ Add Property First</span>
-              </Link>
+              </button>
             </div>
           ) : (
             <>
@@ -255,6 +266,14 @@ export default function TenantDirectoryPage() {
           </>
           )}
         </main>
+
+        {/* Unified Canonical Commercial Hierarchy & Tenant Modal */}
+        <PropertyHierarchyModal
+          isOpen={hierarchyModalOpen}
+          onClose={() => setHierarchyModalOpen(false)}
+          initialTab={hierarchyTab}
+          onSuccess={fetchData}
+        />
 
         <MobileBottomNav />
       </div>

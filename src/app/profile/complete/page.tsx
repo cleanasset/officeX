@@ -340,7 +340,7 @@ function CompleteProfileContent() {
 
         showToast(`✓ Rent Agreement parsed successfully! ${d.extractedFieldsCount || 16} commercial terms auto-filled.`);
       } else {
-        showToast(json.error || "Failed to parse rent agreement. Please ensure document is legible.", "error");
+        showToast(json?.error || "Failed to parse rent agreement. Please ensure document is legible.", "error");
       }
     } catch (err: any) {
       showToast(`Document extraction failed: ${err.message}`, "error");
