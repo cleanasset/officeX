@@ -203,12 +203,24 @@ export function assertRolePermission(
   return { allowed: true };
 }
 
+import { getDeterministicOrgId, getDeterministicClientAccountId } from "./ensure-org";
+
+export interface RentRollAuthContext {
+  orgId: string;
+  clientAccountId?: string | null;
+  userId: string;
+  role: SpecRoleKey;
+  isPortfolioRole: boolean;
+  userEmail?: string | null;
+}
+
 export function getAuthContext(req: Request | NextRequest): RentRollAuthContext {
   const headers = req.headers;
-  let orgId = headers.get("x-org-id") || DEFAULT_TEST_ORG_ID;
-  let clientAccountId = headers.get("x-client-account-id") || DEFAULT_TEST_CLIENT_ID;
+  let orgId = headers.get("x-org-id") || "";
+  let clientAccountId = headers.get("x-client-account-id") || "";
   let userId = headers.get("x-user-id") || DEFAULT_TEST_USER_ID;
   let role = (headers.get("x-user-role") || "property_manager") as SpecRoleKey;
+  let userEmail: string | null = headers.get("x-user-email") || null;
 
   // Check cookies if in request headers
   const cookieHeader = headers.get("cookie") || "";
@@ -226,6 +238,20 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     clientAccountId = decodeURIComponent(clientCookie.split("=")[1].trim());
   }
 
+  const emailCookie = cookieHeader
+    .split(";")
+    .find((c) => c.trim().startsWith("officex_user_email="));
+  if (emailCookie) {
+    userEmail = decodeURIComponent(emailCookie.split("=")[1].trim()).toLowerCase().trim();
+  }
+
+  const orgCookie = cookieHeader
+    .split(";")
+    .find((c) => c.trim().startsWith("officex_org_id="));
+  if (orgCookie && !orgId) {
+    orgId = decodeURIComponent(orgCookie.split("=")[1].trim());
+  }
+
   // Check URL query params if present
   try {
     const url = new URL(req.url);
@@ -233,9 +259,24 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     if (url.searchParams.get("client_account_id")) clientAccountId = url.searchParams.get("client_account_id")!;
     if (url.searchParams.get("user_id")) userId = url.searchParams.get("user_id")!;
     if (url.searchParams.get("role")) role = url.searchParams.get("role") as SpecRoleKey;
+    if (url.searchParams.get("user_email")) userEmail = url.searchParams.get("user_email")!.toLowerCase().trim();
   } catch (e) {
     // ignore
   }
+
+  // If user is authenticated with an email, isolate data per user email
+  if (userEmail) {
+    if (!orgId) {
+      orgId = getDeterministicOrgId(userEmail);
+    }
+    if (!clientAccountId) {
+      clientAccountId = getDeterministicClientAccountId(userEmail);
+    }
+  }
+
+  // Fallback to default test constants only if neither email nor orgId was provided
+  if (!orgId) orgId = DEFAULT_TEST_ORG_ID;
+  if (!clientAccountId) clientAccountId = DEFAULT_TEST_CLIENT_ID;
 
   const isPortfolioRole = [
     "super_admin",
@@ -253,5 +294,6 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     userId,
     role,
     isPortfolioRole,
+    userEmail,
   };
 }

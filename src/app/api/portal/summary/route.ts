@@ -63,6 +63,11 @@ export async function GET(req: NextRequest) {
     if (requestedOccupantId) {
       const found = allOccupants.find((o) => o.id === requestedOccupantId);
       if (found) currentOccupant = found;
+    } else if (auth.userEmail) {
+      const matched = allOccupants.find(
+        (o) => o.email && o.email.toLowerCase().trim() === auth.userEmail?.toLowerCase().trim()
+      );
+      if (matched) currentOccupant = matched;
     }
 
     // 2. Fetch Active Contracts for this occupant

@@ -37,9 +37,17 @@ export default function TenantDirectoryPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const authHeaders: Record<string, string> = uEmail
+        ? { "x-user-email": uEmail }
+        : {};
+
       const [tenantsRes, propsRes] = await Promise.all([
-        fetch("/api/rent-roll/tenants").catch(() => null),
-        fetch("/api/rent-roll/properties").catch(() => null),
+        fetch("/api/rent-roll/tenants", { headers: authHeaders }).catch(() => null),
+        fetch("/api/rent-roll/properties", { headers: authHeaders }).catch(() => null),
       ]);
 
       if (propsRes && propsRes.ok) {
@@ -221,10 +229,11 @@ export default function TenantDirectoryPage() {
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                       <th className="py-3 px-4">Tenant Entity</th>
+                      <th className="py-3 px-4">Associated Property</th>
                       <th className="py-3 px-4">Trade Name</th>
                       <th className="py-3 px-4">PAN / GSTIN</th>
                       <th className="py-3 px-4">Leased Unit</th>
-                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Lease Status</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -234,6 +243,12 @@ export default function TenantDirectoryPage() {
                         <td className="py-3.5 px-4 font-black text-slate-900">
                           {t.tenant_name}
                         </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                            <Building2 size={13} className="text-teal-600 shrink-0" />
+                            <span>{t.property_name || "Unassigned"}</span>
+                          </div>
+                        </td>
                         <td className="py-3.5 px-4 text-slate-700 font-semibold">
                           {t.trade_name || "—"}
                         </td>
@@ -241,11 +256,17 @@ export default function TenantDirectoryPage() {
                           {t.pan || "—"}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 font-medium">
-                          {t.unit_number || "Unit Allocated"}
+                          {t.unit_number || "Pending Allocation"}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                            Active Lease
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              t.lease_status === "Active Lease"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {t.lease_status || "Pending Lease Allocation"}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">

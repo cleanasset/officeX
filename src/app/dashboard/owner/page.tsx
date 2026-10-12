@@ -224,30 +224,42 @@ export default function OwnerDashboardPage() {
     try {
       setLoading(true);
 
-      // 1. Fetch live properties from database API
-      const hasUserOnboarded = typeof window !== "undefined" && localStorage.getItem("officex_rentroll_onboarded") === "true";
-      const userProperty = typeof window !== "undefined" ? localStorage.getItem("officex_active_property") : null;
-      let registeredPropIds: string[] = [];
-      let registeredPropNames: string[] = [];
-      try {
-        if (typeof window !== "undefined") {
-          registeredPropIds = JSON.parse(localStorage.getItem("officex_registered_property_ids") || "[]");
-          registeredPropNames = JSON.parse(localStorage.getItem("officex_registered_property_names") || "[]");
-        }
-      } catch {}
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const authHeaders: Record<string, string> = uEmail
+        ? { "x-user-email": uEmail }
+        : {};
 
-      if (!hasUserOnboarded && !userProperty && registeredPropNames.length === 0 && registeredPropIds.length === 0) {
-        setProperties([]);
-        setIsOnboarded(false);
-        setLoading(false);
-        return;
+      // 1. Fetch live properties, tenants, and contracts in parallel
+      const [propRes, tenantsRes, contractsRes] = await Promise.all([
+        fetch("/api/rent-roll/properties", { headers: authHeaders }).catch(() => null),
+        fetch("/api/rent-roll/tenants", { headers: authHeaders }).catch(() => null),
+        fetch("/api/contracts", { headers: authHeaders }).catch(() => null),
+      ]);
+
+      let contractsData: any[] = [];
+      if (contractsRes && contractsRes.ok) {
+        const cJson = await contractsRes.json();
+        if (Array.isArray(cJson.data)) {
+          contractsData = cJson.data;
+        }
       }
 
-      const propRes = await fetch("/api/rent-roll/properties").catch(() => null);
+      let tenantsData: any[] = [];
+      if (tenantsRes && tenantsRes.ok) {
+        const tJson = await tenantsRes.json();
+        if (Array.isArray(tJson.data)) {
+          tenantsData = tJson.data;
+        }
+      }
+
       let liveProps: PropertySummary[] = [];
       if (propRes && propRes.ok) {
         const json = await propRes.json();
         if (Array.isArray(json.data) && json.data.length > 0) {
+          setIsOnboarded(true);
           const storedAssignments =
             typeof window !== "undefined"
               ? JSON.parse(localStorage.getItem("officex_property_assignments") || "{}")
@@ -257,46 +269,89 @@ export default function OwnerDashboardPage() {
           const mgrEmail = typeof window !== "undefined" ? localStorage.getItem("officex_manager_email") || "" : "";
           const mgrType = typeof window !== "undefined" ? localStorage.getItem("officex_manager_type") || "pm_agency" : "pm_agency";
 
-          let targetProps = json.data;
-          if (registeredPropIds.length > 0 || registeredPropNames.length > 0 || userProperty) {
-            const filtered = json.data.filter((p: any) => {
-              const pName = (p.property_name || "").toLowerCase().trim();
-              if (registeredPropIds.includes(p.id)) return true;
-              if (registeredPropNames.some((n: string) => n.toLowerCase().trim() === pName)) return true;
-              if (userProperty && pName === userProperty.toLowerCase().trim()) return true;
-              if (userProperty && pName.includes(userProperty.toLowerCase().trim())) return true;
-              return false;
-            });
-            if (filtered.length > 0) {
-              targetProps = filtered;
-            }
-          }
+          liveProps = json.data.map((p: any) => {
+            const assigned =
+              storedAssignments[p.id] ||
+              storedAssignments[p.property_name] ||
+              (hasMgr && mgrName ? { name: mgrName, email: mgrEmail, type: mgrType } : null);
 
-          liveProps = targetProps.map((p: any) => {
-              const assigned =
-                storedAssignments[p.id] ||
-                storedAssignments[p.property_name] ||
-                (hasMgr && mgrName ? { name: mgrName, email: mgrEmail, type: mgrType } : null);
+            // Compute revenue from contracts matching this property
+            const propContracts = contractsData.filter(
+              (c: any) => c.property_id === p.id || c.property_name === p.property_name
+            );
+            const calculatedRevenue = propContracts.reduce(
+              (sum: number, c: any) => sum + (Number(c.base_rent_rate) || 0),
+              0
+            );
 
-              return {
-                id: p.id,
-                name: p.property_name,
-                code: p.property_code || "PROP",
-                location: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.location || "Location not set"),
-                areaSqft: parseFloat(p.total_leasable_area_sqft || 0),
-                occupiedSqft: parseFloat(p.occupied_area_sqft || 0),
-                occupancyPct: parseFloat(p.total_leasable_area_sqft) > 0 ? Math.round((parseFloat(p.occupied_area_sqft || 0) / parseFloat(p.total_leasable_area_sqft)) * 100) : 0,
-                monthlyRevenue: parseFloat(p.monthly_rent || 0),
-                status: "Performing" as const,
-                assignedManager: assigned,
-              };
-            });
+            const totalArea = parseFloat(p.total_leasable_area_sqft || 0);
+            const occArea = parseFloat(p.occupied_area_sqft || 0) || (propContracts.length > 0 ? totalArea : 0);
+            const occPct = totalArea > 0 ? Math.min(100, Math.round((occArea / totalArea) * 100)) : 0;
+
+            return {
+              id: p.id,
+              name: p.property_name,
+              code: p.property_code || "PROP",
+              location: p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : (p.location || "Location not set"),
+              areaSqft: totalArea,
+              occupiedSqft: occArea,
+              occupancyPct: occPct,
+              monthlyRevenue: calculatedRevenue || parseFloat(p.monthly_rent || 0),
+              status: "Performing" as const,
+              assignedManager: assigned,
+            };
+          });
         }
       }
 
       setProperties(liveProps);
-      setTopOccupants([]);
-      setExpirations([]);
+
+      // 2. Populate Top Occupants from contracts / tenants
+      if (contractsData.length > 0) {
+        const sortedContracts = [...contractsData].sort(
+          (a, b) => (Number(b.base_rent_rate) || 0) - (Number(a.base_rent_rate) || 0)
+        );
+        const topOccs: OccupantRank[] = sortedContracts.slice(0, 5).map((c: any, idx: number) => ({
+          rank: idx + 1,
+          name: c.occupant_name || c.tenant_name || "Commercial Occupant",
+          property: c.property_name || liveProps[0]?.name || "Commercial Asset",
+          space: c.space_name || "Unit Allocated",
+          monthlyRent: Number(c.base_rent_rate || 0),
+          status: "Active" as const,
+        }));
+        setTopOccupants(topOccs);
+
+        // 3. Populate Expirations from contracts
+        const expList: ExpirationItem[] = contractsData.map((c: any) => {
+          const endDate = c.end_date ? new Date(c.end_date) : new Date();
+          const daysLeft = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          return {
+            id: c.id,
+            occupant: c.occupant_name || c.tenant_name || "Commercial Occupant",
+            property: c.property_name || liveProps[0]?.name || "Commercial Asset",
+            space: c.space_name || "Unit Allocated",
+            expiryDate: c.end_date || "2027-12-31",
+            daysLeft: isNaN(daysLeft) ? 365 : daysLeft,
+            status: daysLeft < 90 ? "approaching" : "renewed",
+            renewalStatusText: daysLeft < 90 ? `${daysLeft} days remaining` : "Active Term",
+          };
+        });
+        setExpirations(expList);
+      } else if (tenantsData.length > 0) {
+        const topOccs: OccupantRank[] = tenantsData.slice(0, 5).map((t: any, idx: number) => ({
+          rank: idx + 1,
+          name: t.tenant_name || t.trade_name || "Commercial Occupant",
+          property: t.property_name || liveProps[0]?.name || "Commercial Asset",
+          space: t.unit_number || "Pending Allocation",
+          monthlyRent: 0,
+          status: "Active" as const,
+        }));
+        setTopOccupants(topOccs);
+        setExpirations([]);
+      } else {
+        setTopOccupants([]);
+        setExpirations([]);
+      }
 
       // 2. Fetch live Aging data
       const agingRes = await fetch("/api/collections/aging").catch(() => null);

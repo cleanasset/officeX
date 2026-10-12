@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { property } from "@/db/schema";
+import { property, building, space } from "@/db/schema";
 import { validateRequiredFields } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 /**
@@ -167,6 +168,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Validation failed", details: reqVal.errors }, { status: 422 });
     }
 
+    await ensureTenantOrgRecord(orgId, clientAccountId, auth.userEmail);
+
     const [inserted] = await db
       .insert(property)
       .values({
@@ -202,6 +205,60 @@ export async function POST(req: Request) {
         },
       })
       .returning();
+
+    // Auto-provision building and space so Property/Space Registry and Rent Roll matrix are populated immediately
+    if (inserted) {
+      try {
+        const existingBuildings = await db
+          .select({ id: building.id })
+          .from(building)
+          .where(and(eq(building.property_id, inserted.id), sql`${building.deleted_at} IS NULL`))
+          .limit(1);
+
+        let targetBuildingId = existingBuildings[0]?.id;
+        if (!targetBuildingId) {
+          const [newBld] = await db
+            .insert(building)
+            .values({
+              org_id: orgId,
+              client_account_id: clientAccountId,
+              property_id: inserted.id,
+              building_name: `${inserted.property_name} Tower 1`,
+              building_code: `BLD-${inserted.property_code}-01`,
+              total_area_sqft: String(payload.total_leasable_area_sqft),
+            })
+            .returning();
+          targetBuildingId = newBld.id;
+        }
+
+        if (targetBuildingId) {
+          const existingSpaces = await db
+            .select({ id: space.id })
+            .from(space)
+            .where(and(eq(space.building_id, targetBuildingId), sql`${space.deleted_at} IS NULL`))
+            .limit(1);
+
+          if (existingSpaces.length === 0) {
+            await db
+              .insert(space)
+              .values({
+                org_id: orgId,
+                client_account_id: clientAccountId,
+                building_id: targetBuildingId,
+                space_name: "Suite 101",
+                space_code: `SPC-${inserted.property_code}-101`,
+                chargeable_area_sqft: String(payload.total_leasable_area_sqft),
+                occupancy_status: "vacant",
+                is_leasable: true,
+                space_type: "suite",
+              })
+              .returning();
+          }
+        }
+      } catch (autoErr) {
+        console.warn("Auto-provision building/space notice:", autoErr);
+      }
+    }
 
     return NextResponse.json({ success: true, data: inserted }, { status: 201 });
   } catch (err: any) {

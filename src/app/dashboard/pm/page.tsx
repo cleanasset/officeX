@@ -78,10 +78,22 @@ export default function PropertyManagerDashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
 
   useEffect(() => {
-    fetch("/api/properties")
+    const uEmail =
+      typeof window !== "undefined"
+        ? localStorage.getItem("officex_user_email") || ""
+        : "";
+    const authHeaders: Record<string, string> = uEmail
+      ? { "x-user-email": uEmail }
+      : {};
+
+    fetch("/api/rent-roll/properties", { headers: authHeaders })
       .then((res) => res.json())
       .then((data) => {
-        const list = Array.isArray(data) ? data : data.properties || [];
+        const list = Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data)
+          ? data
+          : data.properties || [];
         setPropertiesList(list);
       })
       .catch(() => {});

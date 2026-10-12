@@ -277,8 +277,16 @@ export default function PropertyHierarchyModal({
 
   const loadHierarchyDropdowns = async () => {
     try {
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const authHeaders: Record<string, string> = uEmail
+        ? { "x-user-email": uEmail }
+        : {};
+
       // 1. Fetch properties
-      const pRes = await fetch("/api/rent-roll/properties");
+      const pRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
       if (pRes.ok) {
         const pData = await pRes.json();
         const pArr = (Array.isArray(pData.data) ? pData.data : []).map((p: any) => ({
@@ -293,7 +301,7 @@ export default function PropertyHierarchyModal({
       }
 
       // 2. Fetch buildings
-      const bRes = await fetch("/api/buildings");
+      const bRes = await fetch("/api/buildings", { headers: authHeaders });
       if (bRes.ok) {
         const bData = await bRes.json();
         const bArr = (Array.isArray(bData.data) ? bData.data : []).map((b: any) => ({
@@ -309,7 +317,7 @@ export default function PropertyHierarchyModal({
       }
 
       // 3. Fetch spaces
-      const sRes = await fetch("/api/spaces");
+      const sRes = await fetch("/api/spaces", { headers: authHeaders });
       if (sRes.ok) {
         const sData = await sRes.json();
         const sArr = (Array.isArray(sData.data) ? sData.data : []).map((s: any) => ({
@@ -329,7 +337,7 @@ export default function PropertyHierarchyModal({
       }
 
       // 4. Fetch tenants
-      const tRes = await fetch("/api/rent-roll/tenants");
+      const tRes = await fetch("/api/rent-roll/tenants", { headers: authHeaders });
       if (tRes.ok) {
         const tData = await tRes.json();
         const tArr = (Array.isArray(tData.data) ? tData.data : []).map((t: any) => ({
@@ -369,9 +377,16 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           id: propForm.existingPropId || undefined,
           property_name: propForm.propertyName.trim(),
@@ -439,9 +454,16 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
       const res = await fetch("/api/buildings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           building_name: bldgForm.buildingName.trim(),
           building_code: `BLDG-${Date.now().toString().slice(-4)}`,
@@ -486,9 +508,16 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
       const res = await fetch("/api/spaces", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           space_name: spaceForm.spaceName.trim(),
           space_code: `SP-${Date.now().toString().slice(-4)}`,
@@ -541,9 +570,18 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const targetPropertyId = contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || null;
+
       const res = await fetch("/api/rent-roll/tenants", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           tenant_name: tenantForm.occupantName.trim(),
           trade_name: tenantForm.companyName.trim() || tenantForm.occupantName.trim(),
@@ -554,6 +592,7 @@ export default function PropertyHierarchyModal({
           billing_address: tenantForm.billingAddress.trim(),
           alt_contact_name: tenantForm.altContactName.trim(),
           alt_contact_phone: tenantForm.altContactPhone.trim(),
+          property_id: targetPropertyId,
           remarks: JSON.stringify({
             signatory_name: tenantForm.signatoryName.trim(),
             signatory_designation: tenantForm.signatoryDesignation.trim(),
@@ -927,9 +966,17 @@ export default function PropertyHierarchyModal({
         .filter(Boolean)
         .join(" | ");
 
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+
       const res = await fetch("/api/contracts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           occupant_id: contractForm.occupantId,
           space_id: contractForm.spaceId,

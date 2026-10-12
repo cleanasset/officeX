@@ -21,6 +21,7 @@ import {
   validateChargeDates,
 } from "@/db/validation";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
+import { ensureTenantOrgRecord } from "@/lib/rent-roll/ensure-org";
 import { eq, and, sql, desc, or, ilike } from "drizzle-orm";
 
 /**
@@ -32,21 +33,88 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const orgId = body.org_id || auth.orgId;
-    const clientAccountId = body.client_account_id || auth.clientAccountId;
+    let clientAccountId = body.client_account_id || auth.clientAccountId;
 
-    if (!clientAccountId) {
-      return NextResponse.json(
-        { error: "client_account_id is required for multi-client isolation" },
-        { status: 400 }
-      );
+    const ensured = await ensureTenantOrgRecord(orgId, clientAccountId, auth.userEmail);
+    clientAccountId = ensured.clientAccountId;
+
+    // Auto-resolve space_id if property_id was provided without an explicit space_id
+    let targetSpaceId = body.space_id;
+    if (!targetSpaceId && (body.property_id || body.building_id)) {
+      const spaceConditions = [
+        eq(space.org_id, orgId),
+        sql`${space.deleted_at} IS NULL`,
+      ];
+      if (body.building_id) {
+        spaceConditions.push(eq(space.building_id, body.building_id));
+      }
+
+      const existingSpaces = await db
+        .select({
+          spaceId: space.id,
+          buildingId: space.building_id,
+        })
+        .from(space)
+        .innerJoin(building, eq(space.building_id, building.id))
+        .where(
+          and(
+            ...spaceConditions,
+            body.property_id ? eq(building.property_id, body.property_id) : sql`1=1`
+          )
+        )
+        .limit(1);
+
+      if (existingSpaces.length > 0) {
+        targetSpaceId = existingSpaces[0].spaceId;
+      } else if (body.property_id) {
+        // Auto-provision building & space under this property
+        const propRows = await db
+          .select()
+          .from(property)
+          .where(eq(property.id, body.property_id))
+          .limit(1);
+
+        if (propRows.length > 0) {
+          const p = propRows[0];
+          const [newBld] = await db
+            .insert(building)
+            .values({
+              org_id: orgId,
+              client_account_id: clientAccountId,
+              property_id: p.id,
+              building_name: `${p.property_name} Tower 1`,
+              building_code: `BLD-${p.property_code}-01`,
+              total_area_sqft: p.total_leasable_area_sqft,
+            })
+            .returning();
+
+          const [newSpc] = await db
+            .insert(space)
+            .values({
+              org_id: orgId,
+              client_account_id: clientAccountId,
+              building_id: newBld.id,
+              space_name: "Suite 101",
+              space_code: `SPC-${p.property_code}-101`,
+              chargeable_area_sqft: p.total_leasable_area_sqft,
+              occupancy_status: "occupied",
+              is_leasable: true,
+              space_type: "suite",
+            })
+            .returning();
+
+          targetSpaceId = newSpc.id;
+        }
+      }
     }
 
     const payload = {
       ...body,
       org_id: orgId,
       client_account_id: clientAccountId,
-      contract_status: body.contract_status || "draft",
-      approval_status: "draft",
+      space_id: targetSpaceId || body.space_id,
+      contract_status: body.contract_status || "active",
+      approval_status: body.approval_status || "approved",
       is_evergreen: body.is_evergreen ?? false,
       is_template: body.is_template ?? false,
       version: 1,
@@ -173,6 +241,11 @@ export async function POST(req: Request) {
         created_by: auth.userId,
         updated_by: auth.userId,
       });
+
+      await db
+        .update(space)
+        .set({ occupancy_status: "occupied" })
+        .where(eq(space.id, payload.space_id));
     }
 
     // Insert Charges & Rent Steps

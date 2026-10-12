@@ -52,23 +52,33 @@ export default function AgreementVarianceModal({
   const getFieldIcon = (key: string) => {
     switch (key) {
       case "occupantName":
+      case "occupant_id":
       case "companyName":
         return <User size={15} className="text-teal-600 shrink-0" />;
       case "propertyName":
+      case "property_id":
       case "spaceName":
       case "buildingName":
         return <Building2 size={15} className="text-blue-600 shrink-0" />;
       case "monthlyRent":
+      case "monthly_rent":
       case "ratePerSqft":
+      case "rate_per_sqft":
       case "securityDeposit":
+      case "security_deposit":
         return <DollarSign size={15} className="text-emerald-600 shrink-0" />;
       case "areaSqft":
+      case "area_sqft":
         return <Maximize2 size={15} className="text-indigo-600 shrink-0" />;
       case "startDate":
+      case "start_date":
       case "endDate":
+      case "end_date":
       case "lockInMonths":
+      case "lock_in_months":
         return <Calendar size={15} className="text-amber-600 shrink-0" />;
       case "escalationPct":
+      case "escalation_pct":
         return <Percent size={15} className="text-purple-600 shrink-0" />;
       default:
         return <FileText size={15} className="text-slate-600 shrink-0" />;

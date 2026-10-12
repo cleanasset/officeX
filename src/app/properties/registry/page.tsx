@@ -14,6 +14,9 @@ import {
   RefreshCw,
   Building,
   MapPin,
+  Users,
+  Coins,
+  ChevronRight,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -23,24 +26,47 @@ import PropertyHierarchyModal, {
 } from "@/components/rent-roll/PropertyHierarchyModal";
 
 export default function SpaceAndBuildingRegistryPage() {
+  const [activeTab, setActiveTab] = useState<"properties" | "units">("properties");
+  const [properties, setProperties] = useState<any[]>([]);
   const [spaces, setSpaces] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBuilding, setSelectedBuilding] = useState("all");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
-  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("space");
+  const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("property");
 
   useEffect(() => {
-    fetchSpaces();
+    fetchRegistryData();
   }, []);
 
-  const fetchSpaces = async () => {
+  const fetchRegistryData = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/spaces").catch(() => null);
-      if (res && res.ok) {
-        const json = await res.json();
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const authHeaders: Record<string, string> = uEmail
+        ? { "x-user-email": uEmail }
+        : {};
+
+      const [propsRes, spacesRes] = await Promise.all([
+        fetch("/api/rent-roll/properties", { headers: authHeaders }).catch(() => null),
+        fetch("/api/spaces", { headers: authHeaders }).catch(() => null),
+      ]);
+
+      let loadedProps: any[] = [];
+      if (propsRes && propsRes.ok) {
+        const json = await propsRes.json();
         if (Array.isArray(json.data)) {
+          loadedProps = json.data;
+          setProperties(json.data);
+        }
+      }
+
+      if (spacesRes && spacesRes.ok) {
+        const json = await spacesRes.json();
+        if (Array.isArray(json.data) && json.data.length > 0) {
           setSpaces(
             json.data.map((s: any) => ({
               id: s.id,
@@ -52,36 +78,42 @@ export default function SpaceAndBuildingRegistryPage() {
               standard_rate_psf: Number(s.standard_rate_psf || s.rate_per_sqft || 0),
             }))
           );
-        }
-      } else {
-        // Fallback: check properties to build spaces summary
-        const propRes = await fetch("/api/rent-roll/properties").catch(() => null);
-        if (propRes && propRes.ok) {
-          const json = await propRes.json();
-          if (Array.isArray(json.data) && json.data.length > 0) {
-            setSpaces(
-              json.data.map((p: any, idx: number) => ({
-                id: p.id,
-                space_number: `T1-FL0${idx + 1}-01`,
-                building_name: p.property_name,
-                floor_number: idx + 1,
-                chargeable_area: p.total_leasable_area_sqft || 0,
-                status: "available",
-                standard_rate_psf: p.price_per_sqft || 0,
-              }))
-            );
-          } else {
-            setSpaces([]);
-          }
+        } else if (loadedProps.length > 0) {
+          // If no spaces are explicitly demarcated yet, generate primary demarcated unit rows
+          // from registered commercial properties so users immediately see their asset structure
+          setSpaces(
+            loadedProps.map((p: any, idx: number) => ({
+              id: p.id,
+              space_number: `Unit ${p.property_code ? p.property_code.slice(-4) : "101"}`,
+              building_name: p.property_name,
+              floor_number: 1,
+              chargeable_area: Number(p.total_leasable_area_sqft || 0),
+              status: "available",
+              standard_rate_psf: Number(p.price_per_sqft || 0),
+            }))
+          );
+        } else {
+          setSpaces([]);
         }
       }
     } catch (e) {
       console.error(e);
+      setProperties([]);
       setSpaces([]);
     } finally {
       setLoading(false);
     }
   };
+
+  const filteredProperties = properties.filter((p) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      !q ||
+      (p.property_name && p.property_name.toLowerCase().includes(q)) ||
+      (p.city && p.city.toLowerCase().includes(q)) ||
+      (p.property_code && p.property_code.toLowerCase().includes(q))
+    );
+  });
 
   const filteredSpaces = spaces.filter((s) => {
     const q = searchQuery.toLowerCase();
@@ -108,19 +140,19 @@ export default function SpaceAndBuildingRegistryPage() {
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <Link href="/properties" className="hover:text-slate-800">Portfolio</Link>
                 <span>/</span>
-                <span className="text-[#0F8B7D] font-bold">Space &amp; Building Registry</span>
+                <span className="text-[#0F8B7D] font-bold">Property &amp; Space Registry</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-                Space &amp; Building Registry
+                Property &amp; Space Registry
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                Master database of commercial towers, floors, demarcated leasable units, and carpet areas.
+                Master database of registered commercial properties, towers, floors, and demarcated units.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <button
-                onClick={fetchSpaces}
+                onClick={fetchRegistryData}
                 className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition cursor-pointer"
                 title="Refresh Registry"
               >
@@ -128,15 +160,51 @@ export default function SpaceAndBuildingRegistryPage() {
               </button>
               <button
                 onClick={() => {
-                  setHierarchyTab("space");
+                  setHierarchyTab("property");
                   setHierarchyModalOpen(true);
                 }}
                 className="px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold shadow-md shadow-teal-700/20 flex items-center gap-2 transition cursor-pointer"
               >
                 <Plus size={16} />
-                <span>Demarcate New Unit</span>
+                <span>+ Register Property</span>
+              </button>
+              <button
+                onClick={() => {
+                  setHierarchyTab("space");
+                  setHierarchyModalOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md flex items-center gap-2 transition cursor-pointer"
+              >
+                <Layers size={15} />
+                <span>Demarcate Unit</span>
               </button>
             </div>
+          </div>
+
+          {/* Tab Navigation: Properties vs Demarcated Units */}
+          <div className="flex items-center gap-3 border-b border-slate-200">
+            <button
+              onClick={() => setActiveTab("properties")}
+              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${
+                activeTab === "properties"
+                  ? "border-[#0F8B7D] text-[#0F8B7D]"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Building2 size={16} />
+              <span>Registered Commercial Properties ({properties.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("units")}
+              className={`pb-3 px-2 text-xs sm:text-sm font-black flex items-center gap-2 border-b-2 transition cursor-pointer ${
+                activeTab === "units"
+                  ? "border-[#0F8B7D] text-[#0F8B7D]"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Layers size={16} />
+              <span>Demarcated Units &amp; Spaces ({spaces.length})</span>
+            </button>
           </div>
 
           {/* Search & Filter Bar */}
@@ -145,7 +213,11 @@ export default function SpaceAndBuildingRegistryPage() {
               <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search unit number, wing, or tower..."
+                placeholder={
+                  activeTab === "properties"
+                    ? "Search property name, city, code..."
+                    : "Search unit number, wing, or tower..."
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-600"
@@ -154,94 +226,211 @@ export default function SpaceAndBuildingRegistryPage() {
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end text-xs">
               <span className="text-slate-500 font-semibold hidden sm:inline">Showing:</span>
               <span className="font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">
-                {filteredSpaces.length} Units Demarcated
+                {activeTab === "properties"
+                  ? `${filteredProperties.length} Properties`
+                  : `${filteredSpaces.length} Units Demarcated`}
               </span>
             </div>
           </div>
 
-          {/* Units Table or Clean Empty State */}
-          <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
-            {loading ? (
-              <div className="p-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
-                <RefreshCw size={24} className="animate-spin text-teal-600" />
-                <span>Loading space registry records...</span>
-              </div>
-            ) : filteredSpaces.length === 0 ? (
-              <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
-                  <Layers size={28} />
+          {/* TAB 1: REGISTERED PROPERTIES */}
+          {activeTab === "properties" && (
+            <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
+              {loading ? (
+                <div className="p-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
+                  <RefreshCw size={24} className="animate-spin text-teal-600" />
+                  <span>Loading property registry records...</span>
                 </div>
-                <h4 className="text-base font-black text-slate-900">No units demarcated yet</h4>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  You haven&apos;t added any commercial floors or spaces yet. Add your property units to track occupancy, leases, and escalations.
-                </p>
-                <div className="mt-6 flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => {
-                      setHierarchyTab("property");
-                      setHierarchyModalOpen(true);
-                    }}
-                    className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
-                  >
-                    <Plus size={15} />
-                    <span>Onboard Property First</span>
-                  </button>
+              ) : filteredProperties.length === 0 ? (
+                <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
+                  <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
+                    <Building2 size={28} />
+                  </div>
+                  <h4 className="text-base font-black text-slate-900">No properties registered yet</h4>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Register your commercial asset or business park to manage leases, rent rolls, and tenant allocations.
+                  </p>
+                  <div className="mt-6 flex items-center justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setHierarchyTab("property");
+                        setHierarchyModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
+                    >
+                      <Plus size={15} />
+                      <span>+ Register Property Now</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                      <th className="py-3 px-4">Space # / Unit</th>
-                      <th className="py-3 px-4">Tower / Building</th>
-                      <th className="py-3 px-4">Floor</th>
-                      <th className="py-3 px-4">Chargeable Sq.Ft</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredSpaces.map((space) => (
-                      <tr key={space.id} className="hover:bg-teal-50/30 transition">
-                        <td className="py-3.5 px-4 font-black text-slate-900">
-                          {space.space_number}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-700 font-semibold">
-                          {space.building_name || "Main Tower"}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-600 font-medium">
-                          Floor {space.floor_number || 1}
-                        </td>
-                        <td className="py-3.5 px-4 font-black text-slate-900">
-                          {parseFloat(space.chargeable_area || 0).toLocaleString("en-IN")} sq.ft
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              space.status === "leased"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-teal-100 text-teal-800"
-                            }`}
-                          >
-                            {space.status || "Available"}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <Link
-                            href="/properties/rent-roll"
-                            className="text-[#0F8B7D] font-bold text-xs hover:underline"
-                          >
-                            View in Rent Roll →
-                          </Link>
-                        </td>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                        <th className="py-3 px-4">Commercial Property</th>
+                        <th className="py-3 px-4">Code</th>
+                        <th className="py-3 px-4">Location</th>
+                        <th className="py-3 px-4">Leasable Area</th>
+                        <th className="py-3 px-4">Base Rate PSF</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredProperties.map((p) => (
+                        <tr key={p.id} className="hover:bg-teal-50/30 transition">
+                          <td className="py-3.5 px-4 font-black text-slate-900">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0">
+                                <Building size={14} />
+                              </div>
+                              <div>
+                                <span>{p.property_name}</span>
+                                <div className="text-[10px] text-slate-400 font-normal">
+                                  {p.property_type ? p.property_type.toUpperCase() : "COMMERCIAL"}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+                            {p.property_code || "—"}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-700 font-semibold">
+                            <div className="flex items-center gap-1 text-slate-600">
+                              <MapPin size={12} className="text-teal-600 shrink-0" />
+                              <span>{p.city ? `${p.city}${p.state ? `, ${p.state}` : ""}` : "India"}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-black text-slate-900">
+                            {Number(p.total_leasable_area_sqft || 0).toLocaleString("en-IN")} sq.ft
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                            ₹{Number(p.price_per_sqft || 0).toLocaleString("en-IN")}/sqft
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                              Active Asset
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setHierarchyTab("tenant");
+                                  setHierarchyModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold transition cursor-pointer"
+                              >
+                                + Add Tenant
+                              </button>
+                              <Link
+                                href="/properties/rent-roll"
+                                className="text-[#0F8B7D] font-bold text-xs hover:underline flex items-center gap-0.5"
+                              >
+                                <span>Rent Roll</span>
+                                <ChevronRight size={13} />
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: DEMARCATED UNITS & SPACES */}
+          {activeTab === "units" && (
+            <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs">
+              {loading ? (
+                <div className="p-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-2">
+                  <RefreshCw size={24} className="animate-spin text-teal-600" />
+                  <span>Loading space registry records...</span>
+                </div>
+              ) : filteredSpaces.length === 0 ? (
+                <div className="p-12 sm:p-16 text-center max-w-md mx-auto">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+                    <Layers size={28} />
+                  </div>
+                  <h4 className="text-base font-black text-slate-900">No units demarcated yet</h4>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    You haven&apos;t demarcated any individual office floors or spaces yet. Demarcate units to allocate to tenants.
+                  </p>
+                  <div className="mt-6 flex items-center justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setHierarchyTab("space");
+                        setHierarchyModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-teal-700/20 cursor-pointer"
+                    >
+                      <Plus size={15} />
+                      <span>Demarcate Unit Now</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                        <th className="py-3 px-4">Space # / Unit</th>
+                        <th className="py-3 px-4">Tower / Commercial Property</th>
+                        <th className="py-3 px-4">Floor</th>
+                        <th className="py-3 px-4">Chargeable Sq.Ft</th>
+                        <th className="py-3 px-4">Standard Rate PSF</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredSpaces.map((space) => (
+                        <tr key={space.id} className="hover:bg-teal-50/30 transition">
+                          <td className="py-3.5 px-4 font-black text-slate-900">
+                            {space.space_number}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-700 font-semibold">
+                            {space.building_name || "Main Tower"}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600 font-medium">
+                            Floor {space.floor_number || 1}
+                          </td>
+                          <td className="py-3.5 px-4 font-black text-slate-900">
+                            {parseFloat(space.chargeable_area || 0).toLocaleString("en-IN")} sq.ft
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                            {space.standard_rate_psf > 0 ? `₹${space.standard_rate_psf}/sqft` : "—"}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                space.status === "leased"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-teal-100 text-teal-800"
+                              }`}
+                            >
+                              {space.status || "Available"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <Link
+                              href="/properties/rent-roll"
+                              className="text-[#0F8B7D] font-bold text-xs hover:underline"
+                            >
+                              View in Rent Roll →
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </main>
 
         {/* Unified Canonical Commercial Hierarchy, Space & Property Modal */}
@@ -249,7 +438,7 @@ export default function SpaceAndBuildingRegistryPage() {
           isOpen={hierarchyModalOpen}
           onClose={() => setHierarchyModalOpen(false)}
           initialTab={hierarchyTab}
-          onSuccess={fetchSpaces}
+          onSuccess={fetchRegistryData}
         />
 
         <MobileBottomNav />

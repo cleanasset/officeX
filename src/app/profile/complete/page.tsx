@@ -55,6 +55,7 @@ import {
   matchCanonicalIndianCity,
 } from "@/lib/india-locations";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
+import AgreementVarianceModal, { AgreementDiffItem } from "@/components/rent-roll/AgreementVarianceModal";
 
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL =
@@ -249,7 +250,27 @@ function CompleteProfileContent() {
     summaryHighlights: string[];
   } | null>(null);
 
-  // ──── LEASE AGREEMENT PARSING & AUTO-POPULATION ────
+  // Agreement Variance Review States (§Discrepancy Popup & Highlight)
+  const [varianceModalOpen, setVarianceModalOpen] = useState(false);
+  const [pendingAgreementFile, setPendingAgreementFile] = useState("");
+  const [pendingAgreementData, setPendingAgreementData] = useState<any>(null);
+  const [agreementDifferences, setAgreementDifferences] = useState<AgreementDiffItem[]>([]);
+  const [changedFieldKeys, setChangedFieldKeys] = useState<Set<string>>(new Set());
+
+  const getHighlightClass = (key: string, baseClass: string) => {
+    if (changedFieldKeys.has(key)) {
+      return `${baseClass} bg-amber-50 border-amber-400 ring-2 ring-amber-300/70 transition-all duration-300`;
+    }
+    return baseClass;
+  };
+
+  useEffect(() => {
+    if (changedFieldKeys.size > 0) {
+      setChangedFieldKeys(new Set());
+    }
+  }, [activeStep]);
+
+  // ──── LEASE AGREEMENT PARSING & AUTO-POPULATION WITH DIFFERENCE REVIEW ────
   const handleUploadRentAgreement = async (file: File) => {
     if (!file) return;
     setIsUploadingAgreement(true);
@@ -259,86 +280,167 @@ function CompleteProfileContent() {
         const d = json.data;
         setParsedAgreementMeta({
           fileName: json.fileName,
-          confidence: d.confidence || 92,
-          extractedFieldsCount: d.extractedFieldsCount || 16,
+          confidence: d.confidence || 90,
+          extractedFieldsCount: d.extractedFieldsCount || 12,
           summaryHighlights: d.summaryHighlights || [],
         });
 
-        // 1. Auto-match occupant if name detected
-        let targetOccupantId = contractForm.occupant_id;
-        if (d.occupantName || d.companyName) {
-          const searchName = (d.occupantName || d.companyName).toLowerCase();
-          const matched = tenantsList.find(
-            (t) =>
-              t.name.toLowerCase().includes(searchName) ||
-              searchName.includes(t.name.toLowerCase()) ||
-              (t.company && t.company.toLowerCase().includes(searchName))
-          );
-          if (matched) {
-            targetOccupantId = matched.id;
-          }
+        // 1. Resolve currently selected/typed tenant name
+        const currentSelectedTenant = tenantsList.find((t) => t.id === contractForm.occupant_id);
+        const currentOccupantName = currentSelectedTenant?.name || tenantForm.occupant_name || contractForm.occupant_name || "";
+
+        // 2. Resolve currently selected/typed property name
+        const currentSelectedProp = registeredProperties.find(
+          (p) => p.id === selectedPropertyForTenant || p.id === contractForm.property_id
+        );
+        const currentPropName = currentSelectedProp?.property_name || propForm.property_name || "";
+
+        const diffs: AgreementDiffItem[] = [];
+
+        // 1. Occupant / Tenant Entity Name
+        if (d.occupantName) {
+          const hasVariance =
+            currentOccupantName !== "" &&
+            currentOccupantName.toLowerCase().trim() !== d.occupantName.toLowerCase().trim();
+          diffs.push({
+            fieldKey: "occupant_id",
+            label: "Occupant / Tenant Entity",
+            currentValue: currentOccupantName || "(Not selected)",
+            agreementValue: d.occupantName,
+            hasVariance: hasVariance || !currentOccupantName,
+          });
         }
 
-        // 2. Auto-populate all extracted commercial particulars
-        setContractForm((prev) => {
-          const areaVal = d.areaSqft ? String(d.areaSqft) : prev.area_sqft;
-          const rateSqft = d.ratePerSqft ? String(d.ratePerSqft) : prev.rate_per_sqft;
-          let calculatedRent = d.monthlyRent ? String(d.monthlyRent) : prev.monthly_rent;
-          if (!calculatedRent && rateSqft && areaVal) {
-            calculatedRent = String(Math.round(Number(rateSqft) * Number(areaVal)));
-          }
+        // 2. Commercial Property / Lessor Entity
+        if (d.lessorName || d.propertyName) {
+          const docProp = d.lessorName || d.propertyName;
+          const hasVariance =
+            currentPropName !== "" &&
+            !currentPropName.toLowerCase().trim().includes(docProp.toLowerCase().trim().slice(0, 5));
+          diffs.push({
+            fieldKey: "property_id",
+            label: "Commercial Property / Lessor",
+            currentValue: currentPropName || "(Not selected)",
+            agreementValue: docProp,
+            hasVariance: hasVariance || !currentPropName,
+          });
+        }
 
-          let calcDeposit = d.securityDeposit ? String(d.securityDeposit) : prev.security_deposit;
-          if (!calcDeposit && d.depositMonths && calculatedRent) {
-            calcDeposit = String(Math.round(Number(calculatedRent) * Number(d.depositMonths)));
-          }
+        // 3. Leasable Area (Sq.Ft)
+        if (d.areaSqft > 0) {
+          const curArea = Number(contractForm.area_sqft) || Number(propForm.total_leasable_area_sqft) || 0;
+          const hasVariance = curArea !== d.areaSqft;
+          diffs.push({
+            fieldKey: "area_sqft",
+            label: "Leasable Area",
+            currentValue: curArea > 0 ? `${curArea.toLocaleString()} Sq.Ft` : "(Not entered)",
+            agreementValue: `${d.areaSqft.toLocaleString()} Sq.Ft`,
+            hasVariance: hasVariance,
+          });
+        }
 
-          return {
-            ...prev,
-            occupant_id: targetOccupantId || prev.occupant_id,
-            building_name: d.buildingName || prev.building_name,
-            space_unit: d.spaceName || prev.space_unit,
-            area_sqft: areaVal,
-            start_date: d.startDate || prev.start_date,
-            end_date: d.endDate || prev.end_date,
-            billing_model: d.billingModel || prev.billing_model,
-            rate_per_sqft: rateSqft,
-            rate_per_seat: d.ratePerSeat ? String(d.ratePerSeat) : prev.rate_per_seat,
-            seat_count: d.seatCount ? String(d.seatCount) : prev.seat_count,
-            bare_shell_rate: d.bareShellRate ? String(d.bareShellRate) : prev.bare_shell_rate,
-            fitout_rate: d.fitoutRate ? String(d.fitoutRate) : prev.fitout_rate,
-            monthly_rent: calculatedRent,
-            fitout_condition: d.fitoutCondition || prev.fitout_condition,
-            fitout_period_days: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitout_period_days,
-            possession_date: d.possessionDate || prev.possession_date,
-            cam_type: d.camType || prev.cam_type,
-            cam_rate: d.camRate ? String(d.camRate) : prev.cam_rate,
-            cam_monthly: d.camMonthly ? String(d.camMonthly) : prev.cam_monthly,
-            electricity_billing: d.electricityBilling || prev.electricity_billing,
-            power_backup_type: d.powerBackupType || prev.power_backup_type,
-            electricity_load_kva: d.electricityLoadKva ? String(d.electricityLoadKva) : prev.electricity_load_kva,
-            dg_rate_per_kwh: d.dgRatePerKwh ? String(d.dgRatePerKwh) : prev.dg_rate_per_kwh,
-            water_charges: d.waterCharges || prev.water_charges,
-            car_parking_slots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.car_parking_slots,
-            car_parking_rate: d.carParkingRate ? String(d.carParkingRate) : prev.car_parking_rate,
-            two_wheeler_slots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.two_wheeler_slots,
-            two_wheeler_rate: d.twoWheelerRate ? String(d.twoWheelerRate) : prev.two_wheeler_rate,
-            escalation_pct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalation_pct,
-            escalation_frequency: d.escalationFrequency || prev.escalation_frequency,
-            escalation_start_date: d.escalationStartDate || prev.escalation_start_date,
-            security_deposit: calcDeposit,
-            deposit_months: d.depositMonths ? String(d.depositMonths) : prev.deposit_months,
-            lock_in_months: d.lockInMonths ? String(d.lockInMonths) : prev.lock_in_months,
-            notice_days: d.noticeDays ? String(d.noticeDays) : prev.notice_days,
-            billing_entity: d.billingEntity || prev.billing_entity,
-            payment_terms: d.paymentTerms || prev.payment_terms,
-            late_interest_pct: d.lateInterestPct ? String(d.lateInterestPct) : prev.late_interest_pct,
-            stamp_duty_sharing: d.stampDutySharing || prev.stamp_duty_sharing,
-            notes: d.notes || prev.notes,
-          };
-        });
+        // 4. Monthly Base Rent
+        if (d.monthlyRent > 0) {
+          const curRent = Number(contractForm.monthly_rent) || 0;
+          const hasVariance = curRent !== d.monthlyRent;
+          diffs.push({
+            fieldKey: "monthly_rent",
+            label: "Monthly Base Rent",
+            currentValue: curRent > 0 ? `₹${curRent.toLocaleString()}` : "(Not entered)",
+            agreementValue: `₹${d.monthlyRent.toLocaleString()}`,
+            hasVariance: hasVariance,
+          });
+        }
 
-        showToast(`✓ Rent Agreement parsed successfully! ${d.extractedFieldsCount || 16} commercial terms auto-filled.`);
+        // 5. Rate per Sq.Ft
+        if (d.ratePerSqft > 0) {
+          const curRate = Number(contractForm.rate_per_sqft) || 0;
+          const hasVariance = curRate !== d.ratePerSqft;
+          diffs.push({
+            fieldKey: "rate_per_sqft",
+            label: "Rate PSF",
+            currentValue: curRate > 0 ? `₹${curRate}/sqft` : "(Not entered)",
+            agreementValue: `₹${d.ratePerSqft}/sqft`,
+            hasVariance: hasVariance,
+          });
+        }
+
+        // 6. Security Deposit
+        if (d.securityDeposit > 0) {
+          const curDep = Number(contractForm.security_deposit) || 0;
+          const hasVariance = curDep !== d.securityDeposit;
+          diffs.push({
+            fieldKey: "security_deposit",
+            label: "Security Deposit (IFRSD)",
+            currentValue: curDep > 0 ? `₹${curDep.toLocaleString()}` : "(Not entered)",
+            agreementValue: `₹${d.securityDeposit.toLocaleString()}`,
+            hasVariance: hasVariance,
+          });
+        }
+
+        // 7. Rent Commencement / Start Date
+        if (d.startDate) {
+          const curStart = contractForm.start_date || "";
+          const hasVariance = curStart !== d.startDate;
+          diffs.push({
+            fieldKey: "start_date",
+            label: "Rent Commencement Date",
+            currentValue: curStart || "(Not entered)",
+            agreementValue: d.startDate,
+            hasVariance: hasVariance,
+          });
+        }
+
+        // 8. Lease Expiry / End Date
+        if (d.endDate) {
+          const curEnd = contractForm.end_date || "";
+          const hasVariance = curEnd !== d.endDate;
+          diffs.push({
+            fieldKey: "end_date",
+            label: "Lease Expiry Date",
+            currentValue: curEnd || "(Not entered)",
+            agreementValue: d.endDate,
+            hasVariance: hasVariance,
+          });
+        }
+
+        // 9. Escalation %
+        if (d.escalationPct !== undefined) {
+          const curEsc = Number(contractForm.escalation_pct) || 0;
+          const hasVariance = curEsc !== d.escalationPct;
+          diffs.push({
+            fieldKey: "escalation_pct",
+            label: "Escalation Rate",
+            currentValue: `${contractForm.escalation_pct || 0}%`,
+            agreementValue: `${d.escalationPct}% (${d.escalationFrequency || "Annual"})`,
+            hasVariance: hasVariance,
+          });
+        }
+
+        // 10. Lock-in Months
+        if (d.lockInMonths !== undefined && d.lockInMonths > 0) {
+          const curLock = Number(contractForm.lock_in_months) || 0;
+          const hasVariance = curLock !== d.lockInMonths;
+          diffs.push({
+            fieldKey: "lock_in_months",
+            label: "Lock-in Period",
+            currentValue: curLock > 0 ? `${curLock} Months` : "(Not entered)",
+            agreementValue: `${d.lockInMonths} Months`,
+            hasVariance: hasVariance,
+          });
+        }
+
+        setPendingAgreementData(d);
+        setPendingAgreementFile(json.fileName);
+        setAgreementDifferences(diffs);
+
+        // Check if real variances exist
+        const realDiscrepancies = diffs.filter((x) => x.hasVariance);
+        if (realDiscrepancies.length > 0) {
+          setVarianceModalOpen(true);
+        } else {
+          applyAgreementTerms(d, diffs);
+        }
       } else {
         showToast(json?.error || "Failed to parse rent agreement. Please ensure document is legible.", "error");
       }
@@ -347,6 +449,93 @@ function CompleteProfileContent() {
     } finally {
       setIsUploadingAgreement(false);
     }
+  };
+
+  const applyAgreementTerms = (d: any, diffsList?: AgreementDiffItem[]) => {
+    if (!d) return;
+
+    let targetOccupantId = contractForm.occupant_id;
+    if (d.occupantName || d.companyName) {
+      const searchName = (d.occupantName || d.companyName).toLowerCase();
+      const matched = tenantsList.find(
+        (t) =>
+          t.name.toLowerCase().includes(searchName) ||
+          searchName.includes(t.name.toLowerCase()) ||
+          (t.company && t.company.toLowerCase().includes(searchName))
+      );
+      if (matched) {
+        targetOccupantId = matched.id;
+      }
+    }
+
+    const list = diffsList || agreementDifferences;
+    const updatedKeys = new Set<string>();
+    if (list && Array.isArray(list)) {
+      list.forEach((diff) => {
+        if (diff.hasVariance) updatedKeys.add(diff.fieldKey);
+      });
+    }
+
+    setContractForm((prev) => {
+      const areaVal = d.areaSqft ? String(d.areaSqft) : prev.area_sqft;
+      const rateSqft = d.ratePerSqft ? String(d.ratePerSqft) : prev.rate_per_sqft;
+      let calculatedRent = d.monthlyRent ? String(d.monthlyRent) : prev.monthly_rent;
+      if (!calculatedRent && rateSqft && areaVal) {
+        calculatedRent = String(Math.round(Number(rateSqft) * Number(areaVal)));
+      }
+
+      let calcDeposit = d.securityDeposit ? String(d.securityDeposit) : prev.security_deposit;
+      if (!calcDeposit && d.depositMonths && calculatedRent) {
+        calcDeposit = String(Math.round(Number(calculatedRent) * Number(d.depositMonths)));
+      }
+
+      return {
+        ...prev,
+        occupant_id: targetOccupantId || prev.occupant_id,
+        building_name: d.buildingName || prev.building_name,
+        space_unit: d.spaceName || prev.space_unit,
+        area_sqft: areaVal,
+        start_date: d.startDate || prev.start_date,
+        end_date: d.endDate || prev.end_date,
+        billing_model: d.billingModel || prev.billing_model,
+        rate_per_sqft: rateSqft,
+        rate_per_seat: d.ratePerSeat ? String(d.ratePerSeat) : prev.rate_per_seat,
+        seat_count: d.seatCount ? String(d.seatCount) : prev.seat_count,
+        bare_shell_rate: d.bareShellRate ? String(d.bareShellRate) : prev.bare_shell_rate,
+        fitout_rate: d.fitoutRate ? String(d.fitoutRate) : prev.fitout_rate,
+        monthly_rent: calculatedRent,
+        fitout_condition: d.fitoutCondition || prev.fitout_condition,
+        fitout_period_days: d.fitoutDays !== undefined ? String(d.fitoutDays) : prev.fitout_period_days,
+        possession_date: d.possessionDate || prev.possession_date,
+        cam_type: d.camType || prev.cam_type,
+        cam_rate: d.camRate ? String(d.camRate) : prev.cam_rate,
+        cam_monthly: d.camMonthly ? String(d.camMonthly) : prev.cam_monthly,
+        electricity_billing: d.electricityBilling || prev.electricity_billing,
+        power_backup_type: d.powerBackupType || prev.power_backup_type,
+        electricity_load_kva: d.electricityLoadKva ? String(d.electricityLoadKva) : prev.electricity_load_kva,
+        dg_rate_per_kwh: d.dgRatePerKwh ? String(d.dgRatePerKwh) : prev.dg_rate_per_kwh,
+        water_charges: d.waterCharges || prev.water_charges,
+        car_parking_slots: d.carParkingSlots !== undefined ? String(d.carParkingSlots) : prev.car_parking_slots,
+        car_parking_rate: d.carParkingRate ? String(d.carParkingRate) : prev.car_parking_rate,
+        two_wheeler_slots: d.twoWheelerSlots !== undefined ? String(d.twoWheelerSlots) : prev.two_wheeler_slots,
+        two_wheeler_rate: d.twoWheelerRate ? String(d.twoWheelerRate) : prev.two_wheeler_rate,
+        escalation_pct: d.escalationPct !== undefined ? String(d.escalationPct) : prev.escalation_pct,
+        escalation_frequency: d.escalationFrequency || prev.escalation_frequency,
+        escalation_start_date: d.escalationStartDate || prev.escalation_start_date,
+        security_deposit: calcDeposit,
+        deposit_months: d.depositMonths ? String(d.depositMonths) : prev.deposit_months,
+        lock_in_months: d.lockInMonths ? String(d.lockInMonths) : prev.lock_in_months,
+        notice_days: d.noticeDays ? String(d.noticeDays) : prev.notice_days,
+        billing_entity: d.billingEntity || prev.billing_entity,
+        payment_terms: d.paymentTerms || prev.payment_terms,
+        late_interest_pct: d.lateInterestPct ? String(d.lateInterestPct) : prev.late_interest_pct,
+        stamp_duty_sharing: d.stampDutySharing || prev.stamp_duty_sharing,
+        notes: d.notes || prev.notes,
+      };
+    });
+
+    setChangedFieldKeys(updatedKeys);
+    showToast(`✓ Rent Agreement applied! ${updatedKeys.size} field(s) updated and highlighted in yellow.`);
   };
 
   // Step 4: Documents Vault
@@ -477,8 +666,11 @@ function CompleteProfileContent() {
       } catch {}
 
       // Fetch actually created properties from database (strictly user session only)
+      const uEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
+      const authHeaders: Record<string, string> = uEmail ? { "x-user-email": uEmail } : {};
+
       try {
-        const res = await fetch("/api/rent-roll/properties");
+        const res = await fetch("/api/rent-roll/properties", { headers: authHeaders });
         if (res.ok) {
           const json = await res.json();
           if (Array.isArray(json.data) && json.data.length > 0) {
@@ -499,9 +691,10 @@ function CompleteProfileContent() {
               return false;
             });
 
-            setRegisteredProperties(filtered);
-            if (filtered.length > 0) {
-              setSelectedPropertyForTenant(filtered[0].id || filtered[0].property_name);
+            const finalList = filtered.length > 0 ? filtered : json.data;
+            setRegisteredProperties(finalList);
+            if (finalList.length > 0) {
+              setSelectedPropertyForTenant(finalList[0].id || finalList[0].property_name);
               setCompletedSteps((prev) => (prev.includes("property") ? prev : [...prev, "property"]));
             }
           }
@@ -512,7 +705,7 @@ function CompleteProfileContent() {
 
       // Fetch tenants
       try {
-        const tRes = await fetch("/api/rent-roll/tenants");
+        const tRes = await fetch("/api/rent-roll/tenants", { headers: authHeaders });
         if (tRes.ok) {
           const tData = await tRes.json();
           const tArr = (Array.isArray(tData.data) ? tData.data : []).map((t: any) => ({
@@ -632,9 +825,13 @@ function CompleteProfileContent() {
 
     setPropLoading(true);
     try {
+      const uEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           id: propIdToUse || undefined,
           property_name: propForm.property_name.trim(),
@@ -793,9 +990,13 @@ function CompleteProfileContent() {
 
     setTenantLoading(true);
     try {
+      const uEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
       const res = await fetch("/api/rent-roll/tenants", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(uEmail ? { "x-user-email": uEmail } : {}),
+        },
         body: JSON.stringify({
           tenant_name: tenantForm.occupant_name.trim(),
           trade_name: tenantForm.company_name.trim() || tenantForm.occupant_name.trim(),
@@ -935,9 +1136,13 @@ function CompleteProfileContent() {
         });
       }
 
+      const userEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
       const res = await fetch("/api/contracts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(userEmail ? { "x-user-email": userEmail } : {}),
+        },
         body: JSON.stringify({
           occupant_id: contractForm.occupant_id,
           property_id: contractForm.property_id || selectedPropertyForTenant,
@@ -977,6 +1182,12 @@ function CompleteProfileContent() {
           concessions,
         }),
       });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || errJson.message || `Failed to create contract (HTTP ${res.status})`);
+      }
+
       markStepDone("contract");
       showToast("✓ Commercial Lease Contract registered with full commercial breakdown!");
       setActiveStep("documents");
@@ -2325,6 +2536,28 @@ function CompleteProfileContent() {
                 )}
               </div>
 
+              {/* Temporary Highlight Indicator Banner */}
+              {changedFieldKeys.size > 0 && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    <span>
+                      <strong>{changedFieldKeys.size} field{changedFieldKeys.size > 1 ? "s" : ""} updated</strong> according to Rent Agreement (highlighted in yellow below). Click anywhere or edit to dismiss.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setChangedFieldKeys(new Set());
+                    }}
+                    className="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline shrink-0 cursor-pointer"
+                  >
+                    Dismiss Highlights
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleSaveContract} className="space-y-6">
                 {/* ──── SECTION 1: HIERARCHY & SPACE MAPPING ──── */}
                 <div className="space-y-3">
@@ -2338,10 +2571,24 @@ function CompleteProfileContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     {/* Occupant / Tenant */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Occupant / Tenant *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Occupant / Tenant *</label>
+                        {changedFieldKeys.has("occupant_id") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <select
                         value={contractForm.occupant_id}
                         onChange={(e) => {
+                          if (changedFieldKeys.has("occupant_id")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("occupant_id");
+                              return next;
+                            });
+                          }
                           const sel = tenantsList.find((t) => t.id === e.target.value);
                           setContractForm({
                             ...contractForm,
@@ -2349,7 +2596,10 @@ function CompleteProfileContent() {
                             occupant_name: sel?.name || "",
                           });
                         }}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        className={getHighlightClass(
+                          "occupant_id",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        )}
                       >
                         {tenantsList.length === 0 && (
                           <option value="">{tenantForm.occupant_name || "Enrolled Occupant"}</option>
@@ -2364,11 +2614,30 @@ function CompleteProfileContent() {
 
                     {/* Property */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Commercial Property *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Commercial Property *</label>
+                        {changedFieldKeys.has("property_id") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <select
                         value={contractForm.property_id || selectedPropertyForTenant}
-                        onChange={(e) => setContractForm({ ...contractForm, property_id: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("property_id")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("property_id");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, property_id: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "property_id",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        )}
                       >
                         {registeredProperties.map((p) => (
                           <option key={p.id || p.property_name} value={p.id || p.property_name}>
@@ -2434,25 +2703,81 @@ function CompleteProfileContent() {
 
                     {/* Contract Start Date */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Rent Commencement Date *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Rent Commencement Date *</label>
+                        {changedFieldKeys.has("start_date") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="date"
                         required
                         value={contractForm.start_date}
-                        onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        onClick={() => {
+                          if (changedFieldKeys.has("start_date")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("start_date");
+                              return next;
+                            });
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("start_date")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("start_date");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, start_date: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "start_date",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        )}
                       />
                     </div>
 
                     {/* Contract End Date */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Lease Expiry Date *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Lease Expiry Date *</label>
+                        {changedFieldKeys.has("end_date") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="date"
                         required
                         value={contractForm.end_date}
-                        onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        onClick={() => {
+                          if (changedFieldKeys.has("end_date")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("end_date");
+                              return next;
+                            });
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("end_date")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("end_date");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, end_date: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "end_date",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                        )}
                       />
                     </div>
                   </div>
@@ -2604,19 +2929,45 @@ function CompleteProfileContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                     {/* Area (Sq.Ft) */}
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Demised Area (Sq.Ft) *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">Demised Area (Sq.Ft) *</label>
+                        {changedFieldKeys.has("area_sqft") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         required
                         placeholder="e.g. 5000"
                         value={contractForm.area_sqft}
+                        onClick={() => {
+                          if (changedFieldKeys.has("area_sqft")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("area_sqft");
+                              return next;
+                            });
+                          }
+                        }}
                         onChange={(e) => {
+                          if (changedFieldKeys.has("area_sqft")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("area_sqft");
+                              return next;
+                            });
+                          }
                           const area = e.target.value;
                           const rate = Number(contractForm.rate_per_sqft) || 0;
                           const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthly_rent;
                           setContractForm({ ...contractForm, area_sqft: area, monthly_rent: calcRent });
                         }}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        className={getHighlightClass(
+                          "area_sqft",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        )}
                       />
                     </div>
 
@@ -2656,19 +3007,45 @@ function CompleteProfileContent() {
                       </>
                     ) : (
                       <div>
-                        <label className="font-bold text-slate-700 block mb-1">Rate per Sq.Ft (₹ / sq.ft / mo)</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold text-slate-700">Rate per Sq.Ft (₹ / sq.ft / mo)</label>
+                          {changedFieldKeys.has("rate_per_sqft") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           step="0.5"
                           placeholder="e.g. 75"
                           value={contractForm.rate_per_sqft}
+                          onClick={() => {
+                            if (changedFieldKeys.has("rate_per_sqft")) {
+                              setChangedFieldKeys((prev) => {
+                                const next = new Set(prev);
+                                next.delete("rate_per_sqft");
+                                return next;
+                              });
+                            }
+                          }}
                           onChange={(e) => {
+                            if (changedFieldKeys.has("rate_per_sqft")) {
+                              setChangedFieldKeys((prev) => {
+                                const next = new Set(prev);
+                                next.delete("rate_per_sqft");
+                                return next;
+                              });
+                            }
                             const rate = e.target.value;
                             const area = Number(contractForm.area_sqft) || 0;
                             const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthly_rent;
                             setContractForm({ ...contractForm, rate_per_sqft: rate, monthly_rent: calcRent });
                           }}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          className={getHighlightClass(
+                            "rate_per_sqft",
+                            "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          )}
                         />
                       </div>
                     )}
@@ -2677,17 +3054,45 @@ function CompleteProfileContent() {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="font-bold text-slate-700">Monthly Base Rent (₹) *</label>
-                        <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-mono font-bold">
-                          ₹{Number(contractForm.monthly_rent || 0).toLocaleString()} /mo
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {changedFieldKeys.has("monthly_rent") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                          <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-mono font-bold">
+                            ₹{Number(contractForm.monthly_rent || 0).toLocaleString()} /mo
+                          </span>
+                        </div>
                       </div>
                       <input
                         type="number"
                         required
                         placeholder="e.g. 250000"
                         value={contractForm.monthly_rent}
-                        onChange={(e) => setContractForm({ ...contractForm, monthly_rent: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-black text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        onClick={() => {
+                          if (changedFieldKeys.has("monthly_rent")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("monthly_rent");
+                              return next;
+                            });
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("monthly_rent")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("monthly_rent");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, monthly_rent: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "monthly_rent",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-black text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        )}
                       />
                     </div>
                   </div>
@@ -2912,14 +3317,42 @@ function CompleteProfileContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Escalation % */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Escalation % Rate</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Escalation % Rate</label>
+                        {changedFieldKeys.has("escalation_pct") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         step="0.1"
                         placeholder="e.g. 5.0"
                         value={contractForm.escalation_pct}
-                        onChange={(e) => setContractForm({ ...contractForm, escalation_pct: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        onClick={() => {
+                          if (changedFieldKeys.has("escalation_pct")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("escalation_pct");
+                              return next;
+                            });
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("escalation_pct")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("escalation_pct");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, escalation_pct: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "escalation_pct",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        )}
                       />
                     </div>
 
@@ -2970,30 +3403,86 @@ function CompleteProfileContent() {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-xs font-bold text-slate-700">Security Deposit Amount (₹)</label>
-                        {contractForm.security_deposit && (
-                          <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-mono font-bold">
-                            ₹{Number(contractForm.security_deposit).toLocaleString()}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {changedFieldKeys.has("security_deposit") && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                              Updated
+                            </span>
+                          )}
+                          {contractForm.security_deposit && (
+                            <span className="text-[10px] text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded font-mono font-bold">
+                              ₹{Number(contractForm.security_deposit).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <input
                         type="number"
                         placeholder="e.g. 1500000"
                         value={contractForm.security_deposit}
-                        onChange={(e) => setContractForm({ ...contractForm, security_deposit: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        onClick={() => {
+                          if (changedFieldKeys.has("security_deposit")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("security_deposit");
+                              return next;
+                            });
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("security_deposit")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("security_deposit");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, security_deposit: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "security_deposit",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        )}
                       />
                     </div>
 
                     {/* Lock-in Period (months) */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Lock-in Period (Months)</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Lock-in Period (Months)</label>
+                        {changedFieldKeys.has("lock_in_months") && (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         placeholder="e.g. 36 Months"
                         value={contractForm.lock_in_months}
-                        onChange={(e) => setContractForm({ ...contractForm, lock_in_months: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        onClick={() => {
+                          if (changedFieldKeys.has("lock_in_months")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("lock_in_months");
+                              return next;
+                            });
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (changedFieldKeys.has("lock_in_months")) {
+                            setChangedFieldKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete("lock_in_months");
+                              return next;
+                            });
+                          }
+                          setContractForm({ ...contractForm, lock_in_months: e.target.value });
+                        }}
+                        className={getHighlightClass(
+                          "lock_in_months",
+                          "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        )}
                       />
                     </div>
 
@@ -3597,6 +4086,24 @@ function CompleteProfileContent() {
               </div>
             </div>
           )}
+
+          {/* ──── AGREEMENT VARIANCE REVIEW MODAL (POPUP) ──── */}
+          <AgreementVarianceModal
+            isOpen={varianceModalOpen}
+            onClose={() => setVarianceModalOpen(false)}
+            fileName={pendingAgreementFile}
+            differences={agreementDifferences}
+            onKeepCurrent={() => {
+              setVarianceModalOpen(false);
+              showToast("Kept user-entered details unchanged without modifying form.");
+            }}
+            onApplyAgreement={() => {
+              setVarianceModalOpen(false);
+              if (pendingAgreementData) {
+                applyAgreementTerms(pendingAgreementData, agreementDifferences);
+              }
+            }}
+          />
         </main>
       </div>
     </div>
