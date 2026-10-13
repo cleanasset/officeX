@@ -21,6 +21,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function PropertiesPortfolioPage() {
   const [properties, setProperties] = useState<any[]>([]);
@@ -50,33 +51,37 @@ export default function PropertiesPortfolioPage() {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/rent-roll/properties");
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/rent-roll/properties", { headers: authHeaders });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
-          let registeredPropIds: string[] = [];
-          let registeredPropNames: string[] = [];
-          const userProperty = typeof window !== "undefined" ? localStorage.getItem("officex_active_property") : null;
-          try {
-            if (typeof window !== "undefined") {
-              registeredPropIds = JSON.parse(localStorage.getItem("officex_registered_property_ids") || "[]");
-              registeredPropNames = JSON.parse(localStorage.getItem("officex_registered_property_names") || "[]");
-            }
-          } catch {}
-
-          // Display user registered properties or fallback to all database properties (prevents vanishing properties in new browser sessions)
           let userPropertiesOnly = json.data;
-          if (registeredPropIds.length > 0 || registeredPropNames.length > 0 || userProperty) {
-            const filtered = json.data.filter((p: any) => {
-              const pName = (p.property_name || "").toLowerCase().trim();
-              if (registeredPropIds.includes(p.id)) return true;
-              if (registeredPropNames.some((n: string) => n.toLowerCase().trim() === pName)) return true;
-              if (userProperty && pName === userProperty.toLowerCase().trim()) return true;
-              if (userProperty && pName.includes(userProperty.toLowerCase().trim())) return true;
-              return false;
-            });
-            if (filtered.length > 0) {
-              userPropertiesOnly = filtered;
+
+          // If not authenticated via header, fallback to localStorage registration checks
+          if (!authHeaders["x-user-email"]) {
+            let registeredPropIds: string[] = [];
+            let registeredPropNames: string[] = [];
+            const userProperty = typeof window !== "undefined" ? localStorage.getItem("officex_active_property") : null;
+            try {
+              if (typeof window !== "undefined") {
+                registeredPropIds = JSON.parse(localStorage.getItem("officex_registered_property_ids") || "[]");
+                registeredPropNames = JSON.parse(localStorage.getItem("officex_registered_property_names") || "[]");
+              }
+            } catch {}
+
+            if (registeredPropIds.length > 0 || registeredPropNames.length > 0 || userProperty) {
+              const filtered = json.data.filter((p: any) => {
+                const pName = (p.property_name || "").toLowerCase().trim();
+                if (registeredPropIds.includes(p.id)) return true;
+                if (registeredPropNames.some((n: string) => n.toLowerCase().trim() === pName)) return true;
+                if (userProperty && pName === userProperty.toLowerCase().trim()) return true;
+                if (userProperty && pName.includes(userProperty.toLowerCase().trim())) return true;
+                return false;
+              });
+              if (filtered.length > 0) {
+                userPropertiesOnly = filtered;
+              }
             }
           }
 

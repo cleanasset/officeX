@@ -30,6 +30,7 @@ import {
   ArrowUpRight,
   TrendingDown,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface PaymentsCollectionsViewProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ export default function PaymentsCollectionsView({
 
   async function loadOccupants() {
     try {
-      const res = await fetch("/api/rent-roll/occupants");
+      const res = await fetch("/api/rent-roll/occupants", { headers: getClientAuthHeaders() });
       const json = await res.json();
       if (json.success && json.data) setOccupantsList(json.data);
     } catch (e) {
@@ -116,7 +117,7 @@ export default function PaymentsCollectionsView({
   async function loadPayments() {
     try {
       setLoadingPayments(true);
-      const res = await fetch("/api/payments");
+      const res = await fetch("/api/payments", { headers: getClientAuthHeaders() });
       const json = await res.json();
       if (json.success) setPayments(json.data || []);
     } catch (e) {
@@ -129,7 +130,7 @@ export default function PaymentsCollectionsView({
   async function loadAging() {
     try {
       setLoadingAging(true);
-      const res = await fetch("/api/collections/aging");
+      const res = await fetch("/api/collections/aging", { headers: getClientAuthHeaders() });
       const json = await res.json();
       if (json.success) setAgingData(json.data);
     } catch (e) {
@@ -142,7 +143,7 @@ export default function PaymentsCollectionsView({
   async function loadOverdue() {
     try {
       setLoadingOverdue(true);
-      const res = await fetch("/api/collections/overdue");
+      const res = await fetch("/api/collections/overdue", { headers: getClientAuthHeaders() });
       const json = await res.json();
       if (json.success) setOverdueInvoices(json.data || []);
     } catch (e) {
@@ -163,7 +164,7 @@ export default function PaymentsCollectionsView({
       setSubmittingPayment(true);
       const res = await fetch("/api/payments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           ...recordForm,
           amount_inr: parseFloat(recordForm.amount_inr),
@@ -306,7 +307,7 @@ export default function PaymentsCollectionsView({
     try {
       const res = await fetch("/api/collections/reminder", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({ invoice_id: invoiceId, notes: "Automated reminder sent via Collections View" }),
       });
       const json = await res.json();
@@ -328,7 +329,7 @@ export default function PaymentsCollectionsView({
     try {
       const res = await fetch("/api/collections/dispute", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           invoice_id: disputeInvoice.id,
           dispute_type: disputeType,
@@ -358,7 +359,7 @@ export default function PaymentsCollectionsView({
     try {
       const res = await fetch("/api/collections/writeoff-request", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           invoice_id: writeoffInvoice.id,
           reason: writeoffReason,
@@ -385,7 +386,7 @@ export default function PaymentsCollectionsView({
     try {
       const res = await fetch("/api/collections/writeoff-approve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           invoice_id: invoiceId,
           approved_justification: justification,

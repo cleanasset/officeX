@@ -20,6 +20,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function TenantDirectoryPage() {
   const [tenants, setTenants] = useState<any[]>([]);
@@ -37,13 +38,7 @@ export default function TenantDirectoryPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
-      const authHeaders: Record<string, string> = uEmail
-        ? { "x-user-email": uEmail }
-        : {};
+      const authHeaders = getClientAuthHeaders();
 
       const [tenantsRes, propsRes] = await Promise.all([
         fetch("/api/rent-roll/tenants", { headers: authHeaders }).catch(() => null),

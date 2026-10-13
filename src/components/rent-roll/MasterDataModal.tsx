@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Save,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface MasterDataModalProps {
   isOpen: boolean;
@@ -85,9 +86,10 @@ export default function MasterDataModal({
 
   async function loadDropdowns() {
     try {
+      const authHeaders = getClientAuthHeaders();
       const [pRes, bRes] = await Promise.all([
-        fetch("/api/rent-roll/properties"),
-        fetch("/api/buildings"),
+        fetch("/api/rent-roll/properties", { headers: authHeaders }),
+        fetch("/api/buildings", { headers: authHeaders }),
       ]);
       const [pData, bData] = await Promise.all([pRes.json(), bRes.json()]);
       if (pData.success) {
@@ -114,7 +116,7 @@ export default function MasterDataModal({
       setFeedback(null);
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify(propForm),
       });
       const json = await res.json();
@@ -139,7 +141,7 @@ export default function MasterDataModal({
       setFeedback(null);
       const res = await fetch("/api/buildings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify(bldgForm),
       });
       const json = await res.json();
@@ -164,7 +166,7 @@ export default function MasterDataModal({
       setFeedback(null);
       const res = await fetch("/api/spaces", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify(spaceForm),
       });
       const json = await res.json();
@@ -188,7 +190,7 @@ export default function MasterDataModal({
       setFeedback(null);
       const res = await fetch("/api/occupants", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify(occForm),
       });
       const json = await res.json();

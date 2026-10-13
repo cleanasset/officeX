@@ -39,8 +39,15 @@ export default function TenantHomePage() {
   async function loadHomeData(occupantId?: string) {
     try {
       setLoading(true);
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const authHeaders: Record<string, string> = uEmail
+        ? { "x-user-email": uEmail }
+        : {};
       const url = occupantId ? `/api/portal/summary?occupant_id=${occupantId}` : `/api/portal/summary`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setData(json);

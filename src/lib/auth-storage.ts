@@ -22,3 +22,69 @@ export function clearAuthCookie(name: string) {
     document.cookie = `${name}=; domain=.officex.pro; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax`;
   }
 }
+
+/**
+ * Universal client-side resolver for user email across all sessions, cookies and localStorage.
+ * Guarantees that all API requests consistently pass the user identity header.
+ */
+export function getClientUserEmail(): string {
+  if (typeof window === "undefined") return "";
+
+  const fromLocal = (localStorage.getItem("officex_user_email") || "").trim().toLowerCase();
+  if (fromLocal) return fromLocal;
+
+  const fromSession = (sessionStorage.getItem("officex_user_email") || "").trim().toLowerCase();
+  if (fromSession) {
+    try { localStorage.setItem("officex_user_email", fromSession); } catch {}
+    return fromSession;
+  }
+
+  const fromCookie = getAuthCookie("officex_user_email").trim().toLowerCase();
+  if (fromCookie) {
+    try { localStorage.setItem("officex_user_email", fromCookie); } catch {}
+    return fromCookie;
+  }
+
+  // 4. Check active Supabase auth session token in localStorage
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const parsed = JSON.parse(item);
+          const sbEmail = (parsed.user?.email || "").trim().toLowerCase();
+          if (sbEmail) {
+            try {
+              localStorage.setItem("officex_user_email", sbEmail);
+              setAuthCookie("officex_user_email", sbEmail);
+            } catch {}
+            return sbEmail;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  // 5. Mobile login fallback
+  const fromMobile = (localStorage.getItem("officex_user_mobile") || sessionStorage.getItem("officex_user_mobile") || "").trim();
+  if (fromMobile) {
+    const mobileEmail = `${fromMobile.replace(/\D/g, "")}@officex.pro`;
+    try {
+      localStorage.setItem("officex_user_email", mobileEmail);
+      setAuthCookie("officex_user_email", mobileEmail);
+    } catch {}
+    return mobileEmail;
+  }
+
+  return "";
+}
+
+/**
+ * Helper to build auth headers for client-side fetch requests
+ */
+export function getClientAuthHeaders(): Record<string, string> {
+  const email = getClientUserEmail();
+  return email ? { "x-user-email": email } : {};
+}
+

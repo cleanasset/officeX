@@ -6,6 +6,7 @@ import {
   AlertCircle, Sparkles, Activity, HeartPulse, ChevronRight, ArrowUpRight, 
   Wrench, Building, Settings, Calendar, ShieldCheck, X 
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function OperationsDashboard() {
   const [toast, setToast] = useState<string | null>(null);
@@ -79,12 +80,13 @@ export default function OperationsDashboard() {
 
   React.useEffect(() => {
     try {
-      fetch("/api/rent-roll/properties")
+      fetch("/api/rent-roll/properties", { headers: getClientAuthHeaders() })
         .then(res => res.json())
         .then(data => {
-          if (data && data.properties && data.properties.length > 0) {
-            setHealthData(data.properties.map((p: any) => ({
-              name: p.name,
+          const props = Array.isArray(data.data) ? data.data : (Array.isArray(data.properties) ? data.properties : []);
+          if (props.length > 0) {
+            setHealthData(props.map((p: any) => ({
+              name: p.property_name || p.name,
               health: "98/100 (Optimal)",
               trend: "—",
               trendColor: "text-emerald-600",

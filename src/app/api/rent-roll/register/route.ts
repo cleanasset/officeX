@@ -150,7 +150,7 @@ export async function GET(req: Request) {
           occupiedSpaceIds.add(c.contract.space_id);
         }
 
-        const monthlyRent = contractBaseRentMap[c.contract.id] || 0;
+        const monthlyRent = contractBaseRentMap[c.contract.id] || parseFloat((c.contract as any)?.base_rent_rate || "0") || 0;
 
         rows.push({
           type: "contract",

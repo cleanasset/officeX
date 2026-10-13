@@ -56,6 +56,7 @@ import {
 } from "@/lib/india-locations";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 import AgreementVarianceModal, { AgreementDiffItem } from "@/components/rent-roll/AgreementVarianceModal";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL =
@@ -257,6 +258,19 @@ function CompleteProfileContent() {
   const [agreementDifferences, setAgreementDifferences] = useState<AgreementDiffItem[]>([]);
   const [changedFieldKeys, setChangedFieldKeys] = useState<Set<string>>(new Set());
 
+  const [lastSavedPropName, setLastSavedPropName] = useState("");
+  const [lastSavedOccupantName, setLastSavedOccupantName] = useState("");
+
+  const clearFieldHighlight = (key: string) => {
+    if (changedFieldKeys.has(key)) {
+      setChangedFieldKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
+
   const getHighlightClass = (key: string, baseClass: string) => {
     if (changedFieldKeys.has(key)) {
       return `${baseClass} bg-amber-50 border-amber-400 ring-2 ring-amber-300/70 transition-all duration-300`;
@@ -287,13 +301,22 @@ function CompleteProfileContent() {
 
         // 1. Resolve currently selected/typed tenant name
         const currentSelectedTenant = tenantsList.find((t) => t.id === contractForm.occupant_id);
-        const currentOccupantName = currentSelectedTenant?.name || tenantForm.occupant_name || contractForm.occupant_name || "";
+        const currentOccupantName =
+          currentSelectedTenant?.name ||
+          tenantForm.occupant_name ||
+          contractForm.occupant_name ||
+          lastSavedOccupantName ||
+          "";
 
         // 2. Resolve currently selected/typed property name
         const currentSelectedProp = registeredProperties.find(
           (p) => p.id === selectedPropertyForTenant || p.id === contractForm.property_id
         );
-        const currentPropName = currentSelectedProp?.property_name || propForm.property_name || "";
+        const currentPropName =
+          currentSelectedProp?.property_name ||
+          propForm.property_name ||
+          lastSavedPropName ||
+          (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
 
         const diffs: AgreementDiffItem[] = [];
 
@@ -314,9 +337,12 @@ function CompleteProfileContent() {
         // 2. Commercial Property / Lessor Entity
         if (d.lessorName || d.propertyName) {
           const docProp = d.lessorName || d.propertyName;
+          const normCurrent = currentPropName.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normDoc = docProp.toLowerCase().replace(/[^a-z0-9]/g, "");
           const hasVariance =
             currentPropName !== "" &&
-            !currentPropName.toLowerCase().trim().includes(docProp.toLowerCase().trim().slice(0, 5));
+            normCurrent !== normDoc &&
+            (!normCurrent || !normDoc || (!normCurrent.includes(normDoc) && !normDoc.includes(normCurrent)));
           diffs.push({
             fieldKey: "property_id",
             label: "Commercial Property / Lessor",
@@ -454,9 +480,10 @@ function CompleteProfileContent() {
   const applyAgreementTerms = (d: any, diffsList?: AgreementDiffItem[]) => {
     if (!d) return;
 
-    let targetOccupantId = contractForm.occupant_id;
+    let targetOccupantId = contractForm.occupant_id || (tenantsList.length > 0 ? tenantsList[0].id : "");
     if (d.occupantName || d.companyName) {
-      const searchName = (d.occupantName || d.companyName).toLowerCase();
+      const desiredName = d.occupantName || d.companyName;
+      const searchName = desiredName.toLowerCase();
       const matched = tenantsList.find(
         (t) =>
           t.name.toLowerCase().includes(searchName) ||
@@ -465,6 +492,64 @@ function CompleteProfileContent() {
       );
       if (matched) {
         targetOccupantId = matched.id;
+      } else if (targetOccupantId) {
+        setTenantsList((prev) =>
+          prev.map((t) =>
+            t.id === targetOccupantId
+              ? { ...t, name: desiredName, company: d.companyName || desiredName }
+              : t
+          )
+        );
+        const authHeaders = getClientAuthHeaders();
+        fetch("/api/rent-roll/tenants", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            tenant_id: targetOccupantId,
+            tenant_name: desiredName,
+            trade_name: d.companyName || desiredName,
+          }),
+        }).catch(() => {});
+      } else {
+        const newTenantId = `ten_${Date.now()}`;
+        setTenantsList((prev) => [
+          ...prev,
+          { id: newTenantId, name: desiredName, company: d.companyName || desiredName },
+        ]);
+        targetOccupantId = newTenantId;
+      }
+
+      setTenantForm((prev) => ({
+        ...prev,
+        occupant_name: desiredName,
+        company_name: d.companyName || desiredName,
+      }));
+    }
+
+    // 2. Commercial Property / Lessor name update
+    if (d.propertyName || d.lessorName) {
+      const docPropName = d.propertyName || d.lessorName;
+      setPropForm((prev) => ({ ...prev, property_name: docPropName }));
+      const targetPropId = contractForm.property_id || selectedPropertyForTenant;
+      if (targetPropId) {
+        setRegisteredProperties((prev) =>
+          prev.map((p) => (p.id === targetPropId ? { ...p, property_name: docPropName } : p))
+        );
+        const authHeaders = getClientAuthHeaders();
+        fetch("/api/rent-roll/properties", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            id: targetPropId,
+            property_name: docPropName,
+          }),
+        }).catch(() => {});
       }
     }
 
@@ -666,8 +751,7 @@ function CompleteProfileContent() {
       } catch {}
 
       // Fetch actually created properties from database (strictly user session only)
-      const uEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
-      const authHeaders: Record<string, string> = uEmail ? { "x-user-email": uEmail } : {};
+      const authHeaders = getClientAuthHeaders();
 
       try {
         const res = await fetch("/api/rent-roll/properties", { headers: authHeaders });
@@ -768,7 +852,7 @@ function CompleteProfileContent() {
       setInviteLoading(true);
       const res = await fetch("/api/invitations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           name,
           email,
@@ -823,14 +907,15 @@ function CompleteProfileContent() {
       } catch {}
     }
 
+    setLastSavedPropName(propForm.property_name.trim());
     setPropLoading(true);
     try {
-      const uEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           id: propIdToUse || undefined,
@@ -988,14 +1073,15 @@ function CompleteProfileContent() {
       return;
     }
 
+    setLastSavedOccupantName(tenantForm.occupant_name.trim());
     setTenantLoading(true);
     try {
-      const uEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/rent-roll/tenants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           tenant_name: tenantForm.occupant_name.trim(),
@@ -1136,12 +1222,12 @@ function CompleteProfileContent() {
         });
       }
 
-      const userEmail = typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || "" : "";
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/contracts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(userEmail ? { "x-user-email": userEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           occupant_id: contractForm.occupant_id,
@@ -2581,14 +2667,10 @@ function CompleteProfileContent() {
                       </div>
                       <select
                         value={contractForm.occupant_id}
+                        onClick={() => clearFieldHighlight("occupant_id")}
+                        onFocus={() => clearFieldHighlight("occupant_id")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("occupant_id")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("occupant_id");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("occupant_id");
                           const sel = tenantsList.find((t) => t.id === e.target.value);
                           setContractForm({
                             ...contractForm,
@@ -2624,14 +2706,10 @@ function CompleteProfileContent() {
                       </div>
                       <select
                         value={contractForm.property_id || selectedPropertyForTenant}
+                        onClick={() => clearFieldHighlight("property_id")}
+                        onFocus={() => clearFieldHighlight("property_id")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("property_id")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("property_id");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("property_id");
                           setContractForm({ ...contractForm, property_id: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -2715,23 +2793,10 @@ function CompleteProfileContent() {
                         type="date"
                         required
                         value={contractForm.start_date}
-                        onClick={() => {
-                          if (changedFieldKeys.has("start_date")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("start_date");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("start_date")}
+                        onFocus={() => clearFieldHighlight("start_date")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("start_date")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("start_date");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("start_date");
                           setContractForm({ ...contractForm, start_date: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -2755,23 +2820,10 @@ function CompleteProfileContent() {
                         type="date"
                         required
                         value={contractForm.end_date}
-                        onClick={() => {
-                          if (changedFieldKeys.has("end_date")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("end_date");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("end_date")}
+                        onFocus={() => clearFieldHighlight("end_date")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("end_date")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("end_date");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("end_date");
                           setContractForm({ ...contractForm, end_date: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -2942,23 +2994,10 @@ function CompleteProfileContent() {
                         required
                         placeholder="e.g. 5000"
                         value={contractForm.area_sqft}
-                        onClick={() => {
-                          if (changedFieldKeys.has("area_sqft")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("area_sqft");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("area_sqft")}
+                        onFocus={() => clearFieldHighlight("area_sqft")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("area_sqft")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("area_sqft");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("area_sqft");
                           const area = e.target.value;
                           const rate = Number(contractForm.rate_per_sqft) || 0;
                           const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthly_rent;
@@ -3020,23 +3059,10 @@ function CompleteProfileContent() {
                           step="0.5"
                           placeholder="e.g. 75"
                           value={contractForm.rate_per_sqft}
-                          onClick={() => {
-                            if (changedFieldKeys.has("rate_per_sqft")) {
-                              setChangedFieldKeys((prev) => {
-                                const next = new Set(prev);
-                                next.delete("rate_per_sqft");
-                                return next;
-                              });
-                            }
-                          }}
+                          onClick={() => clearFieldHighlight("rate_per_sqft")}
+                          onFocus={() => clearFieldHighlight("rate_per_sqft")}
                           onChange={(e) => {
-                            if (changedFieldKeys.has("rate_per_sqft")) {
-                              setChangedFieldKeys((prev) => {
-                                const next = new Set(prev);
-                                next.delete("rate_per_sqft");
-                                return next;
-                              });
-                            }
+                            clearFieldHighlight("rate_per_sqft");
                             const rate = e.target.value;
                             const area = Number(contractForm.area_sqft) || 0;
                             const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthly_rent;
@@ -3070,23 +3096,10 @@ function CompleteProfileContent() {
                         required
                         placeholder="e.g. 250000"
                         value={contractForm.monthly_rent}
-                        onClick={() => {
-                          if (changedFieldKeys.has("monthly_rent")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("monthly_rent");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("monthly_rent")}
+                        onFocus={() => clearFieldHighlight("monthly_rent")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("monthly_rent")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("monthly_rent");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("monthly_rent");
                           setContractForm({ ...contractForm, monthly_rent: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -3330,23 +3343,10 @@ function CompleteProfileContent() {
                         step="0.1"
                         placeholder="e.g. 5.0"
                         value={contractForm.escalation_pct}
-                        onClick={() => {
-                          if (changedFieldKeys.has("escalation_pct")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("escalation_pct");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("escalation_pct")}
+                        onFocus={() => clearFieldHighlight("escalation_pct")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("escalation_pct")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("escalation_pct");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("escalation_pct");
                           setContractForm({ ...contractForm, escalation_pct: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -3420,23 +3420,10 @@ function CompleteProfileContent() {
                         type="number"
                         placeholder="e.g. 1500000"
                         value={contractForm.security_deposit}
-                        onClick={() => {
-                          if (changedFieldKeys.has("security_deposit")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("security_deposit");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("security_deposit")}
+                        onFocus={() => clearFieldHighlight("security_deposit")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("security_deposit")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("security_deposit");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("security_deposit");
                           setContractForm({ ...contractForm, security_deposit: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -3460,23 +3447,10 @@ function CompleteProfileContent() {
                         type="number"
                         placeholder="e.g. 36 Months"
                         value={contractForm.lock_in_months}
-                        onClick={() => {
-                          if (changedFieldKeys.has("lock_in_months")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("lock_in_months");
-                              return next;
-                            });
-                          }
-                        }}
+                        onClick={() => clearFieldHighlight("lock_in_months")}
+                        onFocus={() => clearFieldHighlight("lock_in_months")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("lock_in_months")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("lock_in_months");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("lock_in_months");
                           setContractForm({ ...contractForm, lock_in_months: e.target.value });
                         }}
                         className={getHighlightClass(

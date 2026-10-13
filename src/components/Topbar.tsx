@@ -30,6 +30,7 @@ import { performClientLogout } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import PropertySelector from "@/components/PropertySelector";
 import ModuleChooserModal from "@/components/dashboard/ModuleChooserModal";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 const AVAILABLE_ROLES = [
   { key: "owner", label: "Owner / Landlord", sub: "Portfolio, Rent Roll & NOI", route: "/dashboard/owner", icon: Building2 },
@@ -126,7 +127,7 @@ export default function Topbar() {
     }
 
     // Resolve real user profile from active session
-    fetch("/api/users/me")
+    fetch("/api/users/me", { headers: getClientAuthHeaders() })
       .then((res) => res.json())
       .then((data) => {
         if (data?.user?.email && !data.user.email.includes("subscriber@officex.in")) {
@@ -173,7 +174,7 @@ export default function Topbar() {
 
   // Fetch Multi-Client accounts (§2.1)
   useEffect(() => {
-    fetch("/api/multi-client/clients")
+    fetch("/api/multi-client/clients", { headers: getClientAuthHeaders() })
       .then((res) => res.json())
       .then((data) => {
         if (data.clients && data.clients.length > 0) {

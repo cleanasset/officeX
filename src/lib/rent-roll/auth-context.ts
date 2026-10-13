@@ -203,6 +203,7 @@ export function assertRolePermission(
   return { allowed: true };
 }
 
+export { getDeterministicOrgId, getDeterministicClientAccountId } from "./ensure-org";
 import { getDeterministicOrgId, getDeterministicClientAccountId } from "./ensure-org";
 
 export interface RentRollAuthContext {
@@ -220,7 +221,11 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
   let clientAccountId = headers.get("x-client-account-id") || "";
   let userId = headers.get("x-user-id") || DEFAULT_TEST_USER_ID;
   let role = (headers.get("x-user-role") || "property_manager") as SpecRoleKey;
-  let userEmail: string | null = headers.get("x-user-email") || null;
+  const rawHeaderEmail = headers.get("x-user-email");
+  let userEmail: string | null =
+    rawHeaderEmail && rawHeaderEmail.trim()
+      ? rawHeaderEmail.trim().toLowerCase()
+      : null;
 
   // Check cookies if in request headers
   const cookieHeader = headers.get("cookie") || "";
@@ -241,8 +246,11 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
   const emailCookie = cookieHeader
     .split(";")
     .find((c) => c.trim().startsWith("officex_user_email="));
-  if (emailCookie) {
-    userEmail = decodeURIComponent(emailCookie.split("=")[1].trim()).toLowerCase().trim();
+  if (!userEmail && emailCookie) {
+    const parsedCookieEmail = decodeURIComponent(emailCookie.split("=")[1].trim()).toLowerCase().trim();
+    if (parsedCookieEmail) {
+      userEmail = parsedCookieEmail;
+    }
   }
 
   const orgCookie = cookieHeader
@@ -259,19 +267,21 @@ export function getAuthContext(req: Request | NextRequest): RentRollAuthContext 
     if (url.searchParams.get("client_account_id")) clientAccountId = url.searchParams.get("client_account_id")!;
     if (url.searchParams.get("user_id")) userId = url.searchParams.get("user_id")!;
     if (url.searchParams.get("role")) role = url.searchParams.get("role") as SpecRoleKey;
-    if (url.searchParams.get("user_email")) userEmail = url.searchParams.get("user_email")!.toLowerCase().trim();
+    if (!userEmail && url.searchParams.get("user_email")) {
+      userEmail = url.searchParams.get("user_email")!.toLowerCase().trim();
+    }
   } catch (e) {
     // ignore
   }
 
   // If user is authenticated with an email, isolate data per user email
   if (userEmail) {
-    if (!orgId) {
-      orgId = getDeterministicOrgId(userEmail);
-    }
-    if (!clientAccountId) {
-      clientAccountId = getDeterministicClientAccountId(userEmail);
-    }
+    // Only an explicit HTTP header x-org-id should override user email isolation.
+    // Cookies from previous sessions/users must NEVER hijack the active user session!
+    const explicitHeaderOrgId = headers.get("x-org-id");
+    const explicitHeaderClientId = headers.get("x-client-account-id");
+    orgId = explicitHeaderOrgId || getDeterministicOrgId(userEmail);
+    clientAccountId = explicitHeaderClientId || getDeterministicClientAccountId(userEmail);
   }
 
   // Fallback to default test constants only if neither email nor orgId was provided

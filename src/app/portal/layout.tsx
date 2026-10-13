@@ -40,8 +40,15 @@ export default function TenantPortalLayout({
 
   async function loadPortalSummary(occId?: string) {
     try {
+      const uEmail =
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_user_email") || ""
+          : "";
+      const authHeaders: Record<string, string> = uEmail
+        ? { "x-user-email": uEmail }
+        : {};
       const url = occId ? `/api/portal/summary?occupant_id=${occId}` : `/api/portal/summary`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setOccupantsList(json.occupants_list || []);

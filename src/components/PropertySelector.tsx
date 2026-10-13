@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Building2, ChevronDown, Check } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export interface PropertyOption {
   id: string;
@@ -18,11 +19,38 @@ export default function PropertySelector() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 1. Fetch properties for this organization
-    fetch("/api/properties")
-      .then((res) => res.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data.properties || [];
+    // 1. Fetch properties for this organization (both rent-roll & general properties)
+    const authHeaders = getClientAuthHeaders();
+    Promise.all([
+      fetch("/api/rent-roll/properties", { headers: authHeaders }).then((r) => r.json()).catch(() => null),
+      fetch("/api/properties").then((r) => r.json()).catch(() => null),
+    ])
+      .then(([rrData, propData]) => {
+        const rrList = Array.isArray(rrData?.data) ? rrData.data : [];
+        const legacyList = Array.isArray(propData) ? propData : (propData?.properties || []);
+
+        const map = new Map<string, PropertyOption>();
+        for (const p of rrList) {
+          if (p.id) {
+            map.set(p.id, {
+              id: p.id,
+              name: p.property_name || p.name || "Commercial Property",
+              code: p.property_code || p.code,
+              city: p.city,
+            });
+          }
+        }
+        for (const p of legacyList) {
+          if (p.id && !map.has(p.id)) {
+            map.set(p.id, {
+              id: p.id,
+              name: p.name || p.property_name || "Commercial Property",
+              code: p.code || p.property_code,
+              city: p.city,
+            });
+          }
+        }
+        const list = Array.from(map.values());
         setProperties(list);
 
         // Check if property was previously saved

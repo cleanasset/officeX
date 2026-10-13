@@ -55,12 +55,49 @@ export async function GET(req: Request) {
       .select({ id: property.id, name: property.property_name })
       .from(property)
       .where(and(eq(property.org_id, auth.orgId), sql`${property.deleted_at} IS NULL`));
-    const propMap = new Map(orgProperties.map((p) => [p.id, p.name]));
+    const propMap = new Map<string, string>();
+    for (const p of orgProperties) {
+      propMap.set(p.id, p.name);
+      if (p.name) propMap.set(p.name.toLowerCase().trim(), p.name);
+    }
+
+    // Also fetch all non-deleted properties across DB as fallback for cross-org references
+    const allDbProperties = await db
+      .select({ id: property.id, name: property.property_name })
+      .from(property)
+      .where(sql`${property.deleted_at} IS NULL`);
+    const fallbackPropMap = new Map<string, string>();
+    for (const p of allDbProperties) {
+      fallbackPropMap.set(p.id, p.name);
+      if (p.name) fallbackPropMap.set(p.name.toLowerCase().trim(), p.name);
+    }
 
     for (const item of list) {
       const occ = item.occupant;
-      const associatedPropId = item.property?.id || (occ.source_row_id && propMap.has(occ.source_row_id) ? occ.source_row_id : null);
-      const associatedPropName = item.property?.property_name || (associatedPropId ? propMap.get(associatedPropId) : null) || "Unassigned";
+      let associatedPropId = item.property?.id || null;
+      let associatedPropName = item.property?.property_name || null;
+
+      if (!associatedPropName && occ.source_row_id) {
+        if (propMap.has(occ.source_row_id)) {
+          associatedPropId = occ.source_row_id;
+          associatedPropName = propMap.get(occ.source_row_id)!;
+        } else if (propMap.has(occ.source_row_id.toLowerCase().trim())) {
+          associatedPropName = propMap.get(occ.source_row_id.toLowerCase().trim())!;
+        } else if (fallbackPropMap.has(occ.source_row_id)) {
+          associatedPropId = occ.source_row_id;
+          associatedPropName = fallbackPropMap.get(occ.source_row_id)!;
+        }
+      }
+
+      // If still unassigned but this org has registered properties, link to primary property
+      if (!associatedPropName && orgProperties.length > 0) {
+        associatedPropId = orgProperties[0].id;
+        associatedPropName = orgProperties[0].name;
+      }
+
+      if (!associatedPropName) {
+        associatedPropName = "Unassigned";
+      }
 
       if (propertyId && propertyId !== "all") {
         if (associatedPropId !== propertyId && associatedPropName !== propertyId) {
@@ -160,3 +197,69 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const auth = getAuthContext(req);
+    const body = await req.json();
+    const id = body.id || body.tenant_id || body.occupant_id;
+
+    if (!id) {
+      return NextResponse.json({ error: "Tenant ID is required for update" }, { status: 400 });
+    }
+
+    const updateFields: any = {
+      updated_at: new Date(),
+      updated_by: auth.userId,
+    };
+
+    if (body.tenant_name || body.occupant_name) {
+      updateFields.occupant_name = (body.tenant_name || body.occupant_name).trim();
+    }
+    if (body.email !== undefined) updateFields.email = body.email ? body.email.trim() : null;
+    if (body.phone !== undefined) updateFields.phone = body.phone ? body.phone.trim() : null;
+    if (body.pan || body.pan_number) updateFields.pan_number = (body.pan || body.pan_number).trim().toUpperCase();
+    if (body.gstin || body.gst_number) updateFields.gst_number = (body.gstin || body.gst_number).trim().toUpperCase();
+    if (body.billing_address || body.address) updateFields.address = (body.billing_address || body.address).trim();
+    if (body.property_id !== undefined) updateFields.source_row_id = body.property_id || null;
+
+    let [updated] = await db
+      .update(occupant)
+      .set(updateFields)
+      .where(and(eq(occupant.id, id), eq(occupant.org_id, auth.orgId)))
+      .returning();
+
+    if (!updated) {
+      updateFields.org_id = auth.orgId;
+      [updated] = await db
+        .update(occupant)
+        .set(updateFields)
+        .where(eq(occupant.id, id))
+        .returning();
+    }
+
+    if (!updated) {
+      return NextResponse.json({ error: "Tenant not found or unauthorized" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: updated.id,
+        tenant_name: updated.occupant_name,
+        trade_name: updated.occupant_name,
+        occupant_code: updated.occupant_code,
+        pan: updated.pan_number,
+        gstin: updated.gst_number,
+        status: updated.occupant_status,
+        property_id: updated.source_row_id || null,
+      },
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "Failed to update tenant", message: err.message },
+      { status: 500 }
+    );
+  }
+}
+

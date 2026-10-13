@@ -20,6 +20,7 @@ import {
   Send,
   FileCheck,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface ExpiringLease {
   id: string;
@@ -48,7 +49,9 @@ export default function LeaseRenewalsPipelinePage() {
   const fetchRenewals = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/rent-roll/expiry-pipeline");
+      const res = await fetch("/api/rent-roll/expiry-pipeline", {
+        headers: getClientAuthHeaders(),
+      });
       const json = await res.json();
       if (json.success || json.leases) {
         setLeases(json.leases || []);
@@ -70,6 +73,7 @@ export default function LeaseRenewalsPipelinePage() {
       setActingId(lease.id);
       const res = await fetch(`/api/contracts/${lease.id}/renew`, {
         method: "POST",
+        headers: { ...getClientAuthHeaders() },
       });
       const json = await res.json();
       if (json.success) {

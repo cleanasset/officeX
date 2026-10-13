@@ -33,6 +33,7 @@ import GoogleAddressAutocomplete, {
   AddressAutofillResult,
 } from "@/components/common/GoogleAddressAutocomplete";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 import AgreementVarianceModal, {
   AgreementDiffItem,
 } from "./AgreementVarianceModal";
@@ -59,6 +60,10 @@ export default function PropertyHierarchyModal({
 
   // Subscribed Capacity (Sq.Ft ceiling from active plan)
   const [subscribedCapacity, setSubscribedCapacity] = useState<number>(50000);
+
+  // Tracking last saved property and occupant in current workflow session
+  const [lastSavedPropName, setLastSavedPropName] = useState<string>("");
+  const [lastSavedOccupantName, setLastSavedOccupantName] = useState<string>("");
 
   // Generated Tenant Invite Link
   const [latestTenantInvite, setLatestTenantInvite] = useState<{
@@ -88,6 +93,17 @@ export default function PropertyHierarchyModal({
   const setActiveTab = (tab: HierarchyTab) => {
     setChangedFieldKeys(new Set());
     setActiveTabState(tab);
+  };
+
+  // Helper to clear highlight for an individual field once clicked or focused
+  const clearFieldHighlight = (key: string) => {
+    if (changedFieldKeys.has(key)) {
+      setChangedFieldKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
   };
 
   // Helper for dynamic temporary yellow highlight
@@ -277,13 +293,7 @@ export default function PropertyHierarchyModal({
 
   const loadHierarchyDropdowns = async () => {
     try {
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
-      const authHeaders: Record<string, string> = uEmail
-        ? { "x-user-email": uEmail }
-        : {};
+      const authHeaders = getClientAuthHeaders();
 
       // 1. Fetch properties
       const pRes = await fetch("/api/rent-roll/properties", { headers: authHeaders });
@@ -377,15 +387,12 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           id: propForm.existingPropId || undefined,
@@ -404,6 +411,7 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
+        setLastSavedPropName(propForm.propertyName.trim());
         showToast(`✓ Property "${propForm.propertyName}" registered successfully!`);
         // Sync local storage active property
         if (typeof window !== "undefined") {
@@ -414,9 +422,13 @@ export default function PropertyHierarchyModal({
             localStorage.setItem("officex_registered_property_names", JSON.stringify(reg));
           }
           if (data.data?.id) {
+            const newPropId = data.data.id;
             const regIds = JSON.parse(localStorage.getItem("officex_registered_property_ids") || "[]");
-            regIds.push(data.data.id);
+            regIds.push(newPropId);
             localStorage.setItem("officex_registered_property_ids", JSON.stringify(regIds));
+            setPropForm((prev) => ({ ...prev, existingPropId: newPropId }));
+            setBldgForm((prev) => ({ ...prev, propertyId: newPropId }));
+            setContractForm((prev) => ({ ...prev, propertyId: newPropId, areaSqft: prev.areaSqft || propForm.areaSqft }));
           }
         }
         // Auto-fill tenant billing address with property address
@@ -454,15 +466,12 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/buildings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           building_name: bldgForm.buildingName.trim(),
@@ -508,15 +517,12 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/spaces", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           space_name: spaceForm.spaceName.trim(),
@@ -531,7 +537,13 @@ export default function PropertyHierarchyModal({
       const data = await res.json();
       if (res.ok) {
         showToast(`✓ Space "${spaceForm.spaceName}" created successfully!`);
-        await loadHierarchyDropdowns();
+        if (data.data?.id) {
+          setContractForm((prev) => ({
+            ...prev,
+            spaceId: data.data.id,
+            areaSqft: spaceForm.areaSqft || prev.areaSqft,
+          }));
+        }
         setSpaceForm({
           buildingId: bldgId,
           spaceName: "",
@@ -570,17 +582,14 @@ export default function PropertyHierarchyModal({
     }
     setLoading(true);
     try {
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
+      const authHeaders = getClientAuthHeaders();
       const targetPropertyId = contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || null;
 
       const res = await fetch("/api/rent-roll/tenants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           tenant_name: tenantForm.occupantName.trim(),
@@ -603,6 +612,7 @@ export default function PropertyHierarchyModal({
       });
       const data = await res.json();
       if (res.ok) {
+        setLastSavedOccupantName(tenantForm.occupantName.trim());
         // Generate Tenant Portal Invite Link
         const origin =
           typeof window !== "undefined" && window.location.origin
@@ -684,7 +694,19 @@ export default function PropertyHierarchyModal({
 
         // Compute differences between currently entered data and extracted agreement data
         const currentSelectedTenant = tenantsList.find((t) => t.id === contractForm.occupantId);
-        const currentOccupantName = tenantForm.occupantName || currentSelectedTenant?.name || "";
+        const currentOccupantName =
+          tenantForm.occupantName ||
+          currentSelectedTenant?.name ||
+          lastSavedOccupantName ||
+          (tenantsList.length > 0 ? tenantsList[0].name : "");
+
+        const currentSelectedProp = propertiesList.find((p) => p.id === contractForm.propertyId || p.id === propForm.existingPropId);
+        const currentPropName =
+          propForm.propertyName ||
+          currentSelectedProp?.name ||
+          lastSavedPropName ||
+          (typeof window !== "undefined" ? localStorage.getItem("officex_active_property") || "" : "");
+
         const diffs: AgreementDiffItem[] = [];
 
         // 1. Occupant / Tenant Name
@@ -701,9 +723,27 @@ export default function PropertyHierarchyModal({
           });
         }
 
-        // 2. Leasable Area (Sq.Ft)
+        // 2. Commercial Property / Lessor Entity
+        if (d.lessorName || d.propertyName) {
+          const docProp = d.lessorName || d.propertyName;
+          const normCurrent = currentPropName.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normDoc = docProp.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const hasVariance =
+            currentPropName !== "" &&
+            normCurrent !== normDoc &&
+            (!normCurrent || !normDoc || (!normCurrent.includes(normDoc) && !normDoc.includes(normCurrent)));
+          diffs.push({
+            fieldKey: "propertyName",
+            label: "Commercial Property / Lessor",
+            currentValue: currentPropName || "(Not entered)",
+            agreementValue: docProp,
+            hasVariance: hasVariance || (!currentPropName && !!docProp),
+          });
+        }
+
+        // 3. Leasable Area (Sq.Ft)
         if (d.areaSqft > 0) {
-          const curArea = Number(contractForm.areaSqft) || 0;
+          const curArea = Number(contractForm.areaSqft) || Number(spaceForm.areaSqft) || Number(propForm.areaSqft) || 0;
           const hasVariance = curArea > 0 && curArea !== d.areaSqft;
           diffs.push({
             fieldKey: "areaSqft",
@@ -832,8 +872,10 @@ export default function PropertyHierarchyModal({
   const applyAgreementTerms = (d: any, diffsList?: AgreementDiffItem[]) => {
     if (!d) return;
 
+    const authHeaders = getClientAuthHeaders();
+
     // 1. Auto-match or detect occupant
-    let targetOccupantId = contractForm.occupantId;
+    let targetOccupantId = contractForm.occupantId || (tenantsList.length > 0 ? tenantsList[0].id : "");
     if (d.occupantName) {
       const matchedTenant = tenantsList.find(
         (t) =>
@@ -841,9 +883,60 @@ export default function PropertyHierarchyModal({
           d.occupantName.toLowerCase().includes(t.name.toLowerCase()) ||
           (t.company && d.companyName && t.company.toLowerCase().includes(d.companyName.toLowerCase()))
       );
+
       if (matchedTenant) {
         targetOccupantId = matchedTenant.id;
+        setTenantsList((prev) =>
+          prev.map((t) =>
+            t.id === targetOccupantId
+              ? { ...t, name: d.occupantName, company: d.companyName || d.occupantName }
+              : t
+          )
+        );
+        fetch("/api/rent-roll/tenants", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            tenant_id: targetOccupantId,
+            tenant_name: d.occupantName,
+            trade_name: d.companyName || d.occupantName,
+          }),
+        }).catch(() => {});
+      } else if (targetOccupantId) {
+        // Update currently selected tenant in tenantsList to agreement name
+        setTenantsList((prev) =>
+          prev.map((t) =>
+            t.id === targetOccupantId
+              ? { ...t, name: d.occupantName, company: d.companyName || d.occupantName }
+              : t
+          )
+        );
+        // Persist new tenant name in PostgreSQL database
+        fetch("/api/rent-roll/tenants", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            tenant_id: targetOccupantId,
+            tenant_name: d.occupantName,
+            trade_name: d.companyName || d.occupantName,
+          }),
+        }).catch(() => {});
+      } else {
+        // Provision local tenant entry in tenantsList
+        const newTenantId = `ten_${Date.now()}`;
+        setTenantsList((prev) => [
+          ...prev,
+          { id: newTenantId, name: d.occupantName, company: d.companyName || d.occupantName },
+        ]);
+        targetOccupantId = newTenantId;
       }
+
       // Also sync tenantForm state
       setTenantForm((prev) => ({
         ...prev,
@@ -852,7 +945,37 @@ export default function PropertyHierarchyModal({
       }));
     }
 
-    // 2. Auto-match space if area is close
+    // 2. Commercial Property / Lessor match or update
+    let targetPropertyId = contractForm.propertyId || propForm.existingPropId;
+    if (d.propertyName || d.lessorName) {
+      const docPropName = d.propertyName || d.lessorName;
+      setPropForm((prev) => ({ ...prev, propertyName: docPropName }));
+      const normDoc = docPropName.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const matchedProp = propertiesList.find((p) => {
+        const normP = p.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return normP === normDoc || (normDoc.length >= 8 && normP.includes(normDoc)) || (normP.length >= 8 && normDoc.includes(normP));
+      });
+      if (matchedProp) {
+        targetPropertyId = matchedProp.id;
+      } else if (targetPropertyId) {
+        setPropertiesList((prev) =>
+          prev.map((p) => (p.id === targetPropertyId ? { ...p, name: docPropName } : p))
+        );
+        fetch("/api/rent-roll/properties", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            id: targetPropertyId,
+            property_name: docPropName,
+          }),
+        }).catch(() => {});
+      }
+    }
+
+    // 3. Auto-match space if area is close
     let targetSpaceId = contractForm.spaceId;
     if (d.areaSqft > 0) {
       const matchedSpace = spacesList.find(
@@ -863,7 +986,7 @@ export default function PropertyHierarchyModal({
       }
     }
 
-    // 3. Billing SPV match or add
+    // 4. Billing SPV match or add
     if (d.billingEntity) {
       setBillingEntities((prev) => Array.from(new Set([...prev, d.billingEntity])));
     }
@@ -871,6 +994,7 @@ export default function PropertyHierarchyModal({
     setContractForm((prev) => ({
       ...prev,
       occupantId: targetOccupantId || prev.occupantId,
+      propertyId: targetPropertyId || prev.propertyId,
       spaceId: targetSpaceId || prev.spaceId,
       areaSqft: d.areaSqft ? String(d.areaSqft) : prev.areaSqft,
       billingModel: d.billingModel || prev.billingModel,
@@ -966,16 +1090,13 @@ export default function PropertyHierarchyModal({
         .filter(Boolean)
         .join(" | ");
 
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
+      const authHeaders = getClientAuthHeaders();
 
       const res = await fetch("/api/contracts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(uEmail ? { "x-user-email": uEmail } : {}),
+          ...authHeaders,
         },
         body: JSON.stringify({
           occupant_id: contractForm.occupantId,
@@ -1026,14 +1147,7 @@ export default function PropertyHierarchyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-hidden">
-      <div
-        onClick={() => {
-          if (changedFieldKeys.size > 0) {
-            setChangedFieldKeys(new Set());
-          }
-        }}
-        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-white border border-slate-200 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-150"
-      >
+      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-white border border-slate-200 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-150">
         {/* Top Decorative Gradient */}
         <div className="h-2 bg-gradient-to-r from-[#0F8B7D] via-teal-400 to-[#071324] shrink-0 rounded-t-3xl" />
 
@@ -1709,6 +1823,34 @@ export default function PropertyHierarchyModal({
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                {/* Associated Commercial Property */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Associated Property <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Links tenant directly to this commercial asset
+                    </span>
+                  </div>
+                  <select
+                    value={contractForm.propertyId || propForm.existingPropId || propertiesList[0]?.id || ""}
+                    onChange={(e) => {
+                      const selPropId = e.target.value;
+                      setContractForm((prev) => ({ ...prev, propertyId: selPropId }));
+                      setPropForm((prev) => ({ ...prev, existingPropId: selPropId }));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                  >
+                    {propertiesList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                    {propertiesList.length === 0 && <option value="">No properties registered</option>}
+                  </select>
+                </div>
+
                 {/* 1. Occupant Name (required) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -1724,14 +1866,10 @@ export default function PropertyHierarchyModal({
                     required
                     placeholder="e.g. Vikas Nair"
                     value={tenantForm.occupantName}
+                    onClick={() => clearFieldHighlight("occupantName")}
+                    onFocus={() => clearFieldHighlight("occupantName")}
                     onChange={(e) => {
-                      if (changedFieldKeys.has("occupantName")) {
-                        setChangedFieldKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete("occupantName");
-                          return next;
-                        });
-                      }
+                      clearFieldHighlight("occupantName");
                       setTenantForm({ ...tenantForm, occupantName: e.target.value });
                     }}
                     className={getHighlightClass(
@@ -2113,15 +2251,11 @@ export default function PropertyHierarchyModal({
                   <select
                     value={contractForm.occupantId}
                     onChange={(e) => {
-                      if (changedFieldKeys.has("occupantName")) {
-                        setChangedFieldKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete("occupantName");
-                          return next;
-                        });
-                      }
+                      clearFieldHighlight("occupantName");
                       setContractForm({ ...contractForm, occupantId: e.target.value });
                     }}
+                    onClick={() => clearFieldHighlight("occupantName")}
+                    onFocus={() => clearFieldHighlight("occupantName")}
                     className={getHighlightClass(
                       "occupantName",
                       "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
@@ -2138,13 +2272,28 @@ export default function PropertyHierarchyModal({
 
                 {/* 2. Property */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Property <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Property <span className="text-rose-500">*</span>
+                    </label>
+                    {changedFieldKeys.has("propertyName") && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300">
+                        Updated
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={contractForm.propertyId}
-                    onChange={(e) => setContractForm({ ...contractForm, propertyId: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                    onClick={() => clearFieldHighlight("propertyName")}
+                    onFocus={() => clearFieldHighlight("propertyName")}
+                    onChange={(e) => {
+                      clearFieldHighlight("propertyName");
+                      setContractForm({ ...contractForm, propertyId: e.target.value });
+                    }}
+                    className={getHighlightClass(
+                      "propertyName",
+                      "w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:border-[#0F8B7D] outline-none cursor-pointer"
+                    )}
                   >
                     {propertiesList.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -2264,14 +2413,10 @@ export default function PropertyHierarchyModal({
                           step="0.5"
                           placeholder="e.g. 80"
                           value={contractForm.ratePerSqft}
+                          onClick={() => clearFieldHighlight("ratePerSqft")}
+                          onFocus={() => clearFieldHighlight("ratePerSqft")}
                           onChange={(e) => {
-                            if (changedFieldKeys.has("ratePerSqft")) {
-                              setChangedFieldKeys((prev) => {
-                                const next = new Set(prev);
-                                next.delete("ratePerSqft");
-                                return next;
-                              });
-                            }
+                            clearFieldHighlight("ratePerSqft");
                             const rate = e.target.value;
                             const area = Number(contractForm.areaSqft) || 0;
                             const calcRent = rate && area ? String(Math.round(Number(rate) * area)) : contractForm.monthlyRent;
@@ -2303,14 +2448,10 @@ export default function PropertyHierarchyModal({
                           type="number"
                           placeholder="e.g. 5000"
                           value={contractForm.areaSqft}
+                          onClick={() => clearFieldHighlight("areaSqft")}
+                          onFocus={() => clearFieldHighlight("areaSqft")}
                           onChange={(e) => {
-                            if (changedFieldKeys.has("areaSqft")) {
-                              setChangedFieldKeys((prev) => {
-                                const next = new Set(prev);
-                                next.delete("areaSqft");
-                                return next;
-                              });
-                            }
+                            clearFieldHighlight("areaSqft");
                             const area = e.target.value;
                             const rate = Number(contractForm.ratePerSqft) || 0;
                             const calcRent = area && rate ? String(Math.round(Number(area) * rate)) : contractForm.monthlyRent;
@@ -2382,14 +2523,10 @@ export default function PropertyHierarchyModal({
                         type="number"
                         placeholder="e.g. 5000"
                         value={contractForm.areaSqft}
+                        onClick={() => clearFieldHighlight("areaSqft")}
+                        onFocus={() => clearFieldHighlight("areaSqft")}
                         onChange={(e) => {
-                          if (changedFieldKeys.has("areaSqft")) {
-                            setChangedFieldKeys((prev) => {
-                              const next = new Set(prev);
-                              next.delete("areaSqft");
-                              return next;
-                            });
-                          }
+                          clearFieldHighlight("areaSqft");
                           setContractForm({ ...contractForm, areaSqft: e.target.value });
                         }}
                         className={getHighlightClass(
@@ -2421,14 +2558,10 @@ export default function PropertyHierarchyModal({
                       required
                       placeholder="e.g. 400000"
                       value={contractForm.monthlyRent}
+                      onClick={() => clearFieldHighlight("monthlyRent")}
+                      onFocus={() => clearFieldHighlight("monthlyRent")}
                       onChange={(e) => {
-                        if (changedFieldKeys.has("monthlyRent")) {
-                          setChangedFieldKeys((prev) => {
-                            const next = new Set(prev);
-                            next.delete("monthlyRent");
-                            return next;
-                          });
-                        }
+                        clearFieldHighlight("monthlyRent");
                         setContractForm({ ...contractForm, monthlyRent: e.target.value });
                       }}
                       className={getHighlightClass(
@@ -2508,14 +2641,10 @@ export default function PropertyHierarchyModal({
                           step="0.5"
                           placeholder="e.g. 15"
                           value={contractForm.camRate}
+                          onClick={() => clearFieldHighlight("camRate")}
+                          onFocus={() => clearFieldHighlight("camRate")}
                           onChange={(e) => {
-                            if (changedFieldKeys.has("camRate")) {
-                              setChangedFieldKeys((prev) => {
-                                const next = new Set(prev);
-                                next.delete("camRate");
-                                return next;
-                              });
-                            }
+                            clearFieldHighlight("camRate");
                             const rate = e.target.value;
                             const area = Number(contractForm.areaSqft) || 0;
                             const monthly = rate && area ? String(Math.round(Number(rate) * area)) : "";
@@ -2541,14 +2670,10 @@ export default function PropertyHierarchyModal({
                           type="number"
                           placeholder="e.g. 75000"
                           value={contractForm.camMonthly}
+                          onClick={() => clearFieldHighlight("camRate")}
+                          onFocus={() => clearFieldHighlight("camRate")}
                           onChange={(e) => {
-                            if (changedFieldKeys.has("camRate")) {
-                              setChangedFieldKeys((prev) => {
-                                const next = new Set(prev);
-                                next.delete("camRate");
-                                return next;
-                              });
-                            }
+                            clearFieldHighlight("camRate");
                             setContractForm({ ...contractForm, camMonthly: e.target.value });
                           }}
                           className={getHighlightClass(
@@ -2730,14 +2855,10 @@ export default function PropertyHierarchyModal({
                       min="0"
                       placeholder="e.g. 2400000"
                       value={contractForm.securityDeposit}
+                      onClick={() => clearFieldHighlight("securityDeposit")}
+                      onFocus={() => clearFieldHighlight("securityDeposit")}
                       onChange={(e) => {
-                        if (changedFieldKeys.has("securityDeposit")) {
-                          setChangedFieldKeys((prev) => {
-                            const next = new Set(prev);
-                            next.delete("securityDeposit");
-                            return next;
-                          });
-                        }
+                        clearFieldHighlight("securityDeposit");
                         setContractForm({ ...contractForm, securityDeposit: e.target.value });
                       }}
                       className={getHighlightClass(
@@ -2780,14 +2901,10 @@ export default function PropertyHierarchyModal({
                     type="date"
                     required
                     value={contractForm.startDate}
+                    onClick={() => clearFieldHighlight("startDate")}
+                    onFocus={() => clearFieldHighlight("startDate")}
                     onChange={(e) => {
-                      if (changedFieldKeys.has("startDate")) {
-                        setChangedFieldKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete("startDate");
-                          return next;
-                        });
-                      }
+                      clearFieldHighlight("startDate");
                       setContractForm({ ...contractForm, startDate: e.target.value });
                     }}
                     className={getHighlightClass(
@@ -2813,14 +2930,10 @@ export default function PropertyHierarchyModal({
                     type="date"
                     required
                     value={contractForm.endDate}
+                    onClick={() => clearFieldHighlight("endDate")}
+                    onFocus={() => clearFieldHighlight("endDate")}
                     onChange={(e) => {
-                      if (changedFieldKeys.has("endDate")) {
-                        setChangedFieldKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete("endDate");
-                          return next;
-                        });
-                      }
+                      clearFieldHighlight("endDate");
                       setContractForm({ ...contractForm, endDate: e.target.value });
                     }}
                     className={getHighlightClass(
@@ -2845,14 +2958,10 @@ export default function PropertyHierarchyModal({
                     min="0"
                     placeholder="e.g. 12"
                     value={contractForm.lockInMonths}
+                    onClick={() => clearFieldHighlight("lockInMonths")}
+                    onFocus={() => clearFieldHighlight("lockInMonths")}
                     onChange={(e) => {
-                      if (changedFieldKeys.has("lockInMonths")) {
-                        setChangedFieldKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete("lockInMonths");
-                          return next;
-                        });
-                      }
+                      clearFieldHighlight("lockInMonths");
                       setContractForm({ ...contractForm, lockInMonths: e.target.value });
                     }}
                     className={getHighlightClass(
@@ -2895,14 +3004,10 @@ export default function PropertyHierarchyModal({
                     step="0.1"
                     placeholder="e.g. 5"
                     value={contractForm.escalationPct}
+                    onClick={() => clearFieldHighlight("escalationPct")}
+                    onFocus={() => clearFieldHighlight("escalationPct")}
                     onChange={(e) => {
-                      if (changedFieldKeys.has("escalationPct")) {
-                        setChangedFieldKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete("escalationPct");
-                          return next;
-                        });
-                      }
+                      clearFieldHighlight("escalationPct");
                       setContractForm({ ...contractForm, escalationPct: e.target.value });
                     }}
                     className={getHighlightClass(

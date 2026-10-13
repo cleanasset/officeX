@@ -39,6 +39,7 @@ import {
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import RentRollOnboardingWizard, { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
 import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface PropertySummary {
   id: string;
@@ -224,13 +225,7 @@ export default function OwnerDashboardPage() {
     try {
       setLoading(true);
 
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
-      const authHeaders: Record<string, string> = uEmail
-        ? { "x-user-email": uEmail }
-        : {};
+      const authHeaders = getClientAuthHeaders();
 
       // 1. Fetch live properties, tenants, and contracts in parallel
       const [propRes, tenantsRes, contractsRes] = await Promise.all([
@@ -354,7 +349,7 @@ export default function OwnerDashboardPage() {
       }
 
       // 2. Fetch live Aging data
-      const agingRes = await fetch("/api/collections/aging").catch(() => null);
+      const agingRes = await fetch("/api/collections/aging", { headers: authHeaders }).catch(() => null);
       if (agingRes && agingRes.ok) {
         const json = await agingRes.json();
         if (json.summary) {
@@ -369,7 +364,7 @@ export default function OwnerDashboardPage() {
       }
 
       // 3. Fetch live Invoices count & KPIs
-      const invRes = await fetch("/api/invoices").catch(() => null);
+      const invRes = await fetch("/api/invoices", { headers: authHeaders }).catch(() => null);
       if (invRes && invRes.ok) {
         const json = await invRes.json();
         if (json.kpis && json.kpis.overdue_inr > 0) {
@@ -381,14 +376,14 @@ export default function OwnerDashboardPage() {
       }
 
       // 4. Fetch Multi-Client Mandates & Owner Statement
-      const clientRes = await fetch("/api/multi-client/clients").catch(() => null);
+      const clientRes = await fetch("/api/multi-client/clients", { headers: authHeaders }).catch(() => null);
       if (clientRes && clientRes.ok) {
         const cJson = await clientRes.json();
         const clients = cJson.data || cJson.clients || [];
         setDelegatedCount(clients.filter((c: any) => !c.is_self).length);
       }
 
-      const stmtRes = await fetch("/api/multi-client/owner-statement").catch(() => null);
+      const stmtRes = await fetch("/api/multi-client/owner-statement", { headers: authHeaders }).catch(() => null);
       if (stmtRes && stmtRes.ok) {
         const sJson = await stmtRes.json();
         const stmt = sJson.statement || sJson.data;
@@ -433,7 +428,7 @@ export default function OwnerDashboardPage() {
     try {
       await fetch("/api/rent-roll/properties", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           property_name: data.propertyName,
           property_type: data.propertyType,

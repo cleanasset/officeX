@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import ComplianceOperationsCenter from "@/components/compliance/ComplianceOperationsCenter";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface VisitorManagementConsoleProps {
   portalRole?: "tenant" | "security" | "fm" | "admin";
@@ -156,12 +157,13 @@ export default function VisitorManagementConsole({
   }, [searchTerm]);
 
   useEffect(() => {
-    fetch("/api/rent-roll/tenants")
+    fetch("/api/rent-roll/tenants", { headers: getClientAuthHeaders() })
       .then((r) => r.json())
       .then((data) => {
-        const list = (data.tenants || []).map((t: any) => ({
+        const rawList = Array.isArray(data.data) ? data.data : (Array.isArray(data.tenants) ? data.tenants : []);
+        const list = rawList.map((t: any) => ({
           id: t.id,
-          name: t.tradeName || t.legalName || t.name
+          name: t.tenant_name || t.trade_name || t.occupant_name || t.name || t.tradeName || t.legalName,
         }));
         if (list.length > 0) {
           setAvailableTenants(list);

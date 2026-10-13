@@ -249,7 +249,7 @@ export async function POST(req: Request) {
     }
 
     // Insert Charges & Rent Steps
-    if (Array.isArray(body.charges)) {
+    if (Array.isArray(body.charges) && body.charges.length > 0) {
       for (const ch of body.charges) {
         const [insertedCharge] = await db
           .insert(contractCharge)
@@ -291,6 +291,48 @@ export async function POST(req: Request) {
             });
           }
         }
+      }
+    } else if (Number(payload.base_rent_rate || body.base_rent_rate || 0) > 0) {
+      // Auto-provision canonical base rent contractCharge for billing & rent roll engines
+      const rentRate = Number(payload.base_rent_rate || body.base_rent_rate);
+      const [insertedCharge] = await db
+        .insert(contractCharge)
+        .values({
+          org_id: orgId,
+          client_account_id: clientAccountId,
+          contract_id: insertedContract.id,
+          component: "base_rent",
+          calc_basis: "fixed",
+          rate: String(rentRate),
+          rate_period: "month",
+          quantity_basis: "1",
+          is_included: false,
+          is_recoverable: false,
+          invoice_group: "rent",
+          billing_mode: "advance",
+          start_date: payload.start_date,
+          end_date: payload.end_date,
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        })
+        .returning();
+
+      // If escalation specified, provision rentStep for Escalation Calendar engine
+      const escPct = Number(body.escalation_value || payload.escalation_value || 0);
+      if (escPct > 0) {
+        await db.insert(rentStep).values({
+          org_id: orgId,
+          client_account_id: clientAccountId,
+          contract_charge_id: insertedCharge.id,
+          step_no: 1,
+          effective_date: payload.start_date,
+          escalation_type: "percentage",
+          rate: String(rentRate),
+          escalation_value: String(escPct),
+          status: "scheduled",
+          created_by: auth.userId,
+          updated_by: auth.userId,
+        });
       }
     }
 
@@ -420,9 +462,16 @@ export async function GET(req: Request) {
       .from(contract)
       .where(and(...conditions));
 
+    const formattedContracts = contractsList.map((item) => ({
+      ...item.contract,
+      ...item,
+      contract: item.contract,
+      base_rent_rate: Number((item.contract as any)?.base_rent_rate || 0),
+    }));
+
     return NextResponse.json({
       success: true,
-      data: contractsList,
+      data: formattedContracts,
       pagination: {
         total: Number(countResult?.count || 0),
         page,

@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ShieldAlert,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface EscalationCalendarViewProps {
   isOpen: boolean;
@@ -40,7 +41,8 @@ export default function EscalationCalendarView({
     try {
       setLoading(true);
       setFeedback(null);
-      const res = await fetch("/api/escalations/calendar");
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/escalations/calendar", { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setEvents(json.data || []);

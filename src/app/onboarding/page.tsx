@@ -3,6 +3,7 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import RentRollOnboardingWizard, { OnboardingCompleteData } from "@/components/rent-roll/RentRollOnboardingWizard";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 function OnboardingContent() {
   const router = useRouter();
@@ -97,7 +98,7 @@ function OnboardingContent() {
     try {
       const propRes = await fetch("/api/rent-roll/properties", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
           property_name: data.propertyName,
           property_code: data.propertyCode,

@@ -45,6 +45,7 @@ import PropertyHierarchyModal, {
 import { DataImportView } from "@/components/rent-roll/DataImportView";
 import PaymentsCollectionsView from "@/components/rent-roll/PaymentsCollectionsView";
 import MultiClientFlexView from "@/components/rent-roll/MultiClientFlexView";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function RentRollRegisterPage() {
   // As-of-date and Views (§S-10)
@@ -119,7 +120,9 @@ export default function RentRollRegisterPage() {
       if (propertyFilter !== "all") params.set("property_id", propertyFilter);
       if (expiryFilter !== "all") params.set("expiry_window", expiryFilter);
 
-      const res = await fetch(`/api/rent-roll/register?${params.toString()}`);
+      const res = await fetch(`/api/rent-roll/register?${params.toString()}`, {
+        headers: getClientAuthHeaders(),
+      });
       const json = await res.json();
       if (json.success) {
         setRegisterData(json);

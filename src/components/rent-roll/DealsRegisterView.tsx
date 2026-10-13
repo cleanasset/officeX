@@ -13,6 +13,7 @@ import {
   CheckCircle,
   FileText,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface DealsRegisterViewProps {
   isOpen: boolean;
@@ -38,8 +39,8 @@ export default function DealsRegisterView({
 
   async function loadDeals() {
     try {
-      setLoading(true);
-      const res = await fetch("/api/deals");
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/deals", { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setDeals(json.data || []);

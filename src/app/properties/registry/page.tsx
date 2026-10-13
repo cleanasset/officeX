@@ -24,6 +24,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PropertyHierarchyModal, {
   HierarchyTab,
 } from "@/components/rent-roll/PropertyHierarchyModal";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 export default function SpaceAndBuildingRegistryPage() {
   const [activeTab, setActiveTab] = useState<"properties" | "units">("properties");
@@ -42,13 +43,7 @@ export default function SpaceAndBuildingRegistryPage() {
   const fetchRegistryData = async () => {
     try {
       setLoading(true);
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
-      const authHeaders: Record<string, string> = uEmail
-        ? { "x-user-email": uEmail }
-        : {};
+      const authHeaders = getClientAuthHeaders();
 
       const [propsRes, spacesRes] = await Promise.all([
         fetch("/api/rent-roll/properties", { headers: authHeaders }).catch(() => null),

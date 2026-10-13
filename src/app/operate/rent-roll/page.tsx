@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import Footer from "@/components/Footer";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import RentRollPricingTable from "@/components/rent-roll/RentRollPricingTable";
 import { setAuthCookie } from "@/lib/auth-storage";
@@ -74,7 +75,8 @@ export default function RentRollProductPage() {
   useEffect(() => {
     async function loadRegister() {
       try {
-        const res = await fetch("/api/rent-roll/register");
+        const authHeaders = getClientAuthHeaders();
+        const res = await fetch("/api/rent-roll/register", { headers: authHeaders });
         const json = await res.json();
         if (json.success) setLiveData(json);
       } catch (e) {}

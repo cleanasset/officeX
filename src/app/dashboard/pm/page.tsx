@@ -30,6 +30,7 @@ import {
   X
 } from "lucide-react";
 import ContractWizardModal from "@/components/rent-roll/ContractWizardModal";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 type TaskCategory =
   | "contract_approval"
@@ -78,13 +79,7 @@ export default function PropertyManagerDashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
 
   useEffect(() => {
-    const uEmail =
-      typeof window !== "undefined"
-        ? localStorage.getItem("officex_user_email") || ""
-        : "";
-    const authHeaders: Record<string, string> = uEmail
-      ? { "x-user-email": uEmail }
-      : {};
+    const authHeaders = getClientAuthHeaders();
 
     fetch("/api/rent-roll/properties", { headers: authHeaders })
       .then((res) => res.json())
@@ -95,6 +90,93 @@ export default function PropertyManagerDashboardPage() {
           ? data
           : data.properties || [];
         setPropertiesList(list);
+      })
+      .catch(() => {});
+
+    // Fetch live contracts to generate real-time PM operational tasks
+    fetch("/api/contracts", { headers: authHeaders })
+      .then((res) => res.json())
+      .then((data) => {
+        const contracts = Array.isArray(data.data) ? data.data : [];
+        const generatedTasks: TaskItem[] = [];
+
+        contracts.forEach((c: any) => {
+          const occName = c.occupant_name || c.tenant_name || "Tenant";
+          const propName = c.property_name || "Commercial Centre";
+          const spaceName = c.space_name || "Unit Demarcated";
+          const rentVal = Number(c.base_rent_rate || c.contract?.base_rent_rate || 0);
+          const depVal = Number(c.deposit_amount_inr || c.contract?.deposit_amount_inr || 0);
+
+          // 1. Pending Lease Approval
+          if (c.approval_status === "pending" || c.contract_status === "submitted") {
+            generatedTasks.push({
+              id: `appr_${c.id}`,
+              category: "contract_approval",
+              categoryLabel: "Contract Approval",
+              priority: "HIGH",
+              title: `Approve Lease: ${occName}`,
+              info: `Contract ${c.contract_code || "LEAS"} submitted for approval · Base Rent: ₹${rentVal.toLocaleString()}/mo`,
+              property: propName,
+              occupantSpace: `${occName} · ${spaceName}`,
+              dueDate: c.start_date || todayStr,
+              dueStatus: "today",
+              financialDetail: `₹${rentVal.toLocaleString()}/mo`,
+              actions: {
+                primaryText: "Review & Approve",
+                secondaryText: "Reject",
+                tertiaryText: "View Details",
+              },
+            });
+          }
+
+          // 2. Pending Security Deposit Collection
+          if (depVal > 0 && c.deposit_status !== "collected") {
+            generatedTasks.push({
+              id: `dep_${c.id}`,
+              category: "deposit_collection",
+              categoryLabel: "Security Deposit",
+              priority: "HIGH",
+              title: `Collect Security Deposit: ${occName}`,
+              info: `Interest-free refundable security deposit of ₹${depVal.toLocaleString()} due for ${c.contract_code || "LEAS"}`,
+              property: propName,
+              occupantSpace: `${occName} · ${spaceName}`,
+              dueDate: c.start_date || todayStr,
+              dueStatus: "today",
+              financialDetail: `₹${depVal.toLocaleString()}`,
+              actions: {
+                primaryText: "Record Payment",
+                secondaryText: "Send Reminder",
+                tertiaryText: "View Details",
+              },
+            });
+          }
+
+          // 3. Active Lease Escalation or Renewal
+          if (c.has_escalation || Number(c.escalation_value || 0) > 0) {
+            generatedTasks.push({
+              id: `esc_${c.id}`,
+              category: "escalation_due",
+              categoryLabel: "Escalation Due",
+              priority: "MEDIUM",
+              title: `Rent Step-Up (${c.escalation_value || 5}%): ${occName}`,
+              info: `Annual rent escalation scheduled for ${spaceName} under lease ${c.contract_code || "LEAS"}`,
+              property: propName,
+              occupantSpace: `${occName} · ${spaceName}`,
+              dueDate: c.end_date || todayStr,
+              dueStatus: "future",
+              financialDetail: `+${c.escalation_value || 5}%`,
+              actions: {
+                primaryText: "Apply Escalation",
+                secondaryText: "Postpone",
+                tertiaryText: "View Timeline",
+              },
+            });
+          }
+        });
+
+        if (generatedTasks.length > 0) {
+          setTasks(generatedTasks);
+        }
       })
       .catch(() => {});
 

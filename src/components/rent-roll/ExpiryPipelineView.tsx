@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface ExpiryPipelineViewProps {
   isOpen: boolean;
@@ -39,8 +40,9 @@ export default function ExpiryPipelineView({
   async function loadPipeline() {
     try {
       setLoading(true);
+      const authHeaders = getClientAuthHeaders();
       const url = filterWindow === "all" ? "/api/rent-roll/expiry-pipeline" : `/api/rent-roll/expiry-pipeline?window=${filterWindow}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setPipelineData(json.data || []);
@@ -56,9 +58,10 @@ export default function ExpiryPipelineView({
   async function handleCreateRenewalDeal(contractId: string) {
     try {
       setActionLoadingId(contractId);
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/rent-roll/expiry-pipeline", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ contract_id: contractId }),
       });
       const json = await res.json();

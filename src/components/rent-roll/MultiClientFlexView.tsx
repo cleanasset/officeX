@@ -18,6 +18,7 @@ import {
   Calculator,
   Download,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface MultiClientFlexViewProps {
   isOpen: boolean;
@@ -57,9 +58,10 @@ export default function MultiClientFlexView({
 
   async function loadClients() {
     try {
-      const res = await fetch("/api/rent-roll/occupants");
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/rent-roll/occupants", { headers: authHeaders });
       // Also fetch properties to get client accounts
-      const stmtRes = await fetch("/api/multi-client/owner-statement");
+      const stmtRes = await fetch("/api/multi-client/owner-statement", { headers: authHeaders });
       const stmtJson = await stmtRes.json();
       if (stmtJson.success && stmtJson.statement) {
         setSelectedClientId(stmtJson.statement.client_account_id);
@@ -72,7 +74,8 @@ export default function MultiClientFlexView({
   async function loadStatement(clientId: string) {
     try {
       setLoadingStatement(true);
-      const res = await fetch(`/api/multi-client/owner-statement?client_account_id=${clientId}`);
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch(`/api/multi-client/owner-statement?client_account_id=${clientId}`, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setStatement(json.statement);
@@ -87,7 +90,8 @@ export default function MultiClientFlexView({
   async function loadFlexDashboard() {
     try {
       setLoadingFlex(true);
-      const res = await fetch("/api/flex/dashboard");
+      const authHeaders = getClientAuthHeaders();
+      const res = await fetch("/api/flex/dashboard", { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setFlexDashboard(json.data);

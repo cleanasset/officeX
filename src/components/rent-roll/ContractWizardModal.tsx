@@ -19,6 +19,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface ContractWizardModalProps {
   isOpen: boolean;
@@ -112,9 +113,10 @@ export default function ContractWizardModal({
 
   async function loadMasterOptions() {
     try {
+      const authHeaders = getClientAuthHeaders();
       const [occRes, spRes] = await Promise.all([
-        fetch("/api/occupants"),
-        fetch("/api/spaces"),
+        fetch("/api/occupants", { headers: authHeaders }),
+        fetch("/api/spaces", { headers: authHeaders }),
       ]);
       const [occData, spData] = await Promise.all([occRes.json(), spRes.json()]);
       if (occData.success) setOccupants(occData.data || []);
@@ -263,9 +265,10 @@ export default function ContractWizardModal({
         ],
       };
 
+      const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/contracts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
 
@@ -281,7 +284,7 @@ export default function ContractWizardModal({
       if (form.has_uploaded_doc && created?.id) {
         await fetch(`/api/contracts/${created.id}/documents`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({
             doc_type: form.doc_type,
             file_name: form.doc_file_name,
@@ -292,7 +295,10 @@ export default function ContractWizardModal({
 
       // If user clicked submit for approval, immediately trigger submit
       if (submitForApproval && created?.id) {
-        await fetch(`/api/contracts/${created.id}/submit`, { method: "POST" });
+        await fetch(`/api/contracts/${created.id}/submit`, {
+          method: "POST",
+          headers: { ...authHeaders },
+        });
       }
 
       onSuccess(created);
