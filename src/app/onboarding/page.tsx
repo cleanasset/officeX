@@ -27,9 +27,14 @@ function OnboardingContent() {
         localStorage.setItem("officex_brand_logo", data.logoUrl);
       }
 
+      localStorage.setItem("officex_subscription", "active");
+      sessionStorage.setItem("officex_subscription", "active");
+      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+
       // Owner Delegation Data (Fetched in complete profile hub)
       if (data.hasDelegatedManager) {
         localStorage.setItem("officex_has_manager", "true");
+        localStorage.setItem("officex_manage_mode", "delegated");
         localStorage.setItem("officex_manager_type", data.managerType || "pm_company");
         if (data.managerUserRole) {
           localStorage.setItem("officex_manager_user_role", data.managerUserRole);
@@ -59,6 +64,7 @@ function OnboardingContent() {
           localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
         }
       } else {
+        localStorage.setItem("officex_manage_mode", "self");
         localStorage.removeItem("officex_has_manager");
         localStorage.removeItem("officex_manager_type");
         localStorage.removeItem("officex_manager_user_role");

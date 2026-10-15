@@ -8,6 +8,7 @@ import { Lock, ShieldCheck, CheckCircle, CheckCircle2, ArrowRight, Sparkles, Log
 import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 import { supabase } from "@/lib/supabase";
 import { isAuthenticated, getCookie } from "@/lib/auth-client";
+import { getClientUserEmail } from "@/lib/auth-storage";
 import { CountryPhoneInput } from "@/components/ui/CountryPhoneInput";
 
 export interface SubscriptionPlanTier {
@@ -234,9 +235,37 @@ export default function SubscriptionGate({
         }
       }
 
-      let email = (getCookie("officex_user_email") || localStorage.getItem("officex_user_email") || "").toLowerCase().trim();
-      let name = localStorage.getItem("officex_user_name") || getCookie("officex_user_name") || "Member";
-      let role = getCookie("officex_user_role") || localStorage.getItem("officex_user_role") || "Property Owner";
+      // 1. Check if user is already onboarded or active subscriber
+      const isOnboarded =
+        (typeof window !== "undefined" && (
+          localStorage.getItem("officex_rentroll_onboarded") === "true" ||
+          localStorage.getItem("officex_onboarding_completed") === "1" ||
+          sessionStorage.getItem("officex_onboarding_completed") === "1"
+        )) || getCookie("officex_onboarding_completed") === "1";
+
+      const subGlobal =
+        getCookie("officex_subscription") === "active" ||
+        (typeof window !== "undefined" && (
+          localStorage.getItem("officex_subscription") === "active" ||
+          sessionStorage.getItem("officex_subscription") === "active"
+        ));
+
+      let email = (
+        getClientUserEmail() ||
+        getCookie("officex_user_email") ||
+        (typeof window !== "undefined" ? localStorage.getItem("officex_user_email") || sessionStorage.getItem("officex_user_email") : "") ||
+        ""
+      ).toLowerCase().trim();
+
+      let name =
+        (typeof window !== "undefined" ? localStorage.getItem("officex_user_name") || sessionStorage.getItem("officex_user_name") : "") ||
+        getCookie("officex_user_name") ||
+        "";
+
+      let role =
+        getCookie("officex_user_role") ||
+        (typeof window !== "undefined" ? localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role") : "") ||
+        "Property Owner";
 
       // Also check active Supabase Auth session directly
       try {
@@ -244,8 +273,10 @@ export default function SubscriptionGate({
         if (session?.user?.email) {
           email = session.user.email.toLowerCase().trim();
           name = session.user.user_metadata?.full_name || session.user.email.split("@")[0] || name;
-          localStorage.setItem("officex_user_email", email);
-          localStorage.setItem("officex_user_name", name);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_user_email", email);
+            localStorage.setItem("officex_user_name", name);
+          }
           document.cookie = `officex_user_email=${encodeURIComponent(email)}; path=/; max-age=86400; SameSite=Lax`;
           document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
         }
@@ -253,8 +284,32 @@ export default function SubscriptionGate({
         // Non-blocking
       }
 
+      // If user has completed onboarding or has an active subscription, GRANT IMMEDIATE ACCESS!
+      if (isOnboarded || subGlobal) {
+        if (!email && name) {
+          email = `${name.toLowerCase().replace(/\s+/g, ".")}@officex.pro`;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_user_email", email);
+          }
+        }
+        if (typeof window !== "undefined") {
+          localStorage.setItem("officex_subscription", "active");
+          sessionStorage.setItem("officex_subscription", "active");
+        }
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+
+        setUserEmail(email);
+        setUserName(name || "Commercial Owner");
+        setUserRole(role);
+        setIsLoggedIn(true);
+        setIsSubscribed(true);
+        setIsRoleDecided(true);
+        setIsChecking(false);
+        return;
+      }
+
       setUserEmail(email);
-      setUserName(name);
+      setUserName(name || "Member");
       setUserRole(role);
 
       if (!email) {
@@ -271,21 +326,18 @@ export default function SubscriptionGate({
         (typeof window !== "undefined" && (localStorage.getItem("officex_user_role") || localStorage.getItem("officex_rentroll_onboarded")))
       );
 
-      // Check active subscription (strictly subscription-based; being logged in alone is NOT enough)
-      const subGlobal = getCookie("officex_subscription") === "active" ||
-        localStorage.getItem("officex_subscription") === "active";
-
-      const subEmailLocal = localStorage.getItem(`officex_sub_${email}`) === "active" ||
+      const subEmailLocal = (typeof window !== "undefined" && localStorage.getItem(`officex_sub_${email}`) === "active") ||
         getCookie(`officex_sub_${encodeURIComponent(email)}`) === "active";
 
       const storedCoupon =
-        localStorage.getItem("officex_applied_coupon") ||
-        sessionStorage.getItem("officex_applied_coupon");
+        typeof window !== "undefined"
+          ? localStorage.getItem("officex_applied_coupon") || sessionStorage.getItem("officex_applied_coupon")
+          : null;
       if (storedCoupon) {
         setAppliedCoupon(storedCoupon);
       }
 
-      if (subEmailLocal || subGlobal || storedCoupon) {
+      if (subEmailLocal || storedCoupon) {
         setIsSubscribed(true);
         setIsRoleDecided(hasDecidedRole);
         setIsChecking(false);

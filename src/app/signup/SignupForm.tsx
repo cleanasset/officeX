@@ -680,10 +680,9 @@ export default function SignupForm({ initialRole, initialIntent, initialModule, 
       localStorage.removeItem("officex_property_name");
 
       if (isRentRoll) {
-        // Subscription is active or pending via Razorpay
-        localStorage.setItem("officex_subscription", "pending");
-        sessionStorage.setItem("officex_subscription", "pending");
-        document.cookie = "officex_subscription=pending; path=/; max-age=86400; SameSite=Lax";
+        localStorage.setItem("officex_subscription", "active");
+        sessionStorage.setItem("officex_subscription", "active");
+        document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
       }
       document.cookie = `officex_user_role=${encodeURIComponent(roleTitle)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `officex_dashboard=${encodeURIComponent(workspaceUrl)}; path=/; max-age=86400; SameSite=Lax`;

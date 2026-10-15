@@ -56,7 +56,7 @@ import {
 } from "@/lib/india-locations";
 import { uploadAndParseAgreement } from "@/lib/rent-roll/client-document-extractor";
 import AgreementVarianceModal, { AgreementDiffItem } from "@/components/rent-roll/AgreementVarianceModal";
-import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { getClientAuthHeaders, getClientUserEmail } from "@/lib/auth-storage";
 
 // Production Deployed Domain Fallback
 const DEPLOYED_BASE_URL =
@@ -1313,6 +1313,35 @@ function CompleteProfileContent() {
     }
   };
 
+  const finishSetupAndEnterDashboard = () => {
+    markStepDone("delegation");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("officex_subscription", "active");
+      sessionStorage.setItem("officex_subscription", "active");
+      document.cookie = "officex_subscription=active; path=/; max-age=2592000; SameSite=Lax";
+
+      localStorage.setItem("officex_session_active", "1");
+      sessionStorage.setItem("officex_session_active", "1");
+      document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
+
+      localStorage.setItem("officex_rentroll_onboarded", "true");
+      sessionStorage.setItem("officex_rentroll_onboarded", "true");
+      localStorage.setItem("officex_onboarding_completed", "1");
+      sessionStorage.setItem("officex_onboarding_completed", "1");
+      document.cookie = "officex_onboarding_completed=1; path=/; max-age=86400; SameSite=Lax";
+
+      const curEmail = localStorage.getItem("officex_user_email") || getClientUserEmail();
+      if (curEmail) {
+        localStorage.setItem(`officex_sub_${curEmail.toLowerCase().trim()}`, "active");
+        document.cookie = `officex_sub_${encodeURIComponent(curEmail.toLowerCase().trim())}=active; path=/; max-age=2592000; SameSite=Lax`;
+      }
+    }
+    showToast("🎉 Profile Setup Complete! Entering Live Dashboard...");
+    setTimeout(() => {
+      router.push("/dashboard/owner");
+    }, 400);
+  };
+
   const handleCopyInviteLink = () => {
     if (generatedInviteLink && typeof window !== "undefined") {
       navigator.clipboard.writeText(generatedInviteLink);
@@ -1467,7 +1496,7 @@ function CompleteProfileContent() {
                 { id: "tenant", label: "2. Add Occupant", icon: Users },
                 { id: "contract", label: "3. Lease Contract", icon: FileText },
                 { id: "documents", label: "4. Compliance Vault", icon: ShieldCheck },
-                { id: "delegation", label: "5. Team Delegation", icon: UserCheck },
+                { id: "delegation", label: assignChoice === "self" ? "5. Management & Access" : "5. Team Delegation", icon: UserCheck },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isCurrent = activeStep === tab.id;
@@ -3769,7 +3798,7 @@ function CompleteProfileContent() {
                 })}
               </div>
 
-              <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setActiveStep("tenant")}
@@ -3778,21 +3807,31 @@ function CompleteProfileContent() {
                   ← Back to Tenants
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    markStepDone("documents");
-                    setActiveStep("delegation");
-                  }}
-                  className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>Continue to Team Delegation →</span>
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markStepDone("documents");
+                      setActiveStep("delegation");
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 hover:border-teal-500 bg-white text-slate-700 text-xs font-bold transition cursor-pointer"
+                  >
+                    <span>{assignChoice === "self" ? "Review Access & Finish →" : "Continue to Delegation →"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={finishSetupAndEnterDashboard}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#0D7B6C] hover:from-emerald-700 hover:to-[#0A6357] text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Complete Setup &amp; Enter Dashboard →</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* ──── MODULE 5: TEAM DELEGATION & INVITATION LINK ──── */}
+          {/* ──── MODULE 5: MANAGEMENT & TEAM DELEGATION ──── */}
           {activeStep === "delegation" && (
             <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-6">
               <div className="border-b border-slate-100 pb-4">
@@ -3806,185 +3845,293 @@ function CompleteProfileContent() {
                   </div>
                 </div>
                 <h3 className="text-lg font-black text-slate-900">
-                  Step 5: Managing Entity Delegation &amp; Approval Matrix
+                  Step 5: {assignChoice === "self" ? "Direct Owner Management & Access" : "Managing Entity Delegation"}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Assign a managing company, CA, or manager to operate this portfolio and decide what rights they hold. Actions without direct rights require your explicit approval.
+                  {assignChoice === "self"
+                    ? "You have chosen to manage this property portfolio directly as the owner. No external delegation or PM fees required."
+                    : "Assign a managing company, CA, or manager to operate this portfolio and decide what rights they hold."}
                 </p>
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Managing Entity Type</label>
-                    <select
-                      value={managerData.entityType}
-                      onChange={(e) => setManagerData({ ...managerData, entityType: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
-                    >
-                      <option value="pm_company">PM Company (Property Management Company)</option>
-                      <option value="fm_company">FM Company (Facilities Management Company)</option>
-                      <option value="msp">MSP (Managed Service Provider)</option>
-                      <option value="user_pm_or_admin">Another User with role: Property Manager or Org Admin</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                      {managerData.entityType === "user_pm_or_admin" ? "User Full Name *" : "Entity / Company Name *"}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={
-                        managerData.entityType === "user_pm_or_admin"
-                          ? "e.g. Vikram Sharma"
-                          : managerData.entityType === "fm_company"
-                          ? "e.g. CBRE / JLL Facilities"
-                          : managerData.entityType === "msp"
-                          ? "e.g. SmartOps MSP Solutions"
-                          : "e.g. Apex Property Management LLP"
-                      }
-                      value={managerData.name}
-                      onChange={(e) => setManagerData({ ...managerData, name: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                      {managerData.entityType === "user_pm_or_admin" ? "User Email Address *" : "Work Email Address *"}
-                    </label>
-                    <input
-                      type="email"
-                      placeholder={
-                        managerData.entityType === "user_pm_or_admin" ? "vikram@company.com" : "manager@apexpm.in"
-                      }
-                      value={managerData.email}
-                      onChange={(e) => setManagerData({ ...managerData, email: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
-                    />
-                  </div>
-                </div>
-
-                {managerData.entityType === "user_pm_or_admin" && (
-                  <div className="p-3 bg-white rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <div>
-                      <span className="text-xs font-black text-slate-900 block">
-                        Designated Role for this User
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        Choose whether this user operates as a Property Manager or an Org Admin.
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
-                        <input
-                          type="radio"
-                          name="profileManagerRole"
-                          value="property_manager"
-                          checked={managerData.role === "property_manager"}
-                          onChange={() => setManagerData({ ...managerData, role: "property_manager" })}
-                          className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
-                        />
-                        <span>Property Manager</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
-                        <input
-                          type="radio"
-                          name="profileManagerRole"
-                          value="org_admin"
-                          checked={managerData.role === "org_admin"}
-                          onChange={() => setManagerData({ ...managerData, role: "org_admin" })}
-                          className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
-                        />
-                        <span>Org Admin</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {/* Rights Checklist */}
-                <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-800 block">
-                    Delegated Rights &amp; Owner Approval Thresholds:
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {[
-                      {
-                        key: "contractExecution",
-                        label: "Execute Lease Agreements",
-                        desc: managerRights.contractExecution
-                          ? "Direct execution enabled"
-                          : "Requires Owner Approval before lease goes live",
-                      },
-                      {
-                        key: "concessions",
-                        label: "Rent Discounts & Waivers",
-                        desc: managerRights.concessions
-                          ? "Discretionary discounts allowed"
-                          : "Requires Owner Approval in /approvals inbox",
-                      },
-                      {
-                        key: "billingRuns",
-                        label: "Monthly Rent & CAM Invoicing",
-                        desc: managerRights.billingRuns ? "Autonomous monthly batch runs" : "Requires Owner preview",
-                      },
-                      {
-                        key: "depositRefunds",
-                        label: "Security Deposit Refunds",
-                        desc: managerRights.depositRefunds ? "Direct refund" : "Requires Owner Sign-off",
-                      },
-                    ].map((item) => (
-                      <label
-                        key={item.key}
-                        className="p-3 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-slate-300"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={(managerRights as any)[item.key]}
-                          onChange={(e) =>
-                            setManagerRights({
-                              ...managerRights,
-                              [item.key]: e.target.checked,
-                            })
-                          }
-                          className="w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C] border-slate-300 cursor-pointer mt-0.5"
-                        />
-                        <div>
-                          <span className="font-extrabold text-slate-900 block leading-tight">{item.label}</span>
-                          <span className="text-[10px] text-slate-500 font-medium">{item.desc}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Generate Deployed Link Button */}
-                <div className="pt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    Links are generated on your production domain ({DEPLOYED_BASE_URL.replace("https://", "")}).
-                  </span>
-                  <button
-                    type="button"
-                    disabled={!managerData.email || inviteLoading}
-                    onClick={() =>
-                      generateDomainInviteLink(
-                        managerData.name,
-                        managerData.email,
-                        managerData.role,
-                        managerData.entityType
-                      )
+              {/* Management Model Toggle */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                  onClick={() => {
+                    setAssignChoice("self");
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_manage_mode", "self");
+                      localStorage.removeItem("officex_has_manager");
                     }
-                    className="px-4 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
-                  >
-                    <RefreshCw size={13} className={inviteLoading ? "animate-spin" : ""} />
-                    <span>Generate Deployed Invite Link</span>
-                  </button>
+                  }}
+                  className={`p-4 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
+                    assignChoice === "self"
+                      ? "border-[#0D7B6C] bg-teal-50/50 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="assignChoiceRadio"
+                    checked={assignChoice === "self"}
+                    onChange={() => {}}
+                    className="mt-1 text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                  />
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">
+                      Direct Owner-Managed (Self)
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                      You operate leases, rent collections, and tenants directly without appointing an external agency.
+                    </span>
+                    <span className="inline-block mt-2 text-[10px] font-bold text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded">
+                      Zero External Delegation
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setAssignChoice("delegated");
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("officex_manage_mode", "delegated");
+                      localStorage.setItem("officex_has_manager", "true");
+                    }
+                  }}
+                  className={`p-4 rounded-2xl border-2 transition cursor-pointer flex items-start gap-3 ${
+                    assignChoice === "delegated"
+                      ? "border-[#0D7B6C] bg-teal-50/50 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="assignChoiceRadio"
+                    checked={assignChoice === "delegated"}
+                    onChange={() => {}}
+                    className="mt-1 text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                  />
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">
+                      Delegate to PM / FM Agency
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                      Delegate daily operations to a Property Management company, Facility Manager, or CA.
+                    </span>
+                    <span className="inline-block mt-2 text-[10px] font-bold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded">
+                      External Delegation
+                    </span>
+                  </div>
                 </div>
               </div>
 
+              {assignChoice === "self" ? (
+                /* Self-Managed Confirmation State */
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 space-y-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#0D7B6C] text-white flex items-center justify-center shrink-0">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">
+                        Direct Owner-Operator Workspace Active
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Your account has full administrative authority over leases, rent rolls, collections, and compliance.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 text-xs">
+                    <div className="p-3 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Lease Authority</span>
+                      <span className="font-extrabold text-slate-900 block mt-0.5">Direct Sovereign Approval</span>
+                    </div>
+                    <div className="p-3 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Invoicing &amp; Cash</span>
+                      <span className="font-extrabold text-slate-900 block mt-0.5">Direct Landlord SPV Account</span>
+                    </div>
+                    <div className="p-3 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Third-Party Fees</span>
+                      <span className="font-extrabold text-emerald-700 block mt-0.5">₹0 (Zero PM Mandate Fees)</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* External Delegated Manager State */
+                <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">Managing Entity Type</label>
+                      <select
+                        value={managerData.entityType}
+                        onChange={(e) => setManagerData({ ...managerData, entityType: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
+                      >
+                        <option value="pm_company">PM Company (Property Management Company)</option>
+                        <option value="fm_company">FM Company (Facilities Management Company)</option>
+                        <option value="msp">MSP (Managed Service Provider)</option>
+                        <option value="user_pm_or_admin">Another User with role: Property Manager or Org Admin</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        {managerData.entityType === "user_pm_or_admin" ? "User Full Name *" : "Entity / Company Name *"}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={
+                          managerData.entityType === "user_pm_or_admin"
+                            ? "e.g. Vikram Sharma"
+                            : managerData.entityType === "fm_company"
+                            ? "e.g. CBRE / JLL Facilities"
+                            : managerData.entityType === "msp"
+                            ? "e.g. SmartOps MSP Solutions"
+                            : "e.g. Apex Property Management LLP"
+                        }
+                        value={managerData.name}
+                        onChange={(e) => setManagerData({ ...managerData, name: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        {managerData.entityType === "user_pm_or_admin" ? "User Email Address *" : "Work Email Address *"}
+                      </label>
+                      <input
+                        type="email"
+                        placeholder={
+                          managerData.entityType === "user_pm_or_admin" ? "vikram@company.com" : "manager@apexpm.in"
+                        }
+                        value={managerData.email}
+                        onChange={(e) => setManagerData({ ...managerData, email: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:border-[#0D7B6C] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {managerData.entityType === "user_pm_or_admin" && (
+                    <div className="p-3 bg-white rounded-xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div>
+                        <span className="text-xs font-black text-slate-900 block">
+                          Designated Role for this User
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Choose whether this user operates as a Property Manager or an Org Admin.
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                          <input
+                            type="radio"
+                            name="profileManagerRole"
+                            value="property_manager"
+                            checked={managerData.role === "property_manager"}
+                            onChange={() => setManagerData({ ...managerData, role: "property_manager" })}
+                            className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                          />
+                          <span>Property Manager</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                          <input
+                            type="radio"
+                            name="profileManagerRole"
+                            value="org_admin"
+                            checked={managerData.role === "org_admin"}
+                            onChange={() => setManagerData({ ...managerData, role: "org_admin" })}
+                            className="text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                          />
+                          <span>Org Admin</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rights Checklist */}
+                  <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800 block">
+                      Delegated Rights &amp; Owner Approval Thresholds:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {[
+                        {
+                          key: "contractExecution",
+                          label: "Execute Lease Agreements",
+                          desc: managerRights.contractExecution
+                            ? "Direct execution enabled"
+                            : "Requires Owner Approval before lease goes live",
+                        },
+                        {
+                          key: "concessions",
+                          label: "Rent Discounts & Waivers",
+                          desc: managerRights.concessions
+                            ? "Discretionary discounts allowed"
+                            : "Requires Owner Approval in /approvals inbox",
+                        },
+                        {
+                          key: "billingRuns",
+                          label: "Monthly Rent & CAM Invoicing",
+                          desc: managerRights.billingRuns ? "Autonomous monthly batch runs" : "Requires Owner preview",
+                        },
+                        {
+                          key: "depositRefunds",
+                          label: "Security Deposit Refunds",
+                          desc: managerRights.depositRefunds ? "Direct refund" : "Requires Owner Sign-off",
+                        },
+                      ].map((item) => (
+                        <label
+                          key={item.key}
+                          className="p-3 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-slate-300"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={(managerRights as any)[item.key]}
+                            onChange={(e) =>
+                              setManagerRights({
+                                ...managerRights,
+                                [item.key]: e.target.checked,
+                              })
+                            }
+                            className="w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C] border-slate-300 cursor-pointer mt-0.5"
+                          />
+                          <div>
+                            <span className="font-extrabold text-slate-900 block leading-tight">{item.label}</span>
+                            <span className="text-[10px] text-slate-500 font-medium">{item.desc}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Generate Deployed Link Button */}
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Links are generated on your production domain ({DEPLOYED_BASE_URL.replace("https://", "")}).
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!managerData.email || inviteLoading}
+                      onClick={() =>
+                        generateDomainInviteLink(
+                          managerData.name,
+                          managerData.email,
+                          managerData.role,
+                          managerData.entityType
+                        )
+                      }
+                      className="px-4 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <RefreshCw size={13} className={inviteLoading ? "animate-spin" : ""} />
+                      <span>Generate Deployed Invite Link</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Generated Deployed Invitation Link Box */}
-              {generatedInviteLink && (
+              {assignChoice === "delegated" && generatedInviteLink && (
                 <div className="p-4 rounded-2xl bg-teal-50/80 border border-teal-200 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
@@ -4030,13 +4177,7 @@ function CompleteProfileContent() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    markStepDone("delegation");
-                    showToast("🎉 Profile Setup Complete! Entering Live Dashboard...");
-                    setTimeout(() => {
-                      router.push("/dashboard/owner");
-                    }, 500);
-                  }}
+                  onClick={finishSetupAndEnterDashboard}
                   className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-[#0D7B6C] hover:from-emerald-700 hover:to-[#0A6357] text-white text-sm font-black shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Complete Setup &amp; Enter Dashboard</span>
