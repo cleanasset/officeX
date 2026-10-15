@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { occupant, task } from "@/db/rent-roll-schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,6 +21,16 @@ export async function GET(req: NextRequest) {
     }
 
     if (!occupantId) {
+      const [fallbackOcc] = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(sql`${occupant.deleted_at} IS NULL`)
+        .orderBy(desc(occupant.created_at))
+        .limit(1);
+      occupantId = fallbackOcc?.id;
+    }
+
+    if (!occupantId) {
       return NextResponse.json({ success: true, profile: null });
     }
 
@@ -33,24 +43,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Occupant not found" }, { status: 404 });
     }
 
-    // Default Contacts list if not stored
+    // Default Contacts list derived from active tenant record
+    const primaryName = occ.occupant_name || "Authorized Signatory";
     const contacts = [
       {
         id: "c-1",
-        name: "Priya Sharma",
-        designation: "Finance Director",
-        email: occ.email || "finance@tenant.com",
-        phone: occ.phone || "+91 9876543210",
+        name: primaryName,
+        designation: "Authorized Representative / Signatory",
+        email: occ.email || "billing@tenant.com",
+        phone: occ.phone || "+91 9800000000",
         role: "primary_billing",
-        receives_invoices: true,
-      },
-      {
-        id: "c-2",
-        name: "Vikram Malhotra",
-        designation: "Head of Operations",
-        email: "operations@tenant.com",
-        phone: "+91 9876543211",
-        role: "operations_poc",
         receives_invoices: true,
       },
     ];

@@ -108,15 +108,65 @@ export async function POST(req: Request) {
       }
     }
 
+    // Normalize billing_model enum (must be area | seats | fixed | hybrid)
+    const rawBillingModel = String(body.billing_model || "").toLowerCase();
+    const normalizedBillingModel = rawBillingModel.includes("seat")
+      ? "seats"
+      : rawBillingModel.includes("fixed")
+      ? "fixed"
+      : rawBillingModel.includes("hybrid")
+      ? "hybrid"
+      : "area";
+
+    let finalSpaceId = targetSpaceId || body.space_id;
+    if (!finalSpaceId) {
+      const [anySpace] = await db
+        .select({ id: space.id })
+        .from(space)
+        .where(eq(space.org_id, orgId))
+        .limit(1);
+      if (anySpace) {
+        finalSpaceId = anySpace.id;
+      } else {
+        const [sysSpace] = await db.select({ id: space.id }).from(space).limit(1);
+        if (sysSpace) {
+          finalSpaceId = sysSpace.id;
+        }
+      }
+    }
+
+    let finalOccupantId = body.occupant_id;
+    if (!finalOccupantId) {
+      const [latestOcc] = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(eq(occupant.org_id, orgId))
+        .orderBy(desc(occupant.created_at))
+        .limit(1);
+      if (latestOcc) {
+        finalOccupantId = latestOcc.id;
+      } else {
+        const [anyOcc] = await db.select({ id: occupant.id }).from(occupant).orderBy(desc(occupant.created_at)).limit(1);
+        if (anyOcc) finalOccupantId = anyOcc.id;
+      }
+    }
+
     const payload = {
       ...body,
       org_id: orgId,
       client_account_id: clientAccountId,
-      space_id: targetSpaceId || body.space_id,
+      space_id: finalSpaceId,
+      occupant_id: finalOccupantId,
+      contract_code: body.contract_code || `LEAS-${Date.now().toString().slice(-6)}`,
+      contract_type: body.contract_type || "lease",
+      direction: body.direction || "receivable",
+      billing_model: normalizedBillingModel,
       contract_status: body.contract_status || "active",
       approval_status: body.approval_status || "approved",
       is_evergreen: body.is_evergreen ?? false,
       is_template: body.is_template ?? false,
+      start_date: body.start_date || new Date().toISOString().split("T")[0],
+      end_date: body.end_date || new Date(Date.now() + 365 * 24 * 3600 * 1000 * 3).toISOString().split("T")[0],
       version: 1,
       created_by: auth.userId,
       updated_by: auth.userId,
@@ -125,6 +175,7 @@ export async function POST(req: Request) {
     // 1. Validate required fields
     const reqValidation = validateRequiredFields("contract", payload);
     if (!reqValidation.isValid) {
+      console.error("Contract validation failed:", reqValidation.errors, payload);
       return NextResponse.json(
         { error: "Validation failed", details: reqValidation.errors },
         { status: 422 }

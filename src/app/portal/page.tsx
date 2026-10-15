@@ -22,12 +22,15 @@ import {
   DollarSign
 } from "lucide-react";
 
+import { getClientAuthHeaders } from "@/lib/auth-storage";
+
 export default function TenantHomePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHomeData();
+    const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+    loadHomeData(savedOccId || undefined);
 
     const handleOccChange = (e: any) => {
       loadHomeData(e.detail?.id);
@@ -39,18 +42,16 @@ export default function TenantHomePage() {
   async function loadHomeData(occupantId?: string) {
     try {
       setLoading(true);
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
-      const authHeaders: Record<string, string> = uEmail
-        ? { "x-user-email": uEmail }
-        : {};
-      const url = occupantId ? `/api/portal/summary?occupant_id=${occupantId}` : `/api/portal/summary`;
+      const savedOccId = occupantId || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
+      const authHeaders = getClientAuthHeaders();
+      const url = savedOccId ? `/api/portal/summary?occupant_id=${savedOccId}` : `/api/portal/summary`;
       const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setData(json);
+        if (json.occupant?.occupant_name && typeof window !== "undefined") {
+          localStorage.setItem("officex_tenant_name", json.occupant.occupant_name);
+        }
       }
     } catch (e) {
       console.error("Failed to load tenant home data", e);
@@ -73,13 +74,18 @@ export default function TenantHomePage() {
   const contracts = data?.contracts || [];
   const primaryContract = contracts[0] || null;
 
+  const tenantDisplayName =
+    occupant?.occupant_name ||
+    (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_name") || localStorage.getItem("officex_user_name") : "") ||
+    "Commercial Tenant";
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Welcome Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Welcome back, {occupant.occupant_name || "Valued Tenant"}
+            Welcome back, {tenantDisplayName}
           </h1>
           <p className="text-xs font-medium text-slate-500 mt-1">
             {primaryContract

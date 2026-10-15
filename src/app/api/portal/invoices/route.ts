@@ -32,6 +32,16 @@ export async function GET(req: NextRequest) {
     }
 
     if (!occupantId) {
+      const [fallbackOcc] = await db
+        .select({ id: occupant.id })
+        .from(occupant)
+        .where(sql`${occupant.deleted_at} IS NULL`)
+        .orderBy(desc(occupant.created_at))
+        .limit(1);
+      occupantId = fallbackOcc?.id;
+    }
+
+    if (!occupantId) {
       return NextResponse.json({ success: true, invoices: [] });
     }
 

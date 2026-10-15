@@ -1130,6 +1130,13 @@ function CompleteProfileContent() {
         link: inviteUrl,
       });
 
+      // Store newly enrolled tenant identity in browser for seamless portal access
+      if (typeof window !== "undefined") {
+        localStorage.setItem("officex_tenant_occupant_id", tenantId);
+        localStorage.setItem("officex_tenant_name", occupantName);
+        localStorage.setItem("officex_tenant_email", tenantForm.email.trim());
+      }
+
       // Auto-pre-select the newly added tenant in the contract form
       setContractForm((prev) => ({
         ...prev,
@@ -1222,6 +1229,15 @@ function CompleteProfileContent() {
         });
       }
 
+      const rawModel = (contractForm.billing_model || "").toLowerCase();
+      const mappedBillingModel = rawModel.includes("seat")
+        ? "seats"
+        : rawModel.includes("fixed")
+        ? "fixed"
+        : rawModel.includes("hybrid")
+        ? "hybrid"
+        : "area";
+
       const authHeaders = getClientAuthHeaders();
       const res = await fetch("/api/contracts", {
         method: "POST",
@@ -1236,8 +1252,13 @@ function CompleteProfileContent() {
           start_date: contractForm.start_date,
           end_date: contractForm.end_date,
           contract_type: "lease",
+          direction: "receivable",
+          contract_status: "active",
+          approval_status: "approved",
+          is_evergreen: false,
+          is_template: false,
           base_rent_rate: baseRent,
-          billing_model: contractForm.billing_model.toLowerCase().replace(/\s+/g, "_"),
+          billing_model: mappedBillingModel,
           escalation_type: "percentage",
           escalation_value: Number(contractForm.escalation_pct) || 0,
           has_escalation: Boolean(Number(contractForm.escalation_pct) > 0),
@@ -1271,7 +1292,15 @@ function CompleteProfileContent() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || errJson.message || `Failed to create contract (HTTP ${res.status})`);
+        const detailMsg = Array.isArray(errJson.details)
+          ? errJson.details.map((d: any) => `${d.field || "error"}: ${d.message || JSON.stringify(d)}`).join(", ")
+          : "";
+        throw new Error(detailMsg || errJson.error || errJson.message || `Failed to create contract (HTTP ${res.status})`);
+      }
+
+      if (typeof window !== "undefined") {
+        if (contractForm.occupant_id) localStorage.setItem("officex_tenant_occupant_id", contractForm.occupant_id);
+        if (contractForm.occupant_name) localStorage.setItem("officex_tenant_name", contractForm.occupant_name);
       }
 
       markStepDone("contract");

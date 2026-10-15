@@ -22,6 +22,8 @@ import {
   Sparkles
 } from "lucide-react";
 
+import { getClientAuthHeaders } from "@/lib/auth-storage";
+
 export default function TenantPortalLayout({
   children,
 }: {
@@ -35,26 +37,28 @@ export default function TenantPortalLayout({
   const [outstandingAmount, setOutstandingAmount] = useState<number>(0);
 
   useEffect(() => {
-    loadPortalSummary();
+    const savedOccId = typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "";
+    loadPortalSummary(savedOccId || undefined);
   }, []);
 
   async function loadPortalSummary(occId?: string) {
     try {
-      const uEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("officex_user_email") || ""
-          : "";
-      const authHeaders: Record<string, string> = uEmail
-        ? { "x-user-email": uEmail }
-        : {};
-      const url = occId ? `/api/portal/summary?occupant_id=${occId}` : `/api/portal/summary`;
+      const savedOccId = occId || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_occupant_id") || "" : "");
+      const authHeaders = getClientAuthHeaders();
+      const url = savedOccId ? `/api/portal/summary?occupant_id=${savedOccId}` : `/api/portal/summary`;
       const res = await fetch(url, { headers: authHeaders });
       const json = await res.json();
       if (json.success) {
         setOccupantsList(json.occupants_list || []);
         setCurrentOccupant(json.occupant);
-        if (json.occupant?.id && !selectedOccupantId) {
+        if (json.occupant?.id) {
           setSelectedOccupantId(json.occupant.id);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("officex_tenant_occupant_id", json.occupant.id);
+            if (json.occupant.occupant_name) {
+              localStorage.setItem("officex_tenant_name", json.occupant.occupant_name);
+            }
+          }
         }
         setOutstandingAmount(json.summary?.total_outstanding_inr || 0);
       }
@@ -157,12 +161,12 @@ export default function TenantPortalLayout({
 
               {/* User Identity Chip */}
               <div className="flex items-center gap-2 pl-2">
-                <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  {currentOccupant?.occupant_name?.charAt(0) || "P"}
+                <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs uppercase">
+                  {currentOccupant?.occupant_name?.charAt(0) || (typeof window !== "undefined" ? (localStorage.getItem("officex_tenant_name") || localStorage.getItem("officex_user_name") || "T").charAt(0) : "T")}
                 </div>
                 <div className="hidden xl:block text-left">
                   <p className="text-xs font-bold text-slate-800 leading-tight">
-                    {currentOccupant?.occupant_name || "Priya Sharma"}
+                    {currentOccupant?.occupant_name || (typeof window !== "undefined" ? localStorage.getItem("officex_tenant_name") || localStorage.getItem("officex_user_name") : "") || "Commercial Tenant"}
                   </p>
                   <p className="text-[10px] text-slate-400 font-medium">Tenant Signatory</p>
                 </div>

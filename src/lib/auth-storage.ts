@@ -84,7 +84,16 @@ export function getClientUserEmail(): string {
  * Helper to build auth headers for client-side fetch requests
  */
 export function getClientAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
   const email = getClientUserEmail();
-  return email ? { "x-user-email": email } : {};
+  if (email) headers["x-user-email"] = email;
+
+  if (typeof window !== "undefined") {
+    const orgId = localStorage.getItem("officex_org_id") || getAuthCookie("officex_org_id");
+    if (orgId) headers["x-org-id"] = orgId;
+    const clientAccId = localStorage.getItem("officex_client_account_id") || getAuthCookie("officex_client_account_id");
+    if (clientAccId) headers["x-client-account-id"] = clientAccId;
+  }
+  return headers;
 }
 

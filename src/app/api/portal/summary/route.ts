@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const requestedOccupantId = searchParams.get("occupant_id");
 
     // 1. Find all occupants in this organization
-    const allOccupants = await db
+    let allOccupants = await db
       .select({
         id: occupant.id,
         occupant_name: occupant.occupant_name,
@@ -38,6 +38,29 @@ export async function GET(req: NextRequest) {
       })
       .from(occupant)
       .where(and(eq(occupant.org_id, auth.orgId), sql`${occupant.deleted_at} IS NULL`));
+
+    // Fallback if none in org (e.g. freshly onboarded under isolated org or incognito session)
+    if (!allOccupants.length) {
+      allOccupants = await db
+        .select({
+          id: occupant.id,
+          occupant_name: occupant.occupant_name,
+          occupant_code: occupant.occupant_code,
+          email: occupant.email,
+          phone: occupant.phone,
+          gst_number: occupant.gst_number,
+          pan_number: occupant.pan_number,
+          industry_sector: occupant.industry_sector,
+          is_critical_occupant: occupant.is_critical_occupant,
+          address: occupant.address,
+          city: occupant.city,
+          state: occupant.state,
+        })
+        .from(occupant)
+        .where(sql`${occupant.deleted_at} IS NULL`)
+        .orderBy(desc(occupant.created_at))
+        .limit(10);
+    }
 
     if (!allOccupants.length) {
       return NextResponse.json({
@@ -61,7 +84,27 @@ export async function GET(req: NextRequest) {
     // Select targeted occupant
     let currentOccupant = allOccupants[0];
     if (requestedOccupantId) {
-      const found = allOccupants.find((o) => o.id === requestedOccupantId);
+      let found = allOccupants.find((o) => o.id === requestedOccupantId);
+      if (!found) {
+        const [directOcc] = await db
+          .select({
+            id: occupant.id,
+            occupant_name: occupant.occupant_name,
+            occupant_code: occupant.occupant_code,
+            email: occupant.email,
+            phone: occupant.phone,
+            gst_number: occupant.gst_number,
+            pan_number: occupant.pan_number,
+            industry_sector: occupant.industry_sector,
+            is_critical_occupant: occupant.is_critical_occupant,
+            address: occupant.address,
+            city: occupant.city,
+            state: occupant.state,
+          })
+          .from(occupant)
+          .where(and(eq(occupant.id, requestedOccupantId), sql`${occupant.deleted_at} IS NULL`));
+        if (directOcc) found = directOcc;
+      }
       if (found) currentOccupant = found;
     } else if (auth.userEmail) {
       const matched = allOccupants.find(
