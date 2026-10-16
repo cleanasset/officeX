@@ -144,8 +144,7 @@ export default function Topbar() {
       router.push("/operate/rent-roll/pricing");
       return;
     }
-    // Always open module chooser modal per user requirement
-    setIsModuleChooserOpen(true);
+    router.push("/dashboard");
   };
 
   const handleProfileKYC = () => {

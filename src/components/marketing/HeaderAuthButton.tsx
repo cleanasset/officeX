@@ -163,8 +163,8 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
       return;
     }
 
-    // Always show module chooser modal so user can choose where they want to go
-    setIsModuleChooserOpen(true);
+    // Direct navigation to user's assigned dashboard view (S-02 Owner / Rent Roll view)
+    router.push("/dashboard");
   };
 
   const handleProfileClick = (e: React.MouseEvent) => {

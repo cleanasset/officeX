@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   DollarSign,
@@ -90,16 +91,21 @@ export const SAAS_MODULES = [
 
 export default function ModuleChooserModal({ isOpen, onClose }: ModuleChooserModalProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const handleSelectModule = (href: string) => {
     onClose();
     router.push(href);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="relative w-full max-w-3xl rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 shadow-2xl my-8 animate-in fade-in zoom-in-95 duration-150 text-left">
         {/* Close Button */}
         <button
@@ -169,4 +175,6 @@ export default function ModuleChooserModal({ isOpen, onClose }: ModuleChooserMod
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" ? createPortal(modalContent, document.body) : null;
 }
