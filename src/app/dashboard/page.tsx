@@ -11,7 +11,19 @@ export default function DashboardIndexPage() {
       const storedRoleKey = localStorage.getItem("officex_role_key") || sessionStorage.getItem("officex_role_key");
       const storedRole = (localStorage.getItem("officex_user_role") || sessionStorage.getItem("officex_user_role") || "").toLowerCase();
 
-      if (storedRoleKey === "property_manager" || storedRole.includes("property")) {
+      // Prioritize Owner / Landlord first (§S-02)
+      if (
+        storedRoleKey === "owner" ||
+        storedRole.includes("owner") ||
+        storedRole.includes("landlord") ||
+        storedRole.includes("principal")
+      ) {
+        router.replace("/dashboard/owner");
+      } else if (
+        storedRoleKey === "property_manager" ||
+        storedRole.includes("property manager") ||
+        storedRole.includes("pm")
+      ) {
         router.replace("/dashboard/pm");
       } else if (storedRoleKey === "finance_manager" || storedRole.includes("finance")) {
         router.replace("/dashboard/finance");
@@ -19,8 +31,6 @@ export default function DashboardIndexPage() {
         router.replace("/dashboard/leasing");
       } else if (storedRoleKey === "facility_manager" || storedRole.includes("facility") || storedRole.includes("fm")) {
         router.replace("/dashboard/fm");
-      } else if (storedRoleKey === "owner" || storedRole.includes("owner") || storedRole.includes("principal")) {
-        router.replace("/dashboard/owner");
       } else {
         router.replace("/dashboard/owner");
       }

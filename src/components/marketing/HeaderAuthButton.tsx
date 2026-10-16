@@ -163,8 +163,8 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
       return;
     }
 
-    // Direct navigation to user's assigned dashboard view (S-02 Owner / Rent Roll view)
-    router.push("/dashboard");
+    // Ask first: open the full-screen Module Chooser Modal
+    setIsModuleChooserOpen(true);
   };
 
   const handleProfileClick = (e: React.MouseEvent) => {

@@ -36,6 +36,19 @@ export const SAAS_MODULES = [
     features: ["Owner Dashboard (S-02)", "Rent Roll Register (S-10)", "Billing Batch Runs", "Owner Statements"],
   },
   {
+    id: "pm",
+    title: "Property Manager Console",
+    tag: "Site Operations",
+    badge: "Operational",
+    icon: Building2,
+    color: "from-emerald-600 to-teal-700",
+    bgLight: "bg-emerald-50 border-emerald-200 text-emerald-800",
+    href: "/dashboard/pm",
+    description:
+      "Daily execution queue for contract approvals, renewals, security deposits, compliance alerts, and escalations.",
+    features: ["PM Today Console (S-03)", "Active Contracts", "Lease Renewals", "Deposit Tracking"],
+  },
+  {
     id: "fm",
     title: "Facility Management (IFM)",
     tag: "Site Operations",
