@@ -108,9 +108,6 @@ export default function SignInForm({
 
   // Primary workflow state
   const [step, setStep] = useState<Step>("identifier");
-  const [identifierMode, setIdentifierMode] = useState<"email" | "mobile">("email");
-  const [phoneCountryCode, setPhoneCountryCode] = useState<string>("+91");
-  const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [successUserName, setSuccessUserName] = useState("");
   const [isOnboardingNeeded, setIsOnboardingNeeded] = useState(false);
   const [identifier, setIdentifier] = useState("");
@@ -122,8 +119,8 @@ export default function SignInForm({
   const [rememberChoice, setRememberChoice] = useState(true);
 
   // States from discovery
-  const [authType, setAuthType] = useState<"email" | "phone">("email");
-  const [channel, setChannel] = useState<"whatsapp" | "sms" | "email">("whatsapp");
+  const [authType, setAuthType] = useState<"email">("email");
+  const [channel, setChannel] = useState<"email">("email");
   const [maskedId, setMaskedId] = useState("");
   const [ssoDomain, setSsoDomain] = useState("");
   const [ssoOrgName, setSsoOrgName] = useState("");
@@ -290,28 +287,23 @@ export default function SignInForm({
     setError("");
     setInfoMessage("");
 
-    let clean = identifier.trim();
-    if (identifierMode === "mobile") {
-      const cleanDigits = phoneNumber.replace(/\D/g, "");
-      if (!cleanDigits || cleanDigits.length < 10) {
-        setError(
-          lang === "hi"
-            ? "कृपया एक मान्य 10-अंकीय मोबाइल नंबर दर्ज करें।"
-            : "Enter a valid 10-digit mobile number."
-        );
-        return;
-      }
-      clean = cleanDigits.length === 10 ? cleanDigits : `${phoneCountryCode}${cleanDigits}`;
-      setIdentifier(clean);
-    } else {
-      if (!clean) {
-        setError(
-          lang === "hi"
-            ? "कृपया एक वैध कार्य ईमेल दर्ज करें।"
-            : "Enter a valid work email address."
-        );
-        return;
-      }
+    const clean = identifier.trim();
+    if (!clean) {
+      setError(
+        lang === "hi"
+          ? "कृपया एक वैध कार्य या व्यक्तिगत ईमेल दर्ज करें।"
+          : "Enter a valid work or personal email address."
+      );
+      return;
+    }
+
+    if (!clean.includes("@")) {
+      setError(
+        lang === "hi"
+          ? "कृपया अपना ईमेल पता दर्ज करें। मोबाइल सत्यापन उपलब्ध नहीं है।"
+          : "Please enter your email address to continue. Phone SMS/WhatsApp verification is currently offline."
+      );
+      return;
     }
 
     setIsLoading(true);
@@ -326,12 +318,12 @@ export default function SignInForm({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Please enter a valid work email or mobile number.");
+        setError(data.error || "Please enter a valid work or personal email address.");
         setIsLoading(false);
         return;
       }
 
-      setAuthType(data.type);
+      setAuthType("email");
       setMaskedId(data.masked || maskIdentifier(clean));
 
       // 1. Enterprise SSO
@@ -342,20 +334,18 @@ export default function SignInForm({
         setSsoUrl(data.sso_url || "#");
         setStep("sso");
       }
-      // 2. One-time Code (OTP)
+      // 2. One-time Code (Email OTP)
       else if (data.next === "code") {
-        const autoChannel = data.channel || "email";
-        setChannel(autoChannel);
-        setStep("code");
-        // Auto-dispatch OTP so user doesn't see empty input with no code
+        setChannel("email");
         try {
           const sendRes = await fetch("/api/auth/code/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identifier: clean, channel: autoChannel }),
+            body: JSON.stringify({ identifier: clean, channel: "email" }),
           });
           const sendData = await sendRes.json();
           if (sendRes.ok) {
+            setStep("code");
             setCooldown(sendData.cooldown || 30);
             if (sendData.masked) setMaskedId(sendData.masked);
             setInfoMessage(
@@ -363,11 +353,11 @@ export default function SignInForm({
                 ? `सत्यापन कोड ${sendData.masked || maskedId} पर भेजा गया।`
                 : `Verification code dispatched to ${sendData.masked || maskedId}.`
             );
-          } else if (sendData.error) {
-            setInfoMessage(sendData.error);
+          } else {
+            setError(sendData.error || "Unable to send verification code. Please sign in with password.");
           }
         } catch {
-          // Non-blocking — user can still click Resend
+          setError("Network error while dispatching code. Please sign in with password.");
         }
       }
       // 3. Password
@@ -431,32 +421,32 @@ export default function SignInForm({
     }
   };
 
-  // Reusable verification code dispatcher calling /api/auth/code/send
-  const sendVerificationCode = async (targetChannel: "whatsapp" | "sms" | "email") => {
+  // Reusable verification code dispatcher calling /api/auth/code/send (Email only)
+  const sendVerificationCode = async (targetChannel: "email" = "email") => {
     setIsLoading(true);
     setError("");
     try {
       const res = await fetch("/api/auth/code/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, channel: targetChannel }),
+        body: JSON.stringify({ identifier, channel: "email" }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to dispatch verification code.");
+        setError(data.error || "Failed to dispatch verification email.");
         return false;
       }
-      setChannel(targetChannel);
+      setChannel("email");
       setCooldown(data.cooldown || 30);
       if (data.masked) setMaskedId(data.masked);
       setInfoMessage(
         lang === "hi"
-          ? `हमने ${data.masked || maskedId} पर ${targetChannel === "email" ? "ईमेल" : targetChannel === "whatsapp" ? "WhatsApp" : "SMS"} द्वारा सत्यापन कोड भेजा है।`
-          : `Verification code dispatched via ${targetChannel.toUpperCase()} to ${data.masked || maskedId}.`
+          ? `हमने ${data.masked || maskedId} पर ईमेल द्वारा सत्यापन कोड भेजा है।`
+          : `Verification code dispatched to your email (${data.masked || maskedId}).`
       );
       return true;
     } catch {
-      setError("Network connection issue while sending verification code.");
+      setError("Network connection issue while sending verification email.");
       return false;
     } finally {
       setIsLoading(false);
@@ -970,9 +960,9 @@ export default function SignInForm({
   // --------------------------------------------------------------------------
   const handleStartRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = recoveryIdentifier.trim();
-    if (!clean) {
-      setError(lang === "hi" ? "कार्य ईमेल या मोबाइल नंबर दर्ज करें।" : "Enter your work email or mobile number.");
+    const clean = recoveryIdentifier.trim().toLowerCase();
+    if (!clean || !clean.includes("@")) {
+      setError(lang === "hi" ? "कृपया अपना पंजीकृत ईमेल पता दर्ज करें।" : "Enter your registered email address.");
       return;
     }
 
@@ -1259,92 +1249,27 @@ export default function SignInForm({
 
               <form onSubmit={handleIdentifierSubmit} className="space-y-4">
                 <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="identifier-input"
-                      className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block"
-                    >
-                      {identifierMode === "email" ? t.identifierLabel : (lang === "hi" ? "मोबाइल नंबर" : "Mobile Number")}
-                    </label>
-                    <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-bold">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIdentifierMode("email");
-                          setError("");
-                        }}
-                        className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${identifierMode === "email"
-                            ? "bg-white text-slate-900 shadow-2xs font-extrabold"
-                            : "text-slate-500 hover:text-slate-800"
-                          }`}
-                      >
-                        Email
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIdentifierMode("mobile");
-                          setError("");
-                        }}
-                        className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${identifierMode === "mobile"
-                            ? "bg-white text-slate-900 shadow-2xs font-extrabold"
-                            : "text-slate-500 hover:text-slate-800"
-                          }`}
-                      >
-                        Mobile
-                      </button>
-                    </div>
-                  </div>
+                  <label
+                    htmlFor="identifier-input"
+                    className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block"
+                  >
+                    {t.identifierLabel}
+                  </label>
 
-                  {identifierMode === "email" ? (
-                    <div className="relative">
-                      <input
-                        id="identifier-input"
-                        type="email"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder={t.identifierPlaceholder}
-                        autoComplete="username"
-                        autoFocus
-                        required
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all shadow-2xs"
-                      />
-                      <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <select
-                        value={phoneCountryCode}
-                        onChange={(e) => setPhoneCountryCode(e.target.value)}
-                        aria-label="Country Code"
-                        className="w-28 px-2.5 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 shrink-0 cursor-pointer shadow-2xs"
-                      >
-                        {LOGIN_COUNTRY_CODES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.flag} {c.code}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="relative flex-1">
-                        <input
-                          id="identifier-input"
-                          type="tel"
-                          value={phoneNumber}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                            setPhoneNumber(val);
-                            setIdentifier(val);
-                          }}
-                          placeholder="98765 43210"
-                          autoComplete="tel"
-                          autoFocus
-                          required
-                          className="w-full pl-9 pr-4 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm font-bold tracking-wider focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all shadow-2xs font-mono"
-                        />
-                        <Phone size={15} className="absolute left-3 top-3.5 text-slate-400" />
-                      </div>
-                    </div>
-                  )}
+                  <div className="relative">
+                    <input
+                      id="identifier-input"
+                      type="email"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder={t.identifierPlaceholder}
+                      autoComplete="username"
+                      autoFocus
+                      required
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50/80 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-all shadow-2xs"
+                    />
+                    <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                  </div>
                 </div>
 
                 <button
@@ -1564,12 +1489,10 @@ export default function SignInForm({
                   {t.enterCode}
                 </h2>
                 <p className="text-xs text-slate-600 mt-1">
-                  {t.codeSentOn}{" "}
-                  <span className="text-blue-600 font-bold uppercase">{channel}</span> {t.to}{" "}
+                  {lang === "hi" ? "सत्यापन कोड ईमेल पर भेजा गया " : "Verification code sent to email "}{" "}
                   <strong className="text-slate-900">{maskedId}</strong>
                 </p>
               </div>
-
 
               <div className="space-y-5">
                 {/* 6 Individual Code Inputs */}
@@ -1607,35 +1530,21 @@ export default function SignInForm({
                   {t.neverShareCode}
                 </p>
 
-                <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
-                  <div>
-                    {cooldown > 0 ? (
-                      <span className="text-slate-500 font-mono">
-                        {t.resendIn} {cooldown}s
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isLoading}
-                        onClick={() => sendVerificationCode(channel)}
-                        className="text-blue-600 hover:underline font-bold cursor-pointer disabled:opacity-50"
-                      >
-                        Resend Code
-                      </button>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => {
-                      const nextChan = channel === "whatsapp" ? "sms" : "whatsapp";
-                      sendVerificationCode(nextChan);
-                    }}
-                    className="text-blue-600 hover:underline font-semibold cursor-pointer disabled:opacity-50"
-                  >
-                    {channel === "whatsapp" ? t.sendBySms : t.sendByWhatsApp}
-                  </button>
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-center text-xs text-slate-600">
+                  {cooldown > 0 ? (
+                    <span className="text-slate-500 font-mono">
+                      {t.resendIn} {cooldown}s
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => sendVerificationCode("email")}
+                      className="text-blue-600 hover:underline font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {lang === "hi" ? "ईमेल पर कोड पुनः भेजें" : "Resend Code to Email"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -2275,34 +2184,23 @@ export default function SignInForm({
               </div>
             )}
 
-            {/* STEP 1: Enter email / phone */}
+            {/* STEP 1: Enter email */}
             {recoveryStep === 1 && (
               <form onSubmit={handleStartRecovery} className="space-y-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Work Email or Mobile
+                    Registered Email Address
                   </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={phoneCountryCode}
-                      onChange={(e) => setPhoneCountryCode(e.target.value)}
-                      aria-label="Country Code"
-                      className="w-24 px-2 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold shrink-0 cursor-pointer shadow-2xs"
-                    >
-                      {LOGIN_COUNTRY_CODES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.flag} {c.code}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="relative">
                     <input
-                      type="text"
+                      type="email"
                       required
                       value={recoveryIdentifier}
                       onChange={(e) => setRecoveryIdentifier(e.target.value)}
-                      placeholder="name@company.com or 9876543210"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                      placeholder="name@company.com or personal email"
+                      className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                     />
+                    <Mail size={15} className="absolute left-3 top-3 text-slate-400" />
                   </div>
                 </div>
 
@@ -2369,7 +2267,7 @@ export default function SignInForm({
                     }}
                     className="text-slate-500 hover:text-slate-800 transition-colors cursor-pointer text-[11px]"
                   >
-                    Change email / mobile
+                    Change email
                   </button>
                 </div>
               </form>

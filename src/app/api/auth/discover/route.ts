@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     if (!rawIdentifier || typeof rawIdentifier !== 'string') {
       return NextResponse.json(
-        { error: 'Enter a valid work email or 10-digit mobile number.' },
+        { error: 'Please enter a valid work or personal email address.' },
         { status: 400 }
       );
     }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const type = detectIdentifierType(rawIdentifier);
     if (type === 'invalid') {
       return NextResponse.json(
-        { error: 'Enter a valid work email or 10-digit mobile number.' },
+        { error: 'Please enter a valid work or personal email address.' },
         { status: 400 }
       );
     }
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
         });
       }
 
-      // Default real behavior: offer password sign in with one-time code fallback
+      // Default real behavior: offer password sign in with one-time email code fallback
       return NextResponse.json({
         success: true,
         type: 'email',
@@ -90,17 +90,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. If Phone: Mobile OTP flow (WhatsApp first, SMS fallback)
-    return NextResponse.json({
-      success: true,
-      type: 'phone',
-      next: 'code',
-      channel: 'whatsapp',
-      fallback_channel: 'sms',
-      masked: masked,
-      mfa_required: false,
-      cooldown_seconds: 30
-    });
+    // 2. If Phone: SMS / WhatsApp gateway is not configured
+    return NextResponse.json(
+      {
+        error: 'Mobile phone OTP is currently unavailable. Please sign in using your registered email address or Google.',
+      },
+      { status: 400 }
+    );
   } catch (error) {
     console.error('Error in /api/auth/discover:', error);
     return NextResponse.json(

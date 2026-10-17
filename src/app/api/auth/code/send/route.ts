@@ -64,28 +64,9 @@ export async function POST(request: Request) {
     }
 
     if (type === 'phone') {
-      const e164 = normalized.startsWith('+') ? normalized : `+91${normalized}`;
-      
-      try {
-        const { error: supaErr } = await supabase.auth.signInWithOtp({
-          phone: e164,
-        });
-        if (!supaErr) {
-          return NextResponse.json({
-            success: true,
-            message: `Verification code sent via SMS to ${masked}.`,
-            channel: 'sms',
-            masked,
-            cooldown: 30,
-          });
-        }
-      } catch (err) {
-        console.warn('[CODE/SEND] Supabase phone OTP dispatch exception:', err);
-      }
-
       return NextResponse.json(
         {
-          error: 'SMS delivery is currently unavailable for this phone number. Please sign in using your registered email address.',
+          error: 'Mobile phone verification is currently offline. Please sign in using your registered email address or Google.',
           fallback_required: 'email'
         },
         { status: 400 }

@@ -19,15 +19,15 @@ export async function POST(request: Request) {
 
     if (!identifier) {
       return NextResponse.json(
-        { error: 'Enter your work email or mobile number.' },
+        { error: 'Please enter your registered email address.' },
         { status: 400 }
       );
     }
 
     const type = detectIdentifierType(identifier);
-    if (type === 'invalid') {
+    if (type !== 'email') {
       return NextResponse.json(
-        { error: 'Enter a valid work email or 10-digit mobile number.' },
+        { error: 'Please enter a valid registered email address. Phone recovery is unavailable.' },
         { status: 400 }
       );
     }
@@ -41,8 +41,7 @@ export async function POST(request: Request) {
       try {
         const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
         const existingUser = usersData?.users?.find(
-          (u) => (type === 'email' && u.email?.toLowerCase() === normalized.toLowerCase()) ||
-                 (type === 'phone' && (u.phone === normalized || u.phone === `+91${normalized}`))
+          (u) => u.email?.toLowerCase() === normalized.toLowerCase()
         );
         if (existingUser) {
           userExists = true;
@@ -83,14 +82,6 @@ export async function POST(request: Request) {
         });
         if (!emailRes.success) {
           console.warn(`[RECOVER] Email dispatch notice for ${masked}: ${emailRes.error}`);
-        }
-      } else {
-        // Phone recovery
-        const e164 = normalized.startsWith('+') ? normalized : `+91${normalized}`;
-        try {
-          await supabase.auth.signInWithOtp({ phone: e164 });
-        } catch (smsErr) {
-          console.warn('[RECOVER] SMS dispatch error for phone:', smsErr);
         }
       }
     }
