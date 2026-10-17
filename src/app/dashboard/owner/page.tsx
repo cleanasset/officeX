@@ -426,7 +426,7 @@ export default function OwnerDashboardPage() {
     setIsOnboarded(true);
 
     try {
-      await fetch("/api/rent-roll/properties", {
+      const res = await fetch("/api/rent-roll/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
         body: JSON.stringify({
@@ -441,6 +441,12 @@ export default function OwnerDashboardPage() {
           bank_ifsc: data.bankIfsc,
         }),
       });
+      if (res.ok) {
+        await fetchDashboardMetrics();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("officex-property-change", { detail: { propertyName: data.propertyName } }));
+        }
+      }
     } catch (err) {
       console.error("Failed to persist property:", err);
     }

@@ -399,8 +399,12 @@ export default function SubscriptionGate({
         localStorage.setItem("officex_user_phone", cleanPhone);
         localStorage.setItem("officex_user_mobile", cleanPhone);
       }
-      localStorage.setItem("officex_user_properties", "[]");
-      localStorage.setItem("officex_active_leases", "[]");
+      if (!localStorage.getItem("officex_user_properties")) {
+        localStorage.setItem("officex_user_properties", "[]");
+      }
+      if (!localStorage.getItem("officex_active_leases")) {
+        localStorage.setItem("officex_active_leases", "[]");
+      }
     }
 
     // If 100% Discounted (RENTROLL12 / OFFICEX100) — Instant One-Click Free Activation
