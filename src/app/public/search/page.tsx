@@ -47,9 +47,9 @@ function PropertySearchContent() {
   const initialQ = searchParams?.get("q") || searchParams?.get("area") || "";
   const initialBudget = searchParams?.get("budget") || "Budget";
 
-  const [city, setCity] = useState(initialCity);
+  const [city, setCity] = useState(initialCity || "all");
   const [searchQuery, setSearchQuery] = useState(initialQ);
-  const [spaceType, setSpaceType] = useState("Office Space");
+  const [spaceType, setSpaceType] = useState("All Categories");
   const [size, setSize] = useState("2,000 - 5,000 Sq.Ft");
   const [budget, setBudget] = useState(initialBudget);
   const [gradeA, setGradeA] = useState(true);
@@ -62,6 +62,8 @@ function PropertySearchContent() {
       if (q) setSearchQuery(q);
       const c = searchParams.get("city");
       if (c) setCity(c);
+      const st = searchParams.get("type") || searchParams.get("category");
+      if (st) setSpaceType(st);
     }
   }, [searchParams]);
 
@@ -145,12 +147,24 @@ function PropertySearchContent() {
     mumbai: [19.0760, 72.8777],
     bkc: [19.0664, 72.8680],
     bengaluru: [12.9716, 77.5946],
+    bangalore: [12.9716, 77.5946],
     pune: [18.5204, 73.8567],
+    delhi: [28.6139, 77.2090],
     "delhi ncr": [28.6139, 77.2090],
+    "new delhi": [28.6139, 77.2090],
+    "new-delhi": [28.6139, 77.2090],
     gurugram: [28.4595, 77.0266],
+    gurgaon: [28.4595, 77.0266],
+    noida: [28.5355, 77.3910],
     hyderabad: [17.3850, 78.4867],
     chennai: [13.0827, 80.2707],
-    kolkata: [22.5726, 88.3639]
+    kolkata: [22.5726, 88.3639],
+    chandigarh: [30.7333, 76.7794],
+    jaipur: [26.9124, 75.7873],
+    indore: [22.7196, 75.8577],
+    kochi: [9.9312, 76.2673],
+    lucknow: [26.8467, 80.9462],
+    goa: [15.2993, 74.1240]
   };
 
   useEffect(() => {
@@ -166,28 +180,50 @@ function PropertySearchContent() {
             if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
               const marketKey = (p.micro_market || p.microMarket || "").toLowerCase();
               const cityKey = (p.city || "").toLowerCase();
-              const fallback = cityCoords[marketKey] || cityCoords[cityKey] || [23.0225, 72.5714];
+              const fallback = cityCoords[marketKey] || cityCoords[cityKey] || [19.0760, 72.8777];
               lat = fallback[0];
               lng = fallback[1];
+            }
+
+            const pType = p.type || "Coworking Space";
+            let displayPrice = "₹8,500/mo";
+            let pricePerSeat = "₹8,500/mo";
+            let pricePerSqft = "—";
+
+            if (pType.includes("Virtual Office")) {
+              displayPrice = "₹999/mo";
+              pricePerSeat = "—";
+            } else if (pType.includes("Day Pass")) {
+              displayPrice = "₹499/day";
+              pricePerSeat = "₹499/day";
+            } else if (pType.includes("Meeting Room")) {
+              displayPrice = "₹950/hr";
+              pricePerSeat = "—";
+            } else if (pType.includes("Managed Office")) {
+              displayPrice = "₹14,000/seat";
+              pricePerSeat = "₹14,000/seat";
+            } else if (pType.includes("Commercial") || pType.includes("Office Space")) {
+              displayPrice = "₹135/sq.ft.";
+              pricePerSqft = "₹135/sq.ft.";
             }
 
             return {
               id: p.id,
               title: p.name,
               buildingName: p.name,
-              location: `${p.micro_market || p.microMarket || ""}, ${p.city}, ${p.state || ""}`.replace(/^, /, ""),
+              location: `${p.micro_market || p.microMarket || ""}, ${p.city}, ${p.state || ""}`.replace(/^, /, "").replace(/, , /g, ", "),
               subLocation: p.address || "",
               area: p.total_area ? `${Number(p.total_area).toLocaleString()} sqft` : "15,000 sqft",
-              capacity: "—",
-              furnishing: "Warm Shell",
-              price: "₹185/sq.ft.",
-              pricePerSqft: "₹185/sq.ft.",
-              pricePerSeat: "—",
-              propertyScore: 88,
+              capacity: pType.includes("Meeting") ? "6-12 Persons" : pType.includes("Virtual") ? "N/A (Virtual)" : "50-400 Seats",
+              furnishing: pType,
+              price: displayPrice,
+              pricePerSqft: pricePerSqft,
+              pricePerSeat: pricePerSeat,
+              propertyScore: 92,
               readiness: "Available Now",
-              commuteScore: 85,
+              commuteScore: 88,
               energyRating: p.grade === "A" ? "Grade A" : `Grade ${p.grade || "A+"}`,
-              image: p.image_url || p.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+              image: p.image_url || p.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80",
               lat,
               lng
             };
@@ -204,24 +240,56 @@ function PropertySearchContent() {
   // Strictly real database properties (Zero Mock Data)
   const allProperties = dbProperties;
 
-  // Filter properties based on search query and city selection
+  // Filter properties based on search query, city selection, and spaceType vertical
   const filteredProperties = allProperties.filter((p) => {
     const q = searchQuery.trim().toLowerCase();
     const c = city.trim().toLowerCase();
+    const st = spaceType.trim().toLowerCase();
 
-    // If city is selected (and not all), check city/location match
-    const matchesCity = !c || c === "all" || c === "gujarat" 
-      ? (c === "gujarat" ? p.location.toLowerCase().includes("gujarat") || p.location.toLowerCase().includes("ahmedabad") || p.location.toLowerCase().includes("surat") : true)
-      : p.location.toLowerCase().includes(c) || p.subLocation.toLowerCase().includes(c);
+    // 1. City Filter
+    let matchesCity = true;
+    if (c && c !== "all") {
+      if (c === "delhi ncr") {
+        matchesCity = p.location.toLowerCase().includes("delhi") ||
+                      p.location.toLowerCase().includes("gurugram") ||
+                      p.location.toLowerCase().includes("gurgaon") ||
+                      p.location.toLowerCase().includes("noida");
+      } else if (c === "bengaluru" || c === "bangalore") {
+        matchesCity = p.location.toLowerCase().includes("bengaluru") || p.location.toLowerCase().includes("bangalore");
+      } else if (c === "gujarat") {
+        matchesCity = p.location.toLowerCase().includes("gujarat") ||
+                      p.location.toLowerCase().includes("ahmedabad") ||
+                      p.location.toLowerCase().includes("surat") ||
+                      p.location.toLowerCase().includes("gandhinagar");
+      } else {
+        matchesCity = p.location.toLowerCase().includes(c) || p.subLocation.toLowerCase().includes(c);
+      }
+    }
 
-    if (!q) return matchesCity;
+    // 2. Space Type / Category Filter
+    let matchesCategory = true;
+    if (st && st !== "all categories") {
+      matchesCategory = p.furnishing.toLowerCase().includes(st) ||
+                        p.title.toLowerCase().includes(st) ||
+                        (st.includes("coworking") && (p.furnishing.toLowerCase().includes("coworking") || p.furnishing.toLowerCase().includes("dedicated"))) ||
+                        (st.includes("commercial") && (p.furnishing.toLowerCase().includes("commercial") || p.furnishing.toLowerCase().includes("leasing"))) ||
+                        (st.includes("virtual") && p.furnishing.toLowerCase().includes("virtual")) ||
+                        (st.includes("managed") && p.furnishing.toLowerCase().includes("managed")) ||
+                        (st.includes("meeting") && p.furnishing.toLowerCase().includes("meeting")) ||
+                        (st.includes("day pass") && (p.furnishing.toLowerCase().includes("day pass") || p.furnishing.toLowerCase().includes("pass")));
+    }
 
+    if (!matchesCity || !matchesCategory) return false;
+    if (!q) return true;
+
+    // 3. Keyword Query Filter
     const matchesQuery = (
       p.title.toLowerCase().includes(q) ||
       p.buildingName.toLowerCase().includes(q) ||
       p.location.toLowerCase().includes(q) ||
       p.subLocation.toLowerCase().includes(q) ||
       p.area.toLowerCase().includes(q) ||
+      p.furnishing.toLowerCase().includes(q) ||
       p.price.toLowerCase().includes(q)
     );
 
@@ -380,42 +448,31 @@ function PropertySearchContent() {
               onChange={(e) => setCity(e.target.value)}
               className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs shrink-0 max-w-[200px]"
             >
+              <option value="all">🇮🇳 All India (All Metros)</option>
               <optgroup label="⭐ Key Hubs">
                 <option value="Gujarat">📍 Gujarat (Ahmedabad / GIFT City)</option>
-                <option value="Mumbai">📍 Mumbai (BKC / Lower Parel)</option>
-                <option value="Bengaluru">📍 Bengaluru (ORR / Whitefield)</option>
-                <option value="Delhi NCR">📍 Delhi NCR (Gurugram / Noida)</option>
-                <option value="Hyderabad">📍 Hyderabad (HITEC City)</option>
-                <option value="Pune">📍 Pune (Hinjewadi / Kharadi)</option>
-                <option value="Chennai">📍 Chennai (OMR / Guindy)</option>
+                <option value="Mumbai">📍 Mumbai (BKC / Lower Parel / Andheri)</option>
+                <option value="Bengaluru">📍 Bengaluru (ORR / Whitefield / Koramangala)</option>
+                <option value="Delhi NCR">📍 Delhi NCR (Delhi / Gurugram / Noida)</option>
+                <option value="Hyderabad">📍 Hyderabad (HITEC City / Madhapur)</option>
+                <option value="Pune">📍 Pune (Hinjewadi / Kharadi / Baner)</option>
+                <option value="Chennai">📍 Chennai (OMR / Guindy / Anna Nagar)</option>
                 <option value="Kolkata">📍 Kolkata (Sector V / New Town)</option>
               </optgroup>
-              <optgroup label="🏢 Tier-2 Cities">
+              <optgroup label="🏢 Major Cities">
+                <option value="Delhi">📍 Delhi</option>
+                <option value="Gurugram">📍 Gurugram (Gurgaon)</option>
+                <option value="Noida">📍 Noida</option>
                 <option value="Ahmedabad">📍 Ahmedabad</option>
                 <option value="Gandhinagar">📍 Gandhinagar & GIFT City</option>
-                <option value="Surat">📍 Surat</option>
-                <option value="Vadodara">📍 Vadodara</option>
                 <option value="Jaipur">📍 Jaipur</option>
+                <option value="Chandigarh">📍 Chandigarh</option>
                 <option value="Indore">📍 Indore</option>
                 <option value="Kochi">📍 Kochi</option>
-                <option value="Chandigarh">📍 Chandigarh & Mohali</option>
                 <option value="Lucknow">📍 Lucknow</option>
-                <option value="Bhubaneswar">📍 Bhubaneswar</option>
                 <option value="Goa">📍 Goa</option>
-              </optgroup>
-              <optgroup label="Regional Hubs">
-                <option value="Andhra Pradesh">📍 Andhra Pradesh</option>
-                <option value="Assam">📍 Assam</option>
-                <option value="Bihar">📍 Bihar</option>
-                <option value="Haryana">📍 Haryana</option>
-                <option value="Kerala">📍 Kerala</option>
-                <option value="Madhya Pradesh">📍 Madhya Pradesh</option>
-                <option value="Punjab">📍 Punjab</option>
-                <option value="Rajasthan">📍 Rajasthan</option>
-                <option value="Tamil Nadu">📍 Tamil Nadu</option>
-                <option value="Telangana">📍 Telangana</option>
-                <option value="Uttar Pradesh">📍 Uttar Pradesh</option>
-                <option value="West Bengal">📍 West Bengal</option>
+                <option value="Surat">📍 Surat</option>
+                <option value="Vadodara">📍 Vadodara</option>
               </optgroup>
             </select>
 
@@ -424,9 +481,13 @@ function PropertySearchContent() {
               onChange={(e) => setSpaceType(e.target.value)}
               className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white shadow-xs shrink-0"
             >
-              <option>Office Space</option>
-              <option>Managed Coworking</option>
-              <option>Enterprise Suite</option>
+              <option value="All Categories">🏢 All Categories (6 Verticals)</option>
+              <option value="Coworking Space">💻 Coworking Spaces</option>
+              <option value="Virtual Office">🌐 Virtual Offices</option>
+              <option value="Managed Office">🏢 Managed Offices</option>
+              <option value="Commercial Office">🏙️ Commercial Office Leasing</option>
+              <option value="Meeting Room">📅 Meeting Rooms</option>
+              <option value="Day Pass">🎟️ Day Passes</option>
             </select>
 
             {/* Desktop Compare Link */}

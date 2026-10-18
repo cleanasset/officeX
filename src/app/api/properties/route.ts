@@ -19,37 +19,41 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: rrList });
     }
 
-    const client = supabaseAdmin || supabase;
+    const id = searchParams.get("id");
+    const city = searchParams.get("city");
+    const type = searchParams.get("type");
     const userId = searchParams.get("userId");
     const ownerCompany = searchParams.get("ownerCompany");
 
-    let query = client.from('properties').select('*').order('created_at', { ascending: false });
+    // Fast direct query on PostgreSQL
+    let drizzleQuery = db.select().from(properties);
+    const conditions: any[] = [];
+
+    if (id) {
+      conditions.push(eq(properties.id, id));
+    }
+    if (city && city.toLowerCase() !== "all") {
+      conditions.push(ilike(properties.city, `%${city.trim()}%`));
+    }
+    if (type && type.toLowerCase() !== "all" && type.toLowerCase() !== "all categories") {
+      conditions.push(ilike(properties.type, `%${type.trim()}%`));
+    }
     if (ownerCompany) {
-      query = query.ilike('owner_company', `%${ownerCompany}%`);
+      conditions.push(ilike(properties.ownerCompany, `%${ownerCompany.trim()}%`));
     } else if (userId && /^[0-9a-fA-F-]{36}$/.test(userId)) {
-      query = query.eq('owner_user_id', userId);
+      conditions.push(eq(properties.ownerUserId, userId));
     }
 
-    const { data, error } = await query;
-    if (!error && data && data.length > 0) {
-      return NextResponse.json(data);
+    if (conditions.length > 0) {
+      // @ts-ignore
+      drizzleQuery = drizzleQuery.where(and(...conditions));
     }
 
-    // If querying for a specific user or company, do not return other people's properties
-    if (userId || ownerCompany) {
-      return NextResponse.json([]);
-    }
-
-    // Fallback for public search: return all active properties
-    const { data: allProps } = await client.from('properties').select('*').order('created_at', { ascending: false });
-    if (allProps && allProps.length > 0) {
-      return NextResponse.json(allProps);
-    }
-
-    return NextResponse.json([]);
+    const list = await drizzleQuery.orderBy(desc(properties.createdAt)).limit(2000);
+    return NextResponse.json(list);
   } catch (error: any) {
     try {
-      const list = await db.select().from(properties).orderBy(desc(properties.createdAt));
+      const list = await db.select().from(properties).orderBy(desc(properties.createdAt)).limit(1000);
       return NextResponse.json(list);
     } catch (e: any) {
       return NextResponse.json([]);
