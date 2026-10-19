@@ -21,14 +21,21 @@ export default function PropertyPage() {
         return;
       }
       try {
-        const res = await fetch("/api/properties");
+        const res = await fetch(`/api/properties?id=${encodeURIComponent(propertyId)}`);
         if (res.ok) {
           const data = await res.json();
-          const list = Array.isArray(data) ? data : (data.data || []);
-          const match = list.find((p: any) => p.id === propertyId || p.slug === propertyId);
+          const list = Array.isArray(data) ? data : [data];
+          const match = list.find((p: any) => p.id === propertyId || p.slug === propertyId) || (list.length === 1 && list[0]?.id ? list[0] : null);
           if (match) {
             setProperty(match);
-            setSimilarProperties(list.filter((p: any) => p.id !== match.id).slice(0, 3));
+            try {
+              const simRes = await fetch(`/api/properties?city=${encodeURIComponent(match.city || "")}&limit=4`);
+              if (simRes.ok) {
+                const simData = await simRes.json();
+                const simList = Array.isArray(simData) ? simData : [];
+                setSimilarProperties(simList.filter((p: any) => p.id !== match.id).slice(0, 3));
+              }
+            } catch {}
           } else {
             setProperty(null);
           }
