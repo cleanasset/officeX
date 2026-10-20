@@ -79,29 +79,29 @@ export async function POST(
 
     // 6. Create active Lease record in Rent Roll
     const monthlyRent = deal.dealValue ? String(Math.round(Number(deal.dealValue) / 12)) : "150000.00";
-    const leaseNumber = `LSE-MP-${Date.now().toString().slice(-4)}`;
+    const leaseCode = `LSE-MP-${Date.now().toString().slice(-4)}`;
 
     const [createdLease] = await db
       .insert(leases)
       .values({
-        leaseNumber,
-        tenantId: createdTenant.id,
+        leaseCode,
+        tenantCompanyId: createdTenant.id,
         propertyId: propId || undefined,
-        spaceNumber: "Suite-MP-101",
+        unitNumber: "Suite-MP-101",
         chargeableArea: "3500.00",
         carpetArea: "2800.00",
-        leaseStartDate: new Date().toISOString().split("T")[0],
-        leaseEndDate: new Date(Date.now() + 365 * 24 * 3600 * 1000 * 3).toISOString().split("T")[0],
-        billingCycle: "monthly",
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: new Date(Date.now() + 365 * 24 * 3600 * 1000 * 3).toISOString().split("T")[0],
+        billingFrequency: "monthly",
         baseRentPsf: "125.00",
-        totalMonthlyBaseRent: monthlyRent,
-        maintenanceCamPsf: "18.00",
-        totalMonthlyCam: "63000.00",
-        securityDepositAmount: String(Number(monthlyRent) * 3),
+        monthlyRent: monthlyRent,
+        camRatePsf: "18.00",
+        camMonthly: "63000.00",
+        securityDeposit: String(Number(monthlyRent) * 3),
         securityDepositMonths: 3,
         lockInMonths: 36,
-        noticePeriodMonths: 3,
-        annualEscalationRate: "5.00",
+        noticePeriodDays: 90,
+        escalationPct: "5.00",
         status: "active"
       })
       .returning();
@@ -112,7 +112,7 @@ export async function POST(
       dealId: deal.id,
       tenantId: createdTenant.id,
       leaseId: createdLease.id,
-      leaseNumber: createdLease.leaseNumber,
+      leaseCode: createdLease.leaseCode || leaseCode,
       rentRollUrl: `/properties/rent-roll?tab=contracts`
     });
   } catch (error: any) {
