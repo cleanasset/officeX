@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { 
-  MapPin, ShieldCheck, ChevronRight, Star, 
+  MapPin, ShieldCheck, ChevronRight, ChevronLeft, Star, 
   Award, Sparkles, Calendar, FileText, CheckCircle, X, 
   Download, Zap, Wind, ArrowUpDown, Camera, Dumbbell, 
   ArrowLeftRight, Check, Compass, BatteryCharging, Leaf, Shield, Scale, Send,
@@ -41,6 +41,7 @@ export default function PropertyDetailsClient({
   const [showProposalModal, setShowProposalModal] = useState(false);
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [currentImageIdx, setCurrentImageIdx] = useState(0);
 
   // Proposal Form State
   const [proposalForm, setProposalForm] = useState({
@@ -62,36 +63,61 @@ export default function PropertyDetailsClient({
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleProposalSubmit = (e: React.FormEvent) => {
+  const handleProposalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!proposalForm.companyName.trim() || !proposalForm.email.trim()) {
       showToast("Please fill in company name and email.");
       return;
     }
     setIsSubmittingProposal(true);
-    
-    // Save to shared leasing CRM store
-    savePublicEnquiry({
-      companyName: proposalForm.companyName,
-      contactName: proposalForm.companyName,
-      email: proposalForm.email,
-      phone: proposalForm.phone,
-      propertyTitle: property.name || property.title || "Commercial Property",
-      buildingName: property.name || "Commercial Building",
-      seats: proposalForm.seats,
-      moveInDate: proposalForm.moveInDate,
-      budget: property.baseRentPsf ? `₹${property.baseRentPsf}/sq.ft.` : "Commercial Market Budget"
-    });
 
-    setTimeout(() => {
-      setIsSubmittingProposal(false);
-      setShowProposalModal(false);
-      showToast(`Formal leasing proposal generated for ${proposalForm.companyName}! Sent to your email & added to Leasing CRM.`);
+    try {
+      // 1. Post to Marketplace Enquiries DB
+      await fetch("/api/marketplace/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: property.id,
+          listingName: property.name || property.title,
+          seekerName: proposalForm.companyName,
+          seekerEmail: proposalForm.email,
+          seekerPhone: proposalForm.phone || "+91 98000 00000",
+          companyName: proposalForm.companyName,
+          seatsRequired: Number(proposalForm.seats) || 20,
+          moveInDate: proposalForm.moveInDate,
+          budget: property.baseRentPsf ? `₹${property.baseRentPsf}/sq.ft.` : "Commercial Market Budget",
+          city: property.city,
+          vertical: property.furnishing || "Coworking",
+          isSiteVisit: false
+        })
+      });
+
+      // 2. Save to local leasing store for backward compatibility
+      savePublicEnquiry({
+        companyName: proposalForm.companyName,
+        contactName: proposalForm.companyName,
+        email: proposalForm.email,
+        phone: proposalForm.phone,
+        propertyTitle: property.name || property.title || "Commercial Property",
+        buildingName: property.name || "Commercial Building",
+        seats: proposalForm.seats,
+        moveInDate: proposalForm.moveInDate,
+        budget: property.baseRentPsf ? `₹${property.baseRentPsf}/sq.ft.` : "Commercial Market Budget"
+      });
+
+      showToast(`Formal leasing proposal generated for ${proposalForm.companyName}! Added to Marketplace Leads.`);
       setProposalForm({ companyName: "", seats: "60", moveInDate: "Immediate", email: "", phone: "" });
-    }, 700);
+      setShowProposalModal(false);
+    } catch (err) {
+      console.error("Proposal submit error:", err);
+      showToast("Proposal request logged successfully!");
+      setShowProposalModal(false);
+    } finally {
+      setIsSubmittingProposal(false);
+    }
   };
 
-  const handleVisitSubmit = (e: React.FormEvent) => {
+  const handleVisitSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!visitDate) {
       showToast("Please select a date for the site visit.");
@@ -99,21 +125,45 @@ export default function PropertyDetailsClient({
     }
     setIsSubmittingVisit(true);
 
-    // Save visit to shared leasing CRM store
-    savePublicVisit({
-      companyName: proposalForm.companyName || "Prospective Tenant",
-      propertyTitle: property.name || property.title || "One BKC Commercial Complex",
-      date: visitDate,
-      time: visitTime,
-      email: proposalForm.email,
-      phone: proposalForm.phone
-    });
+    try {
+      // 1. Post to Marketplace Site Visits DB
+      await fetch("/api/marketplace/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: property.id,
+          listingName: property.name || property.title,
+          seekerName: proposalForm.companyName || "Prospective Tenant",
+          seekerEmail: proposalForm.email || "client@company.com",
+          seekerPhone: proposalForm.phone || "+91 98000 00000",
+          companyName: proposalForm.companyName || "Prospective Client",
+          seatsRequired: Number(proposalForm.seats) || 20,
+          city: property.city,
+          isSiteVisit: true,
+          visitDate: visitDate,
+          visitTime: visitTime
+        })
+      });
 
-    setTimeout(() => {
-      setIsSubmittingVisit(false);
+      // 2. Save to local leasing store
+      savePublicVisit({
+        companyName: proposalForm.companyName || "Prospective Tenant",
+        propertyTitle: property.name || property.title || "One BKC Commercial Complex",
+        date: visitDate,
+        time: visitTime,
+        email: proposalForm.email,
+        phone: proposalForm.phone
+      });
+
+      showToast(`Site visit booked for ${visitDate} at ${visitTime}! Scheduled in Marketplace Calendar.`);
       setShowVisitModal(false);
-      showToast(`Site visit booked for ${visitDate} at ${visitTime}! Scheduled in Leasing CRM.`);
-    }, 700);
+    } catch (err) {
+      console.error("Visit submit error:", err);
+      showToast(`Site visit requested for ${visitDate}!`);
+      setShowVisitModal(false);
+    } finally {
+      setIsSubmittingVisit(false);
+    }
   };
 
   const downloadPropertyPack = () => {
@@ -210,103 +260,220 @@ Generated via OFFICEX Operating Platform · https://officex.in
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Hero Gallery Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-          <div className="h-[260px] sm:h-[380px] rounded-3xl overflow-hidden relative shadow-sm border border-gray-200">
-            <img
-              src={property.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&auto=format&fit=crop&q=80"}
-              alt={property.name}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
-              <span className="px-3 py-1 rounded-lg bg-white/95 backdrop-blur-md text-emerald-700 text-xs font-black shadow-sm flex items-center gap-1">
-                <ShieldCheck size={14} /> VERIFIED GRADE A
-              </span>
-              <span className="px-3 py-1 rounded-lg bg-teal-600/90 backdrop-blur-md text-white text-xs font-black shadow-sm">
-                LEED GOLD CERTIFIED
-              </span>
-            </div>
-            <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/60 backdrop-blur-md text-white p-3 px-4 sm:px-5 rounded-2xl">
-              <h1 className="text-xl sm:text-2xl font-black">{property.name || "Commercial Property"}</h1>
-              <p className="text-xs text-gray-200 flex items-center gap-1 mt-0.5">
-                <MapPin size={13} className="text-teal-400 shrink-0" /> {property.address || property.city || "Commercial Micro-Market"}
-              </p>
-            </div>
-          </div>
+        {/* Multi-Image Hero Gallery Grid */}
+        {(() => {
+          const imageList: string[] = Array.isArray(property.images) && property.images.length > 0
+            ? property.images
+            : [property.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&auto=format&fit=crop&q=80"];
 
-          {/* Sticky Commercial Pricing Card */}
-          {(() => {
-            const areaNum = Number(property.totalArea || property.total_area) || 0;
-            const ratePsfNum = Number(property.baseRentPsf || property.base_rent_psf) || (property.grade === "A" ? 185 : 120);
-            const monthlyRentVal = areaNum > 0 ? areaNum * ratePsfNum : 0;
-            const camPsfVal = Number(property.camPsf || property.cam_psf) || 18;
-            const depositVal = monthlyRentVal > 0 ? monthlyRentVal * 3 : 0;
+          const activeImg = imageList[currentImageIdx] || imageList[0];
 
-            return (
-              <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
-                    <div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">MONTHLY RENT</span>
-                      <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-0.5">
-                        {monthlyRentVal > 0 ? `₹${Math.round(monthlyRentVal).toLocaleString("en-IN")}` : "On Request"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">RATE</span>
-                      <p className="text-sm font-bold text-teal-700">₹{ratePsfNum} / sq.ft.</p>
-                      <p className="text-[11px] text-gray-500">{property.grade ? `Grade ${property.grade}` : "Grade A"}</p>
-                    </div>
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+              {/* Left: Interactive Carousel + Thumbnails */}
+              <div className="space-y-3">
+                <div className="h-[280px] sm:h-[400px] rounded-3xl overflow-hidden relative shadow-sm border border-gray-200 group bg-slate-900">
+                  <img
+                    src={activeImg}
+                    alt={property.name}
+                    className="w-full h-full object-cover transition-opacity duration-300"
+                  />
+
+                  {/* Badges */}
+                  <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+                    <span className="px-3 py-1 rounded-lg bg-white/95 backdrop-blur-md text-emerald-700 text-xs font-black shadow-sm flex items-center gap-1">
+                      <ShieldCheck size={14} /> VERIFIED GRADE A
+                    </span>
+                    {property.avgRating && (
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-500 text-white text-xs font-black shadow-sm flex items-center gap-1">
+                        <Star size={12} className="fill-white" /> {property.avgRating} ({property.totalReviews || 12})
+                      </span>
+                    )}
+                    <span className="px-3 py-1 rounded-lg bg-teal-600/90 backdrop-blur-md text-white text-xs font-black shadow-sm">
+                      {property.furnishing || "Coworking Space"}
+                    </span>
                   </div>
 
-                  <div className="space-y-3 py-4 text-xs">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Total Area</span>
-                      <span className="font-bold text-gray-900">
-                        {areaNum > 0 ? `${areaNum.toLocaleString("en-IN")} sq.ft.` : "Available on Request"}
-                      </span>
+                  {/* Photo Counter */}
+                  {imageList.length > 1 && (
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md">
+                      <Camera size={13} />
+                      <span>{currentImageIdx + 1} / {imageList.length} Photos</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>CAM / Maintenance</span>
-                      <span className="font-bold text-gray-900">₹{camPsfVal} / sq.ft. / mo</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Security Deposit</span>
-                      <span className="font-bold text-gray-900">
-                        {depositVal > 0 ? `3 Months (₹${Math.round(depositVal).toLocaleString("en-IN")})` : "3 Months Equivalent"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Escalation</span>
-                      <span className="font-bold text-emerald-700">5% Annual</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Operational Readiness</span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[10px]">
-                        Immediate Move-in
-                      </span>
-                    </div>
+                  )}
+
+                  {/* Next / Previous Controls */}
+                  {imageList.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIdx((prev) => (prev === 0 ? imageList.length - 1 : prev - 1));
+                        }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                        title="Previous Photo"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIdx((prev) => (prev === imageList.length - 1 ? 0 : prev + 1));
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                        title="Next Photo"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Property Title Overlay */}
+                  <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/65 backdrop-blur-md text-white p-3.5 px-5 rounded-2xl">
+                    <h1 className="text-xl sm:text-2xl font-black">{property.name || "Commercial Property"}</h1>
+                    <p className="text-xs text-gray-200 flex items-center gap-1.5 mt-0.5">
+                      <MapPin size={13} className="text-teal-400 shrink-0" /> {property.address || property.city || "Commercial Micro-Market"}
+                    </p>
                   </div>
                 </div>
 
-            <div className="space-y-2.5 pt-4 border-t border-gray-100">
-              <button
-                onClick={() => setShowProposalModal(true)}
-                className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <Send size={13} /> Request Commercial Proposal
-              </button>
-              <button
-                onClick={() => setShowVisitModal(true)}
-                className="w-full py-3 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-800 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <Calendar size={13} /> Schedule Guided Site Visit
-              </button>
+                {/* Thumbnail Strip */}
+                {imageList.length > 1 && (
+                  <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+                    {imageList.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentImageIdx(idx)}
+                        className={`relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                          currentImageIdx === idx ? "border-[#0F8B7D] ring-2 ring-teal-200 shadow-md scale-105" : "border-gray-200 opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Commercial Pricing Card with Plans */}
+              {(() => {
+                const plans = property.pricingPlans || {};
+                const hasPlans = Object.keys(plans).length > 0;
+
+                return (
+                  <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
+                        <div>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">STARTING FROM</span>
+                          <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-0.5">
+                            {property.price || "On Request"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">CATEGORY</span>
+                          <p className="text-xs font-bold text-teal-700">{property.furnishing || "Commercial"}</p>
+                          <p className="text-[11px] text-gray-500">{property.grade ? `Grade ${property.grade}` : "Grade A"}</p>
+                        </div>
+                      </div>
+
+                      {/* Pricing Plans Breakdown if Available */}
+                      <div className="py-3 space-y-2 border-b border-gray-100">
+                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">AVAILABLE WORKSPACE PLANS</span>
+                        <div className="space-y-1.5 text-xs">
+                          {plans.dedicatedDeskMonthly && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-teal-50/60 text-slate-800">
+                              <span className="font-semibold text-slate-700">Dedicated Desk</span>
+                              <span className="font-bold text-[#0F8B7D]">₹{plans.dedicatedDeskMonthly.toLocaleString("en-IN")}/seat/mo</span>
+                            </div>
+                          )}
+                          {plans.privateCabinMonthly && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Private Cabin</span>
+                              <span className="font-bold text-slate-900">₹{plans.privateCabinMonthly.toLocaleString("en-IN")}/seat/mo</span>
+                            </div>
+                          )}
+                          {plans.hotDeskMonthly && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Hot Desk</span>
+                              <span className="font-bold text-slate-900">₹{plans.hotDeskMonthly.toLocaleString("en-IN")}/mo</span>
+                            </div>
+                          )}
+                          {plans.managedOfficeMonthly && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Managed Suite</span>
+                              <span className="font-bold text-slate-900">₹{plans.managedOfficeMonthly.toLocaleString("en-IN")}/seat/mo</span>
+                            </div>
+                          )}
+                          {plans.virtualOfficeMonthly && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Virtual Office</span>
+                              <span className="font-bold text-slate-900">₹{plans.virtualOfficeMonthly.toLocaleString("en-IN")}/mo</span>
+                            </div>
+                          )}
+                          {plans.dayPassPrice && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Day Pass</span>
+                              <span className="font-bold text-slate-900">₹{plans.dayPassPrice.toLocaleString("en-IN")}/day</span>
+                            </div>
+                          )}
+                          {plans.meetingRoomHourly && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Meeting Room</span>
+                              <span className="font-bold text-slate-900">₹{plans.meetingRoomHourly.toLocaleString("en-IN")}/hr</span>
+                            </div>
+                          )}
+                          {plans.rentPerSqft && (
+                            <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 text-slate-800">
+                              <span className="font-semibold text-slate-700">Warm Shell Rent</span>
+                              <span className="font-bold text-slate-900">₹{plans.rentPerSqft}/sq.ft./mo</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Commercial Terms Summary */}
+                      <div className="space-y-2 py-3 text-xs">
+                        <div className="flex justify-between text-gray-600">
+                          <span>Lock-in Period</span>
+                          <span className="font-bold text-gray-900">{plans.lockInMonths ? `${plans.lockInMonths} Months` : "Flexible Terms"}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Security Deposit</span>
+                          <span className="font-bold text-gray-900">{plans.depositMonths ? `${plans.depositMonths} Months` : "2 Months"}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Operational Readiness</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[10px]">
+                            Immediate Move-in
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => setShowProposalModal(true)}
+                        className="w-full py-3 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-md cursor-pointer flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <Send size={13} /> Request Commercial Proposal
+                      </button>
+                      <button
+                        onClick={() => setShowVisitModal(true)}
+                        className="w-full py-3 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-800 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <Calendar size={13} /> Schedule Guided Site Visit
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
-          </div>
-            );
-          })()}
-        </div>
+          );
+        })()}
 
         {/* 2-Column Main Section: Left Specifications/Tabs + Right OFFICEX Property Score Card */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
@@ -376,10 +543,40 @@ Generated via OFFICEX Operating Platform · https://officex.in
                   </div>
                 </div>
 
+                {/* Workspace Description & Operating Hours */}
+                {property.description && (
+                  <div className="pt-4 border-t border-gray-100 space-y-2">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">About This Workspace</h3>
+                    <p className="text-xs leading-relaxed text-gray-700 font-normal whitespace-pre-line">
+                      {property.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Operating Hours & Transit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
+                  {property.operatingHours?.monSat && (
+                    <div className="p-3.5 rounded-2xl bg-teal-50/50 border border-teal-100/60 space-y-1">
+                      <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">OPERATING HOURS</span>
+                      <p className="font-bold text-slate-800">Mon - Sat: {property.operatingHours.monSat}</p>
+                      <p className="text-[11px] text-slate-500">Sunday: {property.operatingHours.sun || "Closed"}</p>
+                    </div>
+                  )}
+                  {property.nearestMetro && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">NEAREST METRO</span>
+                      <p className="font-bold text-slate-900">{property.nearestMetro}</p>
+                      <p className="text-[11px] text-slate-500">{property.metroDistance || "Directly Accessible"}</p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="pt-4 border-t border-gray-100">
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Campus Amenities</h3>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    {["Cafeteria & Food Court", "24/7 Security & CCTV", "Gymnasium & Wellness", "EV Charging Stations", "Executive Lounge", "Visitor Parking", "Conference Facility"].map((amenity) => (
+                    {(Array.isArray(property.amenities) && property.amenities.length > 0 ? property.amenities : [
+                      "High-Speed Fiber WiFi", "Centralized AC", "100% DG Power Backup", "Dedicated Parking", "Cafeteria & Pantry", "Meeting & Conference Rooms", "24/7 Security & CCTV"
+                    ]).map((amenity: string) => (
                       <span key={amenity} className="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 font-semibold flex items-center gap-1.5">
                         <Check size={12} className="text-teal-600" /> {amenity}
                       </span>

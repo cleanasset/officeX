@@ -37,7 +37,9 @@ import {
   Database,
   Cloud,
   CreditCard,
-  Menu
+  Menu,
+  Plus,
+  ExternalLink
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -73,6 +75,16 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "MIS Investor Pack", href: "/operate/mis", icon: FileText },
     { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
     { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+  ],
+
+  // MARKETPLACE PROPERTY OWNER / OPERATOR (Property Discovery & Listing Partner)
+  marketplace_owner: [
+    { name: "Marketplace Dashboard", href: "/marketplace/dashboard", icon: Layers },
+    { name: "My Listed Spaces", href: "/marketplace/dashboard", icon: Building },
+    { name: "Inbound Leads & RFQs", href: "/marketplace/dashboard", icon: Users },
+    { name: "Site Visits Calendar", href: "/marketplace/dashboard", icon: Calendar },
+    { name: "List New Workspace", href: "/marketplace/list-space", icon: Plus, badge: "New" },
+    { name: "Public Marketplace", href: "/marketplace", icon: ExternalLink }
   ],
 
   // PROPERTY MANAGER / CENTRE MANAGER (§3.2, §S-03)

@@ -21,6 +21,63 @@ export default function PropertyPage() {
         return;
       }
       try {
+        // 1. Try Marketplace Listings first (rich scraped & verified data)
+        const mpRes = await fetch(`/api/marketplace/listings/${encodeURIComponent(propertyId)}`);
+        if (mpRes.ok) {
+          const mpData = await mpRes.json();
+          if (mpData.listing) {
+            const l = mpData.listing;
+            setProperty({
+              id: l.id,
+              slug: l.slug,
+              name: l.name,
+              title: l.name,
+              brandName: l.brandName,
+              address: l.fullAddress || `${l.locality || ""}, ${l.city}`,
+              location: `${l.locality || l.microMarket || ""}, ${l.city}`,
+              city: l.city,
+              grade: l.buildingGrade || "Grade A",
+              totalArea: l.totalAreaSqft,
+              total_area: l.totalAreaSqft,
+              capacity: l.totalSeats ? `${l.totalSeats} Seats` : "20-250 Workstations",
+              furnishing: (l.vertical || "Coworking").replace(/_/g, " "),
+              baseRentPsf: l.pricingPlans?.rentPerSqft || (l.buildingGrade === "Grade A" ? 145 : 95),
+              price: l.startingPrice ? `₹${Math.round(Number(l.startingPrice)).toLocaleString("en-IN")}` : "₹8,500",
+              pricePerSeat: l.pricingPlans?.dedicatedDeskMonthly 
+                ? `₹${Math.round(l.pricingPlans.dedicatedDeskMonthly).toLocaleString("en-IN")} / seat / mo`
+                : (l.startingPrice ? `₹${Math.round(Number(l.startingPrice)).toLocaleString("en-IN")} / seat / mo` : "₹8,500 / seat / mo"),
+              pricePerSqft: l.pricingPlans?.rentPerSqft ? `₹${l.pricingPlans.rentPerSqft} / sq.ft.` : "₹145 / sq.ft.",
+              imageUrl: l.featuredImage || (l.images && l.images[0]) || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80",
+              images: Array.isArray(l.images) && l.images.length > 0 ? l.images : [l.featuredImage],
+              pricingPlans: l.pricingPlans || {},
+              amenities: Array.isArray(l.amenities) ? l.amenities : [],
+              description: l.description,
+              operatingHours: l.operatingHours || {},
+              avgRating: l.avgRating || "4.50",
+              totalReviews: l.totalReviews || 12,
+              nearestMetro: l.nearestMetro,
+              metroDistance: l.metroDistance,
+              latitude: l.latitude,
+              longitude: l.longitude,
+              propertyScore: 94
+            });
+
+            if (Array.isArray(mpData.similar) && mpData.similar.length > 0) {
+              setSimilarProperties(mpData.similar.map((s: any) => ({
+                id: s.slug || s.id,
+                name: s.name,
+                title: s.name,
+                location: `${s.locality || ""}, ${s.city}`,
+                area: s.totalAreaSqft ? `${s.totalAreaSqft} sqft` : "Flexible Layout",
+                price: s.startingPrice ? `₹${Math.round(Number(s.startingPrice)).toLocaleString("en-IN")}` : "On Request",
+                imageUrl: s.featuredImage || (s.images && s.images[0]) || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80"
+              })));
+            }
+            return;
+          }
+        }
+
+        // 2. Fallback to /api/properties if not found in marketplace
         const res = await fetch(`/api/properties?id=${encodeURIComponent(propertyId)}`);
         if (res.ok) {
           const data = await res.json();

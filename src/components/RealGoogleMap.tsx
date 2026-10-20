@@ -22,6 +22,11 @@ export interface PropertyListing {
   image: string;
   lat: number;
   lng: number;
+  images?: string[];
+  rating?: string;
+  reviews?: number;
+  slug?: string;
+  amenities?: string[];
 }
 
 interface MapProps {

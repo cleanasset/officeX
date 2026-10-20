@@ -170,68 +170,115 @@ function PropertySearchContent() {
   useEffect(() => {
     async function fetchRealProperties() {
       try {
+        const res = await fetch("/api/marketplace/listings?limit=250");
+        if (res.ok) {
+          const json = await res.json();
+          const items = Array.isArray(json.listings) ? json.listings : (Array.isArray(json) ? json : []);
+          
+          if (items.length > 0) {
+            const mapped: PropertyListing[] = items.map((p: any) => {
+              let lat = p.latitude ? parseFloat(p.latitude) : null;
+              let lng = p.longitude ? parseFloat(p.longitude) : null;
+
+              if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                const marketKey = (p.microMarket || p.locality || "").toLowerCase();
+                const cityKey = (p.city || "").toLowerCase();
+                const fallback = cityCoords[marketKey] || cityCoords[cityKey] || [19.0760, 72.8777];
+                lat = fallback[0];
+                lng = fallback[1];
+              }
+
+              const numPrice = p.startingPrice ? Number(p.startingPrice) : 8500;
+              const formattedPrice = "₹" + Math.round(numPrice).toLocaleString("en-IN");
+              let displayPrice = `${formattedPrice}/mo`;
+              let pricePerSeat = `${formattedPrice}/seat`;
+              let pricePerSqft = "—";
+
+              if (p.startingPriceUnit === "per_sqft_month" || p.vertical === "commercial") {
+                displayPrice = `${formattedPrice}/sq.ft.`;
+                pricePerSqft = `${formattedPrice}/sq.ft.`;
+                pricePerSeat = "—";
+              } else if (p.startingPriceUnit === "per_day" || p.vertical === "day_pass") {
+                displayPrice = `${formattedPrice}/day`;
+                pricePerSeat = `${formattedPrice}/day`;
+              } else if (p.startingPriceUnit === "per_hour" || p.vertical === "meeting_room") {
+                displayPrice = `${formattedPrice}/hr`;
+                pricePerSeat = "—";
+              } else if (p.startingPriceUnit === "per_month" || p.vertical === "virtual_office") {
+                displayPrice = `${formattedPrice}/mo`;
+                pricePerSeat = "—";
+              }
+
+              const photoList = Array.isArray(p.images) && p.images.length > 0 
+                ? p.images 
+                : [p.featuredImage || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80"];
+
+              const verticalName = (p.vertical || "coworking").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+              return {
+                id: p.slug || p.id,
+                slug: p.slug,
+                title: p.name,
+                buildingName: p.brandName || p.name,
+                location: `${p.locality || p.microMarket || ""}, ${p.city}`.replace(/^, /, "").replace(/, , /g, ", "),
+                subLocation: p.fullAddress || "",
+                area: p.totalAreaSqft ? `${Number(p.totalAreaSqft).toLocaleString("en-IN")} sqft` : "Flexible Layout",
+                capacity: p.totalSeats ? `${p.totalSeats} Workstations` : (p.vertical === "meeting_room" ? "8-16 Persons" : p.vertical === "virtual_office" ? "Virtual Address" : "20-250 Seats"),
+                furnishing: verticalName,
+                price: displayPrice,
+                pricePerSqft: pricePerSqft,
+                pricePerSeat: pricePerSeat,
+                propertyScore: 92,
+                readiness: "Ready to Move",
+                commuteScore: 88,
+                energyRating: p.buildingGrade || "Grade A",
+                image: p.featuredImage || photoList[0],
+                images: photoList,
+                rating: p.avgRating || "4.50",
+                reviews: p.totalReviews || 12,
+                amenities: Array.isArray(p.amenities) ? p.amenities : [],
+                lat,
+                lng
+              };
+            });
+
+            setDbProperties(mapped);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch marketplace listings, trying legacy properties fallback:", err);
+      }
+
+      // Legacy fallback if needed
+      try {
         const res = await fetch("/api/properties");
         if (res.ok) {
           const data = await res.json();
-          const mapped: PropertyListing[] = data.map((p: any) => {
-            let lat = p.latitude ? parseFloat(p.latitude) : null;
-            let lng = p.longitude ? parseFloat(p.longitude) : null;
-
-            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-              const marketKey = (p.micro_market || p.microMarket || "").toLowerCase();
-              const cityKey = (p.city || "").toLowerCase();
-              const fallback = cityCoords[marketKey] || cityCoords[cityKey] || [19.0760, 72.8777];
-              lat = fallback[0];
-              lng = fallback[1];
-            }
-
-            const pType = p.type || "Coworking Space";
-            let displayPrice = "₹8,500/mo";
-            let pricePerSeat = "₹8,500/mo";
-            let pricePerSqft = "—";
-
-            if (pType.includes("Virtual Office")) {
-              displayPrice = "₹999/mo";
-              pricePerSeat = "—";
-            } else if (pType.includes("Day Pass")) {
-              displayPrice = "₹499/day";
-              pricePerSeat = "₹499/day";
-            } else if (pType.includes("Meeting Room")) {
-              displayPrice = "₹950/hr";
-              pricePerSeat = "—";
-            } else if (pType.includes("Managed Office")) {
-              displayPrice = "₹14,000/seat";
-              pricePerSeat = "₹14,000/seat";
-            } else if (pType.includes("Commercial") || pType.includes("Office Space")) {
-              displayPrice = "₹135/sq.ft.";
-              pricePerSqft = "₹135/sq.ft.";
-            }
-
-            return {
-              id: p.id,
-              title: p.name,
-              buildingName: p.name,
-              location: `${p.micro_market || p.microMarket || ""}, ${p.city}, ${p.state || ""}`.replace(/^, /, "").replace(/, , /g, ", "),
-              subLocation: p.address || "",
-              area: p.total_area ? `${Number(p.total_area).toLocaleString()} sqft` : "15,000 sqft",
-              capacity: pType.includes("Meeting") ? "6-12 Persons" : pType.includes("Virtual") ? "N/A (Virtual)" : "50-400 Seats",
-              furnishing: pType,
-              price: displayPrice,
-              pricePerSqft: pricePerSqft,
-              pricePerSeat: pricePerSeat,
-              propertyScore: 92,
-              readiness: "Available Now",
-              commuteScore: 88,
-              energyRating: p.grade === "A" ? "Grade A" : `Grade ${p.grade || "A+"}`,
-              image: p.image_url || p.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80",
-              lat,
-              lng
-            };
-          });
+          const mapped: PropertyListing[] = data.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            buildingName: p.name,
+            location: `${p.microMarket || ""}, ${p.city || "Mumbai"}`.replace(/^, /, ""),
+            subLocation: p.address || "",
+            area: p.totalArea ? `${Number(p.totalArea).toLocaleString()} sqft` : "15,000 sqft",
+            capacity: "50-400 Seats",
+            furnishing: p.type || "Coworking Space",
+            price: "₹8,500/mo",
+            pricePerSqft: "—",
+            pricePerSeat: "₹8,500/mo",
+            propertyScore: 92,
+            readiness: "Available Now",
+            commuteScore: 88,
+            energyRating: "Grade A",
+            image: p.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80",
+            lat: 19.0760,
+            lng: 72.8777
+          }));
           setDbProperties(mapped);
         }
       } catch (err) {
-        console.warn("Could not fetch real properties:", err);
+        console.warn("Could not fetch real properties fallback:", err);
       }
     }
     fetchRealProperties();
