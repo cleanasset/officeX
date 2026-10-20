@@ -89,6 +89,7 @@ const BRANDS = [
 ];
 
 const PRODUCTS = [
+  { id: "all", label: "All Workspaces", title: "Office & Coworking Spaces" },
   { id: "coworking", label: "Coworking Space", title: "Coworking Spaces" },
   { id: "managed", label: "Managed Office", title: "Managed Offices" },
   { id: "commercial", label: "Commercial Office", title: "Commercial Office Spaces" },
@@ -105,7 +106,7 @@ function MarketplaceSearchContent() {
   const initialCity = searchParams?.get("city") || "Delhi";
   const initialQ = searchParams?.get("q") || "";
   const initialLocality = searchParams?.get("locality") || "";
-  const initialVertical = searchParams?.get("vertical") || searchParams?.get("type") || "coworking";
+  const initialVertical = searchParams?.get("vertical") || searchParams?.get("type") || "all";
 
   // Filter States
   const [city, setCity] = useState(initialCity);
@@ -555,9 +556,10 @@ function MarketplaceSearchContent() {
             </div>
 
             {/* Reset Filters Text Button */}
-            {(selectedLocality || searchQuery || selectedBrand !== "All Brands" || selectedPriceRange !== "all" || sortBy !== "popular") && (
+            {(selectedLocality || searchQuery || selectedBrand !== "All Brands" || selectedPriceRange !== "all" || sortBy !== "popular" || (selectedProduct && selectedProduct !== "all")) && (
               <button
                 onClick={() => {
+                  setSelectedProduct("all");
                   setSelectedLocality("");
                   setSearchQuery("");
                   setSelectedBrand("All Brands");
@@ -677,15 +679,33 @@ function MarketplaceSearchContent() {
             </div>
             <h3 className="text-lg font-black text-slate-900">No Spaces Match Your Exact Filter</h3>
             <p className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
-              We couldn&apos;t find matching properties in {selectedLocality || city} with the chosen price/brand. Our enterprise sourcing desk can scout off-market floors for you.
+              {selectedProduct !== "all" ? (
+                <>
+                  No spaces found specifically under <span className="font-bold text-slate-800">{activeProductObj.label}</span> in {selectedLocality || city}. Try switching to <strong>All Workspaces</strong> to view all available coworking hubs and managed offices.
+                </>
+              ) : (
+                <>
+                  We couldn&apos;t find matching properties in {selectedLocality || city} with the chosen price/brand. Our enterprise sourcing desk can scout off-market floors for you.
+                </>
+              )}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              {selectedProduct !== "all" && (
+                <button
+                  onClick={() => setSelectedProduct("all")}
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  View All Workspaces in {city}
+                </button>
+              )}
               <button
                 onClick={() => {
+                  setSelectedProduct("all");
                   setSelectedLocality("");
                   setSearchQuery("");
                   setSelectedBrand("All Brands");
                   setSelectedPriceRange("all");
+                  setSortBy("popular");
                 }}
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
               >
@@ -693,7 +713,7 @@ function MarketplaceSearchContent() {
               </button>
               <button
                 onClick={() => setActiveModalProperty({ name: `Custom Workspace Scouting in ${city}` })}
-                className="px-4 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
                 Submit Custom Requirement
               </button>
