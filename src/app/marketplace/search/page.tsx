@@ -1127,7 +1127,7 @@ function MarketplaceSearchContent() {
                       alt="Himanshu Sheakher"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as any).src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80";
+                        (e.target as any).src = "/images/pro_property_manager.jpg";
                       }}
                     />
                   </div>

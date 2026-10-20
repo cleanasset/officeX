@@ -60,9 +60,12 @@ async function main() {
     }
     seenSlugs.add(uniqueSlug);
 
-    // Photos
+    // Photos - REQUIRE real scraped photos (no Unsplash fallbacks)
     const rawPhotos = (item['Photo URLs'] || '').split(' ; ').map((s: string) => s.trim()).filter(Boolean);
-    const featuredImage = rawPhotos[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80';
+    if (!rawPhotos.length || rawPhotos[0].includes('unsplash')) {
+      continue; // Skip listings that don't have authentic scraped photos
+    }
+    const featuredImage = rawPhotos[0];
 
     // Amenities list
     const amenities: string[] = [];

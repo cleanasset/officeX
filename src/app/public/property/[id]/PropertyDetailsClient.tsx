@@ -264,7 +264,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
         {(() => {
           const imageList: string[] = Array.isArray(property.images) && property.images.length > 0
             ? property.images
-            : [property.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&auto=format&fit=crop&q=80"];
+            : [property.imageUrl || "/images/workspace_managed_suite.jpg"];
 
           const activeImg = imageList[currentImageIdx] || imageList[0];
 
@@ -681,7 +681,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
                         readiness: "Immediate Move-in",
                         lat: property.id === "godrej-bkc" ? 19.0682 : property.id === "maker-maxity" ? 19.0607 : property.id === "the-capital" ? 19.0637 : 19.0664,
                         lng: property.id === "godrej-bkc" ? 72.8695 : property.id === "maker-maxity" ? 72.8519 : property.id === "the-capital" ? 72.8631 : 72.8680,
-                        image: property.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80"
+                        image: property.imageUrl || "/images/workspace_managed_suite.jpg"
                       }]}
                       selectedProperty={null}
                       onSelectProperty={() => {}}
@@ -768,7 +768,7 @@ Generated via OFFICEX Operating Platform · https://officex.in
               >
                 <div className="h-44 relative overflow-hidden">
                   <img
-                    src={sim.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80"}
+                    src={sim.imageUrl || "/images/workspace_dedicated_desks.jpg"}
                     alt={sim.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

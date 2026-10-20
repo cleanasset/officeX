@@ -5,18 +5,11 @@ import { properties } from '../src/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 async function main() {
-  console.log('================================================================');
-  console.log('       SEEDING SCRAPED COMMERCIAL REAL ESTATE TO DATABASE       ');
-  console.log('================================================================\n');
-
-  const jsonPath = path.join(__dirname, '..', 'office marketplace data', 'json', 'all_properties_master.json');
-  if (!fs.existsSync(jsonPath)) {
-    console.error('File not found:', jsonPath);
-    process.exit(1);
-  }
-
-  const allProps = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-  console.log(`Loaded ${allProps.length} properties from all_properties_master.json`);
+  console.error('[CRITICAL ARCHITECTURE SAFEGUARD]');
+  console.error('DO NOT run this script! Office Marketplace data belongs in "marketplace_listings" table, NOT the Rent Roll SaaS "properties" table.');
+  console.error('Please use "scripts/seed_marketplace_listings.ts" instead.');
+  process.exit(1);
+}
 
   // Existing properties to avoid duplicates
   const existing = await db.select({ name: properties.name, city: properties.city }).from(properties);

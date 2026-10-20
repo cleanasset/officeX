@@ -199,7 +199,7 @@ export default function MarketplaceOwnerDashboard() {
                   <div>
                     <div className="h-44 relative bg-slate-900">
                       <img
-                        src={item.featuredImage || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80"}
+                        src={item.featuredImage || "/images/workspace_managed_suite.jpg"}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

@@ -47,8 +47,8 @@ export default function PropertyPage() {
                 ? `₹${Math.round(l.pricingPlans.dedicatedDeskMonthly).toLocaleString("en-IN")} / seat / mo`
                 : (l.startingPrice ? `₹${Math.round(Number(l.startingPrice)).toLocaleString("en-IN")} / seat / mo` : "₹8,500 / seat / mo"),
               pricePerSqft: l.pricingPlans?.rentPerSqft ? `₹${l.pricingPlans.rentPerSqft} / sq.ft.` : "₹145 / sq.ft.",
-              imageUrl: l.featuredImage || (l.images && l.images[0]) || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80",
-              images: Array.isArray(l.images) && l.images.length > 0 ? l.images : [l.featuredImage],
+              imageUrl: l.featuredImage || (l.images && l.images[0]) || "/images/workspace_managed_suite.jpg",
+              images: Array.isArray(l.images) && l.images.length > 0 ? l.images : [l.featuredImage || "/images/workspace_managed_suite.jpg"],
               pricingPlans: l.pricingPlans || {},
               amenities: Array.isArray(l.amenities) ? l.amenities : [],
               description: l.description,
@@ -70,7 +70,7 @@ export default function PropertyPage() {
                 location: `${s.locality || ""}, ${s.city}`,
                 area: s.totalAreaSqft ? `${s.totalAreaSqft} sqft` : "Flexible Layout",
                 price: s.startingPrice ? `₹${Math.round(Number(s.startingPrice)).toLocaleString("en-IN")}` : "On Request",
-                imageUrl: s.featuredImage || (s.images && s.images[0]) || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80"
+                imageUrl: s.featuredImage || (s.images && s.images[0]) || "/images/workspace_dedicated_desks.jpg"
               })));
             }
             return;

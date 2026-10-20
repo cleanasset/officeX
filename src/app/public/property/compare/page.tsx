@@ -52,7 +52,7 @@ export default async function PropertyComparePage() {
         structure: true,
         pollution: true,
       },
-      imageUrl: p.imageUrl || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop"
+      imageUrl: p.imageUrl || "/images/workspace_managed_suite.jpg"
     };
   });
 

@@ -25,9 +25,9 @@ export async function GET(req: Request) {
     const userId = searchParams.get("userId");
     const ownerCompany = searchParams.get("ownerCompany");
 
-    // Fast direct query on PostgreSQL
+    // Fast direct query on PostgreSQL - STRICT ISOLATION: SaaS properties must belong to an organization
     let drizzleQuery = db.select().from(properties);
-    const conditions: any[] = [];
+    const conditions: any[] = [sql`${properties.orgId} IS NOT NULL`];
 
     if (id) {
       conditions.push(eq(properties.id, id));

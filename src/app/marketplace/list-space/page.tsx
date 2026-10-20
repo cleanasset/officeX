@@ -72,10 +72,9 @@ export default function ListSpacePage() {
     ],
     
     // Step 4: Photo URLs
-    photos: [
-      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80"
-    ]
+    photos: [] as string[]
   });
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const allAmenitiesOptions = [
     "High-Speed WiFi",
@@ -107,13 +106,22 @@ export default function ListSpacePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMsg(null);
 
     try {
-      // Mock submit or post to API
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const res = await fetch("/api/marketplace/list-space", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to submit space listing application.");
+      }
       setSubmitted(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("List space error:", err);
+      setErrorMsg(err.message || "Failed to submit listing. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -680,6 +688,12 @@ export default function ListSpacePage() {
                     I confirm that I am an authorized representative of <b>{formData.brandName || "the workspace"}</b> and all stated details, address, and pricing are accurate. I accept the OfficeX Marketplace Partner Terms.
                   </label>
                 </div>
+
+                {errorMsg && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                    {errorMsg}
+                  </div>
+                )}
 
                 <div className="flex justify-between pt-4">
                   <button

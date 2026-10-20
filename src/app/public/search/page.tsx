@@ -227,7 +227,7 @@ function PropertySearchContent() {
 
               const photoList = Array.isArray(p.images) && p.images.length > 0 
                 ? p.images 
-                : [p.featuredImage || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80"];
+                : [p.featuredImage || "/images/workspace_managed_suite.jpg"];
 
               const verticalName = (p.vertical || "coworking").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
