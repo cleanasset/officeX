@@ -41,7 +41,15 @@ export default function MarketplaceSlugPage() {
               capacity: l.totalSeats ? `${l.totalSeats} Seats` : "20-250 Workstations",
               furnishing: (l.vertical || "Coworking").replace(/_/g, " "),
               baseRentPsf: l.pricingPlans?.rentPerSqft || (l.buildingGrade === "Grade A" ? 145 : 95),
-              price: l.startingPrice ? `₹${Math.round(Number(l.startingPrice)).toLocaleString("en-IN")}` : "₹8,500",
+              price: (() => {
+                const num = Number(l.startingPrice || 8500);
+                const fmt = "₹" + Math.round(num).toLocaleString("en-IN");
+                if (l.startingPriceUnit === "per_sqft_month" || l.vertical === "commercial") return `${fmt} / sq.ft.`;
+                if (l.startingPriceUnit === "per_day" || l.vertical === "day_pass") return `${fmt} / day`;
+                if (l.startingPriceUnit === "per_hour" || l.vertical === "meeting_room") return `${fmt} / hr`;
+                if (l.startingPriceUnit === "per_month" && l.vertical === "virtual_office") return `${fmt} / mo`;
+                return `${fmt} / seat`;
+              })(),
               pricePerSeat: l.pricingPlans?.dedicatedDeskMonthly 
                 ? `₹${Math.round(l.pricingPlans.dedicatedDeskMonthly).toLocaleString("en-IN")} / seat / mo`
                 : (l.startingPrice ? `₹${Math.round(Number(l.startingPrice)).toLocaleString("en-IN")} / seat / mo` : "₹8,500 / seat / mo"),

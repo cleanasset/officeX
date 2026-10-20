@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const locality = searchParams.get("locality");
     const minPrice = searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : null;
     const maxPrice = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : null;
+    const brand = searchParams.get("brand");
     const grade = searchParams.get("grade");
     const sort = searchParams.get("sort") || "popular"; // popular | price_asc | price_desc | rating
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
@@ -61,16 +62,25 @@ export async function GET(request: NextRequest) {
         conditions.push(eq(marketplaceListings.vertical, "meeting_room"));
       } else if (v === "virtual" || v === "virtual_office") {
         conditions.push(eq(marketplaceListings.vertical, "virtual_office"));
-      } else if (v === "coworking" || v === "managed" || v === "cabins" || v === "office") {
-        conditions.push(
-          or(
-            eq(marketplaceListings.vertical, "coworking"),
-            eq(marketplaceListings.vertical, "commercial")
-          )
-        );
+      } else if (v === "managed" || v === "managed_office") {
+        conditions.push(eq(marketplaceListings.vertical, "managed_office"));
+      } else if (v === "commercial" || v === "industry" || v === "warehouse") {
+        conditions.push(eq(marketplaceListings.vertical, "commercial"));
+      } else if (v === "coworking" || v === "cabins" || v === "office") {
+        // Strictly coworking spaces (no commercial bare-shells)
+        conditions.push(eq(marketplaceListings.vertical, "coworking"));
       } else {
         conditions.push(eq(marketplaceListings.vertical, v));
       }
+    }
+
+    if (brand && brand.toLowerCase() !== "all" && brand.toLowerCase() !== "all brands") {
+      conditions.push(
+        or(
+          ilike(marketplaceListings.brandName, `%${brand.trim()}%`),
+          ilike(marketplaceListings.name, `%${brand.trim()}%`)
+        )
+      );
     }
 
     if (locality) {
@@ -110,14 +120,32 @@ export async function GET(request: NextRequest) {
 
     const whereClause = and(...conditions);
 
-    // Sorting
-    let orderByClause: any = desc(marketplaceListings.totalReviews);
+    // Sorting: Popularity boosts verified recognized operators with photos and reviews
+    const brandPriority = sql`CASE 
+      WHEN ${marketplaceListings.brandName} ILIKE '%Awfis%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%WeWork%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%91Springboard%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%Innov8%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%Regus%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%DevX%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%Smartworks%' THEN 1
+      WHEN ${marketplaceListings.brandName} ILIKE '%Incuspaze%' THEN 1
+      WHEN ${marketplaceListings.images} IS NOT NULL AND jsonb_array_length(${marketplaceListings.images}) >= 3 THEN 2
+      ELSE 3
+    END`;
+
+    let orderByClause: any[] = [
+      asc(brandPriority),
+      desc(marketplaceListings.totalReviews),
+      desc(marketplaceListings.avgRating)
+    ];
+
     if (sort === "price_asc") {
-      orderByClause = asc(marketplaceListings.startingPrice);
+      orderByClause = [asc(marketplaceListings.startingPrice)];
     } else if (sort === "price_desc") {
-      orderByClause = desc(marketplaceListings.startingPrice);
+      orderByClause = [desc(marketplaceListings.startingPrice)];
     } else if (sort === "rating") {
-      orderByClause = desc(marketplaceListings.avgRating);
+      orderByClause = [desc(marketplaceListings.avgRating), desc(marketplaceListings.totalReviews)];
     }
 
     // Query listings + count
@@ -126,7 +154,7 @@ export async function GET(request: NextRequest) {
         .select()
         .from(marketplaceListings)
         .where(whereClause)
-        .orderBy(orderByClause)
+        .orderBy(...orderByClause)
         .limit(limit)
         .offset(offset),
       db

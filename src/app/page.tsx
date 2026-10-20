@@ -570,7 +570,7 @@ export default function LandingPage() {
       return;
     }
     if (activeSearchTab === "space") {
-      router.push(`/public/search?city=${encodeURIComponent(spaceCity)}`);
+      router.push(`/marketplace/search?city=${encodeURIComponent(spaceCity)}&vertical=coworking`);
       return;
     }
     router.push('/managed-services');

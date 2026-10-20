@@ -202,7 +202,7 @@ export default function ListSpacePage() {
                 Go to Partner Operator Console <ArrowRight size={14} />
               </Link>
               <Link
-                href="/public/search"
+                href="/marketplace/search"
                 className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 text-slate-700 text-xs font-bold"
               >
                 Browse Live Marketplace

@@ -163,20 +163,17 @@ export default function PropertyMarketplacePage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (activeSolution === "virtual") {
-      setSlideInOpen(true);
-      return;
-    }
     const params = new URLSearchParams();
     if (selectedCity) params.set("city", selectedCity);
     if (searchLocationQuery) params.set("q", searchLocationQuery);
     if (activeSolution === "daypass") {
-      params.set("type", "daypass");
-      params.set("passType", activeSubPills.daypass);
+      params.set("vertical", activeSubPills.daypass === "single" ? "day_pass" : "meeting_room");
     } else if (activeSolution === "events") {
-      params.set("type", activeSubPills.events);
+      params.set("vertical", activeSubPills.events === "managed" ? "managed" : "coworking");
+    } else if (activeSolution === "virtual") {
+      params.set("vertical", "virtual_office");
     } else {
-      params.set("category", activeSubPills.longterm);
+      params.set("vertical", "commercial");
     }
     router.push(`/marketplace/search?${params.toString()}`);
   };

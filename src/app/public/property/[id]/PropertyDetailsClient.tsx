@@ -243,9 +243,9 @@ Generated via OFFICEX Operating Platform · https://officex.in
       {/* Top Breadcrumb Header */}
       <div className="bg-white border-b border-gray-200 px-4 sm:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-gray-500">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          <Link href="/public/search" className="hover:text-gray-900">Commercial Spaces</Link>
+          <Link href="/marketplace/search" className="hover:text-gray-900">Commercial Spaces</Link>
           <ChevronRight size={12} />
-          <Link href="/public/search" className="hover:text-gray-900">{property.city || "Mumbai"}</Link>
+          <Link href={`/marketplace/search?city=${encodeURIComponent(property.city || "Delhi")}`} className="hover:text-gray-900">{property.city || "Delhi"}</Link>
           <ChevronRight size={12} />
           <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">{property.name || "Commercial Property"}</span>
         </div>
