@@ -15,17 +15,62 @@ export async function GET(request: NextRequest) {
     const grade = searchParams.get("grade");
     const sort = searchParams.get("sort") || "popular"; // popular | price_asc | price_desc | rating
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
-    const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit")) || 18));
+    const limit = Math.min(250, Math.max(1, Number(searchParams.get("limit")) || 20));
     const offset = (page - 1) * limit;
 
     const conditions: any[] = [eq(marketplaceListings.status, "active")];
 
     if (city && city.toLowerCase() !== "all") {
-      conditions.push(ilike(marketplaceListings.city, `%${city.trim()}%`));
+      const c = city.trim().toLowerCase();
+      if (c === "delhi ncr" || c === "ncr") {
+        conditions.push(
+          or(
+            ilike(marketplaceListings.city, "%Delhi%"),
+            ilike(marketplaceListings.city, "%Gurgaon%"),
+            ilike(marketplaceListings.city, "%Noida%"),
+            ilike(marketplaceListings.city, "%Faridabad%"),
+            ilike(marketplaceListings.city, "%Ghaziabad%")
+          )
+        );
+      } else if (c === "bengaluru" || c === "bangalore") {
+        conditions.push(
+          or(
+            ilike(marketplaceListings.city, "%Bangalore%"),
+            ilike(marketplaceListings.city, "%Bengaluru%")
+          )
+        );
+      } else if (c === "gandhinagar" || c.includes("gift")) {
+        conditions.push(
+          or(
+            ilike(marketplaceListings.city, "%Gandhinagar%"),
+            ilike(marketplaceListings.city, "%Ahmedabad%"),
+            ilike(marketplaceListings.locality, "%GIFT%"),
+            ilike(marketplaceListings.microMarket, "%GIFT%")
+          )
+        );
+      } else {
+        conditions.push(ilike(marketplaceListings.city, `%${city.trim()}%`));
+      }
     }
 
     if (vertical && vertical.toLowerCase() !== "all") {
-      conditions.push(eq(marketplaceListings.vertical, vertical.trim()));
+      const v = vertical.trim().toLowerCase();
+      if (v === "daypass" || v === "day_pass") {
+        conditions.push(eq(marketplaceListings.vertical, "day_pass"));
+      } else if (v === "meeting" || v === "meeting_room" || v === "training" || v === "event") {
+        conditions.push(eq(marketplaceListings.vertical, "meeting_room"));
+      } else if (v === "virtual" || v === "virtual_office") {
+        conditions.push(eq(marketplaceListings.vertical, "virtual_office"));
+      } else if (v === "coworking" || v === "managed" || v === "cabins" || v === "office") {
+        conditions.push(
+          or(
+            eq(marketplaceListings.vertical, "coworking"),
+            eq(marketplaceListings.vertical, "commercial")
+          )
+        );
+      } else {
+        conditions.push(eq(marketplaceListings.vertical, v));
+      }
     }
 
     if (locality) {

@@ -178,7 +178,7 @@ export default function PropertyMarketplacePage() {
     } else {
       params.set("category", activeSubPills.longterm);
     }
-    router.push(`/public/search?${params.toString()}`);
+    router.push(`/marketplace/search?${params.toString()}`);
   };
 
   // myHQ-inspired Workspace Models without pricing
@@ -333,57 +333,43 @@ export default function PropertyMarketplacePage() {
     }
   ];
 
-  // Curated Verified Spaces in Ahmedabad & Metros (myHQ style Cards)
-  const featuredSpaces = [
-    {
-      id: "space-1",
-      name: "Horizon Tech Park",
-      location: "SG Highway, Ahmedabad",
-      type: "Enterprise Managed Floor",
-      area: "18,500 Sq.Ft.",
-      seats: "180 Seats",
-      tag: "Immediate Move-in",
-      image: "/images/showcase_office_techhorizon_hd.jpg",
-      features: ["Metro 400m", "100% DG Backup", "Cafeteria", "LEED Gold Certified"],
-      verified: true
-    },
-    {
-      id: "space-2",
-      name: "GIFT One International Tower",
-      location: "GIFT City, Gandhinagar / Ahmedabad",
-      type: "Grade-A+ Commercial Suite",
-      area: "32,000 Sq.Ft.",
-      seats: "320 Workstations",
-      tag: "IFSC Special Zone",
-      image: "/images/space_gift_one_tower.jpg",
-      features: ["SEZ Tax Benefits", "Triple Height Atrium", "Multi-Tier Security", "District Cooling"],
-      verified: true
-    },
-    {
-      id: "space-3",
-      name: "Prahlad Corporate Capital",
-      location: "Prahlad Nagar, Ahmedabad",
-      type: "Boutique Executive Office",
-      area: "12,000 Sq.Ft.",
-      seats: "110 Seats",
-      tag: "Premium CBD",
-      image: "/images/space_prahlad_capital.jpg",
-      features: ["Valet Parking", "Acoustic Phone Booths", "Barista Lounge", "Fiber Internet"],
-      verified: true
-    },
-    {
-      id: "space-4",
-      name: "BKC Sovereign Heights",
-      location: "Bandra Kurla Complex (BKC), Mumbai",
-      type: "Enterprise Headquarters Plate",
-      area: "45,000 Sq.Ft.",
-      seats: "450 Seats",
-      tag: "Prestige Headquarters",
-      image: "/images/officex_prestige_cre_hero.jpg",
-      features: ["Helipad Access", "IGBC Platinum", "Dedicated High-Speed Elevators", "Concierge"],
-      verified: true
-    }
+  // Real Database Marketplace Listings state for homepage showcase
+  const [featuredListings, setFeaturedListings] = useState<any[]>([]);
+  const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
+  const [featuredCity, setFeaturedCity] = useState("Ahmedabad");
+  const [featuredTotal, setFeaturedTotal] = useState(116);
+
+  const cityTabs = [
+    { id: "Ahmedabad", label: "Ahmedabad", count: 116 },
+    { id: "Mumbai", label: "Mumbai", count: 644 },
+    { id: "Bangalore", label: "Bengaluru", count: 1546 },
+    { id: "Delhi NCR", label: "Delhi NCR", count: 1719 },
+    { id: "Pune", label: "Pune", count: 587 },
+    { id: "Hyderabad", label: "Hyderabad", count: 508 },
   ];
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadFeatured() {
+      setIsLoadingFeatured(true);
+      try {
+        const res = await fetch(`/api/marketplace/listings?city=${encodeURIComponent(featuredCity)}&limit=8`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled) {
+            setFeaturedListings(data.listings || []);
+            setFeaturedTotal(data.pagination?.total || (data.listings?.length || 0));
+          }
+        }
+      } catch (err) {
+        console.warn("Featured listings error:", err);
+      } finally {
+        if (!isCancelled) setIsLoadingFeatured(false);
+      }
+    }
+    loadFeatured();
+    return () => { isCancelled = true; };
+  }, [featuredCity]);
 
   // Current active solution config and pill data
   const currentConfig = solutionConfigs[activeSolution];
@@ -748,93 +734,163 @@ export default function PropertyMarketplacePage() {
         </div>
       </section>
 
-      {/* 3. FEATURED VERIFIED SPACES (myHQ Ahmedabad Listings Showcase) */}
-      <section className="py-14 px-4 sm:px-6 lg:px-8 bg-white border-y border-slate-200">
+      {/* 3. VERIFIED REAL PROPERTIES FEED */}
+      <section className="py-14 px-4 sm:px-6 lg:px-8 bg-white border-y border-slate-200" id="spaces">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#0F8B7D] text-[11px] font-black uppercase tracking-wider mb-2">
-                <CheckCircle2 size={13} /> 100% Physically Audited
+                <CheckCircle2 size={13} /> 100% Physically Audited Commercial Assets
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Featured Spaces in Ahmedabad &amp; Key Hubs
+                Verified Spaces in {featuredCity}
               </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl mt-1">
+                Explore actual commercial office towers, managed enterprise suites, and coworking hubs with live pricing.
+              </p>
             </div>
+
             <Link
-              href="/public/search"
-              className="text-xs font-black text-[#0F8B7D] hover:underline flex items-center gap-1 mt-3 sm:mt-0"
+              href={`/marketplace/search?city=${encodeURIComponent(featuredCity)}`}
+              className="text-xs font-black text-[#0F8B7D] hover:underline flex items-center gap-1 mt-2 sm:mt-0 shrink-0"
             >
-              View All 500+ Verified Spaces <ArrowUpRight size={14} />
+              View All {featuredTotal} Spaces in {featuredCity} <ArrowUpRight size={14} />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-            {featuredSpaces.map((space) => (
-              <div
-                key={space.id}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col h-full justify-between group"
-              >
-                {/* Image Area (h-52: 208px - More than content area) */}
-                <div className="relative h-52 w-full overflow-hidden bg-slate-200 shrink-0">
-                  <Image
-                    src={space.image}
-                    alt={space.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1">
-                    <span className="bg-[#0F8B7D] text-white text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-xs">
-                      {space.tag}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                    {space.area}
-                  </div>
-                </div>
-
-                {/* Content Area (Compact ~140px) */}
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide block truncate h-4 leading-4">
-                      {space.type}
-                    </span>
-                    <h3 className="text-sm font-black text-slate-900 mt-1 group-hover:text-[#0F8B7D] transition-colors truncate h-5 leading-5" title={space.name}>
-                      {space.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 truncate h-4 leading-4" title={space.location}>
-                      <MapPin size={11} className="text-slate-400 shrink-0" />
-                      <span className="truncate">{space.location}</span>
-                    </p>
-
-                    <div className="h-6 overflow-hidden flex items-center gap-1.5 mt-3">
-                      {space.features.slice(0, 2).map((f, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md truncate max-w-[125px]">
-                          <Check size={10} className="text-[#0F8B7D] shrink-0" />
-                          <span className="truncate">{f}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
-                    <div>
-                      <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Status</span>
-                      <span className="text-xs font-bold text-teal-700 leading-none flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        Available Now
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setSlideInOpen(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
-                    >
-                      Book Tour
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* City Selection Pills */}
+          <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-slate-200 pb-4">
+            {cityTabs.map((tab) => {
+              const isActive = featuredCity === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setFeaturedCity(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? "bg-[#0F8B7D] text-white shadow-sm font-extrabold"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Cards Grid */}
+          {isLoadingFeatured ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 text-[#0F8B7D] animate-spin" />
+              <p className="text-xs font-bold text-slate-500">Loading verified properties in {featuredCity}...</p>
+            </div>
+          ) : featuredListings.length === 0 ? (
+            <div className="py-16 text-center bg-slate-50 rounded-2xl border border-slate-200">
+              <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700">No live spaces found for {featuredCity}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+              {featuredListings.map((space) => {
+                const img = space.images?.[0] || space.featuredImage || "/images/showcase_office_techhorizon_hd.jpg";
+                const numPrice = space.startingPrice ? Number(space.startingPrice) : 8500;
+                const formattedPrice = "₹" + Math.round(numPrice).toLocaleString("en-IN");
+                let priceLabel = `${formattedPrice} / seat`;
+                if (space.startingPriceUnit === "per_sqft_month" || space.vertical === "commercial") {
+                  priceLabel = `${formattedPrice} / sq.ft.`;
+                } else if (space.startingPriceUnit === "per_day" || space.vertical === "day_pass") {
+                  priceLabel = `${formattedPrice} / day`;
+                }
+
+                const verticalLabel = (space.vertical || "Coworking").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+                return (
+                  <div
+                    key={space.id}
+                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col h-full justify-between group"
+                  >
+                    {/* Image Area */}
+                    <Link href={`/marketplace/${space.slug || space.id}`} className="relative h-52 w-full overflow-hidden bg-slate-100 shrink-0 block">
+                      <img
+                        src={img}
+                        alt={space.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1">
+                        <span className="bg-[#0F8B7D] text-white text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-xs">
+                          {space.brandName || "Grade A"}
+                        </span>
+                        <span className="bg-white/95 backdrop-blur-xs text-emerald-800 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md shadow-xs flex items-center gap-0.5">
+                          <Check size={9} strokeWidth={3} /> VERIFIED
+                        </span>
+                      </div>
+                      <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                        {space.totalAreaSqft ? `${Number(space.totalAreaSqft).toLocaleString("en-IN")} sqft` : (space.totalSeats ? `${space.totalSeats} seats` : verticalLabel)}
+                      </div>
+                    </Link>
+
+                    {/* Content Area */}
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide block truncate h-4 leading-4">
+                          {verticalLabel}
+                        </span>
+                        <Link href={`/marketplace/${space.slug || space.id}`}>
+                          <h3 className="text-sm font-black text-slate-900 mt-1 group-hover:text-[#0F8B7D] transition-colors truncate h-5 leading-5" title={space.name}>
+                            {space.name}
+                          </h3>
+                        </Link>
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 truncate h-4 leading-4" title={space.locality || space.city}>
+                          <MapPin size={11} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{space.locality ? `${space.locality}, ${space.city}` : space.city}</span>
+                        </p>
+
+                        <div className="h-6 overflow-hidden flex items-center gap-1.5 mt-3">
+                          {(space.amenities || ["High-Speed WiFi", "100% DG Backup"]).slice(0, 2).map((f: string, i: number) => (
+                            <span key={i} className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md truncate max-w-[125px]">
+                              <Check size={10} className="text-[#0F8B7D] shrink-0" />
+                              <span className="truncate">{f}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase font-bold block leading-none mb-0.5">Starting From</span>
+                          <span className="text-xs font-black text-slate-900 leading-none">
+                            {priceLabel}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setSlideInOpen(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Tour
+                          </button>
+                          <Link
+                            href={`/marketplace/${space.slug || space.id}`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                          >
+                            Inspect <ArrowRight size={11} />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -849,7 +905,7 @@ export default function PropertyMarketplacePage() {
               Explore Prime Commercial Corridors
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl mt-1.5 leading-relaxed">
-              Vetted commercial office stock across India’s highest demand tech &amp; financial clusters. Direct developer listings with zero brokerage.
+              Vetted commercial office stock across India’s highest demand tech &amp; financial clusters. Direct developer listings with zero brokerage. Click &quot;Explore&quot; on any corridor to view its commercial office units and coworking spaces.
             </p>
           </div>
 
@@ -956,10 +1012,10 @@ export default function PropertyMarketplacePage() {
                   </div>
 
                   <Link
-                    href={`/public/search?city=${encodeURIComponent(district.searchCity)}&q=${encodeURIComponent(district.searchQuery)}`}
+                    href={`/marketplace/search?city=${encodeURIComponent(district.searchCity)}&q=${encodeURIComponent(district.searchQuery)}`}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-[#0F8B7D] text-[#0F8B7D] hover:text-white font-bold text-xs transition-all shadow-2xs group-hover:bg-[#0F8B7D] group-hover:text-white cursor-pointer"
                   >
-                    <span>Explore</span>
+                    <span>Explore Spaces</span>
                     <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
@@ -973,7 +1029,7 @@ export default function PropertyMarketplacePage() {
       <section className="py-14 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-slate-50 to-slate-100 border-t border-slate-200" id="calq">
         <OfficeSpaceCalculator
           onExploreSpaces={(city, micromarket) => {
-            router.push(`/public/search?city=${encodeURIComponent(city)}&q=${encodeURIComponent(micromarket)}`);
+            router.push(`/marketplace/search?city=${encodeURIComponent(city)}&q=${encodeURIComponent(micromarket)}`);
           }}
           onOpenAdvisor={() => setSlideInOpen(true)}
         />

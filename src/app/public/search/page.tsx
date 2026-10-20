@@ -167,15 +167,31 @@ function PropertySearchContent() {
     goa: [15.2993, 74.1240]
   };
 
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+
   useEffect(() => {
+    let isCancelled = false;
     async function fetchRealProperties() {
+      setIsLoadingProperties(true);
       try {
-        const res = await fetch("/api/marketplace/listings?limit=250");
+        const params = new URLSearchParams();
+        if (city && city !== "all") {
+          params.set("city", city);
+        }
+        if (searchQuery && searchQuery.trim()) {
+          params.set("q", searchQuery.trim());
+        }
+        if (spaceType && spaceType !== "All Categories") {
+          params.set("vertical", spaceType);
+        }
+        params.set("limit", "150");
+
+        const res = await fetch(`/api/marketplace/listings?${params.toString()}`);
         if (res.ok) {
           const json = await res.json();
           const items = Array.isArray(json.listings) ? json.listings : (Array.isArray(json) ? json : []);
           
-          if (items.length > 0) {
+          if (!isCancelled && items.length > 0) {
             const mapped: PropertyListing[] = items.map((p: any) => {
               let lat = p.latitude ? parseFloat(p.latitude) : null;
               let lng = p.longitude ? parseFloat(p.longitude) : null;
@@ -243,107 +259,33 @@ function PropertySearchContent() {
             });
 
             setDbProperties(mapped);
+            setIsLoadingProperties(false);
+            return;
+          } else if (!isCancelled && items.length === 0) {
+            setDbProperties([]);
+            setIsLoadingProperties(false);
             return;
           }
         }
       } catch (err) {
-        console.warn("Could not fetch marketplace listings, trying legacy properties fallback:", err);
+        console.warn("Could not fetch marketplace listings:", err);
       }
-
-      // Legacy fallback if needed
-      try {
-        const res = await fetch("/api/properties");
-        if (res.ok) {
-          const data = await res.json();
-          const mapped: PropertyListing[] = data.map((p: any) => ({
-            id: p.id,
-            title: p.name,
-            buildingName: p.name,
-            location: `${p.microMarket || ""}, ${p.city || "Mumbai"}`.replace(/^, /, ""),
-            subLocation: p.address || "",
-            area: p.totalArea ? `${Number(p.totalArea).toLocaleString()} sqft` : "15,000 sqft",
-            capacity: "50-400 Seats",
-            furnishing: p.type || "Coworking Space",
-            price: "₹8,500/mo",
-            pricePerSqft: "—",
-            pricePerSeat: "₹8,500/mo",
-            propertyScore: 92,
-            readiness: "Available Now",
-            commuteScore: 88,
-            energyRating: "Grade A",
-            image: p.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80",
-            lat: 19.0760,
-            lng: 72.8777
-          }));
-          setDbProperties(mapped);
-        }
-      } catch (err) {
-        console.warn("Could not fetch real properties fallback:", err);
-      }
-    }
-    fetchRealProperties();
-  }, []);
-
-  // Strictly real database properties (Zero Mock Data)
-  const allProperties = dbProperties;
-
-  // Filter properties based on search query, city selection, and spaceType vertical
-  const filteredProperties = allProperties.filter((p) => {
-    const q = searchQuery.trim().toLowerCase();
-    const c = city.trim().toLowerCase();
-    const st = spaceType.trim().toLowerCase();
-
-    // 1. City Filter
-    let matchesCity = true;
-    if (c && c !== "all") {
-      if (c === "delhi ncr") {
-        matchesCity = p.location.toLowerCase().includes("delhi") ||
-                      p.location.toLowerCase().includes("gurugram") ||
-                      p.location.toLowerCase().includes("gurgaon") ||
-                      p.location.toLowerCase().includes("noida");
-      } else if (c === "bengaluru" || c === "bangalore") {
-        matchesCity = p.location.toLowerCase().includes("bengaluru") || p.location.toLowerCase().includes("bangalore");
-      } else if (c === "gujarat") {
-        matchesCity = p.location.toLowerCase().includes("gujarat") ||
-                      p.location.toLowerCase().includes("ahmedabad") ||
-                      p.location.toLowerCase().includes("surat") ||
-                      p.location.toLowerCase().includes("gandhinagar");
-      } else {
-        matchesCity = p.location.toLowerCase().includes(c) || p.subLocation.toLowerCase().includes(c);
-      }
+      if (!isCancelled) setIsLoadingProperties(false);
     }
 
-    // 2. Space Type / Category Filter
-    let matchesCategory = true;
-    if (st && st !== "all categories") {
-      matchesCategory = p.furnishing.toLowerCase().includes(st) ||
-                        p.title.toLowerCase().includes(st) ||
-                        (st.includes("coworking") && (p.furnishing.toLowerCase().includes("coworking") || p.furnishing.toLowerCase().includes("dedicated"))) ||
-                        (st.includes("commercial") && (p.furnishing.toLowerCase().includes("commercial") || p.furnishing.toLowerCase().includes("leasing"))) ||
-                        (st.includes("virtual") && p.furnishing.toLowerCase().includes("virtual")) ||
-                        (st.includes("managed") && p.furnishing.toLowerCase().includes("managed")) ||
-                        (st.includes("meeting") && p.furnishing.toLowerCase().includes("meeting")) ||
-                        (st.includes("day pass") && (p.furnishing.toLowerCase().includes("day pass") || p.furnishing.toLowerCase().includes("pass")));
-    }
+    const timer = setTimeout(() => {
+      fetchRealProperties();
+    }, 150);
 
-    if (!matchesCity || !matchesCategory) return false;
-    if (!q) return true;
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [city, searchQuery, spaceType]);
 
-    // 3. Keyword Query Filter
-    const matchesQuery = (
-      p.title.toLowerCase().includes(q) ||
-      p.buildingName.toLowerCase().includes(q) ||
-      p.location.toLowerCase().includes(q) ||
-      p.subLocation.toLowerCase().includes(q) ||
-      p.area.toLowerCase().includes(q) ||
-      p.furnishing.toLowerCase().includes(q) ||
-      p.price.toLowerCase().includes(q)
-    );
-
-    return matchesQuery;
-  });
-
-  const isNoResults = filteredProperties.length === 0;
+  // Directly use live database properties returned by the search API
+  const filteredProperties = dbProperties;
+  const isNoResults = !isLoadingProperties && filteredProperties.length === 0;
   const displayProperties = filteredProperties;
 
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
@@ -598,13 +540,21 @@ function PropertySearchContent() {
           <div className="flex items-center justify-between pb-2 border-b border-gray-200/70">
             <div>
               <h1 className="text-base md:text-lg font-black text-gray-900">
-                Commercial Workspaces in {city ? `${city}` : (searchQuery || "All Metro Hubs")}
+                Commercial Workspaces in {city && city !== "all" ? `${city}` : (searchQuery || "All Metro Hubs")}
               </h1>
               <p className="text-[11px] text-gray-400 mt-0.5">
-                {isNoResults ? "0 verified properties found" : `Showing ${filteredProperties.length} verified Grade-A landmark towers`}
+                {isLoadingProperties ? (
+                  <span className="flex items-center gap-1 text-teal-700 font-semibold">
+                    <Loader2 size={11} className="animate-spin" /> Searching live verified spaces...
+                  </span>
+                ) : isNoResults ? (
+                  "0 verified properties found"
+                ) : (
+                  `Showing ${filteredProperties.length} verified Grade-A spaces`
+                )}
               </p>
             </div>
-            {isNoResults && (searchQuery || (city && city !== "all")) && (
+            {(isNoResults || (city && city !== "all") || searchQuery) && (
               <button
                 onClick={() => { setCity("all"); setSearchQuery(""); }}
                 className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0F8B7D] text-[11px] font-bold border border-teal-200 transition-colors cursor-pointer"
@@ -614,7 +564,12 @@ function PropertySearchContent() {
             )}
           </div>
 
-          {isNoResults ? (
+          {isLoadingProperties ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center flex flex-col items-center justify-center space-y-3">
+              <Loader2 className="w-8 h-8 text-[#0F8B7D] animate-spin" />
+              <p className="text-xs font-bold text-gray-600">Loading verified commercial spaces...</p>
+            </div>
+          ) : isNoResults ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center flex flex-col items-center justify-center space-y-4">
               <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#0F8B7D]">
                 <Building size={32} />
@@ -622,13 +577,16 @@ function PropertySearchContent() {
               <div className="max-w-md">
                 <h3 className="text-base font-bold text-gray-900">No Commercial Properties Found</h3>
                 <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  No live properties match your search criteria. Add your first commercial asset to the rent roll to list it on the marketplace.
+                  No verified spaces match &quot;{searchQuery || city}&quot;. Try exploring other prime corridors like SG Highway, BKC, or Cyber City.
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-2">
-                <Link href="/operate/rent-roll" className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0D7A6E] transition shadow-xs">
-                  + Add Property to Rent Roll
-                </Link>
+                <button
+                  onClick={() => { setCity("all"); setSearchQuery(""); }}
+                  className="px-4 py-2 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold hover:bg-[#0D7A6E] transition shadow-xs cursor-pointer"
+                >
+                  View All Verified Spaces
+                </button>
               </div>
             </div>
           ) : (
@@ -734,7 +692,7 @@ function PropertySearchContent() {
                             <Send size={11} /> Enquire
                           </button>
                           <Link
-                            href={`/public/property/${prop.id}`}
+                            href={prop.slug ? `/marketplace/${prop.slug}` : `/public/property/${prop.id}`}
                             className="px-3.5 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-transform active:scale-95"
                           >
                             Inspect Space <ArrowRight size={12} />
@@ -790,7 +748,7 @@ function PropertySearchContent() {
                     Enquire
                   </button>
                   <Link
-                    href={`/public/property/${selectedProperty.id}`}
+                    href={selectedProperty.slug ? `/marketplace/${selectedProperty.slug}` : `/public/property/${selectedProperty.id}`}
                     className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] text-white text-xs font-bold shrink-0"
                   >
                     Details
