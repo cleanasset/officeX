@@ -6,7 +6,7 @@ import {
   Sparkles, CheckCircle2, ChevronDown, ChevronUp, Download,
   TrendingDown, ShieldCheck, HelpCircle, Layers, PieChart,
   Plus, Minus, RefreshCw, Sliders, Briefcase, Coffee, Printer,
-  Maximize2, ArrowUpRight, Phone
+  Maximize2, ArrowUpRight, FileText
 } from "lucide-react";
 
 interface MicromarketBenchmark {
@@ -882,13 +882,13 @@ export default function OfficeSpaceCalculator({
                     if (onOpenAdvisor) {
                       onOpenAdvisor();
                     } else {
-                      showToast("Connecting with an OfficeX Space Advisor...");
+                      showToast("Opening OfficeX Workspace Inquiry Form...");
                     }
                   }}
                   className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
                 >
-                  <Phone size={13} />
-                  <span>Talk to Advisor</span>
+                  <FileText size={13} />
+                  <span>Submit Space Inquiry</span>
                 </button>
               </div>
             </div>

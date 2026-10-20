@@ -11,7 +11,7 @@ import {
   Building2, Users, Calendar, Clock, Train, ArrowRight, X,
   CheckCircle2, Sparkles, Filter, Loader2, ArrowUpRight,
   Briefcase, Award, Zap, Layers, Grid, List as ListIcon, Map as MapIcon,
-  MessageSquare, UserCheck
+  MessageSquare, UserCheck, FileText
 } from "lucide-react";
 import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
@@ -284,7 +284,7 @@ function MarketplaceSearchContent() {
           moveInDate: leadForm.moveInDate,
           city: city,
           budgetMonthly: activeModalProperty?.startingPrice || null,
-          notes: leadForm.message || "Best price quotation request from myHQ-style listing page"
+          notes: leadForm.message || "Office quotation inquiry from OfficeX search"
         })
       });
 
@@ -307,7 +307,7 @@ function MarketplaceSearchContent() {
       }
     } catch (err) {
       console.error("Enquiry submission error:", err);
-      alert("Something went wrong. Please call +91 92050 06361 directly.");
+      alert("Something went wrong. Please submit your inquiry through the requirement form.");
     } finally {
       setIsSubmittingEnquiry(false);
     }
@@ -384,16 +384,16 @@ function MarketplaceSearchContent() {
             )}
           </div>
 
-          {/* Right Action Icons matching myHQ */}
+          {/* Right Action Icons */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0 text-xs">
-            {/* Phone Helpline */}
-            <a
-              href="tel:+919205006361"
-              className="hidden lg:flex items-center gap-1.5 font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors"
+            {/* Inquiry Form Trigger */}
+            <button
+              onClick={() => setActiveModalProperty({ name: `General Office Consultation in ${city}` })}
+              className="hidden lg:flex items-center gap-1.5 font-bold text-slate-700 hover:text-[#0F8B7D] transition-colors cursor-pointer"
             >
-              <Phone size={14} className="text-[#0F8B7D]" />
-              <span>+91 9205006361</span>
-            </a>
+              <Building2 size={14} className="text-[#0F8B7D]" />
+              <span>Inquiry Form</span>
+            </button>
 
             {/* Share Requirement */}
             <Link
@@ -859,7 +859,7 @@ function MarketplaceSearchContent() {
             })}
           </div>
         ) : (
-          /* 8. LIST VIEW (EXACT 2-COLUMN myHQ UX: 70% Cards Feed + 30% Sticky Advisor) */
+          /* 8. LIST VIEW (2-COLUMN: 70% Cards Feed + 30% Sticky Sourcing Desk) */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* Left Column (8 of 12 cols): Real Property Cards Feed */}
@@ -937,7 +937,7 @@ function MarketplaceSearchContent() {
                       </div>
                     )}
 
-                    {/* myHQ Canonical Wide Card */}
+                    {/* OfficeX Wide Card */}
                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-lg hover:border-teal-400 transition-all duration-300 flex flex-col sm:flex-row group">
                       
                       {/* Left: Rich Photo Carousel (~40% of Card) */}
@@ -1130,83 +1130,73 @@ function MarketplaceSearchContent() {
               })}
             </div>
 
-            {/* Right Column (4 of 12 cols): myHQ Canonical Sticky Advisory Card & Price Guarantee */}
+            {/* Right Column (4 of 12 cols): OfficeX Dedicated Sourcing Desk & Price Guarantee */}
             <aside className="lg:col-span-4 sticky top-16 space-y-4">
               
-              {/* Consultant Card */}
+              {/* Sourcing Desk Card */}
               <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4">
-                <h3 className="text-sm font-black text-slate-900 leading-snug">
-                  Upgrade your office with Himanshu Sheakher &amp; team
-                </h3>
-
-                {/* Consultant Profile Details */}
-                <div className="flex items-center gap-3">
-                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-slate-200 border border-teal-200 shrink-0">
-                    <img
-                      src="/images/advisor_himanshu.jpg"
-                      alt="Himanshu Sheakher"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as any).src = "/images/pro_property_manager.jpg";
-                      }}
-                    />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F8B7D] flex items-center justify-center shrink-0">
+                    <Building2 size={20} />
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-black text-slate-900 truncate">Himanshu Sheakher</h4>
-                    <span className="text-[11px] text-slate-500 font-mono block">+91-9205006361</span>
-                    <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-[#0F8B7D] bg-teal-50 px-1.5 py-0.2 rounded mt-0.5">
-                      <ShieldCheck size={10} /> myHQ / OfficeX Consultant
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 leading-snug">
+                      OfficeX Sourcing Desk
+                    </h3>
+                    <span className="text-[10px] font-bold text-[#0F8B7D] flex items-center gap-1">
+                      <ShieldCheck size={11} /> Zero Brokerage • Direct Tariffs
                     </span>
                   </div>
                 </div>
 
                 {/* Subtext description */}
-                <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-relaxed font-medium">
-                  Himanshu&apos;s team has guided 150+ companies to find, customize, and finalize their ideal workspaces across {city}.
+                <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed font-medium">
+                  Looking for custom private suites, enterprise team cabins, or whole floors in {city}? Submit your requirement through our inquiry form and get matching verified options within 24 hours.
                 </p>
 
                 {/* Value bullets */}
                 <div className="space-y-2 pt-1 text-xs">
                   <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-                    Move into your ideal workspace — stress-free:
+                    Why find your office with OfficeX:
                   </span>
                   <div className="flex items-start gap-2 text-slate-700">
                     <Check size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                    <span>Guidance on location &amp; seating setup</span>
+                    <span>Direct-from-operator discounted rates</span>
                   </div>
                   <div className="flex items-start gap-2 text-slate-700">
                     <Check size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                    <span>Curated workspace tours in 24 hours</span>
+                    <span>Curated workspace options &amp; site visit scheduling</span>
                   </div>
                   <div className="flex items-start gap-2 text-slate-700">
                     <Check size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                    <span>Design, fit-out &amp; layout assistance</span>
+                    <span>Custom acoustic cabins &amp; enterprise branding</span>
                   </div>
                   <div className="flex items-start gap-2 text-slate-700">
                     <Check size={14} className="text-[#0F8B7D] shrink-0 mt-0.5" />
-                    <span>End-to-end commercial lease negotiation</span>
+                    <span>End-to-end lease assistance &amp; zero brokerage</span>
                   </div>
                 </div>
 
-                {/* Connect button */}
+                {/* Inquiry button */}
                 <button
                   type="button"
-                  onClick={() => setActiveModalProperty({ name: `Advisor Consultation with Himanshu Sheakher (${city})` })}
-                  className="w-full py-2.5 rounded-xl bg-[#1D3557] hover:bg-[#152741] text-white font-black text-xs transition-all shadow-sm cursor-pointer"
+                  onClick={() => setActiveModalProperty({ name: `Workspace Sourcing Requirement (${city})` })}
+                  className="w-full py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0D7A6E] text-white font-black text-xs transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Connect with us
+                  <FileText size={13} />
+                  <span>Submit Workplace Inquiry</span>
                 </button>
               </div>
 
-              {/* myHQ Price Guarantee Card */}
+              {/* OfficeX Price Guarantee Card */}
               <div className="bg-[#EBF7F2] border border-[#BDE8D6] rounded-2xl p-4 flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-white text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
                   <ShieldCheck size={18} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-black text-emerald-950">OfficeX / myHQ Price Guarantee</h4>
+                  <h4 className="text-xs font-black text-emerald-950">OfficeX Best Price Guarantee</h4>
                   <p className="text-[11px] text-emerald-800 mt-0.5 leading-snug">
-                    Zero fees to tenants. Real savings — up to 15% discount negotiated directly with property owners and flex operators.
+                    Zero fees to occupiers. Real savings — up to 15% discount negotiated directly with flex operators and landlords.
                   </p>
                 </div>
               </div>
@@ -1251,7 +1241,7 @@ function MarketplaceSearchContent() {
                 </div>
                 <h3 className="text-lg font-black text-slate-900">Quotation Request Submitted!</h3>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Our dedicated corporate advisor is locking in the best negotiated tariff for you and will call you within 15 minutes.
+                  Our workspace sourcing team has received your inquiry and will connect with your verified quotation shortly.
                 </p>
               </div>
             ) : (

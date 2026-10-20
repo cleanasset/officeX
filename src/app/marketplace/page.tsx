@@ -184,7 +184,7 @@ export default function PropertyMarketplacePage() {
     router.push(`/marketplace/search?${params.toString()}`);
   };
 
-  // myHQ-inspired Workspace Models without pricing
+  // OfficeX Workspace Models without pricing
   const workspaceModels = [
     {
       id: "managed",
@@ -594,7 +594,7 @@ export default function PropertyMarketplacePage() {
             </a>
           </div>
 
-          {/* myHQ-Style Multi-Tier Search Widget */}
+          {/* OfficeX Multi-Tier Search Widget */}
           <div className="w-full max-w-3xl mx-auto">
             {/* Row 1: 4 Main Solution Tab Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-0">
@@ -1185,7 +1185,7 @@ export default function PropertyMarketplacePage() {
         />
       </section>
 
-      {/* 5. WHY CHOOSE OFFICEX WORKSPACES (myHQ Value Proposition) */}
+      {/* 5. WHY CHOOSE OFFICEX WORKSPACES */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-100/80 to-white border-t border-slate-200">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-12">
@@ -1222,9 +1222,9 @@ export default function PropertyMarketplacePage() {
               <div className="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-4">
                 <Users size={24} />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-1.5">Free Workspace Advisor</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1.5">Dedicated Sourcing Desk</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Get paired with a dedicated commercial advisor who curates options, arranges physical site tours, and negotiates terms.
+                Submit your requirement through our inquiry form. Our workspace sourcing team curates matching verified spaces and coordinates visits.
               </p>
             </div>
 
@@ -1369,7 +1369,7 @@ export default function PropertyMarketplacePage() {
             },
             {
               q: "Can I schedule guided site visits for spaces in Ahmedabad or GIFT City?",
-              a: "Absolutely. Once you request a visit, our dedicated local workspace advisor coordinates with the building manager, issues visitor security gate passes, and accompanies you on the site inspection."
+              a: "Absolutely. Once you request a visit through our inquiry form, our workspace team coordinates with the building manager, issues visitor security passes, and schedules the site inspection."
             },
             {
               q: "What is the difference between Managed Offices and Coworking Desks?",
@@ -1426,7 +1426,7 @@ export default function PropertyMarketplacePage() {
               onClick={() => setSlideInOpen(true)}
               className="w-full sm:w-auto px-7 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm border border-slate-300 shadow-xs transition-all cursor-pointer text-center"
             >
-              Talk to a Space Advisor
+              Submit Space Inquiry
             </button>
           </div>
         </div>
