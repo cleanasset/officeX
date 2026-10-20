@@ -103,7 +103,7 @@ function MarketplaceSearchContent() {
   const searchParams = useSearchParams();
 
   // URL Query Parameters
-  const initialCity = searchParams?.get("city") || "Delhi";
+  const initialCity = searchParams?.get("city") || (typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") || "Ahmedabad" : "Ahmedabad");
   const initialQ = searchParams?.get("q") || "";
   const initialLocality = searchParams?.get("locality") || "";
   const initialVertical = searchParams?.get("vertical") || searchParams?.get("type") || "all";
@@ -150,7 +150,27 @@ function MarketplaceSearchContent() {
   useEffect(() => {
     if (searchParams) {
       const c = searchParams.get("city");
-      if (c && c !== city) setCity(c);
+      if (c && c !== city) {
+        setCity(c);
+      } else if (!c) {
+        // No city specified in URL: check localStorage or auto-detect
+        const saved = typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") : null;
+        if (saved && saved !== city) {
+          setCity(saved);
+        } else if (!saved) {
+          fetch("/api/marketplace/detect-location")
+            .then((res) => res.json())
+            .then((data) => {
+              if (data?.city && data.city !== city) {
+                setCity(data.city);
+                try {
+                  localStorage.setItem("officex_marketplace_city", data.city);
+                } catch {}
+              }
+            })
+            .catch(() => {});
+        }
+      }
       const q = searchParams.get("q");
       if (q != null && q !== searchQuery) setSearchQuery(q);
       const loc = searchParams.get("locality");
@@ -483,12 +503,18 @@ function MarketplaceSearchContent() {
               <select
                 value={city}
                 onChange={(e) => {
-                  setCity(e.target.value);
+                  const newCity = e.target.value;
+                  setCity(newCity);
                   setSelectedLocality("");
+                  if (typeof window !== "undefined") {
+                    try {
+                      localStorage.setItem("officex_marketplace_city", newCity);
+                    } catch {}
+                  }
                 }}
                 className="appearance-none bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-bold py-2 pl-3 pr-7 rounded-xl cursor-pointer shadow-2xs focus:ring-2 focus:ring-[#0F8B7D]/20 outline-none"
               >
-                {["Delhi", "Gurgaon", "Noida", "Bangalore", "Mumbai", "Pune", "Hyderabad", "Ahmedabad"].map((c) => (
+                {["Ahmedabad", "Delhi", "Gurgaon", "Noida", "Bangalore", "Mumbai", "Pune", "Hyderabad"].map((c) => (
                   <option key={c} value={c}>City: {c}</option>
                 ))}
               </select>

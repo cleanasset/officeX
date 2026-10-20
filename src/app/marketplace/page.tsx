@@ -21,6 +21,7 @@ export default function PropertyMarketplacePage() {
   const router = useRouter();
   const [slideInOpen, setSlideInOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState("Ahmedabad");
+  const [detectedLocationBadge, setDetectedLocationBadge] = useState<string | null>(null);
   type SolutionType = "longterm" | "daypass" | "events" | "virtual";
 
   const [activeSolution, setActiveSolution] = useState<SolutionType>("longterm");
@@ -35,6 +36,69 @@ export default function PropertyMarketplacePage() {
   const [selectedTeamSize, setSelectedTeamSize] = useState("all");
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [districtFilter, setDistrictFilter] = useState("all");
+
+  // Synchronize city selection across all sections and persist to localStorage
+  const handleCityChange = (newCity: string, isManual: boolean = true) => {
+    setSelectedCity(newCity);
+    const featuredMapped =
+      newCity === "Delhi" || newCity === "Gurgaon" || newCity === "Noida"
+        ? "Delhi NCR"
+        : newCity === "Bangalore"
+        ? "Bengaluru"
+        : newCity;
+    setFeaturedCity(featuredMapped);
+
+    if (isManual && typeof window !== "undefined") {
+      try {
+        localStorage.setItem("officex_marketplace_city", newCity);
+      } catch {}
+    }
+
+    const lower = newCity.toLowerCase();
+    if (lower.includes("delhi") || lower.includes("gurgaon") || lower.includes("noida")) {
+      setDistrictFilter("delhi-ncr");
+    } else if (lower.includes("mumbai")) {
+      setDistrictFilter("mumbai");
+    } else if (lower.includes("bengaluru") || lower.includes("bangalore")) {
+      setDistrictFilter("bengaluru");
+    } else if (lower.includes("pune")) {
+      setDistrictFilter("pune");
+    } else if (lower.includes("hyderabad")) {
+      setDistrictFilter("hyderabad");
+    } else if (lower.includes("ahmedabad") || lower.includes("gandhinagar")) {
+      setDistrictFilter("ahmedabad");
+    }
+  };
+
+  // Auto-detect visitor location on first load (IP-based, zero permission prompts)
+  useEffect(() => {
+    // 1. Check if user already manually selected or saved a city
+    const savedCity = typeof window !== "undefined" ? localStorage.getItem("officex_marketplace_city") : null;
+    if (savedCity) {
+      handleCityChange(savedCity, false);
+      return;
+    }
+
+    // 2. Auto-detect from server IP headers / geo lookup
+    async function autoDetectLocation() {
+      try {
+        const res = await fetch("/api/marketplace/detect-location");
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.city) {
+            handleCityChange(data.city, false);
+            setDetectedLocationBadge(data.rawCity || data.city);
+            try {
+              localStorage.setItem("officex_marketplace_city", data.city);
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.warn("Marketplace location auto-detection error:", err);
+      }
+    }
+    autoDetectLocation();
+  }, []);
 
   // Google Maps / Places Live Autocomplete State for Marketplace
   const [geoSuggestions, setGeoSuggestions] = useState<any[]>([]);
@@ -688,14 +752,21 @@ export default function PropertyMarketplacePage() {
 
               {/* Row 3: Search Row */}
               <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                {/* City Selector */}
-                <div className="sm:w-48 shrink-0 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] transition-all">
-                  <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight">
-                    City
-                  </label>
+                {/* City Selector with Auto-Detect Indicator */}
+                <div className="sm:w-52 shrink-0 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F8B7D] transition-all">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight">
+                      City
+                    </label>
+                    {detectedLocationBadge && (
+                      <span className="text-[9px] font-black text-[#0F8B7D] flex items-center gap-0.5">
+                        <MapPin size={9} /> Auto-detected
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
+                    onChange={(e) => handleCityChange(e.target.value)}
                     className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
                   >
                     <option value="Ahmedabad">Ahmedabad</option>
@@ -911,11 +982,18 @@ export default function PropertyMarketplacePage() {
           {/* City Selection Pills */}
           <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-slate-200 pb-4">
             {cityTabs.map((tab) => {
-              const isActive = featuredCity === tab.id;
+              const isActive =
+                featuredCity === tab.id ||
+                (tab.id === "Delhi NCR" && (featuredCity === "Delhi" || featuredCity === "Delhi NCR")) ||
+                (tab.id === "Bangalore" && (featuredCity === "Bengaluru" || featuredCity === "Bangalore"));
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setFeaturedCity(tab.id)}
+                  onClick={() =>
+                    handleCityChange(
+                      tab.id === "Delhi NCR" ? "Delhi" : tab.id === "Bangalore" ? "Bengaluru" : tab.id
+                    )
+                  }
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     isActive
                       ? "bg-[#0F8B7D] text-white shadow-sm font-extrabold"
