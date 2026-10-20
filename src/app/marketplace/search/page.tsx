@@ -921,7 +921,7 @@ function MarketplaceSearchContent() {
                   className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
                 >
                   {/* Photo Carousel Header */}
-                  <div className="relative h-56 w-full bg-slate-900 overflow-hidden">
+                  <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
                     <Link href={`/marketplace/${space.slug || space.id}`} className="block w-full h-full">
                       <img
                         src={photo}
@@ -937,24 +937,24 @@ function MarketplaceSearchContent() {
                         <button
                           type="button"
                           onClick={(e) => handlePrevPhoto(e, space.id, photos.length)}
-                          className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10"
                           aria-label="Previous image"
                         >
-                          <ChevronLeft size={16} />
+                          <ChevronLeft size={15} />
                         </button>
                         <button
                           type="button"
                           onClick={(e) => handleNextPhoto(e, space.id, photos.length)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10"
                           aria-label="Next image"
                         >
-                          <ChevronRight size={16} />
+                          <ChevronRight size={15} />
                         </button>
                       </>
                     )}
 
                     {/* Photo counter badge */}
-                    <div className="absolute top-3 left-3 z-10">
+                    <div className="absolute top-2.5 left-2.5 z-10">
                       <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold">
                         {currentPhotoIdx + 1}/{photos.length}
                       </span>
@@ -964,59 +964,59 @@ function MarketplaceSearchContent() {
                     <button
                       type="button"
                       onClick={(e) => toggleShortlist(e, space.id)}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/95 text-slate-700 flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 transition-transform z-10"
+                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/95 text-slate-700 flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 transition-transform z-10"
                       aria-label="Toggle shortlist"
                     >
-                      <Heart size={14} className={isShortlisted ? "text-rose-500 fill-rose-500" : "text-slate-600"} />
+                      <Heart size={13} className={isShortlisted ? "text-rose-500 fill-rose-500" : "text-slate-600"} />
                     </button>
                   </div>
 
                   {/* Body Content */}
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
+                  <div className="p-3.5 flex-1 flex flex-col justify-between">
+                    <div className="space-y-1">
                       {/* Rating + Compare */}
-                      <div className="flex items-center justify-between text-xs mb-2">
-                        <div className="inline-flex items-center gap-1 border border-slate-200 bg-slate-50 rounded-md px-2 py-0.5 font-bold text-slate-800">
-                          <Star size={12} className="text-amber-500 fill-amber-500" />
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <div className="inline-flex items-center gap-1 border border-slate-200 bg-slate-50 rounded px-1.5 py-0.5 font-bold text-slate-800 text-[11px]">
+                          <Star size={11} className="text-amber-500 fill-amber-500" />
                           <span>{space.avgRating || "4.5"}</span>
-                          <span className="text-slate-400 font-normal">({space.totalReviews || 18} reviews)</span>
+                          <span className="text-slate-400 font-normal">({space.totalReviews || 18})</span>
                         </div>
                         <button
                           onClick={(e) => toggleCompare(e, space)}
-                          className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 cursor-pointer font-medium"
+                          className="flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-900 cursor-pointer font-medium"
                         >
-                          {isCompared ? <CheckSquare size={13} className="text-[#0F8B7D]" /> : <Square size={13} className="text-slate-400" />}
+                          {isCompared ? <CheckSquare size={12} className="text-[#0F8B7D]" /> : <Square size={12} className="text-slate-400" />}
                           <span>Compare</span>
                         </button>
                       </div>
 
                       {/* Title */}
                       <Link href={`/marketplace/${space.slug || space.id}`}>
-                        <h3 className="text-base font-bold text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-snug line-clamp-1">
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#0F8B7D] transition-colors leading-snug line-clamp-1">
                           {displayTitle}
                         </h3>
                       </Link>
 
                       {/* Location */}
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 truncate">
-                        <MapPin size={12} className="text-slate-400 shrink-0" />
+                      <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                        <MapPin size={11} className="text-slate-400 shrink-0" />
                         <span className="truncate">{space.locality ? `${space.locality}, ${space.city}` : space.city}</span>
                       </p>
 
                       {/* Timings */}
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                        <Clock size={12} className="text-slate-400 shrink-0" />
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <Clock size={11} className="text-slate-400 shrink-0" />
                         <span>Open Now, 08:00 to 20:00</span>
                       </p>
 
                       {/* Amenities pills */}
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <div className="pt-1 flex flex-wrap items-center gap-1">
                         {(space.amenities || ["Meeting Rooms", "Assured Security", "Parking Available"]).slice(0, 3).map((amenity: string, aIdx: number) => (
                           <span
                             key={aIdx}
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 px-2 py-0.5 rounded-md"
+                            className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-white border border-slate-300 px-1.5 py-0.5 rounded"
                           >
-                            <Check size={11} className="text-[#0F8B7D]" />
+                            <Check size={10} className="text-[#0F8B7D]" />
                             <span>{amenity}</span>
                           </span>
                         ))}
@@ -1024,17 +1024,17 @@ function MarketplaceSearchContent() {
                     </div>
 
                     {/* Bottom Pricing & CTA */}
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-1.5">
                       <div>
-                        <span className="text-[10px] text-slate-400 font-medium block leading-tight">Quoted price (negotiable)</span>
-                        <span className="text-lg font-extrabold text-slate-900 mt-0.5 block">
-                          ₹{Number(space.startingPrice || 8500).toLocaleString("en-IN")}<span className="text-xs font-normal text-slate-500"> / seat / mo</span>
+                        <span className="text-[9px] text-slate-400 font-medium block leading-none">Quoted price</span>
+                        <span className="text-base font-extrabold text-slate-900 mt-0.5 block leading-none">
+                          ₹{Number(space.startingPrice || 8500).toLocaleString("en-IN")}<span className="text-[10px] font-normal text-slate-500"> / mo</span>
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setActiveModalProperty(space)}
-                        className="px-4 py-2 rounded-lg bg-[#192A56] hover:bg-[#122044] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-[#192A56] hover:bg-[#122044] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
                       >
                         Get best price
                       </button>
@@ -1141,16 +1141,16 @@ function MarketplaceSearchContent() {
                       </div>
                     )}
 
-                    {/* The Clean, Organized Listing Card - Exact Anatomy */}
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow duration-200">
+                    {/* The Clean, Organized Listing Card - Horizontal Compact Anatomy */}
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 flex flex-col sm:flex-row group">
                       
-                      {/* Image Header Carousel */}
-                      <div className="relative w-full h-64 sm:h-72 bg-slate-900 overflow-hidden group/img">
+                      {/* Left: Photo Carousel */}
+                      <div className="relative w-full sm:w-[270px] md:w-[290px] h-48 sm:h-auto min-h-[190px] bg-slate-900 shrink-0 overflow-hidden">
                         <Link href={`/marketplace/${space.slug || space.id}`} className="block w-full h-full">
                           <img
                             src={photo}
                             alt={space.name}
-                            className="w-full h-full object-cover group-hover/img:scale-103 transition-transform duration-500"
+                            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                             loading="lazy"
                           />
                         </Link>
@@ -1161,115 +1161,121 @@ function MarketplaceSearchContent() {
                             <button
                               type="button"
                               onClick={(e) => handlePrevPhoto(e, space.id, photos.length)}
-                              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10 shadow-md"
+                              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10 shadow-md"
                               aria-label="Previous photo"
                             >
-                              <ChevronLeft size={18} />
+                              <ChevronLeft size={16} />
                             </button>
                             <button
                               type="button"
                               onClick={(e) => handleNextPhoto(e, space.id, photos.length)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10 shadow-md"
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition-all cursor-pointer z-10 shadow-md"
                               aria-label="Next photo"
                             >
-                              <ChevronRight size={18} />
+                              <ChevronRight size={16} />
                             </button>
                           </>
                         )}
 
                         {/* Photo counter badge */}
-                        <div className="absolute top-3 left-3 z-10">
-                          <span className="px-2.5 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold">
+                        <div className="absolute top-2.5 left-2.5 z-10">
+                          <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold">
                             {currentPhotoIdx + 1}/{photos.length}
                           </span>
                         </div>
                       </div>
 
-                      {/* Card Body */}
-                      <div className="p-5 space-y-3.5">
-                        
-                        {/* Row 1: Star Rating Pill on Left + Shortlist & Compare on Right */}
-                        <div className="flex items-center justify-between">
-                          <div className="inline-flex items-center gap-1.5 border border-slate-200 bg-slate-50/70 rounded-md px-2.5 py-1 text-xs font-bold text-slate-800">
-                            <Star size={13} className="text-amber-500 fill-amber-500" />
-                            <span>{space.avgRating || "4.5"}</span>
-                            <span className="text-slate-500 font-normal">({space.totalReviews || 13} reviews)</span>
+                      {/* Right: Card Body */}
+                      <div className="p-3.5 sm:py-3 sm:px-4 flex-1 flex flex-col justify-between min-w-0">
+                        <div className="space-y-1.5">
+                          {/* Row 1: Star Rating Pill on Left + Shortlist & Compare on Right */}
+                          <div className="flex items-center justify-between">
+                            <div className="inline-flex items-center gap-1 border border-slate-200 bg-slate-50/80 rounded px-2 py-0.5 text-xs font-bold text-slate-800">
+                              <Star size={12} className="text-amber-500 fill-amber-500" />
+                              <span>{space.avgRating || "4.5"}</span>
+                              <span className="text-slate-400 font-normal">({space.totalReviews || 14} reviews)</span>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs font-medium text-slate-600">
+                              {/* Shortlist Toggle */}
+                              <button
+                                type="button"
+                                onClick={(e) => toggleShortlist(e, space.id)}
+                                className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer"
+                              >
+                                <span>Shortlist</span>
+                                <Heart
+                                  size={14}
+                                  className={isShortlisted ? "text-rose-500 fill-rose-500" : "text-slate-400"}
+                                />
+                              </button>
+
+                              {/* Compare Checkbox */}
+                              <button
+                                type="button"
+                                onClick={(e) => toggleCompare(e, space)}
+                                className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer"
+                              >
+                                <span>Compare</span>
+                                {isCompared ? (
+                                  <CheckSquare size={14} className="text-[#0F8B7D]" />
+                                ) : (
+                                  <Square size={14} className="text-slate-400" />
+                                )}
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
-                            {/* Shortlist Toggle */}
-                            <button
-                              type="button"
-                              onClick={(e) => toggleShortlist(e, space.id)}
-                              className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer"
-                            >
-                              <span>Shortlist</span>
-                              <Heart
-                                size={15}
-                                className={isShortlisted ? "text-rose-500 fill-rose-500" : "text-slate-500"}
-                              />
-                            </button>
-
-                            {/* Compare Checkbox */}
-                            <button
-                              type="button"
-                              onClick={(e) => toggleCompare(e, space)}
-                              className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer"
-                            >
-                              <span>Compare</span>
-                              {isCompared ? (
-                                <CheckSquare size={15} className="text-[#0F8B7D]" />
-                              ) : (
-                                <Square size={15} className="text-slate-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Row 2: Space Title */}
-                        <div>
-                          <Link href={`/marketplace/${space.slug || space.id}`}>
-                            <h2 className="text-lg sm:text-xl font-bold text-slate-900 hover:text-[#0F8B7D] transition-colors leading-snug">
-                              {displayTitle}
-                            </h2>
-                          </Link>
-                        </div>
-
-                        {/* Row 3: Location */}
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                          <MapPin size={14} className="text-slate-500 shrink-0" />
-                          <span>{space.locality ? `${space.locality}, ${space.city}` : space.city}</span>
-                        </div>
-
-                        {/* Row 4: Operating Hours */}
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                          <Clock size={14} className="text-slate-500 shrink-0" />
-                          <span>Open Now, 08:00 to 20:00</span>
-                        </div>
-
-                        {/* Row 5: Amenities Tags (Clean Bordered Rectangles) */}
-                        <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                          {(space.amenities || [
-                            "Meeting Rooms", "Assured Security", "Parking Available", "High-Speed Wi-Fi"
-                          ]).slice(0, 4).map((amenity: string, aIdx: number) => (
-                            <span
-                              key={aIdx}
-                              className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-medium border border-slate-300 rounded-md px-2.5 py-1 bg-white shadow-2xs"
-                            >
-                              <Check size={12} className="text-[#0F8B7D]" />
-                              <span>{amenity}</span>
-                            </span>
-                          ))}
-                        </div>
-
-                        {/* Row 6: Bottom Pricing & "Get best price" CTA Button */}
-                        <div className="pt-3 border-t border-slate-100 flex items-end justify-between gap-3">
+                          {/* Row 2: Space Title */}
                           <div>
-                            <span className="text-xs text-slate-500 font-normal block leading-tight">
+                            <Link href={`/marketplace/${space.slug || space.id}`}>
+                              <h2 className="text-base sm:text-lg font-bold text-slate-900 hover:text-[#0F8B7D] transition-colors leading-snug truncate">
+                                {displayTitle}
+                              </h2>
+                            </Link>
+                          </div>
+
+                          {/* Row 3: Location & Operating Hours in one compact line */}
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 font-medium">
+                            <span className="flex items-center gap-1 truncate">
+                              <MapPin size={12} className="text-slate-400 shrink-0" />
+                              <span className="truncate">{space.locality ? `${space.locality}, ${space.city}` : space.city}</span>
+                            </span>
+                            <span className="flex items-center gap-1 shrink-0">
+                              <Clock size={12} className="text-slate-400 shrink-0" />
+                              <span>Open Now, 08:00 to 20:00</span>
+                            </span>
+                          </div>
+
+                          {/* Row 4: Amenities Tags */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {(space.amenities || [
+                              "Meeting Rooms", "Assured Security", "Parking Available"
+                            ]).slice(0, 3).map((amenity: string, aIdx: number) => (
+                              <span
+                                key={aIdx}
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 border border-slate-300 rounded px-2 py-0.5 bg-white"
+                              >
+                                <Check size={11} className="text-[#0F8B7D]" />
+                                <span>{amenity}</span>
+                              </span>
+                            ))}
+                            {(space.amenities?.length || 0) > 3 && (
+                              <span className="text-[10px] font-bold text-slate-400">
+                                +{(space.amenities?.length || 4) - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Row 5: Bottom Pricing & "Get best price" CTA Button */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-medium block leading-none">
                               Quoted price (negotiable)
                             </span>
-                            <div className="flex items-baseline gap-1 mt-1">
-                              <span className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-none">
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                              <span className="text-lg sm:text-xl font-extrabold text-slate-900 leading-none">
                                 {formattedPrice}
                               </span>
                               <span className="text-xs text-slate-500 font-normal">
@@ -1278,18 +1284,18 @@ function MarketplaceSearchContent() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-2">
                             <Link
                               href={`/marketplace/${space.slug || space.id}`}
-                              className="hidden sm:inline-flex items-center gap-1 px-3.5 py-2 rounded-lg border border-slate-300 hover:border-slate-400 font-bold text-xs text-slate-700 hover:text-slate-900 bg-white transition-all cursor-pointer"
+                              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 font-bold text-xs text-slate-700 hover:text-slate-900 bg-white transition-all cursor-pointer"
                             >
-                              <span>Explore Space</span>
+                              <span>Explore</span>
                             </Link>
 
                             <button
                               type="button"
                               onClick={() => setActiveModalProperty(space)}
-                              className="px-6 py-2.5 rounded-lg bg-[#192A56] hover:bg-[#122044] text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow transition-all cursor-pointer active:scale-98"
+                              className="px-4 sm:px-5 py-2 rounded-lg bg-[#192A56] hover:bg-[#122044] text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow transition-all cursor-pointer active:scale-98"
                             >
                               Get best price
                             </button>
