@@ -157,25 +157,14 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setMenuOpen(false);
-
-    if (!isSubscribed) {
-      router.push("/operate/rent-roll/pricing");
-      return;
-    }
-
-    // Ask first: open the full-screen Module Chooser Modal
-    setIsModuleChooserOpen(true);
+    // Directly navigate to the sovereign Workspace Options Hub where user explicitly chooses their workspace
+    router.push("/dashboard");
   };
 
   const handleProfileClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setMenuOpen(false);
-
-    if (!isSubscribed) {
-      router.push("/operate/rent-roll/pricing");
-    } else {
-      router.push("/settings");
-    }
+    router.push("/settings");
   };
 
   if (!mounted) {
@@ -233,7 +222,7 @@ export default function HeaderAuthButton({ className = "", loginContext = "", on
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-800 group-hover:text-[#0F8B7D] transition-colors">Go to My Dashboard</span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    {isSubscribed ? "Open SaaS Dashboard" : "Subscription Required"}
+                    Rent Roll, Marketplace &amp; FM
                   </span>
                 </div>
               </button>

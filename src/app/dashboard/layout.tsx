@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -11,6 +12,15 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isWorkspaceHub = pathname === "/dashboard";
+
+  // The top-level Workspace Hub (/dashboard) is the sovereign launchpad for all users (new or existing, subscribed or marketplace).
+  // It must never be blocked by the SaaS SubscriptionGate or confined to the Rent Roll sidebar.
+  if (isWorkspaceHub) {
+    return <>{children}</>;
+  }
+
   return (
     <SubscriptionGate portalName="Operational Dashboard" fallbackLandingPage="/operate">
       <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">

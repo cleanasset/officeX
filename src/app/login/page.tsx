@@ -25,7 +25,7 @@ interface LoginPageProps {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const safeRedirect = validateRedirect(params?.redirect, "/properties");
+  const safeRedirect = validateRedirect(params?.redirect, "/dashboard");
 
   return (
     <main className="min-h-screen bg-slate-50 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative">

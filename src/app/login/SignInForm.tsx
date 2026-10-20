@@ -87,7 +87,7 @@ export default function SignInForm({
       ? "/operate"
       : isFmContext
         ? "/fm-marketplace"
-        : "/marketplace";
+        : "/dashboard";
 
   const safeRedirect = validateRedirect(initialRedirect, defaultRedirect);
 
@@ -734,17 +734,16 @@ export default function SignInForm({
       : "/dashboard/owner";
 
     let destination = "";
-    if (!isAlreadyOnboarded || !storedRoleKey) {
-      // New user without selected role: MUST go to onboarding to pick from the 5 roles
-      destination = `/onboarding?redirect=${encodeURIComponent(safeRedirect && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/signup") ? safeRedirect : determinedRoleDashboard)}`;
+    if (safeRedirect && safeRedirect === "/dashboard") {
+      destination = "/dashboard";
     } else if (isRentRollContext || (safeRedirect && safeRedirect.includes("rent-roll"))) {
       destination = (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard")
         ? safeRedirect
         : "/properties/rent-roll";
-    } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding") && safeRedirect !== "/properties/rent-roll?tab=dashboard") {
+    } else if (safeRedirect && safeRedirect !== "/" && !safeRedirect.startsWith("/signup") && !safeRedirect.startsWith("/login") && !safeRedirect.startsWith("/onboarding")) {
       destination = safeRedirect;
     } else {
-      destination = determinedRoleDashboard;
+      destination = "/dashboard";
     }
 
     setStep("signed_in_success");

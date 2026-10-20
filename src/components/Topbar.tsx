@@ -24,7 +24,8 @@ import {
   TrendingUp,
   Zap,
   ClipboardList,
-  ShieldCheck
+  ShieldCheck,
+  Compass
 } from "lucide-react";
 import { performClientLogout } from "@/lib/auth-client";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
@@ -395,6 +396,24 @@ export default function Topbar() {
               </div>
 
               <div className="py-1 space-y-1">
+                {/* Global Workspace Hub (Rent Roll · Marketplace · FM) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    router.push("/dashboard");
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 cursor-pointer"
+                >
+                  <Compass size={14} className="text-blue-600" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-900">Workspace Hub</span>
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      Switch to Marketplace or FM Desk
+                    </span>
+                  </div>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleGoToDashboard}
