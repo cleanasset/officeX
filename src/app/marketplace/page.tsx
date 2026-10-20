@@ -16,6 +16,11 @@ import MarketingHeader from "@/components/marketing/MarketingHeader";
 import EnquirySlideIn from "@/components/marketing/EnquirySlideIn";
 import Footer from "@/components/Footer";
 import OfficeSpaceCalculator from "@/components/marketplace/OfficeSpaceCalculator";
+import {
+  TOP_METROS,
+  EMERGING_HUBS,
+  ALL_MARKETPLACE_CITIES,
+} from "@/data/marketplace-cities";
 
 export default function PropertyMarketplacePage() {
   const router = useRouter();
@@ -554,12 +559,19 @@ export default function PropertyMarketplacePage() {
   const [featuredTotal, setFeaturedTotal] = useState(116);
 
   const cityTabs = [
-    { id: "Ahmedabad", label: "Ahmedabad", count: 116 },
-    { id: "Mumbai", label: "Mumbai", count: 644 },
-    { id: "Bangalore", label: "Bengaluru", count: 1546 },
-    { id: "Delhi NCR", label: "Delhi NCR", count: 1719 },
-    { id: "Pune", label: "Pune", count: 587 },
-    { id: "Hyderabad", label: "Hyderabad", count: 508 },
+    { id: "Ahmedabad", label: "Ahmedabad", count: 115 },
+    { id: "Bangalore", label: "Bengaluru", count: 1543 },
+    { id: "Delhi NCR", label: "Delhi NCR", count: 1525 },
+    { id: "Mumbai", label: "Mumbai", count: 483 },
+    { id: "Pune", label: "Pune", count: 490 },
+    { id: "Hyderabad", label: "Hyderabad", count: 388 },
+    { id: "Chennai", label: "Chennai", count: 346 },
+    { id: "Kolkata", label: "Kolkata", count: 230 },
+    { id: "Jaipur", label: "Jaipur", count: 122 },
+    { id: "Indore", label: "Indore", count: 95 },
+    { id: "Kochi", label: "Kochi", count: 70 },
+    { id: "Chandigarh", label: "Chandigarh", count: 60 },
+    { id: "Goa", label: "Goa", count: 20 },
   ];
 
   useEffect(() => {
@@ -769,14 +781,27 @@ export default function PropertyMarketplacePage() {
                     onChange={(e) => handleCityChange(e.target.value)}
                     className="w-full text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
                   >
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Mumbai">Mumbai</option>
-                    <option value="Bengaluru">Bengaluru</option>
-                    <option value="Delhi">Delhi</option>
-                    <option value="Gurgaon">Gurgaon (Gurugram)</option>
-                    <option value="Noida">Noida</option>
-                    <option value="Pune">Pune</option>
-                    <option value="Hyderabad">Hyderabad</option>
+                    <optgroup label="⭐ Top Metros">
+                      {TOP_METROS.map((c) => (
+                        <option key={c.name} value={c.name}>
+                          {c.name} ({c.count} spaces)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🚀 Popular Business Hubs">
+                      {EMERGING_HUBS.map((c) => (
+                        <option key={c.name} value={c.name}>
+                          {c.name} ({c.count} spaces)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📍 All 89 Cities (A-Z)">
+                      {ALL_MARKETPLACE_CITIES.map((c) => (
+                        <option key={c.name} value={c.name}>
+                          {c.name} ({c.count} spaces)
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
 

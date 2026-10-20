@@ -1,0 +1,1005 @@
+{
+  "cities": [
+    {
+      "name": "Bangalore",
+      "count": 1543
+    },
+    {
+      "name": "Gurgaon",
+      "count": 659
+    },
+    {
+      "name": "Pune",
+      "count": 490
+    },
+    {
+      "name": "Mumbai",
+      "count": 483
+    },
+    {
+      "name": "Delhi",
+      "count": 476
+    },
+    {
+      "name": "Hyderabad",
+      "count": 388
+    },
+    {
+      "name": "Noida",
+      "count": 369
+    },
+    {
+      "name": "Chennai",
+      "count": 346
+    },
+    {
+      "name": "Kolkata",
+      "count": 230
+    },
+    {
+      "name": "Jaipur",
+      "count": 122
+    },
+    {
+      "name": "Ahmedabad",
+      "count": 115
+    },
+    {
+      "name": "Indore",
+      "count": 95
+    },
+    {
+      "name": "Coimbatore",
+      "count": 72
+    },
+    {
+      "name": "Kochi",
+      "count": 70
+    },
+    {
+      "name": "Chandigarh",
+      "count": 60
+    },
+    {
+      "name": "Nagpur",
+      "count": 46
+    },
+    {
+      "name": "Lucknow",
+      "count": 43
+    },
+    {
+      "name": "Bhubaneswar",
+      "count": 35
+    },
+    {
+      "name": "Guwahati",
+      "count": 30
+    },
+    {
+      "name": "Visakhapatnam",
+      "count": 29
+    },
+    {
+      "name": "Surat",
+      "count": 27
+    },
+    {
+      "name": "Patna",
+      "count": 26
+    },
+    {
+      "name": "Dehradun",
+      "count": 26
+    },
+    {
+      "name": "Kozhikode",
+      "count": 21
+    },
+    {
+      "name": "Goa",
+      "count": 20
+    },
+    {
+      "name": "Bhopal",
+      "count": 20
+    },
+    {
+      "name": "Mysore",
+      "count": 18
+    },
+    {
+      "name": "Nashik",
+      "count": 14
+    },
+    {
+      "name": "Vadodara",
+      "count": 14
+    },
+    {
+      "name": "Faridabad",
+      "count": 13
+    },
+    {
+      "name": "Thiruvananthapuram",
+      "count": 13
+    },
+    {
+      "name": "Zirakpur",
+      "count": 12
+    },
+    {
+      "name": "Raipur",
+      "count": 12
+    },
+    {
+      "name": "Rajkot",
+      "count": 11
+    },
+    {
+      "name": "Vijayawada",
+      "count": 11
+    },
+    {
+      "name": "Ranchi",
+      "count": 10
+    },
+    {
+      "name": "Agra",
+      "count": 8
+    },
+    {
+      "name": "Ghaziabad",
+      "count": 8
+    },
+    {
+      "name": "Mohali",
+      "count": 7
+    },
+    {
+      "name": "Kottakkal",
+      "count": 7
+    },
+    {
+      "name": "Chhatrapati Sambhajinagar",
+      "count": 6
+    },
+    {
+      "name": "Ludhiana",
+      "count": 6
+    },
+    {
+      "name": "Tiruchirappalli",
+      "count": 5
+    },
+    {
+      "name": "Gwalior",
+      "count": 4
+    },
+    {
+      "name": "Bhilai",
+      "count": 4
+    },
+    {
+      "name": "Jalandhar",
+      "count": 4
+    },
+    {
+      "name": "Dharamsala",
+      "count": 4
+    },
+    {
+      "name": "Jammu",
+      "count": 4
+    },
+    {
+      "name": "Meerut",
+      "count": 3
+    },
+    {
+      "name": "Jabalpur",
+      "count": 3
+    },
+    {
+      "name": "Gandhinagar",
+      "count": 3
+    },
+    {
+      "name": "Kanpur",
+      "count": 3
+    },
+    {
+      "name": "Thrissur",
+      "count": 2
+    },
+    {
+      "name": "Jodhpur",
+      "count": 2
+    },
+    {
+      "name": "Imphal",
+      "count": 2
+    },
+    {
+      "name": "Rohtak",
+      "count": 2
+    },
+    {
+      "name": "Siliguri",
+      "count": 2
+    },
+    {
+      "name": "Kurnool",
+      "count": 2
+    },
+    {
+      "name": "Jamshedpur",
+      "count": 2
+    },
+    {
+      "name": "Amritsar",
+      "count": 2
+    },
+    {
+      "name": "Kakinada",
+      "count": 2
+    },
+    {
+      "name": "Tirupati",
+      "count": 2
+    },
+    {
+      "name": "Hubli-Dharwad",
+      "count": 2
+    },
+    {
+      "name": "Guntur",
+      "count": 2
+    },
+    {
+      "name": "Gangtok",
+      "count": 2
+    },
+    {
+      "name": "Ajmer",
+      "count": 1
+    },
+    {
+      "name": "Junagadh",
+      "count": 1
+    },
+    {
+      "name": "Kannur",
+      "count": 1
+    },
+    {
+      "name": "Karunagappalli",
+      "count": 1
+    },
+    {
+      "name": "Kollam",
+      "count": 1
+    },
+    {
+      "name": "Korba",
+      "count": 1
+    },
+    {
+      "name": "Kullu",
+      "count": 1
+    },
+    {
+      "name": "Latur",
+      "count": 1
+    },
+    {
+      "name": "Mandi",
+      "count": 1
+    },
+    {
+      "name": "Nandyal",
+      "count": 1
+    },
+    {
+      "name": "Dimapur",
+      "count": 1
+    },
+    {
+      "name": "Prayagraj",
+      "count": 1
+    },
+    {
+      "name": "Bareja",
+      "count": 1
+    },
+    {
+      "name": "Ayodhya / Faizabad",
+      "count": 1
+    },
+    {
+      "name": "Shivamogga",
+      "count": 1
+    },
+    {
+      "name": "Anand",
+      "count": 1
+    },
+    {
+      "name": "Taliparamba",
+      "count": 1
+    },
+    {
+      "name": "Udaipur",
+      "count": 1
+    },
+    {
+      "name": "Ujjain",
+      "count": 1
+    },
+    {
+      "name": "Ambarnath",
+      "count": 1
+    },
+    {
+      "name": "Vapi",
+      "count": 1
+    },
+    {
+      "name": "Varanasi",
+      "count": 1
+    },
+    {
+      "name": "Ambala",
+      "count": 1
+    },
+    {
+      "name": "Aluva",
+      "count": 1
+    }
+  ],
+  "localities": {
+    "Bangalore": [
+      "HSR Layout",
+      "Whitefield",
+      "Koramangala",
+      "Indiranagar",
+      "Bellandur",
+      "J P Nagar",
+      "Ashok Nagar, MG Road Bangalore",
+      "Jayanagar",
+      "Hebbal",
+      "CBD Bangalore",
+      "Domlur",
+      "Electronic City",
+      "Yelahanka",
+      "Marathahalli",
+      "Shanthala Nagar, MG Road Bangalore"
+    ],
+    "Gurgaon": [
+      "Udyog Vihar",
+      "Sector 44 Gurgaon",
+      "DLF Cyber City",
+      "Sector 48 Gurgaon, Sohna Road",
+      "Sector 32 Gurgaon, NH-48",
+      "Unitech Cyber Park",
+      "DLF Phase 5, Golf Course Road Gurgaon",
+      "Sector 43 Gurgaon, Golf Course Road Gurgaon",
+      "DLF Phase 2, MG Road Gurgaon",
+      "Huda City Centre",
+      "Sector 58 Gurgaon, Golf Course Road Extension",
+      "DLF Phase 2, Golf Course Road Gurgaon",
+      "DLF Phase 3, NH-48",
+      "Sector 53 Gurgaon, Golf Course Road Gurgaon",
+      "Nirvana Country"
+    ],
+    "Pune": [
+      "Baner",
+      "Kharadi",
+      "Hadapsar",
+      "Viman Nagar",
+      "Kalyani Nagar",
+      "Shivajinagar",
+      "Hinjawadi",
+      "Aundh",
+      "Pimpri-Chinchwad",
+      "Yerawada",
+      "Koregaon Park",
+      "Kothrud",
+      "Erandwane",
+      "Sangamvadi",
+      "Balewadi"
+    ],
+    "Mumbai": [
+      "Andheri",
+      "Andheri East",
+      "Bandra Kurla Complex",
+      "Powai",
+      "Lower Parel",
+      "Thane",
+      "Vashi",
+      "Goregaon",
+      "Navi Mumbai",
+      "Andheri West",
+      "Worli",
+      "Vikhroli",
+      "Thane West",
+      "Bandra East",
+      "Borivali West"
+    ],
+    "Delhi": [
+      "Connaught Place",
+      "Mohan Cooperative Industrial Estate",
+      "Saket",
+      "Okhla Phase III",
+      "Aerocity",
+      "Nehru Place",
+      "Okhla Phase I",
+      "Vasant Kunj",
+      "Janakpuri",
+      "Netaji Subhash Place",
+      "Okhla",
+      "Jasola",
+      "Jhandewalan",
+      "Green Park",
+      "Dwarka"
+    ],
+    "Hyderabad": [
+      "HITEC City",
+      "Madhapur",
+      "Gachibowli",
+      "Kondapur",
+      "Banjara Hills",
+      "Begumpet",
+      "Jubilee Hills",
+      "Financial District",
+      "Kukatpally",
+      "Ameerpet",
+      "Nanakaramguda",
+      "Uppal",
+      "Silicon Valley",
+      "Somajiguda",
+      "Serilingampalle (M)"
+    ],
+    "Noida": [
+      "Sector 62",
+      "Sector 63",
+      "Noida Extension",
+      "Sector 136",
+      "Sector 3",
+      "Sector 2",
+      "Sector 16",
+      "Film City",
+      "Sector 126",
+      "Sector 135",
+      "Sector 142",
+      "Sector 126, Noida Expressway",
+      "Sector 125",
+      "Sector 125, Noida Expressway",
+      "Sector 2-greater-noida"
+    ],
+    "Chennai": [
+      "Guindy",
+      "CBD Chennai",
+      "Anna Nagar",
+      "Porur",
+      "Perungudi, Old Mamallapuram Road",
+      "Perungudi",
+      "Navalur, Old Mamallapuram Road",
+      "Nungambakkam",
+      "Thoraipakkam, Old Mamallapuram Road",
+      "Saidapet",
+      "Sholinganallur, Old Mamallapuram Road",
+      "Ekkatuthangal",
+      "Ambattur, Old Mamallapuram Road",
+      "Koyambedu",
+      "Guindy, Old Mamallapuram Road"
+    ],
+    "Kolkata": [
+      "Bidhannagar",
+      "Newtown",
+      "Park Street area",
+      "Elgin",
+      "Topsia",
+      "Bhowanipore",
+      "Rajarhat",
+      "B.B.D. Bagh",
+      "Kalighat",
+      "Sector V",
+      "Dum Dum",
+      "Dash Drone",
+      "Taltala",
+      "East Kolkata Township",
+      "Barabazar Market"
+    ],
+    "Jaipur": [
+      "Mansarovar",
+      "Malviya Nagar",
+      "Vaishali Nagar",
+      "Lalkothi",
+      "Civil Lines",
+      "Shyam Nagar",
+      "Durgapura",
+      "Pratap Nagar",
+      "Ashok Nagar",
+      "Tonk Road",
+      "Nirman Nagar",
+      "Brijlalpura",
+      "Vidhayak Nagar",
+      "Hathroi",
+      "Subhash Nagar"
+    ],
+    "Ahmedabad": [
+      "Navrangpura",
+      "Makarba",
+      "Vastrapur",
+      "Memnagar",
+      "Satellite",
+      "Bodakdev",
+      "Thaltej",
+      "Makarba, Sarkhej - Gandhinagar Highway",
+      "Bodakdev, Sarkhej - Gandhinagar Highway",
+      "Shyamal",
+      "Ambli",
+      "Ellisbridge",
+      "Jodhpur Village",
+      "Ambawadi",
+      "Motera"
+    ],
+    "Indore": [
+      "Vijay Nagar",
+      "Scheme No 54",
+      "Ab Road",
+      "Ravindra Nagar",
+      "Pipliyahana",
+      "Yeshwant Colony",
+      "Race Course Road",
+      "South Tukoganj",
+      "Ratna Lok Colony",
+      "Scheme No 114",
+      "Jaora Compound",
+      "Siyaganj",
+      "Musakhedi",
+      "Samvad Nagar"
+    ],
+    "Coimbatore": [
+      "R S Puram West",
+      "Peelamedu Pudur",
+      "Saravanampatti",
+      "Periyar Nagar",
+      "Pappanaickenpalayam",
+      "Race Course",
+      "Ramanathapuram",
+      "Saibaba Colony",
+      "Shivaram Nagar",
+      "Annur",
+      "TNHB Colony",
+      "ATT Colony",
+      "Kuppakonam Pudur",
+      "Nehru Nagar"
+    ],
+    "Kochi": [
+      "Ernakulam",
+      "Kakkanad",
+      "Edappally",
+      "Infopark Campus",
+      "Nedumbassery",
+      "Angamaly",
+      "Ravipuram",
+      "Kadavanthra",
+      "Kaloor",
+      "Marine Drive"
+    ],
+    "Chandigarh": [
+      "Industrial Area Phase I",
+      "Sector 26",
+      "Sector 17",
+      "Sector 8",
+      "Zirakpur",
+      "Sector 34",
+      "Sector 45",
+      "Sector 35B"
+    ],
+    "Nagpur": [
+      "Ramdaspeth",
+      "Dharampeth",
+      "Pratap Nagar",
+      "Survey Layout",
+      "Trimurtee Nagar"
+    ],
+    "Lucknow": [
+      "Gomti Nagar",
+      "Vibhuti Khand",
+      "Hazratganj",
+      "Indira Nagar",
+      "Telibagh"
+    ],
+    "Bhubaneswar": [
+      "Chandrasekharpur",
+      "Patia",
+      "Nayapalli",
+      "Saheed Nagar",
+      "Bhoi Nagar",
+      "Rasulgarh"
+    ],
+    "Guwahati": [
+      "Bhangagarh",
+      "Basisthpur",
+      "Geetanagar",
+      "Lalmati",
+      "Ulubari"
+    ],
+    "Visakhapatnam": [
+      "Siripuram",
+      "Dwaraka Nagar",
+      "Dwaraka Nagar, Waltair Main Road",
+      "Allipuram",
+      "Madeena bagh",
+      "MVP Colony",
+      "Ram Nagar",
+      "Maddilapalem",
+      "Balaji Nagar"
+    ],
+    "Surat": [
+      "Vesu",
+      "Adajan",
+      "Nanpura",
+      "Palanpur",
+      "City Light Town",
+      "Dhanmora",
+      "Katargam",
+      "Majura Gate",
+      "Piplod",
+      "Amroli",
+      "Althan",
+      "Begampura"
+    ],
+    "Patna": [
+      "Lohia Nagar",
+      "Kankarbagh",
+      "Danapur",
+      "Hanuman Nagar",
+      "Sri Krishna Puri"
+    ],
+    "Dehradun": [
+      "Ajabpur Kalan",
+      "Govind Vihar",
+      "Kishanpur",
+      "Rajpur"
+    ],
+    "Kozhikode": [
+      "Pantheeramkavu",
+      "Chakkorathukulam",
+      "Vellayil",
+      "Nadakkave",
+      "Palayam",
+      "Panniyankara",
+      "Tazhekkod",
+      "Thiruthiyad",
+      "Vikas Nagar",
+      "Athanikkal",
+      "West Hill",
+      "Kuttichira",
+      "Mananchira",
+      "Pala (Kannur)"
+    ],
+    "Goa": [
+      "Panaji",
+      "Margao",
+      "Mandrem",
+      "Cacra Village",
+      "Santa Inez",
+      "Vagator",
+      "Verna"
+    ],
+    "Bhopal": [
+      "Maharana Pratap Nagar",
+      "Arera Colony",
+      "Bagmugaliya",
+      "Indrapuri",
+      "Shivaji Nagar"
+    ],
+    "Mysore": [
+      "Vijayanagar",
+      "Saraswathipuram",
+      "Vani Vilas Mohalla",
+      "Rajarajeshwari Nagar",
+      "Jayalakshmipuram",
+      "Nazarbad",
+      "TK Layout",
+      "Kuvempu Nagara",
+      "Shakthinagar"
+    ],
+    "Nashik": [
+      "Sharanpur",
+      "Veer Sawarkar Nagar"
+    ],
+    "Vadodara": [
+      "Alkapuri",
+      "Subhanpura",
+      "Gorwa",
+      "Vadiwadi",
+      "Nizampura",
+      "Mandvi",
+      "Tandalja"
+    ],
+    "Faridabad": [
+      "Greenfields",
+      "New Industrial Town",
+      "Sector 10 HBC",
+      "Sector 12",
+      "Sector 15A",
+      "Sector 16",
+      "Sector 16A",
+      "Sector 20A",
+      "Sector 27",
+      "Sector 28",
+      "Sector 31",
+      "Sector 32",
+      "Sector 34"
+    ],
+    "Thiruvananthapuram": [
+      "Kazhakkoottam",
+      "Eanchakkal",
+      "Kumarapuram",
+      "Kuravankonam",
+      "Pattom",
+      "Pettah",
+      "Sasthamangalam",
+      "Aakkulam",
+      "Vellayambalam",
+      "Kowdiar"
+    ],
+    "Zirakpur": [
+      "Utrathiya",
+      "Zirakpur",
+      "Gazipur",
+      "Gmada Aerocity",
+      "Sector 34"
+    ],
+    "Raipur": [
+      "Shankar Nagar",
+      "Telibandha",
+      "Indravati Colony",
+      "Mahamai Para",
+      "Amanaka",
+      "Rajeev Nagar",
+      "Moudhapara",
+      "Devendra Nagar"
+    ],
+    "Rajkot": [
+      "Bajrang Wadi",
+      "Nana Mava",
+      "Sardar Nagar",
+      "Manharpura 1",
+      "Mavdi",
+      "Mota Mava",
+      "Chandreshnagar",
+      "Dharam Nagar"
+    ],
+    "Vijayawada": [
+      "Benz Circle",
+      "Labbipet",
+      "Gannavaram",
+      "Gunadala",
+      "Krishnalanka",
+      "Sri Ramachandra Nagar"
+    ],
+    "Ranchi": [
+      "Lalpur",
+      "Kanka",
+      "Ahirtoli",
+      "Hindpiri",
+      "Kadru"
+    ],
+    "Agra": [
+      "Sanjay Place",
+      "Khandari",
+      "Sadar Bazar",
+      "Shahganj",
+      "Sikandra"
+    ],
+    "Ghaziabad": [
+      "Indirapuram",
+      "Vaishali",
+      "Kaushambi",
+      "Raj Nagar",
+      "Sadiq Nagar",
+      "Sahibabad"
+    ],
+    "Mohali": [
+      "Industrial Area",
+      "Emaar MGF Mohali Sector 105",
+      "JLPL Industrial Area",
+      "Sector 56"
+    ],
+    "Kottakkal": [
+      "Edarikode",
+      "Changuvetty",
+      "Kuttippala",
+      "Pottippara",
+      "Randathani"
+    ],
+    "Chhatrapati Sambhajinagar": [
+      "Cidco",
+      "Gadia Vihar",
+      "Konkanwadi",
+      "MIDC",
+      "Mondha"
+    ],
+    "Ludhiana": [
+      "Bhai Randhir Singh Nagar",
+      "Gurdev Nagar",
+      "Guru Arjan Dev Nagar",
+      "Koh - E - Fiza"
+    ],
+    "Tiruchirappalli": [
+      "Thirunagar",
+      "West Thillai Nagar"
+    ],
+    "Gwalior": [
+      "Patel Nagar",
+      "Lashkar",
+      "LNUPE Campus"
+    ],
+    "Bhilai": [
+      "Nehru Nagar",
+      "Kohka",
+      "Smriti Nagar"
+    ],
+    "Jalandhar": [
+      "Dilbagh Nagar",
+      "Ladhewali",
+      "Model Town",
+      "Urban Estate phase II"
+    ],
+    "Dharamsala": [
+      "Dharamkot",
+      "Khanyara",
+      "Rakkar"
+    ],
+    "Jammu": [
+      "Gadigarh",
+      "Trikuta Nagar"
+    ],
+    "Meerut": [
+      "Ajanta Colony",
+      "Daurli",
+      "Panchsheel Colony"
+    ],
+    "Jabalpur": [
+      "Bargi Hills",
+      "Gorakhpur"
+    ],
+    "Gandhinagar": [
+      "Ratanpur",
+      "Raysan",
+      "Sector 26"
+    ],
+    "Kanpur": [
+      "Benajhabar",
+      "Tilak Nagar"
+    ],
+    "Thrissur": [
+      "Ayyanthole",
+      "Punkunnam"
+    ],
+    "Jodhpur": [
+      "Sangriya",
+      "Shastri Nagar"
+    ],
+    "Imphal": [
+      "Chingamakha",
+      "Khamnam Leirak"
+    ],
+    "Rohtak": [
+      "DLF Colony",
+      "Sector-2"
+    ],
+    "Siliguri": [
+      "Don Bosco Colony",
+      "Sevoke"
+    ],
+    "Kurnool": [
+      "Dinnedevarapadu",
+      "Marwari Street"
+    ],
+    "Jamshedpur": [
+      "Bistupur"
+    ],
+    "Amritsar": [
+      "Ranjit Avenue"
+    ],
+    "Kakinada": [
+      "Rajeshwari Nagar",
+      "Sarpavaram"
+    ],
+    "Tirupati": [
+      "Bhavani Nagar",
+      "Mangalam"
+    ],
+    "Hubli-Dharwad": [
+      "Vidya Nagar",
+      "Vikas Nagar"
+    ],
+    "Guntur": [
+      "Amaravati",
+      "Arundelpet"
+    ],
+    "Gangtok": [
+      "Deorali Bazar",
+      "Deorali Bazar, Sungava"
+    ],
+    "Ajmer": [
+      "Vaishali Nagar"
+    ],
+    "Junagadh": [
+      "Talav Gate"
+    ],
+    "Kannur": [
+      "Thana"
+    ],
+    "Karunagappalli": [
+      "Lalaji Junction"
+    ],
+    "Kollam": [
+      "Vadakkevila"
+    ],
+    "Korba": [
+      "Transport Nagar"
+    ],
+    "Kullu": [
+      "Dhalpur"
+    ],
+    "Latur": [
+      "Sawe Wadi"
+    ],
+    "Mandi": [
+      "Purani Mandi"
+    ],
+    "Nandyal": [
+      "Padmavathi Nagar"
+    ],
+    "Dimapur": [
+      "Duncan Basti"
+    ],
+    "Prayagraj": [
+      "Alka Puri Colony"
+    ],
+    "Bareja": [
+      "Barejadi"
+    ],
+    "Ayodhya / Faizabad": [
+      "Mandakini Nagar"
+    ],
+    "Shivamogga": [
+      "Durgigudi"
+    ],
+    "Anand": [
+      "Near Railway Station"
+    ],
+    "Taliparamba": [
+      "Trichambaram"
+    ],
+    "Udaipur": [
+      "Railway Colony"
+    ],
+    "Ujjain": [
+      "Madhav Nagar"
+    ],
+    "Ambarnath": [
+      "Additional M.I.D.C"
+    ],
+    "Vapi": [
+      "GIDC"
+    ],
+    "Varanasi": [
+      "Sigra"
+    ],
+    "Ambala": [
+      "Patti Mehar"
+    ],
+    "Aluva": [
+      "Kunnathery Thikavu"
+    ]
+  }
+}

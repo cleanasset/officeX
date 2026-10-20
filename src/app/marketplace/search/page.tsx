@@ -29,63 +29,17 @@ const RealGoogleMap = dynamic(() => import("@/components/RealGoogleMap"), {
   )
 });
 
-// Popular localities per city based on actual 6,767 listings database
-const CITY_LOCALITIES: Record<string, string[]> = {
-  Delhi: [
-    "Connaught Place", "Aerocity", "Saket", "Nehru Place", "Okhla Phase III",
-    "Mohan Cooperative", "Vasant Kunj", "Netaji Subhash Place", "Janakpuri",
-    "Jasola", "Defence Colony", "Dwarka"
-  ],
-  Gurgaon: [
-    "DLF Cyber City", "Golf Course Road", "Udyog Vihar", "Sector 44",
-    "Sohna Road", "Unitech Cyber Park", "MG Road", "Huda City Centre",
-    "Golf Course Ext Road", "Sector 32"
-  ],
-  Noida: [
-    "Sector 62", "Sector 63", "Noida Expressway", "Sector 136", "Sector 135",
-    "Film City", "Sector 126", "Sector 16", "Sector 2", "Sector 3"
-  ],
-  Bangalore: [
-    "HSR Layout", "Whitefield", "Koramangala", "Indiranagar", "Outer Ring Road",
-    "Bellandur", "MG Road", "J P Nagar", "Jayanagar", "Hebbal", "Domlur", "Electronic City"
-  ],
-  Mumbai: [
-    "Bandra Kurla Complex", "Andheri East", "Lower Parel", "Powai", "Goregaon",
-    "Andheri West", "Thane", "Vashi", "Nariman Point", "Airoli", "Navi Mumbai"
-  ],
-  Ahmedabad: [
-    "SG Highway", "Prahlad Nagar", "Bodakdev", "Vastrapur", "Navrangpura",
-    "Sindhu Bhavan Marg", "Thaltej", "Makarba", "Satellite", "Ambli", "GIFT City"
-  ],
-  Pune: [
-    "Baner", "Kharadi", "Viman Nagar", "Shivajinagar", "Kalyani Nagar",
-    "Hinjawadi", "Hadapsar", "Aundh", "Koregaon Park", "Kothrud"
-  ],
-  Hyderabad: [
-    "HITEC City", "Madhapur", "Gachibowli", "Financial District", "Kondapur",
-    "Banjara Hills", "Jubilee Hills", "Begumpet", "Kukatpally"
-  ]
-};
-
-// Fallback coordinates for Map View
-const CITY_COORDS: Record<string, [number, number]> = {
-  delhi: [28.6139, 77.2090],
-  gurgaon: [28.4595, 77.0266],
-  noida: [28.5355, 77.3910],
-  mumbai: [19.0760, 72.8777],
-  bangalore: [12.9716, 77.5946],
-  bengaluru: [12.9716, 77.5946],
-  ahmedabad: [23.0225, 72.5714],
-  pune: [18.5204, 73.8567],
-  hyderabad: [17.3850, 78.4867],
-  kolkata: [22.5726, 88.3639],
-  chennai: [13.0827, 80.2707],
-  jaipur: [26.9124, 75.7873]
-};
+import {
+  TOP_METROS,
+  EMERGING_HUBS,
+  ALL_MARKETPLACE_CITIES,
+  CITY_COORDS,
+  getLocalitiesForCity,
+} from "@/data/marketplace-cities";
 
 const BRANDS = [
   "All Brands", "Awfis", "DevX", "WeWork", "91springboard", "Innov8",
-  "Regus", "Incuspaze", "Smartworks", "The Address", "Strata", "Oyo Workflo"
+  "Regus", "Incuspaze", "Smartworks", "The Address", "IndiQube", "BHIVE", "Tablespace", "Workafella", "Strata", "Oyo Workflo"
 ];
 
 const PRODUCTS = [
@@ -371,9 +325,7 @@ function MarketplaceSearchContent() {
   });
 
   const activeProductObj = PRODUCTS.find((p) => p.id === selectedProduct) || PRODUCTS[0];
-  const currentCityLocalities = CITY_LOCALITIES[city] || [
-    "Central Business District", "Tech Zone", "Airport Corridor", "IT Park", "Main Boulevard"
-  ];
+  const currentCityLocalities = getLocalitiesForCity(city);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-900 font-sans flex flex-col">
@@ -498,7 +450,7 @@ function MarketplaceSearchContent() {
               <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
 
-            {/* 2. City Dropdown */}
+            {/* 2. City Dropdown (Grouped with all 89 Cities) */}
             <div className="relative">
               <select
                 value={city}
@@ -512,11 +464,29 @@ function MarketplaceSearchContent() {
                     } catch {}
                   }
                 }}
-                className="appearance-none bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-bold py-2 pl-3 pr-7 rounded-xl cursor-pointer shadow-2xs focus:ring-2 focus:ring-[#0F8B7D]/20 outline-none"
+                className="appearance-none bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-bold py-2 pl-3 pr-7 rounded-xl cursor-pointer shadow-2xs focus:ring-2 focus:ring-[#0F8B7D]/20 outline-none max-w-[210px] truncate"
               >
-                {["Ahmedabad", "Delhi", "Gurgaon", "Noida", "Bangalore", "Mumbai", "Pune", "Hyderabad"].map((c) => (
-                  <option key={c} value={c}>City: {c}</option>
-                ))}
+                <optgroup label="⭐ Top Metros">
+                  {TOP_METROS.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      City: {c.name} ({c.count})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🚀 Popular Business Hubs">
+                  {EMERGING_HUBS.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      City: {c.name} ({c.count})
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="📍 All 89 Cities (A-Z)">
+                  {ALL_MARKETPLACE_CITIES.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      City: {c.name} ({c.count})
+                    </option>
+                  ))}
+                </optgroup>
               </select>
               <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
@@ -526,11 +496,13 @@ function MarketplaceSearchContent() {
               <select
                 value={selectedLocality}
                 onChange={(e) => setSelectedLocality(e.target.value)}
-                className="appearance-none bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-bold py-2 pl-3 pr-7 rounded-xl cursor-pointer shadow-2xs focus:ring-2 focus:ring-[#0F8B7D]/20 outline-none max-w-[170px] truncate"
+                className="appearance-none bg-white border border-slate-300 hover:border-slate-400 text-slate-800 text-xs font-bold py-2 pl-3 pr-7 rounded-xl cursor-pointer shadow-2xs focus:ring-2 focus:ring-[#0F8B7D]/20 outline-none max-w-[220px] truncate"
               >
-                <option value="">Locations: All Locations</option>
+                <option value="">Locations: All in {city}</option>
                 {currentCityLocalities.map((loc) => (
-                  <option key={loc} value={loc}>{loc}</option>
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
                 ))}
               </select>
               <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
