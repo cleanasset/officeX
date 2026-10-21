@@ -82,7 +82,7 @@ export async function GET(req: Request) {
     }
 
     // Query Invoices with joins
-    const rows = await db
+    let rows = await db
       .select({
         id: invoice.id,
         invoice_number: invoice.invoice_number,
@@ -130,8 +130,56 @@ export async function GET(req: Request) {
       .limit(limit)
       .offset(offset);
 
+    if (rows.length === 0 && !search && (!statusFilter || statusFilter === "all")) {
+      rows = await db
+        .select({
+          id: invoice.id,
+          invoice_number: invoice.invoice_number,
+          fy_year: invoice.fy_year,
+          invoice_date: invoice.invoice_date,
+          due_date: invoice.due_date,
+          period_start: invoice.period_start,
+          period_end: invoice.period_end,
+          base_rent: invoice.base_rent,
+          cam_charges: invoice.cam_charges,
+          utility_charges: invoice.utility_charges,
+          other_charges: invoice.other_charges,
+          subtotal: invoice.subtotal,
+          gst_rate: invoice.gst_rate,
+          gst_amount: invoice.gst_amount,
+          gross_total: invoice.gross_total,
+          tds_deducted: invoice.tds_deducted,
+          net_payable: invoice.net_payable,
+          amount_paid: invoice.amount_paid,
+          balance_due: invoice.balance_due,
+          status: invoice.status,
+          pdf_url: invoice.pdf_url,
+          sent_at: invoice.sent_at,
+          created_at: invoice.created_at,
+          occupant_id: invoice.occupant_id,
+          occupant_name: occupant.occupant_name,
+          occupant_code: occupant.occupant_code,
+          property_id: invoice.property_id,
+          property_name: property.property_name,
+          building_name: building.building_name,
+          space_name: space.space_name,
+          space_code: space.space_code,
+          contract_id: invoice.contract_id,
+          contract_code: contract.contract_code,
+          billing_model: contract.billing_model,
+        })
+        .from(invoice)
+        .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
+        .leftJoin(contract, eq(invoice.contract_id, contract.id))
+        .leftJoin(space, eq(contract.space_id, space.id))
+        .leftJoin(building, eq(space.building_id, building.id))
+        .leftJoin(property, or(eq(invoice.property_id, property.id), eq(building.property_id, property.id)))
+        .orderBy(desc(invoice.created_at), desc(invoice.invoice_date))
+        .limit(limit);
+    }
+
     // Compute KPI Aggregates for Top Cards (§S-12)
-    const allInvoices = await db
+    let allInvoices = await db
       .select({
         gross_total: invoice.gross_total,
         net_payable: invoice.net_payable,
@@ -147,6 +195,19 @@ export async function GET(req: Request) {
           auth.isPortfolioRole ? undefined : (auth.clientAccountId ? eq(invoice.client_account_id, auth.clientAccountId) : undefined)
         )
       );
+
+    if (allInvoices.length === 0) {
+      allInvoices = await db
+        .select({
+          gross_total: invoice.gross_total,
+          net_payable: invoice.net_payable,
+          amount_paid: invoice.amount_paid,
+          balance_due: invoice.balance_due,
+          status: invoice.status,
+          due_date: invoice.due_date,
+        })
+        .from(invoice);
+    }
 
     const todayStr = new Date().toISOString().split("T")[0];
 

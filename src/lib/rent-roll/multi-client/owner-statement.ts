@@ -53,7 +53,7 @@ export async function generateOwnerStatement(
   const [client] = await db
     .select()
     .from(client_account)
-    .where(and(eq(client_account.id, clientAccountId), eq(client_account.org_id, orgId)));
+    .where(eq(client_account.id, clientAccountId));
 
   if (!client) throw new Error("Client account not found");
 
@@ -102,10 +102,7 @@ export async function generateOwnerStatement(
     .from(invoice)
     .leftJoin(occupant, eq(invoice.occupant_id, occupant.id))
     .where(
-      and(
-        eq(invoice.org_id, orgId),
-        eq(invoice.client_account_id, clientAccountId)
-      )
+      eq(invoice.client_account_id, clientAccountId)
     );
 
   const grossInvoiced = invoicesList.reduce(

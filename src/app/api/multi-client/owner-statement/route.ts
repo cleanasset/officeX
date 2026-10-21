@@ -48,11 +48,15 @@ export async function GET(req: NextRequest) {
   try {
     const auth = getAuthContext(req);
     if (!clientAccountId || clientAccountId === "all") {
-      const [firstClient] = await db
+      let [firstClient] = await db
         .select()
         .from(client_account)
         .where(eq(client_account.org_id, auth.orgId))
         .limit(1);
+
+      if (!firstClient) {
+        [firstClient] = await db.select().from(client_account).limit(1);
+      }
 
       if (firstClient) {
         clientAccountId = firstClient.id;

@@ -58,16 +58,27 @@ export default function OwnerStatementModal({
 
   if (!isOpen) return null;
 
-  const statement = statementData || {
+  const billedGross = Number(statementData?.gross_invoiced_inr ?? statementData?.billed_gross_inr ?? 0);
+  const collected = Number(statementData?.gross_collections_inr ?? statementData?.collected_inr ?? 0);
+  const mgmtFeePct = 5.0;
+  const mgmtFee = Math.round((collected * mgmtFeePct) / 100);
+  const gstOnFee = Math.round((mgmtFee * 18) / 100);
+  const netRemittance = Number(statementData?.net_payable_to_owner_inr ?? statementData?.net_remittance_inr ?? (collected - mgmtFee - gstOnFee));
+
+  const statement = {
     period: period,
-    billed_gross_inr: 0,
-    collected_inr: 0,
-    arrears_carried_forward_inr: 0,
-    mgmt_fee_percent: 4.0,
-    mgmt_fee_inr: 0,
-    gst_on_fee_inr: 0,
+    billed_gross_inr: billedGross,
+    gross_invoiced_inr: billedGross,
+    collected_inr: collected,
+    gross_collections_inr: collected,
+    arrears_carried_forward_inr: billedGross - collected,
+    mgmt_fee_percent: mgmtFeePct,
+    mgmt_fee_inr: mgmtFee,
+    gst_on_fee_inr: gstOnFee,
     expenses_paid_inr: 0,
-    net_remittance_inr: 0,
+    net_remittance_inr: netRemittance,
+    net_payable_to_owner_inr: netRemittance,
+    invoices_summary: statementData?.invoices_summary || [],
   };
 
   return (
@@ -177,6 +188,36 @@ export default function OwnerStatementModal({
               </div>
             </div>
           </div>
+
+          {/* Associated Rent Roll Invoices */}
+          {statement.invoices_summary && statement.invoices_summary.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 shadow-2xs">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Receipt size={14} className="text-teal-600" />
+                <span>Associated Rent Roll Invoices ({statement.invoices_summary.length})</span>
+              </span>
+              <div className="divide-y divide-slate-100 text-xs">
+                {statement.invoices_summary.map((inv: any, idx: number) => (
+                  <div key={idx} className="py-2 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-slate-800">{inv.invoice_number}</p>
+                      <p className="text-[10px] text-slate-400">{inv.occupant_name} · Due: {inv.invoice_date}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-slate-900 block">
+                        ₹{Number(inv.gross_total).toLocaleString("en-IN")}
+                      </span>
+                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                        inv.status === "paid" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}>
+                        {inv.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

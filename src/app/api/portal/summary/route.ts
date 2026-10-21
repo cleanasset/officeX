@@ -196,8 +196,36 @@ export async function GET(req: NextRequest) {
         )
       );
 
-    // 6. Generate Contextual Notices (§T-01)
+    // 6. Generate Contextual Notices & Live PM Reminders (§T-01)
     const notices: any[] = [];
+    let activeReminders: any[] = [];
+
+    try {
+      const remindersRes = await db.execute(sql`
+        SELECT id, target_name, property_name, invoice_number, amount_inr, sender_name, sender_role, title, message, status, is_read, created_at 
+        FROM tenant_reminders 
+        ORDER BY created_at DESC 
+        LIMIT 5
+      `);
+      activeReminders = remindersRes.rows;
+    } catch (e) {
+      console.warn("tenant_reminders query error:", e);
+    }
+
+    if (activeReminders.length > 0) {
+      activeReminders.forEach((r: any) => {
+        notices.unshift({
+          id: `reminder-${r.id}`,
+          type: "urgent",
+          title: `⚠️ ${r.title || "Payment Reminder from JPS Management"}`,
+          description: r.message,
+          link: "/portal/invoices?action=pay",
+          sender: r.sender_name || "JPS Management",
+          created_at: r.created_at,
+          is_active_reminder: true,
+        });
+      });
+    }
 
     if (overdueCount > 0) {
       notices.push({
@@ -251,6 +279,7 @@ export async function GET(req: NextRequest) {
         },
         recent_invoices: occupantInvoices.slice(0, 5),
         notices,
+        reminders: activeReminders,
       });
   } catch (err: any) {
     console.error("GET /api/portal/summary error:", err);

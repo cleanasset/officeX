@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     const [newDispute] = await db
       .insert(dispute)
       .values({
-        org_id: auth.orgId,
+        org_id: inv.org_id || auth.orgId,
         client_account_id: inv.client_account_id,
         invoice_id: inv.id,
         contract_id: inv.contract_id,

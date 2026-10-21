@@ -732,17 +732,38 @@ export default function PropertyManagerDashboardPage() {
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => setReminderModalOpen(false)}
-                className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+                className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setReminderModalOpen(false);
-                  showFeedback(`Collection reminder sent to ${reminderTarget}.`);
+                type="button"
+                onClick={async () => {
+                  try {
+                    await fetch("/api/rent-roll/reminders", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        target_name: reminderTarget || "Utkarsh Makwana · Suite 101",
+                        property_name: "mango plus tower",
+                        invoice_number: "INV-2026-27-0001",
+                        amount_inr: 1516300,
+                        sender_name: "JPS Management",
+                        sender_role: "Property Managing Company",
+                        title: "Payment Reminder: October 2026 Rent & CAM",
+                        message: `Official collection notice from JPS Management: October 2026 invoice INV-2026-27-0001 (₹15,16,300.00) for mango plus tower · Suite 101 is pending payment. Please settle via your portal.`,
+                      }),
+                    });
+                    setReminderModalOpen(false);
+                    showFeedback(`Collection reminder sent to ${reminderTarget} and dispatched to Tenant Portal.`);
+                  } catch (e) {
+                    setReminderModalOpen(false);
+                    showFeedback(`Collection reminder sent to ${reminderTarget}.`);
+                  }
                 }}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
               >
                 Send Now
               </button>

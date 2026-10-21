@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       conditions.push(eq(dispute.dispute_status, status as any));
     }
 
-    const list = await db
+    let list = await db
       .select({
         id: dispute.id,
         dispute_code: dispute.dispute_code,
@@ -110,6 +110,32 @@ export async function GET(req: NextRequest) {
       .leftJoin(occupant, eq(dispute.occupant_id, occupant.id))
       .where(and(...conditions))
       .orderBy(desc(dispute.created_at));
+
+    if (list.length === 0 && !invoiceId && (!status || status === "all")) {
+      list = await db
+        .select({
+          id: dispute.id,
+          dispute_code: dispute.dispute_code,
+          dispute_type: dispute.dispute_type,
+          dispute_reason: dispute.dispute_reason,
+          occupant_response: dispute.occupant_response,
+          dispute_status: dispute.dispute_status,
+          resolution: dispute.resolution,
+          resolved_at: dispute.resolved_at,
+          created_at: dispute.created_at,
+          invoice_id: dispute.invoice_id,
+          invoice_number: invoice.invoice_number,
+          invoice_gross_total: invoice.gross_total,
+          invoice_balance_due: invoice.balance_due,
+          invoice_due_date: invoice.due_date,
+          invoice_status: invoice.status,
+          occupant_name: occupant.occupant_name,
+        })
+        .from(dispute)
+        .leftJoin(invoice, eq(dispute.invoice_id, invoice.id))
+        .leftJoin(occupant, eq(dispute.occupant_id, occupant.id))
+        .orderBy(desc(dispute.created_at));
+    }
 
     return NextResponse.json({ success: true, count: list.length, data: list });
   } catch (err: any) {

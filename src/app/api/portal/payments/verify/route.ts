@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const [newPayment] = await db
       .insert(payment)
       .values({
-        org_id: auth.orgId,
+        org_id: firstInv.org_id || auth.orgId,
         client_account_id: firstInv.client_account_id,
         occupant_id: resolvedOccupantId!,
         contract_id: firstInv.contract_id,
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       const [newAlloc] = await db
         .insert(payment_allocation)
         .values({
-          org_id: auth.orgId,
+          org_id: firstInv.org_id || auth.orgId,
           payment_id: newPayment.id,
           invoice_id: inv.id,
           amount_allocated_inr: String(allocAmount),

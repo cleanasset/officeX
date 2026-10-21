@@ -26,10 +26,12 @@ import {
   Printer,
   Copy,
   Zap,
-  Lock
+  Lock,
+  Bell
 } from "lucide-react";
 
 import { getClientAuthHeaders } from "@/lib/auth-storage";
+import { initiateRazorpayPayment } from "@/lib/razorpay-client";
 
 export default function TenantHomePage() {
   const [data, setData] = useState<any>(null);
@@ -37,7 +39,7 @@ export default function TenantHomePage() {
 
   // Settlement Modal State
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [selectedPayChannel, setSelectedPayChannel] = useState<"instant" | "neft" | "razorpay">("instant");
+  const [selectedPayChannel, setSelectedPayChannel] = useState<"instant" | "neft" | "razorpay">("razorpay");
   const [payAmountMode, setPayAmountMode] = useState<"full" | "custom">("full");
   const [customPayAmount, setCustomPayAmount] = useState<string>("");
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -88,6 +90,8 @@ export default function TenantHomePage() {
   const primaryContract = contracts[0] || null;
   const recentInvoices = data?.recent_invoices || [];
   const primaryInvoice = recentInvoices[0] || null;
+  const reminders = data?.reminders || [];
+  const latestReminder = reminders[0] || null;
 
   const totalOutstanding = Number(summary.total_outstanding_inr || 0);
   const payableAmount = payAmountMode === "custom" && Number(customPayAmount) > 0
@@ -114,24 +118,107 @@ export default function TenantHomePage() {
       return;
     }
 
-    try {
-      setProcessingPayment(true);
-      const targetInvoiceId = primaryInvoice?.id;
-      if (!targetInvoiceId) {
-        throw new Error("No active invoice found to allocate payment");
+    const targetInvoiceId = primaryInvoice?.id;
+    if (!targetInvoiceId) {
+      alert("No active invoice found to allocate payment");
+      return;
+    }
+
+    // --- Channel 1: Real Net Banking & UPI via Live Razorpay Gateway ---
+    if (selectedPayChannel === "razorpay") {
+      if (payableAmount > 500000) {
+        alert(
+          "⚠️ RBI & Gateway Regulatory Limit:\n\nOnline net banking and payment gateways in India are capped at ₹5,00,000 per transaction.\n\nTo settle this full commercial invoice of ₹15,16,300:\n1. Choose 'Corporate Bank Wire (NEFT / RTGS)' for a direct 0-fee corporate bank transfer to the Landlord's account.\n2. Or choose 'Custom Partial Amount' and enter up to ₹5,00,000 to test live Razorpay Net Banking immediately."
+        );
+        return;
       }
 
-      const generatedRef = `PAY_SIM_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      setProcessingPayment(true);
+      try {
+        await initiateRazorpayPayment({
+          amount: Math.round(payableAmount * 100), // in paise
+          receipt: (primaryInvoice?.invoice_number || `INV-${Date.now()}`).slice(0, 40),
+          description: `Rent - ${primaryInvoice?.invoice_number || "INV-2026-27-0001"}`,
+          prefillName: tenantDisplayName,
+          prefillEmail: occupant?.email || "accounts@mangotower.com",
+          prefillPhone: occupant?.phone || "9876543210",
+          notes: {
+            invoice_id: targetInvoiceId,
+            occupant_id: occupant.id || "",
+            building: "Mango Plus Tower",
+            suite: "Suite 101",
+          },
+          onSuccess: async (rzpRes) => {
+            try {
+              const res = await fetch("/api/portal/payments/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_payment_id: rzpRes.razorpay_payment_id,
+                  order_id: rzpRes.razorpay_order_id,
+                  invoice_ids: [targetInvoiceId],
+                  amount_inr: payableAmount,
+                  occupant_id: occupant.id,
+                  payment_mode: "online",
+                }),
+              });
+
+              const json = await res.json();
+              if (!json.success) throw new Error(json.error || "Payment recording failed");
+
+              setPaymentSuccess({
+                amount: payableAmount,
+                ref: rzpRes.razorpay_payment_id,
+                channel: "Razorpay Real Net Banking / Gateway",
+                date: new Date().toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                invoice_number: primaryInvoice?.invoice_number || "INV-2026-27-0001",
+                allocations: json.allocations || [],
+              });
+              setPayModalOpen(false);
+              await loadHomeData(occupant.id);
+            } catch (err: any) {
+              alert(err.message || "Failed to record payment verification");
+            } finally {
+              setProcessingPayment(false);
+            }
+          },
+          onFailure: (err) => {
+            setProcessingPayment(false);
+            console.error("Razorpay payment error or cancelled:", err);
+          },
+        });
+      } catch (err: any) {
+        setProcessingPayment(false);
+        console.error("Razorpay initiation error:", err);
+        alert(err.message || "Could not launch Razorpay checkout.");
+      }
+      return;
+    }
+
+    // --- Channel 2: Direct Corporate Bank Wire (NEFT / RTGS with UTR) ---
+    // --- Channel 3: Instant Demo Settlement (Test Mode) ---
+    try {
+      setProcessingPayment(true);
+      const isNeft = selectedPayChannel === "neft";
+      const paymentRef = isNeft
+        ? (utrNumber.trim() || `HDFCR5${Date.now().toString().slice(-10)}`)
+        : `DEMO_PAY_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       const res = await fetch("/api/portal/payments/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          razorpay_payment_id: generatedRef,
+          razorpay_payment_id: paymentRef,
           invoice_ids: [targetInvoiceId],
           amount_inr: payableAmount,
           occupant_id: occupant.id,
-          payment_mode: selectedPayChannel === "neft" ? "bank_transfer" : "online",
+          payment_mode: isNeft ? "bank_transfer" : "online",
         }),
       });
 
@@ -142,15 +229,22 @@ export default function TenantHomePage() {
 
       setPaymentSuccess({
         amount: payableAmount,
-        ref: generatedRef,
-        channel: selectedPayChannel === "neft" ? `NEFT (UTR: ${utrNumber || "HDFCR5202610220199"})` : "Instant Bank Settlement",
-        date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+        ref: paymentRef,
+        channel: isNeft
+          ? `Corporate Bank Wire (UTR: ${paymentRef})`
+          : "Instant Demo Settlement",
+        date: new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         invoice_number: primaryInvoice?.invoice_number || "INV-2026-27-0001",
         allocations: json.allocations || [],
       });
 
       setPayModalOpen(false);
-      // Reload fresh data from database
       await loadHomeData(occupant.id);
     } catch (e: any) {
       console.error("Payment execution error:", e);
@@ -192,6 +286,41 @@ export default function TenantHomePage() {
           </span>
         </div>
       </div>
+
+      {/* Active Management Collection Reminder Banner */}
+      {latestReminder && totalOutstanding > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-red-500/10 to-amber-500/10 border-2 border-amber-500/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs font-black">
+              <Bell size={20} className="animate-bounce" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                  Notice from {latestReminder.sender_name || "JPS Management"}
+                </span>
+                <span className="text-[11px] text-slate-500 font-semibold">
+                  {latestReminder.created_at ? new Date(latestReminder.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "Just now"}
+                </span>
+              </div>
+              <p className="text-xs font-black text-slate-900">
+                {latestReminder.title || "Payment Reminder: October 2026 Lease Settlement"}
+              </p>
+              <p className="text-xs text-slate-700 leading-relaxed max-w-2xl font-medium">
+                {latestReminder.message}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPayModalOpen(true)}
+            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs tracking-wide shrink-0 shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+          >
+            <CreditCard size={15} /> Settle Invoice Now
+          </button>
+        </div>
+      )}
 
       {/* 2. Outstanding Balance Hero Card */}
       <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-slate-800">
@@ -235,6 +364,7 @@ export default function TenantHomePage() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
+              id="dashboard-pay-now-btn"
               onClick={() => {
                 if (totalOutstanding <= 0) {
                   alert("Your account balance is ₹0. No payment is currently due.");
@@ -383,6 +513,7 @@ export default function TenantHomePage() {
               Tax invoice dispatched by Mango Groups
             </span>
             <button
+              id="settle-invoice-now-btn"
               onClick={() => {
                 if (totalOutstanding <= 0) {
                   alert("Invoice already fully settled.");
@@ -523,22 +654,22 @@ export default function TenantHomePage() {
             {/* Payment Channel Selection Tabs */}
             <div className="space-y-2">
               <span className="text-xs font-bold text-slate-700 block">Select Settlement Channel:</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedPayChannel("instant")}
+                  onClick={() => setSelectedPayChannel("razorpay")}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    selectedPayChannel === "instant"
-                      ? "border-indigo-600 bg-indigo-50/50 shadow-xs ring-2 ring-indigo-500/20"
+                    selectedPayChannel === "razorpay"
+                      ? "border-indigo-600 bg-indigo-50/70 shadow-xs ring-2 ring-indigo-500/20"
                       : "border-slate-200 hover:border-slate-300 bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Zap size={16} className={selectedPayChannel === "instant" ? "text-indigo-600" : "text-slate-400"} />
-                    <span className="text-xs font-black text-slate-900">Instant Settlement</span>
+                    <CreditCard size={16} className={selectedPayChannel === "razorpay" ? "text-indigo-600" : "text-slate-400"} />
+                    <span className="text-xs font-black text-slate-900">Real Net Banking</span>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">
-                    Direct automated bank credit simulation
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium leading-tight">
+                    Live Indian Bank Net Banking & UPI Gateway
                   </p>
                 </button>
 
@@ -547,65 +678,129 @@ export default function TenantHomePage() {
                   onClick={() => setSelectedPayChannel("neft")}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     selectedPayChannel === "neft"
-                      ? "border-teal-600 bg-teal-50/50 shadow-xs ring-2 ring-teal-500/20"
+                      ? "border-teal-600 bg-teal-50/70 shadow-xs ring-2 ring-teal-500/20"
                       : "border-slate-200 hover:border-slate-300 bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <Landmark size={16} className={selectedPayChannel === "neft" ? "text-teal-600" : "text-slate-400"} />
-                    <span className="text-xs font-black text-slate-900">NEFT / RTGS with UTR</span>
+                    <span className="text-xs font-black text-slate-900">Corporate Wire</span>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">
-                    Manual bank wire into Escrow account
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium leading-tight">
+                    Direct NEFT/RTGS to Owner Bank Account
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayChannel("instant")}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                    selectedPayChannel === "instant"
+                      ? "border-amber-600 bg-amber-50/70 shadow-xs ring-2 ring-amber-500/20"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Zap size={16} className={selectedPayChannel === "instant" ? "text-amber-600" : "text-slate-400"} />
+                    <span className="text-xs font-black text-slate-900">Demo Settle</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium leading-tight">
+                    Instant 1-click test across 3 open tabs
                   </p>
                 </button>
               </div>
             </div>
 
             {/* Channel Details */}
-            {selectedPayChannel === "instant" ? (
-              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-indigo-900 font-bold">
-                  <ShieldCheck size={16} className="text-indigo-600" />
-                  <span>Real Database Execution Mode</span>
-                </div>
-                <p className="text-indigo-700 leading-relaxed text-[11px]">
-                  Clicking below will execute an immediate settlement of <strong>₹{payableAmount.toLocaleString("en-IN")}</strong>. It updates invoice status to <strong>PAID</strong>, writes transaction records to the PostgreSQL database, and adjusts both the Property Owner and Manager dashboards live.
-                </p>
-              </div>
-            ) : (
-              <div className="p-4 rounded-2xl bg-teal-50/60 border border-teal-200 space-y-3 text-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-teal-200/60">
-                  <span className="font-bold text-teal-900">Landlord Escrow Bank Details:</span>
-                  <span className="text-[10px] font-black text-teal-700">Mango Groups Ltd</span>
+            {selectedPayChannel === "razorpay" && (
+              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-3 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-indigo-200/60">
+                  <div className="flex items-center gap-2 text-indigo-950 font-black">
+                    <ShieldCheck size={16} className="text-indigo-600" />
+                    <span>Live Payment Gateway (Razorpay Active)</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    RBI Certified
+                  </span>
                 </div>
 
-                <div className="space-y-1 font-mono text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Bank:</span>
-                    <span className="font-bold text-slate-800">HDFC Bank Ltd</span>
+                <div className="space-y-2 text-[11px] text-indigo-900 leading-relaxed font-medium">
+                  <p>
+                    Opens authentic Indian Net Banking with direct authentication at your bank:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {["HDFC Bank", "ICICI Bank", "State Bank of India", "Axis Bank", "Kotak Bank", "IDFC FIRST", "UPI / QR", "Corporate Cards"].map((b) => (
+                      <span key={b} className="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-slate-800 text-[10px] font-bold shadow-2xs">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-slate-600 text-[10px] pt-1">
+                    Funds collected through this gateway settle directly into the <strong>Property Owner&apos;s linked bank account</strong> (T+1 bank remittance).
+                  </p>
+                </div>
+
+                {payableAmount > 500000 && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5 text-xs text-amber-950">
+                      <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                      RBI Online Gateway Limit (₹5,00,000 per transaction)
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-amber-800">
+                      Online Net Banking & Gateways in India cap transactions at ₹5,00,000.
+                      For the full <strong>₹{payableAmount.toLocaleString("en-IN")}</strong> commercial rent, use <strong>Corporate Wire (NEFT/RTGS)</strong> above (0% fee & no limit), or select <strong>Custom Partial Amount</strong> (e.g. ₹5,00,000 or ₹1,000) to test live Net Banking.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedPayChannel === "neft" && (
+              <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-3 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-teal-200/60">
+                  <div className="flex items-center gap-2">
+                    <Landmark size={16} className="text-teal-700" />
+                    <span className="font-black text-teal-950">Owner Bank Escrow Details:</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-teal-800 bg-teal-100/70 px-2 py-0.5 rounded border border-teal-300">
+                    0% Gateway Fee · No Limit
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-teal-900 font-medium leading-relaxed">
+                  The enterprise industry standard for commercial leases: Your accounts department transfers directly from company bank account to landlord escrow account via Corporate Net Banking (CMS / RTGS).
+                </p>
+
+                <div className="p-3 bg-white rounded-xl border border-teal-200 space-y-2 font-mono text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-sans font-semibold">Beneficiary SPV:</span>
+                    <span className="font-bold text-slate-900 font-sans">Mango Groups Ltd</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Account No:</span>
+                    <span className="text-slate-500 font-sans font-semibold">Bank Name:</span>
+                    <span className="font-bold text-slate-900 font-sans">HDFC Bank Ltd</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-sans font-semibold">Account Number:</span>
                     <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                      <span>50200084920194</span>
+                      <span>50200088991234</span>
                       <button
                         type="button"
-                        onClick={() => handleCopy("50200084920194", "acct")}
-                        className="text-teal-700 hover:text-teal-900"
+                        onClick={() => handleCopy("50200088991234", "acct")}
+                        className="text-teal-700 hover:text-teal-900 cursor-pointer p-0.5"
                       >
                         {copiedField === "acct" ? <Check size={12} /> : <Copy size={12} />}
                       </button>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">IFSC Code:</span>
+                    <span className="text-slate-500 font-sans font-semibold">IFSC Code:</span>
                     <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                      <span>HDFC0001234</span>
+                      <span>HDFC0000060</span>
                       <button
                         type="button"
-                        onClick={() => handleCopy("HDFC0001234", "ifsc")}
-                        className="text-teal-700 hover:text-teal-900"
+                        onClick={() => handleCopy("HDFC0000060", "ifsc")}
+                        className="text-teal-700 hover:text-teal-900 cursor-pointer p-0.5"
                       >
                         {copiedField === "ifsc" ? <Check size={12} /> : <Copy size={12} />}
                       </button>
@@ -613,20 +808,33 @@ export default function TenantHomePage() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-teal-200/60 space-y-2">
-                  <div>
-                    <label className="text-[11px] font-bold text-teal-900 block mb-1">
-                      Bank Transaction / UTR Number:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. HDFCR5202610220199"
-                      value={utrNumber}
-                      onChange={(e) => setUtrNumber(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-teal-300 font-mono font-bold text-slate-900 outline-none text-xs"
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-teal-950 block">
+                    Enter Bank Transfer UTR / Transaction Reference:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HDFCR5202610220199 or CMS99281729"
+                    value={utrNumber}
+                    onChange={(e) => setUtrNumber(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-teal-300 font-mono font-bold text-slate-900 outline-none text-xs"
+                  />
+                  <p className="text-[10px] text-teal-800 font-medium">
+                    Entering the UTR matches the bank wire in PostgreSQL and updates the invoice to PAID immediately.
+                  </p>
                 </div>
+              </div>
+            )}
+
+            {selectedPayChannel === "instant" && (
+              <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-amber-950 font-bold">
+                  <Zap size={16} className="text-amber-600" />
+                  <span>Multi-Window Test Mode (Zero Real Rupee Spent)</span>
+                </div>
+                <p className="text-amber-900 leading-relaxed text-[11px] font-medium">
+                  Designed so you can test the end-to-end Rent Roll lifecycle across your 3 open Chrome tabs (Tenant, Manager, Owner) right now without transferring real money. It commits real settlement records to PostgreSQL, marks the invoice as <strong>PAID</strong>, and refreshes the Owner statement and Manager collection metrics in real time.
+                </p>
               </div>
             )}
 
@@ -644,17 +852,33 @@ export default function TenantHomePage() {
                 type="button"
                 disabled={processingPayment || payableAmount <= 0}
                 onClick={handleExecutePayment}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
+                className={`px-6 py-2.5 rounded-xl text-white font-bold text-xs flex items-center gap-2 shadow-lg cursor-pointer disabled:opacity-50 transition-all ${
+                  selectedPayChannel === "razorpay"
+                    ? "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30"
+                    : selectedPayChannel === "neft"
+                    ? "bg-teal-700 hover:bg-teal-600 shadow-teal-700/30"
+                    : "bg-amber-600 hover:bg-amber-500 shadow-amber-600/30"
+                }`}
               >
                 {processingPayment ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Processing Settlement...</span>
                   </>
+                ) : selectedPayChannel === "razorpay" ? (
+                  <>
+                    <CreditCard size={14} />
+                    <span>Launch Live Net Banking (₹{payableAmount.toLocaleString("en-IN")})</span>
+                  </>
+                ) : selectedPayChannel === "neft" ? (
+                  <>
+                    <Landmark size={14} />
+                    <span>Submit Bank UTR & Record Wire (₹{payableAmount.toLocaleString("en-IN")})</span>
+                  </>
                 ) : (
                   <>
                     <Check size={14} />
-                    <span>Confirm & Pay ₹{payableAmount.toLocaleString("en-IN")}</span>
+                    <span>Execute Demo Settlement (₹{payableAmount.toLocaleString("en-IN")})</span>
                   </>
                 )}
               </button>
