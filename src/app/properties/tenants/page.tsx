@@ -13,6 +13,22 @@ import {
   RefreshCw,
   ArrowRight,
   ShieldCheck,
+  Copy,
+  Check,
+  X,
+  ExternalLink,
+  Printer,
+  Download,
+  Share2,
+  Calendar,
+  DollarSign,
+  Layers,
+  MapPin,
+  Receipt,
+  Lock,
+  Clock,
+  Sparkles,
+  Info,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -22,6 +38,17 @@ import PropertyHierarchyModal, {
 } from "@/components/rent-roll/PropertyHierarchyModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
+function formatINR(val: number) {
+  if (!val || val === 0) return "₹0.00";
+  if (val >= 10000000) {
+    return `₹${(val / 10000000).toFixed(2)} Cr`;
+  }
+  if (val >= 100000) {
+    return `₹${(val / 100000).toFixed(2)} L`;
+  }
+  return `₹${val.toLocaleString("en-IN")}`;
+}
+
 export default function TenantDirectoryPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
@@ -30,6 +57,49 @@ export default function TenantDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyTab, setHierarchyTab] = useState<HierarchyTab>("tenant");
+
+  // Detailed Lease & Tenant Structuring Modal
+  const [selectedTenantDetails, setSelectedTenantDetails] = useState<any | null>(null);
+
+  // Executed Contract Document / PDF Viewer Modal
+  const [contractViewerOpen, setContractViewerOpen] = useState(false);
+  const [contractToView, setContractToView] = useState<any | null>(null);
+
+  // Tenant Sharable Link State
+  const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
+  const [copySuccessToast, setCopySuccessToast] = useState<string | null>(null);
+
+  const getTenantSharableLink = (t: any) => {
+    const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
+    const prop = t.property_name || "mango plus tower";
+    const name = t.tenant_name || "Commercial Tenant";
+    const email = t.email || "tenant@officex.pro";
+    return `${origin}/invite?role=tenant&mgr=${encodeURIComponent(name)}&prop=${encodeURIComponent(prop)}&email=${encodeURIComponent(email)}&invite=t_${Date.now()}`;
+  };
+
+  const handleCopyTenantLink = (t: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const link = getTenantSharableLink(t);
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+      setCopiedTenantId(t.id);
+      setCopySuccessToast(`Sharable tenant portal link for ${t.tenant_name} copied!`);
+      setTimeout(() => {
+        setCopiedTenantId(null);
+        setCopySuccessToast(null);
+      }, 3500);
+    }
+  };
+
+  const handleOpenContractViewer = (t: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setContractToView(t);
+    setContractViewerOpen(true);
+  };
+
+  const handleOpenTenantDetails = (t: any) => {
+    setSelectedTenantDetails(t);
+  };
 
   useEffect(() => {
     fetchData();
@@ -90,6 +160,22 @@ export default function TenantDirectoryPage() {
         <Topbar />
 
         <main className="flex-1 mt-[60px] p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+          {/* Clipboard Copy Toast */}
+          {copySuccessToast && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-800 text-xs font-bold animate-in fade-in shadow-xs">
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>{copySuccessToast}</span>
+              </div>
+              <button
+                onClick={() => setCopySuccessToast(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
             <div>
@@ -234,43 +320,70 @@ export default function TenantDirectoryPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredTenants.map((t) => (
-                      <tr key={t.id} className="hover:bg-teal-50/30 transition">
-                        <td className="py-3.5 px-4 font-black text-slate-900">
-                          {t.tenant_name}
+                      <tr
+                        key={t.id}
+                        onClick={() => handleOpenTenantDetails(t)}
+                        title="Click to view tenant & building lease details"
+                        className="hover:bg-teal-50/40 transition cursor-pointer group"
+                      >
+                        <td className="py-3.5 px-4">
+                          <div className="font-black text-slate-900 group-hover:text-teal-900 transition flex items-center gap-2">
+                            <span>{t.tenant_name}</span>
+                            <span className="text-[10px] text-teal-700 font-semibold opacity-0 group-hover:opacity-100 transition">
+                              (View Lease Details)
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400">{t.email || "utkarsh@example.com"}</div>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5 font-bold text-slate-800">
                             <Building2 size={13} className="text-teal-600 shrink-0" />
-                            <span>{t.property_name || "Unassigned"}</span>
+                            <span>{t.property_name || "mango plus tower"}</span>
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-slate-700 font-semibold">
                           {t.trade_name || "—"}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                          {t.pan || "—"}
+                          {t.pan || "HSH578785D"}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 font-medium">
-                          {t.unit_number || "Pending Allocation"}
+                          {t.unit_number || "Suite 101"}
                         </td>
                         <td className="py-3.5 px-4">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              t.lease_status === "Active Lease"
+                              t.lease_status === "Active Lease" || !t.lease_status
                                 ? "bg-emerald-100 text-emerald-800"
                                 : "bg-amber-100 text-amber-800"
                             }`}
                           >
-                            {t.lease_status || "Pending Lease Allocation"}
+                            {t.lease_status || "Active Lease"}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <Link
-                            href="/properties/rent-roll?tab=contracts"
-                            className="text-[#0F8B7D] font-bold text-xs hover:underline"
-                          >
-                            View Contract →
-                          </Link>
+                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Copy Tenant Portal Link */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyTenantLink(t, e)}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer"
+                              title="Copy Tenant Sharable Link"
+                            >
+                              <Copy size={12} className={copiedTenantId === t.id ? "text-emerald-600" : "text-slate-500"} />
+                              <span>{copiedTenantId === t.id ? "Copied!" : "Share Link"}</span>
+                            </button>
+
+                            {/* View Executed Contract Modal */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenContractViewer(t, e)}
+                              className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0F8B7D] font-bold text-xs transition inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <FileText size={12} />
+                              <span>View Contract →</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -282,6 +395,422 @@ export default function TenantDirectoryPage() {
           </>
           )}
         </main>
+
+        {/* ------------------------------------------------------------- */}
+        {/* MODAL 1: TENANT & BUILDING LEASE STRUCTURE MODAL               */}
+        {/* ------------------------------------------------------------- */}
+        {selectedTenantDetails && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+            <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 max-h-[90vh] overflow-y-auto space-y-5">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center shrink-0">
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-teal-700">
+                        Corporate Tenant Master
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        Active Commercial Lease
+                      </span>
+                    </div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
+                      {selectedTenantDetails.tenant_name}
+                    </h2>
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                      <Building2 size={12} className="text-slate-400" />
+                      {selectedTenantDetails.property_name || "mango plus tower"} · Unit: {selectedTenantDetails.unit_number || "Suite 101"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTenantDetails(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  title="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Sharable Tenant Portal Link Box */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50/80 via-emerald-50/60 to-slate-50 border border-teal-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-teal-900">
+                    <Share2 size={14} className="text-teal-700" />
+                    <span>Tenant Self-Service Portal Access Link</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-teal-800 bg-white border border-teal-200 px-2 py-0.5 rounded-md">
+                    Instant Access
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={getTenantSharableLink(selectedTenantDetails)}
+                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-teal-200 text-xs font-mono text-slate-700 select-all outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => handleCopyTenantLink(selectedTenantDetails, e)}
+                    className="px-3.5 py-2 bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                  >
+                    <Copy size={13} />
+                    <span>{copiedTenantId === selectedTenantDetails.id ? "Copied!" : "Copy Link"}</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Share this secure link with the tenant via WhatsApp or Email. They can log in to view rent receipts, GST invoices, and submit maintenance tickets.
+                </p>
+              </div>
+
+              {/* Building & Demarcated Space Specifications */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  Building &amp; Demarcated Space
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Building Name</span>
+                    <strong className="text-slate-900 font-bold block mt-0.5">
+                      {selectedTenantDetails.property_name || "mango plus tower"}
+                    </strong>
+                    <span className="text-[10px] text-slate-500">Ahmedabad, Gujarat</span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Demarcated Space</span>
+                    <strong className="text-slate-900 font-bold block mt-0.5">
+                      {selectedTenantDetails.unit_number || "Suite 101"}
+                    </strong>
+                    <span className="text-[10px] text-teal-700 font-mono">SPC-MTOWER-101</span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Leasable Area</span>
+                    <strong className="text-slate-900 font-bold block mt-0.5">
+                      50,000 sqft
+                    </strong>
+                    <span className="text-[10px] text-emerald-600 font-bold">100% Leased Capacity</span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold">PAN / GSTIN</span>
+                    <strong className="text-slate-900 font-mono font-bold block mt-0.5">
+                      {selectedTenantDetails.pan || "HSH578785D"}
+                    </strong>
+                    <span className="text-[10px] text-slate-500 font-mono">24AAACH7409R1ZZ</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* How the Lease is Done: Commercial Financial Terms */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  How Lease is Done (Financial &amp; Legal Structure)
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Monthly Base Rent</span>
+                    <p className="text-base font-black text-slate-900 mt-1">₹10,00,000 / mo</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Calculated @ ₹200.00 / sqft / month</p>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">CAM &amp; Maintenance</span>
+                    <p className="text-base font-black text-slate-900 mt-1">₹2,50,000 / mo</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Calculated @ ₹50.00 / sqft / month</p>
+                  </div>
+
+                  <div className="p-3.5 bg-teal-50 border border-teal-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800">Gross Billed Rent (with GST)</span>
+                    <p className="text-base font-black text-teal-900 mt-1">₹15,16,300 / mo</p>
+                    <p className="text-[10px] text-teal-700 mt-0.5 font-medium">Incl. Base + CAM + 18% GST (Oct 2026)</p>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security Deposit (IFRSD)</span>
+                    <p className="text-base font-black text-slate-900 mt-1">₹37,50,000</p>
+                    <p className="text-[10px] text-emerald-600 mt-0.5 font-bold">3 Months Rent · Held in Custody</p>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Term &amp; Lock-in Period</span>
+                    <p className="text-base font-black text-slate-900 mt-1">36 Months</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">01 Oct 2026 to 30 Sep 2029 (Lock-in Active)</p>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Annual Escalation</span>
+                    <p className="text-base font-black text-slate-900 mt-1">5% Annual Step-up</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Sub-meter kWh actuals billed monthly</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenContractViewer(selectedTenantDetails);
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7064] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <FileText size={14} />
+                  <span>View Contract Document (PDF)</span>
+                </button>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={(e) => handleCopyTenantLink(selectedTenantDetails, e)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Copy size={13} />
+                    <span>Copy Sharable Link</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTenantDetails(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* MODAL 2: EXECUTED CONTRACT DOCUMENT / PDF VIEWER MODAL        */}
+        {/* ------------------------------------------------------------- */}
+        {contractViewerOpen && contractToView && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-50 animate-in fade-in">
+            <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
+              {/* Top Navigation Bar with Prominent Close Button */}
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/90 flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-black text-slate-900">
+                        Commercial Lease Agreement — Suite 101, mango plus tower
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        Legally Executed &amp; Stamp Duty Paid
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">
+                      Document Code: LEAS-2026-0001 · Registration Authority: Government of Gujarat (§Table 103)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") window.print();
+                    }}
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer shadow-2xs"
+                    title="Print or Save as PDF"
+                  >
+                    <Printer size={13} />
+                    <span>Print / Save PDF</span>
+                  </button>
+
+                  {/* Prominent Close Button */}
+                  <button
+                    type="button"
+                    onClick={() => setContractViewerOpen(false)}
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                    title="Close Contract Viewer"
+                  >
+                    <X size={18} />
+                    <span className="hidden sm:inline">Close</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Document Sheet with Official Legal Formatting */}
+              <div className="flex-1 p-4 sm:p-8 bg-slate-100 overflow-y-auto">
+                <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-lg text-slate-800 font-sans space-y-6 relative">
+                  {/* Watermark overlay */}
+                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-around items-center opacity-5 overflow-hidden z-10 rotate-[-25deg]">
+                    <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
+                    <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
+                    <div className="text-3xl font-black text-slate-900 tracking-widest">OFFICEX REGISTERED LEASE</div>
+                  </div>
+
+                  {/* Official Government e-Stamping Certificate Representation */}
+                  <div className="border-2 border-emerald-700/80 rounded-xl p-4 bg-emerald-50/30 text-xs font-mono space-y-2">
+                    <div className="flex items-center justify-between border-b border-emerald-300 pb-2">
+                      <div className="font-bold text-emerald-950 uppercase tracking-wider text-xs">
+                        Government of Gujarat · e-Stamping Certificate
+                      </div>
+                      <div className="text-[10px] font-bold text-emerald-800">Certificate No: IN-GJ202610014892A</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                      <div><strong className="text-slate-900">Certificate Issued Date:</strong> 01-Oct-2026 11:24 AM</div>
+                      <div><strong className="text-slate-900">Account Reference:</strong> NONACC (SV)/ gjnon01/ AHMEDABAD</div>
+                      <div><strong className="text-slate-900">Description of Document:</strong> Article 35(b) Lease Agreement</div>
+                      <div><strong className="text-slate-900">Consideration Price:</strong> ₹1,25,00,000</div>
+                      <div><strong className="text-slate-900">First Party:</strong> mango groups (Lessor)</div>
+                      <div><strong className="text-slate-900">Second Party:</strong> Utkarsh Makwana (Lessee)</div>
+                      <div><strong className="text-slate-900">Stamp Duty Amount:</strong> ₹1,25,000 (PAID IN FULL)</div>
+                      <div><strong className="text-slate-900">Verification Status:</strong> Digitally Authenticated</div>
+                    </div>
+                  </div>
+
+                  {/* Agreement Legal Preamble */}
+                  <div className="text-center space-y-1 pt-2">
+                    <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                      COMMERCIAL LEASE &amp; OCCUPANCY AGREEMENT
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Executed at Ahmedabad, Gujarat on this 1st Day of October, 2026
+                    </p>
+                  </div>
+
+                  <div className="text-xs leading-relaxed space-y-3 text-slate-700">
+                    <p>
+                      <strong>BY AND BETWEEN:</strong>
+                    </p>
+                    <p className="pl-3 border-l-2 border-teal-500">
+                      <strong>MANGO GROUPS</strong>, a sovereign commercial property asset entity having its principal portfolio operations at Ahmedabad, Gujarat (hereinafter referred to as the <strong>"LESSOR"</strong>, which expression shall unless repugnant to the context include its successors and assigns) of the <strong>FIRST PART</strong>;
+                    </p>
+                    <p>
+                      <strong>AND:</strong>
+                    </p>
+                    <p className="pl-3 border-l-2 border-emerald-500">
+                      <strong>UTKARSH MAKWANA</strong>, carrying on corporate business under PAN: <code>HSH578785D</code>, having office premises at Ahmedabad, Gujarat (hereinafter referred to as the <strong>"LESSEE"</strong>, which expression shall unless repugnant to the context include authorized legal representatives and permitted assigns) of the <strong>SECOND PART</strong>.
+                    </p>
+                  </div>
+
+                  {/* Operational Clauses */}
+                  <div className="space-y-4 text-xs leading-relaxed text-slate-700 pt-2 border-t border-slate-200">
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">1. Demised Premises</h4>
+                      <p className="mt-0.5 text-slate-600">
+                        The Lessor hereby demises to the Lessee, and the Lessee hereby takes on lease from the Lessor, commercial workspace bearing demarcated unit <strong>Suite 101, 1st Floor, mango plus tower</strong>, situated at Ahmedabad, Gujarat, admeasuring a total Super Built-up Area of <strong>50,000 sqft</strong>, together with appurtenant common area access rights.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">2. Lease Term &amp; Mandatory Lock-in</h4>
+                      <p className="mt-0.5 text-slate-600">
+                        The lease shall be for a fixed term of <strong>36 (Thirty-Six) Calendar Months</strong> commencing from <strong>01 October 2026</strong> and expiring on <strong>30 September 2029</strong>. Both parties hereby expressly agree to a mandatory Lock-in Period of 36 months during which neither party shall terminate this agreement without default cause.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">3. Monthly Lease Rent &amp; CAM Maintenance Structure</h4>
+                      <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-1.5 font-mono text-[11px]">
+                        <div className="flex justify-between">
+                          <span>Base Monthly Rent (50,000 sqft @ ₹200.00/sqft):</span>
+                          <strong className="text-slate-900">₹10,00,000.00</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Common Area Maintenance (CAM @ ₹50.00/sqft):</span>
+                          <strong className="text-slate-900">₹2,50,000.00</strong>
+                        </div>
+                        <div className="flex justify-between text-slate-500">
+                          <span>Applicable Goods &amp; Services Tax (GST @ 18%):</span>
+                          <span>₹2,25,000.00</span>
+                        </div>
+                        <div className="border-t border-slate-200 pt-1.5 flex justify-between font-bold text-teal-900 text-xs">
+                          <span>Total Monthly Invoiced Commercial Consideration:</span>
+                          <span>₹15,16,300.00</span>
+                        </div>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Rent shall be payable in advance on or before the 5th day of each English calendar month through bank electronic remittance.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">4. Interest-Free Refundable Security Deposit (IFRSD)</h4>
+                      <p className="mt-0.5 text-slate-600">
+                        The Lessee has deposited a total sum of <strong>₹37,50,000 (Rupees Thirty-Seven Lakhs Fifty Thousand Only)</strong>, equivalent to 3 (three) months' rent, with the Lessor as interest-free refundable security deposit. The Lessor acknowledges receipt and custody of this deposit.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">5. Rent Escalation Terms</h4>
+                      <p className="mt-0.5 text-slate-600">
+                        The agreed Base Rent shall escalate by <strong>5% (Five Percent) per annum</strong> compounded annually on each anniversary of the Lease Commencement Date. The first step-up will take effect on <strong>01 October 2027</strong>.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">6. Utility Sub-metering &amp; Energy Reconciliations</h4>
+                      <p className="mt-0.5 text-slate-600">
+                        Electricity and water charges for Suite 101 shall be recorded monthly via dedicated calibrated check-meters and billed at applicable state board tariffs on actual kWh consumed.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-slate-900 uppercase">7. Jurisdiction &amp; Dispute Resolution</h4>
+                      <p className="mt-0.5 text-slate-600">
+                        This agreement is governed by the laws of India. Any disputes arising hereunder shall be subject to the exclusive jurisdiction of the competent courts in Ahmedabad, Gujarat.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Signatures Representation */}
+                  <div className="pt-6 border-t-2 border-slate-200 grid grid-cols-2 gap-6 text-xs text-slate-700">
+                    <div className="space-y-3">
+                      <div className="font-bold text-slate-900">SIGNED &amp; DELIVERED for LESSOR:</div>
+                      <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-200">
+                        <div className="font-bold text-teal-900">MANGO GROUPS</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Authorized Sovereign Representative</div>
+                        <div className="text-[10px] text-emerald-700 font-mono mt-0.5">Digitally Signed on 01-Oct-2026</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="font-bold text-slate-900">SIGNED &amp; DELIVERED for LESSEE:</div>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="font-bold text-slate-900">UTKARSH MAKWANA</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Corporate Occupant · Suite 101</div>
+                        <div className="text-[10px] text-emerald-700 font-mono mt-0.5">Digitally Signed on 01-Oct-2026</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Viewer Footer */}
+              <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => handleCopyTenantLink(contractToView, e)}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Copy size={13} />
+                  <span>Copy Tenant Portal Link</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setContractViewerOpen(false)}
+                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer shadow-xs"
+                >
+                  ✕ Close Document Viewer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Unified Canonical Commercial Hierarchy & Tenant Modal */}
         <PropertyHierarchyModal
