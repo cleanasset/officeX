@@ -1057,8 +1057,8 @@ function CompleteProfileContent() {
     }, 600);
   };
 
-  // Save Tenant (Exact 9 fields requested by user)
-  const handleSaveTenant = async (e: React.FormEvent) => {
+  // Save Tenant (Supports single tenant or multi-tenant stacking)
+  const handleSaveTenant = async (e: React.FormEvent, addAnother = false) => {
     e.preventDefault();
     if (!tenantForm.occupant_name.trim()) {
       showToast("Occupant Name is required");
@@ -1146,11 +1146,29 @@ function CompleteProfileContent() {
         billing_entity: prev.billing_entity || propForm.spv_name || companyName || "",
       }));
 
-      markStepDone("tenant");
-      showToast(`✓ Occupant '${occupantName}' enrolled! Tenant Portal invite generated.`);
-
-      // Advance directly to Creating Contract
-      setActiveStep("contract");
+      if (addAnother) {
+        setTenantForm({
+          occupant_name: "",
+          company_name: "",
+          industry_type: "IT / Technology",
+          email: "",
+          phone: "",
+          alt_contact_name: "",
+          alt_contact_phone: "",
+          gstin: "",
+          pan: "",
+          cin_number: "",
+          billing_address: propForm.address || "",
+          signatory_name: "",
+          signatory_designation: "",
+        });
+        showToast(`✓ Occupant '${occupantName}' enrolled! You can now add your next tenant.`);
+      } else {
+        markStepDone("tenant");
+        showToast(`✓ Occupant '${occupantName}' enrolled! Tenant Portal invite generated.`);
+        // Advance directly to Creating Contract
+        setActiveStep("contract");
+      }
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
@@ -2201,6 +2219,36 @@ function CompleteProfileContent() {
                 </p>
               </div>
 
+              {/* Enrolled Tenants Counter & Multi-Tenant Stacking Indicator */}
+              {tenantsList.length > 0 && (
+                <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="w-7 h-7 rounded-lg bg-[#0D7B6C] text-white flex items-center justify-center font-bold text-xs">
+                      {tenantsList.length}
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-slate-900 block">
+                        Enrolled Occupants for this Property ({tenantsList.length})
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Multi-tenant building allocation active. You can add more tenants or proceed to contracts.
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {tenantsList.map((t, idx) => (
+                      <span
+                        key={t.id}
+                        className="px-2.5 py-1 rounded-lg bg-white border border-teal-200 text-teal-900 text-xs font-bold shadow-2xs flex items-center gap-1"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        #{idx + 1} {t.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Latest Tenant Invite Banner if already created */}
               {latestTenantInvite && (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50 via-emerald-50/70 to-white border border-teal-300 shadow-2xs space-y-2 animate-in fade-in">
@@ -2514,7 +2562,7 @@ function CompleteProfileContent() {
                     </div>
                   </div>
 
-                  <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                  <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={() => setActiveStep("property")}
@@ -2523,13 +2571,25 @@ function CompleteProfileContent() {
                       ← Back to Property
                     </button>
 
-                    <button
-                      type="submit"
-                      disabled={tenantLoading}
-                      className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Save Tenant &amp; Create Contract →</span>
-                    </button>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={(e) => handleSaveTenant(e, true)}
+                        disabled={tenantLoading}
+                        className="px-4 py-2.5 rounded-xl border border-[#0D7B6C] text-[#0D7B6C] hover:bg-teal-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <Plus size={14} />
+                        <span>Save &amp; Add Another Tenant</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={tenantLoading}
+                        className="px-6 py-2.5 rounded-xl bg-[#0D7B6C] hover:bg-[#0A6357] text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Save Tenant &amp; Create Contract →</span>
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -3340,7 +3400,14 @@ function CompleteProfileContent() {
                       <label className="font-bold text-slate-700 block mb-1">DG Power Backup</label>
                       <select
                         value={contractForm.power_backup_type}
-                        onChange={(e) => setContractForm({ ...contractForm, power_backup_type: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setContractForm({
+                            ...contractForm,
+                            power_backup_type: val,
+                            dg_rate_per_kwh: val === "No DG Backup" ? "0" : contractForm.dg_rate_per_kwh || "24.50"
+                          });
+                        }}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold bg-white text-slate-900 focus:border-[#0D7B6C] outline-none cursor-pointer"
                       >
                         <option value="100% DG Power Backup">100% DG Backup (Grade-A)</option>
@@ -3351,29 +3418,49 @@ function CompleteProfileContent() {
 
                     {/* Sanctioned Electrical Load (kVA) */}
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Sanctioned Load (kVA)</label>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Sanctioned Load (kVA)
+                        {contractForm.electricity_billing === "Included in Rent" && (
+                          <span className="text-[10px] text-teal-700 font-normal ml-1">(Informational)</span>
+                        )}
+                      </label>
                       <input
                         type="number"
-                        placeholder="e.g. 50 kVA"
+                        placeholder={contractForm.electricity_billing === "Included in Rent" ? "e.g. 50 (Included in Rent)" : "e.g. 50 kVA"}
                         value={contractForm.electricity_load_kva}
                         onChange={(e) => setContractForm({ ...contractForm, electricity_load_kva: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
                       />
                     </div>
 
-                    {/* DG Rate per kWh */}
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">DG Power Tariff (₹ / kWh)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        placeholder="e.g. 24.50"
-                        value={contractForm.dg_rate_per_kwh}
-                        onChange={(e) => setContractForm({ ...contractForm, dg_rate_per_kwh: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
-                      />
-                    </div>
+                    {/* DG Rate per kWh - ONLY SHOWN IF DG BACKUP EXISTS */}
+                    {contractForm.power_backup_type !== "No DG Backup" ? (
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">DG Power Tariff (₹ / kWh)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="e.g. 24.50"
+                          value={contractForm.dg_rate_per_kwh}
+                          onChange={(e) => setContractForm({ ...contractForm, dg_rate_per_kwh: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-medium bg-white text-slate-900 focus:border-[#0D7B6C] outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col justify-end">
+                        <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] text-slate-500 font-medium text-center">
+                          DG Backup: <strong className="text-slate-700">None</strong> (No DG Tariff)
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {contractForm.electricity_billing === "Included in Rent" && (
+                    <div className="p-2.5 rounded-xl bg-teal-50/80 border border-teal-200 text-xs text-teal-800 flex items-center gap-2">
+                      <span className="font-bold">✓ Electricity Included:</span>
+                      <span>Power charges are factored into base monthly rent. Sub-meter billing is not applied to this lease.</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* ──── SECTION 8: ESCALATIONS & SECURITY DEPOSIT ──── */}
@@ -3440,11 +3527,39 @@ function CompleteProfileContent() {
                       />
                     </div>
 
-                    {/* Deposit Months */}
+                    {/* Deposit Months with Quick Presets */}
                     <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Security Deposit (Months)</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Security Deposit (Months)</label>
+                        <div className="flex items-center gap-1">
+                          {[3, 6, 9, 12].map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => {
+                                const rent = Number(contractForm.monthly_rent) || 0;
+                                const calcDep = rent > 0 ? String(Math.round(num * rent)) : contractForm.security_deposit;
+                                setContractForm({
+                                  ...contractForm,
+                                  deposit_months: String(num),
+                                  security_deposit: calcDep,
+                                });
+                              }}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                                String(contractForm.deposit_months) === String(num)
+                                  ? "bg-[#0D7B6C] text-white"
+                                  : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              {num}M
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <input
                         type="number"
+                        min="1"
+                        max="18"
                         placeholder="e.g. 6 Months"
                         value={contractForm.deposit_months}
                         onChange={(e) => {
@@ -3457,7 +3572,7 @@ function CompleteProfileContent() {
                       />
                     </div>
 
-                    {/* Security Deposit Amount */}
+                    {/* Security Deposit Amount with Guardrails */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-xs font-bold text-slate-700">Security Deposit Amount (₹)</label>
@@ -3476,19 +3591,40 @@ function CompleteProfileContent() {
                       </div>
                       <input
                         type="number"
-                        placeholder="e.g. 1500000"
+                        placeholder="e.g. 600000"
                         value={contractForm.security_deposit}
                         onClick={() => clearFieldHighlight("security_deposit")}
                         onFocus={() => clearFieldHighlight("security_deposit")}
                         onChange={(e) => {
                           clearFieldHighlight("security_deposit");
-                          setContractForm({ ...contractForm, security_deposit: e.target.value });
+                          const val = e.target.value;
+                          const rent = Number(contractForm.monthly_rent) || 0;
+                          const equivMonths = rent > 0 && val ? String(Math.round((Number(val) / rent) * 10) / 10) : contractForm.deposit_months;
+                          setContractForm({ ...contractForm, security_deposit: val, deposit_months: equivMonths });
                         }}
                         className={getHighlightClass(
                           "security_deposit",
                           "w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
                         )}
                       />
+                      {/* Live Guardrail Feedback */}
+                      {Number(contractForm.monthly_rent) > 0 && Number(contractForm.security_deposit) > 0 && (
+                        <div className="mt-1">
+                          {Number(contractForm.deposit_months) > 12 ? (
+                            <span className="text-[10px] text-amber-700 font-semibold flex items-center gap-1">
+                              ⚠️ High Deposit: {contractForm.deposit_months} Months Rent (Commercial standard is 3–10 months, max 12 months)
+                            </span>
+                          ) : Number(contractForm.deposit_months) < 1 ? (
+                            <span className="text-[10px] text-amber-700 font-semibold flex items-center gap-1">
+                              ⚠️ Low Deposit: Less than 1 month rent
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                              ✓ Verified: {contractForm.deposit_months} Months Rent equivalent
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Lock-in Period (months) */}

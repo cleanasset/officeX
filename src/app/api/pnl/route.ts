@@ -2,17 +2,54 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { invoice, expenses, property, camPoolCosts } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
-import { sql } from "drizzle-orm";
+import { sql, eq, and, desc } from "drizzle-orm";
 
 export async function GET(req: Request) {
   try {
     const auth = getAuthContext(req);
     const { searchParams } = new URL(req.url);
-    const period = searchParams.get("period") || "Oct-2026";
+    const propertyId = searchParams.get("property_id");
+    const period = searchParams.get("period") || new Date().toISOString().slice(0, 7); // e.g. "2026-10"
 
-    // 1. Calculate Invoiced Revenue components
+    // 1. Resolve real property details
+    let propertyName = "All Portfolio Properties";
+    if (propertyId && propertyId !== "all") {
+      try {
+        const propRec = await db
+          .select({ name: property.property_name })
+          .from(property)
+          .where(eq(property.id, propertyId))
+          .limit(1);
+        if (propRec.length > 0 && propRec[0].name) {
+          propertyName = propRec[0].name;
+        }
+      } catch (e) {}
+    } else {
+      try {
+        const firstProp = await db
+          .select({ name: property.property_name })
+          .from(property)
+          .limit(1);
+        if (firstProp.length > 0 && firstProp[0].name) {
+          propertyName = firstProp[0].name;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Query real live invoices
+    const invoiceConditions = [sql`${invoice.status} IS NOT NULL`];
+    if (auth.orgId) {
+      invoiceConditions.push(eq(invoice.org_id, auth.orgId));
+    }
+    if (propertyId && propertyId !== "all") {
+      invoiceConditions.push(eq(invoice.property_id, propertyId));
+    }
+
     const invoices = await db
       .select({
+        id: invoice.id,
+        invoiceDate: invoice.invoice_date,
+        periodStart: invoice.period_start,
         baseRent: invoice.base_rent,
         camCharges: invoice.cam_charges,
         utilityCharges: invoice.utility_charges,
@@ -20,81 +57,145 @@ export async function GET(req: Request) {
         grossTotal: invoice.gross_total,
       })
       .from(invoice)
-      .where(sql`${invoice.status} != 'draft'`);
+      .where(and(...invoiceConditions));
 
     let rentRevenue = 0;
     let camRevenue = 0;
     let utilityRevenue = 0;
+    let subtotalSum = 0;
 
     invoices.forEach((inv) => {
-      rentRevenue += parseFloat(inv.baseRent || "0");
-      camRevenue += parseFloat(inv.camCharges || "0");
-      utilityRevenue += parseFloat(inv.utilityCharges || "0");
+      const base = parseFloat(String(inv.baseRent || "0"));
+      const cam = parseFloat(String(inv.camCharges || "0"));
+      const util = parseFloat(String(inv.utilityCharges || "0"));
+      const sub = parseFloat(String(inv.subtotal || "0"));
+
+      rentRevenue += base;
+      camRevenue += cam;
+      utilityRevenue += util;
+      subtotalSum += sub;
     });
 
-    const parkingOtherRevenue = Math.round(rentRevenue * 0.04);
-    const totalRevenue = rentRevenue + camRevenue + utilityRevenue + parkingOtherRevenue;
+    const otherRevenue = Math.max(0, subtotalSum - (rentRevenue + camRevenue + utilityRevenue));
+    const totalRevenue = rentRevenue + camRevenue + utilityRevenue + otherRevenue;
 
-    // 2. Calculate Operating Expenses (OPEX)
-    const dbExpenses = await db.select().from(expenses);
-    const dbCamCosts = await db.select().from(camPoolCosts);
+    // 3. Query real operating expenses from expenses table and cam_pool_costs
+    const expenseConditions: any[] = [];
+    if (auth.orgId) {
+      expenseConditions.push(eq(expenses.orgId, auth.orgId));
+    }
+    if (propertyId && propertyId !== "all") {
+      expenseConditions.push(eq(expenses.propertyId, propertyId));
+    }
 
-    // Standard institutional Grade-A OPEX Breakdown
-    const opexCategories = [
-      { category: "Security & Guarding Services", amount: Math.round(camRevenue * 0.32), code: "OPEX-SEC" },
-      { category: "Housekeeping & Waste Management", amount: Math.round(camRevenue * 0.24), code: "OPEX-HK" },
-      { category: "HVAC & Electrical Substation AMC", amount: Math.round(camRevenue * 0.28), code: "OPEX-AMC" },
-      { category: "Common Area Power & Utilities", amount: Math.round(utilityRevenue * 0.85), code: "OPEX-UTIL" },
-      { category: "Property Taxes & Municipal Levies", amount: Math.round(rentRevenue * 0.06), code: "OPEX-TAX" },
-      { category: "Insurance & Statutory Compliances", amount: Math.round(rentRevenue * 0.02), code: "OPEX-INS" },
-    ];
+    let realExpenses: any[] = [];
+    try {
+      realExpenses = await db
+        .select()
+        .from(expenses)
+        .where(expenseConditions.length > 0 ? and(...expenseConditions) : sql`1=1`);
+    } catch (e) {}
+
+    let realCamCosts: any[] = [];
+    try {
+      realCamCosts = await db.select().from(camPoolCosts);
+    } catch (e) {}
+
+    // Group real expenses by category
+    const categoryMap = new Map<string, number>();
+    realExpenses.forEach((exp) => {
+      const cat = exp.expenseCategory || exp.description || "General Operations";
+      const amt = parseFloat(String(exp.totalAmount || exp.amount || "0"));
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + amt);
+    });
+
+    realCamCosts.forEach((cost) => {
+      const cat = cost.category || "CAM Facility Maintenance";
+      const amt = parseFloat(String(cost.actual_cost || cost.budget_amount || "0"));
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + amt);
+    });
+
+    const opexCategories: Array<{ category: string; amount: number; code: string }> = [];
+    categoryMap.forEach((amount, category) => {
+      const code = `OPEX-${category.slice(0, 3).toUpperCase()}`;
+      opexCategories.push({ category, amount: Math.round(amount), code });
+    });
 
     const totalOpex = opexCategories.reduce((sum, c) => sum + c.amount, 0);
 
-    // 3. Formula F-19: Net Operating Income (NOI) and Net Margin %
+    // 4. Formula F-19: Net Operating Income (NOI) and Net Margin %
     const noi = totalRevenue - totalOpex;
-    const noiMarginPct = Math.round((noi / totalRevenue) * 1000) / 10;
-
-    // Benchmark status: Amber if < 60%
+    const noiMarginPct = totalRevenue > 0 ? Math.round((noi / totalRevenue) * 1000) / 10 : 0;
     const marginStatus = noiMarginPct >= 65 ? "green" : noiMarginPct >= 60 ? "amber" : "red";
+
+    // 5. Real 12-Month Historical Trend from actual invoices
+    const monthlyMap = new Map<string, { revenue: number; opex: number }>();
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthlyMap.set(key, { revenue: 0, opex: 0 });
+    }
+
+    invoices.forEach((inv) => {
+      const dateStr = inv.periodStart || inv.invoiceDate;
+      if (dateStr) {
+        const key = dateStr.slice(0, 7);
+        if (monthlyMap.has(key)) {
+          const cur = monthlyMap.get(key)!;
+          cur.revenue += parseFloat(String(inv.subtotal || inv.grossTotal || "0"));
+        }
+      }
+    });
+
+    realExpenses.forEach((exp) => {
+      if (exp.expenseDate) {
+        const key = String(exp.expenseDate).slice(0, 7);
+        if (monthlyMap.has(key)) {
+          const cur = monthlyMap.get(key)!;
+          cur.opex += parseFloat(String(exp.totalAmount || exp.amount || "0"));
+        }
+      }
+    });
+
+    const monthlyTrends = Array.from(monthlyMap.entries()).map(([monthKey, val]) => {
+      const [y, m] = monthKey.split("-");
+      const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+      const label = d.toLocaleString("en-US", { month: "short" }) + "-" + y.slice(2);
+      const rev = Math.round(val.revenue);
+      const exp = Math.round(val.opex);
+      return {
+        month: label,
+        revenue: rev,
+        opex: exp,
+        noi: rev - exp,
+      };
+    });
 
     return NextResponse.json({
       success: true,
       period,
-      property: "Cyber Greens Commercial Complex (Portfolio Aggregation)",
+      property: propertyName,
       revenue: {
-        contracted_base_rent: rentRevenue,
-        cam_recoveries: camRevenue,
-        metered_utility_recoveries: utilityRevenue,
-        car_parking_and_other: parkingOtherRevenue,
-        total_revenue: totalRevenue,
+        contracted_base_rent: Math.round(rentRevenue),
+        cam_recoveries: Math.round(camRevenue),
+        metered_utility_recoveries: Math.round(utilityRevenue),
+        car_parking_and_other: Math.round(otherRevenue),
+        total_revenue: Math.round(totalRevenue),
       },
       operating_expenses: {
         categories: opexCategories,
-        total_operating_expenses: totalOpex,
+        total_operating_expenses: Math.round(totalOpex),
       },
       formula_f19: {
         name: "F-19: Net Operating Income & Margin",
         equation: "NOI = Property Revenue − Operating Expenses; Margin = NOI ÷ Revenue",
-        net_operating_income_inr: noi,
+        net_operating_income_inr: Math.round(noi),
         noi_margin_pct: noiMarginPct,
         benchmark_status: marginStatus,
         target_benchmark: "Office Prime: ≥ 60.0% (Green)",
       },
-      monthly_trend_12m: [
-        { month: "Nov-25", revenue: Math.round(totalRevenue * 0.94), opex: Math.round(totalOpex * 0.95), noi: Math.round(noi * 0.93) },
-        { month: "Dec-25", revenue: Math.round(totalRevenue * 0.95), opex: Math.round(totalOpex * 0.96), noi: Math.round(noi * 0.94) },
-        { month: "Jan-26", revenue: Math.round(totalRevenue * 0.96), opex: Math.round(totalOpex * 0.96), noi: Math.round(noi * 0.96) },
-        { month: "Feb-26", revenue: Math.round(totalRevenue * 0.97), opex: Math.round(totalOpex * 0.97), noi: Math.round(noi * 0.97) },
-        { month: "Mar-26", revenue: Math.round(totalRevenue * 0.98), opex: Math.round(totalOpex * 0.99), noi: Math.round(noi * 0.97) },
-        { month: "Apr-26", revenue: Math.round(totalRevenue * 0.98), opex: Math.round(totalOpex * 0.98), noi: Math.round(noi * 0.98) },
-        { month: "May-26", revenue: Math.round(totalRevenue * 0.99), opex: Math.round(totalOpex * 0.99), noi: Math.round(noi * 0.99) },
-        { month: "Jun-26", revenue: Math.round(totalRevenue * 0.99), opex: Math.round(totalOpex * 0.99), noi: Math.round(noi * 0.99) },
-        { month: "Jul-26", revenue: Math.round(totalRevenue * 1.00), opex: Math.round(totalOpex * 1.00), noi: Math.round(noi * 1.00) },
-        { month: "Aug-26", revenue: Math.round(totalRevenue * 1.00), opex: Math.round(totalOpex * 1.01), noi: Math.round(noi * 0.99) },
-        { month: "Sep-26", revenue: Math.round(totalRevenue * 1.00), opex: Math.round(totalOpex * 1.00), noi: Math.round(noi * 1.00) },
-        { month: "Oct-26", revenue: totalRevenue, opex: totalOpex, noi: noi },
-      ],
+      monthly_trend_12m: monthlyTrends,
     });
   } catch (err: any) {
     console.error("GET /api/pnl error:", err);

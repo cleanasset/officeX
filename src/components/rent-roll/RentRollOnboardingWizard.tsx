@@ -54,6 +54,13 @@ export interface OnboardingCompleteData {
   managerName?: string;
   managerEmail?: string;
   managerUserRole?: "property_manager" | "org_admin";
+  managerRights?: {
+    contractExecution: boolean;
+    concessions: boolean;
+    billingRuns: boolean;
+    depositRefunds: boolean;
+    maxMaintenanceSpend: number;
+  };
 }
 
 interface RentRollOnboardingWizardProps {
@@ -80,12 +87,6 @@ export const CANONICAL_ROLES = [
     title: "Facility Manager",
     badge: "Engineering",
     desc: "On-site operations, utility sub-meters, common area maintenance (CAM), and vendor SLAs.",
-  },
-  {
-    id: "leasing_manager",
-    title: "Leasing Manager / Broker",
-    badge: "Marketing",
-    desc: "Vacant space listings, broker channel partnerships, tenant pipeline, and visual stacking plans.",
   },
   {
     id: "finance_manager",
@@ -132,6 +133,13 @@ export default function RentRollOnboardingWizard({
   const [managerUserRole, setManagerUserRole] = useState<"property_manager" | "org_admin">("property_manager");
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
+  const [managerRights, setManagerRights] = useState({
+    contractExecution: false,
+    concessions: false,
+    billingRuns: true,
+    depositRefunds: false,
+    maxMaintenanceSpend: 25000,
+  });
 
   // Comprehensive Property Registry Fields
   const [propertyName, setPropertyName] = useState("");
@@ -284,7 +292,12 @@ export default function RentRollOnboardingWizard({
       managerName: hasDelegatedManager ? managerName.trim() : undefined,
       managerEmail: hasDelegatedManager ? managerEmail.trim().toLowerCase() : undefined,
       managerUserRole: hasDelegatedManager && managerType === "user_pm_or_admin" ? managerUserRole : undefined,
+      managerRights: hasDelegatedManager ? managerRights : undefined,
     });
+
+    if (hasDelegatedManager && typeof window !== "undefined") {
+      localStorage.setItem("officex_delegated_rights", JSON.stringify(managerRights));
+    }
   };
 
   const selectedRoleObj = CANONICAL_ROLES.find((r) => r.id === selectedRole) || CANONICAL_ROLES[0];
@@ -550,6 +563,93 @@ export default function RentRollOnboardingWizard({
                         </div>
                       </div>
                     )}
+
+                    {/* Granular Delegated Rights & Approvals */}
+                    <div className="pt-3 border-t border-amber-200/80 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-800 block">
+                          Delegated Manager Rights &amp; Owner Approval Controls:
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-semibold">Select rights granted</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                          <input
+                            type="checkbox"
+                            checked={managerRights.contractExecution}
+                            onChange={(e) => setManagerRights({ ...managerRights, contractExecution: e.target.checked })}
+                            className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block">Execute Lease Agreements</span>
+                            <span className="text-[10px] text-slate-500">
+                              {managerRights.contractExecution ? "Direct execution enabled" : "Requires Owner Approval before signing"}
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                          <input
+                            type="checkbox"
+                            checked={managerRights.concessions}
+                            onChange={(e) => setManagerRights({ ...managerRights, concessions: e.target.checked })}
+                            className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block">Rent Discounts &amp; Waivers</span>
+                            <span className="text-[10px] text-slate-500">
+                              {managerRights.concessions ? "Discretionary discounts permitted" : "Requires Owner Approval in inbox"}
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                          <input
+                            type="checkbox"
+                            checked={managerRights.billingRuns}
+                            onChange={(e) => setManagerRights({ ...managerRights, billingRuns: e.target.checked })}
+                            className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block">Monthly Invoicing Runs</span>
+                            <span className="text-[10px] text-slate-500">
+                              {managerRights.billingRuns ? "Autonomous monthly batch runs" : "Requires Owner preview &amp; trigger"}
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className="p-2.5 rounded-xl border border-slate-200 bg-white flex items-start gap-2.5 cursor-pointer hover:border-teal-400 transition">
+                          <input
+                            type="checkbox"
+                            checked={managerRights.depositRefunds}
+                            onChange={(e) => setManagerRights({ ...managerRights, depositRefunds: e.target.checked })}
+                            className="mt-0.5 w-4 h-4 rounded text-[#0D7B6C] focus:ring-[#0D7B6C]"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-800 block">Deposit Refund Authorisation</span>
+                            <span className="text-[10px] text-slate-500">
+                              {managerRights.depositRefunds ? "Direct refund authorization" : "Requires Owner Approval"}
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+
+                      <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-amber-100/60 border border-amber-200 text-xs">
+                        <label className="font-bold text-slate-800">
+                          Maintenance Spend Threshold Without Owner Approval:
+                        </label>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="font-bold text-slate-600">₹</span>
+                          <input
+                            type="number"
+                            step="5000"
+                            value={managerRights.maxMaintenanceSpend}
+                            onChange={(e) => setManagerRights({ ...managerRights, maxMaintenanceSpend: Number(e.target.value) || 0 })}
+                            className="w-28 px-2 py-1 rounded-lg border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:border-[#0D7B6C] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

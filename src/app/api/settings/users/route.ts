@@ -9,7 +9,7 @@ export async function GET(req: Request) {
       { code: "owner_principal", name: "Owner / Client Principal", scope: "client_assigned", description: "Portfolio approvals, owner statements, MIS investor packs" },
       { code: "asset_manager", name: "Asset Manager", scope: "portfolio", description: "Checker for leases, financial revisions, credit notes, and budget true-ups" },
       { code: "property_manager", name: "Property Manager", scope: "property_assigned", description: "Maker for lease amendments, move-in/exit inspections, meters" },
-      { code: "leasing_broker", name: "Leasing Manager / Broker", scope: "property_assigned", description: "Space demising, pipeline CRM, LOI generator, deal terms" },
+      { code: "leasing_manager", name: "Leasing Manager", scope: "property_assigned", description: "Space demising, pipeline CRM, LOI generator, deal terms" },
       { code: "finance_maker", name: "Finance Maker", scope: "portfolio", description: "Billing runs creation, offline receipt entries, credit notes drafting" },
       { code: "finance_checker", name: "Finance Checker", scope: "portfolio", description: "Approval & issuance of invoices, bank reconciliations, tax returns" },
       { code: "facility_manager", name: "Facility Operations Lead", scope: "property_assigned", description: "Sub-meter logs, DG power readings, PPM upkeep records" },

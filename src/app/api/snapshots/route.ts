@@ -9,6 +9,7 @@ import {
   payment,
   organizations,
   auditLogs,
+  expenses,
 } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { desc, eq, and, sql } from "drizzle-orm";
@@ -104,19 +105,44 @@ export async function POST(req: Request) {
       if (s.occupancy_status === "occupied") occupiedArea += a;
     });
 
-    if (totalArea === 0) totalArea = 110000;
-    if (occupiedArea === 0) occupiedArea = 98500;
-    const vacantArea = totalArea - occupiedArea;
-    const occupancyPct = Math.round((occupiedArea / totalArea) * 1000) / 10;
+    const vacantArea = Math.max(0, totalArea - occupiedArea);
+    const occupancyPct = totalArea > 0 ? Math.round((occupiedArea / totalArea) * 1000) / 10 : 0;
 
     const [firstOrg] = await db.select().from(organizations).limit(1);
     const orgId = firstOrg ? firstOrg.id : auth.orgId;
 
-    const monthlyRevenue = 9696800; // ₹96.9 Lakh
-    const monthlyCam = 952000;      // ₹9.52 Lakh
-    const collections = 9250000;    // ₹92.5 Lakh
-    const outstanding = monthlyRevenue + monthlyCam - collections;
-    const noi = Math.round((monthlyRevenue + monthlyCam) * 0.76); // 76% margin
+    // Query real invoices
+    const invs = await db
+      .select({
+        baseRent: invoice.base_rent,
+        camCharges: invoice.cam_charges,
+        subtotal: invoice.subtotal,
+        grossTotal: invoice.gross_total,
+        amountPaid: invoice.amount_paid,
+        balanceDue: invoice.balance_due,
+      })
+      .from(invoice);
+
+    let monthlyRevenue = 0;
+    let monthlyCam = 0;
+    let collections = 0;
+    let outstanding = 0;
+
+    invs.forEach((inv) => {
+      monthlyRevenue += parseFloat(String(inv.baseRent || 0));
+      monthlyCam += parseFloat(String(inv.camCharges || 0));
+      collections += parseFloat(String(inv.amountPaid || 0));
+      outstanding += parseFloat(String(inv.balanceDue || 0));
+    });
+
+    let totalExp = 0;
+    try {
+      const allExp = await db.select({ total: expenses.totalAmount, amt: expenses.amount }).from(expenses);
+      totalExp = allExp.reduce((sum, e) => sum + parseFloat(String(e.total || e.amt || 0)), 0);
+    } catch (e) {}
+
+    const noi = (monthlyRevenue + monthlyCam) - totalExp;
+    const avgRatePsf = occupiedArea > 0 ? (monthlyRevenue / occupiedArea).toFixed(2) : "0.00";
 
     // 2. Insert into rent_roll_snapshots table
     const [snapshot] = await db
@@ -134,19 +160,14 @@ export async function POST(req: Request) {
         totalCollections: collections.toFixed(2),
         totalOutstanding: outstanding.toFixed(2),
         noiMonthly: noi.toFixed(2),
-        averageRatePsf: "285.20",
-        waltMonths: "48.50",
+        averageRatePsf: avgRatePsf,
+        waltMonths: "0.00",
         dataJson: {
-          period: "Oct-2026",
+          period: monthStr,
           locked_by_user: auth.userId,
           locked_at: new Date().toISOString(),
           contracts_count: contracts.length,
-          movement_vs_previous: {
-            new_leases: 2,
-            exits: 0,
-            escalations_applied: 1,
-            occupancy_change: "+1.8%",
-          },
+          invoices_count: invs.length,
         },
       })
       .returning();

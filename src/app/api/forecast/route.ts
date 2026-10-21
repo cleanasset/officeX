@@ -20,13 +20,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const renewalPct = parseFloat(searchParams.get("renewal_pct") || "70") / 100;
 
-    // 1. Generate 12 months sequence starting current month (Oct-2026)
-    const months: MonthForecast[] = [];
-    const startDate = new Date(2026, 9, 1); // 1-Oct-2026
+    // 1. Fetch live active contracts with their spaces
+    const contractConditions = [sql`${contract.contract_status} IN ('active', 'notice_served', 'holding_over')`];
+    if (auth.orgId) {
+      contractConditions.push(eq(contract.org_id, auth.orgId));
+    }
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    // Baseline active contracts
     const activeContracts = await db
       .select({
         id: contract.id,
@@ -38,48 +37,130 @@ export async function GET(req: Request) {
       })
       .from(contract)
       .leftJoin(space, eq(contract.space_id, space.id))
-      .where(sql`${contract.contract_status} IN ('active', 'notice_served', 'holding_over')`);
+      .where(and(...contractConditions));
 
-    // Open pipeline deals
-    const openDeals = await db
-      .select()
-      .from(deals)
-      .where(sql`${deals.stage} NOT IN ('lost', 'closed_lost')`);
+    // Fetch all real contract charges
+    let allCharges: any[] = [];
+    try {
+      allCharges = await db.select().from(contract_charge);
+    } catch (e) {}
 
-    // Scheduled rent steps
-    const rentSteps = await db.select().from(rent_step);
+    // Fetch all scheduled rent steps
+    let allSteps: any[] = [];
+    try {
+      allSteps = await db.select().from(rent_step);
+    } catch (e) {}
 
-    let baselineMonthlyRent = 0;
+    // Fetch open pipeline deals
+    let openDeals: any[] = [];
+    try {
+      openDeals = await db
+        .select()
+        .from(deals)
+        .where(sql`${deals.stage} NOT IN ('lost', 'closed_lost')`);
+    } catch (e) {}
+
+    // Build contract monthly rent map
+    const contractRentMap = new Map<string, { baseRent: number; charges: any[] }>();
     activeContracts.forEach((c) => {
+      const cCharges = allCharges.filter((ch) => ch.contract_id === c.id);
+      let monthlyRent = 0;
       const area = parseFloat(c.spaceArea || "0");
-      if (area > 0) {
-        baselineMonthlyRent += area * 285.2;
+
+      if (cCharges.length > 0) {
+        cCharges.forEach((ch) => {
+          if (ch.is_included) return;
+          const rate = parseFloat(ch.rate || "0");
+          if (ch.calc_basis === "per_sqft" || ch.calc_basis === "per_area") {
+            const qty = parseFloat(ch.quantity_basis || String(area || 0));
+            monthlyRent += rate * qty;
+          } else if (ch.calc_basis === "fixed") {
+            monthlyRent += rate;
+          } else if (ch.calc_basis === "per_seat") {
+            const seats = parseFloat(ch.quantity_basis || "1");
+            monthlyRent += rate * seats;
+          } else {
+            monthlyRent += rate;
+          }
+        });
+      } else {
+        // If no explicit charges linked, derive from space area or fallback to 0
+        monthlyRent = area > 0 ? area * 100 : 0;
       }
+
+      contractRentMap.set(c.id, { baseRent: monthlyRent, charges: cCharges });
     });
+
+    // 2. Generate 12 months sequence starting current calendar month
+    const months: MonthForecast[] = [];
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     for (let i = 0; i < 12; i++) {
       const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
       const mStr = `${monthNames[d.getMonth()]}-${d.getFullYear()}`;
       const ymStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const monthStartStr = `${ymStr}-01`;
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      const monthEndStr = `${ymStr}-${String(lastDay).padStart(2, "0")}`;
 
-      // 1. Contracted rent (with step growth across quarters)
-      const escalationFactor = 1 + (Math.floor(i / 3) * 0.015); // scheduled escalations ~ 4.5% p.a.
-      const contractedRent = Math.round(baselineMonthlyRent * (i < 6 ? 1 : 0.96)); // slight expiry dip in H2
-      const scheduledEscalations = Math.round(contractedRent * (escalationFactor - 1));
+      let contractedRent = 0;
+      let scheduledEscalations = 0;
+      let renewalsProjected = 0;
 
-      // 2. Projected Renewals for expiring contracts in window
-      const expiringInMonth = i >= 6 ? baselineMonthlyRent * 0.04 : 0;
-      const renewalsProjected = Math.round(expiringInMonth * renewalPct * escalationFactor);
+      // Evaluate each contract in this month window
+      activeContracts.forEach((c) => {
+        const rentInfo = contractRentMap.get(c.id);
+        const baseRent = rentInfo?.baseRent || 0;
+        if (baseRent <= 0) return;
 
-      // 3. Pipeline deals weighted by probability_pct (Formula D-22 / F-24)
+        // Check if contract has already started
+        if (c.startDate && c.startDate > monthEndStr) return;
+
+        // Check if contract has expired before this month
+        const isExpiringThisOrPast = c.endDate && c.endDate < monthStartStr;
+        const isExpiringDuringMonth = c.endDate && c.endDate >= monthStartStr && c.endDate <= monthEndStr;
+
+        if (isExpiringThisOrPast) {
+          // Contract already expired, apply renewal probability
+          renewalsProjected += baseRent * renewalPct;
+        } else if (isExpiringDuringMonth) {
+          // Expires mid-month
+          contractedRent += baseRent * 0.5;
+          renewalsProjected += baseRent * 0.5 * renewalPct;
+        } else {
+          // Active contract
+          // Check for scheduled escalations in rent_step
+          const cSteps = allSteps.filter(
+            (st) => st.effective_date && st.effective_date <= monthEndStr && rentInfo?.charges.some((ch) => ch.id === st.contract_charge_id)
+          );
+          let escalationAdd = 0;
+          if (cSteps.length > 0) {
+            cSteps.forEach((st) => {
+              if (st.escalation_type === "fixed_percentage") {
+                const pct = parseFloat(st.escalation_value || "5") / 100;
+                escalationAdd += baseRent * pct;
+              } else if (st.escalation_type === "fixed_amount") {
+                escalationAdd += parseFloat(st.escalation_value || "0");
+              }
+            });
+          }
+          contractedRent += baseRent;
+          scheduledEscalations += escalationAdd;
+        }
+      });
+
+      // Pipeline deals weighted by probability_pct (Formula D-22 / F-24)
       let pipelineWeighted = 0;
       openDeals.forEach((deal) => {
         const area = parseFloat(deal.proposedAreaSqft || "0");
         const psf = parseFloat(deal.targetRentPsf || "0");
         const proposedRent = (deal as any).proposedMonthlyRent ? parseFloat((deal as any).proposedMonthlyRent) : (area * psf);
         const prob = (deal.probabilityPct != null ? Number(deal.probabilityPct) : 50) / 100;
-        // Deals ramp up from month 2 onwards
-        if (i >= 2 && proposedRent > 0) {
+        
+        // Deals expected after 1-2 months lead time
+        if (i >= 1 && proposedRent > 0) {
           pipelineWeighted += proposedRent * prob;
         }
       });
@@ -89,9 +170,9 @@ export async function GET(req: Request) {
       months.push({
         month: mStr,
         year_month: ymStr,
-        contracted_rent: contractedRent,
-        scheduled_escalations: scheduledEscalations,
-        renewals_projected: renewalsProjected,
+        contracted_rent: Math.round(contractedRent),
+        scheduled_escalations: Math.round(scheduledEscalations),
+        renewals_projected: Math.round(renewalsProjected),
         pipeline_weighted: Math.round(pipelineWeighted),
         total_projected_revenue: Math.round(totalRevenue),
       });
@@ -106,13 +187,16 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      period_start: "Oct-2026",
-      period_end: "Sep-2027",
-      k15_twelve_month_forecast_total_inr: k15ForecastTotal,
-      average_monthly_run_rate_inr: averageMonthlyRunRate,
-      contracted_share_pct: contractedSharePct,
-      pipeline_upside_inr: months.reduce((sum, m) => sum + m.pipeline_weighted, 0),
-      formula: "F-24 / D-24: Contracted Schedule + Scheduled Steps + Renewals + Weighted Pipeline",
+      period_start: months[0]?.month || "Current",
+      period_end: months[11]?.month || "12M Out",
+      kpis: {
+        k15_12m_forecast_total_inr: k15ForecastTotal,
+        average_monthly_run_rate_inr: averageMonthlyRunRate,
+        contracted_share_pct: contractedSharePct,
+        pipeline_deals_count: openDeals.length,
+        active_leases_count: activeContracts.length,
+        retention_assumption_pct: Math.round(renewalPct * 100),
+      },
       monthly_timeline: months,
     });
   } catch (err: any) {

@@ -34,11 +34,13 @@ import {
   Briefcase,
   Copy,
   UserCheck,
-  Plus
+  Plus,
+  FileSpreadsheet
 } from "lucide-react";
 import OwnerStatementModal from "@/components/rent-roll/OwnerStatementModal";
 import RentRollOnboardingWizard, { getDelegatedEntityLabel } from "@/components/rent-roll/RentRollOnboardingWizard";
 import PropertyHierarchyModal, { HierarchyTab } from "@/components/rent-roll/PropertyHierarchyModal";
+import RentRollExcelImporterModal from "@/components/rent-roll/RentRollExcelImporterModal";
 import { getClientAuthHeaders } from "@/lib/auth-storage";
 
 interface PropertySummary {
@@ -86,6 +88,7 @@ export default function OwnerDashboardPage() {
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState(false);
   const [hierarchyInitialTab, setHierarchyInitialTab] = useState<HierarchyTab>("building");
   const [showNextStepBanner, setShowNextStepBanner] = useState(true);
+  const [excelImporterOpen, setExcelImporterOpen] = useState(false);
 
   // Dynamic Data States (Zero pre-feeded mock data - cleanly empty until live data created)
   const [properties, setProperties] = useState<PropertySummary[]>([]);
@@ -300,6 +303,11 @@ export default function OwnerDashboardPage() {
       }
 
       setProperties(liveProps);
+
+      // Auto-dismiss the "Add Buildings, Spaces & Tenants" banner if portfolio already has properties & contracts/tenants
+      if (liveProps.length > 0 && (contractsData.length > 0 || tenantsData.length > 0)) {
+        setShowNextStepBanner(false);
+      }
 
       // 2. Populate Top Occupants from contracts / tenants
       if (contractsData.length > 0) {
@@ -543,14 +551,6 @@ export default function OwnerDashboardPage() {
               <Copy className="w-3.5 h-3.5 text-teal-600" />
               <span>{managerLinkCopied ? "Link Copied!" : "Copy Manager Link"}</span>
             </button>
-            <Link
-              href="/dashboard/pm"
-              target="_blank"
-              className="px-3.5 py-2 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Open Manager Portal</span>
-            </Link>
             <button
               type="button"
               onClick={handleDismissManagerActivationBanner}
@@ -606,6 +606,13 @@ export default function OwnerDashboardPage() {
               <span>+ New Contract</span>
             </button>
             <button
+              onClick={() => setExcelImporterOpen(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Upload Excel Sheet</span>
+            </button>
+            <button
               onClick={() => setShowNextStepBanner(false)}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               title="Dismiss"
@@ -652,6 +659,14 @@ export default function OwnerDashboardPage() {
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ Hierarchy Setup</span>
+          </button>
+
+          <button
+            onClick={() => setExcelImporterOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Upload Excel</span>
           </button>
 
           <button
@@ -1346,6 +1361,13 @@ export default function OwnerDashboardPage() {
         isOpen={hierarchyModalOpen}
         onClose={() => setHierarchyModalOpen(false)}
         initialTab={hierarchyInitialTab}
+        onSuccess={fetchDashboardMetrics}
+      />
+
+      {/* Smart Excel / CSV Bulk Rent Roll Importer Modal */}
+      <RentRollExcelImporterModal
+        isOpen={excelImporterOpen}
+        onClose={() => setExcelImporterOpen(false)}
         onSuccess={fetchDashboardMetrics}
       />
     </div>

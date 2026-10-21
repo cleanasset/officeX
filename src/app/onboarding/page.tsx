@@ -91,7 +91,7 @@ function OnboardingContent() {
         owner: "Commercial Property Owner / Landlord",
         property_manager: "Property Manager / Centre Manager",
         facility_manager: "Facility Manager / Site Operations Lead",
-        leasing_manager: "Commercial Leasing Manager / Broker",
+        leasing_manager: "Commercial Leasing Manager",
         finance_manager: "CA / Financial Controller",
       };
       const label = roleLabels[data.role] || "Commercial Property Owner";
