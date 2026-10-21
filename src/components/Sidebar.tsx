@@ -54,6 +54,7 @@ interface MenuItem {
   href: string;
   icon: React.ComponentType<{ size: number; className?: string }>;
   badge?: string;
+  section?: string;
   subItems?: SubMenuItem[];
 }
 
@@ -61,20 +62,22 @@ interface MenuItem {
 const roleSpecificMenus: Record<string, MenuItem[]> = {
   // PROPERTY OWNER / LANDLORD (§3.1, §S-02)
   owner: [
-    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers },
+    { name: "Portfolio Overview", href: "/dashboard/owner", icon: Layers, section: "Portfolio Assets" },
     { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
     { name: "Property Registry", href: "/properties/registry", icon: Building },
     { name: "Tenant Directory", href: "/properties/tenants", icon: Users },
     { name: "Contracts & Leases", href: "/properties/rent-roll?tab=contracts", icon: FileText },
-    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck },
-    { name: "Stacking Plan (S-26)", href: "/operate/stacking", icon: Layers },
-    { name: "Owner Statements (S-55)", href: "/operate/owner-statements", icon: Landmark },
-    { name: "FM Delegation & Mandates", href: "/settings/delegation", icon: Briefcase },
-    { name: "12-Mo Forecast (S-51)", href: "/operate/forecast", icon: Calendar },
+    { name: "Stacking Plan", href: "/operate/stacking", icon: Layers },
+
+    { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck, section: "Operations & FM" },
+    { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
+    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle },
+
+    { name: "Owner Statements", href: "/operate/owner-statements", icon: Landmark, section: "Financials" },
+    { name: "Revenue Forecast", href: "/operate/forecast", icon: Calendar },
     { name: "NOI & Property P&L", href: "/operate/pnl", icon: BarChart3 },
-    { name: "MIS Investor Pack", href: "/operate/mis", icon: FileText },
-    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
-    { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
+    { name: "Investor Pack (MIS)", href: "/operate/mis", icon: FileText },
+    { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle }
   ],
 
   // MARKETPLACE PROPERTY OWNER / OPERATOR (Property Discovery & Listing Partner)
@@ -89,53 +92,53 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
 
   // PROPERTY MANAGER / CENTRE MANAGER (§3.2, §S-03)
   property_manager: [
-    { name: "PM Today Console", href: "/dashboard/pm", icon: ClipboardList },
+    { name: "PM Today Console", href: "/dashboard/pm", icon: ClipboardList, section: "Overview" },
     { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
     { name: "Space & Building Registry", href: "/properties/registry", icon: Building },
     { name: "Deals & Inquiries", href: "/operate/lease-crm", icon: Sparkles },
     { name: "New Contract Wizard", href: "/operate/contracts/new", icon: FileText },
     { name: "Active Contracts", href: "/properties/rent-roll?tab=contracts", icon: FileText },
-    { name: "Expiry & Renewals (S-24)", href: "/operate/renewals", icon: Clock },
-    { name: "Escalation Calendar (S-25)", href: "/operate/escalations", icon: TrendingUp },
-    { name: "Stacking Plan (S-26)", href: "/operate/stacking", icon: Layers },
-    { name: "Invoices & Billing", href: "/operate/invoices", icon: DollarSign },
+    { name: "Expiry & Renewals", href: "/operate/renewals", icon: Clock },
+    { name: "Rent Escalations", href: "/operate/escalations", icon: TrendingUp },
+    { name: "Stacking Plan", href: "/operate/stacking", icon: Layers },
+    { name: "Invoices & Billing", href: "/operate/invoices", icon: DollarSign, section: "Financials" },
     { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
     { name: "Disputes & Claims", href: "/operate/disputes", icon: ShieldCheck },
-    { name: "Security Deposits (S-47)", href: "/operate/deposits", icon: Landmark },
-    { name: "Utility Meters (S-31)", href: "/properties/rent-roll?tab=meter-readings", icon: Zap },
+    { name: "Security Deposits", href: "/operate/deposits", icon: Landmark },
+    { name: "Utility Meters", href: "/properties/rent-roll?tab=meter-readings", icon: Zap },
     { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
   ],
 
   // FACILITY MANAGER (§3.6, §S-03 FM)
   facility_manager: [
-    { name: "FM Command Centre", href: "/dashboard/fm", icon: ClipboardList },
+    { name: "FM Command Centre", href: "/dashboard/fm", icon: ClipboardList, section: "Operations" },
     { name: "Utility Meter Readings", href: "/properties/rent-roll?tab=meter-readings", icon: Zap },
     { name: "CAM Pools & True-Up", href: "/operate/cam-pools", icon: Sparkles },
     { name: "Helpdesk & Work Orders", href: "/ops/helpdesk", icon: AlertTriangle },
     { name: "52-Week PPM Calendar", href: "/ops/ppm", icon: Calendar },
     { name: "Asset Register & Health", href: "/ops/assets", icon: Settings },
     { name: "Space & Building Directory", href: "/properties/registry", icon: Building },
-    { name: "Service Disputes (S-46)", href: "/operate/disputes", icon: ShieldCheck },
+    { name: "Service Disputes", href: "/operate/disputes", icon: ShieldCheck },
     { name: "Statutory Compliance", href: "/ops/compliance", icon: ShieldCheck },
     { name: "Exceptions Centre", href: "/operate/exceptions", icon: AlertTriangle }
   ],
 
   // FINANCE / AR MANAGER (§3.4, §S-05)
   finance_manager: [
-    { name: "Finance Dashboard", href: "/dashboard/finance", icon: BarChart3 },
+    { name: "Finance Dashboard", href: "/dashboard/finance", icon: BarChart3, section: "Finance & Accounts" },
     { name: "Approvals Inbox", href: "/approvals", icon: ShieldCheck },
     { name: "Rent Roll Register", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
     { name: "Contracts Review", href: "/properties/rent-roll?tab=contracts", icon: FileText },
     { name: "Billing Runs & Invoices", href: "/operate/invoices", icon: DollarSign },
-    { name: "Credit Notes (S-42)", href: "/operate/credit-notes", icon: FileText },
+    { name: "Credit Notes", href: "/operate/credit-notes", icon: FileText },
     { name: "Payments Centre", href: "/operate/payments", icon: CreditCard },
-    { name: "Bank Reconciler (RR-INT-02)", href: "/operate/sync/bank-reconcile", icon: Landmark },
-    { name: "Tally ERP Sync (RR-INT-01)", href: "/operate/sync/tally", icon: Database },
+    { name: "Bank Reconciliation", href: "/operate/sync/bank-reconcile", icon: Landmark },
+    { name: "Tally ERP Sync", href: "/operate/sync/tally", icon: Database },
     { name: "Ageing & Collections", href: "/operate/collections", icon: AlertTriangle },
-    { name: "Security Deposits (S-47)", href: "/operate/deposits", icon: Landmark },
+    { name: "Security Deposits", href: "/operate/deposits", icon: Landmark },
     { name: "Month-End Snapshots", href: "/operate/snapshots", icon: ShieldCheck },
     { name: "Property P&L", href: "/operate/pnl", icon: BarChart3 },
-    { name: "MIS Investor Pack", href: "/operate/mis", icon: FileText },
+    { name: "Investor Pack (MIS)", href: "/operate/mis", icon: FileText },
     { name: "Billing Entities & Setup", href: "/settings", icon: Settings }
   ],
 
@@ -156,7 +159,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Head Leases & Centre P&L", href: "/operate/head-leases", icon: TrendingUp },
     { name: "Seat Inventory & Plans", href: "/operate/seats", icon: Layers },
     { name: "Rent Roll Master", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
-    { name: "Stacking Plan (S-26)", href: "/operate/stacking", icon: Layers },
+    { name: "Stacking Plan", href: "/operate/stacking", icon: Layers },
     { name: "Billing & Invoices", href: "/operate/invoices", icon: DollarSign },
     { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle }
   ],
@@ -166,7 +169,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Tenant Workplace", href: "/portal", icon: Building },
     { name: "Invoices & Settlement", href: "/portal/invoices", icon: DollarSign },
     { name: "Payments & Tax Receipts", href: "/portal/payments", icon: CreditCard },
-    { name: "Raise Dispute (T-05)", href: "/portal/disputes", icon: AlertTriangle },
+    { name: "Raise Dispute", href: "/portal/disputes", icon: AlertTriangle },
     { name: "My Lease Contract", href: "/portal/contracts", icon: FileText },
     { name: "Lease Documents", href: "/portal/documents", icon: FolderOpen },
     { name: "Contacts & Sub-Users", href: "/portal/sub-users", icon: Users }
@@ -177,7 +180,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Tenant Workplace", href: "/portal", icon: Building },
     { name: "Invoices & Settlement", href: "/portal/invoices", icon: DollarSign },
     { name: "Payments & Tax Receipts", href: "/portal/payments", icon: CreditCard },
-    { name: "Raise Dispute (T-05)", href: "/portal/disputes", icon: AlertTriangle },
+    { name: "Raise Dispute", href: "/portal/disputes", icon: AlertTriangle },
     { name: "My Lease Contract", href: "/portal/contracts", icon: FileText },
     { name: "Lease Documents", href: "/portal/documents", icon: FolderOpen },
     { name: "Contacts & Sub-Users", href: "/portal/sub-users", icon: Users }
@@ -194,7 +197,7 @@ const roleSpecificMenus: Record<string, MenuItem[]> = {
     { name: "Billing Runs & Invoices", href: "/operate/invoices", icon: DollarSign },
     { name: "Payments & Banking", href: "/operate/payments", icon: CreditCard },
     { name: "Collections & Aging", href: "/operate/collections", icon: AlertTriangle },
-    { name: "FM Delegation & Mandates", href: "/settings/delegation", icon: Briefcase },
+    { name: "Property Delegation", href: "/settings/delegation", icon: Briefcase },
     { name: "Bulk Import Centre", href: "/operate/imports", icon: FolderOpen },
     { name: "Settings Master", href: "/settings", icon: Settings },
     { name: "System Audit Log", href: "/admin/audit", icon: ShieldCheck }
@@ -492,12 +495,8 @@ function SidebarInner() {
         </div>
 
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}
-        <nav className="flex-1 px-3 py-3.5 flex flex-col gap-1.5 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="px-3 py-1 text-[9px] font-black text-gray-400 uppercase tracking-wider">
-            Navigation
-          </div>
-
-          {activeMenu.map((item) => {
+        <nav className="flex-1 px-3 py-3 flex flex-col gap-1 overflow-y-auto [::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {activeMenu.map((item, idx) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
             const itemPath = item.href.split("?")[0];
             const isItemActive = hasSubItems
@@ -506,91 +505,98 @@ function SidebarInner() {
             const Icon = item.icon;
             const isExpanded = expandedSubMenus[item.name] ?? isItemActive;
 
-            if (hasSubItems) {
-              return (
-                <div key={item.name} className="flex flex-col gap-1 my-0.5">
-                  <div
-                    onClick={() => {
-                      setExpandedSubMenus(prev => ({
-                        ...prev,
-                        [item.name]: !isExpanded
-                      }));
-                      if (!isItemActive) {
-                        router.push(item.href);
-                      }
-                    }}
-                    className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+            return (
+              <React.Fragment key={item.name}>
+                {item.section && (
+                  <div className={`px-2 text-[9.5px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ${idx > 0 ? "pt-3 pb-1 border-t border-slate-100/90 mt-1" : "pb-1"}`}>
+                    <span>{item.section}</span>
+                  </div>
+                )}
+
+                {hasSubItems ? (
+                  <div className="flex flex-col gap-0.5 my-0.5">
+                    <div
+                      onClick={() => {
+                        setExpandedSubMenus(prev => ({
+                          ...prev,
+                          [item.name]: !isExpanded
+                        }));
+                        if (!isItemActive) {
+                          router.push(item.href);
+                        }
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+                        isItemActive
+                          ? "bg-[#0F8B7D] text-white font-black shadow-xs"
+                          : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900 bg-transparent"
+                      }`}
+                    >
+                      <Icon size={16} className={isItemActive ? "text-white shrink-0" : "text-slate-500 shrink-0"} />
+                      <span className="truncate flex-1 font-bold tracking-tight">{item.name}</span>
+                      {item.badge && !isItemActive && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0">
+                          {item.badge}
+                        </span>
+                      )}
+                      {isExpanded ? (
+                        <ChevronDown size={14} className={isItemActive ? "text-white shrink-0" : "text-slate-400 shrink-0"} />
+                      ) : (
+                        <ChevronRight size={14} className={isItemActive ? "text-white shrink-0" : "text-slate-400 shrink-0"} />
+                      )}
+                    </div>
+
+                    {/* Dropdown Sub-Items List */}
+                    {isExpanded && item.subItems && (
+                      <div className="ml-3 pl-2.5 border-l-2 border-slate-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
+                        {item.subItems.map((sub) => {
+                          const SubIcon = sub.icon || ChevronRight;
+                          const subPath = sub.href.split("?")[0];
+                          const subTab = new URLSearchParams(sub.href.split("?")[1] || "").get("tab");
+                          const isSubActive =
+                            pathname === subPath && (!subTab || activeTabParam === subTab || (!searchParams.get("tab") && subTab === "dashboard" && subPath === "/properties/rent-roll") || (!searchParams.get("tab") && subTab === "banking" && subPath === "/properties/banking"));
+
+                          return (
+                            <Link
+                              key={sub.name}
+                              href={sub.href}
+                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
+                                isSubActive
+                                  ? "bg-teal-50 text-[#0F8B7D] font-extrabold shadow-2xs border border-teal-200/90"
+                                  : "text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900"
+                              }`}
+                            >
+                              <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D] shrink-0" : "text-slate-400 shrink-0"} />
+                              <span className="truncate">{sub.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all relative group ${
                       isItemActive
-                        ? "bg-[#0F8B7D] text-white font-black shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100/80 hover:text-gray-900 bg-transparent"
+                        ? "bg-[#0F8B7D] text-white font-bold shadow-xs"
+                        : "text-slate-700 font-semibold hover:bg-slate-100/80 hover:text-slate-900"
                     }`}
                   >
-                    <Icon size={16} className={isItemActive ? "text-white" : "text-gray-500"} />
-                    <span className="truncate flex-1 font-bold tracking-wide">{item.name}</span>
-                    {item.badge && !isItemActive && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-teal-50 text-teal-700 border border-teal-200/60">
+                    <Icon size={16} className={isItemActive ? "text-white shrink-0" : "text-slate-400 group-hover:text-slate-600 shrink-0"} />
+                    <span className="truncate flex-1 tracking-tight">{item.name}</span>
+                    {item.badge && (
+                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                        isItemActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"
+                      }`}>
                         {item.badge}
                       </span>
                     )}
-                    {isExpanded ? (
-                      <ChevronDown size={14} className={isItemActive ? "text-white" : "text-gray-400"} />
-                    ) : (
-                      <ChevronRight size={14} className={isItemActive ? "text-white" : "text-gray-400"} />
+                    {isItemActive && !item.badge && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                     )}
-                  </div>
-
-                  {/* Dropdown Sub-Items List */}
-                  {isExpanded && item.subItems && (
-                    <div className="ml-3 pl-2.5 border-l-2 border-gray-200 flex flex-col gap-0.5 py-1 my-0.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-1 animate-in fade-in duration-150">
-                      {item.subItems.map((sub) => {
-                        const SubIcon = sub.icon || ChevronRight;
-                        const subPath = sub.href.split("?")[0];
-                        const subTab = new URLSearchParams(sub.href.split("?")[1] || "").get("tab");
-                        const isSubActive =
-                          pathname === subPath && (!subTab || activeTabParam === subTab || (!searchParams.get("tab") && subTab === "dashboard" && subPath === "/properties/rent-roll") || (!searchParams.get("tab") && subTab === "banking" && subPath === "/properties/banking"));
-
-                        return (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
-                              isSubActive
-                                ? "bg-teal-50 text-[#0F8B7D] font-extrabold shadow-2xs border border-teal-200/90"
-                                : "text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900"
-                            }`}
-                          >
-                            <SubIcon size={13} className={isSubActive ? "text-[#0F8B7D]" : "text-gray-400"} />
-                            <span className="truncate">{sub.name}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all relative ${
-                  isItemActive
-                    ? "bg-[#0F8B7D] text-white font-black shadow-sm"
-                    : "text-gray-700 font-bold hover:bg-gray-100/70 hover:text-gray-900"
-                }`}
-              >
-                <Icon size={16} className={isItemActive ? "text-white" : "text-gray-500"} />
-                <span className="truncate">{item.name}</span>
-                {item.badge && (
-                  <span className={`ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
-                    isItemActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 border border-amber-200"
-                  }`}>
-                    {item.badge}
-                  </span>
+                  </Link>
                 )}
-                {isItemActive && !item.badge && <ChevronRight size={13} className="ml-auto text-white shrink-0" />}
-              </Link>
+              </React.Fragment>
             );
           })}
         </nav>
