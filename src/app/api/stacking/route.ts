@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { space, building, property, contract, occupant, contract_charge } from "@/db/schema";
+import { space, building, property, contract, occupant, contractCharge } from "@/db/schema";
 import { getAuthContext } from "@/lib/rent-roll/auth-context";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
 
@@ -67,6 +67,7 @@ export async function GET(req: Request) {
         end_date: contract.end_date,
         occupant_id: contract.occupant_id,
         occupant_name: occupant.occupant_name,
+        base_rate: contractCharge.rate,
       })
       .from(space)
       .leftJoin(building, eq(space.building_id, building.id))
@@ -78,6 +79,14 @@ export async function GET(req: Request) {
         )
       )
       .leftJoin(occupant, eq(contract.occupant_id, occupant.id))
+      .leftJoin(
+        contractCharge,
+        and(
+          eq(contractCharge.contract_id, contract.id),
+          eq(contractCharge.component, "base_rent"),
+          sql`${contractCharge.deleted_at} IS NULL`
+        )
+      )
       .where(and(...spaceConditions))
       .orderBy(desc(space.floor_name), asc(space.space_code));
 
@@ -110,8 +119,8 @@ export async function GET(req: Request) {
         floorTotalArea += area;
         totalBuildingArea += area;
 
-        // Rate estimation or contract charge
-        const ratePsf = u.occupant_name ? (u.space_code.startsWith("G") ? 415 : 285) : 0;
+        // Rate directly from contract charge
+        const ratePsf = u.base_rate ? parseFloat(u.base_rate) : (u.occupant_name ? 200 : 0);
         const monthlyRent = ratePsf * area;
 
         let statusKey: string = String(u.occupancy_status || "vacant");

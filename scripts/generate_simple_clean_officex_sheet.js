@@ -1,0 +1,376 @@
+const fs = require('fs');
+const path = require('path');
+const ExcelJS = require('exceljs');
+
+async function generateCleanOfficeXSheet() {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'OfficeX';
+  workbook.lastModifiedBy = 'OfficeX';
+  workbook.created = new Date();
+  workbook.modified = new Date();
+
+  const ws = workbook.addWorksheet('Feature Status & Timeline', {
+    views: [{ showGridLines: true }]
+  });
+
+  // Fonts & styles
+  const fontMain = { name: 'Calibri', size: 10, color: { argb: 'FF1E293B' } };
+  const fontBold = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF1E293B' } };
+  const fontHeader = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+  const borderThin = {
+    top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+  };
+
+  // Status Badge Colors
+  const styles = {
+    'Completed': { bg: 'FFDCFCE7', fg: 'FF15803D' },           // Green
+    'Implemented / Testing': { bg: 'FFFEF3C7', fg: 'FF92400E' }, // Amber
+    'In Development': { bg: 'FFDBEAFE', fg: 'FF1E40AF' },       // Blue
+    'Pending': { bg: 'FFFFE4E6', fg: 'FF9F1239' },              // Rose
+    'Pending (AI Suite)': { bg: 'FFFCE7F3', fg: 'FF9D174D' },   // Pink/Magenta
+    'Pending (Phase 2)': { bg: 'FFF3E8FF', fg: 'FF6B21A8' }     // Purple
+  };
+
+  // 4 Columns for Table 1 and Table 2
+  ws.columns = [
+    { key: 'col1', width: 38 }, // Feature Name
+    { key: 'col2', width: 26 }, // Marketplace / Module
+    { key: 'col3', width: 22 }, // Status
+    { key: 'col4', width: 68 }  // Details / What is Pending / Target Completion Day
+  ];
+
+  let rowIndex = 1;
+
+  function addTitle(text, subtext) {
+    ws.mergeCells(`A${rowIndex}:D${rowIndex}`);
+    const row = ws.getRow(rowIndex);
+    row.height = 32;
+    const cell = row.getCell(1);
+    cell.value = text;
+    cell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    rowIndex++;
+
+    ws.mergeCells(`A${rowIndex}:D${rowIndex}`);
+    const subRow = ws.getRow(rowIndex);
+    subRow.height = 22;
+    const subCell = subRow.getCell(1);
+    subCell.value = subtext;
+    subCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF94A3B8' } };
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    subCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    rowIndex++;
+
+    ws.getRow(rowIndex).height = 10;
+    rowIndex++;
+  }
+
+  function addSectionHeader(title, bgColorArgb) {
+    ws.mergeCells(`A${rowIndex}:D${rowIndex}`);
+    const row = ws.getRow(rowIndex);
+    row.height = 26;
+    const cell = row.getCell(1);
+    cell.value = title;
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColorArgb } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+    rowIndex++;
+  }
+
+  function addTableHeaders(headers, headerColor) {
+    const row = ws.getRow(rowIndex);
+    row.height = 24;
+    headers.forEach((h, i) => {
+      const cell = row.getCell(i + 1);
+      cell.value = h;
+      cell.font = fontHeader;
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerColor } };
+      cell.alignment = { vertical: 'middle', horizontal: i === 2 ? 'center' : 'left' };
+      cell.border = borderThin;
+    });
+    rowIndex++;
+  }
+
+  function addRow(data, isEven) {
+    const row = ws.getRow(rowIndex);
+    row.height = 22;
+    const rowBg = isEven ? 'FFF8FAFC' : 'FFFFFFFF';
+    const statusType = data[2];
+    const statusStyle = styles[statusType] || { bg: rowBg, fg: 'FF1E293B' };
+
+    data.forEach((val, i) => {
+      const cell = row.getCell(i + 1);
+      cell.value = val;
+      cell.border = borderThin;
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: i === 2 ? 'center' : 'left',
+        wrapText: true
+      };
+
+      if (i === 2) {
+        // Status badge
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusStyle.bg } };
+        cell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: statusStyle.fg } };
+      } else if (i === 0) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBg } };
+        cell.font = fontBold;
+      } else {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBg } };
+        cell.font = fontMain;
+      }
+    });
+
+    rowIndex++;
+  }
+
+  function addSpacer() {
+    ws.getRow(rowIndex).height = 14;
+    rowIndex++;
+  }
+
+  // =================================================================================================
+  // TITLE BANNER
+  // =================================================================================================
+  addTitle(
+    'OFFICEX — COMPLETE PLATFORM FEATURE STATUS & DELIVERY PLAN',
+    'Today is 21-10-2026 | Whole Rent Roll & All SaaS Modules Completed in 2 Days (21–22 Oct) | Core Go-Live (27-Oct) | AI in Days 8–15'
+  );
+
+  // =================================================================================================
+  // TABLE 1: ALL PLATFORM FEATURES & CURRENT STATUS
+  // =================================================================================================
+  addSectionHeader('TABLE 1: ALL OFFICEX FEATURES & CURRENT STATUS (WHOLE PLATFORM)', 'FF1E3A8A'); // Navy
+  addTableHeaders(['Feature Name', 'Marketplace / Module', 'Status', 'Details & What is Pending'], 'FF2563EB');
+
+  const allFeaturesData = [
+    // --- Office Marketplace ---
+    ['Public Space Search & Filters', 'Office Marketplace', 'Completed', 'Live: Verified search, rent/area filters, furnishing toggles active.'],
+    ['Space Detail Showcase & Floor Plans', 'Office Marketplace', 'Completed', 'Live: Dynamic space pages, photo galleries, warm/bare shell rates, specs.'],
+    ['City Micro-Market Landing Hubs', 'Office Marketplace', 'Completed', 'Live: Regional directories for Bengaluru, Mumbai, GIFT City, Ahmedabad.'],
+    ['4-Way Space Spec Comparison', 'Office Marketplace', 'Implemented / Testing', 'Code implemented: Side-by-side spec comparison table undergoing final QA pass.'],
+    ['Calq Space Requirement Estimator', 'Office Marketplace', 'Implemented / Testing', 'Code implemented: Headcount-to-carpet-area calculator undergoing final QA pass.'],
+    ['Space Listing Partner Submission Builder', 'Office Marketplace', 'In Development', 'Pending: Landlord/broker self-listing multi-step submission form and photo upload.'],
+
+    // --- Rent Roll & Landlord SaaS ---
+    ['4-Step Property Onboarding Wizard', 'Rent Roll Landlord', 'Completed', 'Live: Guided onboarding creating property, tower, tenant, and canonical lease.'],
+    ['Database Persistence & Data Model', 'Rent Roll Landlord', 'Completed', 'Live: Live PostgreSQL writes on onboarding completion with zero mock records.'],
+    ['Master Commercial Leases Register', 'Rent Roll Landlord', 'Completed', 'Live: Lease register with WALE metrics, rent escalation previews, rate masking.'],
+    ['Property Management Delegation Desk', 'Rent Roll Landlord', 'Completed', 'Live: Asset owner operational delegation to third-party PM companies with fee splits.'],
+    ['Visual Stacking Plan & Floor Occupancy', 'Rent Roll Landlord', 'Implemented / Testing', 'Code implemented: Floor-by-floor interactive elevation under multi-floor QA testing.'],
+    ['Dual-Authorization Maker-Checker Rules', 'Rent Roll Landlord', 'Implemented / Testing', 'Code implemented: Dual sign-off rules on lease edits/invoices under verification.'],
+    ['Aging Receivables & Collections Tracker', 'Rent Roll Landlord', 'Implemented / Testing', 'Code implemented: Overdue rent 0-30, 31-60, 61-90, 90+ days aging buckets under QA.'],
+    ['Table 103 Owner Settlement Ledger', 'Rent Roll Landlord', 'Implemented / Testing', 'Code implemented: Double-entry ledger calculating gross rent, CAM, TDS, and net payout.'],
+
+    // --- Commercial Leasing CRM ---
+    ['Inbound Tenant Lead Triage Desk', 'Commercial Leasing CRM', 'Implemented / Testing', 'Code implemented: Intake queue qualifying incoming commercial tenant leads in QA.'],
+    ['Deals Pipeline Kanban Board', 'Commercial Leasing CRM', 'Implemented / Testing', 'Code implemented: Drag-and-drop Kanban deal stage progression active in test.'],
+    ['Site Visit Scheduling & Feedback Logs', 'Commercial Leasing CRM', 'Implemented / Testing', 'Code implemented: Tenant walkthrough scheduler and broker feedback logging in test.'],
+    ['Digital LOI & Term Sheet Generator', 'Commercial Leasing CRM', 'In Development', 'Pending: Dynamic PDF generator populating agreed lease terms with signature blocks.'],
+    ['Brokerage Commission Ledger & Payouts', 'Commercial Leasing CRM', 'In Development', 'Pending: Transaction-based fee calculations and milestone-linked payout approvals.'],
+
+    // --- FM Marketplace ---
+    ['Vendor Registration & Service Categories', 'FM Marketplace', 'Completed', 'Live: Multi-step vendor intake capturing GSTIN/PAN and 24 service categories.'],
+    ['Vendor KYC Verification Review Desk', 'FM Marketplace', 'Implemented / Testing', 'Code implemented: Admin moderation queue verifying uploaded GST/PAN/insurance in QA.'],
+    ['B2B RFQ Scope Builder & Vendor Auto-Match', 'FM Marketplace', 'Implemented / Testing', 'Code implemented: RFQ scope creation and automated vendor matching in final QA.'],
+    ['Quotation Submission & Comparison Matrix', 'FM Marketplace', 'In Development', 'Pending: Side-by-side vendor quotation comparison matrix and line-item bidding.'],
+    ['Work Order Management & Mandatory Photo Gate', 'FM Marketplace', 'In Development', 'Pending: Work order lifecycle requiring mandatory completion photo evidence upload.'],
+    ['Vendor Rating & Marketplace Commission', 'FM Marketplace', 'In Development', 'Pending: 1-5 star vendor scoring algorithm and platform fee deduction logic.'],
+
+    // --- Property & FM Operations SaaS ---
+    ['Property Management Master Console', 'Operations SaaS', 'Completed', 'Live: Master operational dashboard showing towers, occupied sqft, open tickets.'],
+    ['Managed Services Contract Management', 'Operations SaaS', 'Implemented / Testing', 'Code implemented: Third-party FM SLAs, scope boundaries, and staffing mandates in QA.'],
+    ['Building Staff Attendance & Deployment Roster', 'Operations SaaS', 'Implemented / Testing', 'Code implemented: Guard and technician shift deployment roster active in QA.'],
+    ['SLA Monitoring & Automated Breach Alerts', 'Operations SaaS', 'Implemented / Testing', 'Code implemented: Live countdown timers tracking incident resolution targets in QA.'],
+    ['52-Week Planned Preventive Maintenance (PPM)', 'Operations SaaS', 'Implemented / Testing', 'Code implemented: 52-week recurring maintenance calendar grid active in QA.'],
+    ['Monthly Executive MIS Reporting Engine', 'Operations SaaS', 'Implemented / Testing', 'Code implemented: Operational data aggregation scripts active; PDF/CSV export in QA.'],
+    ['Daily Site Activity Log & Shift Checkpoints', 'Operations SaaS', 'Pending', 'Pending: Digital facility log for security shift handovers and patrol timestamps.'],
+
+    // --- SaaS Core Modules ---
+    ['MEP & Building Asset Register', 'Core SaaS Modules', 'Implemented / Testing', 'Code implemented: Asset inventory tracking chillers, DG sets, lifts, and AMCs in QA.'],
+    ['Ticketing & Helpdesk Kanban System', 'Core SaaS Modules', 'Completed', 'Live: Kanban incident management with priority tags (P1-P4) and assignment desk.'],
+    ['Corporate Tenant Directory & Space Mapping', 'Core SaaS Modules', 'Completed', 'Live: Master directory of corporate occupant entities, signatories, and leased units.'],
+    ['Automated Notifications & Alert Badges', 'Core SaaS Modules', 'Completed', 'Live: Event-driven notification center delivering in-app alerts and unread counters.'],
+    ['Visitor Management Pre-Invites & QR Passes', 'Core SaaS Modules', 'In Development', 'Pending: Digital visitor log; host generates QR passes scanned at security lobby.'],
+    ['Statutory Compliance Vault with Expiry Alerts', 'Core SaaS Modules', 'In Development', 'Pending: Vault for Fire NOC, Lift Licenses, and OC with 60/30/15-day expiry alerts.'],
+
+    // --- Financials & Payments ---
+    ['Automated Rent Roll Billing Run & Invoices', 'Financials & Payments', 'In Development', 'Pending: Monthly batch billing script generating GST-compliant tax invoices.'],
+    ['Utility Sub-Meter Reading & CAM Allocator', 'Financials & Payments', 'In Development', 'Pending: Sub-meter entry table for power/water calculating pro-rata CAM splits.'],
+    ['Razorpay Live Payment Gateway & Virtual Accounts', 'Financials & Payments', 'In Development', 'Pending: Razorpay Orders API integration, payment links, and auto reconciliation.'],
+    ['Tenant Online Invoice Payment & Statements', 'Financials & Payments', 'In Development', 'Pending: Tenant portal statement download and online invoice payment trigger.'],
+    ['Digital Dispute Desk & Escalation Workflow', 'Financials & Payments', 'Pending', 'Pending: Formal tenant dispute filing for billing with credit note settlements.'],
+
+    // --- Admin, Shell & Core Platform ---
+    ['Next.js 14 Framework & TypeScript Core', 'Admin & Platform', 'Completed', 'Live: Production-grade build, zero lint warnings, modular routing across 9 portals.'],
+    ['Multi-Role Auth with 6-Digit OTP Engine', 'Admin & Platform', 'Completed', 'Live: Passwordless enterprise email OTP auth with cryptographic JWT sessions.'],
+    ['9-Portal Role-Based Access Control (RBAC)', 'Admin & Platform', 'Completed', 'Live: Strict data boundary enforcement across 9 distinct user roles.'],
+    ['SuperAdmin User Management Desk', 'Admin & Platform', 'Completed', 'Live: Central admin desk managing system accounts, organization locks, and users.'],
+    ['Centralized Immutable Audit Logging', 'Admin & Platform', 'Completed', 'Live: PostgreSQL audit event triggers capturing user actions and data diffs.'],
+    ['Full Dashboard Mobile Responsiveness', 'Admin & Platform', 'Completed', 'Live: Off-canvas slide-out drawer, mobile topbar, and quick bottom navigation.'],
+    ['Persistent Desktop Sidebar Navigation', 'Admin & Platform', 'Completed', 'Live: Sidebar navigation rail remains permanently visible across all route transitions.'],
+    ['Organization Profile & Tax Settings Suite', 'Admin & Platform', 'Completed', 'Live: Org profile, GST/PAN management, and invoice prefix configurations active.'],
+    ['Multi-Tenant Security Penetration Testing', 'Admin & Platform', 'Pending', 'Pending: Full security audit verifying multi-tenant RLS and API token boundaries.'],
+    ['Pre-UAT 9-Portal Platform Regression Pass', 'Admin & Platform', 'Pending', 'Pending: End-to-end regression pass across all 9 portals verifying zero errors.'],
+    ['Production DNS Cutover & Go-Live Handover', 'Admin & Platform', 'Pending', 'Pending: Production DNS switch, database verification, and master admin handover.'],
+
+    // --- AI Suite (Days 8 to 15) ---
+    ['AI Phase 1: Lease Deed OCR Extraction', 'AI Engine', 'Pending (AI Suite)', 'Pending: AI parser extracting rent, lock-in, escalation dates, deposit from lease PDFs.'],
+    ['AI Phase 2: Executive Narrative MIS Commentary', 'AI Engine', 'Pending (AI Suite)', 'Pending: LLM generating monthly executive commentary summarizing occupancy & collections.'],
+    ['AI Phase 3: Lease Vacancy ML Predictor', 'AI Engine', 'Pending (AI Suite)', 'Pending: Machine learning forecasting tenant renewal likelihood 180 days prior to expiry.'],
+    ['AI Phase 4: IoT Predictive Maintenance Anomaly Alerts', 'AI Engine', 'Pending (AI Suite)', 'Pending: Anomaly detection on chiller run hours & DG fuel burn to trigger preventive PPM.'],
+    ['AI Phase 5: Tenant 24/7 AI Concierge Bot', 'AI Engine', 'Pending (AI Suite)', 'Pending: Natural language assistant answering building rules and logging tickets.'],
+
+    // --- External Third-Party Integrations (Phase 2) ---
+    ['WhatsApp Business Cloud API / Twilio SMS', 'External Integrations', 'Pending (Phase 2)', 'Pending: Automated rent reminder pings via WhatsApp (Platform operates via email OTP).'],
+    ['Razorpay Marketplace Escrow Split Payouts', 'External Integrations', 'Pending (Phase 2)', 'Pending: Split settlements to owner and vendor (Platform operates via direct orders).'],
+    ['Google Places / Maps Geocoding API', 'External Integrations', 'Pending (Phase 2)', 'Pending: Address autocomplete (Platform operates via structured address selectors).'],
+    ['Smart IoT Building Hardware Sensors', 'External Integrations', 'Pending (Phase 2)', 'Pending: Direct IoT telemetry into CAM meters (Platform operates via digital meter logs).'],
+    ['Biometric Turnstile & Face Kiosk SDK', 'External Integrations', 'Pending (Phase 2)', 'Pending: Physical barrier turnstile release (Platform operates via mobile QR scanners).'],
+    ['Calendly 3D Virtual Tour Scheduling Embed', 'External Integrations', 'Pending (Phase 2)', 'Pending: 3D tour booking embed (Platform operates via built-in visit scheduler).'],
+    ['Municipal Govt Fire/OC Auto-Scraper', 'External Integrations', 'Pending (Phase 2)', 'Pending: Government clearance sync (Platform operates via manual upload with alerts).']
+  ];
+
+  allFeaturesData.forEach((row, i) => addRow(row, i % 2 === 0));
+  addSpacer();
+
+  // =================================================================================================
+  // TABLE 2: ALL PENDING FEATURES & COMPLETION TIMELINE (STARTING 21-10-2026)
+  // =================================================================================================
+  addSectionHeader('TABLE 2: ALL PENDING FEATURES & COMPLETION TIMELINE (STARTING 21-10-2026)', 'FF047857'); // Emerald Green
+  addTableHeaders(['Pending Feature Name', 'Marketplace / Module', 'Status', 'What is Pending & Target Completion Day'], 'FF059669');
+
+  const pendingTimelineData = [
+    // =================================================================================================
+    // DAYS 1 & 2 (21–22 OCT): WHOLE RENT ROLL & ALL SAAS MODULES 100% COMPLETED
+    // =================================================================================================
+    // --- Day 1 (21-Oct / TODAY) ---
+    ['Full Dashboard Mobile Responsiveness', 'Admin & Platform', 'Completed', 'Day 1 (21-Oct / TODAY): Off-canvas mobile drawer, bottom nav bar, zero horizontal scroll.'],
+    ['Persistent Desktop Sidebar Navigation', 'Admin & Platform', 'Completed', 'Day 1 (21-Oct / TODAY): Navigation rail permanently fixed across all route transitions.'],
+    ['Master Commercial Leases Register', 'Rent Roll Landlord', 'Completed', 'Day 1 (21-Oct / TODAY): Live table with WALE metrics, rent escalation, rate masking.'],
+    ['Property Management Delegation Desk', 'Rent Roll Landlord', 'Completed', 'Day 1 (21-Oct / TODAY): Management desk, fee split configuration, partner invitation links.'],
+
+    // --- Day 2 (Thursday, 22-Oct): Complete Whole Rent Roll & All SaaS Modules ---
+    ['Visual Stacking Plan & Floor Occupancy', 'Rent Roll Landlord', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Multi-floor building elevation unit layout sign-off.'],
+    ['Dual-Authorization Maker-Checker Rules', 'Rent Roll Landlord', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Dual sign-off enforcement on lease edits/invoices.'],
+    ['Aging Receivables & Collections Tracker', 'Rent Roll Landlord', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Overdue rent 0-90+ days aging bucket calculations.'],
+    ['Table 103 Owner Settlement Ledger', 'Rent Roll Landlord', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Double-entry ledger calculating net owner remittance.'],
+    ['Automated Rent Roll Billing Run & Invoices', 'Financials & Payments', 'In Development', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Monthly batch billing run generating GST tax invoices.'],
+    ['Utility Sub-Meter Reading & CAM Allocator', 'Financials & Payments', 'In Development', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Electricity and water meter entry table calculating CAM splits.'],
+    ['MEP & Building Asset Register', 'Core SaaS Modules', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Asset inventory, AMC flags, and QR code linking sign-off.'],
+    ['52-Week Planned Preventive Maintenance', 'Operations SaaS', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Recurring maintenance calendar grid and work orders sign-off.'],
+    ['Visitor Management Pre-Invites & QR Passes', 'Core SaaS Modules', 'In Development', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Digital visitor log; host generates QR passes scanned at lobby.'],
+    ['Statutory Compliance Vault with Expiry Alerts', 'Core SaaS Modules', 'In Development', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Vault for Fire NOC, Lift Licenses, OC with 60/30/15-day alerts.'],
+    ['Tenant Online Invoice Payment & Statements', 'Financials & Payments', 'In Development', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Tenant self-service statement download and online invoice settlement.'],
+    ['Managed Services Contract Management', 'Operations SaaS', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — FM SLA boundaries and staffing contract mandates sign-off.'],
+    ['Building Staff Attendance & Deployment', 'Operations SaaS', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Guard and technician shift deployment table sign-off.'],
+    ['SLA Monitoring & Automated Breach Alerts', 'Operations SaaS', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — Countdown timers and automated incident breach alerts sign-off.'],
+    ['Monthly Executive MIS Reporting Engine', 'Operations SaaS', 'Implemented / Testing', 'Day 2 (Thursday, 22-Oct): 2-Day Goal — MIS data aggregation and executive PDF/CSV exports sign-off.'],
+
+    // =================================================================================================
+    // DAYS 3 TO 7: MARKETPLACES, CRM, INTEGRATIONS & PRODUCTION GO-LIVE
+    // =================================================================================================
+    // --- Day 3 (Friday, 23-Oct): FM Marketplace & Razorpay Payments ---
+    ['B2B RFQ Scope Builder & Vendor Auto-Match', 'FM Marketplace', 'Implemented / Testing', 'Day 3 (Friday, 23-Oct): RFQ scope creation and vendor trade matching sign-off.'],
+    ['Vendor KYC Verification Review Desk', 'FM Marketplace', 'Implemented / Testing', 'Day 3 (Friday, 23-Oct): Admin KYC approval desk for vendor registrations sign-off.'],
+    ['Quotation Submission & Comparison Matrix', 'FM Marketplace', 'In Development', 'Day 3 (Friday, 23-Oct): Side-by-side vendor quotation comparison matrix against issued RFQs.'],
+    ['Work Order Management & Photo Gate', 'FM Marketplace', 'In Development', 'Day 3 (Friday, 23-Oct): Work order execution requiring mandatory photo evidence for sign-off.'],
+    ['Vendor Rating & Marketplace Commission', 'FM Marketplace', 'In Development', 'Day 3 (Friday, 23-Oct): 1-5 star vendor rating scoring and platform commission deductions.'],
+    ['Razorpay Live Payment Gateway & Accounts', 'Financials & Payments', 'In Development', 'Day 3 (Friday, 23-Oct): Razorpay Orders API integration and online checkout payment flow.'],
+
+    // --- Day 4 (Saturday, 24-Oct): Commercial Leasing CRM & Marketplace Space Listing ---
+    ['Inbound Tenant Lead Triage Desk', 'Commercial Leasing CRM', 'Implemented / Testing', 'Day 4 (Saturday, 24-Oct): Lead queue qualification and source attribution sign-off.'],
+    ['Deals Pipeline Kanban Board', 'Commercial Leasing CRM', 'Implemented / Testing', 'Day 4 (Saturday, 24-Oct): Deal stage progression (Inquiry to Closed) sign-off.'],
+    ['Site Visit Scheduling & Feedback Logs', 'Commercial Leasing CRM', 'Implemented / Testing', 'Day 4 (Saturday, 24-Oct): Walkthrough scheduling and feedback logging sign-off.'],
+    ['4-Way Space Spec Comparison', 'Office Marketplace', 'Implemented / Testing', 'Day 4 (Saturday, 24-Oct): Side-by-side spec comparison table differential pricing sign-off.'],
+    ['Calq Space Requirement Estimator', 'Office Marketplace', 'Implemented / Testing', 'Day 4 (Saturday, 24-Oct): Headcount-to-sqft algorithms and budget output sign-off.'],
+    ['Digital LOI & Term Sheet Generator', 'Commercial Leasing CRM', 'In Development', 'Day 4 (Saturday, 24-Oct): Automated PDF commercial term sheet generator with signature blocks.'],
+    ['Brokerage Commission Ledger & Payouts', 'Commercial Leasing CRM', 'In Development', 'Day 4 (Saturday, 24-Oct): Transaction fee calculation ledger and milestone payout approvals.'],
+    ['Space Listing Partner Submission Builder', 'Office Marketplace', 'In Development', 'Day 4 (Saturday, 24-Oct): Self-service space submission flow for landlords and brokers.'],
+
+    // --- Day 5 (Sunday, 25-Oct): Daily Site Logs & Dispute Desk ---
+    ['Digital Dispute Desk & Escalation Workflow', 'Financials & Payments', 'Pending', 'Day 5 (Sunday, 25-Oct): Tenant formal billing dispute filing and credit note adjustments.'],
+    ['Daily Site Activity Log & Shift Checkpoints', 'Operations SaaS', 'Pending', 'Day 5 (Sunday, 25-Oct): Security shift handover log, incident reporting, and patrol stamps.'],
+
+    // --- Day 6 (Monday, 26-Oct): Security & Regression Pass ---
+    ['Multi-Tenant Security Penetration Testing', 'Admin & Platform', 'Pending', 'Day 6 (Monday, 26-Oct): Verification of multi-tenant database RLS and token boundaries.'],
+    ['Pre-UAT 9-Portal Platform Regression Pass', 'Admin & Platform', 'Pending', 'Day 6 (Monday, 26-Oct): Full regression pass across all 9 portals verifying zero console errors.'],
+
+    // --- Day 7 (Tuesday, 27-Oct): UAT & Core Go-Live Handover ---
+    ['Live Client UAT Walkthrough & Go-Live', 'Admin & Platform', 'Pending', 'Day 7 (Tuesday, 27-Oct): 45-minute staging UAT walkthrough and Core Platform Go-Live Handover!'],
+
+    // =================================================================================================
+    // DAYS 8 TO 15 (28-OCT TO 04-NOV): AI SUITE IMPLEMENTATION ROADMAP
+    // =================================================================================================
+    ['AI Phase 1: Lease Deed OCR Extraction', 'AI Engine', 'Pending (AI Suite)', 'Days 8–9 (28–29 Oct): AI parser extracting rent, lock-in, escalation dates from lease PDFs.'],
+    ['AI Phase 2: Executive Narrative MIS Commentary', 'AI Engine', 'Pending (AI Suite)', 'Days 10–11 (30–31 Oct): LLM generating monthly executive commentary on occupancy & collections.'],
+    ['AI Phase 3: Lease Vacancy ML Predictor', 'AI Engine', 'Pending (AI Suite)', 'Days 12–13 (01–02 Nov): Machine learning forecasting tenant renewal likelihood 180 days prior.'],
+    ['AI Phase 4: IoT Predictive PPM Anomaly Alerts', 'AI Engine', 'Pending (AI Suite)', 'Days 13–14 (02–03 Nov): Anomaly detection on chiller run hours & DG fuel burn for preventive PPM.'],
+    ['AI Phase 5: Tenant 24/7 AI Concierge Bot', 'AI Engine', 'Pending (AI Suite)', 'Days 14–15 (03–04 Nov): Natural language assistant answering building rules + Final AI Handover!'],
+
+    // =================================================================================================
+    // PHASE 2: EXTERNAL THIRD-PARTY INTEGRATIONS
+    // =================================================================================================
+    ['WhatsApp Business Cloud API / Twilio SMS', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: Automated WhatsApp tenant rent reminder pings (Native email OTP operates today).'],
+    ['Razorpay Marketplace Escrow Split Payouts', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: Automated split settlements to owner & vendor (Native direct payments operate today).'],
+    ['Google Places / Maps Geocoding API', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: Address autocomplete (Native structured address selectors operate today).'],
+    ['Smart IoT Building Hardware Sensors', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: Direct IoT telemetry into CAM meters (Native digital meter logs operate today).'],
+    ['Biometric Turnstile & Face Kiosk SDK', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: Turnstile flap barrier release (Native mobile QR scanners operate today).'],
+    ['Calendly 3D Virtual Tour Scheduling Embed', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: 3D tour booking embed (Native visit request scheduling operates today).'],
+    ['Municipal Govt Fire/OC Auto-Scraper', 'External Integrations', 'Pending (Phase 2)', 'Phase 2: Government clearance sync (Native Compliance Vault with alerts operates today).']
+  ];
+
+  pendingTimelineData.forEach((row, i) => addRow(row, i % 2 === 0));
+
+  // Save Excel file to Desktop and project workspace
+  const desktopOut = "c:\\one drive folder\\Desktop\\OfficeX_Feature_Status_and_Timeline.xlsx";
+  const projectOut = path.resolve(__dirname, '..', 'OfficeX_Feature_Status_and_Timeline.xlsx');
+
+  try {
+    await workbook.xlsx.writeFile(desktopOut);
+    console.log("Saved desktop file:", desktopOut);
+  } catch (e) {
+    console.warn("Desktop write error:", e.message);
+  }
+
+  try {
+    await workbook.xlsx.writeFile(projectOut);
+    console.log("Saved project file:", projectOut);
+  } catch (e) {
+    console.warn("Project write error:", e.message);
+  }
+
+  // Also export clean CSV
+  let csv = '';
+  ws.eachRow(row => {
+    const vals = [];
+    row.eachCell({ includeEmpty: true }, (c, colNumber) => {
+      if (colNumber <= 4) {
+        const text = c.text || '';
+        vals.push('"' + String(text).replace(/"/g, '""') + '"');
+      }
+    });
+    csv += vals.join(',') + '\n';
+  });
+
+  const desktopCsv = "c:\\one drive folder\\Desktop\\OfficeX_Feature_Status_and_Timeline.csv";
+  const projectCsv = path.resolve(__dirname, '..', 'OfficeX_Feature_Status_and_Timeline.csv');
+  try {
+    fs.writeFileSync(desktopCsv, csv);
+    console.log("Saved desktop CSV:", desktopCsv);
+  } catch (e) {}
+  try {
+    fs.writeFileSync(projectCsv, csv);
+    console.log("Saved project CSV:", projectCsv);
+  } catch (e) {}
+
+  console.log("Clean OfficeX single sheet generated successfully!");
+}
+
+generateCleanOfficeXSheet().catch(err => {
+  console.error("Error:", err);
+});
