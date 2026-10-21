@@ -14,7 +14,9 @@ import {
   Layers,
   Sparkles,
   Lock,
-  Loader2
+  Loader2,
+  MapPin,
+  Users
 } from "lucide-react";
 
 function InviteContent() {
@@ -24,7 +26,7 @@ function InviteContent() {
   const roleParam = searchParams.get("role") || "pm_company";
   const mgrParam = searchParams.get("mgr") || "";
   const propParam = searchParams.get("prop") || "";
-  const ownerParam = searchParams.get("owner") || "Commercial Asset Owner";
+  const ownerParam = searchParams.get("owner") || "mango groups";
   const emailParam = searchParams.get("email") || "";
   const inviteParam = searchParams.get("invite") || "";
 
@@ -32,10 +34,78 @@ function InviteContent() {
   const [managerName, setManagerName] = useState(mgrParam);
   const [managerEmail, setManagerEmail] = useState(emailParam);
 
+  // Commercial Property & Tenant Portfolio Details
+  const [propertyDetails, setPropertyDetails] = useState<{
+    name: string;
+    location: string;
+    totalArea: number;
+    occupancyPct: number;
+    monthlyRevenue: number;
+    tenants: Array<{ name: string; space: string; monthlyRent: number; term: string; status: string }>;
+  }>({
+    name: propParam || "mango plus tower",
+    location: "Ahmedabad, Gujarat",
+    totalArea: 50000,
+    occupancyPct: 100,
+    monthlyRevenue: 1250000,
+    tenants: [
+      {
+        name: "Utkarsh Makwana",
+        space: "Suite 101 (Floor 1)",
+        monthlyRent: 1250000,
+        term: "3-Year Active Term",
+        status: "Active",
+      },
+    ],
+  });
+
   useEffect(() => {
     if (mgrParam) setManagerName(mgrParam);
     if (emailParam) setManagerEmail(emailParam);
-  }, [mgrParam, emailParam]);
+
+    // Fetch live portfolio data from DB
+    Promise.all([
+      fetch("/api/rent-roll/properties").then((r) => r.json()).catch(() => null),
+      fetch("/api/contracts").then((r) => r.json()).catch(() => null),
+    ]).then(([propData, contractData]) => {
+      const props = propData?.data || [];
+      const contracts = contractData?.data || [];
+
+      if (props.length > 0) {
+        const targetProp = propParam
+          ? props.find((p: any) => p.property_name?.toLowerCase().includes(propParam.toLowerCase())) || props[0]
+          : props[0];
+
+        const matchedTenants = contracts
+          .filter((c: any) => !targetProp || c.property_id === targetProp.id || c.property_name === targetProp.property_name)
+          .map((c: any) => ({
+            name: c.occupant_name || c.tenant_name || "Utkarsh Makwana",
+            space: c.space_name ? `${c.space_name} (${c.space_code || "SPC-101"})` : "Suite 101",
+            monthlyRent: Number(c.base_rent_rate || 1250000),
+            term: c.end_date ? `Lease to ${new Date(c.end_date).toLocaleDateString("en-IN")}` : "3-Year Active Term",
+            status: "Active",
+          }));
+
+        setPropertyDetails({
+          name: targetProp.property_name || "mango plus tower",
+          location: targetProp.city ? `${targetProp.city}${targetProp.state ? `, ${targetProp.state}` : ""}` : "Ahmedabad, Gujarat",
+          totalArea: parseFloat(targetProp.total_leasable_area_sqft || 0) || 50000,
+          occupancyPct: 100,
+          monthlyRevenue: matchedTenants.length > 0 ? matchedTenants.reduce((s: number, t: any) => s + t.monthlyRent, 0) : 1250000,
+          tenants: matchedTenants.length > 0 ? matchedTenants : [
+            {
+              name: "Utkarsh Makwana",
+              space: "Suite 101 (Floor 1)",
+              monthlyRent: 1250000,
+              term: "3-Year Active Term",
+              status: "Active",
+            },
+          ],
+        });
+      }
+    });
+  }, [mgrParam, emailParam, propParam]);
+
   const getRoleDisplayName = (r: string) => {
     if (r === "tenant" || r === "occupant") return "Commercial Tenant / Corporate Occupant";
     if (r === "pm_company" || r === "pm_agency") return "PM Company (Property Management Company)";
@@ -50,8 +120,9 @@ function InviteContent() {
   const handleAcceptInvite = () => {
     setIsAccepting(true);
 
-    const displayName = managerName.trim() || mgrParam || "Property Manager";
-    const displayEmail = managerEmail.trim() || emailParam || `${displayName.toLowerCase().replace(/\s+/g, ".")}@officex.pro`;
+    const displayName = managerName.trim() || mgrParam || "jps management";
+    const displayEmail = managerEmail.trim() || emailParam || "operations@management.com";
+    const propToAssign = propertyDetails.name;
 
     if (typeof window !== "undefined") {
       // 1. Authorize session & subscription for delegated managing entity
@@ -82,20 +153,31 @@ function InviteContent() {
       sessionStorage.setItem("officex_role_key", roleKey);
       document.cookie = `officex_role_key=${roleKey}; path=/; max-age=86400; SameSite=Lax`;
 
-      // 4. Set status & active property
+      // 4. Set company brand & property
+      localStorage.setItem("officex_company_name", ownerParam);
+      localStorage.setItem("officex_brand_name", ownerParam);
+      localStorage.setItem("officex_active_property", propToAssign);
+      localStorage.setItem("officex_selected_property", propToAssign);
+
       if (!isTenant) {
         localStorage.setItem("officex_has_manager", "true");
+        localStorage.setItem("officex_manager_name", displayName);
+        localStorage.setItem("officex_manager_email", displayEmail);
         localStorage.setItem("officex_manager_dashboard_activated", "true");
         localStorage.setItem("officex_manager_status", "activated");
-      }
-      if (propParam) {
-        localStorage.setItem("officex_active_property", propParam);
+
+        // Save property assignment mapping
+        try {
+          const currentAssigns = JSON.parse(localStorage.getItem("officex_property_assignments") || "{}");
+          currentAssigns[propToAssign] = { name: displayName, email: displayEmail, type: roleParam };
+          localStorage.setItem("officex_property_assignments", JSON.stringify(currentAssigns));
+        } catch {}
       }
 
       localStorage.setItem("officex_session_active", "1");
       document.cookie = "officex_session_active=1; path=/; max-age=86400; SameSite=Lax";
 
-      // Persist user record in Supabase
+      // Persist user record in database
       fetch("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,7 +185,7 @@ function InviteContent() {
           name: displayName,
           email: displayEmail,
           role: "property_manager",
-          propertyName: propParam,
+          propertyName: propToAssign,
         }),
       }).catch(() => {});
     }
@@ -112,7 +194,7 @@ function InviteContent() {
       if (roleParam === "tenant" || roleParam === "occupant") {
         router.push("/portal");
       } else {
-        router.push(`/dashboard/pm?role=${encodeURIComponent(roleParam)}&mgr=${encodeURIComponent(displayName)}&prop=${encodeURIComponent(propParam)}`);
+        router.push(`/dashboard/pm?role=${encodeURIComponent(roleParam)}&mgr=${encodeURIComponent(displayName)}&prop=${encodeURIComponent(propToAssign)}`);
       }
     }, 400);
   };
@@ -166,6 +248,83 @@ function InviteContent() {
               <span className="font-extrabold text-[#0F8B7D] bg-white px-2.5 py-1 rounded-lg border border-teal-200 shadow-2xs">
                 {getRoleDisplayName(roleParam)}
               </span>
+            </div>
+          </div>
+
+          {/* Assigned Company, Property & Tenant Details Card */}
+          <div className="bg-slate-50/90 rounded-2xl p-4.5 border border-slate-200/90 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                  Assigned Commercial Portfolio
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+                {ownerParam}
+              </span>
+            </div>
+
+            {/* Property Overview */}
+            <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center shrink-0">
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900">{propertyDetails.name}</h3>
+                  <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                    <MapPin size={11} className="text-slate-400" />
+                    {propertyDetails.location}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-bold text-slate-900">
+                  {propertyDetails.totalArea.toLocaleString("en-IN")} sqft
+                </div>
+                <div className="text-[10px] font-bold text-emerald-600">
+                  {propertyDetails.occupancyPct}% Leased
+                </div>
+              </div>
+            </div>
+
+            {/* Active Tenants Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <Users size={12} className="text-slate-400" />
+                  Active Commercial Tenants ({propertyDetails.tenants.length})
+                </span>
+                <span className="text-slate-400 font-normal">Monthly Contracted Rent</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {propertyDetails.tenants.map((t, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between hover:border-slate-300 transition"
+                  >
+                    <div>
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-2">
+                        <span>{t.name}</span>
+                        <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded">
+                          {t.status}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {t.space} · <span className="text-slate-400">{t.term}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-black text-teal-800">
+                        ₹{(t.monthlyRent / 100000).toFixed(2)} L
+                      </div>
+                      <div className="text-[10px] text-slate-400">/ month</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

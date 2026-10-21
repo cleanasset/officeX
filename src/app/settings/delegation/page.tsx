@@ -20,8 +20,22 @@ import {
   ChevronRight,
   HelpCircle,
   Landmark,
-  Copy
+  Copy,
+  SlidersHorizontal,
+  Save,
+  ShieldAlert,
+  Loader2
 } from "lucide-react";
+
+interface DelegationRights {
+  leaseIssuance: "requires_approval" | "full_authority" | "restricted";
+  concessionLimit: number;
+  monthlyInvoicing: "full_authority" | "draft_only" | "restricted";
+  depositRefunds: "requires_approval" | "under_50k" | "full_authority";
+  spendingThreshold: number;
+  utilitySubmetering: "allowed" | "state_tariff_only" | "restricted";
+  evictionNotice: "owner_only" | "delegated";
+}
 
 interface DelegationMandate {
   id: string;
@@ -43,6 +57,18 @@ function DelegationContent() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedMandateDetails, setSelectedMandateDetails] = useState<DelegationMandate | null>(null);
   const [copiedMandateId, setCopiedMandateId] = useState<string | null>(null);
+
+  // Editable Manager Authorities & Restrictions
+  const [currentRights, setCurrentRights] = useState<DelegationRights>({
+    leaseIssuance: "requires_approval",
+    concessionLimit: 5,
+    monthlyInvoicing: "full_authority",
+    depositRefunds: "requires_approval",
+    spendingThreshold: 25000,
+    utilitySubmetering: "state_tariff_only",
+    evictionNotice: "owner_only",
+  });
+  const [savingRights, setSavingRights] = useState(false);
 
   // Wizard State
   const [step, setStep] = useState(1);
@@ -74,6 +100,55 @@ function DelegationContent() {
       setCopiedMandateId(m.id);
       setTimeout(() => setCopiedMandateId(null), 3000);
     }
+  };
+
+  const handleOpenRightsModal = (m: DelegationMandate) => {
+    setSelectedMandateDetails(m);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`officex_mandate_rights_${m.id}`);
+      if (saved) {
+        try {
+          setCurrentRights(JSON.parse(saved));
+          return;
+        } catch {}
+      }
+    }
+    setCurrentRights({
+      leaseIssuance: "requires_approval",
+      concessionLimit: 5,
+      monthlyInvoicing: "full_authority",
+      depositRefunds: "requires_approval",
+      spendingThreshold: 25000,
+      utilitySubmetering: "state_tariff_only",
+      evictionNotice: "owner_only",
+    });
+  };
+
+  const handleSaveRights = () => {
+    if (!selectedMandateDetails) return;
+    setSavingRights(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        `officex_mandate_rights_${selectedMandateDetails.id}`,
+        JSON.stringify(currentRights)
+      );
+      localStorage.setItem(
+        "officex_delegated_rights",
+        JSON.stringify({
+          canIssueLeases: currentRights.leaseIssuance === "full_authority",
+          canApproveConcessions: currentRights.concessionLimit > 0,
+          canIssueInvoices: currentRights.monthlyInvoicing === "full_authority",
+          canRefundDeposits: currentRights.depositRefunds !== "requires_approval",
+          spendingLimit: currentRights.spendingThreshold,
+        })
+      );
+    }
+    setTimeout(() => {
+      setSavingRights(false);
+      setSelectedMandateDetails(null);
+      setSuccessMessage("Manager authorities and spending restrictions successfully updated and enforced.");
+      setTimeout(() => setSuccessMessage(""), 4500);
+    }, 400);
   };
 
   const loadData = async () => {
@@ -337,11 +412,11 @@ function DelegationContent() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSelectedMandateDetails(m)}
-                    className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 font-bold text-xs hover:underline cursor-pointer"
+                    onClick={() => handleOpenRightsModal(m)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition cursor-pointer"
                   >
-                    <ShieldCheck size={14} className="text-teal-600" />
-                    <span>View Rights</span>
+                    <SlidersHorizontal size={13} className="text-[#0F8B7D]" />
+                    <span>Manage Rights &amp; Restrictions</span>
                   </button>
                 </div>
               </div>
@@ -648,55 +723,118 @@ function DelegationContent() {
                     <p className="font-bold text-slate-900">{selectedMandateDetails.properties.join(", ")}</p>
                   </div>
 
-                  <div className="border border-slate-200/80 rounded-xl divide-y divide-slate-100 text-xs">
-                    <div className="p-3 flex items-center justify-between">
+                  <div className="border border-slate-200/80 rounded-xl divide-y divide-slate-100 text-xs bg-white">
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <p className="font-bold text-slate-900">Lease Agreement Issuance</p>
                         <p className="text-[11px] text-slate-500">Draft, execute, and dispatch commercial lease contracts</p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
-                        Requires Owner Sign-off
-                      </span>
+                      <select
+                        value={currentRights.leaseIssuance}
+                        onChange={(e) => setCurrentRights({ ...currentRights, leaseIssuance: e.target.value as any })}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shrink-0"
+                      >
+                        <option value="requires_approval">Requires Owner Sign-off</option>
+                        <option value="full_authority">Full Authority (Issue directly)</option>
+                        <option value="restricted">Restricted (No Lease Creation)</option>
+                      </select>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <p className="font-bold text-slate-900">Rent Concession Approval</p>
-                        <p className="text-[11px] text-slate-500">Maximum discount allowed without owner confirmation</p>
+                        <p className="font-bold text-slate-900">Rent Concession &amp; Discount</p>
+                        <p className="text-[11px] text-slate-500">Maximum rent discount allowed without owner confirmation</p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 text-[10px] font-bold border border-teal-200">
-                        Up to 5% Max
-                      </span>
+                      <select
+                        value={currentRights.concessionLimit}
+                        onChange={(e) => setCurrentRights({ ...currentRights, concessionLimit: Number(e.target.value) })}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shrink-0"
+                      >
+                        <option value={0}>0% (No Concessions Allowed)</option>
+                        <option value={5}>Up to 5% Max Discount</option>
+                        <option value={10}>Up to 10% Max Discount</option>
+                        <option value={20}>Up to 20% Max Discount</option>
+                      </select>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <p className="font-bold text-slate-900">Monthly Invoicing &amp; CAM</p>
                         <p className="text-[11px] text-slate-500">Generate, dispatch monthly invoices &amp; reconcile bank receipts</p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
-                        Full Authority
-                      </span>
+                      <select
+                        value={currentRights.monthlyInvoicing}
+                        onChange={(e) => setCurrentRights({ ...currentRights, monthlyInvoicing: e.target.value as any })}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shrink-0"
+                      >
+                        <option value="full_authority">Full Authority (Dispatch Invoices)</option>
+                        <option value="draft_only">Draft Only (Requires Owner Approval)</option>
+                        <option value="restricted">Restricted (Billing Frozen)</option>
+                      </select>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <p className="font-bold text-slate-900">Security Deposit Refunds</p>
                         <p className="text-[11px] text-slate-500">Authorize refund payout at contract conclusion or surrender</p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
-                        Requires Owner Sign-off
-                      </span>
+                      <select
+                        value={currentRights.depositRefunds}
+                        onChange={(e) => setCurrentRights({ ...currentRights, depositRefunds: e.target.value as any })}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shrink-0"
+                      >
+                        <option value="requires_approval">Requires Owner Sign-off</option>
+                        <option value="under_50k">Allowed Under ₹50,000</option>
+                        <option value="full_authority">Full Authority</option>
+                      </select>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <p className="font-bold text-slate-900">Operational Spending Threshold</p>
-                        <p className="text-[11px] text-slate-500">Expenditure limit per maintenance work order</p>
+                        <p className="text-[11px] text-slate-500">Maximum expenditure limit per maintenance work order</p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10px] font-bold border border-slate-200">
-                        ₹25,000 / order
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs font-bold text-slate-500">₹</span>
+                        <input
+                          type="number"
+                          value={currentRights.spendingThreshold}
+                          onChange={(e) => setCurrentRights({ ...currentRights, spendingThreshold: Number(e.target.value) || 0 })}
+                          className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-900 focus:border-[#0F8B7D] outline-none"
+                        />
+                        <span className="text-[10px] text-slate-400 font-medium">/ order</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-slate-900">Utility Sub-metering &amp; Tariffs</p>
+                        <p className="text-[11px] text-slate-500">Rate revision authority on electricity and water consumption</p>
+                      </div>
+                      <select
+                        value={currentRights.utilitySubmetering}
+                        onChange={(e) => setCurrentRights({ ...currentRights, utilitySubmetering: e.target.value as any })}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shrink-0"
+                      >
+                        <option value="state_tariff_only">State Board Tariffs Only</option>
+                        <option value="allowed">Custom Commercial Tariffs</option>
+                        <option value="restricted">Restricted</option>
+                      </select>
+                    </div>
+
+                    <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-slate-900">Eviction &amp; Legal Notices</p>
+                        <p className="text-[11px] text-slate-500">Issue default warnings or formal lease termination</p>
+                      </div>
+                      <select
+                        value={currentRights.evictionNotice}
+                        onChange={(e) => setCurrentRights({ ...currentRights, evictionNotice: e.target.value as any })}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-white text-xs font-bold text-slate-800 focus:border-[#0F8B7D] outline-none cursor-pointer shrink-0"
+                      >
+                        <option value="owner_only">Owner Reserved Only</option>
+                        <option value="delegated">Delegated to Managing Partner</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -710,13 +848,33 @@ function DelegationContent() {
                     <Copy size={13} />
                     <span>{copiedMandateId === selectedMandateDetails.id ? "Link Copied!" : "Copy Manager Link"}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMandateDetails(null)}
-                    className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 cursor-pointer"
-                  >
-                    Close
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMandateDetails(null)}
+                      className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveRights}
+                      disabled={savingRights}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7367] text-white text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                    >
+                      {savingRights ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save size={13} />
+                          <span>Save &amp; Enforce Rights</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

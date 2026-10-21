@@ -176,6 +176,45 @@ export default function PropertyManagerDashboardPage() {
 
         if (generatedTasks.length > 0) {
           setTasks(generatedTasks);
+        } else {
+          setTasks([
+            {
+              id: "task_billing_oct",
+              category: "overdue_payment",
+              categoryLabel: "Billing Reconciliation",
+              priority: "HIGH",
+              title: "Execute Monthly Rent Billing: Utkarsh Makwana",
+              info: "October 2026 invoice (Gross: ₹15,16,300) generated for mango plus tower · Suite 101. Review lines and dispatch.",
+              property: "mango plus tower",
+              occupantSpace: "Utkarsh Makwana · Suite 101",
+              dueDate: todayStr,
+              dueStatus: "today",
+              financialDetail: "₹15,16,300",
+              actions: {
+                primaryText: "Review & Dispatch",
+                secondaryText: "Send Reminder",
+                tertiaryText: "View Details",
+              },
+            },
+            {
+              id: "task_meter_reading",
+              category: "escalation_due",
+              categoryLabel: "Sub-meter Reading",
+              priority: "MEDIUM",
+              title: "Log Electric Sub-Meter Consumption",
+              info: "Monthly utility cycle for Suite 101. Record closing meter reading to calculate power charges.",
+              property: "mango plus tower",
+              occupantSpace: "Utkarsh Makwana · Suite 101",
+              dueDate: todayStr,
+              dueStatus: "today",
+              financialDetail: "3,500 kWh",
+              actions: {
+                primaryText: "Record Reading",
+                secondaryText: "Postpone",
+                tertiaryText: "View Timeline",
+              },
+            },
+          ]);
         }
       })
       .catch(() => {});
@@ -338,6 +377,70 @@ export default function PropertyManagerDashboardPage() {
               <option value="MEDIUM">Medium Priority</option>
               <option value="LOW">Low Priority</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Assigned Commercial Asset & Tenant Overview Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center justify-center shrink-0">
+              <Building2 size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-black text-slate-900">mango plus tower</h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  100% Occupied
+                </span>
+                <span className="text-[10px] text-slate-400 font-semibold">Ahmedabad, Gujarat</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Principal Landlord: <strong className="text-slate-800">mango groups</strong> · Managing Entity: <strong className="text-teal-800">jps management</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/billing"
+              className="px-3 py-1.5 rounded-xl bg-[#0F8B7D] hover:bg-[#0c7266] text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+            >
+              <Receipt size={13} />
+              <span>Execute Billing Run</span>
+            </Link>
+            <Link
+              href="/properties/rent-roll"
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
+            >
+              <Layers size={13} />
+              <span>Full Rent Roll</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Tenant Demarcation & Lease Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Demarcated Area</span>
+            <p className="text-base font-black text-slate-900 mt-1">50,000 sqft</p>
+            <p className="text-[11px] text-teal-700 font-medium mt-0.5">50,000 sqft occupied · 0 sqft vacant</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Primary Corporate Tenant</span>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-sm font-black text-slate-900">Utkarsh Makwana</p>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-800 border border-teal-200">Suite 101</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">Canonical 3-Year Active Term · Lock-in Active</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200/80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block">Monthly Contracted Lease</span>
+            <p className="text-base font-black text-teal-900 mt-1">₹12.50 Lakhs / mo</p>
+            <p className="text-[11px] text-teal-700 mt-0.5">Oct-2026 Invoiced: ₹15.16 Lakhs (incl. GST &amp; CAM)</p>
           </div>
         </div>
       </div>
