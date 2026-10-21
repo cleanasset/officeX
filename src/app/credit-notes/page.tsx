@@ -1,3 +1,5 @@
-import CreditNotesPage from "@/app/operate/credit-notes/page";
+import { redirect } from "next/navigation";
 
-export default CreditNotesPage;
+export default function CreditNotesRedirectPage() {
+  redirect("/operate/credit-notes");
+}

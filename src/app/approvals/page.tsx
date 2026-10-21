@@ -30,6 +30,8 @@ import {
   CheckCheck
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
+import Sidebar from "@/components/Sidebar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 interface SubmittedContract {
   id: string;
@@ -574,50 +576,52 @@ export default function ApprovalsInboxPage() {
   const uniqueProperties = Array.from(new Set(invoices.map((i) => i.property_name).filter(Boolean)));
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      <Topbar />
+    <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">
+      <Sidebar />
+      <div className="flex-1 min-w-0 pl-0 md:pl-[260px] flex flex-col max-w-full overflow-x-hidden">
+        <Topbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Breadcrumb & Navigation Back */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-            <Link href="/dashboard" className="hover:text-slate-900">
-              Dashboard
-            </Link>
-            <span>/</span>
-            <span className="text-slate-900 font-bold">Approvals Inbox</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/operate/rent-roll/register"
-              className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
-            >
-              <ArrowLeft size={13} />
-              <span>Rent Roll Register (§S-10)</span>
-            </Link>
-            <span className="text-slate-300">|</span>
-            <Link
-              href="/dashboard/finance"
-              className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1"
-            >
-              <span>Finance Dashboard (§S-05)</span>
-              <ArrowRight size={13} />
-            </Link>
-          </div>
-        </div>
-
-        {/* Header (§S-06) */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
-                §S-06 Wireframe Spec
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                Unified Maker-Checker Sign-Off Desk
-              </span>
+        <main className="flex-1 mt-[60px] max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-24 md:pb-8">
+          {/* Breadcrumb & Navigation Back */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <Link href="/dashboard" className="hover:text-slate-900">
+                Dashboard
+              </Link>
+              <span>/</span>
+              <span className="text-slate-900 font-bold">Approvals Inbox</span>
             </div>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/properties/rent-roll?tab=rentroll"
+                className="text-xs font-bold text-[#0F8B7D] hover:underline flex items-center gap-1"
+              >
+                <ArrowLeft size={13} />
+                <span>Rent Roll Register</span>
+              </Link>
+              <span className="text-slate-300">|</span>
+              <Link
+                href="/dashboard/owner"
+                className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1"
+              >
+                <span>Owner Dashboard</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200 uppercase tracking-wider">
+                  Maker-Checker Governance
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  Unified Sign-Off Desk
+                </span>
+              </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
               <ShieldCheck size={24} className="text-[#0F8B7D]" />
               <span>Approvals Inbox</span>
@@ -1639,7 +1643,9 @@ export default function ApprovalsInboxPage() {
             </div>
           </div>
         )}
-      </main>
+        </main>
+      </div>
+      <MobileBottomNav />
     </div>
   );
 }

@@ -1,3 +1,5 @@
-import ExceptionCentrePage from "@/app/operate/exceptions/page";
+import { redirect } from "next/navigation";
 
-export default ExceptionCentrePage;
+export default function ExceptionsRedirectPage() {
+  redirect("/operate/exceptions");
+}

@@ -22,8 +22,6 @@ import {
   Landmark,
   Copy
 } from "lucide-react";
-import Topbar from "@/components/Topbar";
-import Sidebar from "@/components/Sidebar";
 
 interface DelegationMandate {
   id: string;
@@ -216,13 +214,8 @@ function DelegationContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
-      <Sidebar />
-      <div className="flex-1 md:ml-[260px] flex flex-col min-w-0">
-        <Topbar />
-
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          {/* Header */}
+    <div className="max-w-7xl w-full mx-auto space-y-6">
+      {/* Header */}
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -728,8 +721,6 @@ function DelegationContent() {
               </div>
             </div>
           )}
-        </main>
-      </div>
     </div>
   );
 }

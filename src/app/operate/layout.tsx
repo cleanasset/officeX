@@ -1,14 +1,40 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "OfficeX Operate — FM Operations Platform",
-  description: "Automate 52-week PPM, enforce SLAs, and manage helpdesk tickets for Grade-A commercial buildings. Built for facility managers.",
-};
+import React, { Suspense } from "react";
+import { usePathname } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 export default function OperateLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  const pathname = usePathname();
+  const isMarketingLanding = pathname === "/operate";
+
+  if (isMarketingLanding) {
+    return <>{children}</>;
+  }
+
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" /></div>}>
+      <div className="flex min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden font-sans text-slate-900">
+        {/* Canonical Left Navigation Sidebar */}
+        <Sidebar />
+
+        {/* Main Panel Flow beside Sidebar */}
+        <div className="flex-1 min-w-0 pl-0 md:pl-[260px] flex flex-col max-w-full overflow-x-hidden">
+          <Topbar />
+          <main className="flex-1 mt-[60px] p-3 sm:p-6 lg:p-8 overflow-y-auto min-w-0 max-w-full pb-24 md:pb-8">
+            {children}
+          </main>
+        </div>
+
+        {/* Fixed Mobile Bottom Navigation */}
+        <MobileBottomNav />
+      </div>
+    </Suspense>
+  );
 }

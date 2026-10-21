@@ -39,7 +39,8 @@ import {
   CreditCard,
   Menu,
   Plus,
-  ExternalLink
+  ExternalLink,
+  X
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -492,6 +493,15 @@ function SidebarInner() {
               style={{ width: "auto", height: "25px" }}
             />
           </Link>
+
+          {/* Mobile Drawer Close Button */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 md:hidden cursor-pointer active:scale-95 transition-all"
+            title="Close Menu"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {/* Clean, Role-Isolated Navigation (Left Panel Fixed, Scrollbar Hidden) */}

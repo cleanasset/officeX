@@ -1,3 +1,5 @@
-import RevenueForecastPage from "@/app/operate/forecast/page";
+import { redirect } from "next/navigation";
 
-export default RevenueForecastPage;
+export default function ForecastRedirectPage() {
+  redirect("/operate/forecast");
+}

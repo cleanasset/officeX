@@ -1,3 +1,5 @@
-import MonthlyMisPage from "@/app/operate/mis/page";
+import { redirect } from "next/navigation";
 
-export default MonthlyMisPage;
+export default function MisRedirectPage() {
+  redirect("/operate/mis");
+}

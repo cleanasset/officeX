@@ -1,1 +1,5 @@
-export { default } from "@/app/operate/mandates/page";
+import { redirect } from "next/navigation";
+
+export default function MandatesRedirectPage() {
+  redirect("/operate/mandates");
+}

@@ -1,3 +1,5 @@
-import SnapshotsPage from "@/app/operate/snapshots/page";
+import { redirect } from "next/navigation";
 
-export default SnapshotsPage;
+export default function SnapshotsRedirectPage() {
+  redirect("/operate/snapshots");
+}

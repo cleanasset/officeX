@@ -95,9 +95,8 @@ export default function SettingsSuitePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="p-3.5 sm:p-6 md:p-8 pb-28 md:pb-16 max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {/* Header */}
+    <div className="max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
+      {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -656,7 +655,6 @@ export default function SettingsSuitePage() {
             )}
           </>
         )}
-      </div>
     </div>
   );
 }

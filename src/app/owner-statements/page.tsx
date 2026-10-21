@@ -1,1 +1,5 @@
-export { default } from "@/app/operate/owner-statements/page";
+import { redirect } from "next/navigation";
+
+export default function OwnerStatementsRedirectPage() {
+  redirect("/operate/owner-statements");
+}

@@ -1,3 +1,5 @@
-import PropertyPnlPage from "@/app/operate/pnl/page";
+import { redirect } from "next/navigation";
 
-export default PropertyPnlPage;
+export default function PnlRedirectPage() {
+  redirect("/operate/pnl");
+}

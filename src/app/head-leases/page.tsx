@@ -1,1 +1,5 @@
-export { default } from "@/app/operate/head-leases/page";
+import { redirect } from "next/navigation";
+
+export default function HeadLeasesRedirectPage() {
+  redirect("/operate/head-leases");
+}

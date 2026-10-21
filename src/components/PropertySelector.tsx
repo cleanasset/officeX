@@ -102,12 +102,12 @@ export default function PropertySelector() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors cursor-pointer max-w-full"
         title="Scope all dashboards and rent roll to selected property (§2.1)"
       >
         <Building2 size={13} className="text-[#0F8B7D] shrink-0" />
-        <span className="text-[11px] text-slate-400 font-medium">Property:</span>
-        <span className="font-bold text-slate-800 truncate max-w-[150px]">
+        <span className="hidden sm:inline text-[11px] text-slate-400 font-medium">Property:</span>
+        <span className="font-bold text-slate-800 truncate max-w-[85px] sm:max-w-[150px]">
           {selectedPropertyName}
         </span>
         <ChevronDown size={13} className="text-slate-400 shrink-0" />

@@ -17,11 +17,35 @@ interface NavItem {
 }
 
 const roleBottomTabs: Record<string, NavItem[]> = {
+  dashboard: [
+    { label: "Portfolio", href: "/dashboard/owner", icon: Layers },
+    { label: "Rent Roll", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { label: "Approvals", href: "/approvals", icon: ShieldCheck },
+    { label: "Delegation", href: "/settings/delegation", icon: Briefcase }
+  ],
+  approvals: [
+    { label: "Portfolio", href: "/dashboard/owner", icon: Layers },
+    { label: "Rent Roll", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { label: "Approvals", href: "/approvals", icon: ShieldCheck },
+    { label: "Delegation", href: "/settings/delegation", icon: Briefcase }
+  ],
+  operate: [
+    { label: "Portfolio", href: "/dashboard/owner", icon: Layers },
+    { label: "Rent Roll", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { label: "Stacking", href: "/operate/stacking", icon: Layers },
+    { label: "Statements", href: "/operate/owner-statements", icon: DollarSign }
+  ],
+  settings: [
+    { label: "Portfolio", href: "/dashboard/owner", icon: Layers },
+    { label: "Rent Roll", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
+    { label: "Delegation", href: "/settings/delegation", icon: Briefcase },
+    { label: "Settings", href: "/settings", icon: Building }
+  ],
   properties: [
-    { label: "Portfolio", href: "/properties", icon: Layers },
+    { label: "Portfolio", href: "/dashboard/owner", icon: Layers },
+    { label: "Rent Roll", href: "/properties/rent-roll?tab=rentroll", icon: DollarSign },
     { label: "Registry", href: "/properties/registry", icon: Building },
-    { label: "Rent Roll", href: "/properties/rent-roll", icon: DollarSign },
-    { label: "Compliance", href: "/properties/compliance", icon: ShieldCheck }
+    { label: "Tenants", href: "/properties/tenants", icon: Users }
   ],
   ops: [
     { label: "Command", href: "/ops", icon: ClipboardList },

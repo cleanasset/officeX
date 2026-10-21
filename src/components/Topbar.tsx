@@ -254,31 +254,31 @@ export default function Topbar() {
   const activeRole = AVAILABLE_ROLES.find((r) => r.key === currentRoleKey) || AVAILABLE_ROLES[0];
 
   return (
-    <header className="h-[60px] bg-white border-b border-slate-200 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-4 md:px-8 flex items-center justify-between shadow-2xs">
+    <header className="h-[60px] bg-white border-b border-slate-200 fixed top-0 right-0 left-0 md:left-[260px] z-20 px-3 sm:px-4 md:px-8 flex items-center justify-between shadow-2xs">
       {/* Left: Mobile Toggle & Breadcrumbs & Selectors */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("officex-toggle-sidebar"))}
-          className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 md:hidden cursor-pointer active:scale-95 transition-transform"
+          className="p-1.5 sm:p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 md:hidden cursor-pointer active:scale-95 transition-transform shrink-0"
           title="Toggle Navigation Menu"
         >
           <Menu size={18} />
         </button>
 
         {/* Clean Company / Brand Logo & Name Badge */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs">
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs shrink-0">
           {brandLogo ? (
             <img src={brandLogo} alt="Logo" className="h-5 max-w-[80px] object-contain rounded" />
           ) : (
             <Building2 size={15} className="text-[#0F8B7D]" />
           )}
-          <span className="text-xs font-extrabold text-slate-900 max-w-[180px] truncate">
+          <span className="text-xs font-extrabold text-slate-900 max-w-[130px] lg:max-w-[180px] truncate">
             {brandName || "OfficeX Commercial"}
           </span>
         </div>
 
         {/* Global Property Selector */}
-        <div>
+        <div className="min-w-0">
           <PropertySelector />
         </div>
       </div>
@@ -343,7 +343,7 @@ export default function Topbar() {
         {/* Support Link */}
         <Link
           href="/support"
-          className="text-slate-500 hover:text-teal-600 transition-colors p-1"
+          className="hidden sm:block text-slate-500 hover:text-teal-600 transition-colors p-1"
           title="Help & Documentation"
         >
           <HelpCircle size={18} />
